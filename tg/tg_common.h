@@ -1,20 +1,21 @@
 #ifndef TG_COMMON_H
 #define TG_COMMON_H
 
-#include <stdint.h>
-
 #if defined(_WIN32) || defined(_WIN64)
-#define TG_WINDOWS
+#define TG_WIN32
 #endif
 
 #ifndef NDEBUG
-#define ASSERT(x) if (!(x)) \
-    {                       \
-        *(int*)0 = 0;       \
-    }
+#define TG_DEBUG
+#endif
+
+#ifdef TG_DEBUG
+#define ASSERT(x) if (!(x)) *(int*)0 = 0
 #else
 #define ASSERT(x)
 #endif
+
+#include <stdint.h>
 
 typedef unsigned int uint;
 

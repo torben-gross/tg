@@ -3,9 +3,15 @@
   <ItemGroup>
     <ClCompile Include="platform\tg_win32_platform.c" />
     <ClCompile Include="util\tg_string.c" />
+    <ClCompile Include="graphics\tg_vulkan.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="util\tg_string.h" />
     <ClInclude Include="tg_common.h" />
+    <ClInclude Include="graphics\tg_vulkan.h" />
+    <ClInclude Include="platform\tg_platform.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="tg.ruleset" />
   </ItemGroup>
 </Project>

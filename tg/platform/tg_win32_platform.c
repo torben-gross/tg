@@ -1,6 +1,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 
 #include "tg/tg_common.h"
+#include "tg/graphics/tg_vulkan.h"
 #include <stdbool.h>
 #include <stdio.h>
 #include <windows.h>
@@ -8,7 +9,12 @@
 
 static bool running = true;
 
-void tg_win32_platform_screen_size(uint32* width, uint32* height)
+void tg_platform_print(const char* string)
+{
+    OutputDebugStringA(string);
+}
+
+void tg_platform_screen_size(uint32* width, uint32* height)
 {
     RECT rect;
     GetWindowRect(GetDesktopWindow(), &rect);
@@ -56,6 +62,7 @@ int CALLBACK WinMain(
     _In_     int       show_cmd
 )
 {
+    // initialize window
     const char* window_class_id     = "win32_platform";
     const char* window_title        = "This is a window title!";
 
@@ -74,7 +81,7 @@ int CALLBACK WinMain(
     }
 
     uint32 w, h;
-    tg_win32_platform_screen_size(&w, &h);
+    tg_platform_screen_size(&w, &h);
     window_handle = CreateWindowExA(
         0, window_class_id, window_title, WS_OVERLAPPEDWINDOW,
         0, 0, w, h,
@@ -90,6 +97,10 @@ int CALLBACK WinMain(
     ShowWindow(window_handle, show_cmd);
     UpdateWindow(window_handle);
 
+    // initialize vulkan
+    tg_vulkan_init();
+
+    // game loop
     char buf[256];
     struct timeb start, end;
     uint64 fps = 0;
@@ -114,5 +125,14 @@ int CALLBACK WinMain(
         TranslateMessage(&msg);
         DispatchMessageA(&msg);
     }
+
+    // shutdown
+    tg_vulkan_shutdown();
+
     return (int)msg.wParam;
+}
+
+void test()
+{
+
 }
