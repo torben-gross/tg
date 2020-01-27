@@ -7,7 +7,14 @@
 #include <windows.h>
 #include <sys/timeb.h>
 
-static bool running = true;
+
+bool running = true;
+HWND handle_window = NULL;
+
+void* tg_platform_get_window_handle()
+{
+    return handle_window;
+}
 
 void tg_platform_print(const char* string)
 {
@@ -66,8 +73,6 @@ int CALLBACK WinMain(
     const char* window_class_id     = "win32_platform";
     const char* window_title        = "This is a window title!";
 
-    HWND window_handle              = 0;
-
     WNDCLASSEXA window_class_info   = { 0 };
     window_class_info.cbSize        = sizeof(window_class_info);
     window_class_info.lpfnWndProc   = tg_win32_platform_window_proc;
@@ -82,20 +87,20 @@ int CALLBACK WinMain(
 
     uint32 w, h;
     tg_platform_screen_size(&w, &h);
-    window_handle = CreateWindowExA(
+    handle_window = CreateWindowExA(
         0, window_class_id, window_title, WS_OVERLAPPEDWINDOW,
         0, 0, w, h,
         NULL, NULL, handle_instance, NULL
     );
 
-    if (window_handle == NULL)
+    if (handle_window == NULL)
     {
         DebugBreak();
         return EXIT_FAILURE;
     }
 
-    ShowWindow(window_handle, show_cmd);
-    UpdateWindow(window_handle);
+    ShowWindow(handle_window, show_cmd);
+    UpdateWindow(handle_window);
 
     // initialize vulkan
     tg_vulkan_init();

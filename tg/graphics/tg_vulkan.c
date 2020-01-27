@@ -11,9 +11,15 @@
 #endif
 
 #ifdef TG_WIN32
-#define ENABLED_EXTENSION_COUNT 3
-#define ENABLED_EXTENSION_NAMES (char*[]){ VK_EXT_DEBUG_UTILS_EXTENSION_NAME, VK_KHR_SURFACE_EXTENSION_NAME, VK_KHR_WIN32_SURFACE_EXTENSION_NAME }
+#define INSTANCE_EXTENSION_COUNT 3
+#define INSTANCE_EXTENSION_NAMES (char*[]){ VK_EXT_DEBUG_UTILS_EXTENSION_NAME, VK_KHR_SURFACE_EXTENSION_NAME, VK_KHR_WIN32_SURFACE_EXTENSION_NAME }
+#else
+#define INSTANCE_EXTENSION_COUNT 0
+#define INSTANCE_EXTENSION_NAMES NULL
 #endif
+
+#define DEVICE_EXTENSION_COUNT 1
+#define DEVICE_EXTENSION_NAMES (char*[]){ VK_KHR_SWAPCHAIN_EXTENSION_NAME }
 
 #ifdef TG_DEBUG
 #define VALIDATION_LAYER_COUNT 1
@@ -24,17 +30,19 @@
 #endif
 
 VkInstance instance = VK_NULL_HANDLE;
-VkPhysicalDevice physical_device = VK_NULL_HANDLE;
-VkDevice device = VK_NULL_HANDLE;
-VkQueue queue = VK_NULL_HANDLE;
-
 #ifdef TG_DEBUG
 VkDebugUtilsMessengerEXT debug_utils_messenger;
 #endif
+VkPhysicalDevice physical_device = VK_NULL_HANDLE;
+VkDevice device = VK_NULL_HANDLE;
+VkQueue graphics_queue = VK_NULL_HANDLE;
+VkQueue present_queue = VK_NULL_HANDLE;
+VkSurfaceKHR surface = VK_NULL_HANDLE;
 
 typedef struct
 {
     uint32 graphics_family;
+    uint32 present_family;
 } tg_vulkan_queue_family_indices;
 
 VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(
@@ -90,10 +98,10 @@ void tg_vulkan_init()
     instance_create_info.pApplicationInfo        = &application_info;
     instance_create_info.enabledLayerCount       = VALIDATION_LAYER_COUNT;
     instance_create_info.ppEnabledLayerNames     = VALIDATION_LAYER_NAMES;
-    instance_create_info.enabledExtensionCount   = ENABLED_EXTENSION_COUNT;
-    instance_create_info.ppEnabledExtensionNames = ENABLED_EXTENSION_NAMES;
+    instance_create_info.enabledExtensionCount   = INSTANCE_EXTENSION_COUNT;
+    instance_create_info.ppEnabledExtensionNames = INSTANCE_EXTENSION_NAMES;
 
-    VkResult create_instance_result = vkCreateInstance(&instance_create_info, NULL, &instance);
+    const VkResult create_instance_result = vkCreateInstance(&instance_create_info, NULL, &instance);
     ASSERT(create_instance_result == VK_SUCCESS);
 
     // debug utils messenger
@@ -109,6 +117,19 @@ void tg_vulkan_init()
     ASSERT(vkCreateDebugUtilsMessengerEXT);
     VkResult create_debug_utils_messenger_result = vkCreateDebugUtilsMessengerEXT(instance, &debug_utils_messenger_create_info, NULL, &debug_utils_messenger);
     ASSERT(create_debug_utils_messenger_result == VK_SUCCESS);
+#endif
+
+    // surface
+#ifdef TG_WIN32
+    VkWin32SurfaceCreateInfoKHR win32_surface_create_info = { 0 };
+    win32_surface_create_info.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+    win32_surface_create_info.hinstance = GetModuleHandle(NULL);
+    win32_surface_create_info.hwnd = tg_platform_get_window_handle();
+
+    const VkResult create_win32_surface_result = vkCreateWin32SurfaceKHR(instance, &win32_surface_create_info, NULL, &surface);
+    ASSERT(create_win32_surface_result == VK_SUCCESS);
+#else
+    ASSERT(false);
 #endif
 
     // physical device
@@ -131,6 +152,7 @@ void tg_vulkan_init()
         const bool is_discrete_gpu          = physical_device_properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
         const bool supports_geometry_shader = physical_device_features.geometryShader;
         bool supports_graphics_family       = false;
+        VkBool32 supports_present_family    = 0;
 
         uint32 queue_family_count;
         vkGetPhysicalDeviceQueueFamilyProperties(physical_devices[i], &queue_family_count, NULL);
@@ -141,15 +163,50 @@ void tg_vulkan_init()
         tg_vulkan_queue_family_indices queue_family_indices_temp = { 0 };
         for (uint32 j = 0; j < queue_family_count; j++)
         {
-            if (queue_family_properties[j].queueFlags & VK_QUEUE_GRAPHICS_BIT)
+            if (!supports_graphics_family)
             {
-                queue_family_indices_temp.graphics_family = j;
-                supports_graphics_family                  = true;
+                if (queue_family_properties[j].queueFlags & VK_QUEUE_GRAPHICS_BIT)
+                {
+                    queue_family_indices_temp.graphics_family = j;
+                    supports_graphics_family                  = true;
+                }
+            }
+            if (!supports_present_family)
+            {
+                vkGetPhysicalDeviceSurfaceSupportKHR(physical_devices[i], j, surface, &supports_present_family);
+                if (supports_present_family)
+                {
+                    queue_family_indices_temp.present_family = j;
+                }
+            }
+            if (supports_graphics_family && supports_present_family)
+            {
+                break;
             }
         }
         free(queue_family_properties);
 
-        if (is_discrete_gpu && supports_geometry_shader && supports_graphics_family)
+        bool supports_extensions = true;
+        uint32 device_extension_property_count;
+        vkEnumerateDeviceExtensionProperties(physical_devices[i], NULL, &device_extension_property_count, NULL);
+        VkExtensionProperties* device_extension_properties = malloc(device_extension_property_count * sizeof(*device_extension_properties));
+        vkEnumerateDeviceExtensionProperties(physical_devices[i], NULL, &device_extension_property_count, device_extension_properties);
+        for (uint32 i = 0; i < DEVICE_EXTENSION_COUNT; i++)
+        {
+            bool supports_extension = false;
+            for (uint32 j = 0; j < device_extension_property_count; j++)
+            {
+                if (strcmp(DEVICE_EXTENSION_NAMES[i], device_extension_properties[j].extensionName) == 0)
+                {
+                    supports_extension = true;
+                    break;
+                }
+            }
+            supports_extensions &= supports_extension;
+        }
+        free(device_extension_properties);
+
+        if (is_discrete_gpu && supports_geometry_shader && supports_graphics_family && supports_present_family && supports_extensions)
         {
             physical_device      = physical_devices[i];
             queue_family_indices = queue_family_indices_temp;
@@ -169,21 +226,39 @@ void tg_vulkan_init()
 
     VkPhysicalDeviceFeatures physical_device_features = { 0 };
 
+    uint32 queue_family_count = sizeof(tg_vulkan_queue_family_indices) / sizeof(uint32);
+    VkDeviceQueueCreateInfo* device_queue_create_infos = malloc(queue_family_count * sizeof(*device_queue_create_infos));
+    ASSERT(device_queue_create_infos);
+    for (uint32 i = 0; i < queue_family_count; i++)
+    {
+        VkDeviceQueueCreateInfo device_queue_create_info = { 0 };
+        device_queue_create_info.sType                   = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+        device_queue_create_info.queueFamilyIndex        = *((uint32*)(&queue_family_indices) + i);
+        device_queue_create_info.queueCount              = 1;
+        device_queue_create_info.pQueuePriorities        = &queue_priority;
+        device_queue_create_infos[i]                     = device_queue_create_info;
+    }
+
     VkDeviceCreateInfo device_create_info      = { 0 };
     device_create_info.sType                   = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    device_create_info.queueCreateInfoCount    = 1;
-    device_create_info.pQueueCreateInfos       = &device_queue_create_info;
+    device_create_info.queueCreateInfoCount    = queue_family_count;
+    device_create_info.pQueueCreateInfos       = device_queue_create_infos;
     device_create_info.enabledLayerCount       = VALIDATION_LAYER_COUNT;
     device_create_info.ppEnabledLayerNames     = VALIDATION_LAYER_NAMES;
-    device_create_info.enabledExtensionCount   = 0;
-    device_create_info.ppEnabledExtensionNames = NULL;
+    device_create_info.enabledExtensionCount   = DEVICE_EXTENSION_COUNT;
+    device_create_info.ppEnabledExtensionNames = DEVICE_EXTENSION_NAMES;
     device_create_info.pEnabledFeatures        = &physical_device_features;
 
-    VkResult create_device_result = vkCreateDevice(physical_device, &device_create_info, NULL, &device);
+    const VkResult create_device_result = vkCreateDevice(physical_device, &device_create_info, NULL, &device);
     ASSERT(create_device_result == VK_SUCCESS);
 
-    // graphics queue
-    vkGetDeviceQueue(device, queue_family_indices.graphics_family, 0, &queue);
+    free(device_queue_create_infos);
+
+    // queues
+    vkGetDeviceQueue(device, queue_family_indices.graphics_family, 0, &graphics_queue);
+    vkGetDeviceQueue(device, queue_family_indices.present_family, 0, &present_queue);
+
+    // TODO: https://vulkan-tutorial.com/en/Drawing_a_triangle/Presentation/Swap_chain Querying details of swap chain support
 }
 
 void tg_vulkan_shutdown()
@@ -194,5 +269,6 @@ void tg_vulkan_shutdown()
     ASSERT(vkDestroyDebugUtilsMessengerEXT);
     vkDestroyDebugUtilsMessengerEXT(instance, debug_utils_messenger, NULL);
 #endif
+    vkDestroySurfaceKHR(instance, surface, NULL);
     vkDestroyInstance(instance, NULL);
 }
