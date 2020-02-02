@@ -2,6 +2,7 @@
 
 #include "tg/tg_common.h"
 #include "tg/graphics/tg_vulkan.h"
+#include "tg/math/tg_math_functional.h"
 #include <stdbool.h>
 #include <stdio.h>
 #include <windows.h>
@@ -16,17 +17,31 @@ void* tg_platform_get_window_handle()
     return handle_window;
 }
 
+void tg_platform_get_screen_size(uint32* width, uint32* height)
+{
+    RECT rect;
+    BOOL result = GetWindowRect(GetDesktopWindow(), &rect);
+    if (result)
+    {
+        *width = rect.right - rect.left;
+        *height = rect.bottom - rect.top;
+    }
+}
+
+void tg_platform_get_window_size(uint32* width, uint32* height)
+{
+    RECT rect;
+    BOOL result = GetWindowRect(handle_window, &rect);
+    if (result)
+    {
+        *width = rect.right - rect.left;
+        *height = rect.bottom - rect.top;
+    }
+}
+
 void tg_platform_print(const char* string)
 {
     OutputDebugStringA(string);
-}
-
-void tg_platform_screen_size(uint32* width, uint32* height)
-{
-    RECT rect;
-    GetWindowRect(GetDesktopWindow(), &rect);
-    *width = rect.right - rect.left;
-    *height = rect.bottom - rect.top;
 }
 
 LRESULT CALLBACK tg_win32_platform_window_proc(
@@ -86,7 +101,7 @@ int CALLBACK WinMain(
     }
 
     uint32 w, h;
-    tg_platform_screen_size(&w, &h);
+    tg_platform_get_screen_size(&w, &h);
     handle_window = CreateWindowExA(
         0, window_class_id, window_title, WS_OVERLAPPEDWINDOW,
         0, 0, w, h,

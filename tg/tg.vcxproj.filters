@@ -4,12 +4,14 @@
     <ClCompile Include="platform\tg_win32_platform.c" />
     <ClCompile Include="util\tg_string.c" />
     <ClCompile Include="graphics\tg_vulkan.c" />
+    <ClCompile Include="math\tg_math_functional.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="util\tg_string.h" />
     <ClInclude Include="tg_common.h" />
     <ClInclude Include="graphics\tg_vulkan.h" />
     <ClInclude Include="platform\tg_platform.h" />
+    <ClInclude Include="math\tg_math_functional.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="tg.ruleset" />

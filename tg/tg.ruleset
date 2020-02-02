@@ -200,8 +200,6 @@
     <Rule Id="C6381" Action="Warning" />
     <Rule Id="C6383" Action="Warning" />
     <Rule Id="C6384" Action="Warning" />
-    <Rule Id="C6385" Action="Warning" />
-    <Rule Id="C6386" Action="Warning" />
     <Rule Id="C6387" Action="Warning" />
     <Rule Id="C6388" Action="Warning" />
     <Rule Id="C6500" Action="Warning" />
