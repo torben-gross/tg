@@ -2,6 +2,7 @@
 
 #include "tg/tg_common.h"
 #include "tg/platform/tg_platform.h"
+#include "tg/util/tg_file_io.h"
 #include "tg/math/tg_math_functional.h"
 #include <stdbool.h>
 #include <stdlib.h>
@@ -70,6 +71,7 @@ VkExtent2D swapchain_extent = { 0 };
 
 tg_vulkan_swapchain_image_views swapchain_image_views = { 0 };
 
+#ifdef TG_DEBUG
 VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(
     VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
     VkDebugUtilsMessageTypeFlagsEXT message_type,
@@ -78,11 +80,12 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(
 {
     if (message_severity >= VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT)
     {
-        tg_platform_print(callback_data->pMessage + '\n');
+        TG_PRINT(callback_data->pMessage + '\n');
         return VK_TRUE;
     }
     return VK_FALSE;
 }
+#endif
 
 void tg_vulkan_init_instance()
 {
@@ -118,7 +121,7 @@ void tg_vulkan_init_debug_utils_manager()
 
     PFN_vkCreateDebugUtilsMessengerEXT vkCreateDebugUtilsMessengerEXT = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
     ASSERT(vkCreateDebugUtilsMessengerEXT);
-    VkResult create_debug_utils_messenger_result = vkCreateDebugUtilsMessengerEXT(instance, &debug_utils_messenger_create_info, NULL, &debug_utils_messenger);
+    const VkResult create_debug_utils_messenger_result = vkCreateDebugUtilsMessengerEXT(instance, &debug_utils_messenger_create_info, NULL, &debug_utils_messenger);
     ASSERT(create_debug_utils_messenger_result == VK_SUCCESS);
 }
 #endif
@@ -140,9 +143,9 @@ void tg_vulkan_init_physical_device_find_queue_family_indices(VkPhysicalDevice p
 {
     uint32 queue_family_count;
     vkGetPhysicalDeviceQueueFamilyProperties(pd, &queue_family_count, NULL);
-    VkQueueFamilyProperties* queue_family_properties = malloc(queue_family_count * sizeof(*queue_family_properties));
     ASSERT(queue_family_count);
-    vkGetPhysicalDeviceQueueFamilyProperties(pd, &queue_family_count, NULL);
+    VkQueueFamilyProperties* queue_family_properties = malloc(queue_family_count * sizeof(*queue_family_properties));
+    vkGetPhysicalDeviceQueueFamilyProperties(pd, &queue_family_count, queue_family_properties);
 
     bool supports_graphics_family = false;
     VkBool32 supports_present_family = 0;
@@ -222,7 +225,7 @@ void tg_vulkan_init_physical_device()
         bool qfi_complete;
         tg_vulkan_init_physical_device_find_queue_family_indices(physical_devices[i], &qfi, &qfi_complete);
 
-        bool supports_extensions = tg_vulkan_init_physical_device_supports_extensions(physical_devices[i]);
+        const bool supports_extensions = tg_vulkan_init_physical_device_supports_extensions(physical_devices[i]);
 
         uint32 physical_device_surface_format_count;
         vkGetPhysicalDeviceSurfaceFormatsKHR(physical_devices[i], surface, &physical_device_surface_format_count, NULL);
@@ -366,7 +369,7 @@ void tg_vulkan_init_swap_chain()
     swapchain_create_info.clipped = VK_TRUE;
     swapchain_create_info.oldSwapchain = VK_NULL_HANDLE;
 
-    VkResult create_swapchain_result = vkCreateSwapchainKHR(device, &swapchain_create_info, NULL, &swapchain);
+    const VkResult create_swapchain_result = vkCreateSwapchainKHR(device, &swapchain_create_info, NULL, &swapchain);
     ASSERT(create_swapchain_result == VK_SUCCESS);
     
     vkGetSwapchainImagesKHR(device, swapchain, &swapchain_images.swapchain_image_count, NULL);
@@ -403,9 +406,61 @@ void tg_vulkan_init_image_views()
         image_view_create_info.components = component_mapping;
         image_view_create_info.subresourceRange = image_subresource_range;
 
-        VkResult create_image_view_result = vkCreateImageView(device, &image_view_create_info, NULL, &swapchain_image_views.swapchain_image_views[i]);
+        const VkResult create_image_view_result = vkCreateImageView(device, &image_view_create_info, NULL, &swapchain_image_views.swapchain_image_views[i]);
         ASSERT(create_image_view_result == VK_SUCCESS);
     }
+}
+
+VkShaderModule tg_vulkan_init_graphics_pipeline_create_shader_module(uint64 size, const char* shader)
+{
+    VkShaderModuleCreateInfo shader_module_create_info = { 0 };
+    shader_module_create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    shader_module_create_info.codeSize = size / sizeof(char);
+    shader_module_create_info.pCode = (const uint32*)shader;
+
+    VkShaderModule shader_module;
+    const VkResult create_shader_module_result = vkCreateShaderModule(device, &shader_module_create_info, NULL, &shader_module);
+    ASSERT(create_shader_module_result == VK_SUCCESS);
+    return shader_module;
+}
+
+void tg_vulkan_init_graphics_pipeline()
+{
+    // TODO: comments for compilation: https://vulkan-tutorial.com/en/Drawing_a_triangle/Graphics_pipeline_basics/Shader_modules
+    uint64 vert_size;
+    char* vert;
+    uint64 frag_size;
+    char* frag;
+    tg_file_io_read("graphics/shaders/vert.spv", &vert_size, &vert);
+    tg_file_io_read("graphics/shaders/frag.spv", &frag_size, &frag);
+
+    VkShaderModule frag_shader_module = tg_vulkan_init_graphics_pipeline_create_shader_module(frag_size, frag);
+    VkShaderModule vert_shader_module = tg_vulkan_init_graphics_pipeline_create_shader_module(vert_size, vert);
+
+    VkPipelineShaderStageCreateInfo pipeline_shader_state_create_info_vert = { 0 };
+    pipeline_shader_state_create_info_vert.stage = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    pipeline_shader_state_create_info_vert.stage = VK_SHADER_STAGE_VERTEX_BIT;
+    pipeline_shader_state_create_info_vert.module = vert_shader_module;
+    pipeline_shader_state_create_info_vert.pName = "main";
+
+    VkPipelineShaderStageCreateInfo pipeline_shader_state_create_info_frag = { 0 };
+    pipeline_shader_state_create_info_frag.stage = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    pipeline_shader_state_create_info_frag.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+    pipeline_shader_state_create_info_frag.module = frag_shader_module;
+    pipeline_shader_state_create_info_frag.pName = "main";
+
+    VkPipelineShaderStageCreateInfo pipeline_shader_stage_create_infos[] = {
+        pipeline_shader_state_create_info_vert,
+        pipeline_shader_state_create_info_frag
+    };
+
+    // TODO: continue: https://vulkan-tutorial.com/en/Drawing_a_triangle/Graphics_pipeline_basics/Fixed_functions
+
+    tg_file_io_free(frag);
+    tg_file_io_free(vert);
+
+    vkDestroyShaderModule(device, frag_shader_module, NULL);
+    vkDestroyShaderModule(device, vert_shader_module, NULL);
 }
 
 void tg_vulkan_init()
@@ -446,8 +501,7 @@ void tg_vulkan_init()
 
     tg_vulkan_init_swap_chain();
     tg_vulkan_init_image_views();
-
-    // https://vulkan-tutorial.com/en/Drawing_a_triangle/Graphics_pipeline_basics/Introduction
+    tg_vulkan_init_graphics_pipeline();
 }
 
 void tg_vulkan_shutdown()

@@ -39,10 +39,12 @@ void tg_platform_get_window_size(uint32* width, uint32* height)
     }
 }
 
+#ifdef TG_DEBUG
 void tg_platform_print(const char* string)
 {
     OutputDebugStringA(string);
 }
+#endif
 
 LRESULT CALLBACK tg_win32_platform_window_proc(
     HWND   window_handle,

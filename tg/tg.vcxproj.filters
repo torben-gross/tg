@@ -5,6 +5,7 @@
     <ClCompile Include="util\tg_string.c" />
     <ClCompile Include="graphics\tg_vulkan.c" />
     <ClCompile Include="math\tg_math_functional.c" />
+    <ClCompile Include="util\tg_file_io.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="util\tg_string.h" />
@@ -12,6 +13,7 @@
     <ClInclude Include="graphics\tg_vulkan.h" />
     <ClInclude Include="platform\tg_platform.h" />
     <ClInclude Include="math\tg_math_functional.h" />
+    <ClInclude Include="util\tg_file_io.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="tg.ruleset" />
