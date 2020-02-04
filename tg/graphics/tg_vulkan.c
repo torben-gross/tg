@@ -71,6 +71,12 @@ VkExtent2D swapchain_extent = { 0 };
 
 tg_vulkan_swapchain_image_views swapchain_image_views = { 0 };
 
+VkRenderPass render_pass = VK_NULL_HANDLE;
+
+VkPipelineLayout pipeline_layout = VK_NULL_HANDLE;
+
+VkPipeline graphics_pipeline;
+
 #ifdef TG_DEBUG
 VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(
     VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
@@ -411,6 +417,38 @@ void tg_vulkan_init_image_views()
     }
 }
 
+void tg_vulkan_init_render_pass()
+{
+    VkAttachmentDescription attachment_description = { 0 };
+    attachment_description.format = swapchain_image_format;
+    attachment_description.samples = VK_SAMPLE_COUNT_1_BIT;
+    attachment_description.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    attachment_description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    attachment_description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachment_description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attachment_description.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    attachment_description.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+    VkAttachmentReference attachment_reference = { 0 };
+    attachment_reference.attachment = 0;
+    attachment_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    VkSubpassDescription subpass_description = { 0 };
+    subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass_description.colorAttachmentCount = 1;
+    subpass_description.pColorAttachments = &attachment_reference;
+
+    VkRenderPassCreateInfo render_pass_create_info = { 0 };
+    render_pass_create_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    render_pass_create_info.attachmentCount = 1;
+    render_pass_create_info.pAttachments = &attachment_description;
+    render_pass_create_info.subpassCount = 1;
+    render_pass_create_info.pSubpasses = &subpass_description;
+
+    VkResult create_render_pass_result = vkCreateRenderPass(device, &render_pass_create_info, NULL, &render_pass);
+    ASSERT(create_render_pass_result == VK_SUCCESS);
+}
+
 VkShaderModule tg_vulkan_init_graphics_pipeline_create_shader_module(uint64 size, const char* shader)
 {
     VkShaderModuleCreateInfo shader_module_create_info = { 0 };
@@ -426,7 +464,7 @@ VkShaderModule tg_vulkan_init_graphics_pipeline_create_shader_module(uint64 size
 
 void tg_vulkan_init_graphics_pipeline()
 {
-    // TODO: comments for compilation: https://vulkan-tutorial.com/en/Drawing_a_triangle/Graphics_pipeline_basics/Shader_modules
+    // TODO: look at comments for simpler compilation of shaders: https://vulkan-tutorial.com/en/Drawing_a_triangle/Graphics_pipeline_basics/Shader_modules
     uint64 vert_size;
     char* vert;
     uint64 frag_size;
@@ -454,7 +492,108 @@ void tg_vulkan_init_graphics_pipeline()
         pipeline_shader_state_create_info_frag
     };
 
-    // TODO: continue: https://vulkan-tutorial.com/en/Drawing_a_triangle/Graphics_pipeline_basics/Fixed_functions
+    VkPipelineVertexInputStateCreateInfo pipeline_vertex_input_state_create_info = { 0 };
+    pipeline_vertex_input_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    pipeline_vertex_input_state_create_info.vertexBindingDescriptionCount = 0;
+    pipeline_vertex_input_state_create_info.pVertexBindingDescriptions = NULL;
+    pipeline_vertex_input_state_create_info.vertexAttributeDescriptionCount = 0;
+    pipeline_vertex_input_state_create_info.pVertexAttributeDescriptions = NULL;
+
+    VkPipelineInputAssemblyStateCreateInfo pipeline_input_assembly_state_create_info = { 0 };
+    pipeline_input_assembly_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    pipeline_input_assembly_state_create_info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    pipeline_input_assembly_state_create_info.primitiveRestartEnable = VK_FALSE;
+
+    VkViewport viewport = { 0 };
+    viewport.x = 0.0f;
+    viewport.y = 0.0f;
+    viewport.width = (float)swapchain_extent.width;
+    viewport.height = (float)swapchain_extent.height;
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+
+    VkRect2D rect = { 0 };
+    rect.offset = (VkOffset2D){ 0, 0 };
+    rect.extent = swapchain_extent;
+
+    VkPipelineViewportStateCreateInfo pipeline_viewport_state_create_info = { 0 };
+    pipeline_viewport_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+    pipeline_viewport_state_create_info.viewportCount = 1;
+    pipeline_viewport_state_create_info.pViewports = &viewport;
+    pipeline_viewport_state_create_info.scissorCount = 1;
+    pipeline_viewport_state_create_info.pScissors = &rect;
+
+    VkPipelineRasterizationStateCreateInfo pipeline_rasterization_state_create_info = { 0 };
+    pipeline_rasterization_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    pipeline_rasterization_state_create_info.depthClampEnable = VK_FALSE;
+    pipeline_rasterization_state_create_info.rasterizerDiscardEnable = VK_FALSE;
+    pipeline_rasterization_state_create_info.polygonMode = VK_POLYGON_MODE_FILL;
+    pipeline_rasterization_state_create_info.cullMode = VK_CULL_MODE_BACK_BIT;
+    pipeline_rasterization_state_create_info.frontFace = VK_FRONT_FACE_CLOCKWISE; // TODO: VK_FRONT_FACE_COUNTER_CLOCKWISE
+    pipeline_rasterization_state_create_info.depthBiasEnable = VK_FALSE;
+    pipeline_rasterization_state_create_info.depthBiasConstantFactor = 0.0f;
+    pipeline_rasterization_state_create_info.depthBiasClamp = 0.0f;
+    pipeline_rasterization_state_create_info.depthBiasSlopeFactor = 0.0f;
+    pipeline_rasterization_state_create_info.lineWidth = 1.0f;
+
+    VkPipelineMultisampleStateCreateInfo pipeline_multisample_state_create_info = { 0 };
+    pipeline_multisample_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    pipeline_multisample_state_create_info.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+    pipeline_multisample_state_create_info.sampleShadingEnable = VK_FALSE;
+    pipeline_multisample_state_create_info.minSampleShading = 1.0f;
+    pipeline_multisample_state_create_info.pSampleMask = NULL;
+    pipeline_multisample_state_create_info.alphaToCoverageEnable = VK_FALSE;
+    pipeline_multisample_state_create_info.alphaToOneEnable = VK_FALSE;
+
+    VkPipelineColorBlendAttachmentState pipeline_color_blend_attachment_state = { 0 };
+    pipeline_color_blend_attachment_state.blendEnable = VK_FALSE;
+    pipeline_color_blend_attachment_state.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+    pipeline_color_blend_attachment_state.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
+    pipeline_color_blend_attachment_state.colorBlendOp = VK_BLEND_OP_ADD;
+    pipeline_color_blend_attachment_state.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+    pipeline_color_blend_attachment_state.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+    pipeline_color_blend_attachment_state.alphaBlendOp = VK_BLEND_OP_ADD;
+    pipeline_color_blend_attachment_state.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+
+    VkPipelineColorBlendStateCreateInfo pipeline_color_blend_state_create_info = { 0 };
+    pipeline_color_blend_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    pipeline_color_blend_state_create_info.logicOpEnable = VK_FALSE;
+    pipeline_color_blend_state_create_info.logicOp = VK_LOGIC_OP_COPY;
+    pipeline_color_blend_state_create_info.attachmentCount = 1;
+    pipeline_color_blend_state_create_info.pAttachments = &pipeline_color_blend_attachment_state;
+    pipeline_color_blend_state_create_info.blendConstants[0] = 0.0f;
+    pipeline_color_blend_state_create_info.blendConstants[1] = 0.0f;
+    pipeline_color_blend_state_create_info.blendConstants[2] = 0.0f;
+    pipeline_color_blend_state_create_info.blendConstants[3] = 0.0f;
+
+    VkPipelineLayoutCreateInfo pipeline_layout_create_info = { 0 };
+    pipeline_layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipeline_layout_create_info.setLayoutCount = 0;
+    pipeline_layout_create_info.pSetLayouts = NULL;
+    pipeline_layout_create_info.pushConstantRangeCount = 0;
+    pipeline_layout_create_info.pPushConstantRanges = NULL;
+
+    VkResult create_pipeline_layout_result = vkCreatePipelineLayout(device, &pipeline_layout_create_info, NULL, &pipeline_layout);
+    ASSERT(create_pipeline_layout_result == VK_SUCCESS);
+
+    VkGraphicsPipelineCreateInfo graphics_pipeline_create_info = { 0 };
+    graphics_pipeline_create_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    graphics_pipeline_create_info.stageCount = 2;
+    graphics_pipeline_create_info.pStages = pipeline_shader_stage_create_infos;
+    graphics_pipeline_create_info.pVertexInputState = &pipeline_vertex_input_state_create_info;
+    graphics_pipeline_create_info.pInputAssemblyState = &pipeline_input_assembly_state_create_info;
+    graphics_pipeline_create_info.pViewportState = &pipeline_viewport_state_create_info;
+    graphics_pipeline_create_info.pRasterizationState = &pipeline_rasterization_state_create_info;
+    graphics_pipeline_create_info.pMultisampleState = &pipeline_multisample_state_create_info;
+    graphics_pipeline_create_info.pColorBlendState = &pipeline_color_blend_state_create_info;
+    graphics_pipeline_create_info.layout = pipeline_layout;
+    graphics_pipeline_create_info.renderPass = render_pass;
+    graphics_pipeline_create_info.subpass = 0;
+    graphics_pipeline_create_info.basePipelineHandle = VK_NULL_HANDLE;
+    graphics_pipeline_create_info.basePipelineHandle = VK_NULL_HANDLE;
+    graphics_pipeline_create_info.basePipelineIndex = -1;
+
+    VkResult create_graphics_pipeline_result = vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &graphics_pipeline_create_info, NULL, &graphics_pipeline);
 
     tg_file_io_free(frag);
     tg_file_io_free(vert);
@@ -501,11 +640,17 @@ void tg_vulkan_init()
 
     tg_vulkan_init_swap_chain();
     tg_vulkan_init_image_views();
+    tg_vulkan_init_render_pass();
     tg_vulkan_init_graphics_pipeline();
+
+    // TODO: continue: https://vulkan-tutorial.com/en/Drawing_a_triangle/Drawing/Framebuffers
 }
 
 void tg_vulkan_shutdown()
 {
+    vkDestroyPipeline(device, graphics_pipeline, NULL);
+    vkDestroyPipelineLayout(device, pipeline_layout, NULL);
+    vkDestroyRenderPass(device, render_pass, NULL);
     for (uint32 i = 0; i < swapchain_image_views.swapchain_image_view_count; i++)
     {
         vkDestroyImageView(device, swapchain_image_views.swapchain_image_views[i], NULL);
