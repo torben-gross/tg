@@ -39,15 +39,21 @@ typedef struct
 
 typedef struct
 {
-    uint32 swapchain_image_count;
+    uint32 count;
     VkImage* swapchain_images;
 } tg_vulkan_swapchain_images;
 
 typedef struct
 {
-    uint32 swapchain_image_view_count;
+    uint32 count;
     VkImageView* swapchain_image_views;
 } tg_vulkan_swapchain_image_views;
+
+typedef struct
+{
+    uint32 count;
+    VkFramebuffer* swapchain_framebuffers;
+} tg_vulkan_swapchain_framebuffers;
 
 VkInstance instance = VK_NULL_HANDLE;
 
@@ -76,6 +82,8 @@ VkRenderPass render_pass = VK_NULL_HANDLE;
 VkPipelineLayout pipeline_layout = VK_NULL_HANDLE;
 
 VkPipeline graphics_pipeline;
+
+tg_vulkan_swapchain_framebuffers swapchain_framebuffers = { 0 };
 
 #ifdef TG_DEBUG
 VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(
@@ -378,18 +386,18 @@ void tg_vulkan_init_swap_chain()
     const VkResult create_swapchain_result = vkCreateSwapchainKHR(device, &swapchain_create_info, NULL, &swapchain);
     ASSERT(create_swapchain_result == VK_SUCCESS);
     
-    vkGetSwapchainImagesKHR(device, swapchain, &swapchain_images.swapchain_image_count, NULL);
-    swapchain_images.swapchain_images = malloc(swapchain_images.swapchain_image_count * sizeof(*swapchain_images.swapchain_images));
-    vkGetSwapchainImagesKHR(device, swapchain, &swapchain_images.swapchain_image_count, swapchain_images.swapchain_images);
+    vkGetSwapchainImagesKHR(device, swapchain, &swapchain_images.count, NULL);
+    swapchain_images.swapchain_images = malloc(swapchain_images.count * sizeof(*swapchain_images.swapchain_images));
+    vkGetSwapchainImagesKHR(device, swapchain, &swapchain_images.count, swapchain_images.swapchain_images);
 
     swapchain_image_format = surface_format.format;
 }
 
 void tg_vulkan_init_image_views()
 {
-    swapchain_image_views.swapchain_image_view_count = swapchain_images.swapchain_image_count;
-    swapchain_image_views.swapchain_image_views = malloc(swapchain_image_views.swapchain_image_view_count * sizeof(*swapchain_image_views.swapchain_image_views));
-    for (uint32 i = 0; i < swapchain_image_views.swapchain_image_view_count; i++)
+    swapchain_image_views.count = swapchain_images.count;
+    swapchain_image_views.swapchain_image_views = malloc(swapchain_image_views.count * sizeof(*swapchain_image_views.swapchain_image_views));
+    for (uint32 i = 0; i < swapchain_image_views.count; i++)
     {
         VkComponentMapping component_mapping = { 0 };
         component_mapping.r = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -602,6 +610,26 @@ void tg_vulkan_init_graphics_pipeline()
     vkDestroyShaderModule(device, vert_shader_module, NULL);
 }
 
+void tg_vulkan_init_framebuffers()
+{
+    swapchain_framebuffers.count = swapchain_image_views.count;
+    swapchain_framebuffers.swapchain_framebuffers = malloc(swapchain_image_views.count * sizeof(*swapchain_framebuffers.swapchain_framebuffers));
+    for (uint32 i = 0; i < swapchain_image_views.count; i++)
+    {
+        VkFramebufferCreateInfo framebuffer_create_info = { 0 };
+        framebuffer_create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        framebuffer_create_info.renderPass = render_pass;
+        framebuffer_create_info.attachmentCount = 1;
+        framebuffer_create_info.pAttachments = swapchain_image_views.swapchain_image_views + i;
+        framebuffer_create_info.width = swapchain_extent.width;
+        framebuffer_create_info.height = swapchain_extent.height;
+        framebuffer_create_info.layers = 1;
+
+        VkResult create_framebuffer_result = vkCreateFramebuffer(device, &framebuffer_create_info, NULL, swapchain_framebuffers.swapchain_framebuffers + i);
+        ASSERT(create_framebuffer_result == VK_SUCCESS);
+    }
+}
+
 void tg_vulkan_init()
 {
 #ifdef TG_DEBUG
@@ -642,16 +670,22 @@ void tg_vulkan_init()
     tg_vulkan_init_image_views();
     tg_vulkan_init_render_pass();
     tg_vulkan_init_graphics_pipeline();
+    tg_vulkan_init_framebuffers();
 
-    // TODO: continue: https://vulkan-tutorial.com/en/Drawing_a_triangle/Drawing/Framebuffers
+    // TODO: continue: https://vulkan-tutorial.com/en/Drawing_a_triangle/Drawing/Command_buffers
 }
 
 void tg_vulkan_shutdown()
 {
+    for (uint32 i = 0; i < swapchain_framebuffers.count; i++)
+    {
+        vkDestroyFramebuffer(device, swapchain_framebuffers.swapchain_framebuffers[i], NULL);
+    }
+    free(swapchain_framebuffers.swapchain_framebuffers);
     vkDestroyPipeline(device, graphics_pipeline, NULL);
     vkDestroyPipelineLayout(device, pipeline_layout, NULL);
     vkDestroyRenderPass(device, render_pass, NULL);
-    for (uint32 i = 0; i < swapchain_image_views.swapchain_image_view_count; i++)
+    for (uint32 i = 0; i < swapchain_image_views.count; i++)
     {
         vkDestroyImageView(device, swapchain_image_views.swapchain_image_views[i], NULL);
     }
