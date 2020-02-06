@@ -8,13 +8,12 @@
 #include <windows.h>
 #include <sys/timeb.h>
 
-
 bool running = true;
-HWND handle_window = NULL;
+HWND window_handle = NULL;
 
 void* tg_platform_get_window_handle()
 {
-    return handle_window;
+    return window_handle;
 }
 
 void tg_platform_get_screen_size(uint32* width, uint32* height)
@@ -31,7 +30,7 @@ void tg_platform_get_screen_size(uint32* width, uint32* height)
 void tg_platform_get_window_size(uint32* width, uint32* height)
 {
     RECT rect;
-    BOOL result = GetWindowRect(handle_window, &rect);
+    BOOL result = GetWindowRect(window_handle, &rect);
     if (result)
     {
         *width = rect.right - rect.left;
@@ -80,20 +79,19 @@ LRESULT CALLBACK tg_win32_platform_window_proc(
 }
 
 int CALLBACK WinMain(
-    _In_     HINSTANCE handle_instance,
-    _In_opt_ HINSTANCE handle_prev_instance,
+    _In_     HINSTANCE instance_handle,
+    _In_opt_ HINSTANCE prev_instance_handle,
     _In_     LPSTR     cmd_line,
     _In_     int       show_cmd
 )
 {
-    // initialize window
     const char* window_class_id     = "win32_platform";
     const char* window_title        = "This is a window title!";
 
     WNDCLASSEXA window_class_info   = { 0 };
     window_class_info.cbSize        = sizeof(window_class_info);
     window_class_info.lpfnWndProc   = tg_win32_platform_window_proc;
-    window_class_info.hInstance     = handle_instance;
+    window_class_info.hInstance     = instance_handle;
     window_class_info.lpszClassName = window_class_id;
 
     if (!RegisterClassExA(&window_class_info))
@@ -104,25 +102,23 @@ int CALLBACK WinMain(
 
     uint32 w, h;
     tg_platform_get_screen_size(&w, &h);
-    handle_window = CreateWindowExA(
+    window_handle = CreateWindowExA(
         0, window_class_id, window_title, WS_OVERLAPPEDWINDOW,
         0, 0, w, h,
-        NULL, NULL, handle_instance, NULL
+        NULL, NULL, instance_handle, NULL
     );
 
-    if (handle_window == NULL)
+    if (window_handle == NULL)
     {
         DebugBreak();
         return EXIT_FAILURE;
     }
 
-    ShowWindow(handle_window, show_cmd);
-    UpdateWindow(handle_window);
+    ShowWindow(window_handle, show_cmd);
+    UpdateWindow(window_handle);
 
-    // initialize vulkan
     tg_vulkan_init();
 
-    // game loop
     char buf[256];
     struct timeb start, end;
     uint64 fps = 0;
@@ -155,9 +151,4 @@ int CALLBACK WinMain(
     tg_vulkan_shutdown();
 
     return (int)msg.wParam;
-}
-
-void test()
-{
-
 }
