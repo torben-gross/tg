@@ -40,25 +40,31 @@ typedef struct
 typedef struct
 {
     uint32 count;
-    VkImage* swapchain_images;
+    VkImage* images;
 } tg_vulkan_swapchain_images;
 
 typedef struct
 {
     uint32 count;
-    VkImageView* swapchain_image_views;
+    VkImageView* image_views;
 } tg_vulkan_swapchain_image_views;
 
 typedef struct
 {
     uint32 count;
-    VkFramebuffer* swapchain_framebuffers;
+    VkFramebuffer* framebuffers;
 } tg_vulkan_swapchain_framebuffers;
+
+typedef struct
+{
+    uint32 count;
+    VkCommandBuffer* command_buffers;
+} tg_vulkan_command_buffers;
 
 VkInstance instance = VK_NULL_HANDLE;
 
 #ifdef TG_DEBUG
-VkDebugUtilsMessengerEXT debug_utils_messenger;
+VkDebugUtilsMessengerEXT debug_utils_messenger = VK_NULL_HANDLE;
 #endif
 
 VkSurfaceKHR surface = VK_NULL_HANDLE;
@@ -71,19 +77,26 @@ VkQueue graphics_queue = VK_NULL_HANDLE;
 VkQueue present_queue = VK_NULL_HANDLE;
 
 VkSwapchainKHR swapchain = VK_NULL_HANDLE;
-tg_vulkan_swapchain_images swapchain_images = { 0 };
+tg_vulkan_swapchain_images images = { 0 };
 VkFormat swapchain_image_format = VK_FORMAT_UNDEFINED;
 VkExtent2D swapchain_extent = { 0 };
 
-tg_vulkan_swapchain_image_views swapchain_image_views = { 0 };
+tg_vulkan_swapchain_image_views image_views = { 0 };
 
 VkRenderPass render_pass = VK_NULL_HANDLE;
 
 VkPipelineLayout pipeline_layout = VK_NULL_HANDLE;
 
-VkPipeline graphics_pipeline;
+VkPipeline graphics_pipeline = VK_NULL_HANDLE;
 
-tg_vulkan_swapchain_framebuffers swapchain_framebuffers = { 0 };
+tg_vulkan_swapchain_framebuffers framebuffers = { 0 };
+
+VkCommandPool command_pool = VK_NULL_HANDLE;
+
+tg_vulkan_command_buffers command_buffers = { 0 };
+
+VkSemaphore image_available_semaphore = VK_NULL_HANDLE;
+VkSemaphore rendering_finished_semaphore = VK_NULL_HANDLE;
 
 #ifdef TG_DEBUG
 VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(
@@ -268,7 +281,7 @@ void tg_vulkan_init_device()
 
     VkPhysicalDeviceFeatures physical_device_features = { 0 };
 
-    uint32 queue_family_count = sizeof(tg_vulkan_queue_family_indices) / sizeof(uint32);
+    const uint32 queue_family_count = sizeof(tg_vulkan_queue_family_indices) / sizeof(uint32);
     VkDeviceQueueCreateInfo* device_queue_create_infos = malloc(queue_family_count * sizeof(*device_queue_create_infos));
     ASSERT(device_queue_create_infos);
     for (uint32 i = 0; i < queue_family_count; i++)
@@ -386,18 +399,18 @@ void tg_vulkan_init_swap_chain()
     const VkResult create_swapchain_result = vkCreateSwapchainKHR(device, &swapchain_create_info, NULL, &swapchain);
     ASSERT(create_swapchain_result == VK_SUCCESS);
     
-    vkGetSwapchainImagesKHR(device, swapchain, &swapchain_images.count, NULL);
-    swapchain_images.swapchain_images = malloc(swapchain_images.count * sizeof(*swapchain_images.swapchain_images));
-    vkGetSwapchainImagesKHR(device, swapchain, &swapchain_images.count, swapchain_images.swapchain_images);
+    vkGetSwapchainImagesKHR(device, swapchain, &images.count, NULL);
+    images.images = malloc(images.count * sizeof(*images.images));
+    vkGetSwapchainImagesKHR(device, swapchain, &images.count, images.images);
 
     swapchain_image_format = surface_format.format;
 }
 
 void tg_vulkan_init_image_views()
 {
-    swapchain_image_views.count = swapchain_images.count;
-    swapchain_image_views.swapchain_image_views = malloc(swapchain_image_views.count * sizeof(*swapchain_image_views.swapchain_image_views));
-    for (uint32 i = 0; i < swapchain_image_views.count; i++)
+    image_views.count = images.count;
+    image_views.image_views = malloc(image_views.count * sizeof(*image_views.image_views));
+    for (uint32 i = 0; i < image_views.count; i++)
     {
         VkComponentMapping component_mapping = { 0 };
         component_mapping.r = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -414,13 +427,13 @@ void tg_vulkan_init_image_views()
 
         VkImageViewCreateInfo image_view_create_info = { 0 };
         image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        image_view_create_info.image = swapchain_images.swapchain_images[i];
+        image_view_create_info.image = images.images[i];
         image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
         image_view_create_info.format = swapchain_image_format;
         image_view_create_info.components = component_mapping;
         image_view_create_info.subresourceRange = image_subresource_range;
 
-        const VkResult create_image_view_result = vkCreateImageView(device, &image_view_create_info, NULL, &swapchain_image_views.swapchain_image_views[i]);
+        const VkResult create_image_view_result = vkCreateImageView(device, &image_view_create_info, NULL, &image_views.image_views[i]);
         ASSERT(create_image_view_result == VK_SUCCESS);
     }
 }
@@ -446,14 +459,24 @@ void tg_vulkan_init_render_pass()
     subpass_description.colorAttachmentCount = 1;
     subpass_description.pColorAttachments = &attachment_reference;
 
+    VkSubpassDependency subpass_dependency = { 0 };
+    subpass_dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+    subpass_dependency.dstSubpass = 0;
+    subpass_dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    subpass_dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    subpass_dependency.srcAccessMask = 0;
+    subpass_dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
     VkRenderPassCreateInfo render_pass_create_info = { 0 };
     render_pass_create_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     render_pass_create_info.attachmentCount = 1;
     render_pass_create_info.pAttachments = &attachment_description;
     render_pass_create_info.subpassCount = 1;
     render_pass_create_info.pSubpasses = &subpass_description;
+    render_pass_create_info.dependencyCount = 1;
+    render_pass_create_info.pDependencies = &subpass_dependency;
 
-    VkResult create_render_pass_result = vkCreateRenderPass(device, &render_pass_create_info, NULL, &render_pass);
+    const VkResult create_render_pass_result = vkCreateRenderPass(device, &render_pass_create_info, NULL, &render_pass);
     ASSERT(create_render_pass_result == VK_SUCCESS);
 }
 
@@ -480,8 +503,8 @@ void tg_vulkan_init_graphics_pipeline()
     tg_file_io_read("graphics/shaders/vert.spv", &vert_size, &vert);
     tg_file_io_read("graphics/shaders/frag.spv", &frag_size, &frag);
 
-    VkShaderModule frag_shader_module = tg_vulkan_init_graphics_pipeline_create_shader_module(frag_size, frag);
-    VkShaderModule vert_shader_module = tg_vulkan_init_graphics_pipeline_create_shader_module(vert_size, vert);
+    const VkShaderModule frag_shader_module = tg_vulkan_init_graphics_pipeline_create_shader_module(frag_size, frag);
+    const VkShaderModule vert_shader_module = tg_vulkan_init_graphics_pipeline_create_shader_module(vert_size, vert);
 
     VkPipelineShaderStageCreateInfo pipeline_shader_state_create_info_vert = { 0 };
     pipeline_shader_state_create_info_vert.stage = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -495,7 +518,7 @@ void tg_vulkan_init_graphics_pipeline()
     pipeline_shader_state_create_info_frag.module = frag_shader_module;
     pipeline_shader_state_create_info_frag.pName = "main";
 
-    VkPipelineShaderStageCreateInfo pipeline_shader_stage_create_infos[] = {
+    const VkPipelineShaderStageCreateInfo pipeline_shader_stage_create_infos[] = {
         pipeline_shader_state_create_info_vert,
         pipeline_shader_state_create_info_frag
     };
@@ -581,7 +604,7 @@ void tg_vulkan_init_graphics_pipeline()
     pipeline_layout_create_info.pushConstantRangeCount = 0;
     pipeline_layout_create_info.pPushConstantRanges = NULL;
 
-    VkResult create_pipeline_layout_result = vkCreatePipelineLayout(device, &pipeline_layout_create_info, NULL, &pipeline_layout);
+    const VkResult create_pipeline_layout_result = vkCreatePipelineLayout(device, &pipeline_layout_create_info, NULL, &pipeline_layout);
     ASSERT(create_pipeline_layout_result == VK_SUCCESS);
 
     VkGraphicsPipelineCreateInfo graphics_pipeline_create_info = { 0 };
@@ -601,7 +624,7 @@ void tg_vulkan_init_graphics_pipeline()
     graphics_pipeline_create_info.basePipelineHandle = VK_NULL_HANDLE;
     graphics_pipeline_create_info.basePipelineIndex = -1;
 
-    VkResult create_graphics_pipeline_result = vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &graphics_pipeline_create_info, NULL, &graphics_pipeline);
+    const VkResult create_graphics_pipeline_result = vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &graphics_pipeline_create_info, NULL, &graphics_pipeline);
 
     tg_file_io_free(frag);
     tg_file_io_free(vert);
@@ -612,22 +635,88 @@ void tg_vulkan_init_graphics_pipeline()
 
 void tg_vulkan_init_framebuffers()
 {
-    swapchain_framebuffers.count = swapchain_image_views.count;
-    swapchain_framebuffers.swapchain_framebuffers = malloc(swapchain_image_views.count * sizeof(*swapchain_framebuffers.swapchain_framebuffers));
-    for (uint32 i = 0; i < swapchain_image_views.count; i++)
+    framebuffers.count = image_views.count;
+    framebuffers.framebuffers = malloc(image_views.count * sizeof(*framebuffers.framebuffers));
+
+    for (uint32 i = 0; i < image_views.count; i++)
     {
         VkFramebufferCreateInfo framebuffer_create_info = { 0 };
         framebuffer_create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
         framebuffer_create_info.renderPass = render_pass;
         framebuffer_create_info.attachmentCount = 1;
-        framebuffer_create_info.pAttachments = swapchain_image_views.swapchain_image_views + i;
+        framebuffer_create_info.pAttachments = image_views.image_views + i;
         framebuffer_create_info.width = swapchain_extent.width;
         framebuffer_create_info.height = swapchain_extent.height;
         framebuffer_create_info.layers = 1;
 
-        VkResult create_framebuffer_result = vkCreateFramebuffer(device, &framebuffer_create_info, NULL, swapchain_framebuffers.swapchain_framebuffers + i);
+        const VkResult create_framebuffer_result = vkCreateFramebuffer(device, &framebuffer_create_info, NULL, framebuffers.framebuffers + i);
         ASSERT(create_framebuffer_result == VK_SUCCESS);
     }
+}
+
+void tg_vulkan_init_command_pool()
+{
+    VkCommandPoolCreateInfo command_pool_create_info = { 0 };
+    command_pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    command_pool_create_info.queueFamilyIndex = queue_family_indices.graphics_family;
+
+    const VkResult create_command_pool_result = vkCreateCommandPool(device, &command_pool_create_info, NULL, &command_pool);
+    ASSERT(create_command_pool_result == VK_SUCCESS);
+}
+
+void tg_vulkan_init_command_buffers()
+{
+    command_buffers.count = framebuffers.count;
+    command_buffers.command_buffers = malloc(framebuffers.count * sizeof(*command_buffers.command_buffers));
+
+    VkCommandBufferAllocateInfo command_buffer_allocate_info = { 0 };
+    command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    command_buffer_allocate_info.commandPool = command_pool;
+    command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    command_buffer_allocate_info.commandBufferCount = command_buffers.count;
+
+    VkResult allocate_command_buffers_result = vkAllocateCommandBuffers(device, &command_buffer_allocate_info, command_buffers.command_buffers);
+    ASSERT(allocate_command_buffers_result == VK_SUCCESS);
+
+    for (uint32 i = 0; i < command_buffers.count; i++)
+    {
+        VkCommandBufferBeginInfo command_buffer_begin_info = { 0 };
+        command_buffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        command_buffer_begin_info.pInheritanceInfo = NULL;
+
+        const VkResult begin_command_buffer_result = vkBeginCommandBuffer(command_buffers.command_buffers[i], &command_buffer_begin_info);
+        ASSERT(begin_command_buffer_result == VK_SUCCESS);
+
+        const VkClearValue clear_value = { 0.0f, 0.0f, 0.0f, 1.0f };
+
+        VkRenderPassBeginInfo render_pass_begin_info = { 0 };
+        render_pass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        render_pass_begin_info.renderPass = render_pass;
+        render_pass_begin_info.framebuffer = framebuffers.framebuffers[i];
+        render_pass_begin_info.renderArea.offset = (VkOffset2D){ 0, 0 };
+        render_pass_begin_info.renderArea.extent = swapchain_extent;
+        render_pass_begin_info.clearValueCount = 1;
+        render_pass_begin_info.pClearValues = &clear_value;
+
+        vkCmdBeginRenderPass(command_buffers.command_buffers[i], &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
+        vkCmdBindPipeline(command_buffers.command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline);
+        vkCmdDraw(command_buffers.command_buffers[i], 3, 1, 0, 0);
+        vkCmdEndRenderPass(command_buffers.command_buffers[i]);
+        const VkResult end_command_buffer_result = vkEndCommandBuffer(command_buffers.command_buffers[i]);
+        ASSERT(end_command_buffer_result == VK_SUCCESS);
+    }
+}
+
+void tg_vulkan_init_semaphores()
+{
+    VkSemaphoreCreateInfo semaphore_create_info = { 0 };
+    semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+    VkResult create_semaphore_result;
+    create_semaphore_result = vkCreateSemaphore(device, &semaphore_create_info, NULL, &image_available_semaphore);
+    ASSERT(create_semaphore_result == VK_SUCCESS);
+    create_semaphore_result = vkCreateSemaphore(device, &semaphore_create_info, NULL, &rendering_finished_semaphore);
+    ASSERT(create_semaphore_result == VK_SUCCESS);
 }
 
 void tg_vulkan_init()
@@ -671,26 +760,65 @@ void tg_vulkan_init()
     tg_vulkan_init_render_pass();
     tg_vulkan_init_graphics_pipeline();
     tg_vulkan_init_framebuffers();
+    tg_vulkan_init_command_pool();
+    tg_vulkan_init_command_buffers();
+    tg_vulkan_init_semaphores();
+}
 
-    // TODO: continue: https://vulkan-tutorial.com/en/Drawing_a_triangle/Drawing/Command_buffers
+void tg_vulkan_render()
+{
+    uint32 next_image;
+    vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, image_available_semaphore, VK_NULL_HANDLE, &next_image);
+
+    const VkSemaphore wait_semaphores[] = { image_available_semaphore };
+    const VkPipelineStageFlags wait_dst_stage_mask[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+    const VkSemaphore signal_semaphores[] = { rendering_finished_semaphore };
+
+    VkSubmitInfo submit_info = { 0 };
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.waitSemaphoreCount = 1;
+    submit_info.pWaitSemaphores = wait_semaphores;
+    submit_info.pWaitDstStageMask = wait_dst_stage_mask;
+    submit_info.commandBufferCount = 1;
+    submit_info.pCommandBuffers = &command_buffers.command_buffers[next_image];
+    submit_info.signalSemaphoreCount = 1;
+    submit_info.pSignalSemaphores = signal_semaphores;
+
+    const VkResult queue_submit_result = vkQueueSubmit(graphics_queue, 1, &submit_info, VK_NULL_HANDLE);
+    ASSERT(queue_submit_result == VK_SUCCESS);
+
+    VkPresentInfoKHR present_info = { 0 };
+    present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    present_info.waitSemaphoreCount = 1;
+    present_info.pWaitSemaphores = signal_semaphores;
+    present_info.swapchainCount = 1;
+    present_info.pSwapchains = &swapchain;
+    present_info.pImageIndices = &next_image;
+    present_info.pResults = NULL;
+
+    vkQueuePresentKHR(present_queue, &present_info);
 }
 
 void tg_vulkan_shutdown()
 {
-    for (uint32 i = 0; i < swapchain_framebuffers.count; i++)
+    vkDestroySemaphore(device, rendering_finished_semaphore, NULL);
+    vkDestroySemaphore(device, image_available_semaphore, NULL);
+    free(command_buffers.command_buffers);
+    vkDestroyCommandPool(device, command_pool, NULL);
+    for (uint32 i = 0; i < framebuffers.count; i++)
     {
-        vkDestroyFramebuffer(device, swapchain_framebuffers.swapchain_framebuffers[i], NULL);
+        vkDestroyFramebuffer(device, framebuffers.framebuffers[i], NULL);
     }
-    free(swapchain_framebuffers.swapchain_framebuffers);
+    free(framebuffers.framebuffers);
     vkDestroyPipeline(device, graphics_pipeline, NULL);
     vkDestroyPipelineLayout(device, pipeline_layout, NULL);
     vkDestroyRenderPass(device, render_pass, NULL);
-    for (uint32 i = 0; i < swapchain_image_views.count; i++)
+    for (uint32 i = 0; i < image_views.count; i++)
     {
-        vkDestroyImageView(device, swapchain_image_views.swapchain_image_views[i], NULL);
+        vkDestroyImageView(device, image_views.image_views[i], NULL);
     }
-    free(swapchain_image_views.swapchain_image_views);
-    free(swapchain_images.swapchain_images);
+    free(image_views.image_views);
+    free(images.images);
     vkDestroySwapchainKHR(device, swapchain, NULL);
     vkDestroyDevice(device, NULL);
 #ifdef TG_DEBUG

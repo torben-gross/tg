@@ -130,7 +130,13 @@ int CALLBACK WinMain(
     MSG msg = { 0 };
     while (running)
     {
-        while (PeekMessageA(&msg, NULL, 0, 0, PM_REMOVE));
+        while (PeekMessageA(&msg, NULL, 0, 0, PM_REMOVE))
+        {
+            TranslateMessage(&msg);
+            DispatchMessageA(&msg);
+        }
+        tg_vulkan_render();
+
         ftime(&end);
         float delta_time = (1000.0f * (end.time - start.time) + (end.millitm - start.millitm));
         if (delta_time > 1000.0f)
@@ -143,9 +149,6 @@ int CALLBACK WinMain(
             fps = 0;
         }
         fps++;
-
-        TranslateMessage(&msg);
-        DispatchMessageA(&msg);
     }
 
     // shutdown
