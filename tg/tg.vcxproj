@@ -94,27 +94,29 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="graphics\tg_vulkan.c" />
-    <ClCompile Include="math\tg_math_functional.c" />
-    <ClCompile Include="math\tg_math_mat4f.c" />
-    <ClCompile Include="math\tg_math_vec2f.c" />
-    <ClCompile Include="math\tg_math_vec3f.c" />
-    <ClCompile Include="math\tg_math_vec4f.c" />
+    <ClCompile Include="math\tg_algorithm.c" />
+    <ClCompile Include="math\tg_mat3f.c" />
+    <ClCompile Include="math\tg_mat4f.c" />
+    <ClCompile Include="math\tg_vec2f.c" />
+    <ClCompile Include="math\tg_vec3f.c" />
+    <ClCompile Include="math\tg_vec4f.c" />
+    <ClCompile Include="platform\tg_allocator.c" />
     <ClCompile Include="platform\tg_win32_platform.c" />
     <ClCompile Include="util\tg_file_io.c" />
-    <ClCompile Include="util\tg_string.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="graphics\tg_vertex.h" />
     <ClInclude Include="graphics\tg_vulkan.h" />
-    <ClInclude Include="math\tg_math_functional.h" />
-    <ClInclude Include="math\tg_math_mat4f.h" />
-    <ClInclude Include="math\tg_math_vec2f.h" />
-    <ClInclude Include="math\tg_math_vec3f.h" />
-    <ClInclude Include="math\tg_math_vec4f.h" />
+    <ClInclude Include="math\tg_algorithm.h" />
+    <ClInclude Include="math\tg_mat3f.h" />
+    <ClInclude Include="math\tg_mat4f.h" />
+    <ClInclude Include="math\tg_vec2f.h" />
+    <ClInclude Include="math\tg_vec3f.h" />
+    <ClInclude Include="math\tg_vec4f.h" />
+    <ClInclude Include="platform\tg_allocator.h" />
     <ClInclude Include="platform\tg_platform.h" />
     <ClInclude Include="tg_common.h" />
     <ClInclude Include="util\tg_file_io.h" />
-    <ClInclude Include="util\tg_string.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="tg.ruleset" />

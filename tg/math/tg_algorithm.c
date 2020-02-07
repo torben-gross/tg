@@ -1,4 +1,4 @@
-#include "tg_math_functional.h"
+#include "tg_algorithm.h"
 
 uint32 tg_uint32_min(uint32 a, uint32 b)
 {

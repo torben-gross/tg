@@ -1,9 +1,10 @@
 #include "tg_vulkan.h"
 
 #include "tg_vertex.h"
+#include "tg/math/tg_algorithm.h"
+#include "tg/platform/tg_allocator.h"
 #include "tg/platform/tg_platform.h"
 #include "tg/util/tg_file_io.h"
-#include "tg/math/tg_math_functional.h"
 #include <stdbool.h>
 #include <stdlib.h>
 
@@ -201,7 +202,7 @@ void tg_vulkan_init_physical_device_find_queue_family_indices(VkPhysicalDevice p
     uint32 queue_family_count;
     vkGetPhysicalDeviceQueueFamilyProperties(pd, &queue_family_count, NULL);
     ASSERT(queue_family_count);
-    VkQueueFamilyProperties* queue_family_properties = malloc(queue_family_count * sizeof(*queue_family_properties));
+    VkQueueFamilyProperties* queue_family_properties = glob_alloc(queue_family_count * sizeof(*queue_family_properties));
     vkGetPhysicalDeviceQueueFamilyProperties(pd, &queue_family_count, queue_family_properties);
 
     bool supports_graphics_family = false;
@@ -237,7 +238,7 @@ bool tg_vulkan_init_physical_device_supports_extensions(VkPhysicalDevice pd)
 {
     uint32 device_extension_property_count;
     vkEnumerateDeviceExtensionProperties(pd, NULL, &device_extension_property_count, NULL);
-    VkExtensionProperties* device_extension_properties = malloc(device_extension_property_count * sizeof(*device_extension_properties));
+    VkExtensionProperties* device_extension_properties = glob_alloc(device_extension_property_count * sizeof(*device_extension_properties));
     vkEnumerateDeviceExtensionProperties(pd, NULL, &device_extension_property_count, device_extension_properties);
 
     bool supports_extensions = true;
@@ -263,7 +264,7 @@ void tg_vulkan_init_physical_device()
     uint32 physical_device_count;
     vkEnumeratePhysicalDevices(instance, &physical_device_count, NULL);
     ASSERT(physical_device_count);
-    VkPhysicalDevice* physical_devices = malloc(physical_device_count * sizeof(*physical_devices));
+    VkPhysicalDevice* physical_devices = glob_alloc(physical_device_count * sizeof(*physical_devices));
     ASSERT(physical_devices);
     vkEnumeratePhysicalDevices(instance, &physical_device_count, physical_devices);
 
@@ -312,7 +313,7 @@ void tg_vulkan_init_device()
     VkPhysicalDeviceFeatures physical_device_features = { 0 };
 
     const uint32 queue_family_count = sizeof(tg_vulkan_queue_family_indices) / sizeof(uint32); // TODO: on the stack
-    VkDeviceQueueCreateInfo* device_queue_create_infos = malloc(queue_family_count * sizeof(*device_queue_create_infos));
+    VkDeviceQueueCreateInfo* device_queue_create_infos = glob_alloc(queue_family_count * sizeof(*device_queue_create_infos));
     ASSERT(device_queue_create_infos);
     for (uint32 i = 0; i < queue_family_count; i++)
     {
@@ -347,7 +348,7 @@ void tg_vulkan_init_swapchain()
     uint32 surface_format_count;
     vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &surface_format_count, NULL);
     ASSERT(surface_format_count);
-    VkSurfaceFormatKHR* surface_formats = malloc(surface_format_count * sizeof(*surface_formats));
+    VkSurfaceFormatKHR* surface_formats = glob_alloc(surface_format_count * sizeof(*surface_formats));
     vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &surface_format_count, surface_formats);
     VkSurfaceFormatKHR surface_format = surface_formats[0];
     for (uint32 i = 0; i < surface_format_count; i++)
@@ -363,7 +364,7 @@ void tg_vulkan_init_swapchain()
     uint32 present_mode_count;
     vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &present_mode_count, NULL);
     ASSERT(present_mode_count);
-    VkPresentModeKHR* present_modes = malloc(present_mode_count * sizeof(*present_modes));
+    VkPresentModeKHR* present_modes = glob_alloc(present_mode_count * sizeof(*present_modes));
     vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &present_mode_count, present_modes);
     VkPresentModeKHR present_mode = VK_PRESENT_MODE_FIFO_KHR;
     for (uint32 i = 0; i < present_mode_count; i++)
@@ -428,7 +429,7 @@ void tg_vulkan_init_swapchain()
     VK_CALL(vkCreateSwapchainKHR(device, &swapchain_create_info, NULL, &swapchain));
     
     vkGetSwapchainImagesKHR(device, swapchain, &images.count, NULL);
-    images.images = malloc(images.count * sizeof(*images.images));
+    images.images = glob_alloc(images.count * sizeof(*images.images));
     vkGetSwapchainImagesKHR(device, swapchain, &images.count, images.images);
 
     swapchain_image_format = surface_format.format;
@@ -437,7 +438,7 @@ void tg_vulkan_init_swapchain()
 void tg_vulkan_init_image_views()
 {
     image_views.count = images.count;
-    image_views.image_views = malloc(image_views.count * sizeof(*image_views.image_views));
+    image_views.image_views = glob_alloc(image_views.count * sizeof(*image_views.image_views));
     for (uint32 i = 0; i < image_views.count; i++)
     {
         VkComponentMapping component_mapping = { 0 };
@@ -675,7 +676,7 @@ void tg_vulkan_init_graphics_pipeline()
 void tg_vulkan_init_framebuffers()
 {
     framebuffers.count = image_views.count;
-    framebuffers.framebuffers = malloc(image_views.count * sizeof(*framebuffers.framebuffers));
+    framebuffers.framebuffers = glob_alloc(image_views.count * sizeof(*framebuffers.framebuffers));
 
     for (uint32 i = 0; i < image_views.count; i++)
     {
@@ -844,7 +845,7 @@ void tg_vulkan_init_index_buffer()
 void tg_vulkan_init_command_buffers()
 {
     command_buffers.count = framebuffers.count;
-    command_buffers.command_buffers = malloc(framebuffers.count * sizeof(*command_buffers.command_buffers));
+    command_buffers.command_buffers = glob_alloc(framebuffers.count * sizeof(*command_buffers.command_buffers));
 
     VkCommandBufferAllocateInfo command_buffer_allocate_info = { 0 };
     command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -887,7 +888,7 @@ void tg_vulkan_init_command_buffers()
 void tg_vulkan_init_semaphores_and_fences()
 {
     images_in_flight.count = images.count;
-    images_in_flight.fences = malloc(images.count * sizeof(*images_in_flight.fences));
+    images_in_flight.fences = glob_alloc(images.count * sizeof(*images_in_flight.fences));
     memset(images_in_flight.fences, 0, images.count * sizeof(*images_in_flight.fences));
 
     VkSemaphoreCreateInfo semaphore_create_info = { 0 };
@@ -910,7 +911,7 @@ void tg_vulkan_init()
 #ifdef TG_DEBUG
     uint32 layer_property_count;
     vkEnumerateInstanceLayerProperties(&layer_property_count, NULL);
-    VkLayerProperties* layer_properties = malloc(layer_property_count * sizeof(*layer_properties));
+    VkLayerProperties* layer_properties = glob_alloc(layer_property_count * sizeof(*layer_properties));
     ASSERT(layer_properties != NULL);
     vkEnumerateInstanceLayerProperties(&layer_property_count, layer_properties);
 
@@ -951,6 +952,8 @@ void tg_vulkan_init()
     tg_vulkan_init_index_buffer();
     tg_vulkan_init_command_buffers();
     tg_vulkan_init_semaphores_and_fences();
+
+    // TODO: continue: https://vulkan-tutorial.com/en/Uniform_buffers/Descriptor_layout_and_buffer
 }
 
 void tg_vulkan_render()

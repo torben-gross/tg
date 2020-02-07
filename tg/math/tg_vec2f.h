@@ -1,5 +1,5 @@
-#ifndef TG_MATH_VEC2F
-#define TG_MATH_VEC2F
+#ifndef TG_VEC2F
+#define TG_VEC2F
 
 typedef struct tg_vec2f
 {

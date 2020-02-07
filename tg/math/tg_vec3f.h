@@ -1,5 +1,5 @@
-#ifndef TG_MATH_VEC3F
-#define TG_MATH_VEC3F
+#ifndef TG_VEC3F
+#define TG_VEC3F
 
 typedef struct tg_vec3f
 {
