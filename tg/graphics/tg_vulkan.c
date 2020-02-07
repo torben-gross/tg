@@ -1,6 +1,6 @@
 #include "tg_vulkan.h"
 
-#include "tg/tg_common.h"
+#include "tg_vertex.h"
 #include "tg/platform/tg_platform.h"
 #include "tg/util/tg_file_io.h"
 #include "tg/math/tg_math_functional.h"
@@ -101,6 +101,9 @@ tg_vulkan_swapchain_framebuffers framebuffers = { 0 };
 
 VkCommandPool command_pool = VK_NULL_HANDLE;
 
+VkBuffer vertex_buffer = VK_NULL_HANDLE;
+VkDeviceMemory vertex_buffer_memory = VK_NULL_HANDLE;
+
 tg_vulkan_command_buffers command_buffers = { 0 };
 
 VkSemaphore image_available_semaphores[MAX_FRAMES_IN_FLIGHT] = { 0 };
@@ -108,6 +111,12 @@ VkSemaphore rendering_finished_semaphores[MAX_FRAMES_IN_FLIGHT] = { 0 };
 VkFence in_flight_fences[MAX_FRAMES_IN_FLIGHT] = { 0 };
 tg_vulkan_fences images_in_flight = { 0 };
 uint32 current_frame = 0;
+
+tg_vertex vertices[3] = {
+    {{0.0f, -0.5f}, {0.0f, 0.2f, 1.0f}},
+    {{0.5f,  0.5f}, {0.0f, 1.0f, 0.2f}},
+    {{-0.5f, 0.5f}, {0.0f, 0.5f, 0.5f}}
+};
 
 #ifdef TG_DEBUG
 VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(
@@ -321,7 +330,7 @@ void tg_vulkan_init_device()
     free(device_queue_create_infos);
 }
 
-void tg_vulkan_init_swap_chain()
+void tg_vulkan_init_swapchain()
 {
     VkSurfaceCapabilitiesKHR surface_capabilities;
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device, surface, &surface_capabilities);
@@ -534,12 +543,27 @@ void tg_vulkan_init_graphics_pipeline()
         pipeline_shader_state_create_info_frag
     };
 
+    VkVertexInputBindingDescription vertex_input_binding_description = { 0 };
+    vertex_input_binding_description.binding = 0;
+    vertex_input_binding_description.stride = sizeof(tg_vertex);
+    vertex_input_binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+    VkVertexInputAttributeDescription vertex_input_attribute_descriptions[2] = { 0 };
+    vertex_input_attribute_descriptions[0].binding = 0;
+    vertex_input_attribute_descriptions[0].location = 0;
+    vertex_input_attribute_descriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+    vertex_input_attribute_descriptions[0].offset = offsetof(tg_vertex, position);
+    vertex_input_attribute_descriptions[1].binding = 0;
+    vertex_input_attribute_descriptions[1].location = 1;
+    vertex_input_attribute_descriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+    vertex_input_attribute_descriptions[1].offset = offsetof(tg_vertex, color);
+
     VkPipelineVertexInputStateCreateInfo pipeline_vertex_input_state_create_info = { 0 };
     pipeline_vertex_input_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    pipeline_vertex_input_state_create_info.vertexBindingDescriptionCount = 0;
-    pipeline_vertex_input_state_create_info.pVertexBindingDescriptions = NULL;
-    pipeline_vertex_input_state_create_info.vertexAttributeDescriptionCount = 0;
-    pipeline_vertex_input_state_create_info.pVertexAttributeDescriptions = NULL;
+    pipeline_vertex_input_state_create_info.vertexBindingDescriptionCount = 1;
+    pipeline_vertex_input_state_create_info.pVertexBindingDescriptions = &vertex_input_binding_description;
+    pipeline_vertex_input_state_create_info.vertexAttributeDescriptionCount = 2;
+    pipeline_vertex_input_state_create_info.pVertexAttributeDescriptions = vertex_input_attribute_descriptions;
 
     VkPipelineInputAssemblyStateCreateInfo pipeline_input_assembly_state_create_info = { 0 };
     pipeline_input_assembly_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -675,6 +699,52 @@ void tg_vulkan_init_command_pool()
     ASSERT(create_command_pool_result == VK_SUCCESS);
 }
 
+void tg_vulkan_init_vertex_buffer()
+{
+    VkBufferCreateInfo buffer_create_info = { 0 };
+    buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    buffer_create_info.size = sizeof(vertices);
+    buffer_create_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    buffer_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    const VkResult create_buffer_result = vkCreateBuffer(device, &buffer_create_info, NULL, &vertex_buffer);
+    ASSERT(create_buffer_result == VK_SUCCESS);
+
+    VkMemoryRequirements memory_requirements;
+    vkGetBufferMemoryRequirements(device, vertex_buffer, &memory_requirements);
+
+    VkPhysicalDeviceMemoryProperties physical_device_memory_properties;
+    vkGetPhysicalDeviceMemoryProperties(physical_device, &physical_device_memory_properties);
+    const VkMemoryPropertyFlags memory_property_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+    uint32 memory_type_index = -1;
+    for (uint32 i = 0; i < physical_device_memory_properties.memoryTypeCount; i++)
+    {
+        const bool is_memory_type_suitable = memory_requirements.memoryTypeBits & (1 << i);
+        const bool are_property_flags_suitable = (physical_device_memory_properties.memoryTypes[i].propertyFlags & memory_property_flags) == memory_property_flags;
+        if (is_memory_type_suitable && are_property_flags_suitable)
+        {
+            memory_type_index = i;
+            break;
+        }
+    }
+    ASSERT(memory_type_index != -1);
+
+    VkMemoryAllocateInfo memory_allocate_info = { 0 };
+    memory_allocate_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    memory_allocate_info.allocationSize = memory_requirements.size;
+    memory_allocate_info.memoryTypeIndex = memory_type_index;
+
+    const VkResult allocate_memory_result = vkAllocateMemory(device, &memory_allocate_info, NULL, &vertex_buffer_memory);
+    ASSERT(allocate_memory_result == VK_SUCCESS);
+
+    vkBindBufferMemory(device, vertex_buffer, vertex_buffer_memory, 0);
+
+    void* data;
+    vkMapMemory(device, vertex_buffer_memory, 0, buffer_create_info.size, 0, &data);
+    memcpy(data, vertices, buffer_create_info.size);
+    vkUnmapMemory(device, vertex_buffer_memory);
+}
+
 void tg_vulkan_init_command_buffers()
 {
     command_buffers.count = framebuffers.count;
@@ -711,6 +781,8 @@ void tg_vulkan_init_command_buffers()
 
         vkCmdBeginRenderPass(command_buffers.command_buffers[i], &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
         vkCmdBindPipeline(command_buffers.command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline);
+        const VkDeviceSize offsets[] = { 0 };
+        vkCmdBindVertexBuffers(command_buffers.command_buffers[i], 0, 1, &vertex_buffer, offsets);
         vkCmdDraw(command_buffers.command_buffers[i], 3, 1, 0, 0);
         vkCmdEndRenderPass(command_buffers.command_buffers[i]);
         const VkResult end_command_buffer_result = vkEndCommandBuffer(command_buffers.command_buffers[i]);
@@ -779,12 +851,13 @@ void tg_vulkan_init()
     vkGetDeviceQueue(device, queue_family_indices.graphics_family, 0, &graphics_queue);
     vkGetDeviceQueue(device, queue_family_indices.present_family, 0, &present_queue);
 
-    tg_vulkan_init_swap_chain();
+    tg_vulkan_init_swapchain();
     tg_vulkan_init_image_views();
     tg_vulkan_init_render_pass();
     tg_vulkan_init_graphics_pipeline();
     tg_vulkan_init_framebuffers();
     tg_vulkan_init_command_pool();
+    tg_vulkan_init_vertex_buffer();
     tg_vulkan_init_command_buffers();
     tg_vulkan_init_semaphores_and_fences();
 }
@@ -833,24 +906,13 @@ void tg_vulkan_render()
     current_frame = ++current_frame == MAX_FRAMES_IN_FLIGHT ? 0 : current_frame;
 }
 
-void tg_vulkan_shutdown()
+void tg_vulkan_shutdown_swapchain()
 {
-    vkDeviceWaitIdle(device);
-
-    for (uint32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
-    {
-        vkDestroyFence(device, in_flight_fences[i], NULL);
-        vkDestroySemaphore(device, rendering_finished_semaphores[i], NULL);
-        vkDestroySemaphore(device, image_available_semaphores[i], NULL);
-    }
-    free(images_in_flight.fences);
-    free(command_buffers.command_buffers);
-    vkDestroyCommandPool(device, command_pool, NULL);
     for (uint32 i = 0; i < framebuffers.count; i++)
     {
         vkDestroyFramebuffer(device, framebuffers.framebuffers[i], NULL);
     }
-    free(framebuffers.framebuffers);
+    vkFreeCommandBuffers(device, command_pool, command_buffers.count, command_buffers.command_buffers);
     vkDestroyPipeline(device, graphics_pipeline, NULL);
     vkDestroyPipelineLayout(device, pipeline_layout, NULL);
     vkDestroyRenderPass(device, render_pass, NULL);
@@ -858,9 +920,27 @@ void tg_vulkan_shutdown()
     {
         vkDestroyImageView(device, image_views.image_views[i], NULL);
     }
+    vkDestroySwapchainKHR(device, swapchain, NULL);
+
+    free(framebuffers.framebuffers);
+    free(command_buffers.command_buffers);
     free(image_views.image_views);
     free(images.images);
-    vkDestroySwapchainKHR(device, swapchain, NULL);
+}
+
+void tg_vulkan_shutdown()
+{
+    tg_vulkan_shutdown_swapchain();
+
+    vkDestroyBuffer(device, vertex_buffer, NULL);
+    vkFreeMemory(device, vertex_buffer_memory, NULL);
+    for (uint32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+    {
+        vkDestroyFence(device, in_flight_fences[i], NULL);
+        vkDestroySemaphore(device, rendering_finished_semaphores[i], NULL);
+        vkDestroySemaphore(device, image_available_semaphores[i], NULL);
+    }
+    vkDestroyCommandPool(device, command_pool, NULL);
     vkDestroyDevice(device, NULL);
 #ifdef TG_DEBUG
     PFN_vkDestroyDebugUtilsMessengerEXT vkDestroyDebugUtilsMessengerEXT = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
@@ -869,4 +949,25 @@ void tg_vulkan_shutdown()
 #endif
     vkDestroySurfaceKHR(instance, surface, NULL);
     vkDestroyInstance(instance, NULL);
+
+    free(images_in_flight.fences);
+}
+
+void tg_vulkan_on_window_resize(uint width, uint height)
+{
+    if (instance == VK_NULL_HANDLE)
+    {
+        return;
+    }
+
+    vkDeviceWaitIdle(device);
+
+    tg_vulkan_shutdown_swapchain();
+
+    tg_vulkan_init_swapchain();
+    tg_vulkan_init_image_views();
+    tg_vulkan_init_render_pass();
+    tg_vulkan_init_graphics_pipeline();
+    tg_vulkan_init_framebuffers();
+    tg_vulkan_init_command_buffers();
 }

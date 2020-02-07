@@ -2,7 +2,6 @@
 
 #include "tg/tg_common.h"
 #include "tg/graphics/tg_vulkan.h"
-#include "tg/math/tg_math_functional.h"
 #include <stdbool.h>
 #include <stdio.h>
 #include <windows.h>
@@ -55,13 +54,11 @@ LRESULT CALLBACK tg_win32_platform_window_proc(
     switch (message)
     {
     case WM_CLOSE:
-    case WM_QUIT:
-        DestroyWindow(window_handle);
-        break;
     case WM_DESTROY:
+    {
         running = false;
         PostQuitMessage(EXIT_SUCCESS);
-        break;
+    } break;
     case WM_KEYDOWN:
     {
         char c = (char)w_param;
@@ -71,6 +68,14 @@ LRESULT CALLBACK tg_win32_platform_window_proc(
     {
         char c = (char)w_param;
         c = c;
+    } break;
+    case WM_QUIT:
+    {
+        DestroyWindow(window_handle);
+    } break;
+    case WM_SIZE:
+    {
+        tg_vulkan_on_window_resize((uint)LOWORD(l_param), (uint)HIWORD(l_param));
     } break;
     default:
         return DefWindowProcA(window_handle, message, w_param, l_param);
