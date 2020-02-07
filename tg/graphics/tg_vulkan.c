@@ -31,6 +31,12 @@
 #define VALIDATION_LAYER_NAMES NULL
 #endif
 
+#ifdef TG_DEBUG
+#define VK_CALL(x) ASSERT(x == VK_SUCCESS)
+#else
+#define VK_CALL(x) x
+#endif
+
 #define MAX_FRAMES_IN_FLIGHT 2
 
 typedef struct tg_vulkan_queue_family_indices
@@ -103,6 +109,8 @@ VkCommandPool command_pool = VK_NULL_HANDLE;
 
 VkBuffer vertex_buffer = VK_NULL_HANDLE;
 VkDeviceMemory vertex_buffer_memory = VK_NULL_HANDLE;
+VkBuffer index_buffer = VK_NULL_HANDLE;
+VkDeviceMemory index_buffer_memory = VK_NULL_HANDLE;
 
 tg_vulkan_command_buffers command_buffers = { 0 };
 
@@ -112,10 +120,15 @@ VkFence in_flight_fences[MAX_FRAMES_IN_FLIGHT] = { 0 };
 tg_vulkan_fences images_in_flight = { 0 };
 uint32 current_frame = 0;
 
-tg_vertex vertices[3] = {
-    {{0.0f, -0.5f}, {0.0f, 0.2f, 1.0f}},
-    {{0.5f,  0.5f}, {0.0f, 1.0f, 0.2f}},
-    {{-0.5f, 0.5f}, {0.0f, 0.5f, 0.5f}}
+tg_vertex vertices[] = {
+    { { -0.5f,  0.5f }, { 0.2f, 1.0f, 1.0f } },
+    { {  0.5f,  0.5f }, { 1.0f, 0.2f, 1.0f } },
+    { {  0.5f, -0.5f }, { 1.0f, 0.0f, 0.0f } },
+    { {  0.0f, -0.5f }, { 1.0f, 1.0f, 0.2f } }
+};
+
+uint16 indices[] = {
+    0, 1, 2, 2, 3, 0
 };
 
 #ifdef TG_DEBUG
@@ -152,8 +165,7 @@ void tg_vulkan_init_instance()
     instance_create_info.enabledExtensionCount = INSTANCE_EXTENSION_COUNT;
     instance_create_info.ppEnabledExtensionNames = INSTANCE_EXTENSION_NAMES;
 
-    const VkResult create_instance_result = vkCreateInstance(&instance_create_info, NULL, &instance);
-    ASSERT(create_instance_result == VK_SUCCESS);
+    VK_CALL(vkCreateInstance(&instance_create_info, NULL, &instance));
 }
 
 #ifdef TG_DEBUG
@@ -168,8 +180,7 @@ void tg_vulkan_init_debug_utils_manager()
 
     PFN_vkCreateDebugUtilsMessengerEXT vkCreateDebugUtilsMessengerEXT = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
     ASSERT(vkCreateDebugUtilsMessengerEXT);
-    const VkResult create_debug_utils_messenger_result = vkCreateDebugUtilsMessengerEXT(instance, &debug_utils_messenger_create_info, NULL, &debug_utils_messenger);
-    ASSERT(create_debug_utils_messenger_result == VK_SUCCESS);
+    VK_CALL(vkCreateDebugUtilsMessengerEXT(instance, &debug_utils_messenger_create_info, NULL, &debug_utils_messenger));
 }
 #endif
 
@@ -181,8 +192,7 @@ void tg_vulkan_init_surface()
     win32_surface_create_info.hinstance = GetModuleHandle(NULL);
     win32_surface_create_info.hwnd = tg_platform_get_window_handle();
 
-    const VkResult create_win32_surface_result = vkCreateWin32SurfaceKHR(instance, &win32_surface_create_info, NULL, &surface);
-    ASSERT(create_win32_surface_result == VK_SUCCESS);
+    VK_CALL(vkCreateWin32SurfaceKHR(instance, &win32_surface_create_info, NULL, &surface));
 }
 #endif
 
@@ -301,7 +311,7 @@ void tg_vulkan_init_device()
 
     VkPhysicalDeviceFeatures physical_device_features = { 0 };
 
-    const uint32 queue_family_count = sizeof(tg_vulkan_queue_family_indices) / sizeof(uint32);
+    const uint32 queue_family_count = sizeof(tg_vulkan_queue_family_indices) / sizeof(uint32); // TODO: on the stack
     VkDeviceQueueCreateInfo* device_queue_create_infos = malloc(queue_family_count * sizeof(*device_queue_create_infos));
     ASSERT(device_queue_create_infos);
     for (uint32 i = 0; i < queue_family_count; i++)
@@ -324,8 +334,7 @@ void tg_vulkan_init_device()
     device_create_info.ppEnabledExtensionNames = DEVICE_EXTENSION_NAMES;
     device_create_info.pEnabledFeatures = &physical_device_features;
 
-    const VkResult create_device_result = vkCreateDevice(physical_device, &device_create_info, NULL, &device);
-    ASSERT(create_device_result == VK_SUCCESS);
+    VK_CALL(vkCreateDevice(physical_device, &device_create_info, NULL, &device));
 
     free(device_queue_create_infos);
 }
@@ -416,8 +425,7 @@ void tg_vulkan_init_swapchain()
     swapchain_create_info.clipped = VK_TRUE;
     swapchain_create_info.oldSwapchain = VK_NULL_HANDLE;
 
-    const VkResult create_swapchain_result = vkCreateSwapchainKHR(device, &swapchain_create_info, NULL, &swapchain);
-    ASSERT(create_swapchain_result == VK_SUCCESS);
+    VK_CALL(vkCreateSwapchainKHR(device, &swapchain_create_info, NULL, &swapchain));
     
     vkGetSwapchainImagesKHR(device, swapchain, &images.count, NULL);
     images.images = malloc(images.count * sizeof(*images.images));
@@ -453,8 +461,7 @@ void tg_vulkan_init_image_views()
         image_view_create_info.components = component_mapping;
         image_view_create_info.subresourceRange = image_subresource_range;
 
-        const VkResult create_image_view_result = vkCreateImageView(device, &image_view_create_info, NULL, &image_views.image_views[i]);
-        ASSERT(create_image_view_result == VK_SUCCESS);
+        VK_CALL(vkCreateImageView(device, &image_view_create_info, NULL, &image_views.image_views[i]));
     }
 }
 
@@ -496,8 +503,7 @@ void tg_vulkan_init_render_pass()
     render_pass_create_info.dependencyCount = 1;
     render_pass_create_info.pDependencies = &subpass_dependency;
 
-    const VkResult create_render_pass_result = vkCreateRenderPass(device, &render_pass_create_info, NULL, &render_pass);
-    ASSERT(create_render_pass_result == VK_SUCCESS);
+    VK_CALL(vkCreateRenderPass(device, &render_pass_create_info, NULL, &render_pass));
 }
 
 VkShaderModule tg_vulkan_init_graphics_pipeline_create_shader_module(uint64 size, const char* shader)
@@ -508,8 +514,7 @@ VkShaderModule tg_vulkan_init_graphics_pipeline_create_shader_module(uint64 size
     shader_module_create_info.pCode = (const uint32*)shader;
 
     VkShaderModule shader_module;
-    const VkResult create_shader_module_result = vkCreateShaderModule(device, &shader_module_create_info, NULL, &shader_module);
-    ASSERT(create_shader_module_result == VK_SUCCESS);
+    VK_CALL(vkCreateShaderModule(device, &shader_module_create_info, NULL, &shader_module));
     return shader_module;
 }
 
@@ -595,7 +600,7 @@ void tg_vulkan_init_graphics_pipeline()
     pipeline_rasterization_state_create_info.rasterizerDiscardEnable = VK_FALSE;
     pipeline_rasterization_state_create_info.polygonMode = VK_POLYGON_MODE_FILL;
     pipeline_rasterization_state_create_info.cullMode = VK_CULL_MODE_BACK_BIT;
-    pipeline_rasterization_state_create_info.frontFace = VK_FRONT_FACE_CLOCKWISE; // TODO: VK_FRONT_FACE_COUNTER_CLOCKWISE
+    pipeline_rasterization_state_create_info.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     pipeline_rasterization_state_create_info.depthBiasEnable = VK_FALSE;
     pipeline_rasterization_state_create_info.depthBiasConstantFactor = 0.0f;
     pipeline_rasterization_state_create_info.depthBiasClamp = 0.0f;
@@ -639,8 +644,7 @@ void tg_vulkan_init_graphics_pipeline()
     pipeline_layout_create_info.pushConstantRangeCount = 0;
     pipeline_layout_create_info.pPushConstantRanges = NULL;
 
-    const VkResult create_pipeline_layout_result = vkCreatePipelineLayout(device, &pipeline_layout_create_info, NULL, &pipeline_layout);
-    ASSERT(create_pipeline_layout_result == VK_SUCCESS);
+    VK_CALL(vkCreatePipelineLayout(device, &pipeline_layout_create_info, NULL, &pipeline_layout));
 
     VkGraphicsPipelineCreateInfo graphics_pipeline_create_info = { 0 };
     graphics_pipeline_create_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -659,7 +663,7 @@ void tg_vulkan_init_graphics_pipeline()
     graphics_pipeline_create_info.basePipelineHandle = VK_NULL_HANDLE;
     graphics_pipeline_create_info.basePipelineIndex = -1;
 
-    const VkResult create_graphics_pipeline_result = vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &graphics_pipeline_create_info, NULL, &graphics_pipeline);
+    VK_CALL(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &graphics_pipeline_create_info, NULL, &graphics_pipeline));
 
     tg_file_io_free(frag);
     tg_file_io_free(vert);
@@ -684,8 +688,7 @@ void tg_vulkan_init_framebuffers()
         framebuffer_create_info.height = swapchain_extent.height;
         framebuffer_create_info.layers = 1;
 
-        const VkResult create_framebuffer_result = vkCreateFramebuffer(device, &framebuffer_create_info, NULL, framebuffers.framebuffers + i);
-        ASSERT(create_framebuffer_result == VK_SUCCESS);
+        VK_CALL(vkCreateFramebuffer(device, &framebuffer_create_info, NULL, framebuffers.framebuffers + i));
     }
 }
 
@@ -695,27 +698,30 @@ void tg_vulkan_init_command_pool()
     command_pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     command_pool_create_info.queueFamilyIndex = queue_family_indices.graphics_family;
 
-    const VkResult create_command_pool_result = vkCreateCommandPool(device, &command_pool_create_info, NULL, &command_pool);
-    ASSERT(create_command_pool_result == VK_SUCCESS);
+    VK_CALL(vkCreateCommandPool(device, &command_pool_create_info, NULL, &command_pool));
 }
 
-void tg_vulkan_init_vertex_buffer()
+void tg_vulkan_create_buffer(
+    VkDeviceSize size,
+    VkBufferUsageFlags buffer_usage_flags,
+    VkMemoryPropertyFlags memory_property_flags,
+    VkBuffer* buffer,
+    VkDeviceMemory* buffer_memory)
 {
     VkBufferCreateInfo buffer_create_info = { 0 };
     buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    buffer_create_info.size = sizeof(vertices);
-    buffer_create_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    buffer_create_info.size = size;
+    buffer_create_info.usage = buffer_usage_flags;
     buffer_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    const VkResult create_buffer_result = vkCreateBuffer(device, &buffer_create_info, NULL, &vertex_buffer);
-    ASSERT(create_buffer_result == VK_SUCCESS);
+    VK_CALL(vkCreateBuffer(device, &buffer_create_info, NULL, buffer));
 
     VkMemoryRequirements memory_requirements;
-    vkGetBufferMemoryRequirements(device, vertex_buffer, &memory_requirements);
+    vkGetBufferMemoryRequirements(device, *buffer, &memory_requirements);
 
     VkPhysicalDeviceMemoryProperties physical_device_memory_properties;
     vkGetPhysicalDeviceMemoryProperties(physical_device, &physical_device_memory_properties);
-    const VkMemoryPropertyFlags memory_property_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+
     uint32 memory_type_index = -1;
     for (uint32 i = 0; i < physical_device_memory_properties.memoryTypeCount; i++)
     {
@@ -731,18 +737,108 @@ void tg_vulkan_init_vertex_buffer()
 
     VkMemoryAllocateInfo memory_allocate_info = { 0 };
     memory_allocate_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    memory_allocate_info.allocationSize = memory_requirements.size;
+    memory_allocate_info.allocationSize = size;
     memory_allocate_info.memoryTypeIndex = memory_type_index;
 
-    const VkResult allocate_memory_result = vkAllocateMemory(device, &memory_allocate_info, NULL, &vertex_buffer_memory);
-    ASSERT(allocate_memory_result == VK_SUCCESS);
+    VK_CALL(vkAllocateMemory(device, &memory_allocate_info, NULL, buffer_memory));
+    VK_CALL(vkBindBufferMemory(device, *buffer, *buffer_memory, 0));
+}
 
-    vkBindBufferMemory(device, vertex_buffer, vertex_buffer_memory, 0);
+void tg_vulkan_copy_buffer(VkDeviceSize size, VkBuffer* source, VkBuffer* target)
+{
+    VkCommandBufferAllocateInfo command_buffer_allocate_info = { 0 };
+    command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    command_buffer_allocate_info.commandPool = command_pool;
+    command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    command_buffer_allocate_info.commandBufferCount = 1;
+
+    VkCommandBuffer command_buffer = VK_NULL_HANDLE; // TODO: this doesn't have to be allocated every time. allocate once.
+    VK_CALL(vkAllocateCommandBuffers(device, &command_buffer_allocate_info, &command_buffer));
+
+    VkCommandBufferBeginInfo command_buffer_begin_info = { 0 };
+    command_buffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    command_buffer_begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+    VK_CALL(vkBeginCommandBuffer(command_buffer, &command_buffer_begin_info));
+
+    VkBufferCopy buffer_copy = { 0 };
+    buffer_copy.srcOffset = 0;
+    buffer_copy.dstOffset = 0;
+    buffer_copy.size = size;
+
+    vkCmdCopyBuffer(command_buffer, *source, *target, 1, &buffer_copy);
+    VK_CALL(vkEndCommandBuffer(command_buffer));
+
+    VkSubmitInfo submit_info = { 0 };
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.commandBufferCount = 1;
+    submit_info.pCommandBuffers = &command_buffer;
+
+    VK_CALL(vkQueueSubmit(graphics_queue, 1, &submit_info, VK_NULL_HANDLE));
+    VK_CALL(vkQueueWaitIdle(graphics_queue));
+    vkFreeCommandBuffers(device, command_pool, 1, &command_buffer);
+}
+
+void tg_vulkan_init_vertex_buffer()
+{
+    const uint32 device_size = sizeof(vertices);
+
+    VkBuffer staging_buffer = VK_NULL_HANDLE;
+    VkDeviceMemory staging_buffer_memory = VK_NULL_HANDLE;
+    tg_vulkan_create_buffer(
+        device_size,
+        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        &staging_buffer,
+        &staging_buffer_memory);
 
     void* data;
-    vkMapMemory(device, vertex_buffer_memory, 0, buffer_create_info.size, 0, &data);
-    memcpy(data, vertices, buffer_create_info.size);
-    vkUnmapMemory(device, vertex_buffer_memory);
+    vkMapMemory(device, staging_buffer_memory, 0, device_size, 0, &data);
+    memcpy(data, vertices, device_size);
+    vkUnmapMemory(device, staging_buffer_memory);
+
+    tg_vulkan_create_buffer(
+        device_size,
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        &vertex_buffer,
+        &vertex_buffer_memory);
+
+    tg_vulkan_copy_buffer(device_size, &staging_buffer, &vertex_buffer);
+
+    vkDestroyBuffer(device, staging_buffer, NULL);
+    vkFreeMemory(device, staging_buffer_memory, NULL);
+}
+
+void tg_vulkan_init_index_buffer()
+{
+    const VkDeviceSize size = sizeof(indices);
+
+    VkBuffer staging_buffer = VK_NULL_HANDLE;
+    VkDeviceMemory staging_buffer_memory = VK_NULL_HANDLE;
+    tg_vulkan_create_buffer(
+        size,
+        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        &staging_buffer,
+        &staging_buffer_memory);
+
+    void* data;
+    vkMapMemory(device, staging_buffer_memory, 0, size, 0, &data);
+    memcpy(data, indices, (size_t)size);
+    vkUnmapMemory(device, staging_buffer_memory);
+
+    tg_vulkan_create_buffer(
+        size,
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        &index_buffer,
+        &index_buffer_memory);
+
+    tg_vulkan_copy_buffer(size, &staging_buffer, &index_buffer);
+
+    vkDestroyBuffer(device, staging_buffer, NULL);
+    vkFreeMemory(device, staging_buffer_memory, NULL);
 }
 
 void tg_vulkan_init_command_buffers()
@@ -756,8 +852,7 @@ void tg_vulkan_init_command_buffers()
     command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     command_buffer_allocate_info.commandBufferCount = command_buffers.count;
 
-    VkResult allocate_command_buffers_result = vkAllocateCommandBuffers(device, &command_buffer_allocate_info, command_buffers.command_buffers);
-    ASSERT(allocate_command_buffers_result == VK_SUCCESS);
+    VK_CALL(vkAllocateCommandBuffers(device, &command_buffer_allocate_info, command_buffers.command_buffers));
 
     for (uint32 i = 0; i < command_buffers.count; i++)
     {
@@ -765,8 +860,7 @@ void tg_vulkan_init_command_buffers()
         command_buffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         command_buffer_begin_info.pInheritanceInfo = NULL;
 
-        const VkResult begin_command_buffer_result = vkBeginCommandBuffer(command_buffers.command_buffers[i], &command_buffer_begin_info);
-        ASSERT(begin_command_buffer_result == VK_SUCCESS);
+        VK_CALL(vkBeginCommandBuffer(command_buffers.command_buffers[i], &command_buffer_begin_info));
 
         const VkClearValue clear_value = { 0.0f, 0.0f, 0.0f, 1.0f };
 
@@ -783,10 +877,10 @@ void tg_vulkan_init_command_buffers()
         vkCmdBindPipeline(command_buffers.command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline);
         const VkDeviceSize offsets[] = { 0 };
         vkCmdBindVertexBuffers(command_buffers.command_buffers[i], 0, 1, &vertex_buffer, offsets);
-        vkCmdDraw(command_buffers.command_buffers[i], 3, 1, 0, 0);
+        vkCmdBindIndexBuffer(command_buffers.command_buffers[i], index_buffer, 0, VK_INDEX_TYPE_UINT16);
+        vkCmdDrawIndexed(command_buffers.command_buffers[i], sizeof(indices), 1, 0, 0, 0);
         vkCmdEndRenderPass(command_buffers.command_buffers[i]);
-        const VkResult end_command_buffer_result = vkEndCommandBuffer(command_buffers.command_buffers[i]);
-        ASSERT(end_command_buffer_result == VK_SUCCESS);
+        VK_CALL(vkEndCommandBuffer(command_buffers.command_buffers[i]));
     }
 }
 
@@ -803,15 +897,11 @@ void tg_vulkan_init_semaphores_and_fences()
     fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fence_create_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-    VkResult result;
     for (uint32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
     {
-        result = vkCreateSemaphore(device, &semaphore_create_info, NULL, &image_available_semaphores[i]);
-        ASSERT(result == VK_SUCCESS);
-        result = vkCreateSemaphore(device, &semaphore_create_info, NULL, &rendering_finished_semaphores[i]);
-        ASSERT(result == VK_SUCCESS);
-        result = vkCreateFence(device, &fence_create_info, NULL, &in_flight_fences[i]);
-        ASSERT(result == VK_SUCCESS);
+        VK_CALL(vkCreateSemaphore(device, &semaphore_create_info, NULL, &image_available_semaphores[i]));
+        VK_CALL(vkCreateSemaphore(device, &semaphore_create_info, NULL, &rendering_finished_semaphores[i]));
+        VK_CALL(vkCreateFence(device, &fence_create_info, NULL, &in_flight_fences[i]));
     }
 }
 
@@ -858,6 +948,7 @@ void tg_vulkan_init()
     tg_vulkan_init_framebuffers();
     tg_vulkan_init_command_pool();
     tg_vulkan_init_vertex_buffer();
+    tg_vulkan_init_index_buffer();
     tg_vulkan_init_command_buffers();
     tg_vulkan_init_semaphores_and_fences();
 }
@@ -889,8 +980,7 @@ void tg_vulkan_render()
 
     vkResetFences(device, 1, in_flight_fences + current_frame);
 
-    const VkResult queue_submit_result = vkQueueSubmit(graphics_queue, 1, &submit_info, in_flight_fences[current_frame]);
-    ASSERT(queue_submit_result == VK_SUCCESS);
+    VK_CALL(vkQueueSubmit(graphics_queue, 1, &submit_info, in_flight_fences[current_frame]));
 
     VkPresentInfoKHR present_info = { 0 };
     present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -932,6 +1022,8 @@ void tg_vulkan_shutdown()
 {
     tg_vulkan_shutdown_swapchain();
 
+    vkDestroyBuffer(device, index_buffer, NULL);
+    vkFreeMemory(device, index_buffer_memory, NULL);
     vkDestroyBuffer(device, vertex_buffer, NULL);
     vkFreeMemory(device, vertex_buffer_memory, NULL);
     for (uint32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
