@@ -28,4 +28,6 @@ typedef struct tg_mat4f
 	}                                                                        \
 }
 
+tg_mat4f tg_mat4f_transposed(const tg_mat4f* mat);
+
 #endif

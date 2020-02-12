@@ -2,6 +2,7 @@
 
 #include "tg_vertex.h"
 #include "tg/math/tg_algorithm.h"
+#include "tg/math/tg_mat4f.h"
 #include "tg/platform/tg_allocator.h"
 #include "tg/platform/tg_platform.h"
 #include "tg/util/tg_file_io.h"
@@ -76,6 +77,25 @@ typedef struct tg_vulkan_fences
     VkFence* fences;
 } tg_vulkan_fences;
 
+typedef struct tg_vulkan_uniform_buffer_object
+{
+    tg_mat4f model;
+    tg_mat4f view;
+    tg_mat4f projection;
+} tg_vulkan_uniform_buffer_object;
+
+typedef struct tg_vulkan_uniform_buffers
+{
+    uint32 count;
+    VkBuffer* uniform_buffers;
+} tg_vulkan_uniform_buffers;
+
+typedef struct tg_vulkan_uniform_buffer_memories
+{
+    uint32 count;
+    VkDeviceMemory* uniform_buffer_memories;
+} tg_vulkan_uniform_buffer_memories;
+
 VkInstance instance = VK_NULL_HANDLE;
 
 #ifdef TG_DEBUG
@@ -100,6 +120,8 @@ tg_vulkan_swapchain_image_views image_views = { 0 };
 
 VkRenderPass render_pass = VK_NULL_HANDLE;
 
+VkDescriptorSetLayout descriptor_set_layout = VK_NULL_HANDLE;
+
 VkPipelineLayout pipeline_layout = VK_NULL_HANDLE;
 
 VkPipeline graphics_pipeline = VK_NULL_HANDLE;
@@ -112,6 +134,9 @@ VkBuffer vertex_buffer = VK_NULL_HANDLE;
 VkDeviceMemory vertex_buffer_memory = VK_NULL_HANDLE;
 VkBuffer index_buffer = VK_NULL_HANDLE;
 VkDeviceMemory index_buffer_memory = VK_NULL_HANDLE;
+
+tg_vulkan_uniform_buffers uniform_buffers = { 0 };
+tg_vulkan_uniform_buffer_memories uniform_buffer_memories = { 0 };
 
 tg_vulkan_command_buffers command_buffers = { 0 };
 
@@ -519,6 +544,23 @@ VkShaderModule tg_vulkan_init_graphics_pipeline_create_shader_module(uint64 size
     return shader_module;
 }
 
+void tg_vulkan_init_descriptor_set_layout()
+{
+    VkDescriptorSetLayoutBinding descriptor_set_layout_binding = { 0 };
+    descriptor_set_layout_binding.binding = 0;
+    descriptor_set_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    descriptor_set_layout_binding.descriptorCount = 1;
+    descriptor_set_layout_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    descriptor_set_layout_binding.pImmutableSamplers = NULL;
+
+    VkDescriptorSetLayoutCreateInfo descriptor_set_layout_create_info = { 0 };
+    descriptor_set_layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    descriptor_set_layout_create_info.bindingCount = 1;
+    descriptor_set_layout_create_info.pBindings = &descriptor_set_layout_binding;
+
+    VK_CALL(vkCreateDescriptorSetLayout(device, &descriptor_set_layout_create_info, NULL, &descriptor_set_layout));
+}
+
 void tg_vulkan_init_graphics_pipeline()
 {
     // TODO: look at comments for simpler compilation of shaders: https://vulkan-tutorial.com/en/Drawing_a_triangle/Graphics_pipeline_basics/Shader_modules
@@ -842,6 +884,27 @@ void tg_vulkan_init_index_buffer()
     vkFreeMemory(device, staging_buffer_memory, NULL);
 }
 
+void tg_vulkan_init_uniform_buffers()
+{
+    const VkDeviceSize size = sizeof(tg_vulkan_uniform_buffer_object);
+
+    uniform_buffers.count = images.count;
+    uniform_buffers.uniform_buffers = malloc(images.count * sizeof(*uniform_buffers.uniform_buffers));
+
+    uniform_buffer_memories.count = images.count;
+    uniform_buffer_memories.uniform_buffer_memories = malloc(images.count * sizeof(*uniform_buffer_memories.uniform_buffer_memories));
+
+    for (uint32 i = 0; i < images.count; i++)
+    {
+        tg_vulkan_create_buffer(
+            size,
+            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            uniform_buffers.uniform_buffers[i],
+            uniform_buffer_memories.uniform_buffer_memories[i]);
+    }
+}
+
 void tg_vulkan_init_command_buffers()
 {
     command_buffers.count = framebuffers.count;
@@ -945,11 +1008,13 @@ void tg_vulkan_init()
     tg_vulkan_init_swapchain();
     tg_vulkan_init_image_views();
     tg_vulkan_init_render_pass();
+    tg_vulkan_init_descriptor_set_layout();
     tg_vulkan_init_graphics_pipeline();
     tg_vulkan_init_framebuffers();
     tg_vulkan_init_command_pool();
     tg_vulkan_init_vertex_buffer();
     tg_vulkan_init_index_buffer();
+    tg_vulkan_init_uniform_buffers();
     tg_vulkan_init_command_buffers();
     tg_vulkan_init_semaphores_and_fences();
 
@@ -970,6 +1035,8 @@ void tg_vulkan_render()
     images_in_flight.fences[next_image] = in_flight_fences[current_frame];
 
     const VkPipelineStageFlags wait_dst_stage_mask[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+
+    // TODO: Updating uniform data: https://vulkan-tutorial.com/en/Uniform_buffers/Descriptor_layout_and_buffer
 
     VkSubmitInfo submit_info = { 0 };
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -1014,17 +1081,25 @@ void tg_vulkan_shutdown_swapchain()
         vkDestroyImageView(device, image_views.image_views[i], NULL);
     }
     vkDestroySwapchainKHR(device, swapchain, NULL);
+    for (uint32 i = 0; i < images.count; i++)
+    {
+        vkDestroyBuffer(device, uniform_buffers.uniform_buffers[i], NULL);
+        vkFreeMemory(device, uniform_buffer_memories.uniform_buffer_memories[i], NULL);
+    }
 
     free(framebuffers.framebuffers);
     free(command_buffers.command_buffers);
     free(image_views.image_views);
     free(images.images);
+    free(uniform_buffer_memories.uniform_buffer_memories);
+    free(uniform_buffers.uniform_buffers);
 }
 
 void tg_vulkan_shutdown()
 {
     tg_vulkan_shutdown_swapchain();
 
+    vkDestroyDescriptorSetLayout(device, descriptor_set_layout, NULL);
     vkDestroyBuffer(device, index_buffer, NULL);
     vkFreeMemory(device, index_buffer_memory, NULL);
     vkDestroyBuffer(device, vertex_buffer, NULL);
@@ -1064,5 +1139,6 @@ void tg_vulkan_on_window_resize(uint width, uint height)
     tg_vulkan_init_render_pass();
     tg_vulkan_init_graphics_pipeline();
     tg_vulkan_init_framebuffers();
+    tg_vulkan_init_uniform_buffers();
     tg_vulkan_init_command_buffers();
 }
