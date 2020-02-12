@@ -16,7 +16,7 @@ void tg_file_io_read(const char* filename, uint64* size, char** content)
     fseek(file, 0, SEEK_END);
     *size = (uint64)ftell(file);
     rewind(file);
-    *content = glob_alloc(*size + 1);
+    *content = tg_malloc(*size + 1);
     ASSERT(*content);
     fread(*content, 1, *size, file);
     fclose(file);

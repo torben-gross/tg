@@ -4,12 +4,19 @@
 #include "tg_platform.h"
 #include "tg/tg_common.h"
 
-#include <stdlib.h>
 
 #ifdef TG_DEBUG
-void* glob_alloc(size_t size);
+
+void* tg_malloc(size_t size);
+void tg_free(void* memory);
+
 #else
-#define glob_alloc(size) malloc(size)
+
+#include <stdlib.h>
+
+#define tg_malloc(size) malloc(size)
+#define tg_free(void* memory) free(memory);
+
 #endif
 
 #endif
