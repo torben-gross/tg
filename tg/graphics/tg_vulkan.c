@@ -689,8 +689,8 @@ void tg_vulkan_init_graphics_pipeline()
     pipeline_layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipeline_layout_create_info.pNext = NULL;
     pipeline_layout_create_info.flags = 0;
-    pipeline_layout_create_info.setLayoutCount = 0;
-    pipeline_layout_create_info.pSetLayouts = NULL;
+    pipeline_layout_create_info.setLayoutCount = 1;
+    pipeline_layout_create_info.pSetLayouts = &descriptor_set_layout;
     pipeline_layout_create_info.pushConstantRangeCount = 0;
     pipeline_layout_create_info.pPushConstantRanges = NULL;
 
@@ -794,7 +794,7 @@ void tg_vulkan_create_buffer(
     VkMemoryAllocateInfo memory_allocate_info = { 0 };
     memory_allocate_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     memory_allocate_info.pNext = NULL;
-    memory_allocate_info.allocationSize = size;
+    memory_allocate_info.allocationSize = memory_requirements.size;
     memory_allocate_info.memoryTypeIndex = memory_type_index;
 
     VK_CALL(vkAllocateMemory(device, &memory_allocate_info, NULL, buffer_memory));
@@ -940,7 +940,11 @@ void tg_vulkan_init_descriptor_pool()
 
 void tg_vulkan_init_descriptor_sets()
 {
-    const VkDescriptorSetLayout descriptor_set_layouts[SURFACE_IMAGE_COUNT] = { descriptor_set_layout }; // TODO: will these fill as expected?
+    VkDescriptorSetLayout descriptor_set_layouts[SURFACE_IMAGE_COUNT] = { 0 };
+    for (uint32 i = 0; i < SURFACE_IMAGE_COUNT; i++)
+    {
+        descriptor_set_layouts[i] = descriptor_set_layout;
+    }
 
     VkDescriptorSetAllocateInfo descriptor_set_allocate_info = { 0 };
     descriptor_set_allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -1014,7 +1018,7 @@ void tg_vulkan_init_command_buffers()
         vkCmdBindVertexBuffers(command_buffers[i], 0, 1, &vertex_buffer, offsets);
         vkCmdBindIndexBuffer(command_buffers[i], index_buffer, 0, VK_INDEX_TYPE_UINT16);
         vkCmdBindDescriptorSets(command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptor_sets[i], 0, NULL);
-        vkCmdDrawIndexed(command_buffers[i], sizeof(indices), 1, 0, 0, 0);
+        vkCmdDrawIndexed(command_buffers[i], sizeof(indices) / sizeof(*indices), 1, 0, 0, 0);
         vkCmdEndRenderPass(command_buffers[i]);
         VK_CALL(vkEndCommandBuffer(command_buffers[i]));
     }
