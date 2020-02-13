@@ -1157,11 +1157,11 @@ void tg_vulkan_render()
 
 void tg_vulkan_shutdown_swapchain()
 {
+    vkFreeCommandBuffers(device, command_pool, SURFACE_IMAGE_COUNT, command_buffers);
     for (uint32 i = 0; i < SURFACE_IMAGE_COUNT; i++)
     {
         vkDestroyFramebuffer(device, framebuffers[i], NULL);
     }
-    vkFreeCommandBuffers(device, command_pool, SURFACE_IMAGE_COUNT, command_buffers);
     vkDestroyPipeline(device, graphics_pipeline, NULL);
     vkDestroyPipelineLayout(device, pipeline_layout, NULL);
     vkDestroyRenderPass(device, render_pass, NULL);
@@ -1175,16 +1175,13 @@ void tg_vulkan_shutdown_swapchain()
         vkDestroyBuffer(device, uniform_buffers[i], NULL);
         vkFreeMemory(device, uniform_buffer_memories[i], NULL);
     }
-    for (uint32 i = 0; i < SURFACE_IMAGE_COUNT; i++)
-    {
-        vkDestroyBuffer(device, uniform_buffers[i], NULL);
-        vkFreeMemory(device, uniform_buffer_memories[i], NULL);
-    }
     vkDestroyDescriptorPool(device, descriptor_pool, NULL);
 }
 
 void tg_vulkan_shutdown()
 {
+    vkDeviceWaitIdle(device);
+
     tg_vulkan_shutdown_swapchain();
 
     vkDestroyDescriptorSetLayout(device, descriptor_set_layout, NULL);
