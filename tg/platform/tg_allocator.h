@@ -15,7 +15,7 @@ void tg_free(void* memory);
 #include <stdlib.h>
 
 #define tg_malloc(size) malloc(size)
-#define tg_free(void* memory) free(memory);
+#define tg_free(memory) free(memory);
 
 #endif
 
