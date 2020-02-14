@@ -1,5 +1,37 @@
 #include "tg_mat4f.h"
 
+#include <math.h>
+
+tg_mat4f* tg_mat4f_angle_axis(tg_mat4f* result, float angleInRadians, tg_vec3f* axis)
+{
+	const double r = angleInRadians;
+	const float c = (float)cos((double)r);
+	const float s = (float)sin((double)r);
+	const float omc = 1.0f - c;
+	tg_vec3f unit_axis;
+	tg_vec3f_normalize(&unit_axis, axis);
+	const float x = unit_axis.x;
+	const float y = unit_axis.y;
+	const float z = unit_axis.z;
+	result->data[0] = x * x * omc + c;
+	result->data[1] = x * y * omc - z * s;
+	result->data[2] = x * z * omc + y * s;
+	result->data[3] = 0.0f;
+	result->data[4] = y * x * omc + z * s;
+	result->data[5] = y * y * omc + c;
+	result->data[6] = y * z * omc - x * s;
+	result->data[7] = 0.0f;
+	result->data[8] = z * x * omc - y * s;
+	result->data[9] = z * y * omc + x * s;
+	result->data[10] = z * z * omc + c;
+	result->data[11] = 0.0f;
+	result->data[12] = 0.0f;
+	result->data[13] = 0.0f;
+	result->data[14] = 0.0f;
+	result->data[15] = 1.0f;
+	return result;
+}
+
 tg_mat4f* tg_mat4f_identity(tg_mat4f* result)
 {
 	result->data[0] = 1.0f;
@@ -21,14 +53,14 @@ tg_mat4f* tg_mat4f_identity(tg_mat4f* result)
 	return result;
 }
 
-tg_mat4f* tg_mat4f_look_at(tg_mat4f* result, const tg_vec3f* from, const tg_vec3f* to, const tg_vec3f* up)
+tg_mat4f* tg_mat4f_look_at(tg_mat4f* result, tg_vec3f* from, tg_vec3f* to, tg_vec3f* up)
 {
 	tg_vec3f temp = { 0 };
 	tg_vec3f f = { 0 };
 	tg_vec3f r = { 0 };
 	tg_vec3f u = { 0 };
 	tg_vec3f from_negative = { 0 };
-	tg_vec3f_negative(&f, tg_vec3f_normalize(&f, tg_vec3f_subtract(&f, to, from)));
+	tg_vec3f_normalize(&f, tg_vec3f_subtract(&f, to, from));
 	tg_vec3f_normalize(&r, tg_vec3f_cross(&r, &f, tg_vec3f_normalize(&temp, up)));
 	tg_vec3f_normalize(&u, tg_vec3f_cross(&u, &r, &f));
 	tg_vec3f_negative(&from_negative, from);
@@ -73,11 +105,6 @@ tg_mat4f* tg_mat4f_orthographic(tg_mat4f* result, float left, float right, float
 }
 
 tg_mat4f* tg_mat4f_perspective(tg_mat4f* result, float fov, float aspect, float near, float far)
-{
-	return result;
-}
-
-tg_mat4f* tg_mat4f_rotate(tg_mat4f* result, tg_mat4f* mat, float angleInDegrees, const tg_vec3f* angle)
 {
 	return result;
 }

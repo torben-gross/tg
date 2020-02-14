@@ -1074,12 +1074,16 @@ void tg_vulkan_render()
     tg_vec3f from = { 2.0f, 2.0f, 2.0f };
     tg_vec3f to = { 0 };
     tg_vec3f up = { 0.0f, 1.0f, 0.0f };
+    tg_vec3f axis = { 0.0f, 0.0f, 1.0f };
 
     tg_vulkan_uniform_buffer_object uniform_buffer_object = { 0 }; // TODO: math below
     tg_mat4f_identity(&uniform_buffer_object.model); // tg_mat4f_rotate(const mat4f* mat, float angleInDegrees, const tg_vec3f* angle);
     tg_mat4f_identity(&uniform_buffer_object.view); // tg_mat4f_look_at(const vec3f* from, const vec3f* to, const vec3f* up);
-    //tg_mat4f_look_at(&uniform_buffer_object.view, &from, &to, &up);
     tg_mat4f_identity(&uniform_buffer_object.projection); // tg_mat4f_perspective(float fov, float aspect, float near, float far);
+
+    tg_mat4f_angle_axis(&uniform_buffer_object.model, TG_FLOAT_TO_RADIANS(90.0f), &axis);
+    tg_mat4f_look_at(&uniform_buffer_object.view, &from, &to, &up);
+    //tg_mat4f_perspective(&uniform_buffer_object.projection, 45.0f, (float)swapchain_extent.width / (float)swapchain_extent.height, 0.1f, 10.0f);
 
     void* data;
     VK_CALL(vkMapMemory(device, uniform_buffer_memories[next_image], 0, sizeof(tg_vulkan_uniform_buffer_object), 0, &data));
