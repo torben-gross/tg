@@ -28,5 +28,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="tg.ruleset" />
+    <None Include="assets\shaders\frag.spv" />
+    <None Include="assets\shaders\shader.frag" />
+    <None Include="assets\shaders\shader.vert" />
+    <None Include="assets\shaders\vert.spv" />
   </ItemGroup>
 </Project>

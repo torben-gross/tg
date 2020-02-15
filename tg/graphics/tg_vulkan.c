@@ -10,7 +10,6 @@
 #include "tg/util/tg_file_io.h"
 #include <stdbool.h>
 #include <stdlib.h>
-#include <time.h>
 
 #ifdef TG_WIN32
 #define VK_USE_PLATFORM_WIN32_KHR
@@ -107,13 +106,12 @@ VkDescriptorSet descriptor_sets[SURFACE_IMAGE_COUNT] = { 0 };
 VkCommandBuffer command_buffers[SURFACE_IMAGE_COUNT] = { 0 };
 
 uint32 current_frame = 0;
-time_t start_time = 0;
-
+float fff = 0.0f;
 tg_vertex vertices[] = {
-    { { -0.5f,  0.5f }, { 0.2f, 1.0f, 1.0f } },
-    { {  0.5f,  0.5f }, { 1.0f, 0.2f, 1.0f } },
-    { {  0.5f, -0.5f }, { 1.0f, 0.0f, 0.0f } },
-    { {  0.0f, -0.5f }, { 1.0f, 1.0f, 0.2f } }
+    { { -0.5f, -0.5f }, { 1.0f, 0.0f, 0.0f } },
+    { {  0.5f, -0.5f }, { 0.0f, 1.0f, 0.0f } },
+    { {  0.5f,  0.5f }, { 0.0f, 0.0f, 1.0f } },
+    { { -0.5f,  0.5f }, { 1.0f, 1.0f, 1.0f } }
 };
 uint16 indices[] = {
     0, 1, 2, 2, 3, 0
@@ -726,8 +724,8 @@ void tg_vulkan_init_graphics_pipeline()
     char* vert;
     uint64 frag_size;
     char* frag;
-    tg_file_io_read("graphics/shaders/vert.spv", &vert_size, &vert);
-    tg_file_io_read("graphics/shaders/frag.spv", &frag_size, &frag);
+    tg_file_io_read("assets/shaders/vert.spv", &vert_size, &vert);
+    tg_file_io_read("assets/shaders/frag.spv", &frag_size, &frag);
 
     const VkShaderModule frag_shader_module = tg_vulkan_init_graphics_pipeline_create_shader_module(frag_size, frag);
     const VkShaderModule vert_shader_module = tg_vulkan_init_graphics_pipeline_create_shader_module(vert_size, vert);
@@ -1049,8 +1047,6 @@ void tg_vulkan_init()
     tg_vulkan_init_descriptor_pool();
     tg_vulkan_init_descriptor_sets();
     tg_vulkan_init_command_buffers();
-
-    time(&start_time);
 }
 void tg_vulkan_render()
 {
@@ -1067,23 +1063,21 @@ void tg_vulkan_render()
 
     const VkPipelineStageFlags wait_dst_stage_mask[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 
-    time_t current_time;
-    time(&current_time);
-    float diff = (float)difftime(current_time, start_time);
+    fff += 0.0003f;
 
     tg_vec3f from = { 2.0f, 2.0f, 2.0f };
     tg_vec3f to = { 0 };
     tg_vec3f up = { 0.0f, 1.0f, 0.0f };
     tg_vec3f axis = { 0.0f, 0.0f, 1.0f };
 
-    tg_vulkan_uniform_buffer_object uniform_buffer_object = { 0 }; // TODO: math below
-    tg_mat4f_identity(&uniform_buffer_object.model); // tg_mat4f_rotate(const mat4f* mat, float angleInDegrees, const tg_vec3f* angle);
-    tg_mat4f_identity(&uniform_buffer_object.view); // tg_mat4f_look_at(const vec3f* from, const vec3f* to, const vec3f* up);
-    tg_mat4f_identity(&uniform_buffer_object.projection); // tg_mat4f_perspective(float fov, float aspect, float near, float far);
-
-    tg_mat4f_angle_axis(&uniform_buffer_object.model, TG_FLOAT_TO_RADIANS(90.0f), &axis);
+    tg_vulkan_uniform_buffer_object uniform_buffer_object = { 0 };
+    tg_mat4f_identity(&uniform_buffer_object.model);
+    tg_mat4f_identity(&uniform_buffer_object.view);
+    tg_mat4f_identity(&uniform_buffer_object.projection);
+    tg_mat4f_angle_axis(&uniform_buffer_object.model, fff * TG_FLOAT_TO_RADIANS(90.0f), &axis);
     tg_mat4f_look_at(&uniform_buffer_object.view, &from, &to, &up);
-    //tg_mat4f_perspective(&uniform_buffer_object.projection, 45.0f, (float)swapchain_extent.width / (float)swapchain_extent.height, 0.1f, 10.0f);
+    tg_mat4f_orthographic(&uniform_buffer_object.projection, -1, 1, -0.6f, 0.6f, 10.0f, -10.0f);
+    //tg_mat4f_perspective(&uniform_buffer_object.projection, TG_FLOAT_TO_RADIANS(45.0f), (float)swapchain_extent.width / (float)swapchain_extent.height, 0.1f, 10.0f); // TODO: fix this up
 
     void* data;
     VK_CALL(vkMapMemory(device, uniform_buffer_memories[next_image], 0, sizeof(tg_vulkan_uniform_buffer_object), 0, &data));
