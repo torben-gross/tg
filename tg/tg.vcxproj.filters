@@ -25,6 +25,7 @@
     <ClInclude Include="util\tg_file_io.h" />
     <ClInclude Include="math\tg_algorithm.h" />
     <ClInclude Include="math\tg_mat3f.h" />
+    <ClInclude Include="math\tg_math_defines.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="tg.ruleset" />

@@ -124,6 +124,7 @@
     <ClInclude Include="math\tg_algorithm.h" />
     <ClInclude Include="math\tg_mat3f.h" />
     <ClInclude Include="math\tg_mat4f.h" />
+    <ClInclude Include="math\tg_math_defines.h" />
     <ClInclude Include="math\tg_vec2f.h" />
     <ClInclude Include="math\tg_vec3f.h" />
     <ClInclude Include="math\tg_vec4f.h" />
