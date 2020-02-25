@@ -10,27 +10,44 @@
 #endif
 
 #ifdef TG_DEBUG
-#define ASSERT(x) if (!(x)) *(int*)0 = 0
+#define TG_ASSERT(x) if (!(x)) *(int*)0 = 0
 #else
-#define ASSERT(x)
+#define TG_ASSERT(x)
 #endif
 
-#include <stdint.h>
+#define F32_MIN_POSITIVE   1.175494351e-38f
+#define F32_MAX_POSITIVE   3.402823466e+38f
+#define F32_EPSILON        1.192092896e-07f
+#define F64_MIN_POSITIVE   2.2250738585072014e-308
+#define F64_MAX_POSITIVE   1.7976931348623158e+308
+#define F64_EPSILON        2.2204460492503131e-016
 
-typedef float         float32;
-typedef double        float64;
+#define I8_MIN             (-127i8 - 1)
+#define I16_MIN            (-32767i16 - 1)
+#define I32_MIN            (-2147483647i32 - 1)
+#define I64_MIN            (-9223372036854775807i64 - 1)
+#define I8_MAX             127i8
+#define I16_MAX            32767i16
+#define I32_MAX            2147483647i32
+#define I64_MAX            9223372036854775807i64
 
-typedef char          int4;
-typedef int8_t        int8;
-typedef int16_t       int16;
-typedef int32_t       int32;
-typedef int64_t       int64;
+#define U8_MAX             0xffui8
+#define U16_MAX            0xffffui16
+#define U32_MAX            0xffffffffui32
+#define U64_MAX            0xffffffffffffffffui64
 
-typedef unsigned int  uint;
-typedef unsigned char uint4;
-typedef uint8_t       uint8;
-typedef uint16_t      uint16;
-typedef uint32_t      uint32;
-typedef uint64_t      uint64;
+typedef float              f32;
+typedef double             f64;
+
+typedef signed char        i8;
+typedef short              i16;
+typedef int                i32;
+typedef long long          i64;
+
+typedef unsigned int       ui;
+typedef unsigned char      ui8;
+typedef unsigned short     ui16;
+typedef unsigned int       ui32;
+typedef unsigned long long ui64;
 
 #endif

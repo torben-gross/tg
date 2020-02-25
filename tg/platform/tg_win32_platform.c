@@ -15,7 +15,7 @@ void* tg_platform_get_window_handle()
     return window_handle;
 }
 
-void tg_platform_get_screen_size(uint32* width, uint32* height)
+void tg_platform_get_screen_size(ui32* width, ui32* height)
 {
     RECT rect;
     BOOL result = GetWindowRect(GetDesktopWindow(), &rect);
@@ -26,7 +26,7 @@ void tg_platform_get_screen_size(uint32* width, uint32* height)
     }
 }
 
-void tg_platform_get_window_size(uint32* width, uint32* height)
+void tg_platform_get_window_size(ui32* width, ui32* height)
 {
     RECT rect;
     BOOL result = GetWindowRect(window_handle, &rect);
@@ -71,7 +71,7 @@ LRESULT CALLBACK tg_win32_platform_window_proc(HWND window_handle, UINT message,
     } break;
     case WM_SIZE:
     {
-        tg_vulkan_on_window_resize((uint)LOWORD(l_param), (uint)HIWORD(l_param));
+        tg_vulkan_on_window_resize((ui)LOWORD(l_param), (ui)HIWORD(l_param));
     } break;
     default:
         return DefWindowProcA(window_handle, message, w_param, l_param);
@@ -101,7 +101,7 @@ int CALLBACK WinMain(
         return EXIT_FAILURE;
     }
 
-    uint32 w, h;
+    ui32 w, h;
     tg_platform_get_screen_size(&w, &h);
     window_handle = CreateWindowExA(
         0, window_class_id, window_title, WS_OVERLAPPEDWINDOW,
@@ -122,7 +122,7 @@ int CALLBACK WinMain(
 
     char buf[256];
     struct timeb start, end;
-    uint64 fps = 0;
+    ui64 fps = 0;
     ftime(&start);
     MSG msg = { 0 };
     while (running)
