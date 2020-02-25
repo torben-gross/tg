@@ -1,20 +1,19 @@
-#define _CRT_SECURE_NO_WARNINGS
-
 #include "tg_vulkan.h"
 
+#define _CRT_SECURE_NO_WARNINGS
+
+#ifdef TG_WIN32
+#define VK_USE_PLATFORM_WIN32_KHR
+#endif
+
 #include "tg_vertex.h"
-#include "tg/math/tg_algorithm.h"
-#include "tg/math/tg_mat4f.h"
+#include "tg/math/tg_math.h"
 #include "tg/platform/tg_allocator.h"
 #include "tg/platform/tg_platform.h"
 #include "tg/util/tg_file_io.h"
 #include <stdbool.h>
 #include <stdlib.h>
-
-#ifdef TG_WIN32
-#define VK_USE_PLATFORM_WIN32_KHR
 #include <vulkan/vulkan.h>
-#endif
 
 #ifdef TG_WIN32
 
@@ -64,9 +63,9 @@ typedef struct tg_vulkan_queue_indices
 
 typedef struct tg_vulkan_uniform_buffer_object
 {
-    tg_mat4f model;
-    tg_mat4f view;
-    tg_mat4f projection;
+    tgm_mat4f model;
+    tgm_mat4f view;
+    tgm_mat4f projection;
 } tg_vulkan_uniform_buffer_object;
 
 VkInstance instance = VK_NULL_HANDLE;
@@ -125,7 +124,6 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(
     void* user_data)
 {
     TG_PRINT(callback_data->pMessage);
-    TG_PRINT("\n"); // TODO: this is ugly
     return VK_TRUE;
 }
 #endif
@@ -586,11 +584,11 @@ void tg_vulkan_init_swapchain()
         uint32 height = 0;
         tg_platform_get_window_size(&width, &height);
         ASSERT(width && height);
-        swapchain_extent.width = tg_uint32_clamp(width, surface_capabilities.minImageExtent.width, surface_capabilities.maxImageExtent.width);
-        swapchain_extent.height = tg_uint32_clamp(height, surface_capabilities.minImageExtent.height, surface_capabilities.maxImageExtent.height);
+        swapchain_extent.width = tgm_ui32_clamp(width, surface_capabilities.minImageExtent.width, surface_capabilities.maxImageExtent.width);
+        swapchain_extent.height = tgm_ui32_clamp(height, surface_capabilities.minImageExtent.height, surface_capabilities.maxImageExtent.height);
     }
 
-    ASSERT(tg_uint32_clamp(SURFACE_IMAGE_COUNT, surface_capabilities.minImageCount, surface_capabilities.maxImageCount) == SURFACE_IMAGE_COUNT);
+    ASSERT(tgm_ui32_clamp(SURFACE_IMAGE_COUNT, surface_capabilities.minImageCount, surface_capabilities.maxImageCount) == SURFACE_IMAGE_COUNT);
 
     VkSwapchainCreateInfoKHR swapchain_create_info = { 0 };
     swapchain_create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
@@ -812,7 +810,7 @@ void tg_vulkan_init_graphics_pipeline()
     pipeline_rasterization_state_create_info.depthClampEnable = VK_FALSE;
     pipeline_rasterization_state_create_info.rasterizerDiscardEnable = VK_FALSE;
     pipeline_rasterization_state_create_info.polygonMode = VK_POLYGON_MODE_FILL;
-    pipeline_rasterization_state_create_info.cullMode = VK_CULL_MODE_BACK_BIT;
+    pipeline_rasterization_state_create_info.cullMode = VK_CULL_MODE_NONE; // TODO: BACK_BIT
     pipeline_rasterization_state_create_info.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     pipeline_rasterization_state_create_info.depthBiasEnable = VK_FALSE;
     pipeline_rasterization_state_create_info.depthBiasConstantFactor = 0.0f;
@@ -1065,23 +1063,34 @@ void tg_vulkan_render()
 
     fff += 0.0003f;
 
-    tg_vec3f from = { 2.0f, 2.0f, 2.0f };
-    tg_vec3f to = { 0 };
-    tg_vec3f up = { 0.0f, 1.0f, 0.0f };
-    tg_vec3f axis = { 0.0f, 0.0f, 1.0f };
+    tgm_vec3f from = { 2.0f, 2.0f, 2.0f };
+    tgm_vec3f to = { 0 };
+    tgm_vec3f up = { 0.0f, 1.0f, 0.0f };
+    tgm_vec3f axis = { 0.0f, 0.0f, 1.0f };
+    tgm_vec3f translation = { 0.0f, 0.0f, 0.0f };
 
+    const float fov_y = TGM_TO_DEGREES(45.0f);
+    const float aspect = (float32)swapchain_extent.width / (float32)swapchain_extent.height;
+    const float n = -0.1f;
+    const float f = -1000.0f;
+    
     tg_vulkan_uniform_buffer_object uniform_buffer_object = { 0 };
-    tg_mat4f_identity(&uniform_buffer_object.model);
-    tg_mat4f_identity(&uniform_buffer_object.view);
-    //tg_mat4f_identity(&uniform_buffer_object.projection);
+    tgm_m4f_identity(&uniform_buffer_object.model);
+    tgm_m4f_identity(&uniform_buffer_object.view);
+    tgm_m4f_identity(&uniform_buffer_object.projection);
+    tgm_m4f_translate(&uniform_buffer_object.model, &translation);
     //tg_mat4f_angle_axis(&uniform_buffer_object.model, fff * TG_FLOAT_TO_RADIANS(90.0f), &axis);
     //tg_mat4f_look_at(&uniform_buffer_object.view, &from, &to, &up);
-    tg_mat4f_orthographic(&uniform_buffer_object.projection, -1, 1, -0.6f, 0.6f, 10.0f, -10.0f);
-    //tg_mat4f_perspective(&uniform_buffer_object.projection, TG_FLOAT_TO_RADIANS(45.0f), (float)swapchain_extent.width / (float)swapchain_extent.height, 0.01f, 1000.0f);
+    tgm_m4f_perspective(&uniform_buffer_object.projection, fov_y, aspect, n, f);
+    tgm_m4f_orthographic(&uniform_buffer_object.projection, -aspect, aspect, -1.0f, 1.0f, -10.0f, 10.0f);
+    
+    tgm_vec4f v0 = { 0.5f, 0.5f, n, 1.0f };
+    tgm_vec4f r0 = *tgm_m4f_multiply_v4f(&r0, &uniform_buffer_object.projection, &v0);
+    tgm_vec3f f0 = { r0.x / r0.w, r0.y / r0.w, r0.z / r0.w };
 
-    tg_vec4f v = { 1.0f, 0.0f, 0.0f, 1.0f };
-    tg_mat4f m = *tg_mat4f_angle_axis(&m, TG_FLOAT_TO_RADIANS(90.0f), &axis);
-    tg_vec4f mul = *tg_mat4f_multiply_v4(&mul, &m, &v);
+    tgm_vec4f v1 = { 0.5f, 0.5f, -1.0f, 1.0f };
+    tgm_vec4f r1 = *tgm_m4f_multiply_v4f(&r1, &uniform_buffer_object.projection, &v1);
+    tgm_vec3f f1 = { r1.x / r1.w, r1.y / r1.w, r1.z / r1.w };
 
     void* data;
     VK_CALL(vkMapMemory(device, uniform_buffer_memories[next_image], 0, sizeof(tg_vulkan_uniform_buffer_object), 0, &data));

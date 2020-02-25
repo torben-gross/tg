@@ -41,15 +41,11 @@ void tg_platform_get_window_size(uint32* width, uint32* height)
 void tg_platform_print(const char* string)
 {
     OutputDebugStringA(string);
+    OutputDebugStringA("\n");
 }
 #endif
 
-LRESULT CALLBACK tg_win32_platform_window_proc(
-    HWND   window_handle,
-    UINT   message,
-    WPARAM w_param,
-    LPARAM l_param
-)
+LRESULT CALLBACK tg_win32_platform_window_proc(HWND window_handle, UINT message, WPARAM w_param, LPARAM l_param)
 {
     switch (message)
     {
@@ -152,7 +148,6 @@ int CALLBACK WinMain(
         fps++;
     }
 
-    // shutdown
     tg_vulkan_shutdown();
 
     return (int)msg.wParam;

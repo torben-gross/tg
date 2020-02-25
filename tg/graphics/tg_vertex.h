@@ -1,13 +1,12 @@
 #ifndef TG_VERTEX_H
 #define TG_VERTEX_H
 
-#include "tg/math/tg_vec2f.h"
-#include "tg/math/tg_vec3f.h"
+#include "tg/math/tg_math.h"
 
 typedef struct tg_vertex
 {
-	tg_vec2f position;
-	tg_vec3f color;
+	tgm_vec2f position;
+	tgm_vec3f color;
 } tg_vertex;
 
 #endif
