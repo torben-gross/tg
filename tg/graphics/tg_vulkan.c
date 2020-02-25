@@ -6,6 +6,7 @@
 #define VK_USE_PLATFORM_WIN32_KHR
 #endif
 
+#include "tg_image.h"
 #include "tg_vertex.h"
 #include "tg/math/tg_math.h"
 #include "tg/platform/tg_allocator.h"
@@ -479,6 +480,14 @@ void tg_vulkan_copy_buffer(VkDeviceSize size, VkBuffer* source, VkBuffer* target
     VK_CALL(vkQueueWaitIdle(graphics_queue));
     vkFreeCommandBuffers(device, command_pool, 1, &command_buffer);
 }
+void tg_vulkan_init_texture_image()
+{
+    ui32 w;
+    ui32 h;
+    ui32 d;
+    tgi_load_bmp("test_icon.bmp", &w, &h, NULL);
+    tgi_load_bmp("test_icon.bmp", &w, &h, &d);
+}
 void tg_vulkan_init_vertex_buffer()
 {
     const ui32 device_size = sizeof(vertices);
@@ -718,15 +727,22 @@ VkShaderModule tg_vulkan_init_graphics_pipeline_create_shader_module(ui64 size, 
 void tg_vulkan_init_graphics_pipeline()
 {
     // TODO: look at comments for simpler compilation of shaders: https://vulkan-tutorial.com/en/Drawing_a_triangle/Graphics_pipeline_basics/Shader_modules
+
     ui64 vert_size;
-    char* vert;
+    tg_file_io_read("shaders/vert.spv", &vert_size, NULL);
+    char* vert = tg_malloc(vert_size * sizeof(*vert));
+    tg_file_io_read("shaders/vert.spv", &vert_size, &vert);
+
     ui64 frag_size;
-    char* frag;
-    tg_file_io_read("assets/shaders/vert.spv", &vert_size, &vert);
-    tg_file_io_read("assets/shaders/frag.spv", &frag_size, &frag);
+    tg_file_io_read("shaders/frag.spv", &frag_size, NULL);
+    char* frag = tg_malloc(frag_size * sizeof(*frag));
+    tg_file_io_read("shaders/frag.spv", &frag_size, &frag);
 
     const VkShaderModule frag_shader_module = tg_vulkan_init_graphics_pipeline_create_shader_module(frag_size, frag);
     const VkShaderModule vert_shader_module = tg_vulkan_init_graphics_pipeline_create_shader_module(vert_size, vert);
+
+    tg_free(vert);
+    tg_free(frag);
 
     VkPipelineShaderStageCreateInfo pipeline_shader_state_create_info_vert = { 0 };
     pipeline_shader_state_create_info_vert.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -883,9 +899,6 @@ void tg_vulkan_init_graphics_pipeline()
 
     VK_CALL(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &graphics_pipeline_create_info, NULL, &graphics_pipeline));
 
-    tg_file_io_free(frag);
-    tg_file_io_free(vert);
-
     vkDestroyShaderModule(device, frag_shader_module, NULL);
     vkDestroyShaderModule(device, vert_shader_module, NULL);
 }
@@ -1035,6 +1048,7 @@ void tg_vulkan_init()
     tg_vulkan_init_descriptor_set_layout();
     tg_vulkan_init_command_pool();
     tg_vulkan_init_semaphores_and_fences();
+    tg_vulkan_init_texture_image();
     tg_vulkan_init_vertex_buffer();
     tg_vulkan_init_index_buffer();
 
@@ -1093,7 +1107,7 @@ void tg_vulkan_render()
     tgm_m4f_perspective(&uniform_buffer_object.projection, fov_y, aspect, n, f);
 
     void* data;
-    VK_CALL(vkMapMemory(device, uniform_buffer_memories[next_image], 0, sizeof(tg_vulkan_uniform_buffer_object), 0, &data));
+    VK_CALL(vkMapMemory(device, uniform_buffer_memories[next_image], 0, sizeof(uniform_buffer_object), 0, &data));
     memcpy(data, &uniform_buffer_object, sizeof(uniform_buffer_object));
     vkUnmapMemory(device, uniform_buffer_memories[next_image]);
     

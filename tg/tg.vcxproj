@@ -107,6 +107,7 @@
     </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="graphics\tg_image.c" />
     <ClCompile Include="graphics\tg_vulkan.c" />
     <ClCompile Include="math\tg_math.c" />
     <ClCompile Include="platform\tg_allocator.c" />
@@ -114,6 +115,7 @@
     <ClCompile Include="util\tg_file_io.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="graphics\tg_image.h" />
     <ClInclude Include="graphics\tg_vertex.h" />
     <ClInclude Include="graphics\tg_vulkan.h" />
     <ClInclude Include="math\tg_math.h" />
