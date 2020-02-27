@@ -5,11 +5,11 @@
 #include <memory.h>
 #include <stdlib.h>
 
-void* tg_malloc(size_t size)
+void* tg_malloc(ui64 size)
 {
-	void* memory = malloc(size);
+	void* memory = malloc((size_t)size);
 	TG_ASSERT(memory);
-	memset(memory, 0, size);
+	memset(memory, 0, (size_t)size);
 	return memory;
 }
 

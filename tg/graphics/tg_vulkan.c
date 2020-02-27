@@ -484,9 +484,8 @@ void tg_vulkan_init_texture_image()
 {
     ui32 w;
     ui32 h;
-    ui32 d;
-    tgi_load_bmp("test_icon.bmp", &w, &h, NULL);
-    tgi_load_bmp("test_icon.bmp", &w, &h, &d);
+    f32* d;
+    tgi_bmp_load("test_icon.bmp", &w, &h, &d);
 }
 void tg_vulkan_init_vertex_buffer()
 {
@@ -729,20 +728,18 @@ void tg_vulkan_init_graphics_pipeline()
     // TODO: look at comments for simpler compilation of shaders: https://vulkan-tutorial.com/en/Drawing_a_triangle/Graphics_pipeline_basics/Shader_modules
 
     ui64 vert_size;
-    tg_file_io_read("shaders/vert.spv", &vert_size, NULL);
-    char* vert = tg_malloc(vert_size * sizeof(*vert));
+    char* vert;
     tg_file_io_read("shaders/vert.spv", &vert_size, &vert);
 
     ui64 frag_size;
-    tg_file_io_read("shaders/frag.spv", &frag_size, NULL);
-    char* frag = tg_malloc(frag_size * sizeof(*frag));
+    char* frag;
     tg_file_io_read("shaders/frag.spv", &frag_size, &frag);
 
     const VkShaderModule frag_shader_module = tg_vulkan_init_graphics_pipeline_create_shader_module(frag_size, frag);
     const VkShaderModule vert_shader_module = tg_vulkan_init_graphics_pipeline_create_shader_module(vert_size, vert);
 
-    tg_free(vert);
-    tg_free(frag);
+    tg_file_io_free(vert);
+    tg_file_io_free(frag);
 
     VkPipelineShaderStageCreateInfo pipeline_shader_state_create_info_vert = { 0 };
     pipeline_shader_state_create_info_vert.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;

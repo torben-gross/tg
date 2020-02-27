@@ -5,7 +5,6 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <windows.h>
-#include <sys/timeb.h>
 
 bool running = true;
 HWND window_handle = NULL;
@@ -86,8 +85,8 @@ int CALLBACK WinMain(
     _In_     int       show_cmd
 )
 {
-    const char* window_class_id     = "win32_platform";
-    const char* window_title        = "This is a window title!";
+    const char* window_class_id     = "tg";
+    const char* window_title        = "tg";
 
     WNDCLASSEXA window_class_info   = { 0 };
     window_class_info.cbSize        = sizeof(window_class_info);
@@ -108,23 +107,25 @@ int CALLBACK WinMain(
         0, 0, w, h,
         NULL, NULL, instance_handle, NULL
     );
-
-    if (window_handle == NULL)
-    {
-        DebugBreak();
-        return EXIT_FAILURE;
-    }
+    TG_ASSERT(window_handle);
 
     ShowWindow(window_handle, show_cmd);
     UpdateWindow(window_handle);
 
     tg_vulkan_init();
 
-    char buf[256];
-    struct timeb start, end;
-    ui64 fps = 0;
-    ftime(&start);
+    LARGE_INTEGER performance_frequency;
+    QueryPerformanceFrequency(&performance_frequency);
+
+    LARGE_INTEGER last_performance_counter;
+    QueryPerformanceCounter(&last_performance_counter);
+
     MSG msg = { 0 };
+#ifdef TG_DEBUG
+    char buffer[256];
+    f32 milliseconds_sum = 0.0f;
+    ui32 fps = 0;
+#endif
     while (running)
     {
         while (PeekMessageA(&msg, NULL, 0, 0, PM_REMOVE))
@@ -134,18 +135,27 @@ int CALLBACK WinMain(
         }
         tg_vulkan_render();
 
-        ftime(&end);
-        float delta_time = (1000.0f * (end.time - start.time) + (end.millitm - start.millitm));
-        if (delta_time > 1000.0f)
+#ifdef TG_DEBUG
+        LARGE_INTEGER end_performance_counter;
+        QueryPerformanceCounter(&end_performance_counter);
+        const LONGLONG counter_elapsed = end_performance_counter.QuadPart - last_performance_counter.QuadPart;
+        last_performance_counter = end_performance_counter;
+        const f32 delta_ms = (f32)((1000000000LL * counter_elapsed) / performance_frequency.QuadPart) / 1000000.0f;
+
+        milliseconds_sum += delta_ms;
+        fps++;
+        if (milliseconds_sum > 1000.0f)
         {
-            sprintf(buf, "ms:  %f ms\n", delta_time / (float)fps);
-            OutputDebugStringA(buf);
-            sprintf(buf, "FPS: %llu\n", fps);
-            OutputDebugStringA(buf);
-            start = end;
+            snprintf(buffer, sizeof(buffer), "%f ms\n", milliseconds_sum / fps);
+            OutputDebugStringA(buffer);
+
+            snprintf(buffer, sizeof(buffer), "%lu fps\n", fps);
+            OutputDebugStringA(buffer);
+
+            milliseconds_sum = 0.0f;
             fps = 0;
         }
-        fps++;
+#endif
     }
 
     tg_vulkan_shutdown();
