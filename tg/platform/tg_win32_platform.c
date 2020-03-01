@@ -68,6 +68,7 @@ LRESULT CALLBACK tg_win32_platform_window_proc(HWND window_handle, UINT message,
     {
         DestroyWindow(window_handle);
     } break;
+    case WM_DPICHANGED:
     case WM_SIZE:
     {
         tgvk_on_window_resize((ui)LOWORD(l_param), (ui)HIWORD(l_param));
@@ -94,12 +95,9 @@ int CALLBACK WinMain(
     window_class_info.hInstance     = instance_handle;
     window_class_info.lpszClassName = window_class_id;
 
-    if (!RegisterClassExA(&window_class_info))
-    {
-        DebugBreak();
-        return EXIT_FAILURE;
-    }
+    TG_ASSERT(RegisterClassExA(&window_class_info));
 
+    SetProcessDPIAware();
     ui32 w, h;
     tg_platform_get_screen_size(&w, &h);
     window_handle = CreateWindowExA(
