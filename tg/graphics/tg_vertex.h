@@ -7,6 +7,7 @@ typedef struct tg_vertex
 {
 	tgm_vec2f position;
 	tgm_vec3f color;
+	tgm_vec2f uv;
 } tg_vertex;
 
 #endif
