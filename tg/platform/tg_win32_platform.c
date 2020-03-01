@@ -70,7 +70,7 @@ LRESULT CALLBACK tg_win32_platform_window_proc(HWND window_handle, UINT message,
     } break;
     case WM_SIZE:
     {
-        tg_vulkan_on_window_resize((ui)LOWORD(l_param), (ui)HIWORD(l_param));
+        tgvk_on_window_resize((ui)LOWORD(l_param), (ui)HIWORD(l_param));
     } break;
     default:
         return DefWindowProcA(window_handle, message, w_param, l_param);
@@ -112,7 +112,7 @@ int CALLBACK WinMain(
     ShowWindow(window_handle, show_cmd);
     UpdateWindow(window_handle);
 
-    tg_vulkan_init();
+    tgvk_init();
 
     LARGE_INTEGER performance_frequency;
     QueryPerformanceFrequency(&performance_frequency);
@@ -133,7 +133,7 @@ int CALLBACK WinMain(
             TranslateMessage(&msg);
             DispatchMessageA(&msg);
         }
-        tg_vulkan_render();
+        tgvk_render();
 
 #ifdef TG_DEBUG
         LARGE_INTEGER end_performance_counter;
@@ -158,7 +158,7 @@ int CALLBACK WinMain(
 #endif
     }
 
-    tg_vulkan_shutdown();
+    tgvk_shutdown();
 
     return (int)msg.wParam;
 }

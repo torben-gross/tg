@@ -3,9 +3,9 @@
 
 #include "tg/tg_common.h"
 
-void tg_vulkan_init();
-void tg_vulkan_render();
-void tg_vulkan_shutdown();
-void tg_vulkan_on_window_resize(ui width, ui height);
+void tgvk_init();
+void tgvk_render();
+void tgvk_shutdown();
+void tgvk_on_window_resize(ui32 width, ui32 height);
 
 #endif
