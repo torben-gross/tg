@@ -75,43 +75,63 @@ VkDebugUtilsMessengerEXT debug_utils_messenger = VK_NULL_HANDLE;
 #endif
 VkSurfaceKHR surface = VK_NULL_HANDLE;
 VkPhysicalDevice physical_device = VK_NULL_HANDLE;
+VkSampleCountFlagBits msaa_sample_count = 0;
 tgvk_queue_families queue_family_indices = { 0 };
 VkDevice device = VK_NULL_HANDLE;
+
 VkQueue graphics_queue = VK_NULL_HANDLE;
 VkQueue present_queue = VK_NULL_HANDLE;
+
 VkCommandPool command_pool = VK_NULL_HANDLE;
 VkSemaphore image_available_semaphores[MAX_FRAMES_IN_FLIGHT] = { 0 };
 VkSemaphore rendering_finished_semaphores[MAX_FRAMES_IN_FLIGHT] = { 0 };
 VkFence in_flight_fences[MAX_FRAMES_IN_FLIGHT] = { 0 };
 VkFence images_in_flight[SURFACE_IMAGE_COUNT] = { 0 };
 
+
+
 VkDescriptorSetLayout descriptor_set_layout = VK_NULL_HANDLE;
 VkDescriptorPool descriptor_pool = VK_NULL_HANDLE;
 VkBuffer uniform_buffers[SURFACE_IMAGE_COUNT] = { 0 };
 VkDeviceMemory uniform_buffer_memories[SURFACE_IMAGE_COUNT] = { 0 };
+
 ui32 texture_mip_levels = 0;
 VkImage texture_image = VK_NULL_HANDLE;
 VkDeviceMemory texture_image_memory = VK_NULL_HANDLE;
 VkImageView texture_image_view = VK_NULL_HANDLE;
 VkSampler texture_sampler = VK_NULL_HANDLE;
+
 VkBuffer vertex_buffer = VK_NULL_HANDLE;
 VkDeviceMemory vertex_buffer_memory = VK_NULL_HANDLE;
+
 VkBuffer index_buffer = VK_NULL_HANDLE;
 VkDeviceMemory index_buffer_memory = VK_NULL_HANDLE;
 
+
+
 VkSwapchainKHR swapchain = VK_NULL_HANDLE;
 VkExtent2D swapchain_extent = { 0 };
+
 VkImage images[SURFACE_IMAGE_COUNT] = { 0 };
 VkImageView image_views[SURFACE_IMAGE_COUNT] = { 0 };
+
 VkRenderPass render_pass = VK_NULL_HANDLE;
 VkFramebuffer framebuffers[SURFACE_IMAGE_COUNT] = { 0 };
+
+VkImage color_image = VK_NULL_HANDLE;
+VkDeviceMemory color_image_memory = VK_NULL_HANDLE;
+VkImageView color_image_view = VK_NULL_HANDLE;
+
 VkImage depth_image = VK_NULL_HANDLE;
 VkDeviceMemory depth_image_memory = VK_NULL_HANDLE;
 VkImageView depth_image_view = VK_NULL_HANDLE;
+
 VkPipelineLayout pipeline_layout = VK_NULL_HANDLE;
 VkPipeline graphics_pipeline = VK_NULL_HANDLE;
 VkDescriptorSet descriptor_sets[SURFACE_IMAGE_COUNT] = { 0 };
 VkCommandBuffer command_buffers[SURFACE_IMAGE_COUNT] = { 0 };
+
+
 
 ui32 current_frame = 0;
 f32 fff = 0.0f;
@@ -130,6 +150,8 @@ ui16 indices[] = {
     4, 5, 6, 6, 7, 4
 };
 
+
+
 #ifdef TG_DEBUG
 VKAPI_ATTR VkBool32 VKAPI_CALL tgvk_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity, VkDebugUtilsMessageTypeFlagsEXT message_type, const VkDebugUtilsMessengerCallbackDataEXT* callback_data, void* user_data)
 {
@@ -139,13 +161,13 @@ VKAPI_ATTR VkBool32 VKAPI_CALL tgvk_debug_callback(VkDebugUtilsMessageSeverityFl
 #endif
 
 // utility
-void tgvk_find_physical_device_queue_families(VkPhysicalDevice pd, tgvk_queue_families* p_qfi, bool* p_complete)
+void tgvk_find_physical_device_queue_families(VkPhysicalDevice physical_device, tgvk_queue_families* p_qfi, bool* p_complete)
 {
     ui32 queue_family_count;
-    vkGetPhysicalDeviceQueueFamilyProperties(pd, &queue_family_count, NULL);
+    vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, NULL);
     TG_ASSERT(queue_family_count);
     VkQueueFamilyProperties* queue_family_properties = tg_malloc(queue_family_count * sizeof(*queue_family_properties));
-    vkGetPhysicalDeviceQueueFamilyProperties(pd, &queue_family_count, queue_family_properties);
+    vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, queue_family_properties);
 
     bool supports_graphics_family = false;
     VkBool32 supports_present_family = 0;
@@ -162,7 +184,7 @@ void tgvk_find_physical_device_queue_families(VkPhysicalDevice pd, tgvk_queue_fa
         }
         if (!supports_present_family)
         {
-            VK_CALL(vkGetPhysicalDeviceSurfaceSupportKHR(pd, i, surface, &supports_present_family));
+            VK_CALL(vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, i, surface, &supports_present_family));
             if (supports_present_family)
             {
                 p_qfi->present = i;
@@ -201,6 +223,42 @@ void tgvk_check_physical_device_extension_support(VkPhysicalDevice pd, bool* res
 
     tg_free(device_extension_properties);
     *result = supports_extensions;
+}
+void tgvk_find_max_sample_count(VkPhysicalDevice physical_device, ui32* max_sample_count)
+{
+    VkPhysicalDeviceProperties physical_device_properties;
+    vkGetPhysicalDeviceProperties(physical_device, &physical_device_properties);
+
+    const VkSampleCountFlags sample_count_flags = physical_device_properties.limits.framebufferColorSampleCounts & physical_device_properties.limits.framebufferDepthSampleCounts;
+
+    if (sample_count_flags & VK_SAMPLE_COUNT_64_BIT)
+    {
+        *max_sample_count = VK_SAMPLE_COUNT_64_BIT;
+    }
+    else if (sample_count_flags & VK_SAMPLE_COUNT_32_BIT)
+    {
+        *max_sample_count = VK_SAMPLE_COUNT_32_BIT;
+    }
+    else if (sample_count_flags & VK_SAMPLE_COUNT_16_BIT)
+    {
+        *max_sample_count = VK_SAMPLE_COUNT_16_BIT;
+    }
+    else if (sample_count_flags & VK_SAMPLE_COUNT_8_BIT)
+    {
+        *max_sample_count = VK_SAMPLE_COUNT_8_BIT;
+    }
+    else if (sample_count_flags & VK_SAMPLE_COUNT_4_BIT)
+    {
+        *max_sample_count = VK_SAMPLE_COUNT_4_BIT;
+    }
+    else if (sample_count_flags & VK_SAMPLE_COUNT_2_BIT)
+    {
+        *max_sample_count = VK_SAMPLE_COUNT_2_BIT;
+    }
+    else
+    {
+        *max_sample_count = VK_SAMPLE_COUNT_1_BIT;
+    }
 }
 void tgvk_find_depth_format(VkFormat* p_format)
 {
@@ -300,7 +358,7 @@ void tgvk_create_buffer(VkDeviceSize size, VkBufferUsageFlags buffer_usage_flags
     VK_CALL(vkAllocateMemory(device, &memory_allocate_info, NULL, p_device_memory));
     VK_CALL(vkBindBufferMemory(device, *p_buffer, *p_device_memory, 0));
 }
-void tgvk_create_image(ui32 width, ui32 height, ui32 mip_levels, VkFormat format, VkImageTiling image_tiling, VkImageUsageFlags image_usage_flags, VkMemoryPropertyFlags memory_property_flags, VkImage* p_image, VkDeviceMemory* p_device_memory)
+void tgvk_create_image(ui32 width, ui32 height, ui32 mip_levels, VkFormat format, VkSampleCountFlagBits sample_count_flag_bits, VkImageTiling image_tiling, VkImageUsageFlags image_usage_flags, VkMemoryPropertyFlags memory_property_flags, VkImage* p_image, VkDeviceMemory* p_device_memory)
 {
     VkImageCreateInfo image_create_info = { 0 };
     image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -313,7 +371,7 @@ void tgvk_create_image(ui32 width, ui32 height, ui32 mip_levels, VkFormat format
     image_create_info.extent.depth = 1;
     image_create_info.mipLevels = mip_levels;
     image_create_info.arrayLayers = 1;
-    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
+    image_create_info.samples = sample_count_flag_bits;
     image_create_info.tiling = image_tiling;
     image_create_info.usage = image_usage_flags;
     image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -677,6 +735,7 @@ void tgvk_init_physical_device()
         if (is_discrete_gpu && supports_geometry_shader && supports_sampler_anisotropy && qfi_complete && supports_extensions && physical_device_surface_format_count && physical_device_present_mode_count)
         {
             physical_device = physical_devices[i];
+            tgvk_find_max_sample_count(physical_devices[i], &msaa_sample_count);
             queue_family_indices = qfi;
             break;
         }
@@ -704,7 +763,60 @@ void tgvk_init_device()
     }
 
     VkPhysicalDeviceFeatures physical_device_features = { 0 };
+    physical_device_features.robustBufferAccess = VK_FALSE;
+    physical_device_features.fullDrawIndexUint32 = VK_FALSE;
+    physical_device_features.imageCubeArray = VK_FALSE;
+    physical_device_features.independentBlend = VK_FALSE;
+    physical_device_features.geometryShader = VK_FALSE;
+    physical_device_features.tessellationShader = VK_FALSE;
+    physical_device_features.sampleRateShading = VK_TRUE;
+    physical_device_features.dualSrcBlend = VK_FALSE;
+    physical_device_features.logicOp = VK_FALSE;
+    physical_device_features.multiDrawIndirect = VK_FALSE;
+    physical_device_features.drawIndirectFirstInstance = VK_FALSE;
+    physical_device_features.depthClamp = VK_FALSE;
+    physical_device_features.depthBiasClamp = VK_FALSE;
+    physical_device_features.fillModeNonSolid = VK_FALSE;
+    physical_device_features.depthBounds = VK_FALSE;
+    physical_device_features.wideLines = VK_FALSE;
+    physical_device_features.largePoints = VK_FALSE;
+    physical_device_features.alphaToOne = VK_FALSE;
+    physical_device_features.multiViewport = VK_FALSE;
     physical_device_features.samplerAnisotropy = VK_TRUE;
+    physical_device_features.textureCompressionETC2 = VK_FALSE;
+    physical_device_features.textureCompressionASTC_LDR = VK_FALSE;
+    physical_device_features.textureCompressionBC = VK_FALSE;
+    physical_device_features.occlusionQueryPrecise = VK_FALSE;
+    physical_device_features.pipelineStatisticsQuery = VK_FALSE;
+    physical_device_features.vertexPipelineStoresAndAtomics = VK_FALSE;
+    physical_device_features.fragmentStoresAndAtomics = VK_FALSE;
+    physical_device_features.shaderTessellationAndGeometryPointSize = VK_FALSE;
+    physical_device_features.shaderImageGatherExtended = VK_FALSE;
+    physical_device_features.shaderStorageImageExtendedFormats = VK_FALSE;
+    physical_device_features.shaderStorageImageMultisample = VK_FALSE;
+    physical_device_features.shaderStorageImageReadWithoutFormat = VK_FALSE;
+    physical_device_features.shaderStorageImageWriteWithoutFormat = VK_FALSE;
+    physical_device_features.shaderUniformBufferArrayDynamicIndexing = VK_FALSE;
+    physical_device_features.shaderSampledImageArrayDynamicIndexing = VK_FALSE;
+    physical_device_features.shaderStorageBufferArrayDynamicIndexing = VK_FALSE;
+    physical_device_features.shaderStorageImageArrayDynamicIndexing = VK_FALSE;
+    physical_device_features.shaderClipDistance = VK_FALSE;
+    physical_device_features.shaderCullDistance = VK_FALSE;
+    physical_device_features.shaderFloat64 = VK_FALSE;
+    physical_device_features.shaderInt64 = VK_FALSE;
+    physical_device_features.shaderInt16 = VK_FALSE;
+    physical_device_features.shaderResourceResidency = VK_FALSE;
+    physical_device_features.shaderResourceMinLod = VK_FALSE;
+    physical_device_features.sparseBinding = VK_FALSE;
+    physical_device_features.sparseResidencyBuffer = VK_FALSE;
+    physical_device_features.sparseResidencyImage2D = VK_FALSE;
+    physical_device_features.sparseResidencyImage3D = VK_FALSE;
+    physical_device_features.sparseResidency2Samples = VK_FALSE;
+    physical_device_features.sparseResidency4Samples = VK_FALSE;
+    physical_device_features.sparseResidency8Samples = VK_FALSE;
+    physical_device_features.sparseResidency16Samples = VK_FALSE;
+    physical_device_features.sparseResidencyAliased = VK_FALSE;
+    physical_device_features.variableMultisampleRate = VK_FALSE;
 
     VkDeviceCreateInfo device_create_info = { 0 };
     device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -847,6 +959,7 @@ void tgvk_init_texture_image()
         h,
         texture_mip_levels,
         VK_FORMAT_R8G8B8A8_SRGB,
+        VK_SAMPLE_COUNT_1_BIT,
         VK_IMAGE_TILING_OPTIMAL,
         VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
@@ -1024,6 +1137,10 @@ void tgvk_init_swapchain()
     depth_attachment_reference.attachment = 1;
     depth_attachment_reference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
+    VkAttachmentReference color_resolve_attachment_reference = { 0 };
+    color_resolve_attachment_reference.attachment = 2;
+    color_resolve_attachment_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
     VkSubpassDescription subpass_description = { 0 };
     subpass_description.flags = 0;
     subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
@@ -1031,7 +1148,7 @@ void tgvk_init_swapchain()
     subpass_description.pInputAttachments = NULL;
     subpass_description.colorAttachmentCount = 1;
     subpass_description.pColorAttachments = &color_attachment_reference;
-    subpass_description.pResolveAttachments = NULL;
+    subpass_description.pResolveAttachments = &color_resolve_attachment_reference;
     subpass_description.pDepthStencilAttachment = &depth_attachment_reference;
     subpass_description.preserveAttachmentCount = 0;
     subpass_description.pPreserveAttachments = NULL;
@@ -1044,29 +1161,39 @@ void tgvk_init_swapchain()
     subpass_dependency.srcAccessMask = 0;
     subpass_dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
-    VkAttachmentDescription attachment_descriptions[2] = { 0 };
+    VkAttachmentDescription attachment_descriptions[3] = { 0 };
     VkFormat depth_format;
     tgvk_find_depth_format(&depth_format);
 
     attachment_descriptions[0].flags = 0;
     attachment_descriptions[0].format = surface_format.format;
-    attachment_descriptions[0].samples = VK_SAMPLE_COUNT_1_BIT;
+    attachment_descriptions[0].samples = msaa_sample_count;
     attachment_descriptions[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     attachment_descriptions[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
     attachment_descriptions[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     attachment_descriptions[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     attachment_descriptions[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    attachment_descriptions[0].finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    attachment_descriptions[0].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
     attachment_descriptions[1].flags = 0;
     attachment_descriptions[1].format = depth_format;
-    attachment_descriptions[1].samples = VK_SAMPLE_COUNT_1_BIT;
+    attachment_descriptions[1].samples = msaa_sample_count;
     attachment_descriptions[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     attachment_descriptions[1].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     attachment_descriptions[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     attachment_descriptions[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     attachment_descriptions[1].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     attachment_descriptions[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+    attachment_descriptions[2].flags = 0;
+    attachment_descriptions[2].format = surface_format.format;
+    attachment_descriptions[2].samples = VK_SAMPLE_COUNT_1_BIT;
+    attachment_descriptions[2].loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachment_descriptions[2].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    attachment_descriptions[2].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachment_descriptions[2].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attachment_descriptions[2].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    attachment_descriptions[2].finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
     VkRenderPassCreateInfo render_pass_create_info = { 0 };
     render_pass_create_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
@@ -1085,7 +1212,22 @@ void tgvk_init_swapchain()
         swapchain_extent.width,
         swapchain_extent.height,
         1,
+        surface_format.format,
+        msaa_sample_count,
+        VK_IMAGE_TILING_OPTIMAL,
+        VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        &color_image,
+        &color_image_memory
+    );
+    tgvk_create_image_view(color_image, surface_format.format, 1, VK_IMAGE_ASPECT_COLOR_BIT, &color_image_view);
+
+    tgvk_create_image(
+        swapchain_extent.width,
+        swapchain_extent.height,
+        1,
         depth_format,
+        msaa_sample_count,
         VK_IMAGE_TILING_OPTIMAL,
         VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
@@ -1097,8 +1239,9 @@ void tgvk_init_swapchain()
     for (ui32 i = 0; i < SURFACE_IMAGE_COUNT; i++)
     {
         const VkImageView image_view_attachments[] = {
-            image_views[i],
-            depth_image_view
+            color_image_view,
+            depth_image_view,
+            image_views[i]
         };
 
         VkFramebufferCreateInfo framebuffer_create_info = { 0 };
@@ -1223,8 +1366,8 @@ void tgvk_init_graphics_pipeline()
     pipeline_multisample_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     pipeline_multisample_state_create_info.pNext = NULL;
     pipeline_multisample_state_create_info.flags = 0;
-    pipeline_multisample_state_create_info.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-    pipeline_multisample_state_create_info.sampleShadingEnable = VK_FALSE;
+    pipeline_multisample_state_create_info.rasterizationSamples = msaa_sample_count;
+    pipeline_multisample_state_create_info.sampleShadingEnable = VK_TRUE;
     pipeline_multisample_state_create_info.minSampleShading = 1.0f;
     pipeline_multisample_state_create_info.pSampleMask = NULL;
     pipeline_multisample_state_create_info.alphaToCoverageEnable = VK_FALSE;
@@ -1541,6 +1684,9 @@ void tgvk_shutdown()
     vkDestroyImageView(device, depth_image_view, NULL);
     vkDestroyImage(device, depth_image, NULL);
     vkFreeMemory(device, depth_image_memory, NULL);
+    vkDestroyImageView(device, color_image_view, NULL);
+    vkDestroyImage(device, color_image, NULL);
+    vkFreeMemory(device, color_image_memory, NULL);
     for (ui32 i = 0; i < SURFACE_IMAGE_COUNT; i++)
     {
         vkDestroyFramebuffer(device, framebuffers[i], NULL);
@@ -1597,6 +1743,9 @@ void tgvk_on_window_resize(ui32 width, ui32 height)
     vkDestroyImageView(device, depth_image_view, NULL);
     vkDestroyImage(device, depth_image, NULL);
     vkFreeMemory(device, depth_image_memory, NULL);
+    vkDestroyImageView(device, color_image_view, NULL);
+    vkDestroyImage(device, color_image, NULL);
+    vkFreeMemory(device, color_image_memory, NULL);
     for (ui32 i = 0; i < SURFACE_IMAGE_COUNT; i++)
     {
         vkDestroyFramebuffer(device, framebuffers[i], NULL);
