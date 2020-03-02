@@ -2,6 +2,9 @@
 #define TG_IMAGE
 
 #include "tg/tg_common.h"
+#include <math.h>
+
+#define TGI_MAX_MIP_LEVELS(w, h) ((ui32)log2f(max(w, h)) + 1)
 
 typedef struct tgi_pixel
 {

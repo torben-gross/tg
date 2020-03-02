@@ -89,6 +89,7 @@ VkDescriptorSetLayout descriptor_set_layout = VK_NULL_HANDLE;
 VkDescriptorPool descriptor_pool = VK_NULL_HANDLE;
 VkBuffer uniform_buffers[SURFACE_IMAGE_COUNT] = { 0 };
 VkDeviceMemory uniform_buffer_memories[SURFACE_IMAGE_COUNT] = { 0 };
+ui32 texture_mip_levels = 0;
 VkImage texture_image = VK_NULL_HANDLE;
 VkDeviceMemory texture_image_memory = VK_NULL_HANDLE;
 VkImageView texture_image_view = VK_NULL_HANDLE;
@@ -299,7 +300,7 @@ void tgvk_create_buffer(VkDeviceSize size, VkBufferUsageFlags buffer_usage_flags
     VK_CALL(vkAllocateMemory(device, &memory_allocate_info, NULL, p_device_memory));
     VK_CALL(vkBindBufferMemory(device, *p_buffer, *p_device_memory, 0));
 }
-void tgvk_create_image(ui32 width, ui32 height, VkFormat format, VkImageTiling image_tiling, VkImageUsageFlags image_usage_flags, VkMemoryPropertyFlags memory_property_flags, VkImage* p_image, VkDeviceMemory* p_device_memory)
+void tgvk_create_image(ui32 width, ui32 height, ui32 mip_levels, VkFormat format, VkImageTiling image_tiling, VkImageUsageFlags image_usage_flags, VkMemoryPropertyFlags memory_property_flags, VkImage* p_image, VkDeviceMemory* p_device_memory)
 {
     VkImageCreateInfo image_create_info = { 0 };
     image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -310,7 +311,7 @@ void tgvk_create_image(ui32 width, ui32 height, VkFormat format, VkImageTiling i
     image_create_info.extent.width = width;
     image_create_info.extent.height = height;
     image_create_info.extent.depth = 1;
-    image_create_info.mipLevels = 1;
+    image_create_info.mipLevels = mip_levels;
     image_create_info.arrayLayers = 1;
     image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
     image_create_info.tiling = image_tiling;
@@ -334,7 +335,7 @@ void tgvk_create_image(ui32 width, ui32 height, VkFormat format, VkImageTiling i
     VK_CALL(vkAllocateMemory(device, &memory_allocate_info, NULL, p_device_memory));
     VK_CALL(vkBindImageMemory(device, *p_image, *p_device_memory, 0));
 }
-void tgvk_create_image_view(VkImage image, VkFormat format, VkImageAspectFlags image_aspect_flags, VkImageView* p_image_view)
+void tgvk_create_image_view(VkImage image, VkFormat format, ui32 mip_levels, VkImageAspectFlags image_aspect_flags, VkImageView* p_image_view)
 {
     VkImageViewCreateInfo image_view_create_info = { 0 };
     image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -349,11 +350,120 @@ void tgvk_create_image_view(VkImage image, VkFormat format, VkImageAspectFlags i
     image_view_create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
     image_view_create_info.subresourceRange.aspectMask = image_aspect_flags;
     image_view_create_info.subresourceRange.baseMipLevel = 0;
-    image_view_create_info.subresourceRange.levelCount = 1;
+    image_view_create_info.subresourceRange.levelCount = mip_levels;
     image_view_create_info.subresourceRange.baseArrayLayer = 0;
     image_view_create_info.subresourceRange.layerCount = 1;
 
     VK_CALL(vkCreateImageView(device, &image_view_create_info, NULL, p_image_view));
+}
+void tgvk_create_sampler(VkImage image, ui32 mip_levels, VkFilter min_filter, VkFilter mag_filter, VkSamplerAddressMode address_mode_u, VkSamplerAddressMode address_mode_v, VkSamplerAddressMode address_mode_w, VkSampler* p_sampler)
+{
+    VkSamplerCreateInfo sampler_create_info = { 0 };
+    sampler_create_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    sampler_create_info.pNext = NULL;
+    sampler_create_info.flags = 0;
+    sampler_create_info.magFilter = mag_filter;
+    sampler_create_info.minFilter = min_filter;
+    sampler_create_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    sampler_create_info.addressModeU = address_mode_u;
+    sampler_create_info.addressModeV = address_mode_v;
+    sampler_create_info.addressModeW = address_mode_w;
+    sampler_create_info.mipLodBias = 0.0f;
+    sampler_create_info.anisotropyEnable = VK_TRUE;
+    sampler_create_info.maxAnisotropy = 16;
+    sampler_create_info.compareEnable = VK_FALSE;
+    sampler_create_info.compareOp = VK_COMPARE_OP_ALWAYS;
+    sampler_create_info.minLod = 0;
+    sampler_create_info.maxLod = mip_levels;
+    sampler_create_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    sampler_create_info.unnormalizedCoordinates = VK_FALSE;
+
+    VK_CALL(vkCreateSampler(device, &sampler_create_info, NULL, p_sampler));
+}
+void tgvk_generate_mipmaps(VkImage image, ui32 width, ui32 height, VkFormat format, ui32 mip_levels)
+{
+    VkFormatProperties format_properties;
+    vkGetPhysicalDeviceFormatProperties(physical_device, format, &format_properties);
+    TG_ASSERT(format_properties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT);
+
+    VkCommandBuffer command_buffer;
+    tgvk_begin_command_buffer(&command_buffer);
+
+    VkImageMemoryBarrier image_memory_barrier = { 0 };
+    image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    image_memory_barrier.pNext = NULL;
+    image_memory_barrier.srcAccessMask = 0;
+    image_memory_barrier.dstAccessMask = 0;
+    image_memory_barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    image_memory_barrier.newLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    image_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    image_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    image_memory_barrier.image = image;
+    image_memory_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    image_memory_barrier.subresourceRange.baseMipLevel = 0;
+    image_memory_barrier.subresourceRange.levelCount = 1;
+    image_memory_barrier.subresourceRange.baseArrayLayer = 0;
+    image_memory_barrier.subresourceRange.layerCount = 1;
+
+    ui32 mip_width = width;
+    ui32 mip_height = height;
+
+    for (ui32 i = 1; i < mip_levels; i++)
+    {
+        ui32 next_mip_width = max(1, mip_width / 2);
+        ui32 next_mip_height = max(1, mip_height / 2);
+
+        image_memory_barrier.subresourceRange.baseMipLevel = i - 1;
+        image_memory_barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        image_memory_barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+        image_memory_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        image_memory_barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+
+        vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL, 0, NULL, 1, &image_memory_barrier);
+
+        VkImageBlit image_blit = { 0 };
+        image_blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        image_blit.srcSubresource.mipLevel = i - 1;
+        image_blit.srcSubresource.baseArrayLayer = 0;
+        image_blit.srcSubresource.layerCount = 1;
+        image_blit.srcOffsets[0].x = 0;
+        image_blit.srcOffsets[0].y = 0;
+        image_blit.srcOffsets[0].z = 0;
+        image_blit.srcOffsets[1].x = mip_width;
+        image_blit.srcOffsets[1].y = mip_height;
+        image_blit.srcOffsets[1].z = 1;
+        image_blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        image_blit.dstSubresource.mipLevel = i;
+        image_blit.dstSubresource.baseArrayLayer = 0;
+        image_blit.dstSubresource.layerCount = 1;
+        image_blit.dstOffsets[0].x = 0;
+        image_blit.dstOffsets[0].y = 0;
+        image_blit.dstOffsets[0].z = 0;
+        image_blit.dstOffsets[1].x = next_mip_width;
+        image_blit.dstOffsets[1].y = next_mip_height;
+        image_blit.dstOffsets[1].z = 1;
+
+        vkCmdBlitImage(command_buffer, image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &image_blit, VK_FILTER_LINEAR);
+
+        image_memory_barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+        image_memory_barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        image_memory_barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+        image_memory_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+        vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, NULL, 0, NULL, 1, &image_memory_barrier);
+
+        mip_width = next_mip_width;
+        mip_height = next_mip_height;
+    }
+
+    image_memory_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    image_memory_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    image_memory_barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    image_memory_barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    image_memory_barrier.subresourceRange.baseMipLevel = mip_levels - 1;
+
+    vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, NULL, 0, NULL, 1, &image_memory_barrier);
+    tgvk_end_command_buffer(command_buffer);
 }
 void tgvk_create_shader_module(const char* filename, VkShaderModule* p_shader_module)
 {
@@ -407,7 +517,7 @@ void tgvk_copy_buffer_to_image(ui32 width, ui32 height, VkBuffer* p_source, VkIm
     vkCmdCopyBufferToImage(command_buffer, *p_source, *p_target, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &buffer_image_copy);
     tgvk_end_command_buffer(command_buffer);
 }
-void tgvk_transition_image_layout(VkImageLayout old_image_layout, VkImageLayout new_image_layout, VkImage* p_image)
+void tgvk_transition_image_layout(VkImageLayout old_image_layout, VkImageLayout new_image_layout, ui32 mip_levels, VkImage* p_image)
 {
     VkCommandBuffer command_buffer;
     tgvk_begin_command_buffer(&command_buffer);
@@ -448,7 +558,7 @@ void tgvk_transition_image_layout(VkImageLayout old_image_layout, VkImageLayout 
     image_memory_barrier.image = *p_image;
     image_memory_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     image_memory_barrier.subresourceRange.baseMipLevel = 0;
-    image_memory_barrier.subresourceRange.levelCount = 1;
+    image_memory_barrier.subresourceRange.levelCount = mip_levels;
     image_memory_barrier.subresourceRange.baseArrayLayer = 0;
     image_memory_barrier.subresourceRange.layerCount = 1;
 
@@ -712,6 +822,8 @@ void tgvk_init_texture_image()
     tgi_pixel* d = NULL;
     tgi_load_bmp("test_icon.bmp", &w, &h, &d);
 
+    texture_mip_levels = TGI_MAX_MIP_LEVELS(w, h);
+
     const VkDeviceSize image_size = (ui64)w * (ui64)h * (ui64)sizeof(tgi_pixel);
     VkBuffer staging_buffer;
     VkDeviceMemory staging_buffer_memory;
@@ -733,44 +845,24 @@ void tgvk_init_texture_image()
     tgvk_create_image(
         w,
         h,
+        texture_mip_levels,
         VK_FORMAT_R8G8B8A8_SRGB,
         VK_IMAGE_TILING_OPTIMAL,
-        VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+        VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         &texture_image,
         &texture_image_memory
     );
 
-    tgvk_transition_image_layout(VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &texture_image);
+    tgvk_transition_image_layout(VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, texture_mip_levels, &texture_image);
     tgvk_copy_buffer_to_image(w, h, &staging_buffer, &texture_image);
-    tgvk_transition_image_layout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, &texture_image);
 
     vkDestroyBuffer(device, staging_buffer, NULL);
     vkFreeMemory(device, staging_buffer_memory, NULL);
 
-    tgvk_create_image_view(texture_image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, &texture_image_view);
-
-    VkSamplerCreateInfo sampler_create_info = { 0 };
-    sampler_create_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    sampler_create_info.pNext = NULL;
-    sampler_create_info.flags = 0;
-    sampler_create_info.magFilter = VK_FILTER_NEAREST;
-    sampler_create_info.minFilter = VK_FILTER_NEAREST;
-    sampler_create_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-    sampler_create_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    sampler_create_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    sampler_create_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    sampler_create_info.mipLodBias = 0.0f;
-    sampler_create_info.anisotropyEnable = VK_TRUE;
-    sampler_create_info.maxAnisotropy = 16;
-    sampler_create_info.compareEnable = VK_FALSE;
-    sampler_create_info.compareOp = VK_COMPARE_OP_ALWAYS;
-    sampler_create_info.minLod = 0.0f;
-    sampler_create_info.maxLod = 0.0f;
-    sampler_create_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-    sampler_create_info.unnormalizedCoordinates = VK_FALSE;
-
-    VK_CALL(vkCreateSampler(device, &sampler_create_info, NULL, &texture_sampler));
+    tgvk_generate_mipmaps(texture_image, w, h, VK_FORMAT_R8G8B8A8_SRGB, texture_mip_levels);
+    tgvk_create_image_view(texture_image, VK_FORMAT_R8G8B8A8_SRGB, texture_mip_levels, VK_IMAGE_ASPECT_COLOR_BIT, &texture_image_view);
+    tgvk_create_sampler(texture_image, texture_mip_levels, VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, &texture_sampler);
 }
 void tgvk_init_vertex_buffer()
 {
@@ -921,7 +1013,7 @@ void tgvk_init_swapchain()
 
     for (ui32 i = 0; i < SURFACE_IMAGE_COUNT; i++)
     {
-        tgvk_create_image_view(images[i], surface_format.format, VK_IMAGE_ASPECT_COLOR_BIT, &image_views[i]);
+        tgvk_create_image_view(images[i], surface_format.format, 1, VK_IMAGE_ASPECT_COLOR_BIT, &image_views[i]);
     }
 
     VkAttachmentReference color_attachment_reference = { 0 };
@@ -992,6 +1084,7 @@ void tgvk_init_swapchain()
     tgvk_create_image(
         swapchain_extent.width,
         swapchain_extent.height,
+        1,
         depth_format,
         VK_IMAGE_TILING_OPTIMAL,
         VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
@@ -999,7 +1092,7 @@ void tgvk_init_swapchain()
         &depth_image,
         &depth_image_memory
     );
-    tgvk_create_image_view(depth_image, depth_format, VK_IMAGE_ASPECT_DEPTH_BIT, &depth_image_view);
+    tgvk_create_image_view(depth_image, depth_format, 1, VK_IMAGE_ASPECT_DEPTH_BIT, &depth_image_view);
 
     for (ui32 i = 0; i < SURFACE_IMAGE_COUNT; i++)
     {
