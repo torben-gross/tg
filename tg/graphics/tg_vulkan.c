@@ -929,14 +929,18 @@ void tgvk_init_uniform_buffers()
 }
 void tgvk_init_texture_image()
 {
-    ui32 w = 0;
-    ui32 h = 0;
-    tgi_pixel* d = NULL;
-    tgi_load_bmp("test_icon.bmp", &w, &h, &d);
+    tg_image_h img = NULL;
+    tg_image_create(&img, "test_icon.bmp");
+    tg_image_convert_to_format(img, TG_IMAGE_FORMAT_R8G8B8A8);
 
-    texture_mip_levels = TGI_MAX_MIP_LEVELS(w, h);
+    texture_mip_levels = TG_IMAGE_MAX_MIP_LEVELS(16, 16);
 
-    const VkDeviceSize image_size = (ui64)w * (ui64)h * (ui64)sizeof(tgi_pixel);
+    VkDeviceSize image_size;
+    tg_image_get_data_size(img, &image_size);
+
+    ui32 image_width, image_height;
+    tg_image_get_dimensions(img, &image_width, &image_height);
+
     VkBuffer staging_buffer;
     VkDeviceMemory staging_buffer_memory;
     tgvk_create_buffer(
@@ -949,14 +953,14 @@ void tgvk_init_texture_image()
 
     void* data;
     VK_CALL(vkMapMemory(device, staging_buffer_memory, 0, image_size, 0, &data));
-    memcpy(data, d, (size_t)image_size);
+    ui32* image_data;
+    tg_image_get_data(img, &image_data);
+    memcpy(data, image_data, (size_t)image_size);
     vkUnmapMemory(device, staging_buffer_memory);
 
-    tgi_free(d);
-
     tgvk_create_image(
-        w,
-        h,
+        image_width,
+        image_height,
         texture_mip_levels,
         VK_FORMAT_R8G8B8A8_SRGB,
         VK_SAMPLE_COUNT_1_BIT,
@@ -968,14 +972,16 @@ void tgvk_init_texture_image()
     );
 
     tgvk_transition_image_layout(VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, texture_mip_levels, &texture_image);
-    tgvk_copy_buffer_to_image(w, h, &staging_buffer, &texture_image);
+    tgvk_copy_buffer_to_image(image_width, image_height, &staging_buffer, &texture_image);
 
     vkDestroyBuffer(device, staging_buffer, NULL);
     vkFreeMemory(device, staging_buffer_memory, NULL);
 
-    tgvk_generate_mipmaps(texture_image, w, h, VK_FORMAT_R8G8B8A8_SRGB, texture_mip_levels);
+    tgvk_generate_mipmaps(texture_image, image_width, image_height, VK_FORMAT_R8G8B8A8_SRGB, texture_mip_levels);
     tgvk_create_image_view(texture_image, VK_FORMAT_R8G8B8A8_SRGB, texture_mip_levels, VK_IMAGE_ASPECT_COLOR_BIT, &texture_image_view);
     tgvk_create_sampler(texture_image, texture_mip_levels, VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, &texture_sampler);
+
+    //tg_image_destroy(&img);
 }
 void tgvk_init_vertex_buffer()
 {
