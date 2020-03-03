@@ -95,11 +95,7 @@ VkDescriptorPool descriptor_pool = VK_NULL_HANDLE;
 VkBuffer uniform_buffers[SURFACE_IMAGE_COUNT] = { 0 };
 VkDeviceMemory uniform_buffer_memories[SURFACE_IMAGE_COUNT] = { 0 };
 
-ui32 texture_mip_levels = 0;
-VkImage texture_image = VK_NULL_HANDLE;
-VkDeviceMemory texture_image_memory = VK_NULL_HANDLE;
-VkImageView texture_image_view = VK_NULL_HANDLE;
-VkSampler texture_sampler = VK_NULL_HANDLE;
+tg_image_h image_h = NULL;
 
 VkBuffer vertex_buffer = VK_NULL_HANDLE;
 VkDeviceMemory vertex_buffer_memory = VK_NULL_HANDLE;
@@ -149,6 +145,19 @@ ui16 indices[] = {
     0, 1, 2, 2, 3, 0,
     4, 5, 6, 6, 7, 4
 };
+
+typedef struct tg_image
+{
+    ui32               width;
+    ui32               height;
+    tg_image_format    format;
+    ui32* data;
+
+    VkImage            image;
+    VkDeviceMemory     device_memory;
+    VkImageView        image_view;
+    VkSampler          sampler;
+} tg_image;
 
 
 
@@ -224,7 +233,7 @@ void tgvk_check_physical_device_extension_support(VkPhysicalDevice pd, bool* res
     tg_free(device_extension_properties);
     *result = supports_extensions;
 }
-void tgvk_find_max_sample_count(VkPhysicalDevice physical_device, ui32* max_sample_count)
+void tgvk_find_max_sample_count(VkPhysicalDevice physical_device, VkSampleCountFlagBits* max_sample_count_flag_bits)
 {
     VkPhysicalDeviceProperties physical_device_properties;
     vkGetPhysicalDeviceProperties(physical_device, &physical_device_properties);
@@ -233,31 +242,31 @@ void tgvk_find_max_sample_count(VkPhysicalDevice physical_device, ui32* max_samp
 
     if (sample_count_flags & VK_SAMPLE_COUNT_64_BIT)
     {
-        *max_sample_count = VK_SAMPLE_COUNT_64_BIT;
+        *max_sample_count_flag_bits = VK_SAMPLE_COUNT_64_BIT;
     }
     else if (sample_count_flags & VK_SAMPLE_COUNT_32_BIT)
     {
-        *max_sample_count = VK_SAMPLE_COUNT_32_BIT;
+        *max_sample_count_flag_bits = VK_SAMPLE_COUNT_32_BIT;
     }
     else if (sample_count_flags & VK_SAMPLE_COUNT_16_BIT)
     {
-        *max_sample_count = VK_SAMPLE_COUNT_16_BIT;
+        *max_sample_count_flag_bits = VK_SAMPLE_COUNT_16_BIT;
     }
     else if (sample_count_flags & VK_SAMPLE_COUNT_8_BIT)
     {
-        *max_sample_count = VK_SAMPLE_COUNT_8_BIT;
+        *max_sample_count_flag_bits = VK_SAMPLE_COUNT_8_BIT;
     }
     else if (sample_count_flags & VK_SAMPLE_COUNT_4_BIT)
     {
-        *max_sample_count = VK_SAMPLE_COUNT_4_BIT;
+        *max_sample_count_flag_bits = VK_SAMPLE_COUNT_4_BIT;
     }
     else if (sample_count_flags & VK_SAMPLE_COUNT_2_BIT)
     {
-        *max_sample_count = VK_SAMPLE_COUNT_2_BIT;
+        *max_sample_count_flag_bits = VK_SAMPLE_COUNT_2_BIT;
     }
     else
     {
-        *max_sample_count = VK_SAMPLE_COUNT_1_BIT;
+        *max_sample_count_flag_bits = VK_SAMPLE_COUNT_1_BIT;
     }
 }
 void tgvk_find_depth_format(VkFormat* p_format)
@@ -432,7 +441,7 @@ void tgvk_create_sampler(VkImage image, ui32 mip_levels, VkFilter min_filter, Vk
     sampler_create_info.compareEnable = VK_FALSE;
     sampler_create_info.compareOp = VK_COMPARE_OP_ALWAYS;
     sampler_create_info.minLod = 0;
-    sampler_create_info.maxLod = mip_levels;
+    sampler_create_info.maxLod = (float)mip_levels;
     sampler_create_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
     sampler_create_info.unnormalizedCoordinates = VK_FALSE;
 
@@ -926,62 +935,6 @@ void tgvk_init_uniform_buffers()
             &uniform_buffers[i],
             &uniform_buffer_memories[i]);
     }
-}
-void tgvk_init_texture_image()
-{
-    tg_image_h img = NULL;
-    tg_image_create(&img, "test_icon.bmp");
-    tg_image_convert_to_format(img, TG_IMAGE_FORMAT_R8G8B8A8);
-
-    texture_mip_levels = TG_IMAGE_MAX_MIP_LEVELS(16, 16);
-
-    VkDeviceSize image_size;
-    tg_image_get_data_size(img, &image_size);
-
-    ui32 image_width, image_height;
-    tg_image_get_dimensions(img, &image_width, &image_height);
-
-    VkBuffer staging_buffer;
-    VkDeviceMemory staging_buffer_memory;
-    tgvk_create_buffer(
-        image_size,
-        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-        &staging_buffer,
-        &staging_buffer_memory
-    );
-
-    void* data;
-    VK_CALL(vkMapMemory(device, staging_buffer_memory, 0, image_size, 0, &data));
-    ui32* image_data;
-    tg_image_get_data(img, &image_data);
-    memcpy(data, image_data, (size_t)image_size);
-    vkUnmapMemory(device, staging_buffer_memory);
-
-    tgvk_create_image(
-        image_width,
-        image_height,
-        texture_mip_levels,
-        VK_FORMAT_R8G8B8A8_SRGB,
-        VK_SAMPLE_COUNT_1_BIT,
-        VK_IMAGE_TILING_OPTIMAL,
-        VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        &texture_image,
-        &texture_image_memory
-    );
-
-    tgvk_transition_image_layout(VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, texture_mip_levels, &texture_image);
-    tgvk_copy_buffer_to_image(image_width, image_height, &staging_buffer, &texture_image);
-
-    vkDestroyBuffer(device, staging_buffer, NULL);
-    vkFreeMemory(device, staging_buffer_memory, NULL);
-
-    tgvk_generate_mipmaps(texture_image, image_width, image_height, VK_FORMAT_R8G8B8A8_SRGB, texture_mip_levels);
-    tgvk_create_image_view(texture_image, VK_FORMAT_R8G8B8A8_SRGB, texture_mip_levels, VK_IMAGE_ASPECT_COLOR_BIT, &texture_image_view);
-    tgvk_create_sampler(texture_image, texture_mip_levels, VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, &texture_sampler);
-
-    //tg_image_destroy(&img);
 }
 void tgvk_init_vertex_buffer()
 {
@@ -1490,8 +1443,8 @@ void tgvk_init_descriptor_sets()
         descriptor_buffer_info.range = sizeof(tgvk_ubo);
 
         VkDescriptorImageInfo descriptor_image_info = { 0 };
-        descriptor_image_info.sampler = texture_sampler;
-        descriptor_image_info.imageView = texture_image_view;
+        descriptor_image_info.sampler = image_h->sampler;
+        descriptor_image_info.imageView = image_h->image_view;
         descriptor_image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
         VkWriteDescriptorSet write_descriptor_sets[2] = { 0 };
@@ -1592,7 +1545,7 @@ void tgvk_init()
     tgvk_init_descriptor_pool();
 
     tgvk_init_uniform_buffers();
-    tgvk_init_texture_image();
+    tg_graphics_create_image("test_icon.bmp", &image_h);
     tgvk_init_vertex_buffer();
     tgvk_init_index_buffer();
 
@@ -1707,10 +1660,9 @@ void tgvk_shutdown()
     vkDestroySwapchainKHR(device, swapchain, NULL);
     vkDestroyDescriptorPool(device, descriptor_pool, NULL);
     vkDestroyDescriptorSetLayout(device, descriptor_set_layout, NULL);
-    vkDestroySampler(device, texture_sampler, NULL);
-    vkDestroyImageView(device, texture_image_view, NULL);
-    vkDestroyImage(device, texture_image, NULL);
-    vkFreeMemory(device, texture_image_memory, NULL);
+
+    tg_graphics_destroy_image(image_h);
+
     vkDestroyBuffer(device, index_buffer, NULL);
     vkFreeMemory(device, index_buffer_memory, NULL);
     vkDestroyBuffer(device, vertex_buffer, NULL);
@@ -1768,4 +1720,65 @@ void tgvk_on_window_resize(ui32 width, ui32 height)
     tgvk_init_swapchain();
     tgvk_init_graphics_pipeline();
     tgvk_init_command_buffers();
+}
+
+
+
+void tg_graphics_create_image(const char* filename, tg_image_h* p_image_h)
+{
+    tg_image image = { 0 };
+    tg_image_load(filename, &image.width, &image.height, &image.format, &image.data);
+    tg_image_convert_to_format(image.data, image.width, image.height, image.format, TG_IMAGE_FORMAT_R8G8B8A8);
+    const ui32 mip_levels = TG_IMAGE_MAX_MIP_LEVELS(16, 16);
+    const VkDeviceSize size = (ui64)image.width * (ui64)image.height * sizeof(*image.data);
+
+    VkBuffer staging_buffer;
+    VkDeviceMemory staging_buffer_memory;
+    tgvk_create_buffer(
+        size,
+        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        &staging_buffer,
+        &staging_buffer_memory
+    );
+
+    void* data;
+    VK_CALL(vkMapMemory(device, staging_buffer_memory, 0, size, 0, &data));
+    memcpy(data, image.data, (size_t)size);
+    vkUnmapMemory(device, staging_buffer_memory);
+
+    tgvk_create_image(
+        image.width,
+        image.height,
+        mip_levels,
+        VK_FORMAT_R8G8B8A8_SRGB,
+        VK_SAMPLE_COUNT_1_BIT,
+        VK_IMAGE_TILING_OPTIMAL,
+        VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        &image.image,
+        &image.device_memory
+    );
+
+    tgvk_transition_image_layout(VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mip_levels, &image.image);
+    tgvk_copy_buffer_to_image(image.width, image.height, &staging_buffer, &image.image);
+
+    vkDestroyBuffer(device, staging_buffer, NULL);
+    vkFreeMemory(device, staging_buffer_memory, NULL);
+
+    tgvk_generate_mipmaps(image.image, image.width, image.height, VK_FORMAT_R8G8B8A8_SRGB, mip_levels);
+    tgvk_create_image_view(image.image, VK_FORMAT_R8G8B8A8_SRGB, mip_levels, VK_IMAGE_ASPECT_COLOR_BIT, &image.image_view);
+    tgvk_create_sampler(image.image, mip_levels, VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, &image.sampler);
+
+    *p_image_h = tg_malloc(sizeof(**p_image_h));
+    **p_image_h = image;
+}
+void tg_graphics_destroy_image(tg_image_h image_h)
+{
+    vkDestroySampler(device, image_h->sampler, NULL);
+    vkDestroyImageView(device, image_h->image_view, NULL);
+    vkFreeMemory(device, image_h->device_memory, NULL);
+    vkDestroyImage(device, image_h->image, NULL);
+    tg_image_free(image_h->data);
+    tg_free(image_h);
 }
