@@ -1,9 +1,19 @@
 #ifndef TG_COMMON_H
 #define TG_COMMON_H
 
+
+
 #if defined(_WIN32) || defined(_WIN64)
 #define TG_WIN32
 #endif
+
+#ifdef TG_WIN32
+#define _CRT_SECURE_NO_WARNINGS
+#define VK_USE_PLATFORM_WIN32_KHR
+#define TG_VULKAN
+#endif
+
+
 
 #ifndef NDEBUG
 #define TG_DEBUG
@@ -14,6 +24,11 @@
 #else
 #define TG_ASSERT(x)
 #endif
+
+
+
+
+
 
 #define F32_MIN_POSITIVE   1.175494351e-38f
 #define F32_MAX_POSITIVE   3.402823466e+38f
@@ -35,6 +50,8 @@
 #define U16_MAX            0xffffui16
 #define U32_MAX            0xffffffffui32
 #define U64_MAX            0xffffffffffffffffui64
+
+
 
 typedef float              f32;
 typedef double             f64;

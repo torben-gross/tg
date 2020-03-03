@@ -1,7 +1,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 
 #include "tg/tg_common.h"
-#include "tg/graphics/tg_vulkan.h"
+#include "tg/graphics/tg_graphics.h"
 #include <stdbool.h>
 #include <stdio.h>
 #include <windows.h>
@@ -70,7 +70,7 @@ LRESULT CALLBACK tg_win32_platform_window_proc(HWND window_handle, UINT message,
     } break;
     case WM_SIZE:
     {
-        tgvk_on_window_resize((ui)LOWORD(l_param), (ui)HIWORD(l_param));
+        tg_graphics_on_window_resize((ui)LOWORD(l_param), (ui)HIWORD(l_param));
     } break;
     default:
         return DefWindowProcA(window_handle, message, w_param, l_param);
@@ -110,7 +110,7 @@ int CALLBACK WinMain(
     ShowWindow(window_handle, show_cmd);
     UpdateWindow(window_handle);
 
-    tgvk_init();
+    tg_graphics_init();
 
     LARGE_INTEGER performance_frequency;
     QueryPerformanceFrequency(&performance_frequency);
@@ -131,7 +131,7 @@ int CALLBACK WinMain(
             TranslateMessage(&msg);
             DispatchMessageA(&msg);
         }
-        tgvk_render();
+        tg_graphics_render();
 
 #ifdef TG_DEBUG
         LARGE_INTEGER end_performance_counter;
@@ -156,7 +156,7 @@ int CALLBACK WinMain(
 #endif
     }
 
-    tgvk_shutdown();
+    tg_graphics_shutdown();
 
     return (int)msg.wParam;
 }
