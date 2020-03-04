@@ -120,11 +120,11 @@
     <ClInclude Include="graphics\tg_graphics_vulkan.h" />
     <ClInclude Include="graphics\tg_image.h" />
     <ClInclude Include="graphics\tg_vertex.h" />
-    <ClInclude Include="graphics\tg_vulkan.h" />
     <ClInclude Include="math\tg_math.h" />
     <ClInclude Include="platform\tg_allocator.h" />
     <ClInclude Include="platform\tg_platform.h" />
     <ClInclude Include="tg_common.h" />
+    <ClInclude Include="tg_entity.h" />
     <ClInclude Include="util\tg_file_io.h" />
   </ItemGroup>
   <ItemGroup>

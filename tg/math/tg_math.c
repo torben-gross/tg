@@ -162,7 +162,7 @@ tgm_mat2f* tgm_m2f_multiply_m2f(tgm_mat2f* result, tgm_mat2f* m0, tgm_mat2f* m1)
 	return result;
 }
 
-tgm_vec2f* tgm_m2f_multiply_v2f(tgm_vec2f* result, tgm_mat2f* m, tgm_vec2f* v)
+tgm_vec2f* tgm_m2f_multiply_v2f(tgm_vec2f* result, const tgm_mat2f* m, tgm_vec2f* v)
 {
 	result->x = v->x * m->m00 + v->y * m->m01;
 	result->y = v->x * m->m10 + v->y * m->m11;
@@ -220,7 +220,7 @@ tgm_mat3f* tgm_m3f_multiply_m3f(tgm_mat3f* result, tgm_mat3f* m0, tgm_mat3f* m1)
 	return result;
 }
 
-tgm_vec3f* tgm_m3f_multiply_v3f(tgm_vec3f* result, tgm_mat3f* m, tgm_vec3f* v)
+tgm_vec3f* tgm_m3f_multiply_v3f(tgm_vec3f* result, const tgm_mat3f* m, tgm_vec3f* v)
 {
 	result->x = v->x * m->m00 + v->y * m->m01 + v->z * m->m02;
 	result->y = v->x * m->m10 + v->y * m->m11 + v->z * m->m12;
@@ -271,15 +271,15 @@ tgm_mat3f* tgm_m3f_transpose(tgm_mat3f* result, tgm_mat3f* m)
 
 
 
-tgm_mat4f* tgm_m4f_angle_axis(tgm_mat4f* result, f32 angle_in_radians, tgm_vec3f* axis)
+tgm_mat4f* tgm_m4f_angle_axis(tgm_mat4f* result, f32 angle_in_radians, const tgm_vec3f* axis)
 {
 	const f32 c = (f32)cos((double)angle_in_radians);
 	const f32 s = (f32)sin((double)angle_in_radians);
 	const f32 omc = 1.0f - c;
-	tgm_vec3f unit_axis = *tgm_v3f_normalize(&unit_axis, axis);
-	const f32 x = unit_axis.x;
-	const f32 y = unit_axis.y; // TODO: why minus?
-	const f32 z = unit_axis.z;
+	const f32 l = tgm_v3f_magnitude(axis);
+	const f32 x = axis->x / l;
+	const f32 y = axis->y / l;
+	const f32 z = axis->z / l;
 
 	result->m00 = x * x * omc + c;
 	result->m10 = y * x * omc + z * s;
@@ -385,7 +385,7 @@ tgm_mat4f* tgm_m4f_multiply_m4f(tgm_mat4f* result, tgm_mat4f* m0, tgm_mat4f* m1)
 	return result;
 }
 
-tgm_vec4f* tgm_m4f_multiply_v4f(tgm_vec4f* result, tgm_mat4f* m, tgm_vec4f* v)
+tgm_vec4f* tgm_m4f_multiply_v4f(tgm_vec4f* result, const tgm_mat4f* m, tgm_vec4f* v)
 {
 	result->x = v->x * m->m00 + v->y * m->m01 + v->z * m->m02 + v->w * m->m03;
 	result->y = v->x * m->m10 + v->y * m->m11 + v->z * m->m12 + v->w * m->m13;
@@ -451,7 +451,7 @@ tgm_mat4f* tgm_m4f_perspective(tgm_mat4f* result, f32 fov_y_in_radians, f32 aspe
 	return result;
 }
 
-tgm_mat4f* tgm_m4f_translate(tgm_mat4f* result, tgm_vec3f* v)
+tgm_mat4f* tgm_m4f_translate(tgm_mat4f* result, const tgm_vec3f* v)
 {
 	result->m00 = 1.0f;
 	result->m10 = 0.0f;

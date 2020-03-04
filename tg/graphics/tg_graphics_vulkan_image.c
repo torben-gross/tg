@@ -1,5 +1,7 @@
 #include "tg_graphics_vulkan.h"
 
+#ifdef TG_VULKAN
+
 #include "tg_image.h"
 #include "tg/platform/tg_allocator.h"
 
@@ -61,3 +63,5 @@ void tg_graphics_image_destroy(tg_image_h image_h)
     tg_image_free(image_h->data);
     tg_free(image_h);
 }
+
+#endif

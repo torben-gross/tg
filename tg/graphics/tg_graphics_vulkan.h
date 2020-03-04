@@ -2,7 +2,9 @@
 #define TG_GRAPHICS_VULKAN_H
 
 #include "tg_graphics.h"
+
 #ifdef TG_VULKAN
+
 #include <stdbool.h>
 #include <vulkan/vulkan.h>
 
@@ -42,7 +44,7 @@
 #define VALIDATION_LAYER_NAMES NULL
 #endif
 
-#define MAX_FRAMES_IN_FLIGHT 2
+#define FRAMES_IN_FLIGHT 2
 #define QUEUE_INDEX_COUNT 2
 #define MAX_PRESENT_MODE_COUNT 9
 #define SURFACE_IMAGE_COUNT 3
@@ -71,15 +73,16 @@ typedef struct tg_image
 
 VkInstance instance;
 VkSurfaceKHR surface;
+VkSurfaceFormatKHR surface_format;
 VkPhysicalDevice physical_device;
 VkSampleCountFlagBits msaa_sample_count;
 VkDevice device;
 tg_queue graphics_queue;
 tg_queue present_queue;
 VkCommandPool command_pool;
-VkSemaphore image_available_semaphores[MAX_FRAMES_IN_FLIGHT];
-VkSemaphore rendering_finished_semaphores[MAX_FRAMES_IN_FLIGHT];
-VkFence in_flight_fences[MAX_FRAMES_IN_FLIGHT];
+VkSemaphore image_available_semaphores[FRAMES_IN_FLIGHT];
+VkSemaphore rendering_finished_semaphores[FRAMES_IN_FLIGHT];
+VkFence in_flight_fences[FRAMES_IN_FLIGHT];
 VkFence images_in_flight[SURFACE_IMAGE_COUNT];
 
 #ifdef TG_DEBUG

@@ -1,6 +1,7 @@
-#include "tg_vulkan.h"
-
 #include "tg_graphics_vulkan.h"
+
+#ifdef TG_VULKAN
+
 #include "tg_vertex.h"
 #include "tg/math/tg_math.h"
 #include "tg/platform/tg_allocator.h"
@@ -58,7 +59,8 @@ VkCommandBuffer command_buffers[SURFACE_IMAGE_COUNT] = { 0 };
 
 
 ui32 current_frame = 0;
-f32 fff = 0.0f;
+const VkPipelineStageFlags wait_dst_stage_mask[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+
 tg_vertex vertices[] = {
     { { -0.5f, -0.5f,  0.0f }, { 1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f } },
     { {  0.5f, -0.5f,  0.0f }, { 0.0f, 1.0f, 0.0f }, { 1.0f, 0.0f } },
@@ -780,7 +782,7 @@ void tgvk_init_semaphores_and_fences()
     fence_create_info.pNext = NULL;
     fence_create_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-    for (ui32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+    for (ui32 i = 0; i < FRAMES_IN_FLIGHT; i++)
     {
         VK_CALL(vkCreateSemaphore(device, &semaphore_create_info, NULL, &image_available_semaphores[i]));
         VK_CALL(vkCreateSemaphore(device, &semaphore_create_info, NULL, &rendering_finished_semaphores[i]));
@@ -806,7 +808,7 @@ void tgvk_init_descriptor_set_layout()
     descriptor_set_layout_bindings[1].descriptorCount = 1;
     descriptor_set_layout_bindings[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
     descriptor_set_layout_bindings[1].pImmutableSamplers = NULL;
-
+    
     VkDescriptorSetLayoutCreateInfo descriptor_set_layout_create_info = { 0 };
     descriptor_set_layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     descriptor_set_layout_create_info.pNext = NULL;
@@ -852,7 +854,7 @@ void tgvk_init_uniform_buffers()
 }
 void tgvk_init_vertex_buffer()
 {
-    const ui32 device_size = sizeof(vertices);
+    const VkDeviceSize device_size = sizeof(vertices);
 
     VkBuffer staging_buffer = VK_NULL_HANDLE;
     VkDeviceMemory staging_buffer_memory = VK_NULL_HANDLE;
@@ -921,7 +923,7 @@ void tgvk_init_swapchain()
     VK_CALL(vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &surface_format_count, NULL));
     VkSurfaceFormatKHR* surface_formats = tg_malloc(surface_format_count * sizeof(*surface_formats));
     VK_CALL(vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &surface_format_count, surface_formats));
-    VkSurfaceFormatKHR surface_format = surface_formats[0];
+    surface_format = surface_formats[0];
     for (ui32 i = 0; i < surface_format_count; i++)
     {
         if (surface_formats[i].format == VK_FORMAT_B8G8R8A8_UNORM && surface_formats[i].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
@@ -946,16 +948,9 @@ void tgvk_init_swapchain()
         }
     }
 
-    if (surface_capabilities.currentExtent.width != UINT32_MAX)
-    {
-        swapchain_extent = surface_capabilities.currentExtent;
-    }
-    else
-    {
-        tg_platform_get_window_size(&swapchain_extent.width, &swapchain_extent.height);
-        swapchain_extent.width = tgm_ui32_clamp(swapchain_extent.width, surface_capabilities.minImageExtent.width, surface_capabilities.maxImageExtent.width);
-        swapchain_extent.height = tgm_ui32_clamp(swapchain_extent.height, surface_capabilities.minImageExtent.height, surface_capabilities.maxImageExtent.height);
-    }
+    tg_platform_get_window_size(&swapchain_extent.width, &swapchain_extent.height);
+    swapchain_extent.width = tgm_ui32_clamp(swapchain_extent.width, surface_capabilities.minImageExtent.width, surface_capabilities.maxImageExtent.width);
+    swapchain_extent.height = tgm_ui32_clamp(swapchain_extent.height, surface_capabilities.minImageExtent.height, surface_capabilities.maxImageExtent.height);
 
     TG_ASSERT(tgm_ui32_clamp(SURFACE_IMAGE_COUNT, surface_capabilities.minImageCount, surface_capabilities.maxImageCount) == SURFACE_IMAGE_COUNT);
 
@@ -1003,7 +998,9 @@ void tgvk_init_swapchain()
     {
         tg_graphics_vulkan_image_view_create(images[i], surface_format.format, 1, VK_IMAGE_ASPECT_COLOR_BIT, &image_views[i]);
     }
-
+}
+void tgvk_init_render_pass()
+{
     VkAttachmentReference color_attachment_reference = { 0 };
     color_attachment_reference.attachment = 0;
     color_attachment_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
@@ -1468,9 +1465,17 @@ void tg_graphics_init()
 
 
     tgvk_init_swapchain();
+    tgvk_init_render_pass();
     tgvk_init_graphics_pipeline();
     tgvk_init_descriptor_sets();
     tgvk_init_command_buffers();
+
+
+
+    // TODO: this is obviously quite hard-coded
+    images_in_flight[0] = in_flight_fences[0];
+    images_in_flight[1] = in_flight_fences[1];
+    images_in_flight[2] = in_flight_fences[0];
 }
 void tg_graphics_render()
 {
@@ -1478,44 +1483,19 @@ void tg_graphics_render()
 
     ui32 next_image;
     VK_CALL(vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, image_available_semaphores[current_frame], VK_NULL_HANDLE, &next_image));
-
-    if (images_in_flight[next_image] != VK_NULL_HANDLE)
-    {
-        VK_CALL(vkWaitForFences(device, 1, &images_in_flight[next_image], VK_TRUE, UINT64_MAX));
-    }
     images_in_flight[next_image] = in_flight_fences[current_frame];
-
-    const VkPipelineStageFlags wait_dst_stage_mask[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-
-    fff += 0.001f;
 
     tgm_vec3f from = { -1.0f, 1.0f, 1.0f };
     tgm_vec3f to = { 0.0f, 0.0f, -2.0f };
     tgm_vec3f up = { 0.0f, 1.0f, 0.0f };
-
-    // model
-    const float angle = fff * TGM_TO_RADIANS(45.0f);
-    tgm_vec3f axis = { 0.2f, 1.0f, 0.0f };
-    tgm_vec3f translation_vector = { 0.0f, 0.0f, -2.0f };
-    
-    // projection
+    const tgm_vec3f translation_vector = { 0.0f, 0.0f, -2.0f };
     const f32 fov_y = TGM_TO_DEGREES(70.0f);
     const f32 aspect = (f32)swapchain_extent.width / (f32)swapchain_extent.height;
     const f32 n = -0.1f;
     const f32 f = -1000.0f;
-    
     tgvk_ubo uniform_buffer_object = { 0 };
-    tgm_m4f_identity(&uniform_buffer_object.model);
-    tgm_m4f_identity(&uniform_buffer_object.view);
-    tgm_m4f_identity(&uniform_buffer_object.projection);
-
-    //tgm_mat4f rotation = *tgm_m4f_angle_axis(&rotation, angle, &axis);
-    //tgm_mat4f translation = *tgm_m4f_translate(&translation, &translation_vector);
-    //tgm_m4f_multiply_m4f(&uniform_buffer_object.model, &translation, &rotation);
     tgm_m4f_translate(&uniform_buffer_object.model, &translation_vector);
-
     tgm_m4f_look_at(&uniform_buffer_object.view, &from, &to, &up);
-    tgm_m4f_orthographic(&uniform_buffer_object.projection, -aspect, aspect, -1.0f, 1.0f, -10.0f, 10.0f);
     tgm_m4f_perspective(&uniform_buffer_object.projection, fov_y, aspect, n, f);
 
     void* data;
@@ -1527,12 +1507,12 @@ void tg_graphics_render()
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.pNext = NULL;
     submit_info.waitSemaphoreCount = 1;
-    submit_info.pWaitSemaphores = image_available_semaphores + current_frame;
+    submit_info.pWaitSemaphores = &image_available_semaphores[current_frame];
     submit_info.pWaitDstStageMask = wait_dst_stage_mask;
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &command_buffers[next_image];
     submit_info.signalSemaphoreCount = 1;
-    submit_info.pSignalSemaphores = rendering_finished_semaphores + current_frame;
+    submit_info.pSignalSemaphores = &rendering_finished_semaphores[current_frame];
 
     VK_CALL(vkResetFences(device, 1, in_flight_fences + current_frame));
     VK_CALL(vkQueueSubmit(graphics_queue.queue, 1, &submit_info, in_flight_fences[current_frame]));
@@ -1541,15 +1521,14 @@ void tg_graphics_render()
     present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     present_info.pNext = NULL;
     present_info.waitSemaphoreCount = 1;
-    present_info.pWaitSemaphores = rendering_finished_semaphores + current_frame;
+    present_info.pWaitSemaphores = &rendering_finished_semaphores[current_frame];
     present_info.swapchainCount = 1;
     present_info.pSwapchains = &swapchain;
     present_info.pImageIndices = &next_image;
     present_info.pResults = NULL;
 
     VK_CALL(vkQueuePresentKHR(present_queue.queue, &present_info));
-
-    current_frame = ++current_frame == MAX_FRAMES_IN_FLIGHT ? 0 : current_frame;
+    current_frame = (current_frame + 1) % FRAMES_IN_FLIGHT;
 }
 void tg_graphics_shutdown()
 {
@@ -1588,7 +1567,7 @@ void tg_graphics_shutdown()
         vkDestroyBuffer(device, uniform_buffers[i], NULL);
         vkFreeMemory(device, uniform_buffer_memories[i], NULL);
     }
-    for (ui32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+    for (ui32 i = 0; i < FRAMES_IN_FLIGHT; i++)
     {
         vkDestroyFence(device, in_flight_fences[i], NULL);
         vkDestroySemaphore(device, rendering_finished_semaphores[i], NULL);
@@ -1634,6 +1613,9 @@ void tg_graphics_on_window_resize(ui32 width, ui32 height)
     vkDestroySwapchainKHR(device, swapchain, NULL);
 
     tgvk_init_swapchain();
+    tgvk_init_render_pass();
     tgvk_init_graphics_pipeline();
     tgvk_init_command_buffers();
 }
+
+#endif

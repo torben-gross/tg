@@ -12,7 +12,6 @@
   <ItemGroup>
     <ClInclude Include="tg_common.h" />
     <ClInclude Include="graphics\tg_vertex.h" />
-    <ClInclude Include="graphics\tg_vulkan.h" />
     <ClInclude Include="platform\tg_allocator.h" />
     <ClInclude Include="platform\tg_platform.h" />
     <ClInclude Include="util\tg_file_io.h" />
@@ -20,6 +19,7 @@
     <ClInclude Include="graphics\tg_image.h" />
     <ClInclude Include="graphics\tg_graphics.h" />
     <ClInclude Include="graphics\tg_graphics_vulkan.h" />
+    <ClInclude Include="tg_entity.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="tg.ruleset" />

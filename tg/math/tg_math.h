@@ -171,23 +171,23 @@ tgm_vec3f* tgm_v3f_subtract_f(tgm_vec3f* result, tgm_vec3f* v0, f32 f);
 // matrices
 tgm_mat2f* tgm_m2f_identity(tgm_mat2f* result);
 tgm_mat2f* tgm_m2f_multiply_m2f(tgm_mat2f* result, tgm_mat2f* m0, tgm_mat2f* m1);
-tgm_vec2f* tgm_m2f_multiply_v2f(tgm_vec2f* result, tgm_mat2f* m, tgm_vec2f* v);
+tgm_vec2f* tgm_m2f_multiply_v2f(tgm_vec2f* result, const tgm_mat2f* m, tgm_vec2f* v);
 tgm_mat2f* tgm_m2f_transpose(tgm_mat2f* result, tgm_mat2f* m);
 
 tgm_mat3f* tgm_m3f_identity(tgm_mat3f* result);
 tgm_mat3f* tgm_m3f_multiply_m3f(tgm_mat3f* result, tgm_mat3f* m0, tgm_mat3f* m1);
-tgm_vec3f* tgm_m3f_multiply_v3f(tgm_vec3f* result, tgm_mat3f* m, tgm_vec3f* v);
+tgm_vec3f* tgm_m3f_multiply_v3f(tgm_vec3f* result, const tgm_mat3f* m, tgm_vec3f* v);
 tgm_mat3f* tgm_m3f_orthographic(tgm_mat3f* result, f32 left, f32 right, f32 bottom, f32 top);
 tgm_mat3f* tgm_m3f_transpose(tgm_mat3f* result, tgm_mat3f* m);
 
-tgm_mat4f* tgm_m4f_angle_axis(tgm_mat4f* result, f32 angle_in_radians, tgm_vec3f* axis);
+tgm_mat4f* tgm_m4f_angle_axis(tgm_mat4f* result, f32 angle_in_radians, const tgm_vec3f* axis);
 tgm_mat4f* tgm_m4f_identity(tgm_mat4f* result);
 tgm_mat4f* tgm_m4f_look_at(tgm_mat4f* result, tgm_vec3f* from, tgm_vec3f* to, tgm_vec3f* up);
 tgm_mat4f* tgm_m4f_multiply_m4f(tgm_mat4f* result, tgm_mat4f* m0, tgm_mat4f* m1);
-tgm_vec4f* tgm_m4f_multiply_v4f(tgm_vec4f* result, tgm_mat4f* m, tgm_vec4f* v);
+tgm_vec4f* tgm_m4f_multiply_v4f(tgm_vec4f* result, const tgm_mat4f* m, tgm_vec4f* v);
 tgm_mat4f* tgm_m4f_orthographic(tgm_mat4f* result, f32 left, f32 right, f32 bottom, f32 top, f32 far, f32 near);
 tgm_mat4f* tgm_m4f_perspective(tgm_mat4f* result, f32 fov_y_in_radians, f32 aspect, f32 near, f32 far);
-tgm_mat4f* tgm_m4f_translate(tgm_mat4f* result, tgm_vec3f* v);
+tgm_mat4f* tgm_m4f_translate(tgm_mat4f* result, const tgm_vec3f* v);
 tgm_mat4f* tgm_m4f_transpose(tgm_mat4f* result, tgm_mat4f* m);
 
 #endif
