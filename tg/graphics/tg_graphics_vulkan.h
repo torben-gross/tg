@@ -69,6 +69,18 @@ typedef struct tg_image
     VkSampler          sampler;
 } tg_image;
 
+typedef struct tg_index_buffer
+{
+    VkBuffer buffer;
+    VkDeviceMemory device_memory;
+} tg_index_buffer;
+
+typedef struct tg_vertex_buffer
+{
+    VkBuffer buffer;
+    VkDeviceMemory device_memory;
+} tg_vertex_buffer;
+
 
 
 VkInstance instance;
@@ -111,4 +123,5 @@ void tg_graphics_vulkan_image_transition_layout(VkImageLayout old_image_layout, 
 
 
 #endif
+
 #endif

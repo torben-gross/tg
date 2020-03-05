@@ -31,12 +31,12 @@ void tg_file_io_read(const char* filename, ui64* size, char** content)
     *size = (ui64)ftell(file);
     rewind(file);
 
-    *content = tg_malloc(*size);
+    *content = tg_allocator_allocate(*size);
     fread(*content, 1, *size, file);
     fclose(file);
 }
 
 void tg_file_io_free(char* content)
 {
-    tg_free(content);
+    tg_allocator_free(content);
 }

@@ -1,6 +1,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 
 #include "tg/tg_common.h"
+#include "tg_allocator.h"
 #include "tg/graphics/tg_graphics.h"
 #include <stdbool.h>
 #include <stdio.h>
@@ -157,6 +158,6 @@ int CALLBACK WinMain(
     }
 
     tg_graphics_shutdown();
-
+    TG_ASSERT(tg_allocator_unfreed_allocation_count() == 0);
     return (int)msg.wParam;
 }

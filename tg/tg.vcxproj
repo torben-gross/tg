@@ -108,8 +108,10 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="graphics\tg_graphics_vulkan_image.c" />
-    <ClCompile Include="graphics\tg_image.c" />
+    <ClCompile Include="graphics\tg_graphics_image_loader.c" />
     <ClCompile Include="graphics\tg_graphics_vulkan.c" />
+    <ClCompile Include="graphics\tg_graphics_vulkan_index_buffer.c" />
+    <ClCompile Include="graphics\tg_graphics_vulkan_vertex_buffer.c" />
     <ClCompile Include="math\tg_math.c" />
     <ClCompile Include="platform\tg_allocator.c" />
     <ClCompile Include="platform\tg_win32_platform.c" />
@@ -118,7 +120,7 @@
   <ItemGroup>
     <ClInclude Include="graphics\tg_graphics.h" />
     <ClInclude Include="graphics\tg_graphics_vulkan.h" />
-    <ClInclude Include="graphics\tg_image.h" />
+    <ClInclude Include="graphics\tg_graphics_image_loader.h" />
     <ClInclude Include="graphics\tg_vertex.h" />
     <ClInclude Include="math\tg_math.h" />
     <ClInclude Include="platform\tg_allocator.h" />

@@ -1,4 +1,4 @@
-#include "tg_image.h"
+#include "tg_graphics_image_loader.h"
 
 #include "tg/platform/tg_allocator.h"
 #include "tg/util/tg_file_io.h"
@@ -147,7 +147,7 @@ void tg_image_load(const char* filename, ui32* p_width, ui32* p_height, tg_image
 }
 void tg_image_free(ui32* data)
 {
-	tg_free(data);
+	tg_allocator_free(data);
 }
 
 void tg_image_convert_to_format(ui32* data, ui32 width, ui32 height, tg_image_format old_format, tg_image_format new_format)
@@ -407,6 +407,6 @@ void tg_image_load_bmp_from_memory(ui64 file_size, const char* file_memory, ui32
 	*p_height = bitmapv5header.height;
 	tg_image_convert_masks_to_format(bitmapv5header.r_mask, bitmapv5header.g_mask, bitmapv5header.b_mask, bitmapv5header.a_mask, p_format);
 	const ui64 size = (ui64)bitmapv5header.width * (ui64)bitmapv5header.height * (ui64)sizeof(**p_data);
-	*p_data = tg_malloc(size);
+	*p_data = tg_allocator_allocate(size);
 	memcpy(*p_data, (ui32*)(file_memory + bitmapfileheader.offset_bits), size);
 }

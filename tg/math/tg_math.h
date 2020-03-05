@@ -144,13 +144,13 @@ typedef struct tgm_vec2f
 } tgm_vec2f;
 
 // functional
-f32 tgm_f32_clamp(f32 v, f32 low, f32 high);
-f32 tgm_f32_max(f32 v0, f32 v1);
-f32 tgm_f32_min(f32 v0, f32 v1);
+f32        tgm_f32_clamp(f32 v, f32 low, f32 high);
+f32        tgm_f32_max(f32 v0, f32 v1);
+f32        tgm_f32_min(f32 v0, f32 v1);
 
-ui32 tgm_ui32_clamp(ui32 v, ui32 low, ui32 high);
-ui32 tgm_ui32_max(ui32 v0, ui32 v1);
-ui32 tgm_ui32_min(ui32 v0, ui32 v1);
+ui32       tgm_ui32_clamp(ui32 v, ui32 low, ui32 high);
+ui32       tgm_ui32_max(ui32 v0, ui32 v1);
+ui32       tgm_ui32_min(ui32 v0, ui32 v1);
 
 // vectors
 tgm_vec3f* tgm_v3f_add_v3f(tgm_vec3f* result, tgm_vec3f* v0, tgm_vec3f* v1);
@@ -158,9 +158,9 @@ tgm_vec3f* tgm_v3f_add_f(tgm_vec3f* result, tgm_vec3f* v0, f32 f);
 tgm_vec3f* tgm_v3f_cross(tgm_vec3f* result, tgm_vec3f* v0, tgm_vec3f* v1);
 tgm_vec3f* tgm_v3f_divide_v3f(tgm_vec3f* result, tgm_vec3f* v0, tgm_vec3f* v1);
 tgm_vec3f* tgm_v3f_divide_f(tgm_vec3f* result, tgm_vec3f* v0, f32 f);
-f32 tgm_v3f_dot(const tgm_vec3f* v0, const tgm_vec3f* v1);
-f32 tgm_v3f_magnitude(const tgm_vec3f* v);
-f32 tgm_v3f_magnitude_squared(const tgm_vec3f* v);
+f32        tgm_v3f_dot(const tgm_vec3f* v0, const tgm_vec3f* v1);
+f32        tgm_v3f_magnitude(const tgm_vec3f* v);
+f32        tgm_v3f_magnitude_squared(const tgm_vec3f* v);
 tgm_vec3f* tgm_v3f_multiply_v3f(tgm_vec3f* result, tgm_vec3f* v0, tgm_vec3f* v1);
 tgm_vec3f* tgm_v3f_multiply_f(tgm_vec3f* result, tgm_vec3f* v0, f32 f);
 tgm_vec3f* tgm_v3f_negate(tgm_vec3f* result, tgm_vec3f* v0);

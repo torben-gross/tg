@@ -25,12 +25,8 @@ VkBuffer uniform_buffers[SURFACE_IMAGE_COUNT] = { 0 };
 VkDeviceMemory uniform_buffer_memories[SURFACE_IMAGE_COUNT] = { 0 };
 
 tg_image_h image_h = NULL;
-
-VkBuffer vertex_buffer = VK_NULL_HANDLE;
-VkDeviceMemory vertex_buffer_memory = VK_NULL_HANDLE;
-
-VkBuffer index_buffer = VK_NULL_HANDLE;
-VkDeviceMemory index_buffer_memory = VK_NULL_HANDLE;
+tg_vertex_buffer_h vertex_buffer_h = NULL;
+tg_index_buffer_h index_buffer_h = NULL;
 
 
 
@@ -92,7 +88,7 @@ void tg_graphics_vulkan_physical_device_find_queue_families(VkPhysicalDevice phy
     ui32 queue_family_count;
     vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, NULL);
     TG_ASSERT(queue_family_count);
-    VkQueueFamilyProperties* queue_family_properties = tg_malloc(queue_family_count * sizeof(*queue_family_properties));
+    VkQueueFamilyProperties* queue_family_properties = tg_allocator_allocate(queue_family_count * sizeof(*queue_family_properties));
     vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, queue_family_properties);
 
     bool supports_graphics_family = false;
@@ -123,13 +119,13 @@ void tg_graphics_vulkan_physical_device_find_queue_families(VkPhysicalDevice phy
     }
     *p_complete = supports_graphics_family && supports_present_family;
 
-    tg_free(queue_family_properties);
+    tg_allocator_free(queue_family_properties);
 }
 void tg_graphics_vulkan_physical_device_check_extension_support(VkPhysicalDevice pd, bool* result)
 {
     ui32 device_extension_property_count;
     VK_CALL(vkEnumerateDeviceExtensionProperties(pd, NULL, &device_extension_property_count, NULL));
-    VkExtensionProperties* device_extension_properties = tg_malloc(device_extension_property_count * sizeof(*device_extension_properties));
+    VkExtensionProperties* device_extension_properties = tg_allocator_allocate(device_extension_property_count * sizeof(*device_extension_properties));
     VK_CALL(vkEnumerateDeviceExtensionProperties(pd, NULL, &device_extension_property_count, device_extension_properties));
 
     bool supports_extensions = true;
@@ -147,7 +143,7 @@ void tg_graphics_vulkan_physical_device_check_extension_support(VkPhysicalDevice
         supports_extensions &= supports_extension;
     }
 
-    tg_free(device_extension_properties);
+    tg_allocator_free(device_extension_properties);
     *result = supports_extensions;
 }
 void tg_graphics_vulkan_physical_device_find_max_sample_count(VkPhysicalDevice physical_device, VkSampleCountFlagBits* max_sample_count_flag_bits)
@@ -556,7 +552,7 @@ void tgvk_init_instance()
 #ifdef TG_DEBUG
     ui32 layer_property_count;
     vkEnumerateInstanceLayerProperties(&layer_property_count, NULL);
-    VkLayerProperties* layer_properties = tg_malloc(layer_property_count * sizeof(*layer_properties));
+    VkLayerProperties* layer_properties = tg_allocator_allocate(layer_property_count * sizeof(*layer_properties));
     vkEnumerateInstanceLayerProperties(&layer_property_count, layer_properties);
 
     for (ui32 i = 0; i < VALIDATION_LAYER_COUNT; i++)
@@ -572,7 +568,7 @@ void tgvk_init_instance()
         }
         TG_ASSERT(layer_found);
     }
-    tg_free(layer_properties);
+    tg_allocator_free(layer_properties);
 #endif
 
     VkApplicationInfo application_info = { 0 };
@@ -631,7 +627,7 @@ void tgvk_init_physical_device()
     ui32 physical_device_count;
     VK_CALL(vkEnumeratePhysicalDevices(instance, &physical_device_count, NULL));
     TG_ASSERT(physical_device_count);
-    VkPhysicalDevice* physical_devices = tg_malloc(physical_device_count * sizeof(*physical_devices));
+    VkPhysicalDevice* physical_devices = tg_allocator_allocate(physical_device_count * sizeof(*physical_devices));
     VK_CALL(vkEnumeratePhysicalDevices(instance, &physical_device_count, physical_devices));
 
     for (ui32 i = 0; i < physical_device_count; i++)
@@ -666,7 +662,7 @@ void tgvk_init_physical_device()
     }
     TG_ASSERT(physical_device != VK_NULL_HANDLE);
 
-    tg_free(physical_devices);
+    tg_allocator_free(physical_devices);
 }
 void tgvk_init_device()
 {
@@ -852,66 +848,6 @@ void tgvk_init_uniform_buffers()
             &uniform_buffer_memories[i]);
     }
 }
-void tgvk_init_vertex_buffer()
-{
-    const VkDeviceSize device_size = sizeof(vertices);
-
-    VkBuffer staging_buffer = VK_NULL_HANDLE;
-    VkDeviceMemory staging_buffer_memory = VK_NULL_HANDLE;
-    tg_graphics_vulkan_buffer_create(
-        device_size,
-        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-        &staging_buffer,
-        &staging_buffer_memory);
-
-    void* data;
-    vkMapMemory(device, staging_buffer_memory, 0, device_size, 0, &data);
-    memcpy(data, vertices, device_size);
-    vkUnmapMemory(device, staging_buffer_memory);
-
-    tg_graphics_vulkan_buffer_create(
-        device_size,
-        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        &vertex_buffer,
-        &vertex_buffer_memory);
-
-    tg_graphics_vulkan_buffer_copy(device_size, &staging_buffer, &vertex_buffer);
-
-    vkDestroyBuffer(device, staging_buffer, NULL);
-    vkFreeMemory(device, staging_buffer_memory, NULL);
-}
-void tgvk_init_index_buffer()
-{
-    const VkDeviceSize size = sizeof(indices);
-
-    VkBuffer staging_buffer = VK_NULL_HANDLE;
-    VkDeviceMemory staging_buffer_memory = VK_NULL_HANDLE;
-    tg_graphics_vulkan_buffer_create(
-        size,
-        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-        &staging_buffer,
-        &staging_buffer_memory);
-
-    void* data;
-    vkMapMemory(device, staging_buffer_memory, 0, size, 0, &data);
-    memcpy(data, indices, (size_t)size);
-    vkUnmapMemory(device, staging_buffer_memory);
-
-    tg_graphics_vulkan_buffer_create(
-        size,
-        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        &index_buffer,
-        &index_buffer_memory);
-
-    tg_graphics_vulkan_buffer_copy(size, &staging_buffer, &index_buffer);
-
-    vkDestroyBuffer(device, staging_buffer, NULL);
-    vkFreeMemory(device, staging_buffer_memory, NULL);
-}
 
 // pipeline
 void tgvk_init_swapchain()
@@ -921,7 +857,7 @@ void tgvk_init_swapchain()
 
     ui32 surface_format_count;
     VK_CALL(vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &surface_format_count, NULL));
-    VkSurfaceFormatKHR* surface_formats = tg_malloc(surface_format_count * sizeof(*surface_formats));
+    VkSurfaceFormatKHR* surface_formats = tg_allocator_allocate(surface_format_count * sizeof(*surface_formats));
     VK_CALL(vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &surface_format_count, surface_formats));
     surface_format = surface_formats[0];
     for (ui32 i = 0; i < surface_format_count; i++)
@@ -932,7 +868,7 @@ void tgvk_init_swapchain()
             break;
         }
     }
-    tg_free(surface_formats);
+    tg_allocator_free(surface_formats);
 
     VkPresentModeKHR present_modes[MAX_PRESENT_MODE_COUNT] = { 0 };
     ui32 max_present_mode_count = MAX_PRESENT_MODE_COUNT;
@@ -1428,8 +1364,8 @@ void tgvk_init_command_buffers()
 
         vkCmdBeginRenderPass(command_buffers[i], &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
         vkCmdBindPipeline(command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline);
-        vkCmdBindVertexBuffers(command_buffers[i], 0, 1, &vertex_buffer, offsets);
-        vkCmdBindIndexBuffer(command_buffers[i], index_buffer, 0, VK_INDEX_TYPE_UINT16);
+        vkCmdBindVertexBuffers(command_buffers[i], 0, 1, &vertex_buffer_h->buffer, offsets);
+        vkCmdBindIndexBuffer(command_buffers[i], index_buffer_h->buffer, 0, VK_INDEX_TYPE_UINT16);
         vkCmdBindDescriptorSets(command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptor_sets[i], 0, NULL);
         vkCmdDrawIndexed(command_buffers[i], sizeof(indices) / sizeof(*indices), 1, 0, 0, 0);
         vkCmdEndRenderPass(command_buffers[i]);
@@ -1459,8 +1395,8 @@ void tg_graphics_init()
 
     tgvk_init_uniform_buffers();
     tg_graphics_image_create("test_icon.bmp", &image_h);
-    tgvk_init_vertex_buffer();
-    tgvk_init_index_buffer();
+    tg_graphics_vertex_buffer_create(sizeof(vertices), vertices, &vertex_buffer_h);
+    tg_graphics_index_buffer_create(12, indices, &index_buffer_h);
 
 
 
@@ -1558,10 +1494,8 @@ void tg_graphics_shutdown()
 
     tg_graphics_image_destroy(image_h);
 
-    vkDestroyBuffer(device, index_buffer, NULL);
-    vkFreeMemory(device, index_buffer_memory, NULL);
-    vkDestroyBuffer(device, vertex_buffer, NULL);
-    vkFreeMemory(device, vertex_buffer_memory, NULL);
+    tg_graphics_index_buffer_destroy(index_buffer_h);
+    tg_graphics_vertex_buffer_destroy(vertex_buffer_h);
     for (ui32 i = 0; i < SURFACE_IMAGE_COUNT; i++)
     {
         vkDestroyBuffer(device, uniform_buffers[i], NULL);

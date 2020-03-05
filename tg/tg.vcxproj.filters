@@ -5,9 +5,11 @@
     <ClCompile Include="platform\tg_win32_platform.c" />
     <ClCompile Include="util\tg_file_io.c" />
     <ClCompile Include="math\tg_math.c" />
-    <ClCompile Include="graphics\tg_image.c" />
     <ClCompile Include="graphics\tg_graphics_vulkan.c" />
     <ClCompile Include="graphics\tg_graphics_vulkan_image.c" />
+    <ClCompile Include="graphics\tg_graphics_image_loader.c" />
+    <ClCompile Include="graphics\tg_graphics_vulkan_index_buffer.c" />
+    <ClCompile Include="graphics\tg_graphics_vulkan_vertex_buffer.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="tg_common.h" />
@@ -16,10 +18,10 @@
     <ClInclude Include="platform\tg_platform.h" />
     <ClInclude Include="util\tg_file_io.h" />
     <ClInclude Include="math\tg_math.h" />
-    <ClInclude Include="graphics\tg_image.h" />
     <ClInclude Include="graphics\tg_graphics.h" />
     <ClInclude Include="graphics\tg_graphics_vulkan.h" />
     <ClInclude Include="tg_entity.h" />
+    <ClInclude Include="graphics\tg_graphics_image_loader.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="tg.ruleset" />

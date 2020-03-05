@@ -6,15 +6,16 @@
 
 #ifdef TG_DEBUG
 
-void* tg_malloc(ui64 size);
-void tg_free(void* memory);
+void* tg_allocator_allocate(ui64 size);
+void tg_allocator_free(void* memory);
+ui64 tg_allocator_unfreed_allocation_count();
 
 #else
 
 #include <stdlib.h>
 
-#define tg_malloc(size) malloc((size_t)size)
-#define tg_free(memory) free(memory);
+#define tg_allocator_allocate(size) malloc((size_t)size)
+#define tg_allocator_free(memory) free(memory);
 
 #endif
 
