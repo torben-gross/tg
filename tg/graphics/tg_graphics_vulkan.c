@@ -21,12 +21,11 @@ typedef struct tgvk_ubo
 
 VkDescriptorSetLayout descriptor_set_layout = VK_NULL_HANDLE;
 VkDescriptorPool descriptor_pool = VK_NULL_HANDLE;
-VkBuffer uniform_buffers[SURFACE_IMAGE_COUNT] = { 0 };
-VkDeviceMemory uniform_buffer_memories[SURFACE_IMAGE_COUNT] = { 0 };
 
 tg_image_h image_h = NULL;
 tg_vertex_buffer_h vertex_buffer_h = NULL;
 tg_index_buffer_h index_buffer_h = NULL;
+tg_uniform_buffer_h uniform_buffers_h[SURFACE_IMAGE_COUNT] = { 0 };
 
 
 
@@ -106,7 +105,7 @@ void tg_graphics_vulkan_physical_device_find_queue_families(VkPhysicalDevice phy
         }
         if (!supports_present_family)
         {
-            VK_CALL(vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, i, surface, &supports_present_family));
+            VK_CALL(vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, i, surface.surface, &supports_present_family));
             if (supports_present_family)
             {
                 p_present_queue->index = i;
@@ -181,6 +180,31 @@ void tg_graphics_vulkan_physical_device_find_max_sample_count(VkPhysicalDevice p
     {
         *max_sample_count_flag_bits = VK_SAMPLE_COUNT_1_BIT;
     }
+}
+void tg_graphics_vulkan_physical_device_is_suitable(VkPhysicalDevice physical_device, bool* p_is_suitable)
+{
+    VkPhysicalDeviceProperties physical_device_properties;
+    vkGetPhysicalDeviceProperties(physical_device, &physical_device_properties);
+
+    VkPhysicalDeviceFeatures physical_device_features;
+    vkGetPhysicalDeviceFeatures(physical_device, &physical_device_features);
+
+    const bool is_discrete_gpu = physical_device_properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
+    const bool supports_geometry_shader = physical_device_features.geometryShader;
+    const bool supports_sampler_anisotropy = physical_device_features.samplerAnisotropy;
+
+    bool qfi_complete;
+    tg_graphics_vulkan_physical_device_find_queue_families(physical_device, &graphics_queue, &present_queue, &qfi_complete);
+
+    bool supports_extensions;
+    tg_graphics_vulkan_physical_device_check_extension_support(physical_device, &supports_extensions);
+
+    ui32 physical_device_surface_format_count;
+    VK_CALL(vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface.surface, &physical_device_surface_format_count, NULL));
+    ui32 physical_device_present_mode_count;
+    VK_CALL(vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface.surface, &physical_device_present_mode_count, NULL));
+
+    *p_is_suitable = is_discrete_gpu && supports_geometry_shader && supports_sampler_anisotropy && qfi_complete && supports_extensions && physical_device_surface_format_count && physical_device_present_mode_count;
 }
 void tg_graphics_vulkan_depth_format_acquire(VkFormat* p_format)
 {
@@ -545,10 +569,23 @@ void tg_graphics_vulkan_image_transition_layout(VkImageLayout old_image_layout, 
     vkCmdPipelineBarrier(command_buffer, src_stage, dst_stage, 0, 0, NULL, 0, NULL, 1, &image_memory_barrier);
     tg_graphics_vulkan_command_buffer_end(command_buffer);
 }
+void tg_graphics_vulkan_vertex_shader_layout_element_type_convert_to_vulkan_format(tg_vertex_shader_layout_element_type type, VkFormat* p_format)
+{
+    switch (type)
+    {
+    case TG_VERTEX_SHADER_LAYOUT_ELEMENT_TYPE_R32_SFLOAT:          *p_format = VK_FORMAT_R32_SFLOAT;          break;
+    case TG_VERTEX_SHADER_LAYOUT_ELEMENT_TYPE_R32G32_SFLOAT:       *p_format = VK_FORMAT_R32G32_SFLOAT;       break;
+    case TG_VERTEX_SHADER_LAYOUT_ELEMENT_TYPE_R32G32B32_SFLOAT:    *p_format = VK_FORMAT_R32G32B32_SFLOAT;    break;
+    case TG_VERTEX_SHADER_LAYOUT_ELEMENT_TYPE_R32G32B32A32_SFLOAT: *p_format = VK_FORMAT_R32G32B32A32_SFLOAT; break;
+    default: TG_ASSERT(false); break;
+    }
+}
 
 // initialization
-void tgvk_init_instance()
+void tg_graphics_vulkan_instance_create(VkInstance* p_instance)
 {
+    TG_ASSERT(p_instance);
+
 #ifdef TG_DEBUG
     ui32 layer_property_count;
     vkEnumerateInstanceLayerProperties(&layer_property_count, NULL);
@@ -590,11 +627,13 @@ void tgvk_init_instance()
     instance_create_info.enabledExtensionCount = INSTANCE_EXTENSION_COUNT;
     instance_create_info.ppEnabledExtensionNames = INSTANCE_EXTENSION_NAMES;
 
-    VK_CALL(vkCreateInstance(&instance_create_info, NULL, &instance));
+    VK_CALL(vkCreateInstance(&instance_create_info, NULL, p_instance));
 }
 #ifdef TG_DEBUG
-void tgvk_init_debug_utils_manager()
+void tg_graphics_vulkan_debug_utils_manager_create(VkDebugUtilsMessengerEXT* p_debug_utils_messenger)
 {
+    TG_ASSERT(p_debug_utils_messenger);
+
     VkDebugUtilsMessengerCreateInfoEXT debug_utils_messenger_create_info = { 0 };
     debug_utils_messenger_create_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
     debug_utils_messenger_create_info.pNext = NULL;
@@ -606,12 +645,14 @@ void tgvk_init_debug_utils_manager()
 
     PFN_vkCreateDebugUtilsMessengerEXT vkCreateDebugUtilsMessengerEXT = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
     TG_ASSERT(vkCreateDebugUtilsMessengerEXT);
-    VK_CALL(vkCreateDebugUtilsMessengerEXT(instance, &debug_utils_messenger_create_info, NULL, &debug_utils_messenger));
+    VK_CALL(vkCreateDebugUtilsMessengerEXT(instance, &debug_utils_messenger_create_info, NULL, p_debug_utils_messenger));
 }
 #endif
 #ifdef TG_WIN32
-void tgvk_init_surface()
+void tg_graphics_vulkan_surface_create(tg_surface* p_surface)
 {
+    TG_ASSERT(p_surface);
+
     VkWin32SurfaceCreateInfoKHR win32_surface_create_info = { 0 };
     win32_surface_create_info.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
     win32_surface_create_info.pNext = NULL;
@@ -619,11 +660,13 @@ void tgvk_init_surface()
     win32_surface_create_info.hinstance = GetModuleHandle(NULL);
     win32_surface_create_info.hwnd = tg_platform_get_window_handle();
 
-    VK_CALL(vkCreateWin32SurfaceKHR(instance, &win32_surface_create_info, NULL, &surface));
+    VK_CALL(vkCreateWin32SurfaceKHR(instance, &win32_surface_create_info, NULL, &p_surface->surface));
 }
 #endif
-void tgvk_init_physical_device()
+void tg_graphics_vulkan_physical_device_create(VkPhysicalDevice* p_physical_device)
 {
+    TG_ASSERT(p_physical_device);
+
     ui32 physical_device_count;
     VK_CALL(vkEnumeratePhysicalDevices(instance, &physical_device_count, NULL));
     TG_ASSERT(physical_device_count);
@@ -632,40 +675,23 @@ void tgvk_init_physical_device()
 
     for (ui32 i = 0; i < physical_device_count; i++)
     {
-        VkPhysicalDeviceProperties physical_device_properties;
-        vkGetPhysicalDeviceProperties(physical_devices[i], &physical_device_properties);
-
-        VkPhysicalDeviceFeatures physical_device_features;
-        vkGetPhysicalDeviceFeatures(physical_devices[i], &physical_device_features);
-
-        const bool is_discrete_gpu = physical_device_properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
-        const bool supports_geometry_shader = physical_device_features.geometryShader;
-        const bool supports_sampler_anisotropy = physical_device_features.samplerAnisotropy;
-
-        bool qfi_complete;
-        tg_graphics_vulkan_physical_device_find_queue_families(physical_devices[i], &graphics_queue, &present_queue, &qfi_complete);
-
-        bool supports_extensions;
-        tg_graphics_vulkan_physical_device_check_extension_support(physical_devices[i], &supports_extensions);
-
-        ui32 physical_device_surface_format_count;
-        VK_CALL(vkGetPhysicalDeviceSurfaceFormatsKHR(physical_devices[i], surface, &physical_device_surface_format_count, NULL));
-        ui32 physical_device_present_mode_count;
-        VK_CALL(vkGetPhysicalDeviceSurfacePresentModesKHR(physical_devices[i], surface, &physical_device_present_mode_count, NULL));
-
-        if (is_discrete_gpu && supports_geometry_shader && supports_sampler_anisotropy && qfi_complete && supports_extensions && physical_device_surface_format_count && physical_device_present_mode_count)
+        bool is_suitable;
+        tg_graphics_vulkan_physical_device_is_suitable(physical_devices[i], &is_suitable);
+        if (is_suitable)
         {
-            physical_device = physical_devices[i];
-            tg_graphics_vulkan_physical_device_find_max_sample_count(physical_devices[i], &msaa_sample_count);
+            *p_physical_device = physical_devices[i];
+            tg_graphics_vulkan_physical_device_find_max_sample_count(physical_devices[i], &surface.msaa_sample_count);
             break;
         }
     }
-    TG_ASSERT(physical_device != VK_NULL_HANDLE);
+    TG_ASSERT(*p_physical_device != VK_NULL_HANDLE);
 
     tg_allocator_free(physical_devices);
 }
-void tgvk_init_device()
+void tg_graphics_vulkan_device_create(VkDevice* p_device)
 {
+    TG_ASSERT(p_device);
+
     const float queue_priority = 1.0f;
 
     VkDeviceQueueCreateInfo device_queue_create_infos[QUEUE_INDEX_COUNT] = { 0 };
@@ -751,22 +777,28 @@ void tgvk_init_device()
     device_create_info.ppEnabledExtensionNames = DEVICE_EXTENSION_NAMES;
     device_create_info.pEnabledFeatures = &physical_device_features;
 
-    VK_CALL(vkCreateDevice(physical_device, &device_create_info, NULL, &device));
-
-    vkGetDeviceQueue(device, graphics_queue.index, 0, &graphics_queue.queue);
-    vkGetDeviceQueue(device, present_queue.index, 0, &present_queue.queue);
+    VK_CALL(vkCreateDevice(physical_device, &device_create_info, NULL, p_device));
 }
-void tgvk_init_command_pool()
+void tg_graphics_vulkan_queues_create(tg_queue* p_graphics_queue, tg_queue* p_present_queue)
 {
+    TG_ASSERT(p_graphics_queue && p_present_queue);
+
+    vkGetDeviceQueue(device, p_graphics_queue->index, 0, &p_graphics_queue->queue);
+    vkGetDeviceQueue(device, p_present_queue->index, 0, &p_present_queue->queue);
+}
+void tg_graphics_vulkan_command_pool_create(VkCommandPool* p_command_pool)
+{
+    TG_ASSERT(p_command_pool);
+
     VkCommandPoolCreateInfo command_pool_create_info = { 0 };
     command_pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     command_pool_create_info.pNext = NULL;
     command_pool_create_info.flags = 0;
     command_pool_create_info.queueFamilyIndex = graphics_queue.index;
 
-    VK_CALL(vkCreateCommandPool(device, &command_pool_create_info, NULL, &command_pool));
+    VK_CALL(vkCreateCommandPool(device, &command_pool_create_info, NULL, p_command_pool));
 }
-void tgvk_init_semaphores_and_fences()
+void tg_graphics_vulkan_semaphores_and_fences_create()
 {
     VkSemaphoreCreateInfo semaphore_create_info = { 0 };
     semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -789,7 +821,9 @@ void tgvk_init_semaphores_and_fences()
 
 
 // shader layout and input
-void tgvk_init_descriptor_set_layout()
+
+// bindings for shaders
+void tg_graphics_vulkan_descriptors_create()
 {
     VkDescriptorSetLayoutBinding descriptor_set_layout_bindings[2] = { 0 };
 
@@ -813,9 +847,7 @@ void tgvk_init_descriptor_set_layout()
     descriptor_set_layout_create_info.pBindings = descriptor_set_layout_bindings;
 
     VK_CALL(vkCreateDescriptorSetLayout(device, &descriptor_set_layout_create_info, NULL, &descriptor_set_layout));
-}
-void tgvk_init_descriptor_pool()
-{
+
     VkDescriptorPoolSize descriptor_pool_size[2] = { 0 };
 
     descriptor_pool_size[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -834,37 +866,23 @@ void tgvk_init_descriptor_pool()
 
     VK_CALL(vkCreateDescriptorPool(device, &descriptor_pool_create_info, NULL, &descriptor_pool));
 }
-void tgvk_init_uniform_buffers()
-{
-    const VkDeviceSize size = sizeof(tgvk_ubo);
-
-    for (ui32 i = 0; i < SURFACE_IMAGE_COUNT; i++)
-    {
-        tg_graphics_vulkan_buffer_create(
-            size,
-            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-            &uniform_buffers[i],
-            &uniform_buffer_memories[i]);
-    }
-}
 
 // pipeline
 void tgvk_init_swapchain()
 {
     VkSurfaceCapabilitiesKHR surface_capabilities;
-    VK_CALL(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device, surface, &surface_capabilities));
+    VK_CALL(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device, surface.surface, &surface_capabilities));
 
     ui32 surface_format_count;
-    VK_CALL(vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &surface_format_count, NULL));
+    VK_CALL(vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface.surface, &surface_format_count, NULL));
     VkSurfaceFormatKHR* surface_formats = tg_allocator_allocate(surface_format_count * sizeof(*surface_formats));
-    VK_CALL(vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &surface_format_count, surface_formats));
-    surface_format = surface_formats[0];
+    VK_CALL(vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface.surface, &surface_format_count, surface_formats));
+    surface.format = surface_formats[0];
     for (ui32 i = 0; i < surface_format_count; i++)
     {
         if (surface_formats[i].format == VK_FORMAT_B8G8R8A8_UNORM && surface_formats[i].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
         {
-            surface_format = surface_formats[i];
+            surface.format = surface_formats[i];
             break;
         }
     }
@@ -872,7 +890,7 @@ void tgvk_init_swapchain()
 
     VkPresentModeKHR present_modes[MAX_PRESENT_MODE_COUNT] = { 0 };
     ui32 max_present_mode_count = MAX_PRESENT_MODE_COUNT;
-    VK_CALL(vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &max_present_mode_count, present_modes));
+    VK_CALL(vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface.surface, &max_present_mode_count, present_modes));
 
     VkPresentModeKHR present_mode = VK_PRESENT_MODE_FIFO_KHR;
     for (ui32 i = 0; i < MAX_PRESENT_MODE_COUNT; i++)
@@ -894,10 +912,10 @@ void tgvk_init_swapchain()
     swapchain_create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     swapchain_create_info.pNext = NULL;
     swapchain_create_info.flags = 0;
-    swapchain_create_info.surface = surface;
+    swapchain_create_info.surface = surface.surface;
     swapchain_create_info.minImageCount = SURFACE_IMAGE_COUNT;
-    swapchain_create_info.imageFormat = surface_format.format;
-    swapchain_create_info.imageColorSpace = surface_format.colorSpace;
+    swapchain_create_info.imageFormat = surface.format.format;
+    swapchain_create_info.imageColorSpace = surface.format.colorSpace;
     swapchain_create_info.imageExtent = swapchain_extent;
     swapchain_create_info.imageArrayLayers = 1;
     swapchain_create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
@@ -932,7 +950,7 @@ void tgvk_init_swapchain()
 
     for (ui32 i = 0; i < SURFACE_IMAGE_COUNT; i++)
     {
-        tg_graphics_vulkan_image_view_create(images[i], surface_format.format, 1, VK_IMAGE_ASPECT_COLOR_BIT, &image_views[i]);
+        tg_graphics_vulkan_image_view_create(images[i], surface.format.format, 1, VK_IMAGE_ASPECT_COLOR_BIT, &image_views[i]);
     }
 }
 void tgvk_init_render_pass()
@@ -974,8 +992,8 @@ void tgvk_init_render_pass()
     tg_graphics_vulkan_depth_format_acquire(&depth_format);
 
     attachment_descriptions[0].flags = 0;
-    attachment_descriptions[0].format = surface_format.format;
-    attachment_descriptions[0].samples = msaa_sample_count;
+    attachment_descriptions[0].format = surface.format.format;
+    attachment_descriptions[0].samples = surface.msaa_sample_count;
     attachment_descriptions[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     attachment_descriptions[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
     attachment_descriptions[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
@@ -985,7 +1003,7 @@ void tgvk_init_render_pass()
 
     attachment_descriptions[1].flags = 0;
     attachment_descriptions[1].format = depth_format;
-    attachment_descriptions[1].samples = msaa_sample_count;
+    attachment_descriptions[1].samples = surface.msaa_sample_count;
     attachment_descriptions[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     attachment_descriptions[1].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     attachment_descriptions[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
@@ -994,7 +1012,7 @@ void tgvk_init_render_pass()
     attachment_descriptions[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
     attachment_descriptions[2].flags = 0;
-    attachment_descriptions[2].format = surface_format.format;
+    attachment_descriptions[2].format = surface.format.format;
     attachment_descriptions[2].samples = VK_SAMPLE_COUNT_1_BIT;
     attachment_descriptions[2].loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     attachment_descriptions[2].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -1020,22 +1038,22 @@ void tgvk_init_render_pass()
         swapchain_extent.width,
         swapchain_extent.height,
         1,
-        surface_format.format,
-        msaa_sample_count,
+        surface.format.format,
+        surface.msaa_sample_count,
         VK_IMAGE_TILING_OPTIMAL,
         VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         &color_image,
         &color_image_memory
     );
-    tg_graphics_vulkan_image_view_create(color_image, surface_format.format, 1, VK_IMAGE_ASPECT_COLOR_BIT, &color_image_view);
+    tg_graphics_vulkan_image_view_create(color_image, surface.format.format, 1, VK_IMAGE_ASPECT_COLOR_BIT, &color_image_view);
 
     tg_graphics_vulkan_image_create(
         swapchain_extent.width,
         swapchain_extent.height,
         1,
         depth_format,
-        msaa_sample_count,
+        surface.msaa_sample_count,
         VK_IMAGE_TILING_OPTIMAL,
         VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
@@ -1066,22 +1084,16 @@ void tgvk_init_render_pass()
         VK_CALL(vkCreateFramebuffer(device, &framebuffer_create_info, NULL, &framebuffers[i]));
     }
 }
-void tgvk_init_graphics_pipeline()
+void tgvk_init_graphics_pipeline(tg_vertex_shader_h vertex_shader_h, tg_fragment_shader_h fragment_shader_h)
 {
     // TODO: look at comments for simpler compilation of shaders: https://vulkan-tutorial.com/en/Drawing_a_triangle/Graphics_pipeline_basics/Shader_modules
-
-    VkShaderModule vert_shader_module;
-    tg_graphics_vulkan_shader_module_create("shaders/vert.spv", &vert_shader_module);
-
-    VkShaderModule frag_shader_module;
-    tg_graphics_vulkan_shader_module_create("shaders/frag.spv", &frag_shader_module);
 
     VkPipelineShaderStageCreateInfo pipeline_shader_state_create_info_vert = { 0 };
     pipeline_shader_state_create_info_vert.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     pipeline_shader_state_create_info_vert.pNext = NULL;
     pipeline_shader_state_create_info_vert.flags = 0;
     pipeline_shader_state_create_info_vert.stage = VK_SHADER_STAGE_VERTEX_BIT;
-    pipeline_shader_state_create_info_vert.module = vert_shader_module;
+    pipeline_shader_state_create_info_vert.module = vertex_shader_h->shader_module;
     pipeline_shader_state_create_info_vert.pName = "main";
     pipeline_shader_state_create_info_vert.pSpecializationInfo = NULL;
 
@@ -1090,7 +1102,7 @@ void tgvk_init_graphics_pipeline()
     pipeline_shader_state_create_info_frag.pNext = NULL;
     pipeline_shader_state_create_info_frag.flags = 0;
     pipeline_shader_state_create_info_frag.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-    pipeline_shader_state_create_info_frag.module = frag_shader_module;
+    pipeline_shader_state_create_info_frag.module = fragment_shader_h->shader_module;
     pipeline_shader_state_create_info_frag.pName = "main";
     pipeline_shader_state_create_info_frag.pSpecializationInfo = NULL;
 
@@ -1104,19 +1116,14 @@ void tgvk_init_graphics_pipeline()
     vertex_input_binding_description.stride = sizeof(tg_vertex);
     vertex_input_binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-    VkVertexInputAttributeDescription vertex_input_attribute_descriptions[3] = { 0 };
-    vertex_input_attribute_descriptions[0].binding = 0;
-    vertex_input_attribute_descriptions[0].location = 0;
-    vertex_input_attribute_descriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-    vertex_input_attribute_descriptions[0].offset = offsetof(tg_vertex, position);
-    vertex_input_attribute_descriptions[1].binding = 0;
-    vertex_input_attribute_descriptions[1].location = 1;
-    vertex_input_attribute_descriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-    vertex_input_attribute_descriptions[1].offset = offsetof(tg_vertex, color);
-    vertex_input_attribute_descriptions[2].binding = 0;
-    vertex_input_attribute_descriptions[2].location = 2;
-    vertex_input_attribute_descriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
-    vertex_input_attribute_descriptions[2].offset = offsetof(tg_vertex, uv);
+    VkVertexInputAttributeDescription* vertex_input_attribute_descriptions = tg_allocator_allocate(vertex_shader_h->layout_element_count * sizeof(*vertex_input_attribute_descriptions));
+    for (ui32 i = 0; i < vertex_shader_h->layout_element_count; i++)
+    {
+        vertex_input_attribute_descriptions[i].binding = vertex_shader_h->layout[i].binding;
+        vertex_input_attribute_descriptions[i].location = vertex_shader_h->layout[i].location;
+        tg_graphics_vulkan_vertex_shader_layout_element_type_convert_to_vulkan_format(vertex_shader_h->layout[i].element_type, &vertex_input_attribute_descriptions[i].format);
+        vertex_input_attribute_descriptions[i].offset = vertex_shader_h->layout[i].offset;
+    }
 
     VkPipelineVertexInputStateCreateInfo pipeline_vertex_input_state_create_info = { 0 };
     pipeline_vertex_input_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -1124,7 +1131,7 @@ void tgvk_init_graphics_pipeline()
     pipeline_vertex_input_state_create_info.flags = 0;
     pipeline_vertex_input_state_create_info.vertexBindingDescriptionCount = 1;
     pipeline_vertex_input_state_create_info.pVertexBindingDescriptions = &vertex_input_binding_description;
-    pipeline_vertex_input_state_create_info.vertexAttributeDescriptionCount = sizeof(vertex_input_attribute_descriptions) / sizeof(*vertex_input_attribute_descriptions);
+    pipeline_vertex_input_state_create_info.vertexAttributeDescriptionCount = vertex_shader_h->layout_element_count;
     pipeline_vertex_input_state_create_info.pVertexAttributeDescriptions = vertex_input_attribute_descriptions;
 
     VkPipelineInputAssemblyStateCreateInfo pipeline_input_assembly_state_create_info = { 0 };
@@ -1174,7 +1181,7 @@ void tgvk_init_graphics_pipeline()
     pipeline_multisample_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     pipeline_multisample_state_create_info.pNext = NULL;
     pipeline_multisample_state_create_info.flags = 0;
-    pipeline_multisample_state_create_info.rasterizationSamples = msaa_sample_count;
+    pipeline_multisample_state_create_info.rasterizationSamples = surface.msaa_sample_count;
     pipeline_multisample_state_create_info.sampleShadingEnable = VK_TRUE;
     pipeline_multisample_state_create_info.minSampleShading = 1.0f;
     pipeline_multisample_state_create_info.pSampleMask = NULL;
@@ -1263,9 +1270,7 @@ void tgvk_init_graphics_pipeline()
     graphics_pipeline_create_info.basePipelineIndex = -1;
 
     VK_CALL(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &graphics_pipeline_create_info, NULL, &graphics_pipeline));
-
-    vkDestroyShaderModule(device, frag_shader_module, NULL);
-    vkDestroyShaderModule(device, vert_shader_module, NULL);
+    tg_allocator_free(vertex_input_attribute_descriptions);
 }
 void tgvk_init_descriptor_sets()
 {
@@ -1287,7 +1292,7 @@ void tgvk_init_descriptor_sets()
     for (ui32 i = 0; i < SURFACE_IMAGE_COUNT; i++)
     {
         VkDescriptorBufferInfo descriptor_buffer_info = { 0 };
-        descriptor_buffer_info.buffer = uniform_buffers[i];
+        descriptor_buffer_info.buffer = uniform_buffers_h[i]->buffer;
         descriptor_buffer_info.offset = 0;
         descriptor_buffer_info.range = sizeof(tgvk_ubo);
 
@@ -1378,31 +1383,44 @@ void tgvk_init_command_buffers()
 // main
 void tg_graphics_init()
 {
-    tgvk_init_instance();
+    tg_graphics_vulkan_instance_create(&instance);
 #ifdef TG_DEBUG
-    tgvk_init_debug_utils_manager();
+    tg_graphics_vulkan_debug_utils_manager_create(&debug_utils_messenger);
 #endif
-    tgvk_init_surface();
-    tgvk_init_physical_device();
-    tgvk_init_device();
-    tgvk_init_command_pool();
-    tgvk_init_semaphores_and_fences();
+    tg_graphics_vulkan_surface_create(&surface);
+    tg_graphics_vulkan_physical_device_create(&physical_device);
+    tg_graphics_vulkan_device_create(&device);
+    tg_graphics_vulkan_queues_create(&graphics_queue, &present_queue);
+    tg_graphics_vulkan_command_pool_create(&command_pool);
+    tg_graphics_vulkan_semaphores_and_fences_create();
 
 
 
-    tgvk_init_descriptor_set_layout();
-    tgvk_init_descriptor_pool();
-
-    tgvk_init_uniform_buffers();
     tg_graphics_image_create("test_icon.bmp", &image_h);
     tg_graphics_vertex_buffer_create(sizeof(vertices), vertices, &vertex_buffer_h);
     tg_graphics_index_buffer_create(12, indices, &index_buffer_h);
-
-
+    const VkDeviceSize ubo_size = sizeof(tgvk_ubo);
+    for (ui32 i = 0; i < SURFACE_IMAGE_COUNT; i++)
+    {
+        tg_graphics_uniform_buffer_create((ui32)ubo_size, &uniform_buffers_h[i]);
+    }
+    tg_graphics_vulkan_descriptors_create();
 
     tgvk_init_swapchain();
     tgvk_init_render_pass();
-    tgvk_init_graphics_pipeline();
+    tg_vertex_shader_h vertex_shader_h = NULL;
+    tg_vertex_shader_layout_element layout[] = {
+        { 0, 0, TG_VERTEX_SHADER_LAYOUT_ELEMENT_TYPE_R32G32B32_SFLOAT, offsetof(tg_vertex, position) },
+        { 0, 1, TG_VERTEX_SHADER_LAYOUT_ELEMENT_TYPE_R32G32B32_SFLOAT, offsetof(tg_vertex, color) },
+        { 0, 2, TG_VERTEX_SHADER_LAYOUT_ELEMENT_TYPE_R32G32_SFLOAT, offsetof(tg_vertex, uv) }
+    };
+    const ui32 layout_element_count = sizeof(layout) / sizeof(*layout);
+    tg_graphics_vertex_shader_create("shaders/vert.spv", layout_element_count, layout, &vertex_shader_h);
+    tg_fragment_shader_h fragment_shader_h = NULL;
+    tg_graphics_fragment_shader_create("shaders/frag.spv", &fragment_shader_h);
+    tgvk_init_graphics_pipeline(vertex_shader_h, fragment_shader_h);
+    tg_graphics_vertex_shader_destroy(vertex_shader_h);
+    tg_graphics_fragment_shader_destroy(fragment_shader_h);
     tgvk_init_descriptor_sets();
     tgvk_init_command_buffers();
 
@@ -1435,9 +1453,9 @@ void tg_graphics_render()
     tgm_m4f_perspective(&uniform_buffer_object.projection, fov_y, aspect, n, f);
 
     void* data;
-    VK_CALL(vkMapMemory(device, uniform_buffer_memories[next_image], 0, sizeof(uniform_buffer_object), 0, &data));
+    VK_CALL(vkMapMemory(device, uniform_buffers_h[next_image]->device_memory, 0, sizeof(uniform_buffer_object), 0, &data));
     memcpy(data, &uniform_buffer_object, sizeof(uniform_buffer_object));
-    vkUnmapMemory(device, uniform_buffer_memories[next_image]);
+    vkUnmapMemory(device, uniform_buffers_h[next_image]->device_memory);
     
     VkSubmitInfo submit_info = { 0 };
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -1498,8 +1516,7 @@ void tg_graphics_shutdown()
     tg_graphics_vertex_buffer_destroy(vertex_buffer_h);
     for (ui32 i = 0; i < SURFACE_IMAGE_COUNT; i++)
     {
-        vkDestroyBuffer(device, uniform_buffers[i], NULL);
-        vkFreeMemory(device, uniform_buffer_memories[i], NULL);
+        tg_graphics_uniform_buffer_destroy(uniform_buffers_h[i]);
     }
     for (ui32 i = 0; i < FRAMES_IN_FLIGHT; i++)
     {
@@ -1514,7 +1531,7 @@ void tg_graphics_shutdown()
     TG_ASSERT(vkDestroyDebugUtilsMessengerEXT);
     vkDestroyDebugUtilsMessengerEXT(instance, debug_utils_messenger, NULL);
 #endif
-    vkDestroySurfaceKHR(instance, surface, NULL);
+    vkDestroySurfaceKHR(instance, surface.surface, NULL);
     vkDestroyInstance(instance, NULL);
 }
 void tg_graphics_on_window_resize(ui32 width, ui32 height)
@@ -1548,7 +1565,19 @@ void tg_graphics_on_window_resize(ui32 width, ui32 height)
 
     tgvk_init_swapchain();
     tgvk_init_render_pass();
-    tgvk_init_graphics_pipeline();
+    tg_vertex_shader_h vertex_shader_h = NULL;
+    tg_vertex_shader_layout_element layout[] = {
+        { 0, 0, TG_VERTEX_SHADER_LAYOUT_ELEMENT_TYPE_R32G32B32_SFLOAT, offsetof(tg_vertex, position) },
+        { 0, 1, TG_VERTEX_SHADER_LAYOUT_ELEMENT_TYPE_R32G32B32_SFLOAT, offsetof(tg_vertex, color) },
+        { 0, 2, TG_VERTEX_SHADER_LAYOUT_ELEMENT_TYPE_R32G32_SFLOAT, offsetof(tg_vertex, uv) }
+    };
+    const ui32 layout_element_count = sizeof(layout) / sizeof(*layout);
+    tg_graphics_vertex_shader_create("shaders/vert.spv", layout_element_count, layout, &vertex_shader_h);
+    tg_fragment_shader_h fragment_shader_h = NULL;
+    tg_graphics_fragment_shader_create("shaders/frag.spv", &fragment_shader_h);
+    tgvk_init_graphics_pipeline(vertex_shader_h, fragment_shader_h);
+    tg_graphics_vertex_shader_destroy(vertex_shader_h);
+    tg_graphics_fragment_shader_destroy(fragment_shader_h);
     tgvk_init_command_buffers();
 }
 

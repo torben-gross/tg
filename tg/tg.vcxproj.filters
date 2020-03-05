@@ -10,6 +10,8 @@
     <ClCompile Include="graphics\tg_graphics_image_loader.c" />
     <ClCompile Include="graphics\tg_graphics_vulkan_index_buffer.c" />
     <ClCompile Include="graphics\tg_graphics_vulkan_vertex_buffer.c" />
+    <ClCompile Include="graphics\tg_graphics_vulkan_uniform_buffer.c" />
+    <ClCompile Include="graphics\tg_graphics_vulkan_shader.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="tg_common.h" />

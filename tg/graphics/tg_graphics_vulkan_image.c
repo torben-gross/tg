@@ -7,7 +7,7 @@
 
 void tg_graphics_image_create(const char* filename, tg_image_h* p_image_h)
 {
-    TG_ASSERT(filename, p_image_h);
+    TG_ASSERT(filename && p_image_h);
 
     *p_image_h = tg_allocator_allocate(sizeof(**p_image_h));
     tg_image_load(filename, &(**p_image_h).width, &(**p_image_h).height, &(**p_image_h).format, &(**p_image_h).data);

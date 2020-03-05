@@ -111,6 +111,8 @@
     <ClCompile Include="graphics\tg_graphics_image_loader.c" />
     <ClCompile Include="graphics\tg_graphics_vulkan.c" />
     <ClCompile Include="graphics\tg_graphics_vulkan_index_buffer.c" />
+    <ClCompile Include="graphics\tg_graphics_vulkan_shader.c" />
+    <ClCompile Include="graphics\tg_graphics_vulkan_uniform_buffer.c" />
     <ClCompile Include="graphics\tg_graphics_vulkan_vertex_buffer.c" />
     <ClCompile Include="math\tg_math.c" />
     <ClCompile Include="platform\tg_allocator.c" />
