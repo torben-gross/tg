@@ -4,7 +4,7 @@
 
 #include "tg/platform/tg_allocator.h"
 
-void tg_graphics_vertex_buffer_create(ui32 size, void* vertices, tg_vertex_buffer_h* p_vertex_buffer_h)
+void tg_graphics_vertex_buffer_create(ui32 size, ui32 layout_element_count, const tg_vertex_shader_layout_element* layout, void* vertices, tg_vertex_buffer_h* p_vertex_buffer_h)
 {
     *p_vertex_buffer_h = tg_allocator_allocate(sizeof(**p_vertex_buffer_h));
 
@@ -33,10 +33,27 @@ void tg_graphics_vertex_buffer_create(ui32 size, void* vertices, tg_vertex_buffe
 
     vkDestroyBuffer(device, staging_buffer, NULL);
     vkFreeMemory(device, staging_buffer_memory, NULL);
+
+    if (layout_element_count == 0)
+    {
+        (**p_vertex_buffer_h).layout_element_count = 0;
+        (**p_vertex_buffer_h).layout = NULL;
+    }
+    else
+    {
+        (**p_vertex_buffer_h).layout_element_count = layout_element_count;
+        const ui32 layout_size = layout_element_count * sizeof(*layout);
+        (**p_vertex_buffer_h).layout = tg_allocator_allocate(layout_size);
+        memcpy((**p_vertex_buffer_h).layout, layout, layout_size);
+    }
 }
 
 void tg_graphics_vertex_buffer_destroy(tg_vertex_buffer_h vertex_buffer_h)
 {
+    if (vertex_buffer_h->layout_element_count != 0)
+    {
+        tg_allocator_free(vertex_buffer_h->layout);
+    }
     vkDestroyBuffer(device, vertex_buffer_h->buffer, NULL);
     vkFreeMemory(device, vertex_buffer_h->device_memory, NULL);
     tg_allocator_free(vertex_buffer_h);

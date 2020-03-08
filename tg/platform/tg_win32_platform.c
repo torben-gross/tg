@@ -112,6 +112,9 @@ int CALLBACK WinMain(
     UpdateWindow(window_handle);
 
     tg_graphics_init();
+    tg_graphics_renderer_2d_init();
+    tg_image_h img = NULL;
+    tg_graphics_image_create("test_icon.bmp", &img);
 
     LARGE_INTEGER performance_frequency;
     QueryPerformanceFrequency(&performance_frequency);
@@ -132,7 +135,11 @@ int CALLBACK WinMain(
             TranslateMessage(&msg);
             DispatchMessageA(&msg);
         }
-        tg_graphics_render();
+        //tg_graphics_render();
+        tg_graphics_renderer_2d_begin();
+        tg_graphics_renderer_2d_draw_sprite(0.0f, 0.0f, 1.0f, 1.0f, img);
+        tg_graphics_renderer_2d_draw_sprite(0.2f, 0.2f, 1.0f, 1.0f, img);
+        tg_graphics_renderer_2d_end();
 
 #ifdef TG_DEBUG
         LARGE_INTEGER end_performance_counter;
@@ -157,6 +164,8 @@ int CALLBACK WinMain(
 #endif
     }
 
+    tg_graphics_image_destroy(img);
+    tg_graphics_renderer_2d_shutdown();
     tg_graphics_shutdown();
     TG_ASSERT(tg_allocator_unfreed_allocation_count() == 0);
     return (int)msg.wParam;

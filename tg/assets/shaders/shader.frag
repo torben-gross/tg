@@ -4,7 +4,7 @@
 layout(location = 0) in vec3 v_color;
 layout(location = 1) in vec2 v_uv;
 
-layout(binding = 1) uniform sampler2D tex;
+layout(set = 0, binding = 1) uniform sampler2D tex;
 
 layout(location = 0) out vec4 out_color;
 

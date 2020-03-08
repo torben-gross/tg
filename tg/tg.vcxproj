@@ -107,6 +107,7 @@
     </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="graphics\tg_graphics_renderer_2d.c" />
     <ClCompile Include="graphics\tg_graphics_vulkan_image.c" />
     <ClCompile Include="graphics\tg_graphics_image_loader.c" />
     <ClCompile Include="graphics\tg_graphics_vulkan.c" />
@@ -123,7 +124,6 @@
     <ClInclude Include="graphics\tg_graphics.h" />
     <ClInclude Include="graphics\tg_graphics_vulkan.h" />
     <ClInclude Include="graphics\tg_graphics_image_loader.h" />
-    <ClInclude Include="graphics\tg_vertex.h" />
     <ClInclude Include="math\tg_math.h" />
     <ClInclude Include="platform\tg_allocator.h" />
     <ClInclude Include="platform\tg_platform.h" />

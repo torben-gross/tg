@@ -73,6 +73,8 @@ typedef struct tg_vertex_buffer
 {
     VkBuffer buffer;
     VkDeviceMemory device_memory;
+    ui32 layout_element_count;
+    tg_vertex_shader_layout_element* layout;
 } tg_vertex_buffer;
 
 typedef struct tg_uniform_buffer
@@ -104,7 +106,7 @@ typedef struct tg_surface
 
 typedef struct tg_queue
 {
-    ui8        index;
+    ui8        quad_index;
     VkQueue    queue;
 } tg_queue;
 
@@ -128,13 +130,48 @@ VkDebugUtilsMessengerEXT debug_utils_messenger;
 
 
 
+VkSwapchainKHR swapchain;
+VkExtent2D swapchain_extent;
+
+VkImage images[SURFACE_IMAGE_COUNT];
+VkImageView image_views[SURFACE_IMAGE_COUNT];
+
+VkRenderPass render_pass;
+VkFramebuffer framebuffers[SURFACE_IMAGE_COUNT];
+
+VkImage color_image;
+VkDeviceMemory color_image_memory;
+VkImageView color_image_view;
+
+VkImage depth_image;
+VkDeviceMemory depth_image_memory;
+VkImageView depth_image_view;
+
+VkPipelineLayout pipeline_layout;
+VkPipeline graphics_pipeline;
+VkDescriptorSet descriptor_sets[SURFACE_IMAGE_COUNT];
+VkCommandBuffer command_buffers[SURFACE_IMAGE_COUNT];
+
+VkDescriptorSetLayout descriptor_set_layout;
+VkDescriptorPool descriptor_pool;
+
+tg_image_h image_h;
+tg_vertex_buffer_h vertex_buffer_h;
+tg_index_buffer_h index_buffer_h;
+tg_uniform_buffer_h uniform_buffers_h[SURFACE_IMAGE_COUNT];
+
+ui32 current_frame;
+VkPipelineStageFlags* wait_dst_stage_mask;
+
+
+
 void tg_graphics_vulkan_physical_device_find_queue_families(VkPhysicalDevice physical_device, tg_queue* p_graphics_queue, tg_queue* p_present_queue, bool* p_complete);
 void tg_graphics_vulkan_physical_device_check_extension_support(VkPhysicalDevice pd, bool* result);
 void tg_graphics_vulkan_physical_device_find_max_sample_count(VkPhysicalDevice physical_device, VkSampleCountFlagBits* max_sample_count_flag_bits);
 void tg_graphics_vulkan_physical_device_is_suitable(VkPhysicalDevice physical_device, bool* p_is_suitable);
 void tg_graphics_vulkan_depth_format_acquire(VkFormat* p_format);
 void tg_graphics_vulkan_command_buffer_begin(VkCommandBuffer* p_command_buffer);
-void tg_graphics_vulkan_command_buffer_end(VkCommandBuffer command_buffer);
+void tg_graphics_vulkan_command_buffer_end(VkCommandBuffer command_buffers);
 void tg_graphics_vulkan_memory_type_find(ui32 memory_type_bits, VkMemoryPropertyFlags memory_property_flags, ui32* p_memory_type);
 void tg_graphics_vulkan_buffer_create(VkDeviceSize size, VkBufferUsageFlags buffer_usage_flags, VkMemoryPropertyFlags memory_property_flags, VkBuffer* p_buffer, VkDeviceMemory* p_device_memory);
 void tg_graphics_vulkan_image_create(ui32 width, ui32 height, ui32 mip_levels, VkFormat format, VkSampleCountFlagBits sample_count_flag_bits, VkImageTiling image_tiling, VkImageUsageFlags image_usage_flags, VkMemoryPropertyFlags memory_property_flags, VkImage* p_image, VkDeviceMemory* p_device_memory);
