@@ -94,7 +94,7 @@ renderer 2d
 -------- */
 void tg_graphics_renderer_2d_init();
 void tg_graphics_renderer_2d_begin();
-void tg_graphics_renderer_2d_draw_sprite(f32 x, f32 y, f32 w, f32 h, tg_image_h image);
+void tg_graphics_renderer_2d_draw_sprite(f32 x, f32 y, f32 z, f32 w, f32 h, tg_image_h image);
 void tg_graphics_renderer_2d_end();
 void tg_graphics_renderer_2d_shutdown();
 

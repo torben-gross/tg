@@ -46,10 +46,10 @@
 #define I32_MAX            2147483647i32
 #define I64_MAX            9223372036854775807i64
 
-#define U8_MAX             0xffui8
-#define U16_MAX            0xffffui16
-#define U32_MAX            0xffffffffui32
-#define U64_MAX            0xffffffffffffffffui64
+#define UI8_MAX            0xffui8
+#define UI16_MAX           0xffffui16
+#define UI32_MAX           0xffffffffui32
+#define UI64_MAX           0xffffffffffffffffui64
 
 
 

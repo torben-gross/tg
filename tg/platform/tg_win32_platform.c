@@ -137,8 +137,8 @@ int CALLBACK WinMain(
         }
         //tg_graphics_render();
         tg_graphics_renderer_2d_begin();
-        tg_graphics_renderer_2d_draw_sprite(0.0f, 0.0f, 1.0f, 1.0f, img);
-        tg_graphics_renderer_2d_draw_sprite(0.2f, 0.2f, 1.0f, 1.0f, img);
+        tg_graphics_renderer_2d_draw_sprite(0.0f, 0.0f, -1.0f, 1.0f, 1.0f, img);
+        tg_graphics_renderer_2d_draw_sprite(0.0f, 0.0f,  0.0f, 1.0f, 1.0f, img);
         tg_graphics_renderer_2d_end();
 
 #ifdef TG_DEBUG

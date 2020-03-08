@@ -106,7 +106,7 @@ typedef struct tg_surface
 
 typedef struct tg_queue
 {
-    ui8        quad_index;
+    ui8        index;
     VkQueue    queue;
 } tg_queue;
 

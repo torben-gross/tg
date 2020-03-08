@@ -56,7 +56,7 @@ void tg_graphics_vulkan_physical_device_find_queue_families(VkPhysicalDevice phy
         {
             if (queue_family_properties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
             {
-                p_graphics_queue->quad_index = i;
+                p_graphics_queue->index = i;
                 supports_graphics_family = true;
                 continue;
             }
@@ -66,7 +66,7 @@ void tg_graphics_vulkan_physical_device_find_queue_families(VkPhysicalDevice phy
             VK_CALL(vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, i, surface.surface, &supports_present_family));
             if (supports_present_family)
             {
-                p_present_queue->quad_index = i;
+                p_present_queue->index = i;
             }
         }
         if (supports_graphics_family && supports_present_family)
@@ -653,7 +653,7 @@ void tg_graphics_vulkan_device_create(VkDevice* p_device)
     const float queue_priority = 1.0f;
 
     VkDeviceQueueCreateInfo device_queue_create_infos[QUEUE_INDEX_COUNT] = { 0 };
-    const ui32 queue_family_indices[] = { graphics_queue.quad_index, present_queue.quad_index };
+    const ui32 queue_family_indices[] = { graphics_queue.index, present_queue.index };
     for (ui32 i = 0; i < QUEUE_INDEX_COUNT; i++)
     {
         VkDeviceQueueCreateInfo device_queue_create_info = { 0 };
@@ -741,8 +741,8 @@ void tg_graphics_vulkan_queues_create(tg_queue* p_graphics_queue, tg_queue* p_pr
 {
     TG_ASSERT(p_graphics_queue && p_present_queue);
 
-    vkGetDeviceQueue(device, p_graphics_queue->quad_index, 0, &p_graphics_queue->queue);
-    vkGetDeviceQueue(device, p_present_queue->quad_index, 0, &p_present_queue->queue);
+    vkGetDeviceQueue(device, p_graphics_queue->index, 0, &p_graphics_queue->queue);
+    vkGetDeviceQueue(device, p_present_queue->index, 0, &p_present_queue->queue);
 }
 void tg_graphics_vulkan_command_pool_create(VkCommandPool* p_command_pool)
 {
@@ -752,7 +752,7 @@ void tg_graphics_vulkan_command_pool_create(VkCommandPool* p_command_pool)
     command_pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     command_pool_create_info.pNext = NULL;
     command_pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    command_pool_create_info.queueFamilyIndex = graphics_queue.quad_index;
+    command_pool_create_info.queueFamilyIndex = graphics_queue.index;
 
     VK_CALL(vkCreateCommandPool(device, &command_pool_create_info, NULL, p_command_pool));
 }
@@ -803,7 +803,7 @@ void tg_graphics_vulkan_shader_input_uniform_init_layout()
 
     
 
-    VkDescriptorSetLayoutBinding descriptor_set_layout_bindings[3] = { 0 };
+    VkDescriptorSetLayoutBinding descriptor_set_layout_bindings[2] = { 0 };
 
     descriptor_set_layout_bindings[0].binding = 0;
     descriptor_set_layout_bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
@@ -816,12 +816,6 @@ void tg_graphics_vulkan_shader_input_uniform_init_layout()
     descriptor_set_layout_bindings[1].descriptorCount = 1;
     descriptor_set_layout_bindings[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
     descriptor_set_layout_bindings[1].pImmutableSamplers = NULL;
-
-    descriptor_set_layout_bindings[2].binding = 2;
-    descriptor_set_layout_bindings[2].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-    descriptor_set_layout_bindings[2].descriptorCount = 8;
-    descriptor_set_layout_bindings[2].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-    descriptor_set_layout_bindings[2].pImmutableSamplers = NULL;
 
     VkDescriptorSetLayoutCreateInfo descriptor_set_layout_create_info = { 0 };
     descriptor_set_layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -944,9 +938,9 @@ void tgvk_init_swapchain()
     swapchain_create_info.imageArrayLayers = 1;
     swapchain_create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-    if (graphics_queue.quad_index != present_queue.quad_index)
+    if (graphics_queue.index != present_queue.index)
     {
-        const ui32 queue_family_indices[] = { graphics_queue.quad_index, present_queue.quad_index };
+        const ui32 queue_family_indices[] = { graphics_queue.index, present_queue.index };
 
         swapchain_create_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
         swapchain_create_info.queueFamilyIndexCount = 2;
@@ -1113,7 +1107,7 @@ void tgvk_init_graphics_pipeline(tg_vertex_shader_h vertex_shader_h, tg_fragment
 {
     TG_ASSERT(vertex_shader_h && fragment_shader_h);
     // TODO: look at comments for simpler compilation of shaders: https://vulkan-tutorial.com/en/Drawing_a_triangle/Graphics_pipeline_basics/Shader_modules
-
+    // also: vk has example for runtime compilation, lookup on C://....
 
 
 
@@ -1416,67 +1410,6 @@ void tg_graphics_init()
     tgvk_init_graphics_pipeline(vertex_shader_h, fragment_shader_h);
     tg_graphics_vertex_shader_destroy(vertex_shader_h);
     tg_graphics_fragment_shader_destroy(fragment_shader_h);
-    //tgvk_init_command_buffers(vertex_buffer_h, index_buffer_h);
-
-
-
-    // TODO: this is obviously quite hard-coded
-    images_in_flight[0] = in_flight_fences[0];
-    images_in_flight[1] = in_flight_fences[1];
-    images_in_flight[2] = in_flight_fences[0];
-}
-void tg_graphics_render()
-{
-    VK_CALL(vkWaitForFences(device, 1, &in_flight_fences[current_frame], VK_TRUE, UINT64_MAX));
-
-    ui32 next_image;
-    VK_CALL(vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, image_available_semaphores[current_frame], VK_NULL_HANDLE, &next_image));
-    images_in_flight[next_image] = in_flight_fences[current_frame];
-
-    tgm_vec3f from = { -1.0f, 1.0f, 1.0f };
-    tgm_vec3f to = { 0.0f, 0.0f, -2.0f };
-    tgm_vec3f up = { 0.0f, 1.0f, 0.0f };
-    const tgm_vec3f translation_vector = { 0.0f, 0.0f, -2.0f };
-    const f32 fov_y = TGM_TO_DEGREES(70.0f);
-    const f32 aspect = (f32)swapchain_extent.width / (f32)swapchain_extent.height;
-    const f32 n = -0.1f;
-    const f32 f = -1000.0f;
-    tg_uniform_buffer_object uniform_buffer_object = { 0 };
-    tgm_m4f_translate(&uniform_buffer_object.model, &translation_vector);
-    tgm_m4f_look_at(&uniform_buffer_object.view, &from, &to, &up);
-    tgm_m4f_perspective(&uniform_buffer_object.projection, fov_y, aspect, n, f);
-    
-    void* data;
-    VK_CALL(vkMapMemory(device, uniform_buffers_h[next_image]->device_memory, 0, sizeof(tg_uniform_buffer_object), 0, &data));
-    memcpy(data, &uniform_buffer_object, sizeof(tg_uniform_buffer_object));
-    vkUnmapMemory(device, uniform_buffers_h[next_image]->device_memory);
-    
-    VkSubmitInfo submit_info = { 0 };
-    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submit_info.pNext = NULL;
-    submit_info.waitSemaphoreCount = 1;
-    submit_info.pWaitSemaphores = &image_available_semaphores[current_frame];
-    submit_info.pWaitDstStageMask = wait_dst_stage_mask;
-    submit_info.commandBufferCount = 1;
-    submit_info.pCommandBuffers = &command_buffers[next_image];
-    submit_info.signalSemaphoreCount = 1;
-    submit_info.pSignalSemaphores = &rendering_finished_semaphores[current_frame];
-
-    VK_CALL(vkResetFences(device, 1, in_flight_fences + current_frame));
-    VK_CALL(vkQueueSubmit(graphics_queue.queue, 1, &submit_info, in_flight_fences[current_frame]));
-
-    VkPresentInfoKHR present_info = { 0 };
-    present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-    present_info.pNext = NULL;
-    present_info.waitSemaphoreCount = 1;
-    present_info.pWaitSemaphores = &rendering_finished_semaphores[current_frame];
-    present_info.swapchainCount = 1;
-    present_info.pSwapchains = &swapchain;
-    present_info.pImageIndices = &next_image;
-    present_info.pResults = NULL;
-
-    VK_CALL(vkQueuePresentKHR(present_queue.queue, &present_info));
-    current_frame = (current_frame + 1) % FRAMES_IN_FLIGHT;
 }
 void tg_graphics_shutdown()
 {
