@@ -97,5 +97,6 @@ void tg_graphics_renderer_2d_begin();
 void tg_graphics_renderer_2d_draw_sprite(f32 x, f32 y, f32 z, f32 w, f32 h, tg_image_h image);
 void tg_graphics_renderer_2d_end();
 void tg_graphics_renderer_2d_shutdown();
+void tg_graphics_renderer_2d_on_window_resize(ui32 w, ui32 h);
 
 #endif

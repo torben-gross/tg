@@ -968,7 +968,7 @@ void tgvk_init_swapchain()
 
     for (ui32 i = 0; i < SURFACE_IMAGE_COUNT; i++)
     {
-        tg_graphics_vulkan_image_view_create(images[i], surface.format.format, 1, VK_IMAGE_ASPECT_COLOR_BIT, &image_views[i]);
+        tg_graphics_vulkan_image_view_create(images[i], surface.format.format, 1, VK_IMAGE_ASPECT_COLOR_BIT, &swapchain_image_views[i]);
     }
 }
 void tgvk_init_render_pass()
@@ -1085,7 +1085,7 @@ void tgvk_init_render_pass()
         const VkImageView image_view_attachments[] = {
             color_image_view,
             depth_image_view,
-            image_views[i]
+            swapchain_image_views[i]
         };
 
         VkFramebufferCreateInfo framebuffer_create_info = { 0 };
@@ -1431,7 +1431,7 @@ void tg_graphics_shutdown()
     vkDestroyRenderPass(device, render_pass, NULL);
     for (ui32 i = 0; i < SURFACE_IMAGE_COUNT; i++)
     {
-        vkDestroyImageView(device, image_views[i], NULL);
+        vkDestroyImageView(device, swapchain_image_views[i], NULL);
     }
     vkDestroySwapchainKHR(device, swapchain, NULL);
     vkDestroyDescriptorPool(device, descriptor_pool, NULL);
@@ -1486,7 +1486,7 @@ void tg_graphics_on_window_resize(ui32 width, ui32 height)
     vkDestroyRenderPass(device, render_pass, NULL);
     for (ui32 i = 0; i < SURFACE_IMAGE_COUNT; i++)
     {
-        vkDestroyImageView(device, image_views[i], NULL);
+        vkDestroyImageView(device, swapchain_image_views[i], NULL);
     }
     vkDestroySwapchainKHR(device, swapchain, NULL);
 

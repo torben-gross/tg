@@ -71,7 +71,8 @@ LRESULT CALLBACK tg_win32_platform_window_proc(HWND window_handle, UINT message,
     } break;
     case WM_SIZE:
     {
-        tg_graphics_on_window_resize((ui)LOWORD(l_param), (ui)HIWORD(l_param));
+        tg_graphics_on_window_resize((ui32)LOWORD(l_param), (ui32)HIWORD(l_param));
+        tg_graphics_renderer_2d_on_window_resize((ui32)LOWORD(l_param), (ui32)HIWORD(l_param));
     } break;
     default:
         return DefWindowProcA(window_handle, message, w_param, l_param);
@@ -90,26 +91,32 @@ int CALLBACK WinMain(
     const char* window_title        = "tg";
 
     WNDCLASSEXA window_class_info   = { 0 };
-    window_class_info.cbSize        = sizeof(window_class_info);
-    window_class_info.lpfnWndProc   = tg_win32_platform_window_proc;
-    window_class_info.hInstance     = instance_handle;
     window_class_info.lpszClassName = window_class_id;
-
+    {
+        window_class_info.cbSize = sizeof(window_class_info);
+        window_class_info.style = 0;
+        window_class_info.lpfnWndProc = DefWindowProcA;
+        window_class_info.cbClsExtra = 0;
+        window_class_info.cbWndExtra = 0;
+        window_class_info.hInstance = instance_handle;
+        window_class_info.hIcon = NULL;
+        window_class_info.hCursor = NULL;
+        window_class_info.hbrBackground = NULL;
+        window_class_info.lpszMenuName = NULL;
+        window_class_info.lpszClassName = window_class_id;
+        window_class_info.hIconSm = NULL;
+    }
     const ATOM atom = RegisterClassExA(&window_class_info);
     TG_ASSERT(atom);
 
     SetProcessDPIAware();
     ui32 w, h;
     tg_platform_get_screen_size(&w, &h);
-    window_handle = CreateWindowExA(
-        0, window_class_id, window_title, WS_OVERLAPPEDWINDOW,
-        0, 0, w, h,
-        NULL, NULL, instance_handle, NULL
-    );
+    window_handle = CreateWindowExA(0, window_class_id, window_title, WS_OVERLAPPEDWINDOW, 0, 0, w, h, NULL, NULL, instance_handle, NULL);
     TG_ASSERT(window_handle);
 
     ShowWindow(window_handle, show_cmd);
-    UpdateWindow(window_handle);
+    SetWindowLongPtr(window_handle, GWLP_WNDPROC, (LONG_PTR)&tg_win32_platform_window_proc);
 
     tg_graphics_init();
     tg_graphics_renderer_2d_init();
@@ -135,7 +142,6 @@ int CALLBACK WinMain(
             TranslateMessage(&msg);
             DispatchMessageA(&msg);
         }
-        //tg_graphics_render();
         tg_graphics_renderer_2d_begin();
         tg_graphics_renderer_2d_draw_sprite(0.0f, 0.0f, -1.0f, 1.0f, 1.0f, img);
         tg_graphics_renderer_2d_draw_sprite(0.0f, 0.0f,  0.0f, 1.0f, 1.0f, img);

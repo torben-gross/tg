@@ -5,12 +5,29 @@
 #include "tg/math/tg_math.h"
 #include "tg/platform/tg_allocator.h"
 
+
 VkDescriptorPool         renderer_2d_descriptor_pool;
+VkDescriptorSetLayout    renderer_2d_descriptor_set_layout;
 VkDescriptorSet          renderer_2d_descriptor_set;
 VkCommandBuffer          renderer_2d_command_buffer;
 VkFence                  renderer_2d_rendering_finished_fence;
 VkSemaphore              renderer_2d_rendering_finished_semaphore;
 VkSemaphore              renderer_2d_image_acquired_semaphore;
+
+VkBuffer                 renderer_2d_uniform_buffer; // TODO
+VkShaderModule           renderer_2d_vertex_shader; // TODO
+VkShaderModule           renderer_2d_fragment_shader; // TODO
+
+VkRenderPass             renderer_2d_render_pass; // TODO
+VkImage                  renderer_2d_color_image;
+VkDeviceMemory           renderer_2d_color_image_memory;
+VkImageView              renderer_2d_color_image_view;
+VkImage                  renderer_2d_depth_image;
+VkDeviceMemory           renderer_2d_depth_image_memory;
+VkImageView              renderer_2d_depth_image_view;
+VkFramebuffer            renderer_2d_framebuffers[SURFACE_IMAGE_COUNT];
+VkPipelineLayout         renderer_2d_pipeline_layout;
+VkPipeline               renderer_2d_pipeline; // TODO
 
 
 
@@ -36,7 +53,7 @@ ui32                     current_quad_index = 0;
 
 
 
-void tg_graphics_renderer_2d_init_synchronization_primitives()
+void tg_graphics_renderer_2d_internal_init_synchronization_primitives()
 {
     VkFenceCreateInfo fence_create_info = { 0 };
     {
@@ -55,7 +72,7 @@ void tg_graphics_renderer_2d_init_synchronization_primitives()
     VK_CALL(vkCreateSemaphore(device, &semaphore_create_info, NULL, &renderer_2d_rendering_finished_semaphore));
     VK_CALL(vkCreateSemaphore(device, &semaphore_create_info, NULL, &renderer_2d_image_acquired_semaphore));
 }
-void tg_graphics_renderer_2d_init_descriptors()
+void tg_graphics_renderer_2d_internal_init_descriptors()
 {
     VkDescriptorPoolSize descriptor_pool_sizes[2] = { 0 };
     {
@@ -77,7 +94,6 @@ void tg_graphics_renderer_2d_init_descriptors()
 
 
 
-    VkDescriptorSetLayout descriptor_set_layout;
     VkDescriptorSetLayoutBinding descriptor_set_layout_bindings[2] = { 0 };
     {
         descriptor_set_layout_bindings[0].binding = 0;
@@ -99,7 +115,7 @@ void tg_graphics_renderer_2d_init_descriptors()
         descriptor_set_layout_create_info.bindingCount = sizeof(descriptor_set_layout_bindings) / sizeof(*descriptor_set_layout_bindings);
         descriptor_set_layout_create_info.pBindings = descriptor_set_layout_bindings;
     }
-    VK_CALL(vkCreateDescriptorSetLayout(device, &descriptor_set_layout_create_info, NULL, &descriptor_set_layout));
+    VK_CALL(vkCreateDescriptorSetLayout(device, &descriptor_set_layout_create_info, NULL, &renderer_2d_descriptor_set_layout));
 
 
 
@@ -109,7 +125,7 @@ void tg_graphics_renderer_2d_init_descriptors()
         descriptor_set_allocate_info.pNext = NULL;
         descriptor_set_allocate_info.descriptorPool = renderer_2d_descriptor_pool;
         descriptor_set_allocate_info.descriptorSetCount = 1;
-        descriptor_set_allocate_info.pSetLayouts = &descriptor_set_layout;
+        descriptor_set_allocate_info.pSetLayouts = &renderer_2d_descriptor_set_layout;
     }
     VK_CALL(vkAllocateDescriptorSets(device, &descriptor_set_allocate_info, &renderer_2d_descriptor_set));
 
@@ -151,9 +167,8 @@ void tg_graphics_renderer_2d_init_descriptors()
         write_descriptor_sets[1].pTexelBufferView = NULL;
     }
     vkUpdateDescriptorSets(device, sizeof(write_descriptor_sets) / sizeof(*write_descriptor_sets), write_descriptor_sets, 0, NULL);
-    vkDestroyDescriptorSetLayout(device, descriptor_set_layout, NULL);
 }
-void tg_graphics_renderer_2d_init_index_buffer()
+void tg_graphics_renderer_2d_internal_init_index_buffer()
 {
     VkBuffer staging_buffer = VK_NULL_HANDLE;
     VkDeviceMemory staging_buffer_memory = VK_NULL_HANDLE;
@@ -182,15 +197,332 @@ void tg_graphics_renderer_2d_init_index_buffer()
     vkFreeMemory(device, staging_buffer_memory, NULL);
     tg_allocator_free(indices);
 }
+void tg_graphics_renderer_2d_internal_init_render_pass()
+{
+    VkAttachmentReference color_attachment_reference = { 0 };
+    {
+        color_attachment_reference.attachment = 0;
+        color_attachment_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    }
+    VkAttachmentReference depth_attachment_reference = { 0 };
+    {
+        depth_attachment_reference.attachment = 1;
+        depth_attachment_reference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    }
+    VkAttachmentReference color_resolve_attachment_reference = { 0 };
+    {
+        color_resolve_attachment_reference.attachment = 2;
+        color_resolve_attachment_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    }
+    VkSubpassDescription subpass_description = { 0 };
+    {
+        subpass_description.flags = 0;
+        subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+        subpass_description.inputAttachmentCount = 0;
+        subpass_description.pInputAttachments = NULL;
+        subpass_description.colorAttachmentCount = 1;
+        subpass_description.pColorAttachments = &color_attachment_reference;
+        subpass_description.pResolveAttachments = &color_resolve_attachment_reference;
+        subpass_description.pDepthStencilAttachment = &depth_attachment_reference;
+        subpass_description.preserveAttachmentCount = 0;
+        subpass_description.pPreserveAttachments = NULL;
+    }
+    VkSubpassDependency subpass_dependency = { 0 };
+    {
+        subpass_dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+        subpass_dependency.dstSubpass = 0;
+        subpass_dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        subpass_dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        subpass_dependency.srcAccessMask = 0;
+        subpass_dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    }
+    VkFormat depth_format;
+    tg_graphics_vulkan_depth_format_acquire(&depth_format);
+    VkAttachmentDescription attachment_descriptions[3] = { 0 };
+    {
+        attachment_descriptions[0].flags = 0;
+        attachment_descriptions[0].format = surface.format.format;
+        attachment_descriptions[0].samples = surface.msaa_sample_count;
+        attachment_descriptions[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        attachment_descriptions[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        attachment_descriptions[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        attachment_descriptions[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        attachment_descriptions[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        attachment_descriptions[0].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        attachment_descriptions[1].flags = 0;
+        attachment_descriptions[1].format = depth_format;
+        attachment_descriptions[1].samples = surface.msaa_sample_count;
+        attachment_descriptions[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        attachment_descriptions[1].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        attachment_descriptions[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        attachment_descriptions[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        attachment_descriptions[1].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        attachment_descriptions[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        attachment_descriptions[2].flags = 0;
+        attachment_descriptions[2].format = surface.format.format;
+        attachment_descriptions[2].samples = VK_SAMPLE_COUNT_1_BIT;
+        attachment_descriptions[2].loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        attachment_descriptions[2].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        attachment_descriptions[2].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        attachment_descriptions[2].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        attachment_descriptions[2].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        attachment_descriptions[2].finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    }
+    VkRenderPassCreateInfo render_pass_create_info = { 0 };
+    {
+        render_pass_create_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+        render_pass_create_info.pNext = NULL;
+        render_pass_create_info.flags = 0;
+        render_pass_create_info.attachmentCount = sizeof(attachment_descriptions) / sizeof(*attachment_descriptions);
+        render_pass_create_info.pAttachments = attachment_descriptions;
+        render_pass_create_info.subpassCount = 1;
+        render_pass_create_info.pSubpasses = &subpass_description;
+        render_pass_create_info.dependencyCount = 1;
+        render_pass_create_info.pDependencies = &subpass_dependency;
+    }
+    VK_CALL(vkCreateRenderPass(device, &render_pass_create_info, NULL, &renderer_2d_render_pass));
+
+    tg_graphics_vulkan_image_create(swapchain_extent.width, swapchain_extent.height, 1, surface.format.format, surface.msaa_sample_count, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &renderer_2d_color_image, &renderer_2d_color_image_memory);
+    tg_graphics_vulkan_image_view_create(renderer_2d_color_image, surface.format.format, 1, VK_IMAGE_ASPECT_COLOR_BIT, &renderer_2d_color_image_view);
+
+    tg_graphics_vulkan_image_create(swapchain_extent.width, swapchain_extent.height, 1, depth_format, surface.msaa_sample_count, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &renderer_2d_depth_image, &renderer_2d_depth_image_memory);
+    tg_graphics_vulkan_image_view_create(renderer_2d_depth_image, depth_format, 1, VK_IMAGE_ASPECT_DEPTH_BIT, &renderer_2d_depth_image_view);
+
+    for (ui32 i = 0; i < SURFACE_IMAGE_COUNT; i++)
+    {
+        const VkImageView image_view_attachments[] = {
+            renderer_2d_color_image_view,
+            renderer_2d_depth_image_view,
+            swapchain_image_views[i]
+        };
+        VkFramebufferCreateInfo framebuffer_create_info = { 0 };
+        {
+            framebuffer_create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+            framebuffer_create_info.pNext = NULL;
+            framebuffer_create_info.flags = 0;
+            framebuffer_create_info.renderPass = renderer_2d_render_pass;
+            framebuffer_create_info.attachmentCount = sizeof(image_view_attachments) / sizeof(*image_view_attachments);
+            framebuffer_create_info.pAttachments = image_view_attachments;
+            framebuffer_create_info.width = swapchain_extent.width;
+            framebuffer_create_info.height = swapchain_extent.height;
+            framebuffer_create_info.layers = 1;
+        }
+        VK_CALL(vkCreateFramebuffer(device, &framebuffer_create_info, NULL, &renderer_2d_framebuffers[i]));
+    }
+}
+void tg_graphics_renderer_2d_internal_init_pipeline()
+{
+    tg_graphics_vulkan_shader_module_create("shaders/vert.spv", &renderer_2d_vertex_shader);
+    tg_graphics_vulkan_shader_module_create("shaders/frag.spv", &renderer_2d_fragment_shader);
+
+    VkPipelineLayoutCreateInfo pipeline_layout_create_info = { 0 };
+    {
+        pipeline_layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipeline_layout_create_info.pNext = NULL;
+        pipeline_layout_create_info.flags = 0;
+        pipeline_layout_create_info.setLayoutCount = 1;
+        pipeline_layout_create_info.pSetLayouts = &renderer_2d_descriptor_set_layout;
+        pipeline_layout_create_info.pushConstantRangeCount = 0;
+        pipeline_layout_create_info.pPushConstantRanges = NULL;
+    }
+    VK_CALL(vkCreatePipelineLayout(device, &pipeline_layout_create_info, NULL, &renderer_2d_pipeline_layout));
+
+    VkPipelineShaderStageCreateInfo pipeline_shader_stage_create_infos[2] = { 0 };
+    {
+        pipeline_shader_stage_create_infos[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        pipeline_shader_stage_create_infos[0].pNext = NULL;
+        pipeline_shader_stage_create_infos[0].flags = 0;
+        pipeline_shader_stage_create_infos[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
+        pipeline_shader_stage_create_infos[0].module = renderer_2d_vertex_shader;
+        pipeline_shader_stage_create_infos[0].pName = "main";
+        pipeline_shader_stage_create_infos[0].pSpecializationInfo = NULL;
+        pipeline_shader_stage_create_infos[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        pipeline_shader_stage_create_infos[1].pNext = NULL;
+        pipeline_shader_stage_create_infos[1].flags = 0;
+        pipeline_shader_stage_create_infos[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+        pipeline_shader_stage_create_infos[1].module = renderer_2d_fragment_shader;
+        pipeline_shader_stage_create_infos[1].pName = "main";
+        pipeline_shader_stage_create_infos[1].pSpecializationInfo = NULL;
+    }
+    VkVertexInputBindingDescription vertex_input_binding_description = { 0 };
+    {   
+        vertex_input_binding_description.binding = 0;
+        vertex_input_binding_description.stride = sizeof(tg_vertex);
+        vertex_input_binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+    }
+    VkVertexInputAttributeDescription vertex_input_attribute_descriptions[3] = { 0 };
+    {
+        vertex_input_attribute_descriptions[0].binding = 0;
+        vertex_input_attribute_descriptions[0].location = 0;
+        vertex_input_attribute_descriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
+        vertex_input_attribute_descriptions[0].offset = offsetof(tg_vertex, position);
+        vertex_input_attribute_descriptions[1].binding = 0;
+        vertex_input_attribute_descriptions[1].location = 1;
+        vertex_input_attribute_descriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+        vertex_input_attribute_descriptions[1].offset = offsetof(tg_vertex, color);
+        vertex_input_attribute_descriptions[2].binding = 0;
+        vertex_input_attribute_descriptions[2].location = 2;
+        vertex_input_attribute_descriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
+        vertex_input_attribute_descriptions[2].offset = offsetof(tg_vertex, uv);
+    }
+    VkPipelineVertexInputStateCreateInfo pipeline_vertex_input_state_create_info = { 0 };
+    {
+        pipeline_vertex_input_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+        pipeline_vertex_input_state_create_info.pNext = NULL;
+        pipeline_vertex_input_state_create_info.flags = 0;
+        pipeline_vertex_input_state_create_info.vertexBindingDescriptionCount = 1;
+        pipeline_vertex_input_state_create_info.pVertexBindingDescriptions = &vertex_input_binding_description;
+        pipeline_vertex_input_state_create_info.vertexAttributeDescriptionCount = sizeof(vertex_input_attribute_descriptions) / sizeof(*vertex_input_attribute_descriptions);
+        pipeline_vertex_input_state_create_info.pVertexAttributeDescriptions = vertex_input_attribute_descriptions;
+    }
+    VkPipelineInputAssemblyStateCreateInfo pipeline_input_assembly_state_create_info = { 0 };
+    {
+        pipeline_input_assembly_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+        pipeline_input_assembly_state_create_info.pNext = NULL;
+        pipeline_input_assembly_state_create_info.flags = 0;
+        pipeline_input_assembly_state_create_info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        pipeline_input_assembly_state_create_info.primitiveRestartEnable = VK_FALSE;
+    }
+    VkViewport viewport = { 0 };
+    {
+        viewport.x = 0.0f;
+        viewport.y = 0.0f;
+        viewport.width = (float)swapchain_extent.width;
+        viewport.height = (float)swapchain_extent.height;
+        viewport.minDepth = 0.0f;
+        viewport.maxDepth = 1.0f;
+    }
+    VkRect2D rect = { 0 };
+    {
+        rect.offset = (VkOffset2D){ 0, 0 };
+        rect.extent = swapchain_extent;
+    }
+    VkPipelineViewportStateCreateInfo pipeline_viewport_state_create_info = { 0 };
+    {
+        pipeline_viewport_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+        pipeline_viewport_state_create_info.pNext = NULL;
+        pipeline_viewport_state_create_info.flags = 0;
+        pipeline_viewport_state_create_info.viewportCount = 1;
+        pipeline_viewport_state_create_info.pViewports = &viewport;
+        pipeline_viewport_state_create_info.scissorCount = 1;
+        pipeline_viewport_state_create_info.pScissors = &rect;
+    }
+    VkPipelineRasterizationStateCreateInfo pipeline_rasterization_state_create_info = { 0 };
+    {
+        pipeline_rasterization_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+        pipeline_rasterization_state_create_info.pNext = NULL;
+        pipeline_rasterization_state_create_info.flags = 0;
+        pipeline_rasterization_state_create_info.depthClampEnable = VK_FALSE;
+        pipeline_rasterization_state_create_info.rasterizerDiscardEnable = VK_FALSE;
+        pipeline_rasterization_state_create_info.polygonMode = VK_POLYGON_MODE_FILL;
+        pipeline_rasterization_state_create_info.cullMode = VK_CULL_MODE_BACK_BIT;
+        pipeline_rasterization_state_create_info.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+        pipeline_rasterization_state_create_info.depthBiasEnable = VK_FALSE;
+        pipeline_rasterization_state_create_info.depthBiasConstantFactor = 0.0f;
+        pipeline_rasterization_state_create_info.depthBiasClamp = 0.0f;
+        pipeline_rasterization_state_create_info.depthBiasSlopeFactor = 0.0f;
+        pipeline_rasterization_state_create_info.lineWidth = 1.0f;
+    }
+    VkPipelineMultisampleStateCreateInfo pipeline_multisample_state_create_info = { 0 };
+    {
+        pipeline_multisample_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+        pipeline_multisample_state_create_info.pNext = NULL;
+        pipeline_multisample_state_create_info.flags = 0;
+        pipeline_multisample_state_create_info.rasterizationSamples = surface.msaa_sample_count;
+        pipeline_multisample_state_create_info.sampleShadingEnable = VK_TRUE;
+        pipeline_multisample_state_create_info.minSampleShading = 1.0f;
+        pipeline_multisample_state_create_info.pSampleMask = NULL;
+        pipeline_multisample_state_create_info.alphaToCoverageEnable = VK_FALSE;
+        pipeline_multisample_state_create_info.alphaToOneEnable = VK_FALSE;
+    }
+    VkPipelineDepthStencilStateCreateInfo pipeline_depth_stencil_state_create_info = { 0 };
+    {
+        pipeline_depth_stencil_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+        pipeline_depth_stencil_state_create_info.pNext = NULL;
+        pipeline_depth_stencil_state_create_info.flags = 0;
+        pipeline_depth_stencil_state_create_info.depthTestEnable = VK_TRUE;
+        pipeline_depth_stencil_state_create_info.depthWriteEnable = VK_TRUE;
+        pipeline_depth_stencil_state_create_info.depthCompareOp = VK_COMPARE_OP_LESS;
+        pipeline_depth_stencil_state_create_info.depthBoundsTestEnable = VK_FALSE;
+        pipeline_depth_stencil_state_create_info.stencilTestEnable = VK_FALSE;
+        pipeline_depth_stencil_state_create_info.front.failOp = VK_STENCIL_OP_KEEP;
+        pipeline_depth_stencil_state_create_info.front.passOp = VK_STENCIL_OP_KEEP;
+        pipeline_depth_stencil_state_create_info.front.depthFailOp = VK_STENCIL_OP_KEEP;
+        pipeline_depth_stencil_state_create_info.front.compareOp = VK_COMPARE_OP_NEVER;
+        pipeline_depth_stencil_state_create_info.front.compareMask = 0;
+        pipeline_depth_stencil_state_create_info.front.writeMask = 0;
+        pipeline_depth_stencil_state_create_info.front.reference = 0;
+        pipeline_depth_stencil_state_create_info.back.failOp = VK_STENCIL_OP_KEEP;
+        pipeline_depth_stencil_state_create_info.back.passOp = VK_STENCIL_OP_KEEP;
+        pipeline_depth_stencil_state_create_info.back.depthFailOp = VK_STENCIL_OP_KEEP;
+        pipeline_depth_stencil_state_create_info.back.compareOp = VK_COMPARE_OP_NEVER;
+        pipeline_depth_stencil_state_create_info.back.compareMask = 0;
+        pipeline_depth_stencil_state_create_info.back.writeMask = 0;
+        pipeline_depth_stencil_state_create_info.back.reference = 0;
+        pipeline_depth_stencil_state_create_info.minDepthBounds = 0.0f;
+        pipeline_depth_stencil_state_create_info.maxDepthBounds = 0.0f;
+    }
+    VkPipelineColorBlendAttachmentState pipeline_color_blend_attachment_state = { 0 };
+    {
+        pipeline_color_blend_attachment_state.blendEnable = VK_TRUE;
+        pipeline_color_blend_attachment_state.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+        pipeline_color_blend_attachment_state.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+        pipeline_color_blend_attachment_state.colorBlendOp = VK_BLEND_OP_ADD;
+        pipeline_color_blend_attachment_state.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+        pipeline_color_blend_attachment_state.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+        pipeline_color_blend_attachment_state.alphaBlendOp = VK_BLEND_OP_ADD;
+        pipeline_color_blend_attachment_state.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    }
+    VkPipelineColorBlendStateCreateInfo pipeline_color_blend_state_create_info = { 0 };
+    {
+        pipeline_color_blend_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+        pipeline_color_blend_state_create_info.pNext = NULL;
+        pipeline_color_blend_state_create_info.flags = 0;
+        pipeline_color_blend_state_create_info.logicOpEnable = VK_FALSE;
+        pipeline_color_blend_state_create_info.logicOp = VK_LOGIC_OP_COPY;
+        pipeline_color_blend_state_create_info.attachmentCount = 1;
+        pipeline_color_blend_state_create_info.pAttachments = &pipeline_color_blend_attachment_state;
+        pipeline_color_blend_state_create_info.blendConstants[0] = 0.0f;
+        pipeline_color_blend_state_create_info.blendConstants[1] = 0.0f;
+        pipeline_color_blend_state_create_info.blendConstants[2] = 0.0f;
+        pipeline_color_blend_state_create_info.blendConstants[3] = 0.0f;
+    }
+    VkGraphicsPipelineCreateInfo graphics_pipeline_create_info = { 0 };
+    {
+        graphics_pipeline_create_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+        graphics_pipeline_create_info.pNext = NULL;
+        graphics_pipeline_create_info.flags = 0;
+        graphics_pipeline_create_info.stageCount = sizeof(pipeline_shader_stage_create_infos) / sizeof(*pipeline_shader_stage_create_infos);
+        graphics_pipeline_create_info.pStages = pipeline_shader_stage_create_infos;
+        graphics_pipeline_create_info.pVertexInputState = &pipeline_vertex_input_state_create_info;
+        graphics_pipeline_create_info.pInputAssemblyState = &pipeline_input_assembly_state_create_info;
+        graphics_pipeline_create_info.pTessellationState = NULL;
+        graphics_pipeline_create_info.pViewportState = &pipeline_viewport_state_create_info;
+        graphics_pipeline_create_info.pRasterizationState = &pipeline_rasterization_state_create_info;
+        graphics_pipeline_create_info.pMultisampleState = &pipeline_multisample_state_create_info;
+        graphics_pipeline_create_info.pDepthStencilState = &pipeline_depth_stencil_state_create_info;
+        graphics_pipeline_create_info.pColorBlendState = &pipeline_color_blend_state_create_info;
+        graphics_pipeline_create_info.pDynamicState = NULL;
+        graphics_pipeline_create_info.layout = renderer_2d_pipeline_layout;
+        graphics_pipeline_create_info.renderPass = renderer_2d_render_pass;
+        graphics_pipeline_create_info.subpass = 0;
+        graphics_pipeline_create_info.basePipelineHandle = VK_NULL_HANDLE;
+        graphics_pipeline_create_info.basePipelineIndex = -1;
+    }
+    VK_CALL(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &graphics_pipeline_create_info, NULL, &renderer_2d_pipeline));
+}
+
 void tg_graphics_renderer_2d_init()
 {
     // TODO: is vulkan initialized?
 
     tg_graphics_vulkan_buffer_create(sizeof(tg_uniform_buffer_object), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &renderer_2d_ubo, &renderer_2d_ubo_memory);
-    tg_graphics_renderer_2d_init_synchronization_primitives();
-    tg_graphics_renderer_2d_init_descriptors();
-    tg_graphics_renderer_2d_init_index_buffer();
+    tg_graphics_renderer_2d_internal_init_synchronization_primitives();
+    tg_graphics_renderer_2d_internal_init_descriptors();
+    tg_graphics_renderer_2d_internal_init_index_buffer();
     tg_graphics_vulkan_buffer_create(VBO_SIZE, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, &vbo, &vbo_memory);
+    tg_graphics_renderer_2d_internal_init_render_pass();
+    tg_graphics_renderer_2d_internal_init_pipeline();
 
     VkCommandBufferAllocateInfo command_buffer_allocate_info = { 0 };
     {
@@ -200,7 +532,6 @@ void tg_graphics_renderer_2d_init()
         command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
         command_buffer_allocate_info.commandBufferCount = 1;
     }
-
     VK_CALL(vkAllocateCommandBuffers(device, &command_buffer_allocate_info, &renderer_2d_command_buffer));
 }
 void tg_graphics_renderer_2d_begin()
@@ -262,8 +593,8 @@ void tg_graphics_renderer_2d_end()
     {
         render_pass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         render_pass_begin_info.pNext = NULL;
-        render_pass_begin_info.renderPass = render_pass;
-        render_pass_begin_info.framebuffer = framebuffers[current_image];
+        render_pass_begin_info.renderPass = renderer_2d_render_pass;
+        render_pass_begin_info.framebuffer = renderer_2d_framebuffers[current_image];
         render_pass_begin_info.renderArea.offset = (VkOffset2D){ 0, 0 };
         render_pass_begin_info.renderArea.extent = swapchain_extent;
         render_pass_begin_info.clearValueCount = sizeof(clear_values) / sizeof(*clear_values);
@@ -273,10 +604,10 @@ void tg_graphics_renderer_2d_end()
     const ui32 dynamic_offsets[1] = { 0 };
 
     VK_CALL(vkBeginCommandBuffer(renderer_2d_command_buffer, &command_buffer_begin_info));
-    vkCmdBindPipeline(renderer_2d_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline);
+    vkCmdBindPipeline(renderer_2d_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer_2d_pipeline);
     vkCmdBindVertexBuffers(renderer_2d_command_buffer, 0, sizeof(vertex_buffer_offsets) / sizeof(*vertex_buffer_offsets), &vbo, vertex_buffer_offsets);
     vkCmdBindIndexBuffer(renderer_2d_command_buffer, ibo, 0, VK_INDEX_TYPE_UINT16);
-    vkCmdBindDescriptorSets(renderer_2d_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &renderer_2d_descriptor_set, 1, dynamic_offsets);
+    vkCmdBindDescriptorSets(renderer_2d_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer_2d_pipeline_layout, 0, 1, &renderer_2d_descriptor_set, 1, dynamic_offsets);
     vkCmdBeginRenderPass(renderer_2d_command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
     vkCmdDrawIndexed(renderer_2d_command_buffer, 6 * current_quad_index, 1, 0, 0, 0);
     vkCmdEndRenderPass(renderer_2d_command_buffer);
@@ -341,6 +672,23 @@ void tg_graphics_renderer_2d_shutdown()
 {
     vkDeviceWaitIdle(device);
 
+    vkDestroyPipeline(device, renderer_2d_pipeline, NULL);
+    vkDestroyPipelineLayout(device, renderer_2d_pipeline_layout, NULL);
+    for (ui32 i = 0; i < SURFACE_IMAGE_COUNT; i++)
+    {
+        vkDestroyFramebuffer(device, renderer_2d_framebuffers[i], NULL);
+    }
+    vkDestroyImageView(device, renderer_2d_depth_image_view, NULL);
+    vkFreeMemory(device, renderer_2d_depth_image_memory, NULL);
+    vkDestroyImage(device, renderer_2d_depth_image, NULL);
+    vkDestroyImageView(device, renderer_2d_color_image_view, NULL);
+    vkFreeMemory(device, renderer_2d_color_image_memory, NULL);
+    vkDestroyImage(device, renderer_2d_color_image, NULL);
+    vkDestroyRenderPass(device, renderer_2d_render_pass, NULL);
+
+    vkDestroyShaderModule(device, renderer_2d_fragment_shader, NULL);
+    vkDestroyShaderModule(device, renderer_2d_vertex_shader, NULL);
+
     vkDestroyBuffer(device, renderer_2d_ubo, NULL);
     vkFreeMemory(device, renderer_2d_ubo_memory, NULL);
 
@@ -349,11 +697,17 @@ void tg_graphics_renderer_2d_shutdown()
     vkDestroyBuffer(device, vbo, NULL);
     vkFreeMemory(device, vbo_memory, NULL);
 
+    vkDestroyDescriptorSetLayout(device, renderer_2d_descriptor_set_layout, NULL);
     vkDestroyDescriptorPool(device, renderer_2d_descriptor_pool, NULL);
 
     vkDestroySemaphore(device, renderer_2d_image_acquired_semaphore, NULL);
     vkDestroySemaphore(device, renderer_2d_rendering_finished_semaphore, NULL);
     vkDestroyFence(device, renderer_2d_rendering_finished_fence, NULL);
+}
+void tg_graphics_renderer_2d_on_window_resize(ui32 w, ui32 h)
+{
+    tg_graphics_renderer_2d_shutdown();
+    tg_graphics_renderer_2d_init();
 }
 
 #endif

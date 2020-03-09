@@ -134,7 +134,7 @@ VkSwapchainKHR swapchain;
 VkExtent2D swapchain_extent;
 
 VkImage images[SURFACE_IMAGE_COUNT];
-VkImageView image_views[SURFACE_IMAGE_COUNT];
+VkImageView swapchain_image_views[SURFACE_IMAGE_COUNT];
 
 VkRenderPass render_pass;
 VkFramebuffer framebuffers[SURFACE_IMAGE_COUNT];
