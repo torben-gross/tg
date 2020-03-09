@@ -119,10 +119,6 @@ VkDevice device;
 tg_queue graphics_queue;
 tg_queue present_queue;
 VkCommandPool command_pool;
-VkSemaphore image_available_semaphores[FRAMES_IN_FLIGHT];
-VkSemaphore rendering_finished_semaphores[FRAMES_IN_FLIGHT];
-VkFence in_flight_fences[FRAMES_IN_FLIGHT];
-VkFence images_in_flight[SURFACE_IMAGE_COUNT];
 
 #ifdef TG_DEBUG
 VkDebugUtilsMessengerEXT debug_utils_messenger;
@@ -132,36 +128,8 @@ VkDebugUtilsMessengerEXT debug_utils_messenger;
 
 VkSwapchainKHR swapchain;
 VkExtent2D swapchain_extent;
-
-VkImage images[SURFACE_IMAGE_COUNT];
+VkImage swapchain_images[SURFACE_IMAGE_COUNT];
 VkImageView swapchain_image_views[SURFACE_IMAGE_COUNT];
-
-VkRenderPass render_pass;
-VkFramebuffer framebuffers[SURFACE_IMAGE_COUNT];
-
-VkImage color_image;
-VkDeviceMemory color_image_memory;
-VkImageView color_image_view;
-
-VkImage depth_image;
-VkDeviceMemory depth_image_memory;
-VkImageView depth_image_view;
-
-VkPipelineLayout pipeline_layout;
-VkPipeline graphics_pipeline;
-VkDescriptorSet descriptor_sets[SURFACE_IMAGE_COUNT];
-VkCommandBuffer command_buffers[SURFACE_IMAGE_COUNT];
-
-VkDescriptorSetLayout descriptor_set_layout;
-VkDescriptorPool descriptor_pool;
-
-tg_image_h image_h;
-tg_vertex_buffer_h vertex_buffer_h;
-tg_index_buffer_h index_buffer_h;
-tg_uniform_buffer_h uniform_buffers_h[SURFACE_IMAGE_COUNT];
-
-ui32 current_frame;
-VkPipelineStageFlags* wait_dst_stage_mask;
 
 
 

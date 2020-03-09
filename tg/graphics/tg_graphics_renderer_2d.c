@@ -6,53 +6,83 @@
 #include "tg/platform/tg_allocator.h"
 
 
-VkDescriptorPool         renderer_2d_descriptor_pool;
-VkDescriptorSetLayout    renderer_2d_descriptor_set_layout;
-VkDescriptorSet          renderer_2d_descriptor_set;
-VkCommandBuffer          renderer_2d_command_buffer;
-VkFence                  renderer_2d_rendering_finished_fence;
-VkSemaphore              renderer_2d_rendering_finished_semaphore;
-VkSemaphore              renderer_2d_image_acquired_semaphore;
 
-VkBuffer                 renderer_2d_uniform_buffer; // TODO
-VkShaderModule           renderer_2d_vertex_shader; // TODO
-VkShaderModule           renderer_2d_fragment_shader; // TODO
-
-VkRenderPass             renderer_2d_render_pass; // TODO
-VkImage                  renderer_2d_color_image;
-VkDeviceMemory           renderer_2d_color_image_memory;
-VkImageView              renderer_2d_color_image_view;
-VkImage                  renderer_2d_depth_image;
-VkDeviceMemory           renderer_2d_depth_image_memory;
-VkImageView              renderer_2d_depth_image_view;
-VkFramebuffer            renderer_2d_framebuffers[SURFACE_IMAGE_COUNT];
-VkPipelineLayout         renderer_2d_pipeline_layout;
-VkPipeline               renderer_2d_pipeline; // TODO
+#define RENDERER_2D_MAX_QUAD_COUNT   100000
+#define RENDERER_2D_MAX_VERTEX_COUNT (4 * RENDERER_2D_MAX_QUAD_COUNT)
+#define RENDERER_2D_MAX_VBO_SIZE     (RENDERER_2D_MAX_QUAD_COUNT * sizeof(tg_vertex))
+#define RENDERER_2D_MAX_INDEX_COUNT  (6 * RENDERER_2D_MAX_QUAD_COUNT)
+#define RENDERER_2D_MAX_IBO_SIZE     (RENDERER_2D_MAX_INDEX_COUNT * sizeof(ui16))
 
 
 
-#define QUAD_COUNT       10000
-
-#define VBO_VERTEX_COUNT (4 * QUAD_COUNT)
-#define VBO_SIZE         (QUAD_COUNT * sizeof(tg_vertex))
-VkBuffer                 vbo;
-VkDeviceMemory           vbo_memory;
-
-#define IBO_INDEX_COUNT  (6 * QUAD_COUNT)
-#define IBO_SIZE         (IBO_INDEX_COUNT * sizeof(ui16))
-VkBuffer                 ibo;
-VkDeviceMemory           ibo_memory;
-
-VkBuffer                 renderer_2d_ubo;
-VkDeviceMemory           renderer_2d_ubo_memory;
+tg_image_h                           image_h; // TODO: <- NO!
+VkBuffer                             renderer_2d_vbo;
+VkDeviceMemory                       renderer_2d_vbo_memory;
+VkBuffer                             renderer_2d_ibo;
+VkDeviceMemory                       renderer_2d_ibo_memory;
+VkBuffer                             renderer_2d_ubo;
+VkDeviceMemory                       renderer_2d_ubo_memory;
 
 
+VkFence                              renderer_2d_rendering_finished_fence;
+VkSemaphore                          renderer_2d_rendering_finished_semaphore;
+VkSemaphore                          renderer_2d_image_acquired_semaphore;
 
-tg_vertex*               vertex_data = NULL;
-ui32                     current_quad_index = 0;
+VkRenderPass                         renderer_2d_render_pass;
+VkImage                              renderer_2d_color_image;
+VkDeviceMemory                       renderer_2d_color_image_memory;
+VkImageView                          renderer_2d_color_image_view;
+VkImage                              renderer_2d_depth_image;
+VkDeviceMemory                       renderer_2d_depth_image_memory;
+VkImageView                          renderer_2d_depth_image_view;
+VkFramebuffer                        renderer_2d_framebuffers[SURFACE_IMAGE_COUNT];
+
+VkDescriptorPool                     renderer_2d_descriptor_pool;
+VkDescriptorSetLayout                renderer_2d_descriptor_set_layout;
+VkDescriptorSet                      renderer_2d_descriptor_set;
+
+VkShaderModule                       renderer_2d_vertex_shader;
+VkShaderModule                       renderer_2d_fragment_shader;
+VkPipelineLayout                     renderer_2d_pipeline_layout;
+VkPipeline                           renderer_2d_pipeline;
+
+VkCommandBuffer                      renderer_2d_command_buffer;
+
+
+tg_vertex*                           renderer_2d_mapped_vbo_memory = NULL;
+ui32                                 renderer_2d_current_quad_index = 0;
 
 
 
+void tg_graphics_renderer_2d_internal_init_index_buffer()
+{
+    VkBuffer staging_buffer = VK_NULL_HANDLE;
+    VkDeviceMemory staging_buffer_memory = VK_NULL_HANDLE;
+    tg_graphics_vulkan_buffer_create(RENDERER_2D_MAX_VBO_SIZE, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &staging_buffer, &staging_buffer_memory);
+
+    ui16* indices = tg_allocator_allocate(RENDERER_2D_MAX_IBO_SIZE);
+    for (ui32 i = 0; i < RENDERER_2D_MAX_QUAD_COUNT; i++)
+    {
+        indices[6 * i + 0] = 4 * i + 0;
+        indices[6 * i + 1] = 4 * i + 1;
+        indices[6 * i + 2] = 4 * i + 2;
+        indices[6 * i + 3] = 4 * i + 2;
+        indices[6 * i + 4] = 4 * i + 3;
+        indices[6 * i + 5] = 4 * i + 0;
+    }
+
+    void* data;
+    vkMapMemory(device, staging_buffer_memory, 0, RENDERER_2D_MAX_IBO_SIZE, 0, &data);
+    memcpy(data, indices, RENDERER_2D_MAX_IBO_SIZE);
+    vkUnmapMemory(device, staging_buffer_memory);
+
+    tg_graphics_vulkan_buffer_create(RENDERER_2D_MAX_VBO_SIZE, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &renderer_2d_ibo, &renderer_2d_ibo_memory);
+    tg_graphics_vulkan_buffer_copy(RENDERER_2D_MAX_VBO_SIZE, &staging_buffer, &renderer_2d_ibo);
+
+    vkFreeMemory(device, staging_buffer_memory, NULL);
+    vkDestroyBuffer(device, staging_buffer, NULL);
+    tg_allocator_free(indices);
+}
 void tg_graphics_renderer_2d_internal_init_synchronization_primitives()
 {
     VkFenceCreateInfo fence_create_info = { 0 };
@@ -71,131 +101,6 @@ void tg_graphics_renderer_2d_internal_init_synchronization_primitives()
     }
     VK_CALL(vkCreateSemaphore(device, &semaphore_create_info, NULL, &renderer_2d_rendering_finished_semaphore));
     VK_CALL(vkCreateSemaphore(device, &semaphore_create_info, NULL, &renderer_2d_image_acquired_semaphore));
-}
-void tg_graphics_renderer_2d_internal_init_descriptors()
-{
-    VkDescriptorPoolSize descriptor_pool_sizes[2] = { 0 };
-    {
-        descriptor_pool_sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-        descriptor_pool_sizes[0].descriptorCount = 1;
-        descriptor_pool_sizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        descriptor_pool_sizes[1].descriptorCount = 1;
-    }
-    VkDescriptorPoolCreateInfo descriptor_pool_create_info = { 0 };
-    {
-        descriptor_pool_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-        descriptor_pool_create_info.pNext = NULL;
-        descriptor_pool_create_info.flags = 0;
-        descriptor_pool_create_info.maxSets = 1;
-        descriptor_pool_create_info.poolSizeCount = sizeof(descriptor_pool_sizes) / sizeof(*descriptor_pool_sizes);
-        descriptor_pool_create_info.pPoolSizes = descriptor_pool_sizes;
-    }
-    VK_CALL(vkCreateDescriptorPool(device, &descriptor_pool_create_info, NULL, &renderer_2d_descriptor_pool));
-
-
-
-    VkDescriptorSetLayoutBinding descriptor_set_layout_bindings[2] = { 0 };
-    {
-        descriptor_set_layout_bindings[0].binding = 0;
-        descriptor_set_layout_bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-        descriptor_set_layout_bindings[0].descriptorCount = 1;
-        descriptor_set_layout_bindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-        descriptor_set_layout_bindings[0].pImmutableSamplers = NULL;
-        descriptor_set_layout_bindings[1].binding = 1;
-        descriptor_set_layout_bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        descriptor_set_layout_bindings[1].descriptorCount = 1;
-        descriptor_set_layout_bindings[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-        descriptor_set_layout_bindings[1].pImmutableSamplers = NULL;
-    }
-    VkDescriptorSetLayoutCreateInfo descriptor_set_layout_create_info = { 0 };
-    {
-        descriptor_set_layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        descriptor_set_layout_create_info.pNext = NULL;
-        descriptor_set_layout_create_info.flags = 0;
-        descriptor_set_layout_create_info.bindingCount = sizeof(descriptor_set_layout_bindings) / sizeof(*descriptor_set_layout_bindings);
-        descriptor_set_layout_create_info.pBindings = descriptor_set_layout_bindings;
-    }
-    VK_CALL(vkCreateDescriptorSetLayout(device, &descriptor_set_layout_create_info, NULL, &renderer_2d_descriptor_set_layout));
-
-
-
-    VkDescriptorSetAllocateInfo descriptor_set_allocate_info = { 0 };
-    {
-        descriptor_set_allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-        descriptor_set_allocate_info.pNext = NULL;
-        descriptor_set_allocate_info.descriptorPool = renderer_2d_descriptor_pool;
-        descriptor_set_allocate_info.descriptorSetCount = 1;
-        descriptor_set_allocate_info.pSetLayouts = &renderer_2d_descriptor_set_layout;
-    }
-    VK_CALL(vkAllocateDescriptorSets(device, &descriptor_set_allocate_info, &renderer_2d_descriptor_set));
-
-
-
-    VkDescriptorBufferInfo descriptor_buffer_info = { 0 };
-    {
-        descriptor_buffer_info.buffer = renderer_2d_ubo;
-        descriptor_buffer_info.offset = 0;
-        descriptor_buffer_info.range = sizeof(tg_uniform_buffer_object);
-    }
-    VkDescriptorImageInfo descriptor_image_info = { 0 };
-    {
-        descriptor_image_info.sampler = image_h->sampler;
-        descriptor_image_info.imageView = image_h->image_view;
-        descriptor_image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    }
-    VkWriteDescriptorSet write_descriptor_sets[2] = { 0 };
-    {
-        write_descriptor_sets[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        write_descriptor_sets[0].pNext = NULL;
-        write_descriptor_sets[0].dstSet = renderer_2d_descriptor_set;
-        write_descriptor_sets[0].dstBinding = 0;
-        write_descriptor_sets[0].dstArrayElement = 0;
-        write_descriptor_sets[0].descriptorCount = 1;
-        write_descriptor_sets[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-        write_descriptor_sets[0].pImageInfo = NULL;
-        write_descriptor_sets[0].pBufferInfo = &descriptor_buffer_info;
-        write_descriptor_sets[0].pTexelBufferView = NULL;
-        write_descriptor_sets[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        write_descriptor_sets[1].pNext = NULL;
-        write_descriptor_sets[1].dstSet = renderer_2d_descriptor_set;
-        write_descriptor_sets[1].dstBinding = 1;
-        write_descriptor_sets[1].dstArrayElement = 0;
-        write_descriptor_sets[1].descriptorCount = 1;
-        write_descriptor_sets[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        write_descriptor_sets[1].pImageInfo = &descriptor_image_info;
-        write_descriptor_sets[1].pBufferInfo = NULL;
-        write_descriptor_sets[1].pTexelBufferView = NULL;
-    }
-    vkUpdateDescriptorSets(device, sizeof(write_descriptor_sets) / sizeof(*write_descriptor_sets), write_descriptor_sets, 0, NULL);
-}
-void tg_graphics_renderer_2d_internal_init_index_buffer()
-{
-    VkBuffer staging_buffer = VK_NULL_HANDLE;
-    VkDeviceMemory staging_buffer_memory = VK_NULL_HANDLE;
-    tg_graphics_vulkan_buffer_create(VBO_SIZE, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &staging_buffer, &staging_buffer_memory);
-
-    ui16* indices = tg_allocator_allocate(IBO_SIZE);
-    for (ui32 i = 0; i < QUAD_COUNT; i++)
-    {
-        indices[6 * i + 0] = 4 * i + 0;
-        indices[6 * i + 1] = 4 * i + 1;
-        indices[6 * i + 2] = 4 * i + 2;
-        indices[6 * i + 3] = 4 * i + 2;
-        indices[6 * i + 4] = 4 * i + 3;
-        indices[6 * i + 5] = 4 * i + 0;
-    }
-
-    void* data;
-    vkMapMemory(device, staging_buffer_memory, 0, IBO_SIZE, 0, &data);
-    memcpy(data, indices, IBO_SIZE);
-    vkUnmapMemory(device, staging_buffer_memory);
-
-    tg_graphics_vulkan_buffer_create(VBO_SIZE, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &ibo, &ibo_memory);
-    tg_graphics_vulkan_buffer_copy(VBO_SIZE, &staging_buffer, &ibo);
-
-    vkDestroyBuffer(device, staging_buffer, NULL);
-    vkFreeMemory(device, staging_buffer_memory, NULL);
-    tg_allocator_free(indices);
 }
 void tg_graphics_renderer_2d_internal_init_render_pass()
 {
@@ -309,6 +214,102 @@ void tg_graphics_renderer_2d_internal_init_render_pass()
         }
         VK_CALL(vkCreateFramebuffer(device, &framebuffer_create_info, NULL, &renderer_2d_framebuffers[i]));
     }
+}
+void tg_graphics_renderer_2d_internal_init_descriptors()
+{
+    VkDescriptorPoolSize descriptor_pool_sizes[2] = { 0 };
+    {
+        descriptor_pool_sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+        descriptor_pool_sizes[0].descriptorCount = 1;
+        descriptor_pool_sizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        descriptor_pool_sizes[1].descriptorCount = 1;
+    }
+    VkDescriptorPoolCreateInfo descriptor_pool_create_info = { 0 };
+    {
+        descriptor_pool_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        descriptor_pool_create_info.pNext = NULL;
+        descriptor_pool_create_info.flags = 0;
+        descriptor_pool_create_info.maxSets = 1;
+        descriptor_pool_create_info.poolSizeCount = sizeof(descriptor_pool_sizes) / sizeof(*descriptor_pool_sizes);
+        descriptor_pool_create_info.pPoolSizes = descriptor_pool_sizes;
+    }
+    VK_CALL(vkCreateDescriptorPool(device, &descriptor_pool_create_info, NULL, &renderer_2d_descriptor_pool));
+
+
+
+    VkDescriptorSetLayoutBinding descriptor_set_layout_bindings[2] = { 0 };
+    {
+        descriptor_set_layout_bindings[0].binding = 0;
+        descriptor_set_layout_bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+        descriptor_set_layout_bindings[0].descriptorCount = 1;
+        descriptor_set_layout_bindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+        descriptor_set_layout_bindings[0].pImmutableSamplers = NULL;
+        descriptor_set_layout_bindings[1].binding = 1;
+        descriptor_set_layout_bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        descriptor_set_layout_bindings[1].descriptorCount = 1;
+        descriptor_set_layout_bindings[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+        descriptor_set_layout_bindings[1].pImmutableSamplers = NULL;
+    }
+    VkDescriptorSetLayoutCreateInfo descriptor_set_layout_create_info = { 0 };
+    {
+        descriptor_set_layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        descriptor_set_layout_create_info.pNext = NULL;
+        descriptor_set_layout_create_info.flags = 0;
+        descriptor_set_layout_create_info.bindingCount = sizeof(descriptor_set_layout_bindings) / sizeof(*descriptor_set_layout_bindings);
+        descriptor_set_layout_create_info.pBindings = descriptor_set_layout_bindings;
+    }
+    VK_CALL(vkCreateDescriptorSetLayout(device, &descriptor_set_layout_create_info, NULL, &renderer_2d_descriptor_set_layout));
+
+
+
+    VkDescriptorSetAllocateInfo descriptor_set_allocate_info = { 0 };
+    {
+        descriptor_set_allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        descriptor_set_allocate_info.pNext = NULL;
+        descriptor_set_allocate_info.descriptorPool = renderer_2d_descriptor_pool;
+        descriptor_set_allocate_info.descriptorSetCount = 1;
+        descriptor_set_allocate_info.pSetLayouts = &renderer_2d_descriptor_set_layout;
+    }
+    VK_CALL(vkAllocateDescriptorSets(device, &descriptor_set_allocate_info, &renderer_2d_descriptor_set));
+
+
+
+    VkDescriptorBufferInfo descriptor_buffer_info = { 0 };
+    {
+        descriptor_buffer_info.buffer = renderer_2d_ubo;
+        descriptor_buffer_info.offset = 0;
+        descriptor_buffer_info.range = sizeof(tg_uniform_buffer_object);
+    }
+    VkDescriptorImageInfo descriptor_image_info = { 0 };
+    {
+        descriptor_image_info.sampler = image_h->sampler;
+        descriptor_image_info.imageView = image_h->image_view;
+        descriptor_image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    }
+    VkWriteDescriptorSet write_descriptor_sets[2] = { 0 };
+    {
+        write_descriptor_sets[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        write_descriptor_sets[0].pNext = NULL;
+        write_descriptor_sets[0].dstSet = renderer_2d_descriptor_set;
+        write_descriptor_sets[0].dstBinding = 0;
+        write_descriptor_sets[0].dstArrayElement = 0;
+        write_descriptor_sets[0].descriptorCount = 1;
+        write_descriptor_sets[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+        write_descriptor_sets[0].pImageInfo = NULL;
+        write_descriptor_sets[0].pBufferInfo = &descriptor_buffer_info;
+        write_descriptor_sets[0].pTexelBufferView = NULL;
+        write_descriptor_sets[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        write_descriptor_sets[1].pNext = NULL;
+        write_descriptor_sets[1].dstSet = renderer_2d_descriptor_set;
+        write_descriptor_sets[1].dstBinding = 1;
+        write_descriptor_sets[1].dstArrayElement = 0;
+        write_descriptor_sets[1].descriptorCount = 1;
+        write_descriptor_sets[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        write_descriptor_sets[1].pImageInfo = &descriptor_image_info;
+        write_descriptor_sets[1].pBufferInfo = NULL;
+        write_descriptor_sets[1].pTexelBufferView = NULL;
+    }
+    vkUpdateDescriptorSets(device, sizeof(write_descriptor_sets) / sizeof(*write_descriptor_sets), write_descriptor_sets, 0, NULL);
 }
 void tg_graphics_renderer_2d_internal_init_pipeline()
 {
@@ -511,19 +512,8 @@ void tg_graphics_renderer_2d_internal_init_pipeline()
     }
     VK_CALL(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &graphics_pipeline_create_info, NULL, &renderer_2d_pipeline));
 }
-
-void tg_graphics_renderer_2d_init()
+void tg_graphics_renderer_2d_internal_init_command_buffer()
 {
-    // TODO: is vulkan initialized?
-
-    tg_graphics_vulkan_buffer_create(sizeof(tg_uniform_buffer_object), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &renderer_2d_ubo, &renderer_2d_ubo_memory);
-    tg_graphics_renderer_2d_internal_init_synchronization_primitives();
-    tg_graphics_renderer_2d_internal_init_descriptors();
-    tg_graphics_renderer_2d_internal_init_index_buffer();
-    tg_graphics_vulkan_buffer_create(VBO_SIZE, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, &vbo, &vbo_memory);
-    tg_graphics_renderer_2d_internal_init_render_pass();
-    tg_graphics_renderer_2d_internal_init_pipeline();
-
     VkCommandBufferAllocateInfo command_buffer_allocate_info = { 0 };
     {
         command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -534,42 +524,97 @@ void tg_graphics_renderer_2d_init()
     }
     VK_CALL(vkAllocateCommandBuffers(device, &command_buffer_allocate_info, &renderer_2d_command_buffer));
 }
+
+void tg_graphics_renderer_2d_internal_shutdown_pipeline()
+{
+    vkDestroyPipeline(device, renderer_2d_pipeline, NULL);
+    vkDestroyPipelineLayout(device, renderer_2d_pipeline_layout, NULL);
+
+    vkDestroyShaderModule(device, renderer_2d_fragment_shader, NULL);
+    vkDestroyShaderModule(device, renderer_2d_vertex_shader, NULL);
+}
+void tg_graphics_renderer_2d_internal_shutdown_descriptors()
+{
+    vkDestroyDescriptorSetLayout(device, renderer_2d_descriptor_set_layout, NULL);
+    vkDestroyDescriptorPool(device, renderer_2d_descriptor_pool, NULL);
+}
+void tg_graphics_renderer_2d_internal_shutdown_render_pass()
+{
+    for (ui32 i = 0; i < SURFACE_IMAGE_COUNT; i++)
+    {
+        vkDestroyFramebuffer(device, renderer_2d_framebuffers[i], NULL);
+    }
+    vkDestroyImageView(device, renderer_2d_depth_image_view, NULL);
+    vkFreeMemory(device, renderer_2d_depth_image_memory, NULL);
+    vkDestroyImage(device, renderer_2d_depth_image, NULL);
+    vkDestroyImageView(device, renderer_2d_color_image_view, NULL);
+    vkFreeMemory(device, renderer_2d_color_image_memory, NULL);
+    vkDestroyImage(device, renderer_2d_color_image, NULL);
+    vkDestroyRenderPass(device, renderer_2d_render_pass, NULL);
+}
+void tg_graphics_renderer_2d_internal_shutdown_synchronization_primitives()
+{
+    vkDestroySemaphore(device, renderer_2d_image_acquired_semaphore, NULL);
+    vkDestroySemaphore(device, renderer_2d_rendering_finished_semaphore, NULL);
+    vkDestroyFence(device, renderer_2d_rendering_finished_fence, NULL);
+}
+void tg_graphics_renderer_2d_internal_shutdown_index_buffer()
+{
+    vkFreeMemory(device, renderer_2d_ibo_memory, NULL);
+    vkDestroyBuffer(device, renderer_2d_ibo, NULL);
+}
+
+void tg_graphics_renderer_2d_init()
+{
+    // TODO: assert is vulkan initialized?
+
+    tg_graphics_image_create("test_icon.bmp", &image_h);
+    tg_graphics_vulkan_buffer_create(sizeof(tg_uniform_buffer_object), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &renderer_2d_ubo, &renderer_2d_ubo_memory);
+    tg_graphics_vulkan_buffer_create(RENDERER_2D_MAX_VBO_SIZE, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, &renderer_2d_vbo, &renderer_2d_vbo_memory);
+    tg_graphics_renderer_2d_internal_init_index_buffer();
+
+    tg_graphics_renderer_2d_internal_init_synchronization_primitives();
+    tg_graphics_renderer_2d_internal_init_render_pass();
+    tg_graphics_renderer_2d_internal_init_descriptors();
+    tg_graphics_renderer_2d_internal_init_pipeline();
+    tg_graphics_renderer_2d_internal_init_command_buffer();
+}
 void tg_graphics_renderer_2d_begin()
 {
-    current_quad_index = 0;
-    VK_CALL(vkMapMemory(device, vbo_memory, 0, VBO_SIZE, 0, &vertex_data));
+    renderer_2d_current_quad_index = 0;
+    VK_CALL(vkMapMemory(device, renderer_2d_vbo_memory, 0, RENDERER_2D_MAX_VBO_SIZE, 0, &renderer_2d_mapped_vbo_memory));
 }
 void tg_graphics_renderer_2d_draw_sprite(f32 x, f32 y, f32 z, f32 w, f32 h, tg_image_h image)
 {
-    vertex_data[4 * current_quad_index + 0].position.x = x - w / 2.0f;
-    vertex_data[4 * current_quad_index + 0].position.y = y - h / 2.0f;
-    vertex_data[4 * current_quad_index + 0].position.z = z;
-    vertex_data[4 * current_quad_index + 0].uv.x = 0.0f;
-    vertex_data[4 * current_quad_index + 0].uv.y = 0.0f;
+    renderer_2d_mapped_vbo_memory[4 * renderer_2d_current_quad_index + 0].position.x = x - w / 2.0f;
+    renderer_2d_mapped_vbo_memory[4 * renderer_2d_current_quad_index + 0].position.y = y - h / 2.0f;
+    renderer_2d_mapped_vbo_memory[4 * renderer_2d_current_quad_index + 0].position.z = z;
+    renderer_2d_mapped_vbo_memory[4 * renderer_2d_current_quad_index + 0].uv.x = 0.0f;
+    renderer_2d_mapped_vbo_memory[4 * renderer_2d_current_quad_index + 0].uv.y = 0.0f;
 
-    vertex_data[4 * current_quad_index + 1].position.x = x + w / 2.0f;
-    vertex_data[4 * current_quad_index + 1].position.y = y - h / 2.0f;
-    vertex_data[4 * current_quad_index + 1].position.z = z;
-    vertex_data[4 * current_quad_index + 1].uv.x = 1.0f;
-    vertex_data[4 * current_quad_index + 1].uv.y = 0.0f;
+    renderer_2d_mapped_vbo_memory[4 * renderer_2d_current_quad_index + 1].position.x = x + w / 2.0f;
+    renderer_2d_mapped_vbo_memory[4 * renderer_2d_current_quad_index + 1].position.y = y - h / 2.0f;
+    renderer_2d_mapped_vbo_memory[4 * renderer_2d_current_quad_index + 1].position.z = z;
+    renderer_2d_mapped_vbo_memory[4 * renderer_2d_current_quad_index + 1].uv.x = 1.0f;
+    renderer_2d_mapped_vbo_memory[4 * renderer_2d_current_quad_index + 1].uv.y = 0.0f;
 
-    vertex_data[4 * current_quad_index + 2].position.x = x + w / 2.0f;
-    vertex_data[4 * current_quad_index + 2].position.y = y + h / 2.0f;
-    vertex_data[4 * current_quad_index + 2].position.z = z;
-    vertex_data[4 * current_quad_index + 2].uv.x = 1.0f;
-    vertex_data[4 * current_quad_index + 2].uv.y = 1.0f;
+    renderer_2d_mapped_vbo_memory[4 * renderer_2d_current_quad_index + 2].position.x = x + w / 2.0f;
+    renderer_2d_mapped_vbo_memory[4 * renderer_2d_current_quad_index + 2].position.y = y + h / 2.0f;
+    renderer_2d_mapped_vbo_memory[4 * renderer_2d_current_quad_index + 2].position.z = z;
+    renderer_2d_mapped_vbo_memory[4 * renderer_2d_current_quad_index + 2].uv.x = 1.0f;
+    renderer_2d_mapped_vbo_memory[4 * renderer_2d_current_quad_index + 2].uv.y = 1.0f;
 
-    vertex_data[4 * current_quad_index + 3].position.x = x - w / 2.0f;
-    vertex_data[4 * current_quad_index + 3].position.y = y + h / 2.0f;
-    vertex_data[4 * current_quad_index + 3].position.z = z;
-    vertex_data[4 * current_quad_index + 3].uv.x = 0.0f;
-    vertex_data[4 * current_quad_index + 3].uv.y = 1.0f;
+    renderer_2d_mapped_vbo_memory[4 * renderer_2d_current_quad_index + 3].position.x = x - w / 2.0f;
+    renderer_2d_mapped_vbo_memory[4 * renderer_2d_current_quad_index + 3].position.y = y + h / 2.0f;
+    renderer_2d_mapped_vbo_memory[4 * renderer_2d_current_quad_index + 3].position.z = z;
+    renderer_2d_mapped_vbo_memory[4 * renderer_2d_current_quad_index + 3].uv.x = 0.0f;
+    renderer_2d_mapped_vbo_memory[4 * renderer_2d_current_quad_index + 3].uv.y = 1.0f;
 
-    current_quad_index++;
+    renderer_2d_current_quad_index++;
 }
 void tg_graphics_renderer_2d_end()
 {
-    vkUnmapMemory(device, vbo_memory);
+    vkUnmapMemory(device, renderer_2d_vbo_memory);
 
     ui32 current_image;
     VK_CALL(vkWaitForFences(device, 1, &renderer_2d_rendering_finished_fence, VK_TRUE, UINT64_MAX));
@@ -605,11 +650,11 @@ void tg_graphics_renderer_2d_end()
 
     VK_CALL(vkBeginCommandBuffer(renderer_2d_command_buffer, &command_buffer_begin_info));
     vkCmdBindPipeline(renderer_2d_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer_2d_pipeline);
-    vkCmdBindVertexBuffers(renderer_2d_command_buffer, 0, sizeof(vertex_buffer_offsets) / sizeof(*vertex_buffer_offsets), &vbo, vertex_buffer_offsets);
-    vkCmdBindIndexBuffer(renderer_2d_command_buffer, ibo, 0, VK_INDEX_TYPE_UINT16);
+    vkCmdBindVertexBuffers(renderer_2d_command_buffer, 0, sizeof(vertex_buffer_offsets) / sizeof(*vertex_buffer_offsets), &renderer_2d_vbo, vertex_buffer_offsets);
+    vkCmdBindIndexBuffer(renderer_2d_command_buffer, renderer_2d_ibo, 0, VK_INDEX_TYPE_UINT16);
     vkCmdBindDescriptorSets(renderer_2d_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer_2d_pipeline_layout, 0, 1, &renderer_2d_descriptor_set, 1, dynamic_offsets);
     vkCmdBeginRenderPass(renderer_2d_command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
-    vkCmdDrawIndexed(renderer_2d_command_buffer, 6 * current_quad_index, 1, 0, 0, 0);
+    vkCmdDrawIndexed(renderer_2d_command_buffer, 6 * renderer_2d_current_quad_index, 1, 0, 0, 0);
     vkCmdEndRenderPass(renderer_2d_command_buffer);
     VK_CALL(vkEndCommandBuffer(renderer_2d_command_buffer));
 
@@ -672,42 +717,27 @@ void tg_graphics_renderer_2d_shutdown()
 {
     vkDeviceWaitIdle(device);
 
-    vkDestroyPipeline(device, renderer_2d_pipeline, NULL);
-    vkDestroyPipelineLayout(device, renderer_2d_pipeline_layout, NULL);
-    for (ui32 i = 0; i < SURFACE_IMAGE_COUNT; i++)
-    {
-        vkDestroyFramebuffer(device, renderer_2d_framebuffers[i], NULL);
-    }
-    vkDestroyImageView(device, renderer_2d_depth_image_view, NULL);
-    vkFreeMemory(device, renderer_2d_depth_image_memory, NULL);
-    vkDestroyImage(device, renderer_2d_depth_image, NULL);
-    vkDestroyImageView(device, renderer_2d_color_image_view, NULL);
-    vkFreeMemory(device, renderer_2d_color_image_memory, NULL);
-    vkDestroyImage(device, renderer_2d_color_image, NULL);
-    vkDestroyRenderPass(device, renderer_2d_render_pass, NULL);
+    tg_graphics_image_destroy(image_h);
 
-    vkDestroyShaderModule(device, renderer_2d_fragment_shader, NULL);
-    vkDestroyShaderModule(device, renderer_2d_vertex_shader, NULL);
+    tg_graphics_renderer_2d_internal_shutdown_pipeline();
+    tg_graphics_renderer_2d_internal_shutdown_descriptors();
+    tg_graphics_renderer_2d_internal_shutdown_render_pass();
+    tg_graphics_renderer_2d_internal_shutdown_synchronization_primitives();
 
-    vkDestroyBuffer(device, renderer_2d_ubo, NULL);
+    vkFreeMemory(device, renderer_2d_ibo_memory, NULL); // TODO: all of these need functions
+    vkDestroyBuffer(device, renderer_2d_ibo, NULL);
+    vkFreeMemory(device, renderer_2d_vbo_memory, NULL);
+    vkDestroyBuffer(device, renderer_2d_vbo, NULL);
     vkFreeMemory(device, renderer_2d_ubo_memory, NULL);
-
-    vkDestroyBuffer(device, ibo, NULL);
-    vkFreeMemory(device, ibo_memory, NULL);
-    vkDestroyBuffer(device, vbo, NULL);
-    vkFreeMemory(device, vbo_memory, NULL);
-
-    vkDestroyDescriptorSetLayout(device, renderer_2d_descriptor_set_layout, NULL);
-    vkDestroyDescriptorPool(device, renderer_2d_descriptor_pool, NULL);
-
-    vkDestroySemaphore(device, renderer_2d_image_acquired_semaphore, NULL);
-    vkDestroySemaphore(device, renderer_2d_rendering_finished_semaphore, NULL);
-    vkDestroyFence(device, renderer_2d_rendering_finished_fence, NULL);
+    vkDestroyBuffer(device, renderer_2d_ubo, NULL);
 }
 void tg_graphics_renderer_2d_on_window_resize(ui32 w, ui32 h)
 {
-    tg_graphics_renderer_2d_shutdown();
-    tg_graphics_renderer_2d_init();
+    tg_graphics_renderer_2d_internal_shutdown_pipeline();
+    tg_graphics_renderer_2d_internal_shutdown_render_pass();
+
+    tg_graphics_renderer_2d_internal_init_render_pass();
+    tg_graphics_renderer_2d_internal_init_pipeline();
 }
 
 #endif

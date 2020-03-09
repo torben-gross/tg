@@ -143,8 +143,14 @@ int CALLBACK WinMain(
             DispatchMessageA(&msg);
         }
         tg_graphics_renderer_2d_begin();
-        tg_graphics_renderer_2d_draw_sprite(0.0f, 0.0f, -1.0f, 1.0f, 1.0f, img);
-        tg_graphics_renderer_2d_draw_sprite(0.0f, 0.0f,  0.0f, 1.0f, 1.0f, img);
+        for (ui32 x = 0; x < 16; x++)
+        {
+            for (ui32 y = 0; y < 16; y++)
+            {
+                tg_graphics_renderer_2d_draw_sprite((f32)x - 3.0f, (f32)y - 10.0f, -1.0f, 1.0f, 1.0f, img);
+            }
+        }
+        tg_graphics_renderer_2d_draw_sprite(0.0f, 0.0f, 0.0f, 3.0f, 3.0f, img);
         tg_graphics_renderer_2d_end();
 
 #ifdef TG_DEBUG
