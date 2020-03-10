@@ -27,6 +27,7 @@ typedef struct tg_vertex
 	tgm_vec3f position;
 	tgm_vec3f color;
 	tgm_vec2f uv;
+	i32       image;
 } tg_vertex;
 
 typedef struct tg_uniform_buffer_object

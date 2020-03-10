@@ -298,7 +298,7 @@ void tg_graphics_vulkan_image_view_create(VkImage image, VkFormat format, ui32 m
 
     VK_CALL(vkCreateImageView(device, &image_view_create_info, NULL, p_image_view));
 }
-void tg_graphics_vulkan_sampler_create(VkImage image, ui32 mip_levels, VkFilter min_filter, VkFilter mag_filter, VkSamplerAddressMode address_mode_u, VkSamplerAddressMode address_mode_v, VkSamplerAddressMode address_mode_w, VkSampler* p_sampler)
+void tg_graphics_vulkan_sampler_create(ui32 mip_levels, VkFilter min_filter, VkFilter mag_filter, VkSamplerAddressMode address_mode_u, VkSamplerAddressMode address_mode_v, VkSamplerAddressMode address_mode_w, VkSampler* p_sampler)
 {
     VkSamplerCreateInfo sampler_create_info = { 0 };
     sampler_create_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;

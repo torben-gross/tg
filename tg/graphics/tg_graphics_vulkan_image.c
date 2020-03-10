@@ -12,7 +12,7 @@ void tg_graphics_image_create(const char* filename, tg_image_h* p_image_h)
     *p_image_h = tg_allocator_allocate(sizeof(**p_image_h));
     tg_image_load(filename, &(**p_image_h).width, &(**p_image_h).height, &(**p_image_h).format, &(**p_image_h).data);
     tg_image_convert_to_format((**p_image_h).data, (**p_image_h).width, (**p_image_h).height, (**p_image_h).format, TG_IMAGE_FORMAT_R8G8B8A8);
-    const ui32 mip_levels = TG_IMAGE_MAX_MIP_LEVELS(16, 16);
+    const ui32 mip_levels = TG_IMAGE_MAX_MIP_LEVELS((**p_image_h).width, (**p_image_h).height);
     const VkDeviceSize size = (ui64)(**p_image_h).width * (ui64)(**p_image_h).height * sizeof(*(**p_image_h).data);
 
     VkBuffer staging_buffer = VK_NULL_HANDLE;
@@ -51,11 +51,13 @@ void tg_graphics_image_create(const char* filename, tg_image_h* p_image_h)
 
     tg_graphics_vulkan_image_mipmaps_generate((**p_image_h).image, (**p_image_h).width, (**p_image_h).height, VK_FORMAT_R8G8B8A8_SRGB, mip_levels);
     tg_graphics_vulkan_image_view_create((**p_image_h).image, VK_FORMAT_R8G8B8A8_SRGB, mip_levels, VK_IMAGE_ASPECT_COLOR_BIT, &(**p_image_h).image_view);
-    tg_graphics_vulkan_sampler_create((**p_image_h).image, mip_levels, VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, &(**p_image_h).sampler);
+    tg_graphics_vulkan_sampler_create(mip_levels, VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, &(**p_image_h).sampler);
 }
 
 void tg_graphics_image_destroy(tg_image_h image_h)
 {
+    vkDeviceWaitIdle(device); // TODO: for all destroys
+
     vkDestroySampler(device, image_h->sampler, NULL);
     vkDestroyImageView(device, image_h->image_view, NULL);
     vkFreeMemory(device, image_h->device_memory, NULL);
