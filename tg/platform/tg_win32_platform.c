@@ -182,6 +182,11 @@ int CALLBACK WinMain(
             snprintf(buffer, sizeof(buffer), "%lu fps\n", fps);
             OutputDebugStringA(buffer);
 
+            ui32 draw_call_count = 0;
+            tg_graphics_renderer_2d_draw_call_count(&draw_call_count);
+            snprintf(buffer, sizeof(buffer), "%u draw calls\n\n", draw_call_count / fps);
+            OutputDebugStringA(buffer);
+
             milliseconds_sum = 0.0f;
             fps = 0;
         }

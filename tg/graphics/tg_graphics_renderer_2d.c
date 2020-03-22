@@ -4,6 +4,9 @@
 
 #include "tg/math/tg_math.h"
 #include "tg/platform/tg_allocator.h"
+#ifdef TG_DEBUG
+#include <stdio.h>
+#endif
 
 
 
@@ -107,6 +110,9 @@ typedef struct tg_renderer_2d_present_vertex
 tg_renderer_2d_clear_data           renderer_2d_clear_data;
 tg_renderer_2d_batch_render_data    renderer_2d_batch_render_data;
 tg_renderer_2d_present_data         renderer_2d_present_data;
+#ifdef TG_DEBUG
+ui32                                renderer_2d_draw_call_count;
+#endif
 
 
 void tg_graphics_renderer_2d_internal_init_clear_data()
@@ -1353,6 +1359,10 @@ void tg_graphics_renderer_2d_internal_init_present_data()
 
 void tg_graphics_renderer_2d_init()
 {
+#ifdef TG_DEBUG
+    renderer_2d_draw_call_count = 0;
+#endif
+
     tg_graphics_renderer_2d_internal_init_batch_render_data();
     tg_graphics_renderer_2d_internal_init_present_data();
     tg_graphics_renderer_2d_internal_init_clear_data();
@@ -1379,7 +1389,6 @@ void tg_graphics_renderer_2d_begin()
     VK_CALL(vkMapMemory(device, renderer_2d_batch_render_data.vbo_memory, 0, RENDERER_2D_MAX_VBO_SIZE, 0, &renderer_2d_batch_render_data.mapped_vbo_memory));
 
     memset(renderer_2d_batch_render_data.images, 0, sizeof(renderer_2d_batch_render_data.images));
-    memset(renderer_2d_batch_render_data.mapped_vbo_memory, 0, RENDERER_2D_MAX_VBO_SIZE);
 }
 void tg_graphics_renderer_2d_draw_sprite(f32 x, f32 y, f32 z, f32 w, f32 h, tg_image_h image_h)
 {
@@ -1439,9 +1448,11 @@ void tg_graphics_renderer_2d_draw_sprite(f32 x, f32 y, f32 z, f32 w, f32 h, tg_i
 }
 void tg_graphics_renderer_2d_end()
 {
-    vkUnmapMemory(device, renderer_2d_batch_render_data.vbo_memory);
+#ifdef TG_DEBUG
+    renderer_2d_draw_call_count++;
+#endif
 
-    vkQueueWaitIdle(graphics_queue.queue);
+    vkUnmapMemory(device, renderer_2d_batch_render_data.vbo_memory);
 
     tgm_vec3f from = { -1.0f, 1.0f, 1.0f };
     tgm_vec3f to = { 0.0f, 0.0f, -2.0f };
@@ -1582,10 +1593,14 @@ void tg_graphics_renderer_2d_end()
     }
     VK_CALL(vkResetFences(device, 1, &renderer_2d_batch_render_data.rendering_finished_fence));
     VK_CALL(vkQueueSubmit(graphics_queue.queue, 1, &submit_info, renderer_2d_batch_render_data.rendering_finished_fence));
-    vkQueueWaitIdle(graphics_queue.queue);
+    VK_CALL(vkWaitForFences(device, 1, &renderer_2d_batch_render_data.rendering_finished_fence, VK_TRUE, UINT64_MAX));
 }
 void tg_graphics_renderer_2d_present()
 {
+#ifdef TG_DEBUG
+    renderer_2d_draw_call_count++;
+#endif
+
     ui32 current_image;
     VK_CALL(vkWaitForFences(device, 1, &renderer_2d_batch_render_data.rendering_finished_fence, VK_TRUE, UINT64_MAX));
     VK_CALL(vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, renderer_2d_present_data.image_acquired_semaphore, VK_NULL_HANDLE, &current_image));
@@ -1648,5 +1663,14 @@ void tg_graphics_renderer_2d_on_window_resize(ui32 w, ui32 h)
     //tg_graphics_renderer_2d_internal_init_render_pass();
     //tg_graphics_renderer_2d_internal_init_pipeline();
 }
+
+#ifdef TG_DEBUG
+void tg_graphics_renderer_2d_draw_call_count(ui32* draw_call_count)
+{
+    TG_ASSERT(draw_call_count);
+    *draw_call_count = renderer_2d_draw_call_count;
+    renderer_2d_draw_call_count = 0;
+}
+#endif
 
 #endif
