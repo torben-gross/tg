@@ -157,12 +157,13 @@ int CALLBACK WinMain(
         {
             for (ui32 y = 0; y < 16; y++)
             {
-                ui32 idx = (x * 16 + y) % 9;
+                ui32 idx = (x * 16 + y) % 7;
                 tg_graphics_renderer_2d_draw_sprite((f32)x - 3.0f, (f32)y - 10.0f, -1.0f, 1.0f, 1.0f, numbers[idx]);
             }
         }
         tg_graphics_renderer_2d_draw_sprite(0.0f, 0.0f, 0.0f, 3.0f, 3.0f, img);
         tg_graphics_renderer_2d_end();
+        tg_graphics_renderer_2d_present();
 
 #ifdef TG_DEBUG
         LARGE_INTEGER end_performance_counter;

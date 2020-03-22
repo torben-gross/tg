@@ -242,40 +242,45 @@ void tg_graphics_vulkan_buffer_create(VkDeviceSize size, VkBufferUsageFlags buff
     VK_CALL(vkAllocateMemory(device, &memory_allocate_info, NULL, p_device_memory));
     VK_CALL(vkBindBufferMemory(device, *p_buffer, *p_device_memory, 0));
 }
+void tg_graphics_vulkan_image_allocate_memory(VkImage image, VkMemoryPropertyFlags memory_property_flags, VkDeviceMemory* p_device_memory)
+{
+    VkMemoryRequirements memory_requirements;
+    vkGetImageMemoryRequirements(device, image, &memory_requirements);
+
+    VkMemoryAllocateInfo memory_allocate_info = { 0 };
+    {
+        memory_allocate_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        memory_allocate_info.pNext = NULL;
+        memory_allocate_info.allocationSize = memory_requirements.size;
+        tg_graphics_vulkan_memory_type_find(memory_requirements.memoryTypeBits, memory_property_flags, &memory_allocate_info.memoryTypeIndex);
+    }
+    VK_CALL(vkAllocateMemory(device, &memory_allocate_info, NULL, p_device_memory));
+    VK_CALL(vkBindImageMemory(device, image, *p_device_memory, 0));
+}
 void tg_graphics_vulkan_image_create(ui32 width, ui32 height, ui32 mip_levels, VkFormat format, VkSampleCountFlagBits sample_count_flag_bits, VkImageTiling image_tiling, VkImageUsageFlags image_usage_flags, VkMemoryPropertyFlags memory_property_flags, VkImage* p_image, VkDeviceMemory* p_device_memory)
 {
     VkImageCreateInfo image_create_info = { 0 };
-    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    image_create_info.pNext = NULL;
-    image_create_info.flags = 0;
-    image_create_info.imageType = VK_IMAGE_TYPE_2D;
-    image_create_info.format = format;
-    image_create_info.extent.width = width;
-    image_create_info.extent.height = height;
-    image_create_info.extent.depth = 1;
-    image_create_info.mipLevels = mip_levels;
-    image_create_info.arrayLayers = 1;
-    image_create_info.samples = sample_count_flag_bits;
-    image_create_info.tiling = image_tiling;
-    image_create_info.usage = image_usage_flags;
-    image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    image_create_info.queueFamilyIndexCount = 0;
-    image_create_info.pQueueFamilyIndices = 0;
-    image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-
+    {
+        image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        image_create_info.pNext = NULL;
+        image_create_info.flags = 0;
+        image_create_info.imageType = VK_IMAGE_TYPE_2D;
+        image_create_info.format = format;
+        image_create_info.extent.width = width;
+        image_create_info.extent.height = height;
+        image_create_info.extent.depth = 1;
+        image_create_info.mipLevels = mip_levels;
+        image_create_info.arrayLayers = 1;
+        image_create_info.samples = sample_count_flag_bits;
+        image_create_info.tiling = image_tiling;
+        image_create_info.usage = image_usage_flags;
+        image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        image_create_info.queueFamilyIndexCount = 0;
+        image_create_info.pQueueFamilyIndices = 0;
+        image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    }
     VK_CALL(vkCreateImage(device, &image_create_info, NULL, p_image));
-
-    VkMemoryRequirements memory_requirements;
-    vkGetImageMemoryRequirements(device, *p_image, &memory_requirements);
-
-    VkMemoryAllocateInfo memory_allocate_info = { 0 };
-    memory_allocate_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    memory_allocate_info.pNext = NULL;
-    memory_allocate_info.allocationSize = memory_requirements.size;
-    tg_graphics_vulkan_memory_type_find(memory_requirements.memoryTypeBits, memory_property_flags, &memory_allocate_info.memoryTypeIndex);
-
-    VK_CALL(vkAllocateMemory(device, &memory_allocate_info, NULL, p_device_memory));
-    VK_CALL(vkBindImageMemory(device, *p_image, *p_device_memory, 0));
+    tg_graphics_vulkan_image_allocate_memory(*p_image, memory_property_flags, p_device_memory);
 }
 void tg_graphics_vulkan_image_view_create(VkImage image, VkFormat format, ui32 mip_levels, VkImageAspectFlags image_aspect_flags, VkImageView* p_image_view)
 {
