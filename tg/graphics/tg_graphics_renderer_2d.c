@@ -1261,22 +1261,39 @@ void tg_graphics_renderer_2d_internal_init_present_data()
         command_buffer_begin_info.flags = 0;
         command_buffer_begin_info.pInheritanceInfo = NULL;
     }
-    VkImageMemoryBarrier image_memory_barrier = { 0 };
+    VkImageMemoryBarrier prepare_resolve_attachment_memory_barrier = { 0 };
     {
-        image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        image_memory_barrier.pNext = NULL;
-        image_memory_barrier.srcAccessMask = 0;
-        image_memory_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-        image_memory_barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        image_memory_barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        image_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        image_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        image_memory_barrier.image = renderer_2d_batch_render_data.resolve_attachment;
-        image_memory_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        image_memory_barrier.subresourceRange.baseMipLevel = 0;
-        image_memory_barrier.subresourceRange.levelCount = 1;
-        image_memory_barrier.subresourceRange.baseArrayLayer = 0;
-        image_memory_barrier.subresourceRange.layerCount = 1;
+        prepare_resolve_attachment_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        prepare_resolve_attachment_memory_barrier.pNext = NULL;
+        prepare_resolve_attachment_memory_barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        prepare_resolve_attachment_memory_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        prepare_resolve_attachment_memory_barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        prepare_resolve_attachment_memory_barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        prepare_resolve_attachment_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        prepare_resolve_attachment_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        prepare_resolve_attachment_memory_barrier.image = renderer_2d_batch_render_data.resolve_attachment;
+        prepare_resolve_attachment_memory_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        prepare_resolve_attachment_memory_barrier.subresourceRange.baseMipLevel = 0;
+        prepare_resolve_attachment_memory_barrier.subresourceRange.levelCount = 1;
+        prepare_resolve_attachment_memory_barrier.subresourceRange.baseArrayLayer = 0;
+        prepare_resolve_attachment_memory_barrier.subresourceRange.layerCount = 1;
+    }
+    VkImageMemoryBarrier revert_resolve_attachment_memory_barrier = { 0 };
+    {
+        revert_resolve_attachment_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        revert_resolve_attachment_memory_barrier.pNext = NULL;
+        revert_resolve_attachment_memory_barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        revert_resolve_attachment_memory_barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        revert_resolve_attachment_memory_barrier.oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        revert_resolve_attachment_memory_barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        revert_resolve_attachment_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        revert_resolve_attachment_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        revert_resolve_attachment_memory_barrier.image = renderer_2d_batch_render_data.resolve_attachment;
+        revert_resolve_attachment_memory_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        revert_resolve_attachment_memory_barrier.subresourceRange.baseMipLevel = 0;
+        revert_resolve_attachment_memory_barrier.subresourceRange.levelCount = 1;
+        revert_resolve_attachment_memory_barrier.subresourceRange.baseArrayLayer = 0;
+        revert_resolve_attachment_memory_barrier.subresourceRange.layerCount = 1;
     }
     const VkDeviceSize vertex_buffer_offsets[1] = { 0 };
     VkClearValue clear_value = { 0 };
@@ -1309,7 +1326,7 @@ void tg_graphics_renderer_2d_internal_init_present_data()
 
         VK_CALL(vkBeginCommandBuffer(renderer_2d_present_data.command_buffers[i], &command_buffer_begin_info));
 
-        vkCmdPipelineBarrier(renderer_2d_present_data.command_buffers[i], VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, NULL, 0, NULL, 1, &image_memory_barrier);
+        vkCmdPipelineBarrier(renderer_2d_present_data.command_buffers[i], VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, NULL, 0, NULL, 1, &prepare_resolve_attachment_memory_barrier);
         vkCmdBindPipeline(renderer_2d_present_data.command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, renderer_2d_present_data.pipeline);
         vkCmdBindVertexBuffers(renderer_2d_present_data.command_buffers[i], 0, sizeof(vertex_buffer_offsets) / sizeof(*vertex_buffer_offsets), &renderer_2d_present_data.vbo, vertex_buffer_offsets);
         vkCmdBindIndexBuffer(renderer_2d_present_data.command_buffers[i], renderer_2d_present_data.ibo, 0, VK_INDEX_TYPE_UINT16);
@@ -1329,6 +1346,7 @@ void tg_graphics_renderer_2d_internal_init_present_data()
         vkCmdBeginRenderPass(renderer_2d_present_data.command_buffers[i], &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
         vkCmdDrawIndexed(renderer_2d_present_data.command_buffers[i], 6, 1, 0, 0, 0);
         vkCmdEndRenderPass(renderer_2d_present_data.command_buffers[i]);
+        vkCmdPipelineBarrier(renderer_2d_present_data.command_buffers[i], VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, NULL, 0, NULL, 1, &revert_resolve_attachment_memory_barrier);
         VK_CALL(vkEndCommandBuffer(renderer_2d_present_data.command_buffers[i]));
     }
 }
@@ -1554,13 +1572,13 @@ void tg_graphics_renderer_2d_end()
     {
         submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submit_info.pNext = NULL;
-        submit_info.waitSemaphoreCount = 0;// 1;
-        submit_info.pWaitSemaphores = NULL;// &renderer_2d_batch_render_data.rendering_finished_semaphore;
+        submit_info.waitSemaphoreCount = 0;
+        submit_info.pWaitSemaphores = NULL;
         submit_info.pWaitDstStageMask = pipeline_stage_mask;
         submit_info.commandBufferCount = 1;
         submit_info.pCommandBuffers = &renderer_2d_batch_render_data.command_buffer;
-        submit_info.signalSemaphoreCount = 0;// 1;
-        submit_info.pSignalSemaphores = NULL;// &renderer_2d_batch_render_data.rendering_finished_semaphore;
+        submit_info.signalSemaphoreCount = 0;
+        submit_info.pSignalSemaphores = NULL;
     }
     VK_CALL(vkResetFences(device, 1, &renderer_2d_batch_render_data.rendering_finished_fence));
     VK_CALL(vkQueueSubmit(graphics_queue.queue, 1, &submit_info, renderer_2d_batch_render_data.rendering_finished_fence));
@@ -1572,22 +1590,21 @@ void tg_graphics_renderer_2d_present()
     VK_CALL(vkWaitForFences(device, 1, &renderer_2d_batch_render_data.rendering_finished_fence, VK_TRUE, UINT64_MAX));
     VK_CALL(vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, renderer_2d_present_data.image_acquired_semaphore, VK_NULL_HANDLE, &current_image));
 
-    const VkPipelineStageFlags pipeline_stage_masks[2] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-    const VkSemaphore wait_semaphores[2] = { renderer_2d_batch_render_data.rendering_finished_semaphore, renderer_2d_present_data.image_acquired_semaphore };
-    VkSubmitInfo submit_info = { 0 };
+    const VkPipelineStageFlags pipeline_stage_mask = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+    VkSubmitInfo draw_submit_info = { 0 };
     {
-        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submit_info.pNext = NULL;
-        submit_info.waitSemaphoreCount = 0;// 2;
-        submit_info.pWaitSemaphores = NULL;// wait_semaphores;
-        submit_info.pWaitDstStageMask = pipeline_stage_masks;
-        submit_info.commandBufferCount = 1;
-        submit_info.pCommandBuffers = &renderer_2d_present_data.command_buffers[current_image];
-        submit_info.signalSemaphoreCount = 1;
-        submit_info.pSignalSemaphores = &renderer_2d_present_data.rendering_finished_semaphore;
+        draw_submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        draw_submit_info.pNext = NULL;
+        draw_submit_info.waitSemaphoreCount = 1;
+        draw_submit_info.pWaitSemaphores = &renderer_2d_present_data.image_acquired_semaphore;
+        draw_submit_info.pWaitDstStageMask = &pipeline_stage_mask;
+        draw_submit_info.commandBufferCount = 1;
+        draw_submit_info.pCommandBuffers = &renderer_2d_present_data.command_buffers[current_image];
+        draw_submit_info.signalSemaphoreCount = 1;
+        draw_submit_info.pSignalSemaphores = &renderer_2d_present_data.rendering_finished_semaphore;
     }
     VK_CALL(vkResetFences(device, 1, &renderer_2d_present_data.rendering_finished_fence));
-    VK_CALL(vkQueueSubmit(graphics_queue.queue, 1, &submit_info, renderer_2d_present_data.rendering_finished_fence));
+    VK_CALL(vkQueueSubmit(graphics_queue.queue, 1, &draw_submit_info, renderer_2d_present_data.rendering_finished_fence));
     VK_CALL(vkWaitForFences(device, 1, &renderer_2d_present_data.rendering_finished_fence, VK_TRUE, UINT64_MAX));
 
     VkPresentInfoKHR present_info = { 0 };
@@ -1602,6 +1619,22 @@ void tg_graphics_renderer_2d_present()
         present_info.pResults = NULL;
     }
     VK_CALL(vkQueuePresentKHR(present_queue.queue, &present_info));
+    VK_CALL(vkQueueWaitIdle(graphics_queue.queue));
+
+    VkSubmitInfo clear_submit_info = { 0 };
+    {
+        clear_submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        clear_submit_info.pNext = NULL;
+        clear_submit_info.waitSemaphoreCount = 0;
+        clear_submit_info.pWaitSemaphores = NULL;
+        clear_submit_info.pWaitDstStageMask = NULL;
+        clear_submit_info.commandBufferCount = 1;
+        clear_submit_info.pCommandBuffers = &renderer_2d_clear_data.command_buffer;
+        clear_submit_info.signalSemaphoreCount = 0;
+        clear_submit_info.pSignalSemaphores = NULL;
+    }
+    VK_CALL(vkQueueSubmit(graphics_queue.queue, 1, &clear_submit_info, NULL));
+    VK_CALL(vkQueueWaitIdle(graphics_queue.queue));
 }
 void tg_graphics_renderer_2d_shutdown()
 {
