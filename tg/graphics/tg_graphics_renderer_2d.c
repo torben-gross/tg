@@ -18,7 +18,7 @@
 
 typedef struct tg_renderer_2d_clear_data
 {
-    VkCommandBuffer          command_buffers[SURFACE_IMAGE_COUNT];
+    VkCommandBuffer         command_buffer;
 } tg_renderer_2d_clear_data;
 
 typedef struct tg_renderer_2d_batch_render_data
@@ -93,9 +93,7 @@ typedef struct tg_renderer_2d_present_data
     VkPipelineLayout         pipeline_layout;
     VkPipeline               pipeline;
 
-    VkCommandBuffer          prepare_resolve_image_layout_command_buffer;
-    VkCommandBuffer          draw_command_buffer;
-    VkCommandBuffer          reverse_resolve_image_layout_command_buffer;
+    VkCommandBuffer          command_buffers[SURFACE_IMAGE_COUNT];
 } tg_renderer_2d_present_data;
 
 typedef struct tg_renderer_2d_present_vertex
@@ -106,11 +104,128 @@ typedef struct tg_renderer_2d_present_vertex
 
 
 
+tg_renderer_2d_clear_data           renderer_2d_clear_data;
 tg_renderer_2d_batch_render_data    renderer_2d_batch_render_data;
 tg_renderer_2d_present_data         renderer_2d_present_data;
 
 
+void tg_graphics_renderer_2d_internal_init_clear_data()
+{
+    VkCommandBufferAllocateInfo command_buffer_allocate_info = { 0 };
+    {
+        command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        command_buffer_allocate_info.pNext = NULL;
+        command_buffer_allocate_info.commandPool = command_pool;
+        command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        command_buffer_allocate_info.commandBufferCount = 1;
+    }
+    VK_CALL(vkAllocateCommandBuffers(device, &command_buffer_allocate_info, &renderer_2d_clear_data.command_buffer));
 
+    VkCommandBufferBeginInfo command_buffer_begin_info = { 0 };
+    {
+        command_buffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        command_buffer_begin_info.pNext = NULL;
+        command_buffer_begin_info.flags = 0;
+        command_buffer_begin_info.pInheritanceInfo = NULL;
+    }
+    VK_CALL(vkBeginCommandBuffer(renderer_2d_clear_data.command_buffer, &command_buffer_begin_info));
+
+    const VkClearColorValue clear_color_value = { 1.0f, 0.0f, 1.0f, 1.0f };
+    const VkClearDepthStencilValue clear_depth_stencil_value = { 1.0f, 0 };
+    VkImageSubresourceRange color_image_subresource_range = { 0 };
+    {
+        color_image_subresource_range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        color_image_subresource_range.baseMipLevel = 0;
+        color_image_subresource_range.levelCount = 1;
+        color_image_subresource_range.baseArrayLayer = 0;
+        color_image_subresource_range.layerCount = 1;
+    }
+    VkImageSubresourceRange depth_image_subresource_range = { 0 };
+    {
+        depth_image_subresource_range.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+        depth_image_subresource_range.baseMipLevel = 0;
+        depth_image_subresource_range.levelCount = 1;
+        depth_image_subresource_range.baseArrayLayer = 0;
+        depth_image_subresource_range.layerCount = 1;
+    }
+
+    VkImageMemoryBarrier color_attachment_memory_barrier = { 0 };
+    {
+        color_attachment_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        color_attachment_memory_barrier.pNext = NULL;
+        color_attachment_memory_barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        color_attachment_memory_barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        color_attachment_memory_barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        color_attachment_memory_barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        color_attachment_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        color_attachment_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        color_attachment_memory_barrier.image = renderer_2d_batch_render_data.color_attachment;
+        color_attachment_memory_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        color_attachment_memory_barrier.subresourceRange.baseMipLevel = 0;
+        color_attachment_memory_barrier.subresourceRange.levelCount = 1;
+        color_attachment_memory_barrier.subresourceRange.baseArrayLayer = 0;
+        color_attachment_memory_barrier.subresourceRange.layerCount = 1;
+    }
+    vkCmdPipelineBarrier(renderer_2d_clear_data.command_buffer, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL, 0, NULL, 1, &color_attachment_memory_barrier);
+    vkCmdClearColorImage(renderer_2d_clear_data.command_buffer, renderer_2d_batch_render_data.color_attachment, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color_value, 1, &color_image_subresource_range);
+    color_attachment_memory_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    color_attachment_memory_barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    color_attachment_memory_barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    color_attachment_memory_barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    vkCmdPipelineBarrier(renderer_2d_clear_data.command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, NULL, 0, NULL, 1, &color_attachment_memory_barrier);
+
+    VkImageMemoryBarrier resolve_attachment_memory_barrier = { 0 };
+    {
+        resolve_attachment_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        resolve_attachment_memory_barrier.pNext = NULL;
+        resolve_attachment_memory_barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        resolve_attachment_memory_barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        resolve_attachment_memory_barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        resolve_attachment_memory_barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        resolve_attachment_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        resolve_attachment_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        resolve_attachment_memory_barrier.image = renderer_2d_batch_render_data.resolve_attachment;
+        resolve_attachment_memory_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        resolve_attachment_memory_barrier.subresourceRange.baseMipLevel = 0;
+        resolve_attachment_memory_barrier.subresourceRange.levelCount = 1;
+        resolve_attachment_memory_barrier.subresourceRange.baseArrayLayer = 0;
+        resolve_attachment_memory_barrier.subresourceRange.layerCount = 1;
+    }
+    vkCmdPipelineBarrier(renderer_2d_clear_data.command_buffer, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL, 0, NULL, 1, &resolve_attachment_memory_barrier);
+    vkCmdClearColorImage(renderer_2d_clear_data.command_buffer, renderer_2d_batch_render_data.resolve_attachment, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color_value, 1, &color_image_subresource_range);
+    resolve_attachment_memory_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    resolve_attachment_memory_barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    resolve_attachment_memory_barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    resolve_attachment_memory_barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    vkCmdPipelineBarrier(renderer_2d_clear_data.command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, NULL, 0, NULL, 1, &resolve_attachment_memory_barrier);
+    
+    VkImageMemoryBarrier depth_attachment_memory_barrier = { 0 };
+    {
+        depth_attachment_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        depth_attachment_memory_barrier.pNext = NULL;
+        depth_attachment_memory_barrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+        depth_attachment_memory_barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        depth_attachment_memory_barrier.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        depth_attachment_memory_barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        depth_attachment_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        depth_attachment_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        depth_attachment_memory_barrier.image = renderer_2d_batch_render_data.depth_attachment;
+        depth_attachment_memory_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+        depth_attachment_memory_barrier.subresourceRange.baseMipLevel = 0;
+        depth_attachment_memory_barrier.subresourceRange.levelCount = 1;
+        depth_attachment_memory_barrier.subresourceRange.baseArrayLayer = 0;
+        depth_attachment_memory_barrier.subresourceRange.layerCount = 1;
+    }
+    vkCmdPipelineBarrier(renderer_2d_clear_data.command_buffer, VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL, 0, NULL, 1, &depth_attachment_memory_barrier);
+    vkCmdClearDepthStencilImage(renderer_2d_clear_data.command_buffer, renderer_2d_batch_render_data.depth_attachment, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_depth_stencil_value, 1, &depth_image_subresource_range);
+    depth_attachment_memory_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    depth_attachment_memory_barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    depth_attachment_memory_barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    depth_attachment_memory_barrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    vkCmdPipelineBarrier(renderer_2d_clear_data.command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, 0, 0, NULL, 0, NULL, 1, &depth_attachment_memory_barrier);
+
+    VK_CALL(vkEndCommandBuffer(renderer_2d_clear_data.command_buffer));
+}
 void tg_graphics_renderer_2d_internal_init_batch_render_data()
 {
     tg_graphics_image_create("error.bmp", &renderer_2d_batch_render_data.error_image_h);
@@ -184,7 +299,7 @@ void tg_graphics_renderer_2d_internal_init_batch_render_data()
         color_attachment_create_info.arrayLayers = 1;
         color_attachment_create_info.samples = surface.msaa_sample_count;
         color_attachment_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
-        color_attachment_create_info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        color_attachment_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
         color_attachment_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
         color_attachment_create_info.queueFamilyIndexCount = 0;
         color_attachment_create_info.pQueueFamilyIndices = NULL;
@@ -208,7 +323,7 @@ void tg_graphics_renderer_2d_internal_init_batch_render_data()
         resolve_attachment_create_info.arrayLayers = 1;
         resolve_attachment_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
         resolve_attachment_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
-        resolve_attachment_create_info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+        resolve_attachment_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
         resolve_attachment_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
         resolve_attachment_create_info.queueFamilyIndexCount = 0;
         resolve_attachment_create_info.pQueueFamilyIndices = NULL;
@@ -234,7 +349,7 @@ void tg_graphics_renderer_2d_internal_init_batch_render_data()
         depth_attachment_create_info.arrayLayers = 1;
         depth_attachment_create_info.samples = surface.msaa_sample_count;
         depth_attachment_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
-        depth_attachment_create_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+        depth_attachment_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
         depth_attachment_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
         depth_attachment_create_info.queueFamilyIndexCount = 0;
         depth_attachment_create_info.pQueueFamilyIndices = NULL;
@@ -375,7 +490,7 @@ void tg_graphics_renderer_2d_internal_init_batch_render_data()
         attachment_descriptions[0].flags = 0;
         attachment_descriptions[0].format = surface.format.format;
         attachment_descriptions[0].samples = surface.msaa_sample_count;
-        attachment_descriptions[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR; // TODO: clear seperately
+        attachment_descriptions[0].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
         attachment_descriptions[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         attachment_descriptions[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         attachment_descriptions[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -393,7 +508,7 @@ void tg_graphics_renderer_2d_internal_init_batch_render_data()
         attachment_descriptions[2].flags = 0;
         attachment_descriptions[2].format = renderer_2d_batch_render_data.depth_format;
         attachment_descriptions[2].samples = surface.msaa_sample_count;
-        attachment_descriptions[2].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR; // TODO: clear seperately
+        attachment_descriptions[2].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
         attachment_descriptions[2].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         attachment_descriptions[2].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         attachment_descriptions[2].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -1135,15 +1250,109 @@ void tg_graphics_renderer_2d_internal_init_present_data()
         command_buffer_allocate_info.pNext = NULL;
         command_buffer_allocate_info.commandPool = command_pool;
         command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        command_buffer_allocate_info.commandBufferCount = 1;
+        command_buffer_allocate_info.commandBufferCount = SURFACE_IMAGE_COUNT;
     }
-    VK_CALL(vkAllocateCommandBuffers(device, &command_buffer_allocate_info, &renderer_2d_present_data.draw_command_buffer));
+    VK_CALL(vkAllocateCommandBuffers(device, &command_buffer_allocate_info, renderer_2d_present_data.command_buffers));
+
+    VkCommandBufferBeginInfo command_buffer_begin_info = { 0 };
+    {
+        command_buffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        command_buffer_begin_info.pNext = NULL;
+        command_buffer_begin_info.flags = 0;
+        command_buffer_begin_info.pInheritanceInfo = NULL;
+    }
+    VkImageMemoryBarrier image_memory_barrier = { 0 };
+    {
+        image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        image_memory_barrier.pNext = NULL;
+        image_memory_barrier.srcAccessMask = 0;
+        image_memory_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        image_memory_barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        image_memory_barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        image_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        image_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        image_memory_barrier.image = renderer_2d_batch_render_data.resolve_attachment;
+        image_memory_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        image_memory_barrier.subresourceRange.baseMipLevel = 0;
+        image_memory_barrier.subresourceRange.levelCount = 1;
+        image_memory_barrier.subresourceRange.baseArrayLayer = 0;
+        image_memory_barrier.subresourceRange.layerCount = 1;
+    }
+    const VkDeviceSize vertex_buffer_offsets[1] = { 0 };
+    VkClearValue clear_value = { 0 };
+    {
+        clear_value.color = (VkClearColorValue){ 0.0f, 0.0f, 0.0f, 1.0f };
+        clear_value.depthStencil = (VkClearDepthStencilValue){ 0.0f, 0 };
+    }
+    VkDescriptorImageInfo descriptor_image_info = { 0 };
+    {
+        descriptor_image_info.sampler = renderer_2d_batch_render_data.resolve_attachment_sampler;
+        descriptor_image_info.imageView = renderer_2d_batch_render_data.resolve_attachment_view; // TODO: put this and above somewhere else (renderer_2d_batch_render_data)?
+        descriptor_image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    }
+    VkWriteDescriptorSet write_descriptor_set = { 0 };
+    {
+        write_descriptor_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        write_descriptor_set.pNext = NULL;
+        write_descriptor_set.dstSet = renderer_2d_present_data.descriptor_set;
+        write_descriptor_set.dstBinding = 0;
+        write_descriptor_set.dstArrayElement = 0;
+        write_descriptor_set.descriptorCount = 1;
+        write_descriptor_set.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        write_descriptor_set.pImageInfo = &descriptor_image_info;
+        write_descriptor_set.pBufferInfo = NULL;
+        write_descriptor_set.pTexelBufferView = NULL;
+    }
+    vkUpdateDescriptorSets(device, 1, &write_descriptor_set, 0, NULL);
+    for (ui32 i = 0; i < SURFACE_IMAGE_COUNT; i++)
+    {
+
+        VK_CALL(vkBeginCommandBuffer(renderer_2d_present_data.command_buffers[i], &command_buffer_begin_info));
+
+        vkCmdPipelineBarrier(renderer_2d_present_data.command_buffers[i], VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, NULL, 0, NULL, 1, &image_memory_barrier);
+        vkCmdBindPipeline(renderer_2d_present_data.command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, renderer_2d_present_data.pipeline);
+        vkCmdBindVertexBuffers(renderer_2d_present_data.command_buffers[i], 0, sizeof(vertex_buffer_offsets) / sizeof(*vertex_buffer_offsets), &renderer_2d_present_data.vbo, vertex_buffer_offsets);
+        vkCmdBindIndexBuffer(renderer_2d_present_data.command_buffers[i], renderer_2d_present_data.ibo, 0, VK_INDEX_TYPE_UINT16);
+        vkCmdBindDescriptorSets(renderer_2d_present_data.command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, renderer_2d_present_data.pipeline_layout, 0, 1, &renderer_2d_present_data.descriptor_set, 0, NULL);
+
+        VkRenderPassBeginInfo render_pass_begin_info = { 0 };
+        {
+            render_pass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+            render_pass_begin_info.pNext = NULL;
+            render_pass_begin_info.renderPass = renderer_2d_present_data.render_pass;
+            render_pass_begin_info.framebuffer = renderer_2d_present_data.framebuffers[i];
+            render_pass_begin_info.renderArea.offset = (VkOffset2D){ 0, 0 };
+            render_pass_begin_info.renderArea.extent = swapchain_extent;
+            render_pass_begin_info.clearValueCount = 1;
+            render_pass_begin_info.pClearValues = &clear_value;
+        }
+        vkCmdBeginRenderPass(renderer_2d_present_data.command_buffers[i], &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
+        vkCmdDrawIndexed(renderer_2d_present_data.command_buffers[i], 6, 1, 0, 0, 0);
+        vkCmdEndRenderPass(renderer_2d_present_data.command_buffers[i]);
+        VK_CALL(vkEndCommandBuffer(renderer_2d_present_data.command_buffers[i]));
+    }
 }
 
 void tg_graphics_renderer_2d_init()
 {
     tg_graphics_renderer_2d_internal_init_batch_render_data();
     tg_graphics_renderer_2d_internal_init_present_data();
+    tg_graphics_renderer_2d_internal_init_clear_data();
+
+    VkSubmitInfo submit_info = { 0 };
+    {
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.pNext = NULL;
+        submit_info.waitSemaphoreCount = 0;
+        submit_info.pWaitSemaphores = NULL;
+        submit_info.pWaitDstStageMask = NULL;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &renderer_2d_clear_data.command_buffer;
+        submit_info.signalSemaphoreCount = 0;
+        submit_info.pSignalSemaphores = NULL;
+    }
+    VK_CALL(vkQueueSubmit(graphics_queue.queue, 1, &submit_info, NULL));
+    VK_CALL(vkQueueWaitIdle(graphics_queue.queue));
 }
 void tg_graphics_renderer_2d_begin()
 {
@@ -1214,40 +1423,7 @@ void tg_graphics_renderer_2d_end()
 {
     vkUnmapMemory(device, renderer_2d_batch_render_data.vbo_memory);
 
-
-
-
-
-    /*
-
-    general plan:
-        init
-            color and depth images
-            convert to general
-            clear
-
-        begin
-            nuttn
-
-        draw
-            nuttn
-
-        end
-            draw onto images but dont clear
-
-        present
-            resolve color attachment
-            present images to swapchain_images
-            clear color and depth image
-
-    new pipeline:
-        index and vertex buffers for screen quad
-        vertex and fragment shader taking in an image with another pipeline, framebuffers...
-        renderpass rendering image (renderer_2d_color_image) to swapchain_image_view[current_image]
-
-    present
-
-    */
+    vkQueueWaitIdle(graphics_queue.queue);
 
     tgm_vec3f from = { -1.0f, 1.0f, 1.0f };
     tgm_vec3f to = { 0.0f, 0.0f, -2.0f };
@@ -1378,16 +1554,17 @@ void tg_graphics_renderer_2d_end()
     {
         submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submit_info.pNext = NULL;
-        submit_info.waitSemaphoreCount = 0;
-        submit_info.pWaitSemaphores = NULL;
+        submit_info.waitSemaphoreCount = 0;// 1;
+        submit_info.pWaitSemaphores = NULL;// &renderer_2d_batch_render_data.rendering_finished_semaphore;
         submit_info.pWaitDstStageMask = pipeline_stage_mask;
         submit_info.commandBufferCount = 1;
         submit_info.pCommandBuffers = &renderer_2d_batch_render_data.command_buffer;
-        submit_info.signalSemaphoreCount = 1;
-        submit_info.pSignalSemaphores = &renderer_2d_batch_render_data.rendering_finished_semaphore;
+        submit_info.signalSemaphoreCount = 0;// 1;
+        submit_info.pSignalSemaphores = NULL;// &renderer_2d_batch_render_data.rendering_finished_semaphore;
     }
     VK_CALL(vkResetFences(device, 1, &renderer_2d_batch_render_data.rendering_finished_fence));
     VK_CALL(vkQueueSubmit(graphics_queue.queue, 1, &submit_info, renderer_2d_batch_render_data.rendering_finished_fence));
+    vkQueueWaitIdle(graphics_queue.queue);
 }
 void tg_graphics_renderer_2d_present()
 {
@@ -1395,146 +1572,23 @@ void tg_graphics_renderer_2d_present()
     VK_CALL(vkWaitForFences(device, 1, &renderer_2d_batch_render_data.rendering_finished_fence, VK_TRUE, UINT64_MAX));
     VK_CALL(vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, renderer_2d_present_data.image_acquired_semaphore, VK_NULL_HANDLE, &current_image));
 
-
-
-    VkCommandBuffer barrier_command_buffer;
-    VkCommandBufferAllocateInfo barrier_command_buffer_allocate_info = { 0 };
-    {
-        barrier_command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        barrier_command_buffer_allocate_info.pNext = NULL;
-        barrier_command_buffer_allocate_info.commandPool = command_pool;
-        barrier_command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        barrier_command_buffer_allocate_info.commandBufferCount = 1;
-    }
-    VK_CALL(vkAllocateCommandBuffers(device, &barrier_command_buffer_allocate_info, &barrier_command_buffer));
-
-    VkCommandBufferBeginInfo barrier_command_buffer_begin_info = { 0 };
-    {
-        barrier_command_buffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        barrier_command_buffer_begin_info.pNext = NULL;
-        barrier_command_buffer_begin_info.flags = 0;
-        barrier_command_buffer_begin_info.pInheritanceInfo = NULL;
-    }
-    VK_CALL(vkBeginCommandBuffer(barrier_command_buffer, &barrier_command_buffer_begin_info));
-
-    VkImageMemoryBarrier image_memory_barrier = { 0 };
-    {
-        image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        image_memory_barrier.pNext = NULL;
-        image_memory_barrier.srcAccessMask = 0;
-        image_memory_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-        image_memory_barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        image_memory_barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        image_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        image_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        image_memory_barrier.image = renderer_2d_batch_render_data.resolve_attachment;
-        image_memory_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        image_memory_barrier.subresourceRange.baseMipLevel = 0;
-        image_memory_barrier.subresourceRange.levelCount = 1;
-        image_memory_barrier.subresourceRange.baseArrayLayer = 0;
-        image_memory_barrier.subresourceRange.layerCount = 1;
-    }
-    vkCmdPipelineBarrier(barrier_command_buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, NULL, 0, NULL, 1, &image_memory_barrier);
-    VK_CALL(vkEndCommandBuffer(barrier_command_buffer));
-
-    VkSubmitInfo barrier_submit_info = { 0 };
-    {
-        barrier_submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        barrier_submit_info.pNext = NULL;
-        barrier_submit_info.waitSemaphoreCount = 0;
-        barrier_submit_info.pWaitSemaphores = NULL;
-        barrier_submit_info.pWaitDstStageMask = NULL;
-        barrier_submit_info.commandBufferCount = 1;
-        barrier_submit_info.pCommandBuffers = &barrier_command_buffer;
-        barrier_submit_info.signalSemaphoreCount = 0;
-        barrier_submit_info.pSignalSemaphores = NULL;
-    }
-    VK_CALL(vkQueueSubmit(graphics_queue.queue, 1, &barrier_submit_info, VK_NULL_HANDLE));
-    VK_CALL(vkQueueWaitIdle(graphics_queue.queue));
-    vkFreeCommandBuffers(device, command_pool, 1, &barrier_command_buffer);
-
-
-
-    VkDescriptorImageInfo descriptor_image_info = { 0 };
-    {
-        descriptor_image_info.sampler = renderer_2d_batch_render_data.resolve_attachment_sampler;
-        descriptor_image_info.imageView = renderer_2d_batch_render_data.resolve_attachment_view; // TODO: put this and above somewhere else (renderer_2d_batch_render_data)?
-        descriptor_image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    }
-    VkWriteDescriptorSet write_descriptor_set = { 0 };
-    {
-        write_descriptor_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        write_descriptor_set.pNext = NULL;
-        write_descriptor_set.dstSet = renderer_2d_present_data.descriptor_set;
-        write_descriptor_set.dstBinding = 0;
-        write_descriptor_set.dstArrayElement = 0;
-        write_descriptor_set.descriptorCount = 1;
-        write_descriptor_set.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        write_descriptor_set.pImageInfo = &descriptor_image_info;
-        write_descriptor_set.pBufferInfo = NULL;
-        write_descriptor_set.pTexelBufferView = NULL;
-    }
-    vkUpdateDescriptorSets(device, 1, &write_descriptor_set, 0, NULL);
-
-    VkCommandBufferBeginInfo command_buffer_begin_info = { 0 };
-    {
-        command_buffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        command_buffer_begin_info.pNext = NULL;
-        command_buffer_begin_info.flags = 0;
-        command_buffer_begin_info.pInheritanceInfo = NULL;
-    }
-    VK_CALL(vkBeginCommandBuffer(renderer_2d_present_data.draw_command_buffer, &command_buffer_begin_info));
-    vkCmdBindPipeline(renderer_2d_present_data.draw_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer_2d_present_data.pipeline);
-
-    const VkDeviceSize vertex_buffer_offsets[1] = { 0 };
-    vkCmdBindVertexBuffers(renderer_2d_present_data.draw_command_buffer, 0, sizeof(vertex_buffer_offsets) / sizeof(*vertex_buffer_offsets), &renderer_2d_present_data.vbo, vertex_buffer_offsets);
-    vkCmdBindIndexBuffer(renderer_2d_present_data.draw_command_buffer, renderer_2d_present_data.ibo, 0, VK_INDEX_TYPE_UINT16);
-    vkCmdBindDescriptorSets(renderer_2d_present_data.draw_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer_2d_present_data.pipeline_layout, 0, 1, &renderer_2d_present_data.descriptor_set, 0, NULL);
-
-    VkClearValue clear_value = { 0 };
-    {
-        clear_value.color = (VkClearColorValue){ 0.0f, 0.0f, 0.0f, 1.0f };
-        clear_value.depthStencil = (VkClearDepthStencilValue){ 0.0f, 0 };
-    }
-    VkRenderPassBeginInfo render_pass_begin_info = { 0 };
-    {
-        render_pass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        render_pass_begin_info.pNext = NULL;
-        render_pass_begin_info.renderPass = renderer_2d_present_data.render_pass;
-        render_pass_begin_info.framebuffer = renderer_2d_present_data.framebuffers[current_image];
-        render_pass_begin_info.renderArea.offset = (VkOffset2D){ 0, 0 };
-        render_pass_begin_info.renderArea.extent = swapchain_extent;
-        render_pass_begin_info.clearValueCount = 1;
-        render_pass_begin_info.pClearValues = &clear_value;
-    }
-    vkCmdBeginRenderPass(renderer_2d_present_data.draw_command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
-    vkCmdDrawIndexed(renderer_2d_present_data.draw_command_buffer, 6, 1, 0, 0, 0);
-    vkCmdEndRenderPass(renderer_2d_present_data.draw_command_buffer);
-    VK_CALL(vkEndCommandBuffer(renderer_2d_present_data.draw_command_buffer));
-
-
-
-
-
     const VkPipelineStageFlags pipeline_stage_masks[2] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
     const VkSemaphore wait_semaphores[2] = { renderer_2d_batch_render_data.rendering_finished_semaphore, renderer_2d_present_data.image_acquired_semaphore };
     VkSubmitInfo submit_info = { 0 };
     {
         submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submit_info.pNext = NULL;
-        submit_info.waitSemaphoreCount = 2;
-        submit_info.pWaitSemaphores = wait_semaphores;
+        submit_info.waitSemaphoreCount = 0;// 2;
+        submit_info.pWaitSemaphores = NULL;// wait_semaphores;
         submit_info.pWaitDstStageMask = pipeline_stage_masks;
         submit_info.commandBufferCount = 1;
-        submit_info.pCommandBuffers = &renderer_2d_present_data.draw_command_buffer;
+        submit_info.pCommandBuffers = &renderer_2d_present_data.command_buffers[current_image];
         submit_info.signalSemaphoreCount = 1;
         submit_info.pSignalSemaphores = &renderer_2d_present_data.rendering_finished_semaphore;
     }
     VK_CALL(vkResetFences(device, 1, &renderer_2d_present_data.rendering_finished_fence));
     VK_CALL(vkQueueSubmit(graphics_queue.queue, 1, &submit_info, renderer_2d_present_data.rendering_finished_fence));
     VK_CALL(vkWaitForFences(device, 1, &renderer_2d_present_data.rendering_finished_fence, VK_TRUE, UINT64_MAX));
-
-
 
     VkPresentInfoKHR present_info = { 0 };
     {

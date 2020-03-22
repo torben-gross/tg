@@ -157,7 +157,7 @@ int CALLBACK WinMain(
         {
             for (ui32 y = 0; y < 16; y++)
             {
-                ui32 idx = (x * 16 + y) % 7;
+                ui32 idx = (x * 16 + y) % 9;
                 tg_graphics_renderer_2d_draw_sprite((f32)x - 3.0f, (f32)y - 10.0f, -1.0f, 1.0f, 1.0f, numbers[idx]);
             }
         }
