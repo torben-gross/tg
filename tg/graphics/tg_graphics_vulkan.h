@@ -142,6 +142,7 @@ void tg_graphics_vulkan_command_buffer_begin(VkCommandBuffer* p_command_buffer);
 void tg_graphics_vulkan_command_buffer_end(VkCommandBuffer command_buffers);
 void tg_graphics_vulkan_memory_type_find(ui32 memory_type_bits, VkMemoryPropertyFlags memory_property_flags, ui32* p_memory_type);
 void tg_graphics_vulkan_buffer_create(VkDeviceSize size, VkBufferUsageFlags buffer_usage_flags, VkMemoryPropertyFlags memory_property_flags, VkBuffer* p_buffer, VkDeviceMemory* p_device_memory);
+void tg_graphics_vulkan_buffer_destroy(VkBuffer buffer, VkDeviceMemory device_memory);
 void tg_graphics_vulkan_image_create(ui32 width, ui32 height, ui32 mip_levels, VkFormat format, VkSampleCountFlagBits sample_count_flag_bits, VkImageTiling image_tiling, VkImageUsageFlags image_usage_flags, VkMemoryPropertyFlags memory_property_flags, VkImage* p_image, VkDeviceMemory* p_device_memory);
 void tg_graphics_vulkan_image_allocate_memory(VkImage image, VkMemoryPropertyFlags memory_property_flags, VkDeviceMemory* p_device_memory);
 void tg_graphics_vulkan_image_view_create(VkImage image, VkFormat format, ui32 mip_levels, VkImageAspectFlags image_aspect_flags, VkImageView* p_image_view);
@@ -152,6 +153,10 @@ void tg_graphics_vulkan_buffer_copy(VkDeviceSize size, VkBuffer* p_source, VkBuf
 void tg_graphics_vulkan_buffer_copy_to_image(ui32 width, ui32 height, VkBuffer* p_source, VkImage* p_target);
 void tg_graphics_vulkan_image_transition_layout(VkImageLayout old_image_layout, VkImageLayout new_image_layout, ui32 mip_levels, VkImage* p_image);
 void tg_graphics_vulkan_vertex_shader_layout_element_type_convert_to_vulkan_format(tg_vertex_shader_layout_element_type type, VkFormat* p_format);
+void tg_graphics_vulkan_fence_create(VkFenceCreateFlags fence_create_flags, VkFence* p_fence);
+void tg_graphics_vulkan_fence_destroy(VkFence fence);
+void tg_graphics_vulkan_semaphore_create(VkSemaphore* p_semaphore);
+void tg_graphics_vulkan_semaphore_destroy(VkSemaphore semaphore);
 
 
 

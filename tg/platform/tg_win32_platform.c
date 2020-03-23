@@ -120,6 +120,7 @@ int CALLBACK WinMain(
 
     tg_graphics_init();
     tg_graphics_renderer_2d_init();
+    tg_graphics_renderer_3d_init();
     tg_image_h img = NULL;
     tg_graphics_image_create("test_icon.bmp", &img);
     tg_image_h numbers[9] = { 0 };
@@ -152,18 +153,20 @@ int CALLBACK WinMain(
             TranslateMessage(&msg);
             DispatchMessageA(&msg);
         }
-        tg_graphics_renderer_2d_begin();
-        for (ui32 x = 0; x < 16; x++)
-        {
-            for (ui32 y = 0; y < 16; y++)
-            {
-                ui32 idx = (x * 16 + y) % 9;
-                tg_graphics_renderer_2d_draw_sprite((f32)x - 3.0f, (f32)y - 10.0f, -1.0f, 1.0f, 1.0f, numbers[idx]);
-            }
-        }
-        tg_graphics_renderer_2d_draw_sprite(0.0f, 0.0f, 0.0f, 3.0f, 3.0f, img);
-        tg_graphics_renderer_2d_end();
-        tg_graphics_renderer_2d_present();
+        //tg_graphics_renderer_2d_begin();
+        //for (ui32 x = 0; x < 16; x++)
+        //{
+        //    for (ui32 y = 0; y < 16; y++)
+        //    {
+        //        ui32 idx = (x * 16 + y) % 9;
+        //        tg_graphics_renderer_2d_draw_sprite((f32)x - 3.0f, (f32)y - 10.0f, -1.0f, 1.0f, 1.0f, numbers[idx]);
+        //    }
+        //}
+        //tg_graphics_renderer_2d_draw_sprite(0.0f, 0.0f, 0.0f, 3.0f, 3.0f, img);
+        //tg_graphics_renderer_2d_end();
+        //tg_graphics_renderer_2d_present();
+        tg_graphics_renderer_3d_draw(NULL);
+        tg_graphics_renderer_3d_present();
 
 #ifdef TG_DEBUG
         LARGE_INTEGER end_performance_counter;

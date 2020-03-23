@@ -23,6 +23,9 @@ typedef tg_vertex_shader* tg_vertex_shader_h;
 typedef struct tg_fragment_shader tg_fragment_shader;
 typedef tg_fragment_shader* tg_fragment_shader_h;
 
+typedef struct tg_mesh tg_mesh;
+typedef tg_mesh* tg_mesh_h;
+
 typedef enum tg_filter
 {
 	TG_FILTER_NEAREST    = 0,
@@ -179,5 +182,14 @@ void tg_graphics_renderer_2d_on_window_resize(ui32 w, ui32 h);
 #ifdef TG_DEBUG
 void tg_graphics_renderer_2d_draw_call_count(ui32* draw_call_count);
 #endif
+
+/*
+---- 3D Renderer
+*/
+void tg_graphics_renderer_3d_init();
+void tg_graphics_renderer_3d_draw(const tg_mesh_h mesh_h);
+void tg_graphics_renderer_3d_present();
+void tg_graphics_renderer_3d_shutdown();
+void tg_graphics_renderer_3d_on_window_resize(ui32 w, ui32 h);
 
 #endif

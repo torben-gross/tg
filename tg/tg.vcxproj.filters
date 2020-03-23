@@ -13,6 +13,7 @@
     <ClCompile Include="graphics\tg_graphics_image_loader.c" />
     <ClCompile Include="graphics\tg_graphics_vulkan_vertex_buffer.c" />
     <ClCompile Include="graphics\tg_graphics_renderer_2d.c" />
+    <ClCompile Include="graphics\tg_graphics_renderer_3d.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="tg_common.h" />

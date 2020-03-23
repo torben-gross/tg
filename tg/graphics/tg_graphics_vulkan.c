@@ -242,6 +242,11 @@ void tg_graphics_vulkan_buffer_create(VkDeviceSize size, VkBufferUsageFlags buff
     VK_CALL(vkAllocateMemory(device, &memory_allocate_info, NULL, p_device_memory));
     VK_CALL(vkBindBufferMemory(device, *p_buffer, *p_device_memory, 0));
 }
+void tg_graphics_vulkan_buffer_destroy(VkBuffer buffer, VkDeviceMemory device_memory)
+{
+    vkFreeMemory(device, device_memory, NULL);
+    vkDestroyBuffer(device, buffer, NULL);
+}
 void tg_graphics_vulkan_image_allocate_memory(VkImage image, VkMemoryPropertyFlags memory_property_flags, VkDeviceMemory* p_device_memory)
 {
     VkMemoryRequirements memory_requirements;
@@ -523,6 +528,39 @@ void tg_graphics_vulkan_vertex_shader_layout_element_type_convert_to_vulkan_form
     default: TG_ASSERT(false); break;
     }
 }
+
+void tg_graphics_vulkan_fence_create(VkFenceCreateFlags fence_create_flags, VkFence* p_fence)
+{
+    VkFenceCreateInfo fence_create_info = { 0 };
+    {
+        fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+        fence_create_info.pNext = NULL;
+        fence_create_info.flags = fence_create_flags;
+    }
+    VK_CALL(vkCreateFence(device, &fence_create_info, NULL, p_fence));
+}
+
+void tg_graphics_vulkan_fence_destroy(VkFence fence)
+{
+    vkDestroyFence(device, fence, NULL);
+}
+
+void tg_graphics_vulkan_semaphore_create(VkSemaphore* p_semaphore)
+{
+    VkSemaphoreCreateInfo semaphore_create_info = { 0 };
+    {
+        semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+        semaphore_create_info.pNext = NULL;
+        semaphore_create_info.flags = 0;
+    }
+    VK_CALL(vkCreateSemaphore(device, &semaphore_create_info, NULL, p_semaphore));
+}
+
+void tg_graphics_vulkan_semaphore_destroy(VkSemaphore semaphore)
+{
+    vkDestroySemaphore(device, semaphore, NULL);
+}
+
 
 // initialization
 void tg_graphics_vulkan_instance_create(VkInstance* p_instance)

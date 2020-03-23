@@ -108,6 +108,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="graphics\tg_graphics_renderer_2d.c" />
+    <ClCompile Include="graphics\tg_graphics_renderer_3d.c" />
     <ClCompile Include="graphics\tg_graphics_vulkan_image.c" />
     <ClCompile Include="graphics\tg_graphics_image_loader.c" />
     <ClCompile Include="graphics\tg_graphics_vulkan.c" />

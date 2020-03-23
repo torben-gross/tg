@@ -35,6 +35,8 @@ typedef struct tg_renderer_2d_batch_render_data
     VkDeviceMemory           ibo_memory;
     VkBuffer                 ubo;
     VkDeviceMemory           ubo_memory;
+    VkBuffer                 draw_indexed_indirect_buffer;
+    VkDeviceMemory           draw_indexed_indirect_buffer_memory;
 
     VkFence                  rendering_finished_fence;
     VkSemaphore              rendering_finished_semaphore;
@@ -237,6 +239,7 @@ void tg_graphics_renderer_2d_internal_init_batch_render_data()
     tg_graphics_image_create("error.bmp", &renderer_2d_batch_render_data.error_image_h);
     tg_graphics_vulkan_sampler_create(0, VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, &renderer_2d_batch_render_data.sampler);
     tg_graphics_vulkan_buffer_create(sizeof(tg_uniform_buffer_object), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &renderer_2d_batch_render_data.ubo, &renderer_2d_batch_render_data.ubo_memory);
+    tg_graphics_vulkan_buffer_create(sizeof(VkDrawIndexedIndirectCommand), VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &renderer_2d_batch_render_data.draw_indexed_indirect_buffer, &renderer_2d_batch_render_data.draw_indexed_indirect_buffer_memory);
 
     tg_graphics_vulkan_buffer_create(RENDERER_2D_MAX_VBO_SIZE, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, &renderer_2d_batch_render_data.vbo, &renderer_2d_batch_render_data.vbo_memory);
 
@@ -1454,25 +1457,33 @@ void tg_graphics_renderer_2d_end()
 
     vkUnmapMemory(device, renderer_2d_batch_render_data.vbo_memory);
 
-    tgm_vec3f from = { -1.0f, 1.0f, 1.0f };
-    tgm_vec3f to = { 0.0f, 0.0f, -2.0f };
-    tgm_vec3f up = { 0.0f, 1.0f, 0.0f };
-    const tgm_vec3f translation_vector = { 0.0f, 0.0f, -2.0f };
-    const f32 fov_y = TGM_TO_DEGREES(70.0f);
-    const f32 aspect = (f32)swapchain_extent.width / (f32)swapchain_extent.height;
-    const f32 n = -0.1f;
-    const f32 f = -1000.0f;
-    tg_uniform_buffer_object uniform_buffer_object = { 0 };
-    tgm_m4f_translate(&uniform_buffer_object.model, &translation_vector);
-    tgm_m4f_look_at(&uniform_buffer_object.view, &from, &to, &up);
-    tgm_m4f_perspective(&uniform_buffer_object.projection, fov_y, aspect, n, f);
-
-    void* ubo_data;
-    VK_CALL(vkMapMemory(device, renderer_2d_batch_render_data.ubo_memory, 0, sizeof(tg_uniform_buffer_object), 0, &ubo_data));
-    memcpy(ubo_data, &uniform_buffer_object, sizeof(tg_uniform_buffer_object));
+    tg_uniform_buffer_object* p_uniform_buffer_object = NULL;
+    VK_CALL(vkMapMemory(device, renderer_2d_batch_render_data.ubo_memory, 0, sizeof(*p_uniform_buffer_object), 0, &p_uniform_buffer_object));
+    {
+        tgm_vec3f from = { -1.0f, 1.0f, 1.0f };
+        tgm_vec3f to = { 0.0f, 0.0f, -2.0f };
+        tgm_vec3f up = { 0.0f, 1.0f, 0.0f };
+        const tgm_vec3f translation_vector = { 0.0f, 0.0f, -2.0f };
+        const f32 fov_y = TGM_TO_DEGREES(70.0f);
+        const f32 aspect = (f32)swapchain_extent.width / (f32)swapchain_extent.height;
+        const f32 n = -0.1f;
+        const f32 f = -1000.0f;
+        tgm_m4f_translate(&p_uniform_buffer_object->model, &translation_vector);
+        tgm_m4f_look_at(&p_uniform_buffer_object->view, &from, &to, &up);
+        tgm_m4f_perspective(&p_uniform_buffer_object->projection, fov_y, aspect, n, f);
+    }
     vkUnmapMemory(device, renderer_2d_batch_render_data.ubo_memory);
-    
 
+    VkDrawIndexedIndirectCommand* p_draw_indexed_indirect_command = NULL;
+    VK_CALL(vkMapMemory(device, renderer_2d_batch_render_data.draw_indexed_indirect_buffer_memory, 0, sizeof(*p_draw_indexed_indirect_command), 0, &p_draw_indexed_indirect_command));
+    {
+        p_draw_indexed_indirect_command->indexCount = 6 * renderer_2d_batch_render_data.current_quad_index;
+        p_draw_indexed_indirect_command->instanceCount = 1;
+        p_draw_indexed_indirect_command->firstIndex = 0;
+        p_draw_indexed_indirect_command->vertexOffset = 0;
+        p_draw_indexed_indirect_command->firstInstance = 0;
+    }
+    vkUnmapMemory(device, renderer_2d_batch_render_data.draw_indexed_indirect_buffer_memory);
 
     VkDescriptorBufferInfo descriptor_buffer_info = { 0 };
     {
@@ -1536,6 +1547,10 @@ void tg_graphics_renderer_2d_end()
     }
     vkUpdateDescriptorSets(device, sizeof(write_descriptor_sets) / sizeof(*write_descriptor_sets), write_descriptor_sets, 0, NULL);
 
+
+
+
+
     VkCommandBufferBeginInfo command_buffer_begin_info = { 0 };
     {
         command_buffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -1574,7 +1589,7 @@ void tg_graphics_renderer_2d_end()
         render_pass_begin_info.pClearValues = clear_values;
     }
     vkCmdBeginRenderPass(renderer_2d_batch_render_data.command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
-    vkCmdDrawIndexed(renderer_2d_batch_render_data.command_buffer, 6 * renderer_2d_batch_render_data.current_quad_index, 1, 0, 0, 0);
+    vkCmdDrawIndexedIndirect(renderer_2d_batch_render_data.command_buffer, renderer_2d_batch_render_data.draw_indexed_indirect_buffer, 0, 1, sizeof(VkDrawIndexedIndirectCommand));
     vkCmdEndRenderPass(renderer_2d_batch_render_data.command_buffer);
     VK_CALL(vkEndCommandBuffer(renderer_2d_batch_render_data.command_buffer));
 
