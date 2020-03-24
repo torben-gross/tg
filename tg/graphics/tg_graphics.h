@@ -101,14 +101,6 @@ typedef enum tg_sampler_mipmap_mode {
 	TG_SAMPLER_MIPMAP_MODE_LINEAR     = 1
 } tg_sampler_mipmap_mode;
 
-typedef enum tg_vertex_shader_layout_element_type
-{
-	TG_VERTEX_SHADER_LAYOUT_ELEMENT_TYPE_R32_SFLOAT,
-	TG_VERTEX_SHADER_LAYOUT_ELEMENT_TYPE_R32G32_SFLOAT,
-	TG_VERTEX_SHADER_LAYOUT_ELEMENT_TYPE_R32G32B32_SFLOAT,
-	TG_VERTEX_SHADER_LAYOUT_ELEMENT_TYPE_R32G32B32A32_SFLOAT
-} tg_vertex_shader_layout_element_type;
-
 typedef struct tg_vertex
 {
 	tgm_vec3f    position;

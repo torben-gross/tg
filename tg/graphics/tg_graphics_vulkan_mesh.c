@@ -31,7 +31,7 @@ void tg_graphics_mesh_create(ui32 vertex_count, const tgm_vec3f* positions, cons
     }
     vkUnmapMemory(device, staging_buffer_memory);
     tg_graphics_vulkan_buffer_create(vbo_size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &(**p_mesh_h).vbo.buffer, &(**p_mesh_h).vbo.device_memory);
-    tg_graphics_vulkan_buffer_copy(vbo_size, &staging_buffer, &(**p_mesh_h).vbo.buffer);
+    tg_graphics_vulkan_buffer_copy(vbo_size, staging_buffer, (**p_mesh_h).vbo.buffer);
     tg_graphics_vulkan_buffer_destroy(staging_buffer, staging_buffer_memory);
 
     tg_graphics_vulkan_buffer_create(ibo_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &staging_buffer, &staging_buffer_memory);
@@ -41,7 +41,7 @@ void tg_graphics_mesh_create(ui32 vertex_count, const tgm_vec3f* positions, cons
     }
     vkUnmapMemory(device, staging_buffer_memory);
     tg_graphics_vulkan_buffer_create(ibo_size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &(**p_mesh_h).ibo.buffer, &(**p_mesh_h).ibo.device_memory);
-    tg_graphics_vulkan_buffer_copy(ibo_size, &staging_buffer, &(**p_mesh_h).ibo.buffer);
+    tg_graphics_vulkan_buffer_copy(ibo_size, staging_buffer, (**p_mesh_h).ibo.buffer);
     tg_graphics_vulkan_buffer_destroy(staging_buffer, staging_buffer_memory);
 }
 
