@@ -63,31 +63,9 @@ typedef struct tg_image
     VkSampler          sampler;
 } tg_image;
 
-typedef struct tg_index_buffer
-{
-    VkBuffer buffer;
-    VkDeviceMemory device_memory;
-} tg_index_buffer;
-
-typedef struct tg_vertex_buffer
-{
-    VkBuffer buffer;
-    VkDeviceMemory device_memory;
-    ui32 layout_element_count;
-    tg_vertex_shader_layout_element* layout;
-} tg_vertex_buffer;
-
-typedef struct tg_uniform_buffer
-{
-    VkBuffer buffer;
-    VkDeviceMemory device_memory;
-} tg_uniform_buffer;
-
 typedef struct tg_vertex_shader
 {
     VkShaderModule shader_module;
-    ui32 layout_element_count;
-    tg_vertex_shader_layout_element* layout;
 } tg_vertex_shader;
 
 typedef struct tg_fragment_shader

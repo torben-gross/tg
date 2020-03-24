@@ -107,21 +107,21 @@
     </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="graphics\tg_graphics_renderer_2d.c" />
-    <ClCompile Include="graphics\tg_graphics_renderer_3d.c" />
+    <ClCompile Include="tg_application.c" />
+    <ClCompile Include="graphics\tg_graphics_vulkan_renderer_2d.c" />
+    <ClCompile Include="graphics\tg_graphics_vulkan_renderer_3d.c" />
     <ClCompile Include="graphics\tg_graphics_vulkan_image.c" />
     <ClCompile Include="graphics\tg_graphics_image_loader.c" />
     <ClCompile Include="graphics\tg_graphics_vulkan.c" />
-    <ClCompile Include="graphics\tg_graphics_vulkan_index_buffer.c" />
+    <ClCompile Include="graphics\tg_graphics_vulkan_mesh.c" />
     <ClCompile Include="graphics\tg_graphics_vulkan_shader.c" />
-    <ClCompile Include="graphics\tg_graphics_vulkan_uniform_buffer.c" />
-    <ClCompile Include="graphics\tg_graphics_vulkan_vertex_buffer.c" />
     <ClCompile Include="math\tg_math.c" />
     <ClCompile Include="platform\tg_allocator.c" />
     <ClCompile Include="platform\tg_win32_platform.c" />
     <ClCompile Include="util\tg_file_io.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="tg_application.h" />
     <ClInclude Include="graphics\tg_graphics.h" />
     <ClInclude Include="graphics\tg_graphics_vulkan.h" />
     <ClInclude Include="graphics\tg_graphics_image_loader.h" />

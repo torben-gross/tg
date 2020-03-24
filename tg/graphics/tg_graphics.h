@@ -5,6 +5,8 @@
 #include "tg/math/tg_math.h"
 #include <stdbool.h>
 
+
+
 typedef struct tg_image tg_image;
 typedef tg_image* tg_image_h;
 
@@ -25,6 +27,12 @@ typedef tg_fragment_shader* tg_fragment_shader_h;
 
 typedef struct tg_mesh tg_mesh;
 typedef tg_mesh* tg_mesh_h;
+typedef struct tg_material tg_material;
+typedef tg_material* tg_material_h;
+typedef struct tg_model tg_model;
+typedef tg_model* tg_model_h;
+
+
 
 typedef enum tg_filter
 {
@@ -116,57 +124,22 @@ typedef struct tg_uniform_buffer_object
 	tgm_mat4f    projection;
 } tg_uniform_buffer_object;
 
-typedef struct tg_vertex_shader_layout_element
-{
-	ui32                                    binding;
-	ui32                                    location;
-	tg_vertex_shader_layout_element_type    element_type;
-	ui32                                    offset;
-} tg_vertex_shader_layout_element;
-
-typedef struct tg_image_create_info // TODO: use this?
-{
-	tg_image_type              type;
-	tg_image_format            format;
-	ui32                       width;
-	ui32                       height;
-	ui32                       depth;
-	ui32                       mip_levels;
-	ui32                       array_layers;
-	bool                       enable_msaa_sampling;
-	tg_image_usage             usage;
-	tg_image_aspect            aspect;
-	tg_filter                  min_filter;
-	tg_filter                  mag_filter;
-	tg_sampler_mipmap_mode     mipmap_mode;
-	tg_sampler_address_mode    address_mode_u;
-	tg_sampler_address_mode    address_mode_v;
-	tg_sampler_address_mode    address_mode_w;
-} tg_image_create_info;
-
 
 
 void tg_graphics_init();
 void tg_graphics_on_window_resize(ui32 width, ui32 height);
 void tg_graphics_shutdown();
 
-void tg_graphics_image_create(const char* filename, tg_image_h* p_image_h);
-void tg_graphics_image_destroy(tg_image_h image_h);
-
-void tg_graphics_vertex_buffer_create(ui32 size, ui32 layout_element_count, const tg_vertex_shader_layout_element* layout, void* vertices, tg_vertex_buffer_h* p_vertex_buffer_h);
-void tg_graphics_vertex_buffer_destroy(tg_vertex_buffer_h vertex_buffer_h);
-
-void tg_graphics_index_buffer_create(ui16 count, ui16* indices, tg_index_buffer_h* p_index_buffer_h);
-void tg_graphics_index_buffer_destroy(tg_index_buffer_h index_buffer_h);
-
-void tg_graphics_uniform_buffer_create(ui32 size, tg_uniform_buffer_h* p_uniform_buffer_h);
-void tg_graphics_uniform_buffer_destroy(tg_uniform_buffer_h uniform_buffer_h);
-
-void tg_graphics_vertex_shader_create(const char* filename, ui32 layout_element_count, const tg_vertex_shader_layout_element* layout, tg_vertex_shader_h* p_shader_h);
-void tg_graphics_vertex_shader_destroy(tg_vertex_shader_h shader_h);
-
 void tg_graphics_fragment_shader_create(const char* filename, tg_fragment_shader_h* p_fragment_shader_h);
 void tg_graphics_fragment_shader_destroy(tg_fragment_shader_h p_fragment_shader_h);
+void tg_graphics_image_create(const char* filename, tg_image_h* p_image_h);
+void tg_graphics_image_destroy(tg_image_h image_h);
+void tg_graphics_material_create(tg_vertex_shader_h vertex_shader, tg_fragment_shader_h fragment_shader, tg_material_h* p_material_h);
+void tg_graphics_material_destroy(tg_material_h material_h);
+void tg_graphics_mesh_create(ui32 vertex_count, const tgm_vec3f* positions, const tgm_vec3f* normals, const tgm_vec2f* uvs, ui32 index_count, const ui16* indices, tg_mesh_h* p_mesh_h);
+void tg_graphics_mesh_destroy(tg_mesh_h mesh_h);
+void tg_graphics_vertex_shader_create(const char* filename, tg_vertex_shader_h* p_shader_h);
+void tg_graphics_vertex_shader_destroy(tg_vertex_shader_h shader_h);
 
 /*
 ---- 2D Renderer ----
@@ -187,6 +160,7 @@ void tg_graphics_renderer_2d_draw_call_count(ui32* draw_call_count);
 ---- 3D Renderer
 */
 void tg_graphics_renderer_3d_init();
+void tg_graphics_renderer_3d_register_model(tg_model_h model_h);
 void tg_graphics_renderer_3d_draw(const tg_mesh_h mesh_h);
 void tg_graphics_renderer_3d_present();
 void tg_graphics_renderer_3d_shutdown();

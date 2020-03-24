@@ -14,7 +14,7 @@
 #ifdef TG_DEBUG
 VKAPI_ATTR VkBool32 VKAPI_CALL tgvk_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity, VkDebugUtilsMessageTypeFlagsEXT message_type, const VkDebugUtilsMessengerCallbackDataEXT* callback_data, void* user_data)
 {
-    TG_PRINT(callback_data->pMessage);
+    TG_DEBUG_PRINT(callback_data->pMessage);
     return VK_TRUE;
 }
 #endif
@@ -639,7 +639,7 @@ void tg_graphics_vulkan_surface_create(tg_surface* p_surface)
     win32_surface_create_info.pNext = NULL;
     win32_surface_create_info.flags = 0;
     win32_surface_create_info.hinstance = GetModuleHandle(NULL);
-    win32_surface_create_info.hwnd = tg_platform_get_window_handle();
+    tg_platform_get_window_handle(&win32_surface_create_info.hwnd);
 
     VK_CALL(vkCreateWin32SurfaceKHR(instance, &win32_surface_create_info, NULL, &p_surface->surface));
 }

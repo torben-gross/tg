@@ -28,6 +28,19 @@ typedef struct tg_renderer_3d_geometry_pass
     //    VkSampler            sampler;
     //} normal_buffer;
 
+    VkFence                  rendering_finished_fence;
+    VkSemaphore              rendering_finished_semaphore;
+
+    VkRenderPass             render_pass;
+    VkFramebuffer            framebuffer;
+
+    VkDescriptorPool         descriptor_pool;
+    VkDescriptorSetLayout    descriptor_set_layout;
+    VkDescriptorSet          descriptor_set;
+} tg_renderer_3d_geometry_pass;
+
+typedef struct mesh_pass
+{
     struct
     {
         VkBuffer             buffer;
@@ -46,23 +59,18 @@ typedef struct tg_renderer_3d_geometry_pass
         VkDeviceMemory       device_memory;
     } ubo;
 
-    VkFence                  rendering_finished_fence;
-    VkSemaphore              rendering_finished_semaphore;
-
-    VkRenderPass             render_pass;
-    VkFramebuffer            framebuffer;
-
     VkDescriptorPool         descriptor_pool;
-    VkDescriptorSetLayout    descriptor_set_layout;
+    VkDescriptorSetLayout    descriptor_set_layouts;
     VkDescriptorSet          descriptor_set;
 
     VkShaderModule           vertex_shader;
     VkShaderModule           fragment_shader;
+
     VkPipelineLayout         pipeline_layout;
     VkPipeline               pipeline;
 
     VkCommandBuffer          command_buffer;
-} tg_renderer_3d_geometry_pass;
+} mesh_pass;
 
 typedef struct tg_renderer_3d_shading_pass
 {
@@ -154,146 +162,12 @@ tg_renderer_3d_geometry_pass    geometry_pass;
 tg_renderer_3d_shading_pass     shading_pass;
 tg_renderer_3d_present_pass     present_pass;
 tg_renderer_3d_clear_pass       clear_pass;
+mesh_pass mp;
 
 
 
-void tg_graphics_renderer_3d_internal_init_geometry_pass()
+void create_mesh_render_pass(mesh_pass* p_mesh_pass)
 {
-    VkImageCreateInfo g_buffer_attachment_create_info = { 0 };
-    {
-        g_buffer_attachment_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-        g_buffer_attachment_create_info.pNext = NULL;
-        g_buffer_attachment_create_info.flags = 0;
-        g_buffer_attachment_create_info.imageType = VK_IMAGE_TYPE_2D;
-        g_buffer_attachment_create_info.format = surface.format.format;
-        g_buffer_attachment_create_info.extent.width = swapchain_extent.width;
-        g_buffer_attachment_create_info.extent.height = swapchain_extent.height;
-        g_buffer_attachment_create_info.extent.depth = 1;
-        g_buffer_attachment_create_info.mipLevels = 1;
-        g_buffer_attachment_create_info.arrayLayers = 1;
-        g_buffer_attachment_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
-        g_buffer_attachment_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
-        g_buffer_attachment_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-        g_buffer_attachment_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        g_buffer_attachment_create_info.queueFamilyIndexCount = 0;
-        g_buffer_attachment_create_info.pQueueFamilyIndices = NULL;
-        g_buffer_attachment_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    }
-    VK_CALL(vkCreateImage(device, &g_buffer_attachment_create_info, NULL, &geometry_pass.g_buffer.image));
-    tg_graphics_vulkan_image_allocate_memory(geometry_pass.g_buffer.image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &geometry_pass.g_buffer.device_memory);
-    tg_graphics_vulkan_image_view_create(geometry_pass.g_buffer.image, surface.format.format, 1, VK_IMAGE_ASPECT_COLOR_BIT, &geometry_pass.g_buffer.image_view);
-    tg_graphics_vulkan_sampler_create(1, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, &geometry_pass.g_buffer.sampler);
-
-    VkFormat depth_format = VK_FORMAT_UNDEFINED;
-    tg_graphics_vulkan_depth_format_acquire(&depth_format);
-    VkImageCreateInfo z_buffer_attachment_create_info = { 0 };
-    {
-        z_buffer_attachment_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-        z_buffer_attachment_create_info.pNext = NULL;
-        z_buffer_attachment_create_info.flags = 0;
-        z_buffer_attachment_create_info.imageType = VK_IMAGE_TYPE_2D;
-        z_buffer_attachment_create_info.format = depth_format;
-        z_buffer_attachment_create_info.extent.width = swapchain_extent.width;
-        z_buffer_attachment_create_info.extent.height = swapchain_extent.height;
-        z_buffer_attachment_create_info.extent.depth = 1;
-        z_buffer_attachment_create_info.mipLevels = 1;
-        z_buffer_attachment_create_info.arrayLayers = 1;
-        z_buffer_attachment_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
-        z_buffer_attachment_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
-        z_buffer_attachment_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-        z_buffer_attachment_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        z_buffer_attachment_create_info.queueFamilyIndexCount = 0;
-        z_buffer_attachment_create_info.pQueueFamilyIndices = NULL;
-        z_buffer_attachment_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    }
-    VK_CALL(vkCreateImage(device, &z_buffer_attachment_create_info, NULL, &geometry_pass.z_buffer.image));
-    tg_graphics_vulkan_image_allocate_memory(geometry_pass.z_buffer.image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &geometry_pass.z_buffer.device_memory);
-    tg_graphics_vulkan_image_view_create(geometry_pass.z_buffer.image, depth_format, 1, VK_IMAGE_ASPECT_DEPTH_BIT, &geometry_pass.z_buffer.image_view);
-    tg_graphics_vulkan_sampler_create(1, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, &geometry_pass.z_buffer.sampler);
-
-    // TODO: normal-buffer
-
-    VkCommandBuffer barrier_command_buffer;
-    VkCommandBufferAllocateInfo barrier_command_buffer_allocate_info = { 0 };
-    {
-        barrier_command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        barrier_command_buffer_allocate_info.pNext = NULL;
-        barrier_command_buffer_allocate_info.commandPool = command_pool;
-        barrier_command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        barrier_command_buffer_allocate_info.commandBufferCount = 1;
-    }
-    VK_CALL(vkAllocateCommandBuffers(device, &barrier_command_buffer_allocate_info, &barrier_command_buffer));
-
-    VkCommandBufferBeginInfo barrier_command_buffer_begin_info = { 0 };
-    {
-        barrier_command_buffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        barrier_command_buffer_begin_info.pNext = NULL;
-        barrier_command_buffer_begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-        barrier_command_buffer_begin_info.pInheritanceInfo = NULL;
-    }
-    VK_CALL(vkBeginCommandBuffer(barrier_command_buffer, &barrier_command_buffer_begin_info));
-
-    VkImageMemoryBarrier g_buffer_attachment_memory_barrier = { 0 };
-    {
-        g_buffer_attachment_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        g_buffer_attachment_memory_barrier.pNext = NULL;
-        g_buffer_attachment_memory_barrier.srcAccessMask = 0;
-        g_buffer_attachment_memory_barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-        g_buffer_attachment_memory_barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        g_buffer_attachment_memory_barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        g_buffer_attachment_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        g_buffer_attachment_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        g_buffer_attachment_memory_barrier.image = geometry_pass.g_buffer.image;
-        g_buffer_attachment_memory_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        g_buffer_attachment_memory_barrier.subresourceRange.baseMipLevel = 0;
-        g_buffer_attachment_memory_barrier.subresourceRange.levelCount = 1;
-        g_buffer_attachment_memory_barrier.subresourceRange.baseArrayLayer = 0;
-        g_buffer_attachment_memory_barrier.subresourceRange.layerCount = 1;
-    }
-    vkCmdPipelineBarrier(barrier_command_buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, NULL, 0, NULL, 1, &g_buffer_attachment_memory_barrier);
-
-    VkImageMemoryBarrier z_buffer_image_memory_barrier = { 0 };
-    {
-        z_buffer_image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        z_buffer_image_memory_barrier.pNext = NULL;
-        z_buffer_image_memory_barrier.srcAccessMask = 0;
-        z_buffer_image_memory_barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-        z_buffer_image_memory_barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        z_buffer_image_memory_barrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-        z_buffer_image_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        z_buffer_image_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        z_buffer_image_memory_barrier.image = geometry_pass.z_buffer.image;
-        z_buffer_image_memory_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-        z_buffer_image_memory_barrier.subresourceRange.baseMipLevel = 0;
-        z_buffer_image_memory_barrier.subresourceRange.levelCount = 1;
-        z_buffer_image_memory_barrier.subresourceRange.baseArrayLayer = 0;
-        z_buffer_image_memory_barrier.subresourceRange.layerCount = 1;
-    }
-    vkCmdPipelineBarrier(barrier_command_buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, 0, 0, NULL, 0, NULL, 1, &z_buffer_image_memory_barrier);
-    VK_CALL(vkEndCommandBuffer(barrier_command_buffer));
-
-    // TODO: normal-buffer
-
-    VkSubmitInfo barrier_submit_info = { 0 };
-    {
-        barrier_submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        barrier_submit_info.pNext = NULL;
-        barrier_submit_info.waitSemaphoreCount = 0;
-        barrier_submit_info.pWaitSemaphores = NULL;
-        barrier_submit_info.pWaitDstStageMask = NULL;
-        barrier_submit_info.commandBufferCount = 1;
-        barrier_submit_info.pCommandBuffers = &barrier_command_buffer;
-        barrier_submit_info.signalSemaphoreCount = 0;
-        barrier_submit_info.pSignalSemaphores = NULL;
-    }
-    VK_CALL(vkQueueSubmit(graphics_queue.queue, 1, &barrier_submit_info, VK_NULL_HANDLE));
-    VK_CALL(vkQueueWaitIdle(graphics_queue.queue));
-    vkFreeCommandBuffers(device, command_pool, 1, &barrier_command_buffer);
-
-    // --------------------------------------------------------------
-    // TODO: not here!
-    tg_graphics_vulkan_buffer_create(sizeof(tg_uniform_buffer_object), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &geometry_pass.ubo.buffer, &geometry_pass.ubo.device_memory);
-
     VkBuffer staging_buffer = VK_NULL_HANDLE;
     VkDeviceMemory staging_buffer_memory = VK_NULL_HANDLE;
     void* data;
@@ -301,39 +175,39 @@ void tg_graphics_renderer_3d_internal_init_geometry_pass()
     {
         vertices[0].position.x = -1.5f;
         vertices[0].position.y = -1.5f;
-        vertices[0].position.z =  0.0f;
-        vertices[0].normal.x   =  0.0f;
-        vertices[0].normal.y   =  0.0f;
-        vertices[0].normal.z   =  1.0f;
-        vertices[0].uv.x       =  0.0f;
-        vertices[0].uv.y       =  0.0f;
-        
-        vertices[1].position.x =  1.5f;
+        vertices[0].position.z = 0.0f;
+        vertices[0].normal.x = 0.0f;
+        vertices[0].normal.y = 0.0f;
+        vertices[0].normal.z = 1.0f;
+        vertices[0].uv.x = 0.0f;
+        vertices[0].uv.y = 0.0f;
+
+        vertices[1].position.x = 1.5f;
         vertices[1].position.y = -1.5f;
-        vertices[1].position.z =  0.0f;
-        vertices[1].normal.x   =  0.0f;
-        vertices[1].normal.y   =  0.0f;
-        vertices[1].normal.z   =  1.0f;
-        vertices[1].uv.x       =  1.0f;
-        vertices[1].uv.y       =  0.0f;
-        
-        vertices[2].position.x =  1.5f;
-        vertices[2].position.y =  1.5f;
-        vertices[2].position.z =  0.0f;
-        vertices[2].normal.x   =  0.0f;
-        vertices[2].normal.y   =  0.0f;
-        vertices[2].normal.z   =  1.0f;
-        vertices[2].uv.x       =  1.0f;
-        vertices[2].uv.y       =  1.0f;
-        
+        vertices[1].position.z = 0.0f;
+        vertices[1].normal.x = 0.0f;
+        vertices[1].normal.y = 0.0f;
+        vertices[1].normal.z = 1.0f;
+        vertices[1].uv.x = 1.0f;
+        vertices[1].uv.y = 0.0f;
+
+        vertices[2].position.x = 1.5f;
+        vertices[2].position.y = 1.5f;
+        vertices[2].position.z = 0.0f;
+        vertices[2].normal.x = 0.0f;
+        vertices[2].normal.y = 0.0f;
+        vertices[2].normal.z = 1.0f;
+        vertices[2].uv.x = 1.0f;
+        vertices[2].uv.y = 1.0f;
+
         vertices[3].position.x = -1.5f;
-        vertices[3].position.y =  1.5f;
-        vertices[3].position.z =  0.0f;
-        vertices[3].normal.x   =  0.0f;
-        vertices[3].normal.y   =  0.0f;
-        vertices[3].normal.z   =  1.0f;
-        vertices[3].uv.x       =  0.0f;
-        vertices[3].uv.y       =  1.0f;
+        vertices[3].position.y = 1.5f;
+        vertices[3].position.z = 0.0f;
+        vertices[3].normal.x = 0.0f;
+        vertices[3].normal.y = 0.0f;
+        vertices[3].normal.z = 1.0f;
+        vertices[3].uv.x = 0.0f;
+        vertices[3].uv.y = 1.0f;
 
     }
     tg_graphics_vulkan_buffer_create(sizeof(vertices), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &staging_buffer, &staging_buffer_memory);
@@ -342,8 +216,8 @@ void tg_graphics_renderer_3d_internal_init_geometry_pass()
         memcpy(data, vertices, sizeof(vertices));
     }
     vkUnmapMemory(device, staging_buffer_memory);
-    tg_graphics_vulkan_buffer_create(sizeof(vertices), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &geometry_pass.vbo.buffer, &geometry_pass.vbo.device_memory);
-    tg_graphics_vulkan_buffer_copy(sizeof(vertices), &staging_buffer, &geometry_pass.vbo.buffer);
+    tg_graphics_vulkan_buffer_create(sizeof(vertices), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &p_mesh_pass->vbo.buffer, &p_mesh_pass->vbo.device_memory);
+    tg_graphics_vulkan_buffer_copy(sizeof(vertices), &staging_buffer, &p_mesh_pass->vbo.buffer);
     tg_graphics_vulkan_buffer_destroy(staging_buffer, staging_buffer_memory);
 
     ui16 indices[6] = { 0 };
@@ -361,159 +235,26 @@ void tg_graphics_renderer_3d_internal_init_geometry_pass()
         memcpy(data, indices, sizeof(indices));
     }
     vkUnmapMemory(device, staging_buffer_memory);
-    tg_graphics_vulkan_buffer_create(sizeof(indices), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &geometry_pass.ibo.buffer, &geometry_pass.ibo.device_memory);
-    tg_graphics_vulkan_buffer_copy(sizeof(indices), &staging_buffer, &geometry_pass.ibo.buffer);
+    tg_graphics_vulkan_buffer_create(sizeof(indices), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &p_mesh_pass->ibo.buffer, &p_mesh_pass->ibo.device_memory);
+    tg_graphics_vulkan_buffer_copy(sizeof(indices), &staging_buffer, &p_mesh_pass->ibo.buffer);
     tg_graphics_vulkan_buffer_destroy(staging_buffer, staging_buffer_memory);
-    // TODO: not here!
-    // --------------------------------------------------------------
 
-    tg_graphics_vulkan_fence_create(VK_FENCE_CREATE_SIGNALED_BIT, &geometry_pass.rendering_finished_fence);
-    tg_graphics_vulkan_semaphore_create(&geometry_pass.rendering_finished_semaphore);
+    tg_graphics_vulkan_buffer_create(sizeof(tg_uniform_buffer_object), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &p_mesh_pass->ubo.buffer, &p_mesh_pass->ubo.device_memory);
 
-    VkAttachmentReference g_buffer_attachment_reference = { 0 };
-    {
-        g_buffer_attachment_reference.attachment = 0;
-        g_buffer_attachment_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    }
-    VkAttachmentReference z_buffer_attachment_reference = { 0 };
-    {
-        z_buffer_attachment_reference.attachment = 1;
-        z_buffer_attachment_reference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    }
-    // TODO: normal-buffer
-    VkSubpassDescription subpass_description = { 0 };
-    {
-        subpass_description.flags = 0;
-        subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subpass_description.inputAttachmentCount = 0;
-        subpass_description.pInputAttachments = NULL;
-        subpass_description.colorAttachmentCount = 1; // TODO: this will increase
-        subpass_description.pColorAttachments = &g_buffer_attachment_reference;
-        subpass_description.pResolveAttachments = NULL;
-        subpass_description.pDepthStencilAttachment = &z_buffer_attachment_reference;
-        subpass_description.preserveAttachmentCount = 0;
-        subpass_description.pPreserveAttachments = NULL;
-    }
-    VkAttachmentDescription attachment_descriptions[2] = { 0 };
-    {
-        attachment_descriptions[0].flags = 0;
-        attachment_descriptions[0].format = surface.format.format;
-        attachment_descriptions[0].samples = VK_SAMPLE_COUNT_1_BIT;
-        attachment_descriptions[0].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-        attachment_descriptions[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        attachment_descriptions[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        attachment_descriptions[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        attachment_descriptions[0].initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        attachment_descriptions[0].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        attachment_descriptions[1].flags = 0;
-        attachment_descriptions[1].format = depth_format;
-        attachment_descriptions[1].samples = VK_SAMPLE_COUNT_1_BIT;
-        attachment_descriptions[1].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-        attachment_descriptions[1].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        attachment_descriptions[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        attachment_descriptions[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        attachment_descriptions[1].initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-        attachment_descriptions[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    }
-    VkSubpassDependency subpass_dependency = { 0 };
-    {
-        subpass_dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-        subpass_dependency.dstSubpass = 0;
-        subpass_dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        subpass_dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        subpass_dependency.srcAccessMask = 0;
-        subpass_dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    }
-    VkRenderPassCreateInfo render_pass_create_info = { 0 };
-    {
-        render_pass_create_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-        render_pass_create_info.pNext = NULL;
-        render_pass_create_info.flags = 0;
-        render_pass_create_info.attachmentCount = sizeof(attachment_descriptions) / sizeof(*attachment_descriptions);
-        render_pass_create_info.pAttachments = attachment_descriptions;
-        render_pass_create_info.subpassCount = 1;
-        render_pass_create_info.pSubpasses = &subpass_description;
-        render_pass_create_info.dependencyCount = 1;
-        render_pass_create_info.pDependencies = &subpass_dependency;
-    }
-    VK_CALL(vkCreateRenderPass(device, &render_pass_create_info, NULL, &geometry_pass.render_pass));
-
-    const VkImageView framebuffer_attachments[] = {
-        geometry_pass.g_buffer.image_view,
-        geometry_pass.z_buffer.image_view
-    };
-    VkFramebufferCreateInfo framebuffer_create_info = { 0 };
-    {
-        framebuffer_create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        framebuffer_create_info.pNext = NULL;
-        framebuffer_create_info.flags = 0;
-        framebuffer_create_info.renderPass = geometry_pass.render_pass;
-        framebuffer_create_info.attachmentCount = sizeof(framebuffer_attachments) / sizeof(*framebuffer_attachments);
-        framebuffer_create_info.pAttachments = framebuffer_attachments;
-        framebuffer_create_info.width = swapchain_extent.width;
-        framebuffer_create_info.height = swapchain_extent.height;
-        framebuffer_create_info.layers = 1;
-    }
-    VK_CALL(vkCreateFramebuffer(device, &framebuffer_create_info, NULL, &geometry_pass.framebuffer));
-
-    VkDescriptorPoolSize descriptor_pool_size = { 0 };
-    {
-        descriptor_pool_size.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-        descriptor_pool_size.descriptorCount = 1;
-    }
-    VkDescriptorPoolCreateInfo descriptor_pool_create_info = { 0 };
-    {
-        descriptor_pool_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-        descriptor_pool_create_info.pNext = NULL;
-        descriptor_pool_create_info.flags = 0;
-        descriptor_pool_create_info.maxSets = 1;
-        descriptor_pool_create_info.poolSizeCount = 1;
-        descriptor_pool_create_info.pPoolSizes = &descriptor_pool_size;
-    }
-    VK_CALL(vkCreateDescriptorPool(device, &descriptor_pool_create_info, NULL, &geometry_pass.descriptor_pool));
-
-    VkDescriptorSetLayoutBinding descriptor_set_layout_binding = { 0 };
-    {
-        descriptor_set_layout_binding.binding = 0;
-        descriptor_set_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-        descriptor_set_layout_binding.descriptorCount = 1;
-        descriptor_set_layout_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-        descriptor_set_layout_binding.pImmutableSamplers = NULL;
-    }
-    VkDescriptorSetLayoutCreateInfo descriptor_set_layout_create_info = { 0 };
-    {
-        descriptor_set_layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        descriptor_set_layout_create_info.pNext = NULL;
-        descriptor_set_layout_create_info.flags = 0;
-        descriptor_set_layout_create_info.bindingCount = 1;
-        descriptor_set_layout_create_info.pBindings = &descriptor_set_layout_binding;
-    }
-    VK_CALL(vkCreateDescriptorSetLayout(device, &descriptor_set_layout_create_info, NULL, &geometry_pass.descriptor_set_layout));
-
-    VkDescriptorSetAllocateInfo descriptor_set_allocate_info = { 0 };
-    {
-        descriptor_set_allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-        descriptor_set_allocate_info.pNext = NULL;
-        descriptor_set_allocate_info.descriptorPool = geometry_pass.descriptor_pool;
-        descriptor_set_allocate_info.descriptorSetCount = 1;
-        descriptor_set_allocate_info.pSetLayouts = &geometry_pass.descriptor_set_layout;
-    }
-    VK_CALL(vkAllocateDescriptorSets(device, &descriptor_set_allocate_info, &geometry_pass.descriptor_set));
-    
-    tg_graphics_vulkan_shader_module_create("shaders/geometry_vert.spv", &geometry_pass.vertex_shader);
-    tg_graphics_vulkan_shader_module_create("shaders/geometry_frag.spv", &geometry_pass.fragment_shader);
+    tg_graphics_vulkan_shader_module_create("shaders/geometry_vert.spv", &p_mesh_pass->vertex_shader);
+    tg_graphics_vulkan_shader_module_create("shaders/geometry_frag.spv", &p_mesh_pass->fragment_shader);
 
     VkPipelineLayoutCreateInfo pipeline_layout_create_info = { 0 };
     {
         pipeline_layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         pipeline_layout_create_info.pNext = NULL;
         pipeline_layout_create_info.flags = 0;
-        pipeline_layout_create_info.setLayoutCount = 1;
+        pipeline_layout_create_info.setLayoutCount = 1; // TODO: ask mesh for additional descriptor sets
         pipeline_layout_create_info.pSetLayouts = &geometry_pass.descriptor_set_layout;
         pipeline_layout_create_info.pushConstantRangeCount = 0;
         pipeline_layout_create_info.pPushConstantRanges = NULL;
     }
-    VK_CALL(vkCreatePipelineLayout(device, &pipeline_layout_create_info, NULL, &geometry_pass.pipeline_layout));
+    VK_CALL(vkCreatePipelineLayout(device, &pipeline_layout_create_info, NULL, &p_mesh_pass->pipeline_layout));
 
     VkPipelineShaderStageCreateInfo pipeline_shader_stage_create_infos[2] = { 0 };
     {
@@ -521,14 +262,14 @@ void tg_graphics_renderer_3d_internal_init_geometry_pass()
         pipeline_shader_stage_create_infos[0].pNext = NULL;
         pipeline_shader_stage_create_infos[0].flags = 0;
         pipeline_shader_stage_create_infos[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
-        pipeline_shader_stage_create_infos[0].module = geometry_pass.vertex_shader;
+        pipeline_shader_stage_create_infos[0].module = p_mesh_pass->vertex_shader;
         pipeline_shader_stage_create_infos[0].pName = "main";
         pipeline_shader_stage_create_infos[0].pSpecializationInfo = NULL;
         pipeline_shader_stage_create_infos[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         pipeline_shader_stage_create_infos[1].pNext = NULL;
         pipeline_shader_stage_create_infos[1].flags = 0;
         pipeline_shader_stage_create_infos[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-        pipeline_shader_stage_create_infos[1].module = geometry_pass.fragment_shader;
+        pipeline_shader_stage_create_infos[1].module = p_mesh_pass->fragment_shader;
         pipeline_shader_stage_create_infos[1].pName = "main";
         pipeline_shader_stage_create_infos[1].pSpecializationInfo = NULL;
     }
@@ -691,13 +432,13 @@ void tg_graphics_renderer_3d_internal_init_geometry_pass()
         graphics_pipeline_create_info.pDepthStencilState = &pipeline_depth_stencil_state_create_info;
         graphics_pipeline_create_info.pColorBlendState = &pipeline_color_blend_state_create_info;
         graphics_pipeline_create_info.pDynamicState = NULL;
-        graphics_pipeline_create_info.layout = geometry_pass.pipeline_layout;
+        graphics_pipeline_create_info.layout = p_mesh_pass->pipeline_layout;
         graphics_pipeline_create_info.renderPass = geometry_pass.render_pass;
         graphics_pipeline_create_info.subpass = 0;
         graphics_pipeline_create_info.basePipelineHandle = VK_NULL_HANDLE;
         graphics_pipeline_create_info.basePipelineIndex = -1;
     }
-    VK_CALL(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &graphics_pipeline_create_info, NULL, &geometry_pass.pipeline));
+    VK_CALL(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &graphics_pipeline_create_info, NULL, &p_mesh_pass->pipeline));
 
     VkCommandBufferAllocateInfo command_buffer_allocate_info = { 0 };
     {
@@ -707,11 +448,11 @@ void tg_graphics_renderer_3d_internal_init_geometry_pass()
         command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
         command_buffer_allocate_info.commandBufferCount = 1;
     }
-    VK_CALL(vkAllocateCommandBuffers(device, &command_buffer_allocate_info, &geometry_pass.command_buffer));
+    VK_CALL(vkAllocateCommandBuffers(device, &command_buffer_allocate_info, &p_mesh_pass->command_buffer));
 
     VkDescriptorBufferInfo descriptor_buffer_info = { 0 };
     {
-        descriptor_buffer_info.buffer = geometry_pass.ubo.buffer;
+        descriptor_buffer_info.buffer = p_mesh_pass->ubo.buffer;
         descriptor_buffer_info.offset = 0;
         descriptor_buffer_info.range = sizeof(tg_uniform_buffer_object);
     }
@@ -737,15 +478,15 @@ void tg_graphics_renderer_3d_internal_init_geometry_pass()
         command_buffer_begin_info.flags = 0;
         command_buffer_begin_info.pInheritanceInfo = NULL;
     }
-    VK_CALL(vkBeginCommandBuffer(geometry_pass.command_buffer, &command_buffer_begin_info));
-    vkCmdBindPipeline(geometry_pass.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, geometry_pass.pipeline);
+    VK_CALL(vkBeginCommandBuffer(p_mesh_pass->command_buffer, &command_buffer_begin_info));
+    vkCmdBindPipeline(p_mesh_pass->command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_mesh_pass->pipeline);
 
     const VkDeviceSize vertex_buffer_offset = 0;
-    vkCmdBindVertexBuffers(geometry_pass.command_buffer, 0, 1, &geometry_pass.vbo.buffer, &vertex_buffer_offset);
-    vkCmdBindIndexBuffer(geometry_pass.command_buffer, geometry_pass.ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
+    vkCmdBindVertexBuffers(p_mesh_pass->command_buffer, 0, 1, &p_mesh_pass->vbo.buffer, &vertex_buffer_offset);
+    vkCmdBindIndexBuffer(p_mesh_pass->command_buffer, p_mesh_pass->ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
 
     const ui32 dynamic_offset = 0;
-    vkCmdBindDescriptorSets(geometry_pass.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, geometry_pass.pipeline_layout, 0, 1, &geometry_pass.descriptor_set, 1, &dynamic_offset);
+    vkCmdBindDescriptorSets(p_mesh_pass->command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_mesh_pass->pipeline_layout, 0, 1, &geometry_pass.descriptor_set, 1, &dynamic_offset);
 
     VkClearValue clear_values[2] = { 0 };
     {
@@ -765,10 +506,276 @@ void tg_graphics_renderer_3d_internal_init_geometry_pass()
         render_pass_begin_info.clearValueCount = sizeof(clear_values) / sizeof(*clear_values);
         render_pass_begin_info.pClearValues = clear_values; // TODO: NULL?
     }
-    vkCmdBeginRenderPass(geometry_pass.command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
-    vkCmdDrawIndexed(geometry_pass.command_buffer, 6, 1, 0, 0, 0);
-    vkCmdEndRenderPass(geometry_pass.command_buffer);
-    VK_CALL(vkEndCommandBuffer(geometry_pass.command_buffer));
+    vkCmdBeginRenderPass(p_mesh_pass->command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdDrawIndexed(p_mesh_pass->command_buffer, 6, 1, 0, 0, 0);
+    vkCmdEndRenderPass(p_mesh_pass->command_buffer);
+    VK_CALL(vkEndCommandBuffer(p_mesh_pass->command_buffer));
+}
+void tg_graphics_renderer_3d_internal_init_geometry_pass()
+{
+    VkImageCreateInfo g_buffer_attachment_create_info = { 0 };
+    {
+        g_buffer_attachment_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        g_buffer_attachment_create_info.pNext = NULL;
+        g_buffer_attachment_create_info.flags = 0;
+        g_buffer_attachment_create_info.imageType = VK_IMAGE_TYPE_2D;
+        g_buffer_attachment_create_info.format = surface.format.format;
+        g_buffer_attachment_create_info.extent.width = swapchain_extent.width;
+        g_buffer_attachment_create_info.extent.height = swapchain_extent.height;
+        g_buffer_attachment_create_info.extent.depth = 1;
+        g_buffer_attachment_create_info.mipLevels = 1;
+        g_buffer_attachment_create_info.arrayLayers = 1;
+        g_buffer_attachment_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
+        g_buffer_attachment_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+        g_buffer_attachment_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        g_buffer_attachment_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        g_buffer_attachment_create_info.queueFamilyIndexCount = 0;
+        g_buffer_attachment_create_info.pQueueFamilyIndices = NULL;
+        g_buffer_attachment_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    }
+    VK_CALL(vkCreateImage(device, &g_buffer_attachment_create_info, NULL, &geometry_pass.g_buffer.image));
+    tg_graphics_vulkan_image_allocate_memory(geometry_pass.g_buffer.image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &geometry_pass.g_buffer.device_memory);
+    tg_graphics_vulkan_image_view_create(geometry_pass.g_buffer.image, surface.format.format, 1, VK_IMAGE_ASPECT_COLOR_BIT, &geometry_pass.g_buffer.image_view);
+    tg_graphics_vulkan_sampler_create(1, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, &geometry_pass.g_buffer.sampler);
+
+    VkFormat depth_format = VK_FORMAT_UNDEFINED;
+    tg_graphics_vulkan_depth_format_acquire(&depth_format);
+    VkImageCreateInfo z_buffer_attachment_create_info = { 0 };
+    {
+        z_buffer_attachment_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        z_buffer_attachment_create_info.pNext = NULL;
+        z_buffer_attachment_create_info.flags = 0;
+        z_buffer_attachment_create_info.imageType = VK_IMAGE_TYPE_2D;
+        z_buffer_attachment_create_info.format = depth_format;
+        z_buffer_attachment_create_info.extent.width = swapchain_extent.width;
+        z_buffer_attachment_create_info.extent.height = swapchain_extent.height;
+        z_buffer_attachment_create_info.extent.depth = 1;
+        z_buffer_attachment_create_info.mipLevels = 1;
+        z_buffer_attachment_create_info.arrayLayers = 1;
+        z_buffer_attachment_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
+        z_buffer_attachment_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+        z_buffer_attachment_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+        z_buffer_attachment_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        z_buffer_attachment_create_info.queueFamilyIndexCount = 0;
+        z_buffer_attachment_create_info.pQueueFamilyIndices = NULL;
+        z_buffer_attachment_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    }
+    VK_CALL(vkCreateImage(device, &z_buffer_attachment_create_info, NULL, &geometry_pass.z_buffer.image));
+    tg_graphics_vulkan_image_allocate_memory(geometry_pass.z_buffer.image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &geometry_pass.z_buffer.device_memory);
+    tg_graphics_vulkan_image_view_create(geometry_pass.z_buffer.image, depth_format, 1, VK_IMAGE_ASPECT_DEPTH_BIT, &geometry_pass.z_buffer.image_view);
+    tg_graphics_vulkan_sampler_create(1, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, &geometry_pass.z_buffer.sampler);
+
+    // TODO: normal-buffer
+
+    VkCommandBuffer barrier_command_buffer;
+    VkCommandBufferAllocateInfo barrier_command_buffer_allocate_info = { 0 };
+    {
+        barrier_command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        barrier_command_buffer_allocate_info.pNext = NULL;
+        barrier_command_buffer_allocate_info.commandPool = command_pool;
+        barrier_command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        barrier_command_buffer_allocate_info.commandBufferCount = 1;
+    }
+    VK_CALL(vkAllocateCommandBuffers(device, &barrier_command_buffer_allocate_info, &barrier_command_buffer));
+
+    VkCommandBufferBeginInfo barrier_command_buffer_begin_info = { 0 };
+    {
+        barrier_command_buffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        barrier_command_buffer_begin_info.pNext = NULL;
+        barrier_command_buffer_begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+        barrier_command_buffer_begin_info.pInheritanceInfo = NULL;
+    }
+    VK_CALL(vkBeginCommandBuffer(barrier_command_buffer, &barrier_command_buffer_begin_info));
+
+    VkImageMemoryBarrier g_buffer_attachment_memory_barrier = { 0 };
+    {
+        g_buffer_attachment_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        g_buffer_attachment_memory_barrier.pNext = NULL;
+        g_buffer_attachment_memory_barrier.srcAccessMask = 0;
+        g_buffer_attachment_memory_barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        g_buffer_attachment_memory_barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        g_buffer_attachment_memory_barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        g_buffer_attachment_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        g_buffer_attachment_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        g_buffer_attachment_memory_barrier.image = geometry_pass.g_buffer.image;
+        g_buffer_attachment_memory_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        g_buffer_attachment_memory_barrier.subresourceRange.baseMipLevel = 0;
+        g_buffer_attachment_memory_barrier.subresourceRange.levelCount = 1;
+        g_buffer_attachment_memory_barrier.subresourceRange.baseArrayLayer = 0;
+        g_buffer_attachment_memory_barrier.subresourceRange.layerCount = 1;
+    }
+    vkCmdPipelineBarrier(barrier_command_buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, NULL, 0, NULL, 1, &g_buffer_attachment_memory_barrier);
+
+    VkImageMemoryBarrier z_buffer_image_memory_barrier = { 0 };
+    {
+        z_buffer_image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        z_buffer_image_memory_barrier.pNext = NULL;
+        z_buffer_image_memory_barrier.srcAccessMask = 0;
+        z_buffer_image_memory_barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+        z_buffer_image_memory_barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        z_buffer_image_memory_barrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        z_buffer_image_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        z_buffer_image_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        z_buffer_image_memory_barrier.image = geometry_pass.z_buffer.image;
+        z_buffer_image_memory_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+        z_buffer_image_memory_barrier.subresourceRange.baseMipLevel = 0;
+        z_buffer_image_memory_barrier.subresourceRange.levelCount = 1;
+        z_buffer_image_memory_barrier.subresourceRange.baseArrayLayer = 0;
+        z_buffer_image_memory_barrier.subresourceRange.layerCount = 1;
+    }
+    vkCmdPipelineBarrier(barrier_command_buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, 0, 0, NULL, 0, NULL, 1, &z_buffer_image_memory_barrier);
+    VK_CALL(vkEndCommandBuffer(barrier_command_buffer));
+
+    // TODO: normal-buffer
+
+    VkSubmitInfo barrier_submit_info = { 0 };
+    {
+        barrier_submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        barrier_submit_info.pNext = NULL;
+        barrier_submit_info.waitSemaphoreCount = 0;
+        barrier_submit_info.pWaitSemaphores = NULL;
+        barrier_submit_info.pWaitDstStageMask = NULL;
+        barrier_submit_info.commandBufferCount = 1;
+        barrier_submit_info.pCommandBuffers = &barrier_command_buffer;
+        barrier_submit_info.signalSemaphoreCount = 0;
+        barrier_submit_info.pSignalSemaphores = NULL;
+    }
+    VK_CALL(vkQueueSubmit(graphics_queue.queue, 1, &barrier_submit_info, VK_NULL_HANDLE));
+    VK_CALL(vkQueueWaitIdle(graphics_queue.queue));
+    vkFreeCommandBuffers(device, command_pool, 1, &barrier_command_buffer);
+
+    tg_graphics_vulkan_fence_create(VK_FENCE_CREATE_SIGNALED_BIT, &geometry_pass.rendering_finished_fence);
+    tg_graphics_vulkan_semaphore_create(&geometry_pass.rendering_finished_semaphore);
+
+    VkAttachmentReference g_buffer_attachment_reference = { 0 };
+    {
+        g_buffer_attachment_reference.attachment = 0;
+        g_buffer_attachment_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    }
+    VkAttachmentReference z_buffer_attachment_reference = { 0 };
+    {
+        z_buffer_attachment_reference.attachment = 1;
+        z_buffer_attachment_reference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    }
+    // TODO: normal-buffer
+    VkSubpassDescription subpass_description = { 0 };
+    {
+        subpass_description.flags = 0;
+        subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+        subpass_description.inputAttachmentCount = 0;
+        subpass_description.pInputAttachments = NULL;
+        subpass_description.colorAttachmentCount = 1; // TODO: this will increase
+        subpass_description.pColorAttachments = &g_buffer_attachment_reference;
+        subpass_description.pResolveAttachments = NULL;
+        subpass_description.pDepthStencilAttachment = &z_buffer_attachment_reference;
+        subpass_description.preserveAttachmentCount = 0;
+        subpass_description.pPreserveAttachments = NULL;
+    }
+    VkAttachmentDescription attachment_descriptions[2] = { 0 };
+    {
+        attachment_descriptions[0].flags = 0;
+        attachment_descriptions[0].format = surface.format.format;
+        attachment_descriptions[0].samples = VK_SAMPLE_COUNT_1_BIT;
+        attachment_descriptions[0].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        attachment_descriptions[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        attachment_descriptions[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        attachment_descriptions[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        attachment_descriptions[0].initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        attachment_descriptions[0].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        attachment_descriptions[1].flags = 0;
+        attachment_descriptions[1].format = depth_format;
+        attachment_descriptions[1].samples = VK_SAMPLE_COUNT_1_BIT;
+        attachment_descriptions[1].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        attachment_descriptions[1].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        attachment_descriptions[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        attachment_descriptions[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        attachment_descriptions[1].initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        attachment_descriptions[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    }
+    VkSubpassDependency subpass_dependency = { 0 };
+    {
+        subpass_dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+        subpass_dependency.dstSubpass = 0;
+        subpass_dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        subpass_dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        subpass_dependency.srcAccessMask = 0;
+        subpass_dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    }
+    VkRenderPassCreateInfo render_pass_create_info = { 0 };
+    {
+        render_pass_create_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+        render_pass_create_info.pNext = NULL;
+        render_pass_create_info.flags = 0;
+        render_pass_create_info.attachmentCount = sizeof(attachment_descriptions) / sizeof(*attachment_descriptions);
+        render_pass_create_info.pAttachments = attachment_descriptions;
+        render_pass_create_info.subpassCount = 1;
+        render_pass_create_info.pSubpasses = &subpass_description;
+        render_pass_create_info.dependencyCount = 1;
+        render_pass_create_info.pDependencies = &subpass_dependency;
+    }
+    VK_CALL(vkCreateRenderPass(device, &render_pass_create_info, NULL, &geometry_pass.render_pass));
+
+    const VkImageView framebuffer_attachments[] = {
+        geometry_pass.g_buffer.image_view,
+        geometry_pass.z_buffer.image_view
+    };
+    VkFramebufferCreateInfo framebuffer_create_info = { 0 };
+    {
+        framebuffer_create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        framebuffer_create_info.pNext = NULL;
+        framebuffer_create_info.flags = 0;
+        framebuffer_create_info.renderPass = geometry_pass.render_pass;
+        framebuffer_create_info.attachmentCount = sizeof(framebuffer_attachments) / sizeof(*framebuffer_attachments);
+        framebuffer_create_info.pAttachments = framebuffer_attachments;
+        framebuffer_create_info.width = swapchain_extent.width;
+        framebuffer_create_info.height = swapchain_extent.height;
+        framebuffer_create_info.layers = 1;
+    }
+    VK_CALL(vkCreateFramebuffer(device, &framebuffer_create_info, NULL, &geometry_pass.framebuffer));
+
+    VkDescriptorPoolSize descriptor_pool_size = { 0 };
+    {
+        descriptor_pool_size.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+        descriptor_pool_size.descriptorCount = 1;
+    }
+    VkDescriptorPoolCreateInfo descriptor_pool_create_info = { 0 };
+    {
+        descriptor_pool_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        descriptor_pool_create_info.pNext = NULL;
+        descriptor_pool_create_info.flags = 0;
+        descriptor_pool_create_info.maxSets = 1;
+        descriptor_pool_create_info.poolSizeCount = 1;
+        descriptor_pool_create_info.pPoolSizes = &descriptor_pool_size;
+    }
+    VK_CALL(vkCreateDescriptorPool(device, &descriptor_pool_create_info, NULL, &geometry_pass.descriptor_pool));
+
+    VkDescriptorSetLayoutBinding descriptor_set_layout_binding = { 0 };
+    {
+        descriptor_set_layout_binding.binding = 0;
+        descriptor_set_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+        descriptor_set_layout_binding.descriptorCount = 1;
+        descriptor_set_layout_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+        descriptor_set_layout_binding.pImmutableSamplers = NULL;
+    }
+    VkDescriptorSetLayoutCreateInfo descriptor_set_layout_create_info = { 0 };
+    {
+        descriptor_set_layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        descriptor_set_layout_create_info.pNext = NULL;
+        descriptor_set_layout_create_info.flags = 0;
+        descriptor_set_layout_create_info.bindingCount = 1;
+        descriptor_set_layout_create_info.pBindings = &descriptor_set_layout_binding;
+    }
+    VK_CALL(vkCreateDescriptorSetLayout(device, &descriptor_set_layout_create_info, NULL, &geometry_pass.descriptor_set_layout));
+
+    VkDescriptorSetAllocateInfo descriptor_set_allocate_info = { 0 };
+    {
+        descriptor_set_allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        descriptor_set_allocate_info.pNext = NULL;
+        descriptor_set_allocate_info.descriptorPool = geometry_pass.descriptor_pool;
+        descriptor_set_allocate_info.descriptorSetCount = 1;
+        descriptor_set_allocate_info.pSetLayouts = &geometry_pass.descriptor_set_layout;
+    }
+    VK_CALL(vkAllocateDescriptorSets(device, &descriptor_set_allocate_info, &geometry_pass.descriptor_set));
 }
 void tg_graphics_renderer_3d_internal_init_shading_pass()
 {
@@ -831,29 +838,9 @@ void tg_graphics_renderer_3d_internal_init_present_pass()
     tg_graphics_vulkan_buffer_copy(sizeof(indices), &staging_buffer, &present_pass.ibo.buffer);
     tg_graphics_vulkan_buffer_destroy(staging_buffer, staging_buffer_memory);
 
-    VkSemaphoreCreateInfo image_acquired_semaphore_create_info = { 0 };
-    {
-        image_acquired_semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-        image_acquired_semaphore_create_info.pNext = NULL;
-        image_acquired_semaphore_create_info.flags = 0;
-    }
-    VK_CALL(vkCreateSemaphore(device, &image_acquired_semaphore_create_info, NULL, &present_pass.image_acquired_semaphore));
-
-    VkFenceCreateInfo fence_create_info = { 0 };
-    {
-        fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-        fence_create_info.pNext = NULL;
-        fence_create_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-    }
-    VK_CALL(vkCreateFence(device, &fence_create_info, NULL, &present_pass.rendering_finished_fence));
-
-    VkSemaphoreCreateInfo rendering_finished_semaphore_create_info = { 0 };
-    {
-        rendering_finished_semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-        rendering_finished_semaphore_create_info.pNext = NULL;
-        rendering_finished_semaphore_create_info.flags = 0;
-    }
-    VK_CALL(vkCreateSemaphore(device, &rendering_finished_semaphore_create_info, NULL, &present_pass.rendering_finished_semaphore));
+    tg_graphics_vulkan_semaphore_create(&present_pass.image_acquired_semaphore);
+    tg_graphics_vulkan_fence_create(VK_FENCE_CREATE_SIGNALED_BIT, &present_pass.rendering_finished_fence);
+    tg_graphics_vulkan_semaphore_create(&present_pass.rendering_finished_semaphore);
 
     VkAttachmentReference color_attachment_reference = { 0 };
     {
@@ -1362,13 +1349,14 @@ void tg_graphics_renderer_3d_init()
     tg_graphics_renderer_3d_internal_init_shading_pass();
     tg_graphics_renderer_3d_internal_init_present_pass();
     tg_graphics_renderer_3d_internal_init_clear_pass();
+    create_mesh_render_pass(&mp);
 }
-void tg_graphics_renderer_3d_draw(const tg_mesh_h mesh_h)
+void tg_graphics_renderer_3d_draw_mEsHpAsS(const mesh_pass* p_mesh_pass)
 {
     // geometry pass
 
     tg_uniform_buffer_object* p_uniform_buffer_object = NULL;
-    VK_CALL(vkMapMemory(device, geometry_pass.ubo.device_memory, 0, sizeof(*p_uniform_buffer_object), 0, &p_uniform_buffer_object));
+    VK_CALL(vkMapMemory(device, p_mesh_pass->ubo.device_memory, 0, sizeof(*p_uniform_buffer_object), 0, &p_uniform_buffer_object));
     {
         tgm_vec3f from = { -1.0f, 1.0f, 1.0f };
         tgm_vec3f to = { 0.0f, 0.0f, -2.0f };
@@ -1382,7 +1370,7 @@ void tg_graphics_renderer_3d_draw(const tg_mesh_h mesh_h)
         tgm_m4f_look_at(&p_uniform_buffer_object->view, &from, &to, &up);
         tgm_m4f_perspective(&p_uniform_buffer_object->projection, fov_y, aspect, n, f);
     }
-    vkUnmapMemory(device, geometry_pass.ubo.device_memory);
+    vkUnmapMemory(device, p_mesh_pass->ubo.device_memory);
 
     VkSubmitInfo submit_info = { 0 };
     {
@@ -1392,13 +1380,17 @@ void tg_graphics_renderer_3d_draw(const tg_mesh_h mesh_h)
         submit_info.pWaitSemaphores = NULL;
         submit_info.pWaitDstStageMask = NULL;
         submit_info.commandBufferCount = 1;
-        submit_info.pCommandBuffers = &geometry_pass.command_buffer;
+        submit_info.pCommandBuffers = &p_mesh_pass->command_buffer;
         submit_info.signalSemaphoreCount = 0;
         submit_info.pSignalSemaphores = NULL;
     }
     VK_CALL(vkResetFences(device, 1, &geometry_pass.rendering_finished_fence));
     VK_CALL(vkQueueSubmit(graphics_queue.queue, 1, &submit_info, geometry_pass.rendering_finished_fence));
     VK_CALL(vkWaitForFences(device, 1, &geometry_pass.rendering_finished_fence, VK_TRUE, UINT64_MAX));
+}
+void tg_graphics_renderer_3d_draw(const tg_mesh_h p_mesh)
+{
+    tg_graphics_renderer_3d_draw_mEsHpAsS(&mp);
 }
 void tg_graphics_renderer_3d_present()
 {

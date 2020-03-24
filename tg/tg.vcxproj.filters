@@ -7,13 +7,12 @@
     <ClCompile Include="math\tg_math.c" />
     <ClCompile Include="graphics\tg_graphics_vulkan.c" />
     <ClCompile Include="graphics\tg_graphics_vulkan_image.c" />
-    <ClCompile Include="graphics\tg_graphics_vulkan_index_buffer.c" />
-    <ClCompile Include="graphics\tg_graphics_vulkan_uniform_buffer.c" />
     <ClCompile Include="graphics\tg_graphics_vulkan_shader.c" />
     <ClCompile Include="graphics\tg_graphics_image_loader.c" />
-    <ClCompile Include="graphics\tg_graphics_vulkan_vertex_buffer.c" />
-    <ClCompile Include="graphics\tg_graphics_renderer_2d.c" />
-    <ClCompile Include="graphics\tg_graphics_renderer_3d.c" />
+    <ClCompile Include="graphics\tg_graphics_vulkan_mesh.c" />
+    <ClCompile Include="graphics\tg_graphics_vulkan_renderer_3d.c" />
+    <ClCompile Include="graphics\tg_graphics_vulkan_renderer_2d.c" />
+    <ClCompile Include="tg_application.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="tg_common.h" />
@@ -25,6 +24,7 @@
     <ClInclude Include="graphics\tg_graphics_vulkan.h" />
     <ClInclude Include="tg_entity.h" />
     <ClInclude Include="graphics\tg_graphics_image_loader.h" />
+    <ClInclude Include="tg_application.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="tg.ruleset" />
