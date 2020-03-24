@@ -107,6 +107,8 @@
     </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="graphics\tg_graphics_vulkan_material.c" />
+    <ClCompile Include="graphics\tg_graphics_vulkan_model.c" />
     <ClCompile Include="tg_application.c" />
     <ClCompile Include="graphics\tg_graphics_vulkan_renderer_2d.c" />
     <ClCompile Include="graphics\tg_graphics_vulkan_renderer_3d.c" />
@@ -121,6 +123,7 @@
     <ClCompile Include="util\tg_file_io.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="graphics\tg_graphics_vulkan_renderer_3d.h" />
     <ClInclude Include="tg_application.h" />
     <ClInclude Include="graphics\tg_graphics.h" />
     <ClInclude Include="graphics\tg_graphics_vulkan.h" />

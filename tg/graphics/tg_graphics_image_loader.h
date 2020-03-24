@@ -2,7 +2,7 @@
 #define TG_IMAGE_H
 
 #include "tg/tg_common.h"
-#include "tg_graphics.h"
+#include "tg/graphics/tg_graphics.h"
 #include <math.h>
 
 #define TG_IMAGE_MAX_MIP_LEVELS(w, h) ((ui32)log2f((f32)max((ui32)w, (ui32)h)) + 1)

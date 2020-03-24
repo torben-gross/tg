@@ -5,7 +5,7 @@
 
 #ifdef TG_DEBUG
 #define TG_DEBUG_PRINT(x)               tg_platform_debug_print(x)
-#define TG_DEBUG_PRINT_PERFORMANCE()    tg_platform_debug_print_performance();
+#define TG_DEBUG_PRINT_PERFORMANCE()    tg_platform_debug_print_performance()
 #else
 #define TG_DEBUG_PRINT(x)
 #define TG_DEBUG_PRINT_PERFORMANCE()

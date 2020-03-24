@@ -1,4 +1,4 @@
-#include "tg_graphics_image_loader.h"
+#include "tg/graphics/tg_graphics_image_loader.h"
 
 #include "tg/platform/tg_allocator.h"
 #include "tg/util/tg_file_io.h"

@@ -11,46 +11,56 @@ void tg_application_start()
 {
     tg_graphics_init();
     tg_graphics_renderer_3d_init();
-    //tg_graphics_renderer_2d_init();
-    //tg_image_h img = NULL;
-    //tg_graphics_image_create("test_icon.bmp", &img);
-    //tg_image_h numbers[9] = { 0 };
-    //tg_graphics_image_create("1.bmp", &numbers[0]);
-    //tg_graphics_image_create("2.bmp", &numbers[1]);
-    //tg_graphics_image_create("3.bmp", &numbers[2]);
-    //tg_graphics_image_create("4.bmp", &numbers[3]);
-    //tg_graphics_image_create("5.bmp", &numbers[4]);
-    //tg_graphics_image_create("6.bmp", &numbers[5]);
-    //tg_graphics_image_create("7.bmp", &numbers[6]);
-    //tg_graphics_image_create("8.bmp", &numbers[7]);
-    //tg_graphics_image_create("9.bmp", &numbers[8]);
+
+    const tgm_vec3f positions[4] = {
+        { -1.5f, -1.5f, 0.0f },
+        {  1.5f, -1.5f, 0.0f },
+        {  1.5f,  1.5f, 0.0f },
+        { -1.5f,  1.5f, 0.0f }
+    };
+    const tgm_vec3f normals[4] = {
+        { 0.0f, 0.0f, 1.0f },
+        { 0.0f, 0.0f, 1.0f },
+        { 0.0f, 0.0f, 1.0f },
+        { 0.0f, 0.0f, 1.0f }
+    };
+    const tgm_vec2f uvs[4] = {
+        { 0.0f, 0.0f },
+        { 1.0f, 0.0f },
+        { 1.0f, 1.0f },
+        { 0.0f, 1.0f }
+    };
+    const ui16 indices[6] = {
+        0, 1, 2, 2, 3, 0
+    };
+
+    tg_mesh_h mesh_h = NULL;
+    tg_vertex_shader_h vertex_shader_h = NULL;
+    tg_fragment_shader_h fragment_shader_h = NULL;
+    tg_material_h material_h = NULL;
+    tg_model_h model_h = NULL;
+
+    tg_graphics_mesh_create(4, positions, normals, uvs, 6, indices, &mesh_h);
+    tg_graphics_vertex_shader_create("shaders/geometry_vert.spv", &vertex_shader_h);
+    tg_graphics_fragment_shader_create("shaders/geometry_frag.spv", &fragment_shader_h);
+    tg_graphics_material_create(vertex_shader_h, fragment_shader_h, &material_h);
+    tg_graphics_model_create(mesh_h, material_h, &model_h);
 
     while (running)
     {
         tg_platform_handle_events();
-        //tg_graphics_renderer_2d_begin();
-        //for (ui32 x = 0; x < 16; x++)
-        //{
-        //    for (ui32 y = 0; y < 16; y++)
-        //    {
-        //        ui32 idx = (x * 16 + y) % 9;
-        //        tg_graphics_renderer_2d_draw_sprite((f32)x - 3.0f, (f32)y - 10.0f, -1.0f, 1.0f, 1.0f, numbers[idx]);
-        //    }
-        //}
-        //tg_graphics_renderer_2d_draw_sprite(0.0f, 0.0f, 0.0f, 3.0f, 3.0f, img);
-        //tg_graphics_renderer_2d_end();
-        //tg_graphics_renderer_2d_present();
-        tg_graphics_renderer_3d_draw(NULL);
+        tg_graphics_renderer_3d_draw(model_h);
         tg_graphics_renderer_3d_present();
-        tg_platform_debug_print_performance();
+        TG_DEBUG_PRINT_PERFORMANCE();
     }
 
-    //for (ui8 i = 0; i < 9; i++)
-    //{
-    //    tg_graphics_image_destroy(numbers[i]);
-    //}
-    //tg_graphics_image_destroy(img);
-    //tg_graphics_renderer_2d_shutdown();
+    tg_graphics_model_destroy(model_h);
+    tg_graphics_material_destroy(material_h);
+    tg_graphics_fragment_shader_destroy(fragment_shader_h);
+    tg_graphics_vertex_shader_destroy(vertex_shader_h);
+    tg_graphics_mesh_destroy(mesh_h);
+
+    tg_graphics_renderer_3d_shutdown();
     tg_graphics_shutdown();
 }
 

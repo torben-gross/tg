@@ -1,4 +1,4 @@
-#include "tg_graphics_vulkan.h"
+#include "tg/graphics/tg_graphics_vulkan_renderer_3d.h"
 
 #ifdef TG_VULKAN
 
@@ -33,44 +33,7 @@ typedef struct tg_renderer_3d_geometry_pass
 
     VkRenderPass             render_pass;
     VkFramebuffer            framebuffer;
-
-    VkDescriptorPool         descriptor_pool;
-    VkDescriptorSetLayout    descriptor_set_layout;
-    VkDescriptorSet          descriptor_set;
 } tg_renderer_3d_geometry_pass;
-
-typedef struct mesh_pass
-{
-    struct
-    {
-        VkBuffer             buffer;
-        VkDeviceMemory       device_memory;
-    } vbo;
-
-    struct
-    {
-        VkBuffer             buffer;
-        VkDeviceMemory       device_memory;
-    } ibo;
-
-    struct
-    {
-        VkBuffer             buffer;
-        VkDeviceMemory       device_memory;
-    } ubo;
-
-    VkDescriptorPool         descriptor_pool;
-    VkDescriptorSetLayout    descriptor_set_layouts;
-    VkDescriptorSet          descriptor_set;
-
-    VkShaderModule           vertex_shader;
-    VkShaderModule           fragment_shader;
-
-    VkPipelineLayout         pipeline_layout;
-    VkPipeline               pipeline;
-
-    VkCommandBuffer          command_buffer;
-} mesh_pass;
 
 typedef struct tg_renderer_3d_shading_pass
 {
@@ -149,367 +112,22 @@ typedef struct tg_renderer_3d_present_pass_vertex
     tgm_vec2f    uv;
 } tg_renderer_3d_present_pass_vertex;
 
-typedef struct tg_renderer_3d_geometry_pass_vertex
-{
-    tgm_vec3f    position;
-    tgm_vec3f    normal;
-    tgm_vec2f    uv;
-} tg_renderer_3d_geometry_pass_vertex;
-
 
 
 tg_renderer_3d_geometry_pass    geometry_pass;
 tg_renderer_3d_shading_pass     shading_pass;
 tg_renderer_3d_present_pass     present_pass;
 tg_renderer_3d_clear_pass       clear_pass;
-mesh_pass mp;
 
 
 
-void create_mesh_render_pass(mesh_pass* p_mesh_pass)
+void tg_graphics_vulkan_renderer_3d_get_geometry_framebuffer(VkFramebuffer* p_framebuffer)
 {
-    VkBuffer staging_buffer = VK_NULL_HANDLE;
-    VkDeviceMemory staging_buffer_memory = VK_NULL_HANDLE;
-    void* data;
-    tg_renderer_3d_geometry_pass_vertex vertices[4] = { 0 };
-    {
-        vertices[0].position.x = -1.5f;
-        vertices[0].position.y = -1.5f;
-        vertices[0].position.z = 0.0f;
-        vertices[0].normal.x = 0.0f;
-        vertices[0].normal.y = 0.0f;
-        vertices[0].normal.z = 1.0f;
-        vertices[0].uv.x = 0.0f;
-        vertices[0].uv.y = 0.0f;
-
-        vertices[1].position.x = 1.5f;
-        vertices[1].position.y = -1.5f;
-        vertices[1].position.z = 0.0f;
-        vertices[1].normal.x = 0.0f;
-        vertices[1].normal.y = 0.0f;
-        vertices[1].normal.z = 1.0f;
-        vertices[1].uv.x = 1.0f;
-        vertices[1].uv.y = 0.0f;
-
-        vertices[2].position.x = 1.5f;
-        vertices[2].position.y = 1.5f;
-        vertices[2].position.z = 0.0f;
-        vertices[2].normal.x = 0.0f;
-        vertices[2].normal.y = 0.0f;
-        vertices[2].normal.z = 1.0f;
-        vertices[2].uv.x = 1.0f;
-        vertices[2].uv.y = 1.0f;
-
-        vertices[3].position.x = -1.5f;
-        vertices[3].position.y = 1.5f;
-        vertices[3].position.z = 0.0f;
-        vertices[3].normal.x = 0.0f;
-        vertices[3].normal.y = 0.0f;
-        vertices[3].normal.z = 1.0f;
-        vertices[3].uv.x = 0.0f;
-        vertices[3].uv.y = 1.0f;
-
-    }
-    tg_graphics_vulkan_buffer_create(sizeof(vertices), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &staging_buffer, &staging_buffer_memory);
-    VK_CALL(vkMapMemory(device, staging_buffer_memory, 0, sizeof(vertices), 0, &data));
-    {
-        memcpy(data, vertices, sizeof(vertices));
-    }
-    vkUnmapMemory(device, staging_buffer_memory);
-    tg_graphics_vulkan_buffer_create(sizeof(vertices), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &p_mesh_pass->vbo.buffer, &p_mesh_pass->vbo.device_memory);
-    tg_graphics_vulkan_buffer_copy(sizeof(vertices), &staging_buffer, &p_mesh_pass->vbo.buffer);
-    tg_graphics_vulkan_buffer_destroy(staging_buffer, staging_buffer_memory);
-
-    ui16 indices[6] = { 0 };
-    {
-        indices[0] = 0;
-        indices[1] = 1;
-        indices[2] = 2;
-        indices[3] = 2;
-        indices[4] = 3;
-        indices[5] = 0;
-    }
-    tg_graphics_vulkan_buffer_create(sizeof(indices), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &staging_buffer, &staging_buffer_memory);
-    VK_CALL(vkMapMemory(device, staging_buffer_memory, 0, sizeof(indices), 0, &data));
-    {
-        memcpy(data, indices, sizeof(indices));
-    }
-    vkUnmapMemory(device, staging_buffer_memory);
-    tg_graphics_vulkan_buffer_create(sizeof(indices), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &p_mesh_pass->ibo.buffer, &p_mesh_pass->ibo.device_memory);
-    tg_graphics_vulkan_buffer_copy(sizeof(indices), &staging_buffer, &p_mesh_pass->ibo.buffer);
-    tg_graphics_vulkan_buffer_destroy(staging_buffer, staging_buffer_memory);
-
-    tg_graphics_vulkan_buffer_create(sizeof(tg_uniform_buffer_object), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &p_mesh_pass->ubo.buffer, &p_mesh_pass->ubo.device_memory);
-
-    tg_graphics_vulkan_shader_module_create("shaders/geometry_vert.spv", &p_mesh_pass->vertex_shader);
-    tg_graphics_vulkan_shader_module_create("shaders/geometry_frag.spv", &p_mesh_pass->fragment_shader);
-
-    VkPipelineLayoutCreateInfo pipeline_layout_create_info = { 0 };
-    {
-        pipeline_layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipeline_layout_create_info.pNext = NULL;
-        pipeline_layout_create_info.flags = 0;
-        pipeline_layout_create_info.setLayoutCount = 1; // TODO: ask mesh for additional descriptor sets
-        pipeline_layout_create_info.pSetLayouts = &geometry_pass.descriptor_set_layout;
-        pipeline_layout_create_info.pushConstantRangeCount = 0;
-        pipeline_layout_create_info.pPushConstantRanges = NULL;
-    }
-    VK_CALL(vkCreatePipelineLayout(device, &pipeline_layout_create_info, NULL, &p_mesh_pass->pipeline_layout));
-
-    VkPipelineShaderStageCreateInfo pipeline_shader_stage_create_infos[2] = { 0 };
-    {
-        pipeline_shader_stage_create_infos[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-        pipeline_shader_stage_create_infos[0].pNext = NULL;
-        pipeline_shader_stage_create_infos[0].flags = 0;
-        pipeline_shader_stage_create_infos[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
-        pipeline_shader_stage_create_infos[0].module = p_mesh_pass->vertex_shader;
-        pipeline_shader_stage_create_infos[0].pName = "main";
-        pipeline_shader_stage_create_infos[0].pSpecializationInfo = NULL;
-        pipeline_shader_stage_create_infos[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-        pipeline_shader_stage_create_infos[1].pNext = NULL;
-        pipeline_shader_stage_create_infos[1].flags = 0;
-        pipeline_shader_stage_create_infos[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-        pipeline_shader_stage_create_infos[1].module = p_mesh_pass->fragment_shader;
-        pipeline_shader_stage_create_infos[1].pName = "main";
-        pipeline_shader_stage_create_infos[1].pSpecializationInfo = NULL;
-    }
-    VkVertexInputBindingDescription vertex_input_binding_description = { 0 };
-    {
-        vertex_input_binding_description.binding = 0;
-        vertex_input_binding_description.stride = sizeof(tg_renderer_3d_geometry_pass_vertex);
-        vertex_input_binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-    }
-    VkVertexInputAttributeDescription vertex_input_attribute_descriptions[3] = { 0 };
-    {
-        vertex_input_attribute_descriptions[0].binding = 0;
-        vertex_input_attribute_descriptions[0].location = 0;
-        vertex_input_attribute_descriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-        vertex_input_attribute_descriptions[0].offset = offsetof(tg_renderer_3d_geometry_pass_vertex, position);
-        vertex_input_attribute_descriptions[1].binding = 0;
-        vertex_input_attribute_descriptions[1].location = 1;
-        vertex_input_attribute_descriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-        vertex_input_attribute_descriptions[1].offset = offsetof(tg_renderer_3d_geometry_pass_vertex, normal);
-        vertex_input_attribute_descriptions[2].binding = 0;
-        vertex_input_attribute_descriptions[2].location = 2;
-        vertex_input_attribute_descriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
-        vertex_input_attribute_descriptions[2].offset = offsetof(tg_renderer_3d_geometry_pass_vertex, uv);
-    }
-    VkPipelineVertexInputStateCreateInfo pipeline_vertex_input_state_create_info = { 0 };
-    {
-        pipeline_vertex_input_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-        pipeline_vertex_input_state_create_info.pNext = NULL;
-        pipeline_vertex_input_state_create_info.flags = 0;
-        pipeline_vertex_input_state_create_info.vertexBindingDescriptionCount = 1;
-        pipeline_vertex_input_state_create_info.pVertexBindingDescriptions = &vertex_input_binding_description;
-        pipeline_vertex_input_state_create_info.vertexAttributeDescriptionCount = sizeof(vertex_input_attribute_descriptions) / sizeof(*vertex_input_attribute_descriptions);
-        pipeline_vertex_input_state_create_info.pVertexAttributeDescriptions = vertex_input_attribute_descriptions;
-    }
-    VkPipelineInputAssemblyStateCreateInfo pipeline_input_assembly_state_create_info = { 0 };
-    {
-        pipeline_input_assembly_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-        pipeline_input_assembly_state_create_info.pNext = NULL;
-        pipeline_input_assembly_state_create_info.flags = 0;
-        pipeline_input_assembly_state_create_info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-        pipeline_input_assembly_state_create_info.primitiveRestartEnable = VK_FALSE;
-    }
-    VkViewport viewport = { 0 };
-    {
-        viewport.x = 0.0f;
-        viewport.y = 0.0f;
-        viewport.width = (float)swapchain_extent.width;
-        viewport.height = (float)swapchain_extent.height;
-        viewport.minDepth = 0.0f;
-        viewport.maxDepth = 1.0f;
-    }
-    VkRect2D scissors = { 0 };
-    {
-        scissors.offset = (VkOffset2D){ 0, 0 };
-        scissors.extent = swapchain_extent;
-    }
-    VkPipelineViewportStateCreateInfo pipeline_viewport_state_create_info = { 0 };
-    {
-        pipeline_viewport_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-        pipeline_viewport_state_create_info.pNext = NULL;
-        pipeline_viewport_state_create_info.flags = 0;
-        pipeline_viewport_state_create_info.viewportCount = 1;
-        pipeline_viewport_state_create_info.pViewports = &viewport;
-        pipeline_viewport_state_create_info.scissorCount = 1;
-        pipeline_viewport_state_create_info.pScissors = &scissors;
-    }
-    VkPipelineRasterizationStateCreateInfo pipeline_rasterization_state_create_info = { 0 };
-    {
-        pipeline_rasterization_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-        pipeline_rasterization_state_create_info.pNext = NULL;
-        pipeline_rasterization_state_create_info.flags = 0;
-        pipeline_rasterization_state_create_info.depthClampEnable = VK_FALSE;
-        pipeline_rasterization_state_create_info.rasterizerDiscardEnable = VK_FALSE;
-        pipeline_rasterization_state_create_info.polygonMode = VK_POLYGON_MODE_FILL;
-        pipeline_rasterization_state_create_info.cullMode = VK_CULL_MODE_BACK_BIT;
-        pipeline_rasterization_state_create_info.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-        pipeline_rasterization_state_create_info.depthBiasEnable = VK_FALSE;
-        pipeline_rasterization_state_create_info.depthBiasConstantFactor = 0.0f;
-        pipeline_rasterization_state_create_info.depthBiasClamp = 0.0f;
-        pipeline_rasterization_state_create_info.depthBiasSlopeFactor = 0.0f;
-        pipeline_rasterization_state_create_info.lineWidth = 1.0f;
-    }
-    VkPipelineMultisampleStateCreateInfo pipeline_multisample_state_create_info = { 0 };
-    {
-        pipeline_multisample_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-        pipeline_multisample_state_create_info.pNext = NULL;
-        pipeline_multisample_state_create_info.flags = 0;
-        pipeline_multisample_state_create_info.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;//surface.msaa_sample_count;
-        pipeline_multisample_state_create_info.sampleShadingEnable = VK_FALSE;//VK_TRUE;
-        pipeline_multisample_state_create_info.minSampleShading = 1.0f;
-        pipeline_multisample_state_create_info.pSampleMask = NULL;
-        pipeline_multisample_state_create_info.alphaToCoverageEnable = VK_FALSE;
-        pipeline_multisample_state_create_info.alphaToOneEnable = VK_FALSE;
-    }
-    VkPipelineDepthStencilStateCreateInfo pipeline_depth_stencil_state_create_info = { 0 };
-    {
-        pipeline_depth_stencil_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-        pipeline_depth_stencil_state_create_info.pNext = NULL;
-        pipeline_depth_stencil_state_create_info.flags = 0;
-        pipeline_depth_stencil_state_create_info.depthTestEnable = VK_TRUE;
-        pipeline_depth_stencil_state_create_info.depthWriteEnable = VK_TRUE;
-        pipeline_depth_stencil_state_create_info.depthCompareOp = VK_COMPARE_OP_LESS;
-        pipeline_depth_stencil_state_create_info.depthBoundsTestEnable = VK_FALSE;
-        pipeline_depth_stencil_state_create_info.stencilTestEnable = VK_FALSE;
-        pipeline_depth_stencil_state_create_info.front.failOp = VK_STENCIL_OP_KEEP;
-        pipeline_depth_stencil_state_create_info.front.passOp = VK_STENCIL_OP_KEEP;
-        pipeline_depth_stencil_state_create_info.front.depthFailOp = VK_STENCIL_OP_KEEP;
-        pipeline_depth_stencil_state_create_info.front.compareOp = VK_COMPARE_OP_NEVER;
-        pipeline_depth_stencil_state_create_info.front.compareMask = 0;
-        pipeline_depth_stencil_state_create_info.front.writeMask = 0;
-        pipeline_depth_stencil_state_create_info.front.reference = 0;
-        pipeline_depth_stencil_state_create_info.back.failOp = VK_STENCIL_OP_KEEP;
-        pipeline_depth_stencil_state_create_info.back.passOp = VK_STENCIL_OP_KEEP;
-        pipeline_depth_stencil_state_create_info.back.depthFailOp = VK_STENCIL_OP_KEEP;
-        pipeline_depth_stencil_state_create_info.back.compareOp = VK_COMPARE_OP_NEVER;
-        pipeline_depth_stencil_state_create_info.back.compareMask = 0;
-        pipeline_depth_stencil_state_create_info.back.writeMask = 0;
-        pipeline_depth_stencil_state_create_info.back.reference = 0;
-        pipeline_depth_stencil_state_create_info.minDepthBounds = 0.0f;
-        pipeline_depth_stencil_state_create_info.maxDepthBounds = 0.0f;
-    }
-    VkPipelineColorBlendAttachmentState pipeline_color_blend_attachment_state = { 0 };
-    {
-        pipeline_color_blend_attachment_state.blendEnable = VK_TRUE;
-        pipeline_color_blend_attachment_state.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-        pipeline_color_blend_attachment_state.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-        pipeline_color_blend_attachment_state.colorBlendOp = VK_BLEND_OP_ADD;
-        pipeline_color_blend_attachment_state.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-        pipeline_color_blend_attachment_state.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-        pipeline_color_blend_attachment_state.alphaBlendOp = VK_BLEND_OP_ADD;
-        pipeline_color_blend_attachment_state.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-    }
-    VkPipelineColorBlendStateCreateInfo pipeline_color_blend_state_create_info = { 0 };
-    {
-        pipeline_color_blend_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-        pipeline_color_blend_state_create_info.pNext = NULL;
-        pipeline_color_blend_state_create_info.flags = 0;
-        pipeline_color_blend_state_create_info.logicOpEnable = VK_FALSE;
-        pipeline_color_blend_state_create_info.logicOp = VK_LOGIC_OP_COPY;
-        pipeline_color_blend_state_create_info.attachmentCount = 1;
-        pipeline_color_blend_state_create_info.pAttachments = &pipeline_color_blend_attachment_state;
-        pipeline_color_blend_state_create_info.blendConstants[0] = 0.0f;
-        pipeline_color_blend_state_create_info.blendConstants[1] = 0.0f;
-        pipeline_color_blend_state_create_info.blendConstants[2] = 0.0f;
-        pipeline_color_blend_state_create_info.blendConstants[3] = 0.0f;
-    }
-    VkGraphicsPipelineCreateInfo graphics_pipeline_create_info = { 0 };
-    {
-        graphics_pipeline_create_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-        graphics_pipeline_create_info.pNext = NULL;
-        graphics_pipeline_create_info.flags = 0;
-        graphics_pipeline_create_info.stageCount = sizeof(pipeline_shader_stage_create_infos) / sizeof(*pipeline_shader_stage_create_infos);
-        graphics_pipeline_create_info.pStages = pipeline_shader_stage_create_infos;
-        graphics_pipeline_create_info.pVertexInputState = &pipeline_vertex_input_state_create_info;
-        graphics_pipeline_create_info.pInputAssemblyState = &pipeline_input_assembly_state_create_info;
-        graphics_pipeline_create_info.pTessellationState = NULL;
-        graphics_pipeline_create_info.pViewportState = &pipeline_viewport_state_create_info;
-        graphics_pipeline_create_info.pRasterizationState = &pipeline_rasterization_state_create_info;
-        graphics_pipeline_create_info.pMultisampleState = &pipeline_multisample_state_create_info;
-        graphics_pipeline_create_info.pDepthStencilState = &pipeline_depth_stencil_state_create_info;
-        graphics_pipeline_create_info.pColorBlendState = &pipeline_color_blend_state_create_info;
-        graphics_pipeline_create_info.pDynamicState = NULL;
-        graphics_pipeline_create_info.layout = p_mesh_pass->pipeline_layout;
-        graphics_pipeline_create_info.renderPass = geometry_pass.render_pass;
-        graphics_pipeline_create_info.subpass = 0;
-        graphics_pipeline_create_info.basePipelineHandle = VK_NULL_HANDLE;
-        graphics_pipeline_create_info.basePipelineIndex = -1;
-    }
-    VK_CALL(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &graphics_pipeline_create_info, NULL, &p_mesh_pass->pipeline));
-
-    VkCommandBufferAllocateInfo command_buffer_allocate_info = { 0 };
-    {
-        command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        command_buffer_allocate_info.pNext = NULL;
-        command_buffer_allocate_info.commandPool = command_pool;
-        command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        command_buffer_allocate_info.commandBufferCount = 1;
-    }
-    VK_CALL(vkAllocateCommandBuffers(device, &command_buffer_allocate_info, &p_mesh_pass->command_buffer));
-
-    VkDescriptorBufferInfo descriptor_buffer_info = { 0 };
-    {
-        descriptor_buffer_info.buffer = p_mesh_pass->ubo.buffer;
-        descriptor_buffer_info.offset = 0;
-        descriptor_buffer_info.range = sizeof(tg_uniform_buffer_object);
-    }
-    VkWriteDescriptorSet write_descriptor_set = { 0 };
-    {
-        write_descriptor_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        write_descriptor_set.pNext = NULL;
-        write_descriptor_set.dstSet = geometry_pass.descriptor_set;
-        write_descriptor_set.dstBinding = 0;
-        write_descriptor_set.dstArrayElement = 0;
-        write_descriptor_set.descriptorCount = 1;
-        write_descriptor_set.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-        write_descriptor_set.pImageInfo = NULL;
-        write_descriptor_set.pBufferInfo = &descriptor_buffer_info;
-        write_descriptor_set.pTexelBufferView = NULL;
-    }
-    vkUpdateDescriptorSets(device, 1, &write_descriptor_set, 0, NULL);
-
-    VkCommandBufferBeginInfo command_buffer_begin_info = { 0 };
-    {
-        command_buffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        command_buffer_begin_info.pNext = NULL;
-        command_buffer_begin_info.flags = 0;
-        command_buffer_begin_info.pInheritanceInfo = NULL;
-    }
-    VK_CALL(vkBeginCommandBuffer(p_mesh_pass->command_buffer, &command_buffer_begin_info));
-    vkCmdBindPipeline(p_mesh_pass->command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_mesh_pass->pipeline);
-
-    const VkDeviceSize vertex_buffer_offset = 0;
-    vkCmdBindVertexBuffers(p_mesh_pass->command_buffer, 0, 1, &p_mesh_pass->vbo.buffer, &vertex_buffer_offset);
-    vkCmdBindIndexBuffer(p_mesh_pass->command_buffer, p_mesh_pass->ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
-
-    const ui32 dynamic_offset = 0;
-    vkCmdBindDescriptorSets(p_mesh_pass->command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_mesh_pass->pipeline_layout, 0, 1, &geometry_pass.descriptor_set, 1, &dynamic_offset);
-
-    VkClearValue clear_values[2] = { 0 };
-    {
-        clear_values[0].color = (VkClearColorValue){ 0.0f, 0.0f, 0.0f, 1.0f };
-        clear_values[0].depthStencil = (VkClearDepthStencilValue){ 0.0f, 0 };
-        clear_values[1].color = (VkClearColorValue){ 0.0f, 0.0f, 0.0f, 0.0f };
-        clear_values[1].depthStencil = (VkClearDepthStencilValue){ 1.0f, 0 };
-    }
-    VkRenderPassBeginInfo render_pass_begin_info = { 0 };
-    {
-        render_pass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        render_pass_begin_info.pNext = NULL;
-        render_pass_begin_info.renderPass = geometry_pass.render_pass;
-        render_pass_begin_info.framebuffer = geometry_pass.framebuffer;
-        render_pass_begin_info.renderArea.offset = (VkOffset2D){ 0, 0 };
-        render_pass_begin_info.renderArea.extent = swapchain_extent;
-        render_pass_begin_info.clearValueCount = sizeof(clear_values) / sizeof(*clear_values);
-        render_pass_begin_info.pClearValues = clear_values; // TODO: NULL?
-    }
-    vkCmdBeginRenderPass(p_mesh_pass->command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
-    vkCmdDrawIndexed(p_mesh_pass->command_buffer, 6, 1, 0, 0, 0);
-    vkCmdEndRenderPass(p_mesh_pass->command_buffer);
-    VK_CALL(vkEndCommandBuffer(p_mesh_pass->command_buffer));
+    *p_framebuffer = geometry_pass.framebuffer;
+}
+void tg_graphics_vulkan_renderer_3d_get_geometry_render_pass(VkRenderPass* p_render_pass)
+{
+    *p_render_pass = geometry_pass.render_pass;
 }
 void tg_graphics_renderer_3d_internal_init_geometry_pass()
 {
@@ -732,54 +350,9 @@ void tg_graphics_renderer_3d_internal_init_geometry_pass()
         framebuffer_create_info.layers = 1;
     }
     VK_CALL(vkCreateFramebuffer(device, &framebuffer_create_info, NULL, &geometry_pass.framebuffer));
-
-    VkDescriptorPoolSize descriptor_pool_size = { 0 };
-    {
-        descriptor_pool_size.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-        descriptor_pool_size.descriptorCount = 1;
-    }
-    VkDescriptorPoolCreateInfo descriptor_pool_create_info = { 0 };
-    {
-        descriptor_pool_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-        descriptor_pool_create_info.pNext = NULL;
-        descriptor_pool_create_info.flags = 0;
-        descriptor_pool_create_info.maxSets = 1;
-        descriptor_pool_create_info.poolSizeCount = 1;
-        descriptor_pool_create_info.pPoolSizes = &descriptor_pool_size;
-    }
-    VK_CALL(vkCreateDescriptorPool(device, &descriptor_pool_create_info, NULL, &geometry_pass.descriptor_pool));
-
-    VkDescriptorSetLayoutBinding descriptor_set_layout_binding = { 0 };
-    {
-        descriptor_set_layout_binding.binding = 0;
-        descriptor_set_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-        descriptor_set_layout_binding.descriptorCount = 1;
-        descriptor_set_layout_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-        descriptor_set_layout_binding.pImmutableSamplers = NULL;
-    }
-    VkDescriptorSetLayoutCreateInfo descriptor_set_layout_create_info = { 0 };
-    {
-        descriptor_set_layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        descriptor_set_layout_create_info.pNext = NULL;
-        descriptor_set_layout_create_info.flags = 0;
-        descriptor_set_layout_create_info.bindingCount = 1;
-        descriptor_set_layout_create_info.pBindings = &descriptor_set_layout_binding;
-    }
-    VK_CALL(vkCreateDescriptorSetLayout(device, &descriptor_set_layout_create_info, NULL, &geometry_pass.descriptor_set_layout));
-
-    VkDescriptorSetAllocateInfo descriptor_set_allocate_info = { 0 };
-    {
-        descriptor_set_allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-        descriptor_set_allocate_info.pNext = NULL;
-        descriptor_set_allocate_info.descriptorPool = geometry_pass.descriptor_pool;
-        descriptor_set_allocate_info.descriptorSetCount = 1;
-        descriptor_set_allocate_info.pSetLayouts = &geometry_pass.descriptor_set_layout;
-    }
-    VK_CALL(vkAllocateDescriptorSets(device, &descriptor_set_allocate_info, &geometry_pass.descriptor_set));
 }
 void tg_graphics_renderer_3d_internal_init_shading_pass()
 {
-
 }
 void tg_graphics_renderer_3d_internal_init_present_pass()
 {
@@ -1349,14 +922,13 @@ void tg_graphics_renderer_3d_init()
     tg_graphics_renderer_3d_internal_init_shading_pass();
     tg_graphics_renderer_3d_internal_init_present_pass();
     tg_graphics_renderer_3d_internal_init_clear_pass();
-    create_mesh_render_pass(&mp);
 }
-void tg_graphics_renderer_3d_draw_mEsHpAsS(const mesh_pass* p_mesh_pass)
+void tg_graphics_renderer_3d_draw(const tg_model_h model_h)
 {
     // geometry pass
 
     tg_uniform_buffer_object* p_uniform_buffer_object = NULL;
-    VK_CALL(vkMapMemory(device, p_mesh_pass->ubo.device_memory, 0, sizeof(*p_uniform_buffer_object), 0, &p_uniform_buffer_object));
+    VK_CALL(vkMapMemory(device, model_h->material->ubo.device_memory, 0, sizeof(*p_uniform_buffer_object), 0, &p_uniform_buffer_object));
     {
         tgm_vec3f from = { -1.0f, 1.0f, 1.0f };
         tgm_vec3f to = { 0.0f, 0.0f, -2.0f };
@@ -1370,7 +942,7 @@ void tg_graphics_renderer_3d_draw_mEsHpAsS(const mesh_pass* p_mesh_pass)
         tgm_m4f_look_at(&p_uniform_buffer_object->view, &from, &to, &up);
         tgm_m4f_perspective(&p_uniform_buffer_object->projection, fov_y, aspect, n, f);
     }
-    vkUnmapMemory(device, p_mesh_pass->ubo.device_memory);
+    vkUnmapMemory(device, model_h->material->ubo.device_memory);
 
     VkSubmitInfo submit_info = { 0 };
     {
@@ -1380,17 +952,13 @@ void tg_graphics_renderer_3d_draw_mEsHpAsS(const mesh_pass* p_mesh_pass)
         submit_info.pWaitSemaphores = NULL;
         submit_info.pWaitDstStageMask = NULL;
         submit_info.commandBufferCount = 1;
-        submit_info.pCommandBuffers = &p_mesh_pass->command_buffer;
+        submit_info.pCommandBuffers = &model_h->command_buffer;
         submit_info.signalSemaphoreCount = 0;
         submit_info.pSignalSemaphores = NULL;
     }
     VK_CALL(vkResetFences(device, 1, &geometry_pass.rendering_finished_fence));
     VK_CALL(vkQueueSubmit(graphics_queue.queue, 1, &submit_info, geometry_pass.rendering_finished_fence));
     VK_CALL(vkWaitForFences(device, 1, &geometry_pass.rendering_finished_fence, VK_TRUE, UINT64_MAX));
-}
-void tg_graphics_renderer_3d_draw(const tg_mesh_h p_mesh)
-{
-    tg_graphics_renderer_3d_draw_mEsHpAsS(&mp);
 }
 void tg_graphics_renderer_3d_present()
 {
@@ -1445,6 +1013,10 @@ void tg_graphics_renderer_3d_present()
     }
     VK_CALL(vkQueueSubmit(graphics_queue.queue, 1, &clear_submit_info, NULL));
     VK_CALL(vkQueueWaitIdle(graphics_queue.queue));
+}
+void tg_graphics_renderer_3d_shutdown()
+{
+
 }
 
 #endif

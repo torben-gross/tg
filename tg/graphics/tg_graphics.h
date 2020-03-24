@@ -112,9 +112,8 @@ typedef enum tg_vertex_shader_layout_element_type
 typedef struct tg_vertex
 {
 	tgm_vec3f    position;
-	tgm_vec3f    color;
+	tgm_vec3f    normal;
 	tgm_vec2f    uv;
-	i32          image;
 } tg_vertex;
 
 typedef struct tg_uniform_buffer_object
@@ -134,10 +133,12 @@ void tg_graphics_fragment_shader_create(const char* filename, tg_fragment_shader
 void tg_graphics_fragment_shader_destroy(tg_fragment_shader_h p_fragment_shader_h);
 void tg_graphics_image_create(const char* filename, tg_image_h* p_image_h);
 void tg_graphics_image_destroy(tg_image_h image_h);
-void tg_graphics_material_create(tg_vertex_shader_h vertex_shader, tg_fragment_shader_h fragment_shader, tg_material_h* p_material_h);
+void tg_graphics_material_create(tg_vertex_shader_h vertex_shader_h, tg_fragment_shader_h fragment_shader_h, tg_material_h* p_material_h);
 void tg_graphics_material_destroy(tg_material_h material_h);
 void tg_graphics_mesh_create(ui32 vertex_count, const tgm_vec3f* positions, const tgm_vec3f* normals, const tgm_vec2f* uvs, ui32 index_count, const ui16* indices, tg_mesh_h* p_mesh_h);
 void tg_graphics_mesh_destroy(tg_mesh_h mesh_h);
+void tg_graphics_model_create(tg_mesh_h mesh_h, tg_material_h material_h, tg_model_h* p_model_h);
+void tg_graphics_model_destroy(tg_model_h model_h);
 void tg_graphics_vertex_shader_create(const char* filename, tg_vertex_shader_h* p_shader_h);
 void tg_graphics_vertex_shader_destroy(tg_vertex_shader_h shader_h);
 
@@ -160,8 +161,7 @@ void tg_graphics_renderer_2d_draw_call_count(ui32* draw_call_count);
 ---- 3D Renderer
 */
 void tg_graphics_renderer_3d_init();
-void tg_graphics_renderer_3d_register_model(tg_model_h model_h);
-void tg_graphics_renderer_3d_draw(const tg_mesh_h mesh_h);
+void tg_graphics_renderer_3d_draw(const tg_model_h model_h);
 void tg_graphics_renderer_3d_present();
 void tg_graphics_renderer_3d_shutdown();
 void tg_graphics_renderer_3d_on_window_resize(ui32 w, ui32 h);

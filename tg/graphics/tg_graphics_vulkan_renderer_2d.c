@@ -1,3 +1,4 @@
+/*
 #include "tg_graphics_vulkan.h"
 
 #ifdef TG_VULKAN
@@ -1689,3 +1690,4 @@ void tg_graphics_renderer_2d_draw_call_count(ui32* draw_call_count)
 #endif
 
 #endif
+*/

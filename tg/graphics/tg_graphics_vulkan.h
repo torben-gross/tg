@@ -1,7 +1,7 @@
 #ifndef TG_GRAPHICS_VULKAN_H
 #define TG_GRAPHICS_VULKAN_H
 
-#include "tg_graphics.h"
+#include "tg/graphics/tg_graphics.h"
 
 #ifdef TG_VULKAN
 
@@ -51,6 +51,11 @@
 
 
 
+typedef struct tg_fragment_shader
+{
+    VkShaderModule shader_module;
+} tg_fragment_shader;
+
 typedef struct tg_image
 {
     ui32               width;
@@ -63,15 +68,50 @@ typedef struct tg_image
     VkSampler          sampler;
 } tg_image;
 
+typedef struct tg_material
+{
+    struct
+    {
+        VkBuffer             buffer;
+        VkDeviceMemory       device_memory;
+    } ubo;
+
+    tg_vertex_shader_h       vertex_shader;
+    tg_fragment_shader_h     fragment_shader;
+    VkDescriptorPool         descriptor_pool;
+    VkDescriptorSetLayout    descriptor_set_layout;
+    VkDescriptorSet          descriptor_set;
+    VkPipelineLayout         pipeline_layout;
+    VkPipeline               pipeline;
+} tg_material;
+
+typedef struct tg_mesh
+{
+    struct
+    {
+        VkBuffer       buffer;
+        VkDeviceMemory device_memory;
+    } vbo;
+
+    struct
+    {
+        VkBuffer       buffer;
+        VkDeviceMemory device_memory;
+    } ibo;
+} tg_mesh;
+
+typedef struct tg_model
+{
+    tg_mesh_h mesh;
+    tg_material_h material;
+    VkCommandPool command_pool;
+    VkCommandBuffer command_buffer;
+} tg_model;
+
 typedef struct tg_vertex_shader
 {
     VkShaderModule shader_module;
 } tg_vertex_shader;
-
-typedef struct tg_fragment_shader
-{
-    VkShaderModule shader_module;
-} tg_fragment_shader;
 
 
 

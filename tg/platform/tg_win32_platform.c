@@ -41,11 +41,6 @@ void tg_platform_debug_print_performance()
         snprintf(buffer, sizeof(buffer), "%lu fps\n", fps);
         OutputDebugStringA(buffer);
 
-        ui32 draw_call_count = 0;
-        tg_graphics_renderer_2d_draw_call_count(&draw_call_count);
-        snprintf(buffer, sizeof(buffer), "%u draw calls\n\n", draw_call_count / fps);
-        OutputDebugStringA(buffer);
-
         milliseconds_sum = 0.0f;
         fps = 0;
     }
@@ -120,7 +115,7 @@ LRESULT CALLBACK tg_platform_win32_window_proc(HWND window_h, UINT message, WPAR
     case WM_SIZE:
     {
         tg_graphics_on_window_resize((ui32)LOWORD(l_param), (ui32)HIWORD(l_param));
-        tg_graphics_renderer_2d_on_window_resize((ui32)LOWORD(l_param), (ui32)HIWORD(l_param));
+        //tg_graphics_renderer_2d_on_window_resize((ui32)LOWORD(l_param), (ui32)HIWORD(l_param)); TODO
     } break;
     default:
         return DefWindowProcA(window_h, message, w_param, l_param);
@@ -167,6 +162,7 @@ int CALLBACK WinMain(_In_ HINSTANCE instance_h, _In_opt_ HINSTANCE prev_instance
     SetWindowLongPtr(window_h, GWLP_WNDPROC, (LONG_PTR)&tg_platform_win32_window_proc);
 
     tg_application_start();
+
     TG_ASSERT(tg_allocator_unfreed_allocation_count() == 0);
     return EXIT_SUCCESS;
 }

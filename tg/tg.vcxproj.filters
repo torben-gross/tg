@@ -13,6 +13,8 @@
     <ClCompile Include="graphics\tg_graphics_vulkan_renderer_3d.c" />
     <ClCompile Include="graphics\tg_graphics_vulkan_renderer_2d.c" />
     <ClCompile Include="tg_application.c" />
+    <ClCompile Include="graphics\tg_graphics_vulkan_material.c" />
+    <ClCompile Include="graphics\tg_graphics_vulkan_model.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="tg_common.h" />
@@ -25,6 +27,7 @@
     <ClInclude Include="tg_entity.h" />
     <ClInclude Include="graphics\tg_graphics_image_loader.h" />
     <ClInclude Include="tg_application.h" />
+    <ClInclude Include="graphics\tg_graphics_vulkan_renderer_3d.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="tg.ruleset" />
