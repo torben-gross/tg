@@ -171,8 +171,8 @@ void tg_graphics_material_create(tg_vertex_shader_h vertex_shader_h, tg_fragment
         pipeline_multisample_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
         pipeline_multisample_state_create_info.pNext = NULL;
         pipeline_multisample_state_create_info.flags = 0;
-        pipeline_multisample_state_create_info.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;//surface.msaa_sample_count;
-        pipeline_multisample_state_create_info.sampleShadingEnable = VK_FALSE;//VK_TRUE;
+        pipeline_multisample_state_create_info.rasterizationSamples = surface.msaa_sample_count;
+        pipeline_multisample_state_create_info.sampleShadingEnable = VK_TRUE;
         pipeline_multisample_state_create_info.minSampleShading = 1.0f;
         pipeline_multisample_state_create_info.pSampleMask = NULL;
         pipeline_multisample_state_create_info.alphaToCoverageEnable = VK_FALSE;

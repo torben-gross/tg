@@ -15,6 +15,7 @@
 VKAPI_ATTR VkBool32 VKAPI_CALL tgvk_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity, VkDebugUtilsMessageTypeFlagsEXT message_type, const VkDebugUtilsMessengerCallbackDataEXT* callback_data, void* user_data)
 {
     TG_DEBUG_PRINT(callback_data->pMessage);
+    TG_DEBUG_BREAK();
     return VK_TRUE;
 }
 #endif

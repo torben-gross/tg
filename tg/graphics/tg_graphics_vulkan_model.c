@@ -65,7 +65,10 @@ void tg_graphics_model_create(tg_mesh_h mesh_h, tg_material_h material_h, tg_mod
 
     const VkDeviceSize vertex_buffer_offset = 0;
     vkCmdBindVertexBuffers((**p_model_h).command_buffer, 0, 1, &(**p_model_h).mesh->vbo.buffer, &vertex_buffer_offset);
-    vkCmdBindIndexBuffer((**p_model_h).command_buffer, (**p_model_h).mesh->ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
+    if ((**p_model_h).mesh->ibo.index_count != 0)
+    {
+        vkCmdBindIndexBuffer((**p_model_h).command_buffer, (**p_model_h).mesh->ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
+    }
 
     const ui32 dynamic_offset = 0;
     vkCmdBindDescriptorSets((**p_model_h).command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, (**p_model_h).material->pipeline_layout, 0, 1, &(**p_model_h).material->descriptor_set, 1, &dynamic_offset);
