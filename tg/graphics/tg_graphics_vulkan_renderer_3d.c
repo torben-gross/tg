@@ -222,23 +222,24 @@ void tg_graphics_renderer_3d_internal_init_present_pass()
 
     tg_renderer_3d_present_pass_vertex vertices[4] = { 0 };
     {
+        // TODO: y is inverted, because image has to be flipped. add projection matrix to present vertex shader?
         vertices[0].position.x = -1.0f;
-        vertices[0].position.y =  1.0f;
+        vertices[0].position.y = -1.0f;
         vertices[0].uv.x       =  0.0f;
         vertices[0].uv.y       =  0.0f;
 
         vertices[1].position.x =  1.0f;
-        vertices[1].position.y =  1.0f;
+        vertices[1].position.y = -1.0f;
         vertices[1].uv.x       =  1.0f;
         vertices[1].uv.y       =  0.0f;
 
         vertices[2].position.x =  1.0f;
-        vertices[2].position.y = -1.0f;
+        vertices[2].position.y =  1.0f;
         vertices[2].uv.x       =  1.0f;
         vertices[2].uv.y       =  1.0f;
 
         vertices[3].position.x = -1.0f;
-        vertices[3].position.y = -1.0f;
+        vertices[3].position.y =  1.0f;
         vertices[3].uv.x       =  0.0f;
         vertices[3].uv.y       =  1.0f;
     }                     
@@ -701,22 +702,24 @@ void tg_graphics_renderer_3d_init()
 }
 void tg_graphics_renderer_3d_draw(const tg_model_h model_h)
 {
-    // geometry pass
+    // TODO: full geometry pass
 
     tg_uniform_buffer_object* p_uniform_buffer_object = NULL;
     VK_CALL(vkMapMemory(device, model_h->material->ubo.device_memory, 0, sizeof(*p_uniform_buffer_object), 0, &p_uniform_buffer_object));
     {
-        tgm_vec3f from = { -1.0f, 1.0f, 1.0f };
+        tgm_vec3f from = { -1.0f, 1.0f, 7.0f };
+        //tgm_vec3f from = { 0.0f, 0.0f, 0.0f };
         tgm_vec3f to = { 0.0f, 0.0f, -2.0f };
         tgm_vec3f up = { 0.0f, 1.0f, 0.0f };
         const tgm_vec3f translation_vector = { 0.0f, 0.0f, -2.0f };
-        const f32 fov_y = TGM_TO_DEGREES(70.0f);
+        const f32 fov_y_in_radians = TGM_TO_RADIANS(70.0f);
         const f32 aspect = (f32)swapchain_extent.width / (f32)swapchain_extent.height;
         const f32 n = -0.1f;
         const f32 f = -1000.0f;
         tgm_m4f_translate(&p_uniform_buffer_object->model, &translation_vector);
         tgm_m4f_look_at(&p_uniform_buffer_object->view, &from, &to, &up);
-        tgm_m4f_perspective(&p_uniform_buffer_object->projection, fov_y, aspect, n, f);
+        tgm_m4f_perspective(&p_uniform_buffer_object->projection, fov_y_in_radians, aspect, n, f);
+        //tgm_m4f_orthographic(&p_uniform_buffer_object->projection, -10, 10, -10, 10, -10, 10);
     }
     vkUnmapMemory(device, model_h->material->ubo.device_memory);
 

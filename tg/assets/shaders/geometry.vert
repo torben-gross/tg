@@ -18,7 +18,7 @@ layout(location = 2) out vec2    v_uv;
 
 void main()
 {
-    gl_Position = u_projection * u_view  * u_model * vec4(in_position, 1.0);
+    gl_Position = u_projection * u_view * u_model * vec4(in_position, 1.0);
 	v_position  = (u_model * vec4(in_position, 1.0));
 	v_normal    = (u_model * vec4(in_normal, 0.0)).xyz;
 	v_uv        = in_uv;

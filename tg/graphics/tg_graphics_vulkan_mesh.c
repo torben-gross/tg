@@ -6,10 +6,11 @@
 
 void tg_graphics_mesh_create(ui32 vertex_count, const tgm_vec3f* positions, const tgm_vec3f* normals, const tgm_vec2f* uvs, ui32 index_count, const ui16* indices, tg_mesh_h* p_mesh_h)
 {
-	TG_ASSERT(vertex_count && positions && normals && uvs && p_mesh_h);
-	TG_ASSERT(index_count && indices); // TODO: if indices 0, dont use index buffer! remove assertion
+	TG_ASSERT(vertex_count && positions && normals && uvs && p_mesh_h && index_count % 3 == 0);
 
 	*p_mesh_h = tg_allocator_allocate(sizeof(**p_mesh_h));
+    (**p_mesh_h).vbo.vertex_count = vertex_count;
+    (**p_mesh_h).ibo.index_count = index_count;
 
     VkBuffer staging_buffer = VK_NULL_HANDLE;
     VkDeviceMemory staging_buffer_memory = VK_NULL_HANDLE;
@@ -34,22 +35,33 @@ void tg_graphics_mesh_create(ui32 vertex_count, const tgm_vec3f* positions, cons
     tg_graphics_vulkan_buffer_copy(vbo_size, staging_buffer, (**p_mesh_h).vbo.buffer);
     tg_graphics_vulkan_buffer_destroy(staging_buffer, staging_buffer_memory);
 
-    tg_graphics_vulkan_buffer_create(ibo_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &staging_buffer, &staging_buffer_memory);
-    VK_CALL(vkMapMemory(device, staging_buffer_memory, 0, ibo_size, 0, &ibo_data));
+    if (index_count > 0)
     {
-        memcpy(ibo_data, indices, ibo_size);
+        tg_graphics_vulkan_buffer_create(ibo_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &staging_buffer, &staging_buffer_memory);
+        VK_CALL(vkMapMemory(device, staging_buffer_memory, 0, ibo_size, 0, &ibo_data));
+        {
+            memcpy(ibo_data, indices, ibo_size);
+        }
+        vkUnmapMemory(device, staging_buffer_memory);
+        tg_graphics_vulkan_buffer_create(ibo_size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &(**p_mesh_h).ibo.buffer, &(**p_mesh_h).ibo.device_memory);
+        tg_graphics_vulkan_buffer_copy(ibo_size, staging_buffer, (**p_mesh_h).ibo.buffer);
+        tg_graphics_vulkan_buffer_destroy(staging_buffer, staging_buffer_memory);
     }
-    vkUnmapMemory(device, staging_buffer_memory);
-    tg_graphics_vulkan_buffer_create(ibo_size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &(**p_mesh_h).ibo.buffer, &(**p_mesh_h).ibo.device_memory);
-    tg_graphics_vulkan_buffer_copy(ibo_size, staging_buffer, (**p_mesh_h).ibo.buffer);
-    tg_graphics_vulkan_buffer_destroy(staging_buffer, staging_buffer_memory);
+    else
+    {
+        (**p_mesh_h).ibo.buffer = VK_NULL_HANDLE;
+        (**p_mesh_h).ibo.device_memory = VK_NULL_HANDLE;
+    }
 }
 
 void tg_graphics_mesh_destroy(tg_mesh_h mesh_h)
 {
     TG_ASSERT(mesh_h);
 
-    tg_graphics_vulkan_buffer_destroy(mesh_h->ibo.buffer, mesh_h->ibo.device_memory);
+    if (mesh_h->ibo.buffer && mesh_h->ibo.device_memory)
+    {
+        tg_graphics_vulkan_buffer_destroy(mesh_h->ibo.buffer, mesh_h->ibo.device_memory);
+    }
     tg_graphics_vulkan_buffer_destroy(mesh_h->vbo.buffer, mesh_h->vbo.device_memory);
 	tg_allocator_free(mesh_h);
 }

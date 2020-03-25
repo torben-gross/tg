@@ -89,7 +89,14 @@ void tg_graphics_model_create(tg_mesh_h mesh_h, tg_material_h material_h, tg_mod
         render_pass_begin_info.pClearValues = clear_values; // TODO: NULL?
     }
     vkCmdBeginRenderPass((**p_model_h).command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
-    vkCmdDrawIndexed((**p_model_h).command_buffer, 6, 1, 0, 0, 0);
+    if ((**p_model_h).mesh->ibo.index_count != 0)
+    {
+        vkCmdDrawIndexed((**p_model_h).command_buffer, (**p_model_h).mesh->ibo.index_count, 1, 0, 0, 0);
+    }
+    else
+    {
+        vkCmdDraw((**p_model_h).command_buffer, (**p_model_h).mesh->vbo.vertex_count, 1, 0, 0);
+    }
     vkCmdEndRenderPass((**p_model_h).command_buffer);
     VK_CALL(vkEndCommandBuffer((**p_model_h).command_buffer));
 }

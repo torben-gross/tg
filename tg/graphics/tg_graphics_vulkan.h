@@ -89,12 +89,14 @@ typedef struct tg_mesh
 {
     struct
     {
+        ui32           vertex_count;
         VkBuffer       buffer;
         VkDeviceMemory device_memory;
     } vbo;
 
     struct
     {
+        ui32           index_count;
         VkBuffer       buffer;
         VkDeviceMemory device_memory;
     } ibo;
@@ -127,6 +129,23 @@ typedef struct tg_queue
     ui8        index;
     VkQueue    queue;
 } tg_queue;
+
+typedef struct tg_vulkan_image_create_info
+{
+    VkFormat                 format;
+    ui32                     width;
+    ui32                     height;
+    ui32                     mip_levels;
+    VkSampleCountFlagBits    sample_count_flag_bits;
+    VkImageUsageFlags        image_usage_flags;
+    VkMemoryPropertyFlags    memory_property_flags;
+    VkImageLayout            image_layout;
+} tg_vulkan_image_create_info;
+/*
+TODO: use above for image creation. also: make image_transition_layout to
+tg_graphics_vulkan_command_buffer_cmd_transition_layout and use accordingly (do
+not create command buffer in there)
+*/
 
 
 

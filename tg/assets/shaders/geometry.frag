@@ -9,5 +9,5 @@ layout(location = 0) out vec4    out_position;
 
 void main()
 {
-    out_position = v_position;
+    out_position = vec4(v_uv, 0.0, 1.0);
 }
