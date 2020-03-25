@@ -4,7 +4,7 @@
 #include "tg/tg_common.h"
 
 #ifdef TG_DEBUG
-#define TG_DEBUG_BREAK()                __debugbreak()
+#define TG_DEBUG_BREAK()                TG_ASSERT(false)
 #define TG_DEBUG_PRINT(x)               tg_platform_debug_print(x)
 #define TG_DEBUG_PRINT_PERFORMANCE()    tg_platform_debug_print_performance()
 #else

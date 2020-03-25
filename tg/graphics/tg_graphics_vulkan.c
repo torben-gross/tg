@@ -15,7 +15,6 @@
 VKAPI_ATTR VkBool32 VKAPI_CALL tgvk_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity, VkDebugUtilsMessageTypeFlagsEXT message_type, const VkDebugUtilsMessengerCallbackDataEXT* callback_data, void* user_data)
 {
     TG_DEBUG_PRINT(callback_data->pMessage);
-    TG_DEBUG_BREAK();
     return VK_TRUE;
 }
 #endif
@@ -120,6 +119,27 @@ void tg_graphics_vulkan_command_buffer_begin(VkCommandBufferUsageFlags usage_fla
         command_buffer_begin_info.pInheritanceInfo = NULL;
     }
     VK_CALL(vkBeginCommandBuffer(command_buffer, &command_buffer_begin_info));
+}
+void tg_graphics_vulkan_command_buffer_cmd_transition_image_layout(VkCommandBuffer command_buffer, VkImage image, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkImageAspectFlags aspect_mask, ui32 mip_levels, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits)
+{
+    VkImageMemoryBarrier image_memory_barrier = { 0 };
+    {
+        image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        image_memory_barrier.pNext = NULL;
+        image_memory_barrier.srcAccessMask = src_access_mask;
+        image_memory_barrier.dstAccessMask = dst_access_mask;
+        image_memory_barrier.oldLayout = old_layout;
+        image_memory_barrier.newLayout = new_layout;
+        image_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        image_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        image_memory_barrier.image = image;
+        image_memory_barrier.subresourceRange.aspectMask = aspect_mask;
+        image_memory_barrier.subresourceRange.baseMipLevel = 0;
+        image_memory_barrier.subresourceRange.levelCount = mip_levels;
+        image_memory_barrier.subresourceRange.baseArrayLayer = 0;
+        image_memory_barrier.subresourceRange.layerCount = 1;
+    }
+    vkCmdPipelineBarrier(command_buffer, src_stage_bits, dst_stage_bits, 0, 0, NULL, 0, NULL, 1, &image_memory_barrier);
 }
 void tg_graphics_vulkan_command_buffer_end_and_submit(VkCommandBuffer command_buffer)
 {
@@ -397,26 +417,7 @@ void tg_graphics_vulkan_image_transition_layout(VkImage image, VkAccessFlags src
     VkCommandBuffer command_buffer;
     tg_graphics_vulkan_command_buffer_allocate(command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, &command_buffer);
     tg_graphics_vulkan_command_buffer_begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, command_buffer);
-
-    VkImageMemoryBarrier image_memory_barrier = { 0 };
-    {
-        image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        image_memory_barrier.pNext = NULL;
-        image_memory_barrier.srcAccessMask = src_access_mask;
-        image_memory_barrier.dstAccessMask = dst_access_mask;
-        image_memory_barrier.oldLayout = old_layout;
-        image_memory_barrier.newLayout = new_layout;
-        image_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        image_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        image_memory_barrier.image = image;
-        image_memory_barrier.subresourceRange.aspectMask = aspect_mask;
-        image_memory_barrier.subresourceRange.baseMipLevel = 0;
-        image_memory_barrier.subresourceRange.levelCount = mip_levels;
-        image_memory_barrier.subresourceRange.baseArrayLayer = 0;
-        image_memory_barrier.subresourceRange.layerCount = 1;
-    }
-    vkCmdPipelineBarrier(command_buffer, src_stage_bits, dst_stage_bits, 0, 0, NULL, 0, NULL, 1, &image_memory_barrier);
-
+    tg_graphics_vulkan_command_buffer_cmd_transition_image_layout(command_buffer, image, src_access_mask, dst_access_mask, old_layout, new_layout, aspect_mask, mip_levels, src_stage_bits, dst_stage_bits);
     tg_graphics_vulkan_command_buffer_end_and_submit(command_buffer);
     tg_graphics_vulkan_command_buffer_free(command_pool, command_buffer);
 }

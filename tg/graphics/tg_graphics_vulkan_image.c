@@ -11,7 +11,7 @@ void tg_graphics_image_create(const char* filename, tg_image_h* p_image_h)
 
     *p_image_h = tg_allocator_allocate(sizeof(**p_image_h));
     tg_image_load(filename, &(**p_image_h).width, &(**p_image_h).height, &(**p_image_h).format, &(**p_image_h).data);
-    tg_image_convert_to_format((**p_image_h).data, (**p_image_h).width, (**p_image_h).height, (**p_image_h).format, TG_IMAGE_FORMAT_R8G8B8A8);
+    tg_image_convert_format((**p_image_h).data, (**p_image_h).width, (**p_image_h).height, (**p_image_h).format, TG_IMAGE_FORMAT_R8G8B8A8);
     const ui32 mip_levels = TG_IMAGE_MAX_MIP_LEVELS((**p_image_h).width, (**p_image_h).height);
     const VkDeviceSize size = (ui64)(**p_image_h).width * (ui64)(**p_image_h).height * sizeof(*(**p_image_h).data);
 
