@@ -51,105 +51,200 @@ ui32 tgm_ui32_min(ui32 v0, ui32 v1)
 
 tgm_vec3f* tgm_v3f_add_v3f(tgm_vec3f* result, tgm_vec3f* v0, tgm_vec3f* v1)
 {
+	TG_ASSERT(result && v0 && v1);
+
 	result->x = v0->x + v1->x;
 	result->y = v0->y + v1->y;
 	result->z = v0->z + v1->z;
+
 	return result;
 }
 
-tgm_vec3f* tgm_v3f_add_f(tgm_vec3f* result, tgm_vec3f* v0, f32 f)
+tgm_vec3f* tgm_v3f_add_f(tgm_vec3f* result, tgm_vec3f* v, f32 f)
 {
-	result->x = v0->x + f;
-	result->y = v0->y + f;
-	result->z = v0->z + f;
+	TG_ASSERT(result && v);
+
+	result->x = v->x + f;
+	result->y = v->y + f;
+	result->z = v->z + f;
+
 	return result;
 }
 
 tgm_vec3f* tgm_v3f_cross(tgm_vec3f* result, tgm_vec3f* v0, tgm_vec3f* v1)
 {
-	result->x = v0->y * v1->z - v0->z * v1->y;
-	result->y = v0->z * v1->x - v0->x * v1->z;
-	result->z = v0->x * v1->y - v0->y * v1->x;
+	TG_ASSERT(result && v0 && v1);
+
+	tgm_vec3f res = { 0 };
+
+	res.x = v0->y * v1->z - v0->z * v1->y;
+	res.y = v0->z * v1->x - v0->x * v1->z;
+	res.z = v0->x * v1->y - v0->y * v1->x;
+
+	*result = res;
 	return result;
 }
 
 tgm_vec3f* tgm_v3f_divide_v3f(tgm_vec3f* result, tgm_vec3f* v0, tgm_vec3f* v1)
 {
+	TG_ASSERT(result && v0 && v1 && v1->x && v1->y && v1->z);
+
 	result->x = v0->x / v1->x;
 	result->y = v0->y / v1->y;
 	result->z = v0->z / v1->z;
+
 	return result;
 }
 
-tgm_vec3f* tgm_v3f_divide_f(tgm_vec3f* result, tgm_vec3f* v0, f32 f)
+tgm_vec3f* tgm_v3f_divide_f(tgm_vec3f* result, tgm_vec3f* v, f32 f)
 {
-	result->x = v0->x / f;
-	result->y = v0->y / f;
-	result->z = v0->z / f;
+	TG_ASSERT(result && v && f);
+
+	result->x = v->x / f;
+	result->y = v->y / f;
+	result->z = v->z / f;
+
 	return result;
 }
 
 f32 tgm_v3f_dot(const tgm_vec3f* v0, const tgm_vec3f* v1)
 {
+	TG_ASSERT(v0 && v1);
+
 	return v0->x * v1->x + v0->y * v1->y + v0->z * v1->z;
 }
 
-f32 tgm_v3f_magnitude(const tgm_vec3f* v)
+bool tgm_v3f_equal(tgm_vec3f* v0, tgm_vec3f* v1)
 {
-	return sqrtf(v->x * v->x + v->y * v->y + v->z * v->z);
+	TG_ASSERT(v0 && v1);
+
+	return v0 == v1 || v0->x == v1->x && v0->y == v1->y && v0->z == v1->z;
+}
+
+f32 tgm_v3f_magnitude(const tgm_vec3f* v0)
+{
+	TG_ASSERT(v0);
+
+	return sqrtf(v0->x * v0->x + v0->y * v0->y + v0->z * v0->z);
 }
 
 f32 tgm_v3f_magnitude_squared(const tgm_vec3f* v)
 {
+	TG_ASSERT(v);
+
 	return v->x * v->x + v->y * v->y + v->z * v->z;
 }
 
 tgm_vec3f* tgm_v3f_multiply_v3f(tgm_vec3f* result, tgm_vec3f* v0, tgm_vec3f* v1)
 {
+	TG_ASSERT(result && v0 && v1);
+
 	result->x = v0->x * v1->x;
 	result->y = v0->y * v1->y;
 	result->z = v0->z * v1->z;
+
 	return result;
 }
 
-tgm_vec3f* tgm_v3f_multiply_f(tgm_vec3f* result, tgm_vec3f* v0, f32 f)
+tgm_vec3f* tgm_v3f_multiply_f(tgm_vec3f* result, tgm_vec3f* v, f32 f)
 {
-	result->x = v0->x * f;
-	result->y = v0->y * f;
-	result->z = v0->z * f;
+	TG_ASSERT(result && v);
+
+	result->x = v->x * f;
+	result->y = v->y * f;
+	result->z = v->z * f;
+
 	return result;
 }
 
-tgm_vec3f* tgm_v3f_negate(tgm_vec3f* result, tgm_vec3f* v0)
+tgm_vec3f* tgm_v3f_negate(tgm_vec3f* result, tgm_vec3f* v)
 {
-	result->x = -v0->x;
-	result->y = -v0->y;
-	result->z = -v0->z;
+	TG_ASSERT(result && v);
+
+	result->x = -v->x;
+	result->y = -v->y;
+	result->z = -v->z;
+
 	return result;
 }
 
-tgm_vec3f* tgm_v3f_normalize(tgm_vec3f* result, tgm_vec3f* v0)
+tgm_vec3f* tgm_v3f_normalize(tgm_vec3f* result, tgm_vec3f* v)
 {
-	const f32 magnitude = tgm_v3f_magnitude(v0);
-	result->x = v0->x / magnitude;
-	result->y = v0->y / magnitude;
-	result->z = v0->z / magnitude;
+	TG_ASSERT(result && v);
+
+	const f32 magnitude = tgm_v3f_magnitude(v);
+	TG_ASSERT(magnitude);
+
+	result->x = v->x / magnitude;
+	result->y = v->y / magnitude;
+	result->z = v->z / magnitude;
+
 	return result;
 }
 
 tgm_vec3f* tgm_v3f_subtract_v3f(tgm_vec3f* result, tgm_vec3f* v0, tgm_vec3f* v1)
 {
+	TG_ASSERT(result && v0 && v1);
+
 	result->x = v0->x - v1->x;
 	result->y = v0->y - v1->y;
 	result->z = v0->z - v1->z;
+
 	return result;
 }
 
-tgm_vec3f* tgm_v3f_subtract_f(tgm_vec3f* result, tgm_vec3f* v0, f32 f)
+tgm_vec3f* tgm_v3f_subtract_f(tgm_vec3f* result, tgm_vec3f* v, f32 f)
 {
-	result->x = v0->x - f;
-	result->y = v0->y - f;
-	result->z = v0->z - f;
+	TG_ASSERT(result && v);
+
+	result->x = v->x - f;
+	result->y = v->y - f;
+	result->z = v->z - f;
+
+	return result;
+}
+
+tgm_vec4f* tgm_v3f_to_v4f(tgm_vec4f* result, const tgm_vec3f* v, f32 w)
+{
+	TG_ASSERT(result && v);
+
+	result->x = v->x;
+	result->y = v->y;
+	result->z = v->z;
+	result->w = w;
+
+	return result;
+}
+
+
+
+tgm_vec4f* tgm_v4f_negate(tgm_vec4f* result, tgm_vec4f* v)
+{
+	TG_ASSERT(result && v);
+
+	result->x = -v->x;
+	result->y = -v->y;
+	result->z = -v->z;
+
+	return result;
+}
+
+tgm_vec3f* tgm_v4f_to_v3f(tgm_vec3f* result, const tgm_vec4f* v)
+{
+	TG_ASSERT(result && v);
+
+	if (v->w == 0.0f)
+	{
+		result->x = v->x;
+		result->y = v->y;
+		result->z = v->z;
+	}
+	else
+	{
+		result->x = v->x / v->w;
+		result->y = v->y / v->w;
+		result->z = v->z / v->w;
+	}
 	return result;
 }
 
@@ -157,6 +252,8 @@ tgm_vec3f* tgm_v3f_subtract_f(tgm_vec3f* result, tgm_vec3f* v0, f32 f)
 
 tgm_mat2f* tgm_m2f_identity(tgm_mat2f* result)
 {
+	TG_ASSERT(result);
+
 	result->m00 = 1.0f;
 	result->m10 = 0.0f;
 
@@ -168,34 +265,45 @@ tgm_mat2f* tgm_m2f_identity(tgm_mat2f* result)
 
 tgm_mat2f* tgm_m2f_multiply_m2f(tgm_mat2f* result, tgm_mat2f* m0, tgm_mat2f* m1)
 {
-	result->m00 = m0->m00 * m1->m00 + m0->m01 * m1->m10;
-	result->m10 = m0->m10 * m1->m00 + m0->m11 * m1->m10;
+	TG_ASSERT(result && m0 && m1);
 
-	result->m01 = m0->m00 * m1->m01 + m0->m01 * m1->m11;
-	result->m11 = m0->m10 * m1->m01 + m0->m11 * m1->m11;
+	tgm_mat2f res = { 0 };
 
+	res.m00 = m0->m00 * m1->m00 + m0->m01 * m1->m10;
+	res.m10 = m0->m10 * m1->m00 + m0->m11 * m1->m10;
+
+	res.m01 = m0->m00 * m1->m01 + m0->m01 * m1->m11;
+	res.m11 = m0->m10 * m1->m01 + m0->m11 * m1->m11;
+
+	*result = res;
 	return result;
 }
 
 tgm_vec2f* tgm_m2f_multiply_v2f(tgm_vec2f* result, const tgm_mat2f* m, tgm_vec2f* v)
 {
-	result->x = v->x * m->m00 + v->y * m->m01;
-	result->y = v->x * m->m10 + v->y * m->m11;
+	TG_ASSERT(result && m && v);
 
+	tgm_vec2f res = { 0 };
+
+	res.x = v->x * m->m00 + v->y * m->m01;
+	res.y = v->x * m->m10 + v->y * m->m11;
+
+	*result = res;
 	return result;
 }
 
 tgm_mat2f* tgm_m2f_transpose(tgm_mat2f* result, tgm_mat2f* m)
 {
-	f32 temp;
+	TG_ASSERT(result && m);
 
-	result->m00 = m->m00;
-	result->m11 = m->m11;
+	tgm_mat2f res = { 0 };
 
-	temp = m->m01;
-	result->m01 = m->m10;
-	result->m10 = temp;
+	res.m00 = m->m00;
+	res.m10 = m->m01;
+	res.m01 = m->m10;
+	res.m11 = m->m11;
 
+	*result = res;
 	return result;
 }
 
@@ -203,6 +311,8 @@ tgm_mat2f* tgm_m2f_transpose(tgm_mat2f* result, tgm_mat2f* m)
 
 tgm_mat3f* tgm_m3f_identity(tgm_mat3f* result)
 {
+	TG_ASSERT(result);
+
 	result->m00 = 1.0f;
 	result->m10 = 0.0f;
 	result->m20 = 0.0f;
@@ -220,32 +330,44 @@ tgm_mat3f* tgm_m3f_identity(tgm_mat3f* result)
 
 tgm_mat3f* tgm_m3f_multiply_m3f(tgm_mat3f* result, tgm_mat3f* m0, tgm_mat3f* m1)
 {
-	result->m00 = m0->m00 * m1->m00 + m0->m01 * m1->m10 + m0->m02 * m1->m20;
-	result->m10 = m0->m10 * m1->m00 + m0->m11 * m1->m10 + m0->m12 * m1->m20;
-	result->m20 = m0->m20 * m1->m00 + m0->m21 * m1->m10 + m0->m22 * m1->m20;
-	
-	result->m01 = m0->m00 * m1->m01 + m0->m01 * m1->m11 + m0->m02 * m1->m21;
-	result->m11 = m0->m10 * m1->m01 + m0->m11 * m1->m11 + m0->m12 * m1->m21;
-	result->m21 = m0->m20 * m1->m01 + m0->m21 * m1->m11 + m0->m22 * m1->m21;
-	
-	result->m02 = m0->m00 * m1->m02 + m0->m01 * m1->m12 + m0->m02 * m1->m22;
-	result->m12 = m0->m10 * m1->m02 + m0->m11 * m1->m12 + m0->m12 * m1->m22;
-	result->m22 = m0->m20 * m1->m02 + m0->m21 * m1->m12 + m0->m22 * m1->m22;
+	TG_ASSERT(result && m0 && m1);
 
+	tgm_mat3f res = { 0 };
+
+	res.m00 = m0->m00 * m1->m00 + m0->m01 * m1->m10 + m0->m02 * m1->m20;
+	res.m10 = m0->m10 * m1->m00 + m0->m11 * m1->m10 + m0->m12 * m1->m20;
+	res.m20 = m0->m20 * m1->m00 + m0->m21 * m1->m10 + m0->m22 * m1->m20;
+	
+	res.m01 = m0->m00 * m1->m01 + m0->m01 * m1->m11 + m0->m02 * m1->m21;
+	res.m11 = m0->m10 * m1->m01 + m0->m11 * m1->m11 + m0->m12 * m1->m21;
+	res.m21 = m0->m20 * m1->m01 + m0->m21 * m1->m11 + m0->m22 * m1->m21;
+	
+	res.m02 = m0->m00 * m1->m02 + m0->m01 * m1->m12 + m0->m02 * m1->m22;
+	res.m12 = m0->m10 * m1->m02 + m0->m11 * m1->m12 + m0->m12 * m1->m22;
+	res.m22 = m0->m20 * m1->m02 + m0->m21 * m1->m12 + m0->m22 * m1->m22;
+
+	*result = res;
 	return result;
 }
 
 tgm_vec3f* tgm_m3f_multiply_v3f(tgm_vec3f* result, const tgm_mat3f* m, tgm_vec3f* v)
 {
-	result->x = v->x * m->m00 + v->y * m->m01 + v->z * m->m02;
-	result->y = v->x * m->m10 + v->y * m->m11 + v->z * m->m12;
-	result->z = v->x * m->m20 + v->y * m->m21 + v->z * m->m22;
+	TG_ASSERT(result && m && v);
 
+	tgm_vec3f res = { 0 };
+
+	res.x = v->x * m->m00 + v->y * m->m01 + v->z * m->m02;
+	res.y = v->x * m->m10 + v->y * m->m11 + v->z * m->m12;
+	res.z = v->x * m->m20 + v->y * m->m21 + v->z * m->m22;
+
+	*result = res;
 	return result;
 }
 
 tgm_mat3f* tgm_m3f_orthographic(tgm_mat3f* result, f32 left, f32 right, f32 bottom, f32 top)
 {
+	TG_ASSERT(result && right != left && top != bottom);
+
 	result->m00 = 2.0f / (right - left);
 	result->m10 = 0.0f;
 	result->m20 = 0.0f;
@@ -263,24 +385,23 @@ tgm_mat3f* tgm_m3f_orthographic(tgm_mat3f* result, f32 left, f32 right, f32 bott
 
 tgm_mat3f* tgm_m3f_transpose(tgm_mat3f* result, tgm_mat3f* m)
 {
-	f32 temp;
+	TG_ASSERT(result && m);
 
-	result->m00 = m->m00;
-	result->m11 = m->m11;
-	result->m22 = m->m22;
+	tgm_mat3f res = { 0 };
 
-	temp = m->m01;
-	result->m01 = m->m10;
-	result->m10 = temp;
+	res.m00 = m->m00;
+	res.m10 = m->m01;
+	res.m20 = m->m01;
 
-	temp = m->m02;
-	result->m02 = m->m20;
-	result->m20 = temp;
+	res.m01 = m->m10;
+	res.m11 = m->m11;
+	res.m21 = m->m12;
 
-	temp = m->m12;
-	result->m12 = m->m21;
-	result->m21 = temp;
+	res.m02 = m->m20;
+	res.m12 = m->m21;
+	res.m22 = m->m22;
 
+	*result = res;
 	return result;
 }
 
@@ -288,10 +409,13 @@ tgm_mat3f* tgm_m3f_transpose(tgm_mat3f* result, tgm_mat3f* m)
 
 tgm_mat4f* tgm_m4f_angle_axis(tgm_mat4f* result, f32 angle_in_radians, const tgm_vec3f* axis)
 {
-	const f32 c = (f32)cos((double)angle_in_radians);
-	const f32 s = (f32)sin((double)angle_in_radians);
+	TG_ASSERT(result && axis);
+
+	const f32 c = (f32)cos((f64)angle_in_radians);
+	const f32 s = (f32)sin((f64)angle_in_radians);
 	const f32 omc = 1.0f - c;
 	const f32 l = tgm_v3f_magnitude(axis);
+	TG_ASSERT(l);
 	const f32 x = axis->x / l;
 	const f32 y = axis->y / l;
 	const f32 z = axis->z / l;
@@ -321,6 +445,8 @@ tgm_mat4f* tgm_m4f_angle_axis(tgm_mat4f* result, f32 angle_in_radians, const tgm
 
 tgm_mat4f* tgm_m4f_euler(tgm_mat4f* result, f32 pitch_in_radians, f32 yaw_in_radians, f32 roll_in_radians)
 {
+	TG_ASSERT(result);
+
 	tgm_mat4f x = *tgm_m4f_rotate_x(&x, pitch_in_radians);
 	tgm_mat4f y = *tgm_m4f_rotate_y(&y, yaw_in_radians);
 	tgm_mat4f z = *tgm_m4f_rotate_z(&z, roll_in_radians);
@@ -330,6 +456,8 @@ tgm_mat4f* tgm_m4f_euler(tgm_mat4f* result, f32 pitch_in_radians, f32 yaw_in_rad
 
 tgm_mat4f* tgm_m4f_identity(tgm_mat4f* result)
 {
+	TG_ASSERT(result);
+
 	result->m00 = 1.0f;
 	result->m10 = 0.0f;
 	result->m20 = 0.0f;
@@ -355,6 +483,8 @@ tgm_mat4f* tgm_m4f_identity(tgm_mat4f* result)
 
 tgm_mat4f* tgm_m4f_look_at(tgm_mat4f* result, tgm_vec3f* from, tgm_vec3f* to, tgm_vec3f* up)
 {
+	TG_ASSERT(result && from && to && up && !tgm_v3f_equal(from, to) && !tgm_v3f_equal(from, up) && !tgm_v3f_equal(to, up));
+
 	tgm_vec3f f = *tgm_v3f_normalize(&f, tgm_v3f_subtract_v3f(&f, to, from));
 	tgm_vec3f r = *tgm_v3f_normalize(&r, tgm_v3f_cross(&r, &f, tgm_v3f_normalize(up, up)));
 	tgm_vec3f u = *tgm_v3f_normalize(&u, tgm_v3f_cross(&u, &r, &f));
@@ -386,42 +516,54 @@ tgm_mat4f* tgm_m4f_look_at(tgm_mat4f* result, tgm_vec3f* from, tgm_vec3f* to, tg
 
 tgm_mat4f* tgm_m4f_multiply_m4f(tgm_mat4f* result, tgm_mat4f* m0, tgm_mat4f* m1)
 {
-	result->m00 = m0->m00 * m1->m00 + m0->m01 * m1->m10 + m0->m02 * m1->m20 + m0->m03 * m1->m30;
-	result->m10 = m0->m10 * m1->m00 + m0->m11 * m1->m10 + m0->m12 * m1->m20 + m0->m13 * m1->m30;
-	result->m20 = m0->m20 * m1->m00 + m0->m21 * m1->m10 + m0->m22 * m1->m20 + m0->m23 * m1->m30;
-	result->m30 = m0->m30 * m1->m00 + m0->m31 * m1->m10 + m0->m32 * m1->m20 + m0->m33 * m1->m30;
+	TG_ASSERT(result && m0 && m1);
 
-	result->m01 = m0->m00 * m1->m01 + m0->m01 * m1->m11 + m0->m02 * m1->m21 + m0->m03 * m1->m31;
-	result->m11 = m0->m10 * m1->m01 + m0->m11 * m1->m11 + m0->m12 * m1->m21 + m0->m13 * m1->m31;
-	result->m21 = m0->m20 * m1->m01 + m0->m21 * m1->m11 + m0->m22 * m1->m21 + m0->m23 * m1->m31;
-	result->m31 = m0->m30 * m1->m01 + m0->m31 * m1->m11 + m0->m32 * m1->m21 + m0->m33 * m1->m31;
+	tgm_mat4f res = { 0 };
 
-	result->m02 = m0->m00 * m1->m02 + m0->m01 * m1->m12 + m0->m02 * m1->m22 + m0->m03 * m1->m32;
-	result->m12 = m0->m10 * m1->m02 + m0->m11 * m1->m12 + m0->m12 * m1->m22 + m0->m13 * m1->m32;
-	result->m22 = m0->m20 * m1->m02 + m0->m21 * m1->m12 + m0->m22 * m1->m22 + m0->m23 * m1->m32;
-	result->m32 = m0->m30 * m1->m02 + m0->m31 * m1->m12 + m0->m32 * m1->m22 + m0->m33 * m1->m32;
+	res.m00 = m0->m00 * m1->m00 + m0->m01 * m1->m10 + m0->m02 * m1->m20 + m0->m03 * m1->m30;
+	res.m10 = m0->m10 * m1->m00 + m0->m11 * m1->m10 + m0->m12 * m1->m20 + m0->m13 * m1->m30;
+	res.m20 = m0->m20 * m1->m00 + m0->m21 * m1->m10 + m0->m22 * m1->m20 + m0->m23 * m1->m30;
+	res.m30 = m0->m30 * m1->m00 + m0->m31 * m1->m10 + m0->m32 * m1->m20 + m0->m33 * m1->m30;
 
-	result->m03 = m0->m00 * m1->m03 + m0->m01 * m1->m13 + m0->m02 * m1->m23 + m0->m03 * m1->m33;
-	result->m13 = m0->m10 * m1->m03 + m0->m11 * m1->m13 + m0->m12 * m1->m23 + m0->m13 * m1->m33;
-	result->m23 = m0->m20 * m1->m03 + m0->m21 * m1->m13 + m0->m22 * m1->m23 + m0->m23 * m1->m33;
-	result->m33 = m0->m30 * m1->m03 + m0->m31 * m1->m13 + m0->m32 * m1->m23 + m0->m33 * m1->m33;
+	res.m01 = m0->m00 * m1->m01 + m0->m01 * m1->m11 + m0->m02 * m1->m21 + m0->m03 * m1->m31;
+	res.m11 = m0->m10 * m1->m01 + m0->m11 * m1->m11 + m0->m12 * m1->m21 + m0->m13 * m1->m31;
+	res.m21 = m0->m20 * m1->m01 + m0->m21 * m1->m11 + m0->m22 * m1->m21 + m0->m23 * m1->m31;
+	res.m31 = m0->m30 * m1->m01 + m0->m31 * m1->m11 + m0->m32 * m1->m21 + m0->m33 * m1->m31;
 
+	res.m02 = m0->m00 * m1->m02 + m0->m01 * m1->m12 + m0->m02 * m1->m22 + m0->m03 * m1->m32;
+	res.m12 = m0->m10 * m1->m02 + m0->m11 * m1->m12 + m0->m12 * m1->m22 + m0->m13 * m1->m32;
+	res.m22 = m0->m20 * m1->m02 + m0->m21 * m1->m12 + m0->m22 * m1->m22 + m0->m23 * m1->m32;
+	res.m32 = m0->m30 * m1->m02 + m0->m31 * m1->m12 + m0->m32 * m1->m22 + m0->m33 * m1->m32;
+
+	res.m03 = m0->m00 * m1->m03 + m0->m01 * m1->m13 + m0->m02 * m1->m23 + m0->m03 * m1->m33;
+	res.m13 = m0->m10 * m1->m03 + m0->m11 * m1->m13 + m0->m12 * m1->m23 + m0->m13 * m1->m33;
+	res.m23 = m0->m20 * m1->m03 + m0->m21 * m1->m13 + m0->m22 * m1->m23 + m0->m23 * m1->m33;
+	res.m33 = m0->m30 * m1->m03 + m0->m31 * m1->m13 + m0->m32 * m1->m23 + m0->m33 * m1->m33;
+
+	*result = res;
 	return result;
 }
 
 tgm_vec4f* tgm_m4f_multiply_v4f(tgm_vec4f* result, const tgm_mat4f* m, tgm_vec4f* v)
 {
-	result->x = v->x * m->m00 + v->y * m->m01 + v->z * m->m02 + v->w * m->m03;
-	result->y = v->x * m->m10 + v->y * m->m11 + v->z * m->m12 + v->w * m->m13;
-	result->z = v->x * m->m20 + v->y * m->m21 + v->z * m->m22 + v->w * m->m23;
-	result->w = v->x * m->m30 + v->y * m->m31 + v->z * m->m32 + v->w * m->m33;
+	TG_ASSERT(result && m && v);
 
+	tgm_vec4f res = { 0 };
+
+	res.x = v->x * m->m00 + v->y * m->m01 + v->z * m->m02 + v->w * m->m03;
+	res.y = v->x * m->m10 + v->y * m->m11 + v->z * m->m12 + v->w * m->m13;
+	res.z = v->x * m->m20 + v->y * m->m21 + v->z * m->m22 + v->w * m->m23;
+	res.w = v->x * m->m30 + v->y * m->m31 + v->z * m->m32 + v->w * m->m33;
+
+	*result = res;
 	return result;
 }
 
 // NOTE: vulkan uses left = -1.0, right = 1.0, bottom = 1.0, top = -1.0, near = 0.0 and far = 1.0
 tgm_mat4f* tgm_m4f_orthographic(tgm_mat4f* result, f32 left, f32 right, f32 bottom, f32 top, f32 far, f32 near)
 {
+	TG_ASSERT(result && left != right && top != bottom && near != far);
+
 	result->m00 = 2.0f / (right - left);
 	result->m10 = 0.0f;
 	result->m20 = 0.0f;
@@ -447,7 +589,9 @@ tgm_mat4f* tgm_m4f_orthographic(tgm_mat4f* result, f32 left, f32 right, f32 bott
 
 tgm_mat4f* tgm_m4f_perspective(tgm_mat4f* result, f32 fov_y_in_radians, f32 aspect, f32 near, f32 far)
 {
-	const f32 tan_half_fov_y = (f32)tan((double)fov_y_in_radians / 2.0f);
+	TG_ASSERT(result);
+
+	const f32 tan_half_fov_y = (f32)tan((f64)fov_y_in_radians / 2.0f);
 
 	const f32 a = -far / (far - near);
 	const f32 b = -(2.0f * far * near) / (near - far);
@@ -477,6 +621,8 @@ tgm_mat4f* tgm_m4f_perspective(tgm_mat4f* result, f32 fov_y_in_radians, f32 aspe
 
 tgm_mat4f* tgm_m4f_rotate_x(tgm_mat4f* result, f32 angle_in_radians)
 {
+	TG_ASSERT(result);
+
 	result->m00 = 1.0f;
 	result->m10 = 0.0f;
 	result->m20 = 0.0f;
@@ -502,6 +648,8 @@ tgm_mat4f* tgm_m4f_rotate_x(tgm_mat4f* result, f32 angle_in_radians)
 
 tgm_mat4f* tgm_m4f_rotate_y(tgm_mat4f* result, f32 angle_in_radians)
 {
+	TG_ASSERT(result);
+
 	result->m00 = (f32)cos((f64)angle_in_radians);
 	result->m10 = 0.0f;
 	result->m20 = (f32)-sin((f64)angle_in_radians);
@@ -527,6 +675,8 @@ tgm_mat4f* tgm_m4f_rotate_y(tgm_mat4f* result, f32 angle_in_radians)
 
 tgm_mat4f* tgm_m4f_rotate_z(tgm_mat4f* result, f32 angle_in_radians)
 {
+	TG_ASSERT(result);
+
 	result->m00 = (f32)cos((f64)angle_in_radians);
 	result->m10 = (f32)sin((f64)angle_in_radians);
 	result->m20 = 0.0f;
@@ -552,6 +702,8 @@ tgm_mat4f* tgm_m4f_rotate_z(tgm_mat4f* result, f32 angle_in_radians)
 
 tgm_mat4f* tgm_m4f_translate(tgm_mat4f* result, const tgm_vec3f* v)
 {
+	TG_ASSERT(result && v);
+
 	result->m00 = 1.0f;
 	result->m10 = 0.0f;
 	result->m20 = 0.0f;
@@ -577,36 +729,30 @@ tgm_mat4f* tgm_m4f_translate(tgm_mat4f* result, const tgm_vec3f* v)
 
 tgm_mat4f* tgm_m4f_transpose(tgm_mat4f* result, tgm_mat4f* m)
 {
-	f32 temp;
+	TG_ASSERT(result && m);
 
-	result->m00 = m->m00;
-	result->m11 = m->m11;
-	result->m22 = m->m22;
-	result->m33 = m->m33;
+	tgm_mat4f res = { 0 };
 
-	temp = m->m01;
-	result->m01 = m->m10;
-	result->m10 = temp;
+	res.m00 = m->m00;
+	res.m10 = m->m01;
+	res.m20 = m->m02;
+	res.m30 = m->m03;
 
-	temp = m->m02;
-	result->m02 = m->m20;
-	result->m20 = temp;
+	res.m01 = m->m10;
+	res.m11 = m->m11;
+	res.m21 = m->m12;
+	res.m31 = m->m13;
 
-	temp = m->m03;
-	result->m03 = m->m30;
-	result->m30 = temp;
+	res.m02 = m->m20;
+	res.m12 = m->m21;
+	res.m22 = m->m22;
+	res.m32 = m->m23;
 
-	temp = m->m12;
-	result->m12 = m->m21;
-	result->m21 = temp;
+	res.m03 = m->m30;
+	res.m13 = m->m31;
+	res.m23 = m->m32;
+	res.m33 = m->m33;
 
-	temp = m->m13;
-	result->m13 = m->m31;
-	result->m31 = temp;
-
-	temp = m->m23;
-	result->m23 = m->m32;
-	result->m32 = temp;
-
+	*result = res;
 	return result;
 }

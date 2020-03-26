@@ -6,6 +6,7 @@ Matrices are layed out in column major.
 #define TG_MATH
 
 #include "tg/tg_common.h"
+#include <stdbool.h>
 
 #define TGM_PI 3.14159265358979323846
 #define TGM_TO_DEGREES(radians) (radians * (360.0f / ((f32)TGM_PI * 2.0f)))
@@ -165,20 +166,25 @@ ui32          tgm_ui32_min(ui32 v0, ui32 v1);
 /*
 ---- Vectors ----
 */
-tgm_vec3f*    tgm_v3f_add_v3f(tgm_vec3f* result, tgm_vec3f* v0, tgm_vec3f* v1);
-tgm_vec3f*    tgm_v3f_add_f(tgm_vec3f* result, tgm_vec3f* v0, f32 f);
+tgm_vec3f*    tgm_v3f_add_v3f(tgm_vec3f* result, tgm_vec3f* v0, tgm_vec3f* v1);// TODO: every functions needs TG_ASSERT for args
+tgm_vec3f*    tgm_v3f_add_f(tgm_vec3f* result, tgm_vec3f* v, f32 f);
 tgm_vec3f*    tgm_v3f_cross(tgm_vec3f* result, tgm_vec3f* v0, tgm_vec3f* v1);
 tgm_vec3f*    tgm_v3f_divide_v3f(tgm_vec3f* result, tgm_vec3f* v0, tgm_vec3f* v1);
-tgm_vec3f*    tgm_v3f_divide_f(tgm_vec3f* result, tgm_vec3f* v0, f32 f);
+tgm_vec3f*    tgm_v3f_divide_f(tgm_vec3f* result, tgm_vec3f* v, f32 f);
 f32           tgm_v3f_dot(const tgm_vec3f* v0, const tgm_vec3f* v1);
+bool          tgm_v3f_equal(tgm_vec3f* v0, tgm_vec3f* v1);
 f32           tgm_v3f_magnitude(const tgm_vec3f* v);
 f32           tgm_v3f_magnitude_squared(const tgm_vec3f* v);
 tgm_vec3f*    tgm_v3f_multiply_v3f(tgm_vec3f* result, tgm_vec3f* v0, tgm_vec3f* v1);
-tgm_vec3f*    tgm_v3f_multiply_f(tgm_vec3f* result, tgm_vec3f* v0, f32 f);
+tgm_vec3f*    tgm_v3f_multiply_f(tgm_vec3f* result, tgm_vec3f* v, f32 f);
 tgm_vec3f*    tgm_v3f_negate(tgm_vec3f* result, tgm_vec3f* v0);
 tgm_vec3f*    tgm_v3f_normalize(tgm_vec3f* result, tgm_vec3f* v0);
 tgm_vec3f*    tgm_v3f_subtract_v3f(tgm_vec3f* result, tgm_vec3f* v0, tgm_vec3f* v1);
-tgm_vec3f*    tgm_v3f_subtract_f(tgm_vec3f* result, tgm_vec3f* v0, f32 f);
+tgm_vec3f*    tgm_v3f_subtract_f(tgm_vec3f* result, tgm_vec3f* v, f32 f);
+tgm_vec4f*    tgm_v3f_to_v4f(tgm_vec4f* result, const tgm_vec3f* v, f32 w);
+
+tgm_vec4f*    tgm_v4f_negate(tgm_vec4f* result, tgm_vec4f* v);
+tgm_vec3f*    tgm_v4f_to_v3f(tgm_vec3f* result, const tgm_vec4f* v);
 
 /*
 ---- Matrices ----
