@@ -2,6 +2,7 @@
 
 #include "tg/graphics/tg_graphics.h"
 #include "tg/platform/tg_platform.h"
+#include "tg/tg_input.h"
 #include <stdbool.h>
 #include <stdlib.h>
 
@@ -81,6 +82,10 @@ void tg_application_start()
         tg_graphics_renderer_3d_draw(model2_h);
         tg_graphics_renderer_3d_present();
         TG_DEBUG_PRINT_PERFORMANCE();
+        if (tg_input_is_key_down(TG_KEY_SPACE))
+        {
+            TG_DEBUG_PRINT("SPACE IS DOWN");
+        }
     }
 
     tg_graphics_model_destroy(model2_h);

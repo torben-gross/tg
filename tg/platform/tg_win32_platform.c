@@ -1,6 +1,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 
 #include "tg/tg_application.h"
+#include "tg/tg_input.h"
 #include "tg/platform/tg_allocator.h"
 #include "tg/graphics/tg_graphics.h"
 #include <stdio.h>
@@ -92,21 +93,11 @@ LRESULT CALLBACK tg_platform_win32_window_proc(HWND window_h, UINT message, WPAR
 {
     switch (message)
     {
-    case WM_CLOSE:
     case WM_DESTROY:
+    case WM_CLOSE:
     {
         tg_application_quit();
         PostQuitMessage(EXIT_SUCCESS);
-    } break;
-    case WM_KEYDOWN:
-    {
-        char c = (char)w_param;
-        c = c;
-    } break;
-    case WM_KEYUP:
-    {
-        char c = (char)w_param;
-        c = c;
     } break;
     case WM_QUIT:
     {
@@ -116,6 +107,38 @@ LRESULT CALLBACK tg_platform_win32_window_proc(HWND window_h, UINT message, WPAR
     {
         tg_graphics_on_window_resize((ui32)LOWORD(l_param), (ui32)HIWORD(l_param));
         //tg_graphics_renderer_2d_on_window_resize((ui32)LOWORD(l_param), (ui32)HIWORD(l_param)); TODO
+        //tg_graphics_renderer_3d_on_window_resize((ui32)LOWORD(l_param), (ui32)HIWORD(l_param)); TODO
+    } break;
+
+
+
+    case WM_LBUTTONDOWN:
+    case WM_RBUTTONDOWN:
+    case WM_MBUTTONDOWN:
+    {
+        tg_input_on_mouse_button_pressed((tg_button)w_param);
+    } break;
+    case WM_XBUTTONDOWN:
+    {
+        tg_input_on_mouse_button_pressed((tg_button)HIWORD(w_param));
+    } break;
+    case WM_LBUTTONUP:
+    case WM_RBUTTONUP:
+    case WM_MBUTTONUP:
+    {
+        tg_input_on_mouse_button_released((tg_button)w_param);
+    } break;
+    case WM_XBUTTONUP:
+    {
+        tg_input_on_mouse_button_released((tg_button)HIWORD(w_param));
+    } break;
+    case WM_KEYDOWN:
+    {
+        tg_input_on_key_pressed((tg_key)w_param);
+    } break;
+    case WM_KEYUP:
+    {
+        tg_input_on_key_released((tg_key)w_param);
     } break;
     default:
         return DefWindowProcA(window_h, message, w_param, l_param);
