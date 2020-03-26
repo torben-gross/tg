@@ -1,5 +1,6 @@
 #include "tg_input.h"
 
+#include "tg/platform/tg_platform.h"
 #include <string.h>
 
 typedef struct tg_input
@@ -13,6 +14,11 @@ typedef struct tg_input
 } tg_input;
 
 tg_input input = { 0 };
+
+void tg_input_get_mouse_position(ui32* x, ui32* y)
+{
+	tg_platform_get_mouse_position(x, y);
+}
 
 void tg_input_on_mouse_button_pressed(tg_button button)
 {

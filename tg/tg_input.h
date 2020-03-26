@@ -100,6 +100,8 @@ typedef enum tg_key
 	TG_KEY_RIGHT_CONTROL    = 0xa3
 } tg_key;
 
+void tg_input_get_mouse_position(ui32* x, ui32* y);
+
 void tg_input_on_mouse_button_pressed(tg_button button);
 void tg_input_on_mouse_button_released(tg_button button);
 void tg_input_on_key_pressed(tg_key key, bool repeated, ui32 additional_key_repeat_counts);

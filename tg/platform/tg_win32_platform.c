@@ -7,6 +7,12 @@
 #include <stdio.h>
 #include <windows.h>
 
+#ifdef TG_DEBUG
+#define WIN32_CALL(x) TG_ASSERT(x)
+#else
+#define WIN32_CALL(x) x
+#endif
+
 HWND             window_h = NULL;
 
 #ifdef TG_DEBUG
@@ -47,22 +53,30 @@ void tg_platform_debug_print_performance()
 }
 #endif
 
-f32 tg_platform_get_window_aspect_ratio()
+void tg_platform_get_mouse_position(ui32* x, ui32* y)
+{
+    POINT point = { 0 };
+    WIN32_CALL(GetCursorPos(&point));
+    WIN32_CALL(ScreenToClient(window_h, &point));
+    ui32 width;
+    ui32 height;
+    tg_platform_get_window_size(&width, &height);
+    *x = (ui32)tgm_i32_clamp(point.x, 0, width - 1);
+    *y = (ui32)tgm_i32_clamp(point.y, 0, height - 1);
+}
+void tg_platform_get_screen_size(ui32* width, ui32* height)
+{
+    RECT rect;
+    WIN32_CALL(GetWindowRect(GetDesktopWindow(), &rect));
+    *width = rect.right - rect.left;
+    *height = rect.bottom - rect.top;
+}
+f32  tg_platform_get_window_aspect_ratio()
 {
     ui32 width;
     ui32 height;
     tg_platform_get_window_size(&width, &height);
     return (f32)width / (f32)height;
-}
-void tg_platform_get_screen_size(ui32* width, ui32* height)
-{
-    RECT rect;
-    BOOL result = GetWindowRect(GetDesktopWindow(), &rect);
-    if (result)
-    {
-        *width = rect.right - rect.left;
-        *height = rect.bottom - rect.top;
-    }
 }
 void tg_platform_get_window_handle(tg_window_h* p_window_h)
 {
@@ -71,12 +85,9 @@ void tg_platform_get_window_handle(tg_window_h* p_window_h)
 void tg_platform_get_window_size(ui32* width, ui32* height)
 {
     RECT rect;
-    BOOL result = GetWindowRect(window_h, &rect);
-    if (result)
-    {
-        *width = rect.right - rect.left;
-        *height = rect.bottom - rect.top;
-    }
+    WIN32_CALL(GetWindowRect(window_h, &rect));
+    *width = rect.right - rect.left;
+    *height = rect.bottom - rect.top;
 }
 void tg_platform_handle_events()
 {
@@ -112,28 +123,14 @@ LRESULT CALLBACK tg_platform_win32_window_proc(HWND window_h, UINT message, WPAR
         //tg_graphics_renderer_3d_on_window_resize((ui32)LOWORD(l_param), (ui32)HIWORD(l_param)); TODO
     } break;
 
-
-
-    case WM_LBUTTONDOWN:
-    case WM_RBUTTONDOWN:
-    case WM_MBUTTONDOWN:
-    {
-        tg_input_on_mouse_button_pressed((tg_button)w_param);
-    } break;
-    case WM_XBUTTONDOWN:
-    {
-        tg_input_on_mouse_button_pressed((tg_button)HIWORD(w_param));
-    } break;
-    case WM_LBUTTONUP:
-    case WM_RBUTTONUP:
-    case WM_MBUTTONUP:
-    {
-        tg_input_on_mouse_button_released((tg_button)w_param);
-    } break;
-    case WM_XBUTTONUP:
-    {
-        tg_input_on_mouse_button_released((tg_button)HIWORD(w_param));
-    } break;
+    case WM_LBUTTONDOWN: tg_input_on_mouse_button_pressed(TG_BUTTON_LEFT);              break;
+    case WM_RBUTTONDOWN: tg_input_on_mouse_button_pressed(TG_BUTTON_RIGHT);             break;
+    case WM_MBUTTONDOWN: tg_input_on_mouse_button_pressed(TG_BUTTON_MIDDLE);            break;
+    case WM_XBUTTONDOWN: tg_input_on_mouse_button_pressed((tg_button)HIWORD(w_param));  break;
+    case WM_LBUTTONUP:   tg_input_on_mouse_button_released(TG_BUTTON_LEFT);             break;
+    case WM_RBUTTONUP:   tg_input_on_mouse_button_released(TG_BUTTON_RIGHT);            break;
+    case WM_MBUTTONUP:   tg_input_on_mouse_button_released(TG_BUTTON_MIDDLE);           break;
+    case WM_XBUTTONUP:   tg_input_on_mouse_button_released((tg_button)HIWORD(w_param)); break;
     case WM_KEYDOWN:
     {
         const tg_key key = (tg_key)w_param;
@@ -141,12 +138,8 @@ LRESULT CALLBACK tg_platform_win32_window_proc(HWND window_h, UINT message, WPAR
         const ui32 additional_repeat_counts = (ui32)(0xffffULL & l_param);
         tg_input_on_key_pressed(key, repeated, additional_repeat_counts);
     } break;
-    case WM_KEYUP:
-    {
-        tg_input_on_key_released((tg_key)w_param);
-    } break;
-    default:
-        return DefWindowProcA(window_h, message, w_param, l_param);
+    case WM_KEYUP: tg_input_on_key_released((tg_key)w_param);                           break;
+    default: return DefWindowProcA(window_h, message, w_param, l_param);
     }
     return 0;
 }

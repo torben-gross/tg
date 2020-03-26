@@ -154,6 +154,10 @@ f32           tgm_f32_clamp(f32 v, f32 low, f32 high);
 f32           tgm_f32_max(f32 v0, f32 v1);
 f32           tgm_f32_min(f32 v0, f32 v1);
 
+i32           tgm_i32_clamp(i32 v, i32 low, i32 high);
+i32           tgm_i32_max(i32 v0, i32 v1);
+i32           tgm_i32_min(i32 v0, i32 v1);
+
 ui32          tgm_ui32_clamp(ui32 v, ui32 low, ui32 high);
 ui32          tgm_ui32_max(ui32 v0, ui32 v1);
 ui32          tgm_ui32_min(ui32 v0, ui32 v1);

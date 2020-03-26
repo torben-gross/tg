@@ -22,6 +22,9 @@ void tg_application_start()
 {
     tg_graphics_init();
     tg_camera camera = { 0 };
+    ui32 last_mouse_x;
+    ui32 last_mouse_y;
+    tg_input_get_mouse_position(&last_mouse_x, &last_mouse_y);
     {
         pitch = 0.0f;
         yaw = 0.0f;
@@ -32,6 +35,7 @@ void tg_application_start()
         aspect = tg_platform_get_window_aspect_ratio(&aspect);
         near = -0.1f;
         far = -1000.0f;
+
         tgm_m4f_perspective(&camera.projection, fov_y_in_radians, aspect, near, far);
     }
 
@@ -115,6 +119,18 @@ void tg_application_start()
         {
             TG_DEBUG_PRINT("SPACE IS CONSUMED!");
         }
+
+        ui32 mouse_x;
+        ui32 mouse_y;
+        tg_input_get_mouse_position(&mouse_x, &mouse_y);
+        if (tg_input_is_mouse_button_down(TG_BUTTON_LEFT))
+        {
+            yaw += 0.032f * (f32)((i32)last_mouse_x - (i32)mouse_x);
+            pitch += 0.032f * (f32)((i32)last_mouse_y - (i32)mouse_y);
+            tgm_m4f_euler(&camera.view, TGM_TO_RADIANS(-pitch), TGM_TO_RADIANS(-yaw), TGM_TO_RADIANS(-roll));
+        }
+        last_mouse_x = mouse_x;
+        last_mouse_y = mouse_y;
     }
 
     tg_graphics_model_destroy(model2_h);

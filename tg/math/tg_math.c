@@ -17,6 +17,21 @@ f32 tgm_f32_min(f32 v0, f32 v1)
 	return v0 < v1 ? v0 : v1;
 }
 
+i32 tgm_i32_clamp(i32 v, i32 low, i32 high)
+{
+	return tgm_i32_max(low, tgm_i32_min(high, v));
+}
+
+i32 tgm_i32_max(i32 v0, i32 v1)
+{
+	return v0 > v1 ? v0 : v1;
+}
+
+i32 tgm_i32_min(i32 v0, i32 v1)
+{
+	return v0 < v1 ? v0 : v1;
+}
+
 ui32 tgm_ui32_clamp(ui32 v, ui32 low, ui32 high)
 {
 	return tgm_ui32_max(low, tgm_ui32_min(high, v));
