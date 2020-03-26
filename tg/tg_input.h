@@ -97,7 +97,7 @@ typedef enum tg_key
 	TG_KEY_LEFT_SHIFT       = 0xa0,
 	TG_KEY_RIGHT_SHIFT      = 0xa1,
 	TG_KEY_LEFT_CONTROL     = 0xa2,
-	TG_KEY_RIGHT_CONTROL    = 0xa3,
+	TG_KEY_RIGHT_CONTROL    = 0xa3
 } tg_key;
 
 void tg_input_on_mouse_button_pressed(tg_button button);

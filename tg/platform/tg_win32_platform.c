@@ -47,6 +47,13 @@ void tg_platform_debug_print_performance()
 }
 #endif
 
+f32 tg_platform_get_window_aspect_ratio()
+{
+    ui32 width;
+    ui32 height;
+    tg_platform_get_window_size(&width, &height);
+    return (f32)width / (f32)height;
+}
 void tg_platform_get_screen_size(ui32* width, ui32* height)
 {
     RECT rect;
@@ -130,7 +137,7 @@ LRESULT CALLBACK tg_platform_win32_window_proc(HWND window_h, UINT message, WPAR
     case WM_KEYDOWN:
     {
         const tg_key key = (tg_key)w_param;
-        const ui64 repeated = ((1ULL << 30) & (i64)l_param) >> 30;
+        const bool repeated = ((1ULL << 30) & (i64)l_param) >> 30;
         const ui32 additional_repeat_counts = (ui32)(0xffffULL & l_param);
         tg_input_on_key_pressed(key, repeated, additional_repeat_counts);
     } break;

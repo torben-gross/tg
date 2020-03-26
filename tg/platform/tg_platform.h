@@ -24,6 +24,7 @@ void tg_platform_debug_print(const char* string);
 void tg_platform_debug_print_performance();
 #endif
 
+f32  tg_platform_get_window_aspect_ratio();
 void tg_platform_get_screen_size(ui32* width, ui32* height);
 void tg_platform_get_window_handle(tg_window_h* p_window_h);
 void tg_platform_get_window_size(ui32* width, ui32* height);

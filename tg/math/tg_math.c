@@ -304,6 +304,15 @@ tgm_mat4f* tgm_m4f_angle_axis(tgm_mat4f* result, f32 angle_in_radians, const tgm
 	return result;
 }
 
+tgm_mat4f* tgm_m4f_euler(tgm_mat4f* result, f32 pitch_in_radians, f32 yaw_in_radians, f32 roll_in_radians)
+{
+	tgm_mat4f x = *tgm_m4f_rotate_x(&x, pitch_in_radians);
+	tgm_mat4f y = *tgm_m4f_rotate_y(&y, yaw_in_radians);
+	tgm_mat4f z = *tgm_m4f_rotate_z(&z, roll_in_radians);
+
+	return tgm_m4f_multiply_m4f(result, &x, tgm_m4f_multiply_m4f(result, &y, &z));
+}
+
 tgm_mat4f* tgm_m4f_identity(tgm_mat4f* result)
 {
 	result->m00 = 1.0f;
@@ -447,6 +456,81 @@ tgm_mat4f* tgm_m4f_perspective(tgm_mat4f* result, f32 fov_y_in_radians, f32 aspe
 	result->m13 = 0.0f;
 	result->m23 = b;
 	result->m33 = 0.0f;
+
+	return result;
+}
+
+tgm_mat4f* tgm_m4f_rotate_x(tgm_mat4f* result, f32 angle_in_radians)
+{
+	result->m00 = 1.0f;
+	result->m10 = 0.0f;
+	result->m20 = 0.0f;
+	result->m30 = 0.0f;
+
+	result->m01 = 0.0f;
+	result->m11 = (f32)cos((f64)angle_in_radians);
+	result->m21 = (f32)sin((f64)angle_in_radians);
+	result->m31 = 0.0f;
+
+	result->m02 = 0.0f;
+	result->m12 = (f32)-sin((f64)angle_in_radians);
+	result->m22 = (f32)cos((f64)angle_in_radians);
+	result->m32 = 0.0f;
+
+	result->m03 = 0.0f;
+	result->m13 = 0.0f;
+	result->m23 = 0.0f;
+	result->m33 = 1.0f;
+
+	return result;
+}
+
+tgm_mat4f* tgm_m4f_rotate_y(tgm_mat4f* result, f32 angle_in_radians)
+{
+	result->m00 = (f32)cos((f64)angle_in_radians);
+	result->m10 = 0.0f;
+	result->m20 = (f32)-sin((f64)angle_in_radians);
+	result->m30 = 0.0f;
+
+	result->m01 = 0.0f;
+	result->m11 = 1.0f;
+	result->m21 = 0.0f;
+	result->m31 = 0.0f;
+
+	result->m02 = (f32)sin((f64)angle_in_radians);
+	result->m12 = 0.0f;
+	result->m22 = (f32)cos((f64)angle_in_radians);
+	result->m32 = 0.0f;
+
+	result->m03 = 0.0f;
+	result->m13 = 0.0f;
+	result->m23 = 0.0f;
+	result->m33 = 1.0f;
+
+	return result;
+}
+
+tgm_mat4f* tgm_m4f_rotate_z(tgm_mat4f* result, f32 angle_in_radians)
+{
+	result->m00 = (f32)cos((f64)angle_in_radians);
+	result->m10 = (f32)sin((f64)angle_in_radians);
+	result->m20 = 0.0f;
+	result->m30 = 0.0f;
+
+	result->m01 = (f32)-sin((f64)angle_in_radians);
+	result->m11 = (f32)cos((f64)angle_in_radians);
+	result->m21 = 0.0f;
+	result->m31 = 0.0f;
+
+	result->m02 = 0.0f;
+	result->m12 = 0.0f;
+	result->m22 = 1.0f;
+	result->m32 = 0.0f;
+
+	result->m03 = 0.0f;
+	result->m13 = 0.0f;
+	result->m23 = 0.0f;
+	result->m33 = 1.0f;
 
 	return result;
 }

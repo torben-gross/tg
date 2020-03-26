@@ -8,10 +8,34 @@
 
 bool running = true;
 
+// TODO: temp
+f32 pitch;
+f32 yaw;
+f32 roll;
+
+f32 fov_y_in_radians;
+f32 aspect;
+f32 near;
+f32 far;
+
 void tg_application_start()
 {
     tg_graphics_init();
-    tg_graphics_renderer_3d_init();
+    tg_camera camera = { 0 };
+    {
+        pitch = 0.0f;
+        yaw = 0.0f;
+        roll = 0.0f;
+        tgm_m4f_euler(&camera.view, TGM_TO_RADIANS(-pitch), TGM_TO_RADIANS(-yaw), TGM_TO_RADIANS(-roll));
+
+        fov_y_in_radians = TGM_TO_RADIANS(70.0f);
+        aspect = tg_platform_get_window_aspect_ratio(&aspect);
+        near = -0.1f;
+        far = -1000.0f;
+        tgm_m4f_perspective(&camera.projection, fov_y_in_radians, aspect, near, far);
+    }
+
+    tg_graphics_renderer_3d_init(&camera);
 
     const tgm_vec3f positions[4] = {
         { -1.5f, -1.5f, 0.0f },

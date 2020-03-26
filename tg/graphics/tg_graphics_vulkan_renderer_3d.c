@@ -126,6 +126,7 @@ typedef struct tg_renderer_3d_present_pass_vertex
 
 
 
+const tg_camera*                p_main_camera;
 tg_renderer_3d_geometry_pass    geometry_pass;
 tg_renderer_3d_shading_pass     shading_pass;
 tg_renderer_3d_present_pass     present_pass;
@@ -663,8 +664,9 @@ void tg_graphics_renderer_3d_internal_init_clear_pass()
     VK_CALL(vkEndCommandBuffer(clear_pass.command_buffer));
 }
 
-void tg_graphics_renderer_3d_init()
+void tg_graphics_renderer_3d_init(const tg_camera* p_camera)
 {
+    p_main_camera = p_camera;
     tg_graphics_renderer_3d_internal_init_geometry_pass();
     tg_graphics_renderer_3d_internal_init_shading_pass();
     tg_graphics_renderer_3d_internal_init_resolve_pass();
@@ -678,19 +680,10 @@ void tg_graphics_renderer_3d_draw(const tg_model_h model_h)
     tg_uniform_buffer_object* p_uniform_buffer_object = NULL;
     VK_CALL(vkMapMemory(device, model_h->material->ubo.device_memory, 0, sizeof(*p_uniform_buffer_object), 0, &p_uniform_buffer_object));
     {
-        tgm_vec3f from = { -1.0f, 1.0f, 7.0f };
-        //tgm_vec3f from = { 0.0f, 0.0f, 0.0f };
-        tgm_vec3f to = { 0.0f, 0.0f, -2.0f };
-        tgm_vec3f up = { 0.0f, 1.0f, 0.0f };
-        const tgm_vec3f translation_vector = { 0.0f, 0.0f, -2.0f };
-        const f32 fov_y_in_radians = TGM_TO_RADIANS(70.0f);
-        const f32 aspect = (f32)swapchain_extent.width / (f32)swapchain_extent.height;
-        const f32 n = -0.1f;
-        const f32 f = -1000.0f;
+        const tgm_vec3f translation_vector = { 0.0f, 0.0f, -9.0f };
         tgm_m4f_translate(&p_uniform_buffer_object->model, &translation_vector);
-        tgm_m4f_look_at(&p_uniform_buffer_object->view, &from, &to, &up);
-        tgm_m4f_perspective(&p_uniform_buffer_object->projection, fov_y_in_radians, aspect, n, f);
-        //tgm_m4f_orthographic(&p_uniform_buffer_object->projection, -10, 10, -10, 10, -10, 10);
+        p_uniform_buffer_object->view = p_main_camera->view;
+        p_uniform_buffer_object->projection = p_main_camera->projection;
     }
     vkUnmapMemory(device, model_h->material->ubo.device_memory);
 

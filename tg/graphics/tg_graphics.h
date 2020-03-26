@@ -152,7 +152,13 @@ void tg_graphics_renderer_2d_draw_call_count(ui32* draw_call_count);
 /*
 ---- 3D Renderer
 */
-void tg_graphics_renderer_3d_init();
+typedef struct tg_camera
+{
+	tgm_mat4f view;
+	tgm_mat4f projection;
+} tg_camera;
+
+void tg_graphics_renderer_3d_init(const tg_camera* p_camera);
 void tg_graphics_renderer_3d_draw(const tg_model_h model_h);
 void tg_graphics_renderer_3d_present();
 void tg_graphics_renderer_3d_shutdown();
