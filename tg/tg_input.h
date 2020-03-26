@@ -102,7 +102,7 @@ typedef enum tg_key
 
 void tg_input_on_mouse_button_pressed(tg_button button);
 void tg_input_on_mouse_button_released(tg_button button);
-void tg_input_on_key_pressed(tg_key key);
+void tg_input_on_key_pressed(tg_key key, bool repeated, ui32 additional_key_repeat_counts);
 void tg_input_on_key_released(tg_key key);
 void tg_input_clear();
 
@@ -110,5 +110,6 @@ bool tg_input_is_mouse_button_pressed(tg_button button, bool consume);
 bool tg_input_is_mouse_button_down(tg_button button);
 bool tg_input_is_key_pressed(tg_key key, bool consume);
 bool tg_input_is_key_down(tg_key key);
+ui32 tg_input_get_key_repeat_count(tg_key key);
 
 #endif

@@ -129,7 +129,10 @@ LRESULT CALLBACK tg_platform_win32_window_proc(HWND window_h, UINT message, WPAR
     } break;
     case WM_KEYDOWN:
     {
-        tg_input_on_key_pressed((tg_key)w_param);
+        const tg_key key = (tg_key)w_param;
+        const ui64 repeated = ((1ULL << 30) & (i64)l_param) >> 30;
+        const ui32 additional_repeat_counts = (ui32)(0xffffULL & l_param);
+        tg_input_on_key_pressed(key, repeated, additional_repeat_counts);
     } break;
     case WM_KEYUP:
     {
