@@ -8,7 +8,7 @@ void tg_graphics_mesh_create(ui32 vertex_count, const tgm_vec3f* positions, cons
 {
 	TG_ASSERT(vertex_count && positions && normals && uvs && p_mesh_h && index_count % 3 == 0);
 
-	*p_mesh_h = tg_allocator_allocate(sizeof(**p_mesh_h));
+	*p_mesh_h = TG_ALLOCATOR_ALLOCATE(sizeof(**p_mesh_h));
     (**p_mesh_h).vbo.vertex_count = vertex_count;
     (**p_mesh_h).ibo.index_count = index_count;
 
@@ -63,7 +63,7 @@ void tg_graphics_mesh_destroy(tg_mesh_h mesh_h)
         tg_graphics_vulkan_buffer_destroy(mesh_h->ibo.buffer, mesh_h->ibo.device_memory);
     }
     tg_graphics_vulkan_buffer_destroy(mesh_h->vbo.buffer, mesh_h->vbo.device_memory);
-	tg_allocator_free(mesh_h);
+	TG_ALLOCATOR_FREE(mesh_h);
 }
 
 #endif

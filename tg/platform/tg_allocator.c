@@ -7,7 +7,7 @@
 
 ui64 total_allocation_count = 0;
 
-void* tg_allocator_allocate(ui64 size)
+void* tg_allocator_allocate_impl(ui64 size)
 {
 	total_allocation_count++;
 
@@ -17,7 +17,7 @@ void* tg_allocator_allocate(ui64 size)
 	return memory;
 }
 
-void tg_allocator_free(void* memory)
+void tg_allocator_free_impl(void* memory)
 {
 	total_allocation_count--;
 

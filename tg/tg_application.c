@@ -77,14 +77,19 @@ void tg_application_start()
 
     while (running)
     {
+        tg_input_clear();
         tg_platform_handle_events();
         tg_graphics_renderer_3d_draw(model_h);
         tg_graphics_renderer_3d_draw(model2_h);
         tg_graphics_renderer_3d_present();
         TG_DEBUG_PRINT_PERFORMANCE();
-        if (tg_input_is_key_down(TG_KEY_SPACE))
+        if (tg_input_is_key_pressed(TG_KEY_SPACE, true))
         {
-            TG_DEBUG_PRINT("SPACE IS DOWN");
+            TG_DEBUG_PRINT("SPACE IS PRESSED!");
+        }
+        if (tg_input_is_key_pressed(TG_KEY_SPACE, false))
+        {
+            TG_DEBUG_PRINT("SPACE IS CONSUMED!");
         }
     }
 

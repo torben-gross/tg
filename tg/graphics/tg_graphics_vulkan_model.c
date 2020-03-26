@@ -9,7 +9,7 @@ void tg_graphics_model_create(tg_mesh_h mesh_h, tg_material_h material_h, tg_mod
 {
 	TG_ASSERT(mesh_h && material_h && p_model_h);
 
-	*p_model_h = tg_allocator_allocate(sizeof(**p_model_h));
+	*p_model_h = TG_ALLOCATOR_ALLOCATE(sizeof(**p_model_h));
     (**p_model_h).mesh = mesh_h;
     (**p_model_h).material = material_h;
 
@@ -109,7 +109,7 @@ void tg_graphics_model_destroy(tg_model_h model_h)
 	TG_ASSERT(model_h);
 
     vkDestroyCommandPool(device, model_h->command_pool, NULL);
-	tg_allocator_free(model_h);
+	TG_ALLOCATOR_FREE(model_h);
 }
 
 #endif

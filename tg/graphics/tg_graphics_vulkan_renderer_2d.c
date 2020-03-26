@@ -248,7 +248,7 @@ void tg_graphics_renderer_2d_internal_init_batch_render_data()
     VkDeviceMemory staging_buffer_memory = VK_NULL_HANDLE;
     tg_graphics_vulkan_buffer_create(RENDERER_2D_MAX_IBO_SIZE, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &staging_buffer, &staging_buffer_memory);
 
-    ui16* indices = tg_allocator_allocate(RENDERER_2D_MAX_IBO_SIZE);
+    ui16* indices = TG_ALLOCATOR_ALLOCATE(RENDERER_2D_MAX_IBO_SIZE);
     for (ui32 i = 0; i < RENDERER_2D_MAX_QUAD_COUNT; i++)
     {
         indices[6 * i + 0] = 4 * i + 0;
@@ -269,7 +269,7 @@ void tg_graphics_renderer_2d_internal_init_batch_render_data()
 
     vkFreeMemory(device, staging_buffer_memory, NULL);
     vkDestroyBuffer(device, staging_buffer, NULL);
-    tg_allocator_free(indices);
+    TG_ALLOCATOR_FREE(indices);
 
 
 

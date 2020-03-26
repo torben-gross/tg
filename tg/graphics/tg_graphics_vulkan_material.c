@@ -9,7 +9,7 @@ void tg_graphics_material_create(tg_vertex_shader_h vertex_shader_h, tg_fragment
 {
 	TG_ASSERT(vertex_shader_h && fragment_shader_h && p_material_h);
 
-	*p_material_h = tg_allocator_allocate(sizeof(**p_material_h));
+	*p_material_h = TG_ALLOCATOR_ALLOCATE(sizeof(**p_material_h));
     tg_graphics_vulkan_buffer_create(sizeof(tg_uniform_buffer_object), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &(**p_material_h).ubo.buffer, &(**p_material_h).ubo.device_memory);
     (**p_material_h).vertex_shader = vertex_shader_h;
     (**p_material_h).fragment_shader = fragment_shader_h;
@@ -263,7 +263,7 @@ void tg_graphics_material_destroy(tg_material_h material_h)
     vkDestroyDescriptorSetLayout(device, material_h->descriptor_set_layout, NULL);
     vkDestroyPipelineLayout(device, material_h->pipeline_layout, NULL);
     vkDestroyPipeline(device, material_h->pipeline, NULL);
-	tg_allocator_free(material_h);
+	TG_ALLOCATOR_FREE(material_h);
 }
 
 #endif

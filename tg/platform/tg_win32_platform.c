@@ -23,7 +23,6 @@ void tg_platform_debug_print(const char* string)
     OutputDebugStringA(string);
     OutputDebugStringA("\n");
 }
-
 void tg_platform_debug_print_performance()
 {
     LARGE_INTEGER end_performance_counter;
@@ -58,12 +57,10 @@ void tg_platform_get_screen_size(ui32* width, ui32* height)
         *height = rect.bottom - rect.top;
     }
 }
-
 void tg_platform_get_window_handle(tg_window_h* p_window_h)
 {
     *p_window_h = window_h;
 }
-
 void tg_platform_get_window_size(ui32* width, ui32* height)
 {
     RECT rect;
@@ -74,7 +71,6 @@ void tg_platform_get_window_size(ui32* width, ui32* height)
         *height = rect.bottom - rect.top;
     }
 }
-
 void tg_platform_handle_events()
 {
     MSG msg = { 0 };
@@ -88,7 +84,6 @@ void tg_platform_handle_events()
 /*
 ---- Windows Internals ----
 */
-
 LRESULT CALLBACK tg_platform_win32_window_proc(HWND window_h, UINT message, WPARAM w_param, LPARAM l_param)
 {
     switch (message)
@@ -145,7 +140,6 @@ LRESULT CALLBACK tg_platform_win32_window_proc(HWND window_h, UINT message, WPAR
     }
     return 0;
 }
-
 int CALLBACK WinMain(_In_ HINSTANCE instance_h, _In_opt_ HINSTANCE prev_instance_h, _In_ LPSTR cmd_line, _In_ int show_cmd)
 {
 #ifdef TG_DEBUG

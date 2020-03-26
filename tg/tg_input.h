@@ -104,10 +104,11 @@ void tg_input_on_mouse_button_pressed(tg_button button);
 void tg_input_on_mouse_button_released(tg_button button);
 void tg_input_on_key_pressed(tg_key key);
 void tg_input_on_key_released(tg_key key);
+void tg_input_clear();
 
-bool tg_input_is_mouse_button_pressed(tg_button button);
+bool tg_input_is_mouse_button_pressed(tg_button button, bool consume);
 bool tg_input_is_mouse_button_down(tg_button button);
-bool tg_input_is_key_pressed(tg_key key);
+bool tg_input_is_key_pressed(tg_key key, bool consume);
 bool tg_input_is_key_down(tg_key key);
 
 #endif

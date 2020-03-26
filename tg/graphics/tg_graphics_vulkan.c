@@ -469,7 +469,7 @@ void tg_graphics_vulkan_physical_device_find_queue_families(VkPhysicalDevice phy
     ui32 queue_family_count;
     vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, NULL);
     TG_ASSERT(queue_family_count);
-    VkQueueFamilyProperties* queue_family_properties = tg_allocator_allocate(queue_family_count * sizeof(*queue_family_properties));
+    VkQueueFamilyProperties* queue_family_properties = TG_ALLOCATOR_ALLOCATE(queue_family_count * sizeof(*queue_family_properties));
     vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, queue_family_properties);
 
     bool supports_graphics_family = false;
@@ -500,13 +500,13 @@ void tg_graphics_vulkan_physical_device_find_queue_families(VkPhysicalDevice phy
     }
     *p_complete = supports_graphics_family && supports_present_family;
 
-    tg_allocator_free(queue_family_properties);
+    TG_ALLOCATOR_FREE(queue_family_properties);
 }
 void tg_graphics_vulkan_physical_device_check_extension_support(VkPhysicalDevice physical_device, bool* p_result)
 {
     ui32 device_extension_property_count;
     VK_CALL(vkEnumerateDeviceExtensionProperties(physical_device, NULL, &device_extension_property_count, NULL));
-    VkExtensionProperties* device_extension_properties = tg_allocator_allocate(device_extension_property_count * sizeof(*device_extension_properties));
+    VkExtensionProperties* device_extension_properties = TG_ALLOCATOR_ALLOCATE(device_extension_property_count * sizeof(*device_extension_properties));
     VK_CALL(vkEnumerateDeviceExtensionProperties(physical_device, NULL, &device_extension_property_count, device_extension_properties));
 
     bool supports_extensions = true;
@@ -524,7 +524,7 @@ void tg_graphics_vulkan_physical_device_check_extension_support(VkPhysicalDevice
         supports_extensions &= supports_extension;
     }
 
-    tg_allocator_free(device_extension_properties);
+    TG_ALLOCATOR_FREE(device_extension_properties);
     *p_result = supports_extensions;
 }
 void tg_graphics_vulkan_physical_device_find_max_sample_count(VkPhysicalDevice physical_device, VkSampleCountFlagBits* p_max_sample_count_flag_bits)
@@ -709,7 +709,7 @@ void tg_graphics_vulkan_instance_create(VkInstance* p_instance)
 #ifdef TG_DEBUG
     ui32 layer_property_count;
     vkEnumerateInstanceLayerProperties(&layer_property_count, NULL);
-    VkLayerProperties* layer_properties = tg_allocator_allocate(layer_property_count * sizeof(*layer_properties));
+    VkLayerProperties* layer_properties = TG_ALLOCATOR_ALLOCATE(layer_property_count * sizeof(*layer_properties));
     vkEnumerateInstanceLayerProperties(&layer_property_count, layer_properties);
 
     for (ui32 i = 0; i < VALIDATION_LAYER_COUNT; i++)
@@ -725,7 +725,7 @@ void tg_graphics_vulkan_instance_create(VkInstance* p_instance)
         }
         TG_ASSERT(layer_found);
     }
-    tg_allocator_free(layer_properties);
+    TG_ALLOCATOR_FREE(layer_properties);
 #endif
 
     VkApplicationInfo application_info = { 0 };
@@ -790,7 +790,7 @@ void tg_graphics_vulkan_physical_device_create(VkPhysicalDevice* p_physical_devi
     ui32 physical_device_count;
     VK_CALL(vkEnumeratePhysicalDevices(instance, &physical_device_count, NULL));
     TG_ASSERT(physical_device_count);
-    VkPhysicalDevice* physical_devices = tg_allocator_allocate(physical_device_count * sizeof(*physical_devices));
+    VkPhysicalDevice* physical_devices = TG_ALLOCATOR_ALLOCATE(physical_device_count * sizeof(*physical_devices));
     VK_CALL(vkEnumeratePhysicalDevices(instance, &physical_device_count, physical_devices));
 
     for (ui32 i = 0; i < physical_device_count; i++)
@@ -806,7 +806,7 @@ void tg_graphics_vulkan_physical_device_create(VkPhysicalDevice* p_physical_devi
     }
     TG_ASSERT(*p_physical_device != VK_NULL_HANDLE);
 
-    tg_allocator_free(physical_devices);
+    TG_ALLOCATOR_FREE(physical_devices);
 }
 void tg_graphics_vulkan_device_create(VkDevice* p_device)
 {
@@ -925,7 +925,7 @@ void tg_graphics_vulkan_swapchain_create()
 
     ui32 surface_format_count;
     VK_CALL(vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface.surface, &surface_format_count, NULL));
-    VkSurfaceFormatKHR* surface_formats = tg_allocator_allocate(surface_format_count * sizeof(*surface_formats));
+    VkSurfaceFormatKHR* surface_formats = TG_ALLOCATOR_ALLOCATE(surface_format_count * sizeof(*surface_formats));
     VK_CALL(vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface.surface, &surface_format_count, surface_formats));
     surface.format = surface_formats[0];
     for (ui32 i = 0; i < surface_format_count; i++)
@@ -936,7 +936,7 @@ void tg_graphics_vulkan_swapchain_create()
             break;
         }
     }
-    tg_allocator_free(surface_formats);
+    TG_ALLOCATOR_FREE(surface_formats);
 
     VkPresentModeKHR present_modes[MAX_PRESENT_MODE_COUNT] = { 0 };
     ui32 max_present_mode_count = MAX_PRESENT_MODE_COUNT;
