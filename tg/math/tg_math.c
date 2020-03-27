@@ -1,6 +1,7 @@
 #include "tg_math.h"
 
 #include <math.h>
+#include <string.h>
 
 f32 tgm_f32_clamp(f32 v, f32 low, f32 high)
 {
@@ -114,11 +115,11 @@ f32 tgm_v3f_dot(const tgm_vec3f* v0, const tgm_vec3f* v1)
 	return v0->x * v1->x + v0->y * v1->y + v0->z * v1->z;
 }
 
-bool tgm_v3f_equal(tgm_vec3f* v0, tgm_vec3f* v1)
+bool tgm_v3f_equal(const tgm_vec3f* v0, const tgm_vec3f* v1)
 {
 	TG_ASSERT(v0 && v1);
 
-	return v0 == v1 || v0->x == v1->x && v0->y == v1->y && v0->z == v1->z;
+	return v0 == v1 || memcmp(v0, v1, sizeof(tgm_vec3f)) == 0;
 }
 
 f32 tgm_v3f_magnitude(const tgm_vec3f* v0)

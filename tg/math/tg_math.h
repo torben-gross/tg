@@ -1,5 +1,10 @@
 /*
 Matrices are layed out in column major.
+
+Projection matrices are currently layed out for following clipping setup:
+	Left: -1, right: 1, bottom: 1, top: -1, near: 0, far: 1
+
+TODO: Support other clipping setups via macros!
 */
 
 #ifndef TG_MATH
@@ -8,24 +13,89 @@ Matrices are layed out in column major.
 #include "tg/tg_common.h"
 #include <stdbool.h>
 
-#define TGM_PI 3.14159265358979323846
-#define TGM_TO_DEGREES(radians) (radians * (360.0f / ((f32)TGM_PI * 2.0f)))
-#define TGM_TO_RADIANS(degrees) (degrees * (((f32)TGM_PI * 2.0f) / 360.0f))
+#define TGM_PI                      3.14159265358979323846
+#define TGM_TO_DEGREES(radians)     (radians * (360.0f / ((f32)TGM_PI * 2.0f)))
+#define TGM_TO_RADIANS(degrees)     (degrees * (((f32)TGM_PI * 2.0f) / 360.0f))
 
-#define TGM_MAT4F_ELEMENT_COUNT 16
-#define TGM_MAT4F_ROW_COUNT      4
-#define TGM_MAT4F_COLUMN_COUNT   4
-#define TGM_MAT3F_ELEMENT_COUNT  9
-#define TGM_MAT3F_ROW_COUNT      3
-#define TGM_MAT3F_COLUMN_COUNT   3
-#define TGM_MAT2F_ELEMENT_COUNT  4
-#define TGM_MAT2F_ROW_COUNT      2
-#define TGM_MAT2F_COLUMN_COUNT   2
+#define TGM_MAT2F_ELEMENT_COUNT     4
+#define TGM_MAT2F_ROW_COUNT         2
+#define TGM_MAT2F_COLUMN_COUNT      2
+#define TGM_MAT3F_ELEMENT_COUNT     9
+#define TGM_MAT3F_ROW_COUNT         3
+#define TGM_MAT3F_COLUMN_COUNT      3
+#define TGM_MAT4F_ELEMENT_COUNT     16
+#define TGM_MAT4F_ROW_COUNT         4
+#define TGM_MAT4F_COLUMN_COUNT      4
 
-#define TGM_VEC4F_ELEMENT_COUNT  4
-#define TGM_VEC3F_ELEMENT_COUNT  3
-#define TGM_VEC2F_ELEMENT_COUNT  2
+#define TGM_VEC2F_ELEMENT_COUNT     2
+#define TGM_VEC3F_ELEMENT_COUNT     3
+#define TGM_VEC4F_ELEMENT_COUNT     4
 
+/*
++-       -+
+| m00 m01 |
+| m10 m11 |
++-       -+
+*/
+typedef struct tgm_mat2f
+{
+	union
+	{
+		struct
+		{
+			f32 m00;
+			f32 m10;
+
+			f32 m01;
+			f32 m11;
+		};
+		struct
+		{
+			f32 data[TGM_MAT2F_ELEMENT_COUNT];
+		};
+	};
+} tgm_mat2f;
+
+/*
++-           -+
+| m00 m01 m02 |
+| m10 m11 m12 |
+| m20 m21 m22 |
++-           -+
+*/
+typedef struct tgm_mat3f
+{
+	union
+	{
+		struct
+		{
+			f32 m00;
+			f32 m10;
+			f32 m20;
+
+			f32 m01;
+			f32 m11;
+			f32 m21;
+
+			f32 m02;
+			f32 m12;
+			f32 m22;
+		};
+		struct
+		{
+			f32 data[TGM_MAT3F_ELEMENT_COUNT];
+		};
+	};
+} tgm_mat3f;
+
+/*
++-               -+
+| m00 m01 m02 m03 |
+| m10 m11 m12 m13 |
+| m20 m21 m22 m23 |
+| m30 m31 m32 m33 |
++-               -+
+*/
 typedef struct tgm_mat4f
 {
 	union
@@ -59,64 +129,20 @@ typedef struct tgm_mat4f
 	};
 } tgm_mat4f;
 
-typedef struct tgm_mat3f
+typedef struct tgm_vec2f
 {
 	union
 	{
 		struct
 		{
-			f32 m00;
-			f32 m10;
-			f32 m20;
-
-			f32 m01;
-			f32 m11;
-			f32 m21;
-			
-			f32 m02;
-			f32 m12;
-			f32 m22;
+			f32 x, y;
 		};
 		struct
 		{
-			f32 data[TGM_MAT3F_ELEMENT_COUNT];
+			f32 data[TGM_VEC2F_ELEMENT_COUNT];
 		};
 	};
-} tgm_mat3f;
-
-typedef struct tgm_mat2f
-{
-	union
-	{
-		struct
-		{
-			f32 m00;
-			f32 m10;
-
-			f32 m01;
-			f32 m11;
-		};
-		struct
-		{
-			f32 data[TGM_MAT2F_ELEMENT_COUNT];
-		};
-	};
-} tgm_mat2f;
-
-typedef struct tgm_vec4f
-{
-	union
-	{
-		struct
-		{
-			f32 x, y, z, w;
-		};
-		struct
-		{
-			f32 data[TGM_VEC4F_ELEMENT_COUNT];
-		};
-	};
-} tgm_vec4f;
+} tgm_vec2f;
 
 typedef struct tgm_vec3f
 {
@@ -133,20 +159,20 @@ typedef struct tgm_vec3f
 	};
 } tgm_vec3f;
 
-typedef struct tgm_vec2f
+typedef struct tgm_vec4f
 {
 	union
 	{
 		struct
 		{
-			f32 x, y;
+			f32 x, y, z, w;
 		};
 		struct
 		{
-			f32 data[TGM_VEC2F_ELEMENT_COUNT];
+			f32 data[TGM_VEC4F_ELEMENT_COUNT];
 		};
 	};
-} tgm_vec2f;
+} tgm_vec4f;
 
 /*
 ---- Functional ----
@@ -172,7 +198,7 @@ tgm_vec3f*    tgm_v3f_cross(tgm_vec3f* result, tgm_vec3f* v0, tgm_vec3f* v1);
 tgm_vec3f*    tgm_v3f_divide_v3f(tgm_vec3f* result, tgm_vec3f* v0, tgm_vec3f* v1);
 tgm_vec3f*    tgm_v3f_divide_f(tgm_vec3f* result, tgm_vec3f* v, f32 f);
 f32           tgm_v3f_dot(const tgm_vec3f* v0, const tgm_vec3f* v1);
-bool          tgm_v3f_equal(tgm_vec3f* v0, tgm_vec3f* v1);
+bool          tgm_v3f_equal(const tgm_vec3f* v0, const tgm_vec3f* v1);
 f32           tgm_v3f_magnitude(const tgm_vec3f* v);
 f32           tgm_v3f_magnitude_squared(const tgm_vec3f* v);
 tgm_vec3f*    tgm_v3f_multiply_v3f(tgm_vec3f* result, tgm_vec3f* v0, tgm_vec3f* v1);

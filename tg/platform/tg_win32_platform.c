@@ -1,10 +1,10 @@
 #define _CRT_SECURE_NO_WARNINGS
 
+#include "tg/graphics/tg_graphics.h"
+#include "tg/platform/tg_allocator.h"
 #include "tg/tg_application.h"
 #include "tg/tg_input.h"
-#include "tg/platform/tg_allocator.h"
-#include "tg/graphics/tg_graphics.h"
-#include <stdio.h>
+#include "tg/util/tg_timer.h"
 #include <windows.h>
 
 #ifdef TG_DEBUG
@@ -13,15 +13,72 @@
 #define WIN32_CALL(x) x
 #endif
 
-HWND             window_h = NULL;
+HWND    window_h = NULL;
 
-#ifdef TG_DEBUG
-LARGE_INTEGER    performance_frequency;
-LARGE_INTEGER    last_performance_counter;
-char             buffer[256];
-f32              milliseconds_sum = 0.0f;
-ui32             fps = 0;
-#endif
+/*
+---- Timer ----
+*/
+typedef struct tg_timer
+{
+    bool             running;
+    LONGLONG         counter_elapsed;
+    LARGE_INTEGER    performance_frequency;
+    LARGE_INTEGER    start_performance_counter;
+    LARGE_INTEGER    end_performance_counter;
+} tg_timer;
+
+void tg_timer_create(tg_timer_h* p_timer_h)
+{
+    TG_ASSERT(p_timer_h);
+
+    *p_timer_h = TG_ALLOCATOR_ALLOCATE(sizeof(**p_timer_h));
+    (**p_timer_h).running = false;
+    QueryPerformanceFrequency(&(**p_timer_h).performance_frequency);
+    QueryPerformanceCounter(&(**p_timer_h).start_performance_counter);
+    QueryPerformanceCounter(&(**p_timer_h).end_performance_counter);
+}
+void tg_timer_start(tg_timer_h timer_h)
+{
+    TG_ASSERT(timer_h);
+
+    if (!timer_h->running)
+    {
+        timer_h->running = true;
+        QueryPerformanceCounter(&timer_h->start_performance_counter);
+    }
+}
+void tg_timer_stop(tg_timer_h timer_h)
+{
+    TG_ASSERT(timer_h);
+
+    if (timer_h->running)
+    {
+        timer_h->running = false;
+        QueryPerformanceCounter(&timer_h->end_performance_counter);
+        timer_h->counter_elapsed += timer_h->end_performance_counter.QuadPart - timer_h->start_performance_counter.QuadPart;
+    }
+}
+void tg_timer_reset(tg_timer_h timer_h)
+{
+    TG_ASSERT(timer_h);
+
+    timer_h->running = false;
+    timer_h->counter_elapsed = 0;
+    QueryPerformanceCounter(&timer_h->start_performance_counter);
+    QueryPerformanceCounter(&timer_h->end_performance_counter);
+}
+f32  tg_timer_elapsed_milliseconds(tg_timer_h timer_h)
+{
+    TG_ASSERT(timer_h);
+
+    return (f32)((1000000000LL * timer_h->counter_elapsed) / timer_h->performance_frequency.QuadPart) / 1000000.0f;
+}
+void tg_timer_destroy(tg_timer_h timer_h)
+{
+    TG_ASSERT(timer_h);
+
+    TG_ALLOCATOR_FREE(timer_h);
+}
 
 #ifdef TG_DEBUG
 void tg_platform_debug_print(const char* string)
@@ -29,30 +86,7 @@ void tg_platform_debug_print(const char* string)
     OutputDebugStringA(string);
     OutputDebugStringA("\n");
 }
-void tg_platform_debug_print_performance()
-{
-    LARGE_INTEGER end_performance_counter;
-    QueryPerformanceCounter(&end_performance_counter);
-    const LONGLONG counter_elapsed = end_performance_counter.QuadPart - last_performance_counter.QuadPart;
-    last_performance_counter = end_performance_counter;
-    const f32 delta_ms = (f32)((1000000000LL * counter_elapsed) / performance_frequency.QuadPart) / 1000000.0f;
-
-    milliseconds_sum += delta_ms;
-    fps++;
-    if (milliseconds_sum > 1000.0f)
-    {
-        snprintf(buffer, sizeof(buffer), "%f ms\n", milliseconds_sum / fps);
-        OutputDebugStringA(buffer);
-
-        snprintf(buffer, sizeof(buffer), "%lu fps\n", fps);
-        OutputDebugStringA(buffer);
-
-        milliseconds_sum = 0.0f;
-        fps = 0;
-    }
-}
 #endif
-
 void tg_platform_get_mouse_position(ui32* x, ui32* y)
 {
     POINT point = { 0 };
@@ -145,11 +179,6 @@ LRESULT CALLBACK tg_platform_win32_window_proc(HWND window_h, UINT message, WPAR
 }
 int CALLBACK WinMain(_In_ HINSTANCE instance_h, _In_opt_ HINSTANCE prev_instance_h, _In_ LPSTR cmd_line, _In_ int show_cmd)
 {
-#ifdef TG_DEBUG
-    QueryPerformanceFrequency(&performance_frequency);
-    QueryPerformanceCounter(&last_performance_counter);
-#endif
-
     const char* window_class_id = "tg";
     const char* window_title = "tg";
 

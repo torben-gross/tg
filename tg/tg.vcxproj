@@ -136,6 +136,7 @@
     <ClInclude Include="tg_common.h" />
     <ClInclude Include="tg_entity.h" />
     <ClInclude Include="util\tg_file_io.h" />
+    <ClInclude Include="util\tg_timer.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="assets\shaders\frag.spv" />
