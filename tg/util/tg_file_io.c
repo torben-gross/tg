@@ -15,28 +15,28 @@
 #define MAX_PATH_LENGTH 260
 #endif
 
-void tg_file_io_read(const char* filename, ui64* size, char** content)
+void tg_file_io_read(const char* p_filename, ui64* p_size, char** pp_data)
 {
-    TG_ASSERT(filename && size && content);
+    TG_ASSERT(p_filename && p_size && pp_data);
 
     char path[MAX_PATH_LENGTH];
     memset(path, 0, MAX_PATH_LENGTH * sizeof(char));
     strcpy(path, ASSETS_PATH);
-    strcpy(path + ASSETS_PATH_LENGTH, filename);
+    strcpy(path + ASSETS_PATH_LENGTH, p_filename);
 
     FILE* file = fopen(path, "rb");
     TG_ASSERT(file);
 
     fseek(file, 0, SEEK_END);
-    *size = (ui64)ftell(file);
+    *p_size = (ui64)ftell(file);
     rewind(file);
 
-    *content = TG_ALLOCATOR_ALLOCATE(*size);
-    fread(*content, 1, *size, file);
+    *pp_data = TG_ALLOCATOR_ALLOCATE(*p_size);
+    fread(*pp_data, 1, *p_size, file);
     fclose(file);
 }
 
-void tg_file_io_free(char* content)
+void tg_file_io_free(char* p_data)
 {
-    TG_ALLOCATOR_FREE(content);
+    TG_ALLOCATOR_FREE(p_data);
 }

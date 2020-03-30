@@ -4,15 +4,6 @@
 #include "tg/tg_common.h"
 #include <stdbool.h>
 
-typedef enum tg_button
-{
-	TG_BUTTON_LEFT      = 0x01,
-	TG_BUTTON_RIGHT     = 0x02,
-	TG_BUTTON_MIDDLE    = 0x04,
-	TG_BUTTON_X1        = 0x05,
-	TG_BUTTON_X2        = 0x06
-} tg_button;
-
 typedef enum tg_key
 {
 	TG_KEY_BACKSPACE        = '\b',
@@ -100,18 +91,34 @@ typedef enum tg_key
 	TG_KEY_RIGHT_CONTROL    = 0xa3
 } tg_key;
 
-void tg_input_get_mouse_position(ui32* x, ui32* y);
+typedef enum tg_button
+{
+	TG_BUTTON_LEFT = 0x01,
+	TG_BUTTON_RIGHT = 0x02,
+	TG_BUTTON_MIDDLE = 0x04,
+	TG_BUTTON_X1 = 0x05,
+	TG_BUTTON_X2 = 0x06
+} tg_button;
 
+/*
+---- Internals ----
+*/
+void tg_input_clear();
+void tg_input_on_key_pressed(tg_key key, bool repeated, ui32 additional_key_repeat_count);
+void tg_input_on_key_released(tg_key key);
 void tg_input_on_mouse_button_pressed(tg_button button);
 void tg_input_on_mouse_button_released(tg_button button);
-void tg_input_on_key_pressed(tg_key key, bool repeated, ui32 additional_key_repeat_counts);
-void tg_input_on_key_released(tg_key key);
-void tg_input_clear();
+void tg_input_on_mouse_wheel_rotated(f32 detents);
 
-bool tg_input_is_mouse_button_pressed(tg_button button, bool consume);
-bool tg_input_is_mouse_button_down(tg_button button);
-bool tg_input_is_key_pressed(tg_key key, bool consume);
-bool tg_input_is_key_down(tg_key key);
+/*
+---- Public Functions ----
+*/
 ui32 tg_input_get_key_repeat_count(tg_key key);
+void tg_input_get_mouse_position(ui32* x, ui32* y);
+f32  tg_input_get_mouse_wheel_detents(bool consume);
+bool tg_input_is_key_down(tg_key key);
+bool tg_input_is_key_pressed(tg_key key, bool consume);
+bool tg_input_is_mouse_button_down(tg_button button);
+bool tg_input_is_mouse_button_pressed(tg_button button, bool consume);
 
 #endif

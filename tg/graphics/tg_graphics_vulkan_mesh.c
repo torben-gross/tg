@@ -4,9 +4,9 @@
 
 #include "tg/platform/tg_allocator.h"
 
-void tg_graphics_mesh_create(ui32 vertex_count, const tgm_vec3f* positions, const tgm_vec3f* normals, const tgm_vec2f* uvs, ui32 index_count, const ui16* indices, tg_mesh_h* p_mesh_h)
+void tg_graphics_mesh_create(ui32 vertex_count, const tgm_vec3f* p_positions, const tgm_vec3f* p_normals, const tgm_vec2f* p_uvs, ui32 index_count, const ui16* p_indices, tg_mesh_h* p_mesh_h)
 {
-	TG_ASSERT(vertex_count && positions && normals && uvs && p_mesh_h && index_count % 3 == 0);
+	TG_ASSERT(vertex_count && p_positions && p_normals && p_uvs && p_mesh_h && index_count % 3 == 0);
 
 	*p_mesh_h = TG_ALLOCATOR_ALLOCATE(sizeof(**p_mesh_h));
     (**p_mesh_h).vbo.vertex_count = vertex_count;
@@ -25,9 +25,9 @@ void tg_graphics_mesh_create(ui32 vertex_count, const tgm_vec3f* positions, cons
     {
         for (ui16 i = 0; i < vertex_count; i++) // TODO: ui16 only if indices stay with ui16
         {
-            vbo_data[i].position = positions[i];
-            vbo_data[i].normal = normals[i];
-            vbo_data[i].uv = uvs[i];
+            vbo_data[i].position = p_positions[i];
+            vbo_data[i].normal = p_normals[i];
+            vbo_data[i].uv = p_uvs[i];
         }
     }
     vkUnmapMemory(device, staging_buffer_memory);
@@ -40,7 +40,7 @@ void tg_graphics_mesh_create(ui32 vertex_count, const tgm_vec3f* positions, cons
         tg_graphics_vulkan_buffer_create(ibo_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &staging_buffer, &staging_buffer_memory);
         VK_CALL(vkMapMemory(device, staging_buffer_memory, 0, ibo_size, 0, &ibo_data));
         {
-            memcpy(ibo_data, indices, ibo_size);
+            memcpy(ibo_data, p_indices, ibo_size);
         }
         vkUnmapMemory(device, staging_buffer_memory);
         tg_graphics_vulkan_buffer_create(ibo_size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &(**p_mesh_h).ibo.buffer, &(**p_mesh_h).ibo.device_memory);

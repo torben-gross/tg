@@ -17,11 +17,11 @@ void* tg_allocator_allocate_impl(ui64 size)
 	return memory;
 }
 
-void tg_allocator_free_impl(void* memory)
+void tg_allocator_free_impl(void* p_memory)
 {
 	total_allocation_count--;
 
-	free(memory);
+	free(p_memory);
 }
 
 ui64 tg_allocator_unfreed_allocation_count()

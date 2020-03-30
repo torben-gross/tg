@@ -81,13 +81,13 @@ void tg_timer_destroy(tg_timer_h timer_h)
 }
 
 #ifdef TG_DEBUG
-void tg_platform_debug_print(const char* string)
+void tg_platform_debug_print(const char* p_message)
 {
-    OutputDebugStringA(string);
+    OutputDebugStringA(p_message);
     OutputDebugStringA("\n");
 }
 #endif
-void tg_platform_get_mouse_position(ui32* x, ui32* y)
+void tg_platform_get_mouse_position(ui32* p_x, ui32* p_y)
 {
     POINT point = { 0 };
     WIN32_CALL(GetCursorPos(&point));
@@ -95,15 +95,15 @@ void tg_platform_get_mouse_position(ui32* x, ui32* y)
     ui32 width;
     ui32 height;
     tg_platform_get_window_size(&width, &height);
-    *x = (ui32)tgm_i32_clamp(point.x, 0, width - 1);
-    *y = (ui32)tgm_i32_clamp(point.y, 0, height - 1);
+    *p_x = (ui32)tgm_i32_clamp(point.x, 0, width - 1);
+    *p_y = (ui32)tgm_i32_clamp(point.y, 0, height - 1);
 }
-void tg_platform_get_screen_size(ui32* width, ui32* height)
+void tg_platform_get_screen_size(ui32* p_width, ui32* p_height)
 {
     RECT rect;
     WIN32_CALL(GetWindowRect(GetDesktopWindow(), &rect));
-    *width = rect.right - rect.left;
-    *height = rect.bottom - rect.top;
+    *p_width = rect.right - rect.left;
+    *p_height = rect.bottom - rect.top;
 }
 f32  tg_platform_get_window_aspect_ratio()
 {
@@ -116,12 +116,12 @@ void tg_platform_get_window_handle(tg_window_h* p_window_h)
 {
     *p_window_h = window_h;
 }
-void tg_platform_get_window_size(ui32* width, ui32* height)
+void tg_platform_get_window_size(ui32* p_width, ui32* p_height)
 {
     RECT rect;
     WIN32_CALL(GetWindowRect(window_h, &rect));
-    *width = rect.right - rect.left;
-    *height = rect.bottom - rect.top;
+    *p_width = rect.right - rect.left;
+    *p_height = rect.bottom - rect.top;
 }
 void tg_platform_handle_events()
 {
@@ -165,12 +165,19 @@ LRESULT CALLBACK tg_platform_win32_window_proc(HWND window_h, UINT message, WPAR
     case WM_RBUTTONUP:   tg_input_on_mouse_button_released(TG_BUTTON_RIGHT);            break;
     case WM_MBUTTONUP:   tg_input_on_mouse_button_released(TG_BUTTON_MIDDLE);           break;
     case WM_XBUTTONUP:   tg_input_on_mouse_button_released((tg_button)HIWORD(w_param)); break;
+    case WM_MOUSEWHEEL:
+    {
+        char buffer[156] = { 0 };
+        const i16 mouse_wheel_delta = GET_WHEEL_DELTA_WPARAM(w_param);
+        const f32 mouse_wheel_delta_normalized = (f32)mouse_wheel_delta / (f32)WHEEL_DELTA;
+        tg_input_on_mouse_wheel_rotated(mouse_wheel_delta_normalized);
+    } break;
     case WM_KEYDOWN:
     {
         const tg_key key = (tg_key)w_param;
         const bool repeated = ((1ULL << 30) & (i64)l_param) >> 30;
-        const ui32 additional_repeat_counts = (ui32)(0xffffULL & l_param);
-        tg_input_on_key_pressed(key, repeated, additional_repeat_counts);
+        const ui32 additional_key_repeat_count = (ui32)(0xffffULL & l_param);
+        tg_input_on_key_pressed(key, repeated, additional_key_repeat_count);
     } break;
     case WM_KEYUP: tg_input_on_key_released((tg_key)w_param);                           break;
     default: return DefWindowProcA(window_h, message, w_param, l_param);

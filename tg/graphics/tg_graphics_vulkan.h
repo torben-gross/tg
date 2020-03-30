@@ -184,13 +184,13 @@ void tg_graphics_vulkan_command_buffers_free(VkCommandPool command_pool, ui32 co
 void tg_graphics_vulkan_depth_format_acquire(VkFormat* p_format);
 void tg_graphics_vulkan_descriptor_pool_create(VkDescriptorPoolCreateFlags flags, ui32 max_sets, ui32 pool_size_count, const VkDescriptorPoolSize* pool_sizes, VkDescriptorPool* p_descriptor_pool);
 void tg_graphics_vulkan_descriptor_pool_destroy(VkDescriptorPool descriptor_pool);
-void tg_graphics_vulkan_descriptor_set_layout_create(VkDescriptorSetLayoutCreateFlags flags, ui32 binding_count, const VkDescriptorSetLayoutBinding* bindings, VkDescriptorSetLayout* p_descriptor_set_layout);
+void tg_graphics_vulkan_descriptor_set_layout_create(VkDescriptorSetLayoutCreateFlags flags, ui32 binding_count, const VkDescriptorSetLayoutBinding* p_bindings, VkDescriptorSetLayout* p_descriptor_set_layout);
 void tg_graphics_vulkan_descriptor_set_layout_destroy(VkDescriptorSetLayout descriptor_set_layout);
 void tg_graphics_vulkan_descriptor_set_allocate(VkDescriptorPool descriptor_pool, VkDescriptorSetLayout descriptor_set_layout, VkDescriptorSet* p_descriptor_set);
 void tg_graphics_vulkan_descriptor_set_free(VkDescriptorPool descriptor_pool, VkDescriptorSet descriptor_set);
 void tg_graphics_vulkan_fence_create(VkFenceCreateFlags fence_create_flags, VkFence* p_fence);
 void tg_graphics_vulkan_fence_destroy(VkFence fence);
-void tg_graphics_vulkan_framebuffer_create(VkRenderPass render_pass, ui32 attachment_count, const VkImageView* attachments, ui32 width, ui32 height, VkFramebuffer* p_framebuffer);
+void tg_graphics_vulkan_framebuffer_create(VkRenderPass render_pass, ui32 attachment_count, const VkImageView* p_attachments, ui32 width, ui32 height, VkFramebuffer* p_framebuffer);
 void tg_graphics_vulkan_framebuffer_destroy(VkFramebuffer framebuffer);
 void tg_graphics_vulkan_image_create(ui32 width, ui32 height, ui32 mip_levels, VkFormat format, VkSampleCountFlagBits sample_count_flag_bits, VkImageUsageFlags image_usage_flags, VkMemoryPropertyFlags memory_property_flags, VkImage* p_image, VkDeviceMemory* p_device_memory);
 void tg_graphics_vulkan_image_destroy(VkImage image, VkDeviceMemory device_memory);
@@ -207,13 +207,13 @@ void tg_graphics_vulkan_pipeline_create(VkPipelineCache pipeline_cache, const Vk
 void tg_graphics_vulkan_pipeline_destroy(VkPipeline pipeline);
 void tg_graphics_vulkan_pipeline_layout_create(ui32 descriptor_set_layout_count, const VkDescriptorSetLayout* descriptor_set_layouts, ui32 push_constant_range_count, const VkPushConstantRange* push_constant_ranges, VkPipelineLayout* p_pipeline_layout);
 void tg_graphics_vulkan_pipeline_layout_destroy(VkPipelineLayout pipeline_layout);
-void tg_graphics_vulkan_render_pass_create(ui32 attachment_count, const VkAttachmentDescription* attachments, ui32 subpass_count, const VkSubpassDescription* subpasses, ui32 dependency_count, const VkSubpassDependency* dependencies, VkRenderPass* p_render_pass);
+void tg_graphics_vulkan_render_pass_create(ui32 attachment_count, const VkAttachmentDescription* p_attachments, ui32 subpass_count, const VkSubpassDescription* p_subpasses, ui32 dependency_count, const VkSubpassDependency* p_dependencies, VkRenderPass* p_render_pass);
 void tg_graphics_vulkan_render_pass_destroy(VkRenderPass render_pass);
 void tg_graphics_vulkan_sampler_create(ui32 mip_levels, VkFilter min_filter, VkFilter mag_filter, VkSamplerAddressMode address_mode_u, VkSamplerAddressMode address_mode_v, VkSamplerAddressMode address_mode_w, VkSampler* p_sampler);
 void tg_graphics_vulkan_sampler_destroy(VkSampler sampler);
 void tg_graphics_vulkan_semaphore_create(VkSemaphore* p_semaphore);
 void tg_graphics_vulkan_semaphore_destroy(VkSemaphore semaphore);
-void tg_graphics_vulkan_shader_module_create(const char* filename, VkShaderModule* p_shader_module);
+void tg_graphics_vulkan_shader_module_create(const char* p_filename, VkShaderModule* p_shader_module);
 void tg_graphics_vulkan_shader_module_destroy(VkShaderModule shader_module);
 
 

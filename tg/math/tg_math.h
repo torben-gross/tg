@@ -175,6 +175,11 @@ typedef struct tgm_vec4f
 } tgm_vec4f;
 
 /*
+---- Intrinsics ----
+*/
+f32           tgm_f32_sin(f32 v); // TODO
+
+/*
 ---- Functional ----
 */
 f32           tgm_f32_clamp(f32 v, f32 low, f32 high);
@@ -192,52 +197,52 @@ ui32          tgm_ui32_min(ui32 v0, ui32 v1);
 /*
 ---- Vectors ----
 */
-tgm_vec3f*    tgm_v3f_add_v3f(tgm_vec3f* result, tgm_vec3f* v0, tgm_vec3f* v1);// TODO: every functions needs TG_ASSERT for args
-tgm_vec3f*    tgm_v3f_add_f(tgm_vec3f* result, tgm_vec3f* v, f32 f);
-tgm_vec3f*    tgm_v3f_cross(tgm_vec3f* result, tgm_vec3f* v0, tgm_vec3f* v1);
-tgm_vec3f*    tgm_v3f_divide_v3f(tgm_vec3f* result, tgm_vec3f* v0, tgm_vec3f* v1);
-tgm_vec3f*    tgm_v3f_divide_f(tgm_vec3f* result, tgm_vec3f* v, f32 f);
-f32           tgm_v3f_dot(const tgm_vec3f* v0, const tgm_vec3f* v1);
-bool          tgm_v3f_equal(const tgm_vec3f* v0, const tgm_vec3f* v1);
-f32           tgm_v3f_magnitude(const tgm_vec3f* v);
-f32           tgm_v3f_magnitude_squared(const tgm_vec3f* v);
-tgm_vec3f*    tgm_v3f_multiply_v3f(tgm_vec3f* result, tgm_vec3f* v0, tgm_vec3f* v1);
-tgm_vec3f*    tgm_v3f_multiply_f(tgm_vec3f* result, tgm_vec3f* v, f32 f);
-tgm_vec3f*    tgm_v3f_negate(tgm_vec3f* result, tgm_vec3f* v0);
-tgm_vec3f*    tgm_v3f_normalize(tgm_vec3f* result, tgm_vec3f* v0);
-tgm_vec3f*    tgm_v3f_subtract_v3f(tgm_vec3f* result, tgm_vec3f* v0, tgm_vec3f* v1);
-tgm_vec3f*    tgm_v3f_subtract_f(tgm_vec3f* result, tgm_vec3f* v, f32 f);
-tgm_vec4f*    tgm_v3f_to_v4f(tgm_vec4f* result, const tgm_vec3f* v, f32 w);
+tgm_vec3f*    tgm_v3f_add_v3f(tgm_vec3f* p_result, tgm_vec3f* p_v0, tgm_vec3f* p_v1);// TODO: every functions needs TG_ASSERT for args
+tgm_vec3f*    tgm_v3f_add_f(tgm_vec3f* p_result, tgm_vec3f* p_v, f32 f);
+tgm_vec3f*    tgm_v3f_cross(tgm_vec3f* p_result, tgm_vec3f* p_v0, tgm_vec3f* p_v1);
+tgm_vec3f*    tgm_v3f_divide_v3f(tgm_vec3f* p_result, tgm_vec3f* p_v0, tgm_vec3f* p_v1);
+tgm_vec3f*    tgm_v3f_divide_f(tgm_vec3f* p_result, tgm_vec3f* p_v, f32 f);
+f32           tgm_v3f_dot(const tgm_vec3f* p_v0, const tgm_vec3f* p_v1);
+bool          tgm_v3f_equal(const tgm_vec3f* p_v0, const tgm_vec3f* p_v1);
+f32           tgm_v3f_magnitude(const tgm_vec3f* p_v);
+f32           tgm_v3f_magnitude_squared(const tgm_vec3f* p_v);
+tgm_vec3f*    tgm_v3f_multiply_v3f(tgm_vec3f* p_result, tgm_vec3f* p_v0, tgm_vec3f* p_v1);
+tgm_vec3f*    tgm_v3f_multiply_f(tgm_vec3f* p_result, tgm_vec3f* p_v, f32 f);
+tgm_vec3f*    tgm_v3f_negate(tgm_vec3f* p_result, tgm_vec3f* p_v0);
+tgm_vec3f*    tgm_v3f_normalize(tgm_vec3f* p_result, tgm_vec3f* p_v0);
+tgm_vec3f*    tgm_v3f_subtract_v3f(tgm_vec3f* p_result, tgm_vec3f* p_v0, tgm_vec3f* p_v1);
+tgm_vec3f*    tgm_v3f_subtract_f(tgm_vec3f* p_result, tgm_vec3f* p_v, f32 f);
+tgm_vec4f*    tgm_v3f_to_v4f(tgm_vec4f* p_result, const tgm_vec3f* p_v, f32 w);
 
-tgm_vec4f*    tgm_v4f_negate(tgm_vec4f* result, tgm_vec4f* v);
-tgm_vec3f*    tgm_v4f_to_v3f(tgm_vec3f* result, const tgm_vec4f* v);
+tgm_vec4f*    tgm_v4f_negate(tgm_vec4f* p_result, tgm_vec4f* p_v);
+tgm_vec3f*    tgm_v4f_to_v3f(tgm_vec3f* p_result, const tgm_vec4f* p_v);
 
 /*
 ---- Matrices ----
 */
-tgm_mat2f*    tgm_m2f_identity(tgm_mat2f* result);
-tgm_mat2f*    tgm_m2f_multiply_m2f(tgm_mat2f* result, tgm_mat2f* m0, tgm_mat2f* m1);
-tgm_vec2f*    tgm_m2f_multiply_v2f(tgm_vec2f* result, const tgm_mat2f* m, tgm_vec2f* v);
-tgm_mat2f*    tgm_m2f_transpose(tgm_mat2f* result, tgm_mat2f* m);
+tgm_mat2f*    tgm_m2f_identity(tgm_mat2f* p_result);
+tgm_mat2f*    tgm_m2f_multiply_m2f(tgm_mat2f* p_result, tgm_mat2f* p_m0, tgm_mat2f* p_m1);
+tgm_vec2f*    tgm_m2f_multiply_v2f(tgm_vec2f* p_result, const tgm_mat2f* p_m, tgm_vec2f* p_v);
+tgm_mat2f*    tgm_m2f_transpose(tgm_mat2f* p_result, tgm_mat2f* p_m);
 
-tgm_mat3f*    tgm_m3f_identity(tgm_mat3f* result);
-tgm_mat3f*    tgm_m3f_multiply_m3f(tgm_mat3f* result, tgm_mat3f* m0, tgm_mat3f* m1);
-tgm_vec3f*    tgm_m3f_multiply_v3f(tgm_vec3f* result, const tgm_mat3f* m, tgm_vec3f* v);
-tgm_mat3f*    tgm_m3f_orthographic(tgm_mat3f* result, f32 left, f32 right, f32 bottom, f32 top);
-tgm_mat3f*    tgm_m3f_transpose(tgm_mat3f* result, tgm_mat3f* m);
+tgm_mat3f*    tgm_m3f_identity(tgm_mat3f* p_result);
+tgm_mat3f*    tgm_m3f_multiply_m3f(tgm_mat3f* p_result, tgm_mat3f* p_m0, tgm_mat3f* p_m1);
+tgm_vec3f*    tgm_m3f_multiply_v3f(tgm_vec3f* p_result, const tgm_mat3f* p_m, tgm_vec3f* p_v);
+tgm_mat3f*    tgm_m3f_orthographic(tgm_mat3f* p_result, f32 left, f32 right, f32 bottom, f32 top);
+tgm_mat3f*    tgm_m3f_transpose(tgm_mat3f* p_result, tgm_mat3f* p_m);
 
-tgm_mat4f*    tgm_m4f_angle_axis(tgm_mat4f* result, f32 angle_in_radians, const tgm_vec3f* axis);
-tgm_mat4f*    tgm_m4f_euler(tgm_mat4f* result, f32 pitch_in_radians, f32 yaw_in_radians, f32 roll_in_radians);
-tgm_mat4f*    tgm_m4f_identity(tgm_mat4f* result);
-tgm_mat4f*    tgm_m4f_look_at(tgm_mat4f* result, tgm_vec3f* from, tgm_vec3f* to, tgm_vec3f* up);
-tgm_mat4f*    tgm_m4f_multiply_m4f(tgm_mat4f* result, tgm_mat4f* m0, tgm_mat4f* m1);
-tgm_vec4f*    tgm_m4f_multiply_v4f(tgm_vec4f* result, const tgm_mat4f* m, tgm_vec4f* v);
-tgm_mat4f*    tgm_m4f_orthographic(tgm_mat4f* result, f32 left, f32 right, f32 bottom, f32 top, f32 far, f32 near);
-tgm_mat4f*    tgm_m4f_perspective(tgm_mat4f* result, f32 fov_y_in_radians, f32 aspect, f32 near, f32 far);
-tgm_mat4f*    tgm_m4f_rotate_x(tgm_mat4f* result, f32 angle_in_radians);
-tgm_mat4f*    tgm_m4f_rotate_y(tgm_mat4f* result, f32 angle_in_radians);
-tgm_mat4f*    tgm_m4f_rotate_z(tgm_mat4f* result, f32 angle_in_radians);
-tgm_mat4f*    tgm_m4f_translate(tgm_mat4f* result, const tgm_vec3f* v);
-tgm_mat4f*    tgm_m4f_transpose(tgm_mat4f* result, tgm_mat4f* m);
+tgm_mat4f*    tgm_m4f_angle_axis(tgm_mat4f* p_result, f32 angle_in_radians, const tgm_vec3f* p_axis);
+tgm_mat4f*    tgm_m4f_euler(tgm_mat4f* p_result, f32 pitch_in_radians, f32 yaw_in_radians, f32 roll_in_radians);
+tgm_mat4f*    tgm_m4f_identity(tgm_mat4f* p_result);
+tgm_mat4f*    tgm_m4f_look_at(tgm_mat4f* p_result, tgm_vec3f* p_from, tgm_vec3f* p_to, tgm_vec3f* p_up);
+tgm_mat4f*    tgm_m4f_multiply_m4f(tgm_mat4f* p_result, tgm_mat4f* p_m0, tgm_mat4f* p_m1);
+tgm_vec4f*    tgm_m4f_multiply_v4f(tgm_vec4f* p_result, const tgm_mat4f* p_m, tgm_vec4f* p_v);
+tgm_mat4f*    tgm_m4f_orthographic(tgm_mat4f* p_result, f32 left, f32 right, f32 bottom, f32 top, f32 far, f32 near);
+tgm_mat4f*    tgm_m4f_perspective(tgm_mat4f* p_result, f32 fov_y_in_radians, f32 aspect, f32 near, f32 far);
+tgm_mat4f*    tgm_m4f_rotate_x(tgm_mat4f* p_result, f32 angle_in_radians);
+tgm_mat4f*    tgm_m4f_rotate_y(tgm_mat4f* p_result, f32 angle_in_radians);
+tgm_mat4f*    tgm_m4f_rotate_z(tgm_mat4f* p_result, f32 angle_in_radians);
+tgm_mat4f*    tgm_m4f_translate(tgm_mat4f* p_result, const tgm_vec3f* p_v);
+tgm_mat4f*    tgm_m4f_transpose(tgm_mat4f* p_result, tgm_mat4f* p_m);
 
 #endif

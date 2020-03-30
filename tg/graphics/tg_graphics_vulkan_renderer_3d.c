@@ -349,7 +349,7 @@ void tg_graphics_renderer_3d_internal_init_present_pass()
         attachment_description.flags = 0;
         attachment_description.format = surface.format.format;
         attachment_description.samples = VK_SAMPLE_COUNT_1_BIT;
-        attachment_description.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        attachment_description.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         attachment_description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         attachment_description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         attachment_description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -576,11 +576,6 @@ void tg_graphics_renderer_3d_internal_init_present_pass()
         command_buffer_begin_info.pInheritanceInfo = NULL;
     }
     const VkDeviceSize vertex_buffer_offsets[1] = { 0 };
-    VkClearValue clear_value = { 0 };
-    {
-        clear_value.color = (VkClearColorValue){ 0.0f, 0.0f, 0.0f, 1.0f };
-        clear_value.depthStencil = (VkClearDepthStencilValue){ 0.0f, 0 };
-    }
     VkDescriptorImageInfo descriptor_image_info = { 0 };
     {
         descriptor_image_info.sampler = resolve_pass.g_buffer.sampler;
@@ -619,8 +614,8 @@ void tg_graphics_renderer_3d_internal_init_present_pass()
             render_pass_begin_info.framebuffer = present_pass.framebuffers[i];
             render_pass_begin_info.renderArea.offset = (VkOffset2D){ 0, 0 };
             render_pass_begin_info.renderArea.extent = swapchain_extent;
-            render_pass_begin_info.clearValueCount = 1;
-            render_pass_begin_info.pClearValues = &clear_value;
+            render_pass_begin_info.clearValueCount = 0;
+            render_pass_begin_info.pClearValues = NULL;
         }
         vkCmdBeginRenderPass(present_pass.command_buffers[i], &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
         vkCmdDrawIndexed(present_pass.command_buffers[i], 6, 1, 0, 0, 0);
@@ -633,7 +628,7 @@ void tg_graphics_renderer_3d_internal_init_clear_pass()
     tg_graphics_vulkan_command_buffer_allocate(command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, &clear_pass.command_buffer);
     tg_graphics_vulkan_command_buffer_begin(0, clear_pass.command_buffer);
 
-    const VkClearColorValue clear_color_value = { 1.0f, 0.0f, 1.0f, 1.0f };
+    const VkClearColorValue clear_color_value = { 0.5294117647f, 0.80784313725f, 0.98039215686f, 1.0f };
     const VkClearDepthStencilValue clear_depth_stencil_value = { 1.0f, 0 };
     VkImageSubresourceRange g_buffer_image_subresource_range = { 0 };
     {

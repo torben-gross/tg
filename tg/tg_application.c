@@ -140,6 +140,11 @@ void tg_application_start()
         debug_info.fps++;
         if (debug_info.ms_sum > 1000.0f)
         {
+            if (debug_info.fps < 60)
+            {
+                TG_DEBUG_PRINT("Low framerate!");
+            }
+
             snprintf(debug_info.buffer, sizeof(debug_info.buffer), "%f ms", debug_info.ms_sum / debug_info.fps);
             TG_DEBUG_PRINT(debug_info.buffer);
 
@@ -176,44 +181,48 @@ void tg_application_start()
 
         tgm_vec3f temp;
         tgm_vec3f velocity = { 0 };
-        const f32 camera_speed = 0.01f * delta_ms;
         if (tg_input_is_key_down(TG_KEY_W))
         {
             tgm_v4f_to_v3f(&temp, &forward);
-            tgm_v3f_multiply_f(&temp, &temp, camera_speed);
             tgm_v3f_add_v3f(&velocity, &velocity, &temp);
         }
         if (tg_input_is_key_down(TG_KEY_A))
         {
             tgm_v4f_to_v3f(&temp, &right);
-            tgm_v3f_multiply_f(&temp, &temp, -camera_speed);
+            tgm_v3f_multiply_f(&temp, &temp, -1.0f);
             tgm_v3f_add_v3f(&velocity, &velocity, &temp);
         }
         if (tg_input_is_key_down(TG_KEY_S))
         {
             tgm_v4f_to_v3f(&temp, &forward);
-            tgm_v3f_multiply_f(&temp, &temp, -camera_speed);
+            tgm_v3f_multiply_f(&temp, &temp, -1.0f);
             tgm_v3f_add_v3f(&velocity, &velocity, &temp);
         }
         if (tg_input_is_key_down(TG_KEY_D))
         {
             tgm_v4f_to_v3f(&temp, &right);
-            tgm_v3f_multiply_f(&temp, &temp, camera_speed);
             tgm_v3f_add_v3f(&velocity, &velocity, &temp);
         }
         if (tg_input_is_key_down(TG_KEY_SPACE))
         {
             tgm_v4f_to_v3f(&temp, &up);
-            tgm_v3f_multiply_f(&temp, &temp, camera_speed);
             tgm_v3f_add_v3f(&velocity, &velocity, &temp);
         }
         if (tg_input_is_key_down(TG_KEY_CONTROL))
         {
             tgm_v4f_to_v3f(&temp, &up);
-            tgm_v3f_multiply_f(&temp, &temp, -camera_speed);
+            tgm_v3f_multiply_f(&temp, &temp, -1.0f);
             tgm_v3f_add_v3f(&velocity, &velocity, &temp);
         }
-        tgm_v3f_add_v3f(&camera_info.position, &camera_info.position, &velocity);
+
+        if (tgm_v3f_magnitude_squared(&velocity) != 0.0f)
+        {
+            const f32 camera_base_speed = tg_input_is_key_down(TG_KEY_SHIFT) ? 0.02f : 0.01f;
+            const f32 camera_speed = camera_base_speed * delta_ms;
+            tgm_v3f_normalize(&velocity, &velocity);
+            tgm_v3f_multiply_f(&velocity, &velocity, camera_speed);
+            tgm_v3f_add_v3f(&camera_info.position, &camera_info.position, &velocity);
+        }
 
         tgm_vec3f negated_camera_position = *tgm_v3f_negate(&negated_camera_position, &camera_info.position);
         tgm_mat4f camera_translation = *tgm_m4f_translate(&camera_translation, &negated_camera_position);
@@ -221,6 +230,12 @@ void tg_application_start()
         tgm_m4f_multiply_m4f(&camera_info.camera.view, &inverse_camera_rotation, &camera_translation);
         camera_info.last_mouse_x = mouse_x;
         camera_info.last_mouse_y = mouse_y;
+
+        if (tg_input_get_mouse_wheel_detents(false))
+        {
+            camera_info.fov_y_in_radians += 0.1f * tg_input_get_mouse_wheel_detents(true);
+            tgm_m4f_perspective(&camera_info.camera.projection, camera_info.fov_y_in_radians, camera_info.aspect, camera_info.near, camera_info.far);
+        }
     }
     tg_timer_destroy(timer_h);
 

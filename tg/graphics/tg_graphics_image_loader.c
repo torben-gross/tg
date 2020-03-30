@@ -130,27 +130,27 @@ void tg_image_load_bmp_from_memory(ui64 file_size, const char* file_memory, ui32
 
 
 
-void tg_image_load(const char* filename, ui32* p_width, ui32* p_height, tg_image_format* p_format, ui32** p_data)
+void tg_image_load(const char* p_filename, ui32* p_width, ui32* p_height, tg_image_format* p_format, ui32** pp_data)
 {
-	TG_ASSERT(filename && p_width && p_height && p_format && p_data);
+	TG_ASSERT(p_filename && p_width && p_height && p_format && pp_data);
 
 	ui64 size = 0;
 	char* memory = NULL;
-	tg_file_io_read(filename, &size, &memory);
+	tg_file_io_read(p_filename, &size, &memory);
 
 	if (size >= 2 && *(ui16*)memory == TG_BMP_IDENTIFIER)
 	{
-		tg_image_load_bmp_from_memory(size, memory, p_width, p_height, p_format, p_data);
+		tg_image_load_bmp_from_memory(size, memory, p_width, p_height, p_format, pp_data);
 	}
 
 	tg_file_io_free(memory);
 }
-void tg_image_free(ui32* data)
+void tg_image_free(ui32* p_data)
 {
-	TG_ALLOCATOR_FREE(data);
+	TG_ALLOCATOR_FREE(p_data);
 }
 
-void tg_image_convert_format(ui32* data, ui32 width, ui32 height, tg_image_format old_format, tg_image_format new_format)
+void tg_image_convert_format(ui32* p_data, ui32 width, ui32 height, tg_image_format old_format, tg_image_format new_format)
 {
 	ui32 old_r_mask = 0;
 	ui32 old_g_mask = 0;
@@ -182,23 +182,23 @@ void tg_image_convert_format(ui32* data, ui32 width, ui32 height, tg_image_forma
 			{
 				if (old_r_mask & (1 << i))
 				{
-					r |= (*data & (1 << i)) >> (i - r_bit++);
+					r |= (*p_data & (1 << i)) >> (i - r_bit++);
 				}
 				if (old_g_mask & (1 << i))
 				{
-					g |= (*data & (1 << i)) >> (i - g_bit++);
+					g |= (*p_data & (1 << i)) >> (i - g_bit++);
 				}
 				if (old_b_mask & (1 << i))
 				{
-					b |= (*data & (1 << i)) >> (i - b_bit++);
+					b |= (*p_data & (1 << i)) >> (i - b_bit++);
 				}
 				if (old_a_mask & (1 << i))
 				{
-					a |= (*data & (1 << i)) >> (i - a_bit++);
+					a |= (*p_data & (1 << i)) >> (i - a_bit++);
 				}
 			}
 
-			*data = 0x00000000;
+			*p_data = 0x00000000;
 
 			for (ui8 i = 0; i < 32; i++)
 			{
@@ -206,29 +206,29 @@ void tg_image_convert_format(ui32* data, ui32 width, ui32 height, tg_image_forma
 				{
 					ui32 bit = (r & 0x00000001) << i;
 					r = r >> 0x00000001;
-					*data |= bit;
+					*p_data |= bit;
 				}
 				if (new_g_mask & (1 << i))
 				{
 					ui32 bit = (g & 0x00000001) << i;
 					g = g >> 0x00000001;
-					*data |= bit;
+					*p_data |= bit;
 				}
 				if (new_b_mask & (1 << i))
 				{
 					ui32 bit = (b & 0x00000001) << i;
 					b = b >> 0x00000001;
-					*data |= bit;
+					*p_data |= bit;
 				}
 				if (new_a_mask & (1 << i))
 				{
 					ui32 bit = (a & 0x00000001) << i;
 					a = a >> 0x00000001;
-					*data |= bit;
+					*p_data |= bit;
 				}
 			}
 
-			data++;
+			p_data++;
 		}
 	}
 }

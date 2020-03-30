@@ -3,7 +3,7 @@
 
 #include "tg/tg_common.h"
 
-void tg_file_io_read(const char* filename, ui64* size, char** content);
-void tg_file_io_free(char* content);
+void tg_file_io_read(const char* p_filename, ui64* p_size, char** pp_data);
+void tg_file_io_free(char* p_data);
 
 #endif

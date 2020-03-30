@@ -134,7 +134,6 @@
     <ClInclude Include="platform\tg_allocator.h" />
     <ClInclude Include="platform\tg_platform.h" />
     <ClInclude Include="tg_common.h" />
-    <ClInclude Include="tg_entity.h" />
     <ClInclude Include="util\tg_file_io.h" />
     <ClInclude Include="util\tg_timer.h" />
   </ItemGroup>

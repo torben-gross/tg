@@ -11,13 +11,17 @@ typedef struct tg_input
 	bool    down_keys[256];
 	bool    pressed_keys[256];
 	ui32    key_repeat_counts[256];
+
+	f32     mouse_wheel_detents;
 } tg_input;
 
 tg_input input = { 0 };
 
-void tg_input_get_mouse_position(ui32* x, ui32* y)
+void tg_input_clear()
 {
-	tg_platform_get_mouse_position(x, y);
+	memset(input.pressed_buttons, 0, sizeof(input.pressed_buttons));
+	memset(input.pressed_keys, 0, sizeof(input.pressed_keys));
+	input.mouse_wheel_detents = 0.0f;
 }
 
 void tg_input_on_mouse_button_pressed(tg_button button)
@@ -31,7 +35,12 @@ void tg_input_on_mouse_button_released(tg_button button)
 	input.down_buttons[button] = false;
 }
 
-void tg_input_on_key_pressed(tg_key key, bool repeated, ui32 additional_key_repeat_counts)
+void tg_input_on_mouse_wheel_rotated(f32 detents)
+{
+	input.mouse_wheel_detents += detents;
+}
+
+void tg_input_on_key_pressed(tg_key key, bool repeated, ui32 additional_key_repeat_count)
 {
 	input.down_keys[key] = true;
 	if (!repeated)
@@ -40,7 +49,7 @@ void tg_input_on_key_pressed(tg_key key, bool repeated, ui32 additional_key_repe
 	}
 	else
 	{
-		input.key_repeat_counts[key] += additional_key_repeat_counts;
+		input.key_repeat_counts[key] += additional_key_repeat_count;
 	}
 }
 
@@ -50,25 +59,31 @@ void tg_input_on_key_released(tg_key key)
 	input.key_repeat_counts[key] = 0;
 }
 
-void tg_input_clear()
+
+
+ui32 tg_input_get_key_repeat_count(tg_key key)
 {
-	memset(input.pressed_buttons, 0, sizeof(input.pressed_buttons));
-	memset(input.pressed_keys, 0, sizeof(input.pressed_keys));
+	return input.key_repeat_counts[key];
 }
 
-bool tg_input_is_mouse_button_pressed(tg_button button, bool consume)
+void tg_input_get_mouse_position(ui32* x, ui32* y)
 {
-	const bool result = input.pressed_buttons[button];
+	tg_platform_get_mouse_position(x, y);
+}
+
+f32  tg_input_get_mouse_wheel_detents(bool consume)
+{
+	const f32 result = input.mouse_wheel_detents;
 	if (consume)
 	{
-		input.pressed_buttons[button] = false;
+		input.mouse_wheel_detents = false;
 	}
 	return result;
 }
 
-bool tg_input_is_mouse_button_down(tg_button button)
+bool tg_input_is_key_down(tg_key key)
 {
-	return input.down_buttons[button];
+	return input.down_keys[key];
 }
 
 bool tg_input_is_key_pressed(tg_key key, bool consume)
@@ -81,13 +96,17 @@ bool tg_input_is_key_pressed(tg_key key, bool consume)
 	return result;
 }
 
-bool tg_input_is_key_down(tg_key key)
+bool tg_input_is_mouse_button_down(tg_button button)
 {
-	return input.down_keys[key];
+	return input.down_buttons[button];
 }
 
-ui32 tg_input_get_key_repeat_count(tg_key key)
+bool tg_input_is_mouse_button_pressed(tg_button button, bool consume)
 {
-	return input.key_repeat_counts[key];
+	const bool result = input.pressed_buttons[button];
+	if (consume)
+	{
+		input.pressed_buttons[button] = false;
+	}
+	return result;
 }
-

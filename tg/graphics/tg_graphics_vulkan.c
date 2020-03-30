@@ -214,7 +214,7 @@ void tg_graphics_vulkan_descriptor_pool_destroy(VkDescriptorPool descriptor_pool
 {
     vkDestroyDescriptorPool(device, descriptor_pool, NULL);
 }
-void tg_graphics_vulkan_descriptor_set_layout_create(VkDescriptorSetLayoutCreateFlags flags, ui32 binding_count, const VkDescriptorSetLayoutBinding* bindings, VkDescriptorSetLayout* p_descriptor_set_layout)
+void tg_graphics_vulkan_descriptor_set_layout_create(VkDescriptorSetLayoutCreateFlags flags, ui32 binding_count, const VkDescriptorSetLayoutBinding* p_bindings, VkDescriptorSetLayout* p_descriptor_set_layout)
 {
     VkDescriptorSetLayoutCreateInfo descriptor_set_layout_create_info = { 0 };
     {
@@ -222,7 +222,7 @@ void tg_graphics_vulkan_descriptor_set_layout_create(VkDescriptorSetLayoutCreate
         descriptor_set_layout_create_info.pNext = NULL;
         descriptor_set_layout_create_info.flags = flags;
         descriptor_set_layout_create_info.bindingCount = binding_count;
-        descriptor_set_layout_create_info.pBindings = bindings;
+        descriptor_set_layout_create_info.pBindings = p_bindings;
     }
     VK_CALL(vkCreateDescriptorSetLayout(device, &descriptor_set_layout_create_info, NULL, p_descriptor_set_layout));
 }
@@ -260,7 +260,7 @@ void tg_graphics_vulkan_fence_destroy(VkFence fence)
 {
     vkDestroyFence(device, fence, NULL);
 }
-void tg_graphics_vulkan_framebuffer_create(VkRenderPass render_pass, ui32 attachment_count, const VkImageView* attachments, ui32 width, ui32 height, VkFramebuffer* p_framebuffer)
+void tg_graphics_vulkan_framebuffer_create(VkRenderPass render_pass, ui32 attachment_count, const VkImageView* p_attachments, ui32 width, ui32 height, VkFramebuffer* p_framebuffer)
 {
     VkFramebufferCreateInfo framebuffer_create_info = { 0 };
     {
@@ -269,7 +269,7 @@ void tg_graphics_vulkan_framebuffer_create(VkRenderPass render_pass, ui32 attach
         framebuffer_create_info.flags = 0;
         framebuffer_create_info.renderPass = render_pass;
         framebuffer_create_info.attachmentCount = attachment_count;
-        framebuffer_create_info.pAttachments = attachments;
+        framebuffer_create_info.pAttachments = p_attachments;
         framebuffer_create_info.width = width;
         framebuffer_create_info.height = height;
         framebuffer_create_info.layers = 1;
@@ -614,7 +614,7 @@ void tg_graphics_vulkan_pipeline_layout_destroy(VkPipelineLayout pipeline_layout
 {
     vkDestroyPipelineLayout(device, pipeline_layout, NULL);
 }
-void tg_graphics_vulkan_render_pass_create(ui32 attachment_count, const VkAttachmentDescription* attachments, ui32 subpass_count, const VkSubpassDescription* subpasses, ui32 dependency_count, const VkSubpassDependency* dependencies, VkRenderPass* p_render_pass)
+void tg_graphics_vulkan_render_pass_create(ui32 attachment_count, const VkAttachmentDescription* p_attachments, ui32 subpass_count, const VkSubpassDescription* p_subpasses, ui32 dependency_count, const VkSubpassDependency* p_dependencies, VkRenderPass* p_render_pass)
 {
     VkRenderPassCreateInfo render_pass_create_info = { 0 };
     {
@@ -622,11 +622,11 @@ void tg_graphics_vulkan_render_pass_create(ui32 attachment_count, const VkAttach
         render_pass_create_info.pNext = NULL;
         render_pass_create_info.flags = 0;
         render_pass_create_info.attachmentCount = attachment_count;
-        render_pass_create_info.pAttachments = attachments;
+        render_pass_create_info.pAttachments = p_attachments;
         render_pass_create_info.subpassCount = subpass_count;
-        render_pass_create_info.pSubpasses = subpasses;
+        render_pass_create_info.pSubpasses = p_subpasses;
         render_pass_create_info.dependencyCount = dependency_count;
-        render_pass_create_info.pDependencies = dependencies;
+        render_pass_create_info.pDependencies = p_dependencies;
     }
     VK_CALL(vkCreateRenderPass(device, &render_pass_create_info, NULL, p_render_pass));
 }
@@ -676,11 +676,11 @@ void tg_graphics_vulkan_semaphore_destroy(VkSemaphore semaphore)
 {
     vkDestroySemaphore(device, semaphore, NULL);
 }
-void tg_graphics_vulkan_shader_module_create(const char* filename, VkShaderModule* p_shader_module)
+void tg_graphics_vulkan_shader_module_create(const char* p_filename, VkShaderModule* p_shader_module)
 {
     ui64 size = 0;
     char* content = NULL;
-    tg_file_io_read(filename, &size, &content);
+    tg_file_io_read(p_filename, &size, &content);
 
     VkShaderModuleCreateInfo shader_module_create_info = { 0 };
     shader_module_create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
