@@ -420,8 +420,8 @@ void tg_graphics_renderer_3d_internal_init_present_pass()
     tg_graphics_vulkan_descriptor_set_layout_create(0, 1, &descriptor_set_layout_binding, &present_pass.descriptor_set_layout);
     tg_graphics_vulkan_descriptor_set_allocate(present_pass.descriptor_pool, present_pass.descriptor_set_layout, &present_pass.descriptor_set);
     
-    tg_graphics_vulkan_shader_module_create("shaders/present_vert.spv", &present_pass.vertex_shader);
-    tg_graphics_vulkan_shader_module_create("shaders/present_frag.spv", &present_pass.fragment_shader);
+    tg_graphics_vulkan_shader_module_create("shaders/present.vert.spv", &present_pass.vertex_shader);
+    tg_graphics_vulkan_shader_module_create("shaders/present.frag.spv", &present_pass.fragment_shader);
 
     tg_graphics_vulkan_pipeline_layout_create(1, &present_pass.descriptor_set_layout, 0, NULL, &present_pass.pipeline_layout);
 

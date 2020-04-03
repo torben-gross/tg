@@ -1,5 +1,7 @@
 #include "tg_application.h"
 
+#define ASSET_PATH "assets"
+
 #include "tg/graphics/tg_graphics.h"
 #include "tg/platform/tg_platform.h"
 #include "tg/tg_input.h"
@@ -9,6 +11,7 @@
 #include <stdlib.h>
 
 bool running = true;
+const char* asset_path = ASSET_PATH; // TODO: determine this some other way
 
 typedef struct tg_camera_info
 {
@@ -88,8 +91,8 @@ void tg_application_start()
     tg_model_h model_h = NULL;
 
     tg_graphics_mesh_create(4, positions, normals, uvs, NULL, 6, indices, &mesh_h);
-    tg_graphics_vertex_shader_create("shaders/geometry_vert.spv", &vertex_shader_h);
-    tg_graphics_fragment_shader_create("shaders/geometry_frag.spv", &fragment_shader_h);
+    tg_graphics_vertex_shader_create("shaders/geometry.vert.spv", &vertex_shader_h);
+    tg_graphics_fragment_shader_create("shaders/geometry.frag.spv", &fragment_shader_h);
     tg_graphics_material_create(vertex_shader_h, fragment_shader_h, &material_h);
     tg_graphics_model_create(mesh_h, material_h, &model_h);
 
@@ -116,8 +119,8 @@ void tg_application_start()
     tg_model_h model2_h = NULL;
 
     tg_graphics_mesh_create(3, positions2, NULL, uvs2, tangents, 0, NULL, &mesh2_h);
-    tg_graphics_vertex_shader_create("shaders/geometry_vert.spv", &vertex_shader2_h);
-    tg_graphics_fragment_shader_create("shaders/geometry_frag.spv", &fragment_shader2_h);
+    tg_graphics_vertex_shader_create("shaders/geometry.vert.spv", &vertex_shader2_h);
+    tg_graphics_fragment_shader_create("shaders/geometry.frag.spv", &fragment_shader2_h);
     tg_graphics_material_create(vertex_shader2_h, fragment_shader2_h, &material2_h);
     tg_graphics_model_create(mesh2_h, material2_h, &model2_h);
 
@@ -258,4 +261,9 @@ void tg_application_start()
 void tg_application_quit()
 {
 	running = false;
+}
+
+const char* tg_application_get_asset_path()
+{
+    return asset_path;
 }

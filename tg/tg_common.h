@@ -13,6 +13,10 @@
 #define                       VK_USE_PLATFORM_WIN32_KHR
 #endif
 
+#if _MSC_VER && !__INTEL_COMPILER
+#define                       TG_COMPILER_MSVC
+#endif
+
 
 
 #ifndef NDEBUG

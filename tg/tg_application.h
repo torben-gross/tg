@@ -3,7 +3,8 @@
 
 #include "tg/tg_common.h"
 
-void tg_application_start();
-void tg_application_quit();
+void           tg_application_start();
+void           tg_application_quit();
+const char*    tg_application_get_asset_path();
 
 #endif

@@ -133,8 +133,8 @@ void tg_graphics_mesh_create(ui32 vertex_count, const tgm_vec3f* p_positions, co
 void tg_graphics_mesh_destroy(tg_mesh_h mesh_h);
 void tg_graphics_model_create(tg_mesh_h mesh_h, tg_material_h material_h, tg_model_h* p_model_h);
 void tg_graphics_model_destroy(tg_model_h model_h);
-void tg_graphics_vertex_shader_create(const char* p_filename, tg_vertex_shader_h* p_shader_h);
-void tg_graphics_vertex_shader_destroy(tg_vertex_shader_h shader_h);
+void tg_graphics_vertex_shader_create(const char* p_filename, tg_vertex_shader_h* p_vertex_shader_h);
+void tg_graphics_vertex_shader_destroy(tg_vertex_shader_h p_vertex_shader_h);
 
 /*
 ---- 2D Renderer ----

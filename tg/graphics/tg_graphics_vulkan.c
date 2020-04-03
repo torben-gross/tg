@@ -2,11 +2,13 @@
 
 #ifdef TG_VULKAN
 
+#include "tg/tg_application.h"
 #include "tg/math/tg_math.h"
 #include "tg/platform/tg_allocator.h"
 #include "tg/platform/tg_platform.h"
 #include "tg/util/tg_file_io.h"
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 
@@ -678,6 +680,17 @@ void tg_graphics_vulkan_semaphore_destroy(VkSemaphore semaphore)
 }
 void tg_graphics_vulkan_shader_module_create(const char* p_filename, VkShaderModule* p_shader_module)
 {
+#ifdef TG_DEBUG
+    char filename_buffer[256] = { 0 };
+    ui32 filename_length = (ui32)strlen(p_filename);
+    strncpy(filename_buffer, p_filename, filename_length - 4);
+
+    char system_buffer[256] = { 0 };
+    // TODO: this should be relative somehow
+    snprintf(system_buffer, sizeof(system_buffer), "C:/VulkanSDK/1.2.131.2/Bin/glslc.exe %s/%s -o %s/%s.spv", tg_application_get_asset_path(), filename_buffer, tg_application_get_asset_path(), filename_buffer);
+    TG_ASSERT(system(system_buffer) != -1);
+#endif
+
     ui64 size = 0;
     char* content = NULL;
     tg_file_io_read(p_filename, &size, &content);
@@ -686,7 +699,7 @@ void tg_graphics_vulkan_shader_module_create(const char* p_filename, VkShaderMod
     shader_module_create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     shader_module_create_info.pNext = NULL;
     shader_module_create_info.flags = 0;
-    shader_module_create_info.codeSize = size / sizeof(char);
+    shader_module_create_info.codeSize = size;
     shader_module_create_info.pCode = (const ui32*)content;
 
     VK_CALL(vkCreateShaderModule(device, &shader_module_create_info, NULL, p_shader_module));
