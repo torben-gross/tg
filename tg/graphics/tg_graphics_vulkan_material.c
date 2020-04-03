@@ -79,6 +79,7 @@ void tg_graphics_material_create(tg_vertex_shader_h vertex_shader_h, tg_fragment
         pipeline_shader_stage_create_infos[0].module = (**p_material_h).vertex_shader->shader_module;
         pipeline_shader_stage_create_infos[0].pName = "main";
         pipeline_shader_stage_create_infos[0].pSpecializationInfo = NULL;
+
         pipeline_shader_stage_create_infos[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         pipeline_shader_stage_create_infos[1].pNext = NULL;
         pipeline_shader_stage_create_infos[1].flags = 0;
@@ -93,20 +94,32 @@ void tg_graphics_material_create(tg_vertex_shader_h vertex_shader_h, tg_fragment
         vertex_input_binding_description.stride = sizeof(tg_vertex);
         vertex_input_binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
     }
-    VkVertexInputAttributeDescription vertex_input_attribute_descriptions[3] = { 0 };
+    VkVertexInputAttributeDescription vertex_input_attribute_descriptions[5] = { 0 };
     {
         vertex_input_attribute_descriptions[0].binding = 0;
         vertex_input_attribute_descriptions[0].location = 0;
         vertex_input_attribute_descriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
         vertex_input_attribute_descriptions[0].offset = offsetof(tg_vertex, position);
+
         vertex_input_attribute_descriptions[1].binding = 0;
         vertex_input_attribute_descriptions[1].location = 1;
         vertex_input_attribute_descriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
         vertex_input_attribute_descriptions[1].offset = offsetof(tg_vertex, normal);
+        
         vertex_input_attribute_descriptions[2].binding = 0;
         vertex_input_attribute_descriptions[2].location = 2;
         vertex_input_attribute_descriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
         vertex_input_attribute_descriptions[2].offset = offsetof(tg_vertex, uv);
+        
+        vertex_input_attribute_descriptions[3].binding = 0;
+        vertex_input_attribute_descriptions[3].location = 3;
+        vertex_input_attribute_descriptions[3].format = VK_FORMAT_R32G32B32_SFLOAT;
+        vertex_input_attribute_descriptions[3].offset = offsetof(tg_vertex, tangent);
+        
+        vertex_input_attribute_descriptions[4].binding = 0;
+        vertex_input_attribute_descriptions[4].location = 4;
+        vertex_input_attribute_descriptions[4].format = VK_FORMAT_R32G32B32_SFLOAT;
+        vertex_input_attribute_descriptions[4].offset = offsetof(tg_vertex, bitangent);
     }
     VkPipelineVertexInputStateCreateInfo pipeline_vertex_input_state_create_info = { 0 };
     {
@@ -205,16 +218,25 @@ void tg_graphics_material_create(tg_vertex_shader_h vertex_shader_h, tg_fragment
         pipeline_depth_stencil_state_create_info.minDepthBounds = 0.0f;
         pipeline_depth_stencil_state_create_info.maxDepthBounds = 0.0f;
     }
-    VkPipelineColorBlendAttachmentState pipeline_color_blend_attachment_state = { 0 };
+    VkPipelineColorBlendAttachmentState p_pipeline_color_blend_attachment_states[2] = { 0 };
     {
-        pipeline_color_blend_attachment_state.blendEnable = VK_TRUE;
-        pipeline_color_blend_attachment_state.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-        pipeline_color_blend_attachment_state.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-        pipeline_color_blend_attachment_state.colorBlendOp = VK_BLEND_OP_ADD;
-        pipeline_color_blend_attachment_state.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-        pipeline_color_blend_attachment_state.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-        pipeline_color_blend_attachment_state.alphaBlendOp = VK_BLEND_OP_ADD;
-        pipeline_color_blend_attachment_state.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+        p_pipeline_color_blend_attachment_states[0].blendEnable = VK_TRUE;
+        p_pipeline_color_blend_attachment_states[0].srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+        p_pipeline_color_blend_attachment_states[0].dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+        p_pipeline_color_blend_attachment_states[0].colorBlendOp = VK_BLEND_OP_ADD;
+        p_pipeline_color_blend_attachment_states[0].srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+        p_pipeline_color_blend_attachment_states[0].dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+        p_pipeline_color_blend_attachment_states[0].alphaBlendOp = VK_BLEND_OP_ADD;
+        p_pipeline_color_blend_attachment_states[0].colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+
+        p_pipeline_color_blend_attachment_states[1].blendEnable = VK_TRUE;
+        p_pipeline_color_blend_attachment_states[1].srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+        p_pipeline_color_blend_attachment_states[1].dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+        p_pipeline_color_blend_attachment_states[1].colorBlendOp = VK_BLEND_OP_ADD;
+        p_pipeline_color_blend_attachment_states[1].srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+        p_pipeline_color_blend_attachment_states[1].dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+        p_pipeline_color_blend_attachment_states[1].alphaBlendOp = VK_BLEND_OP_ADD;
+        p_pipeline_color_blend_attachment_states[1].colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
     }
     VkPipelineColorBlendStateCreateInfo pipeline_color_blend_state_create_info = { 0 };
     {
@@ -223,8 +245,8 @@ void tg_graphics_material_create(tg_vertex_shader_h vertex_shader_h, tg_fragment
         pipeline_color_blend_state_create_info.flags = 0;
         pipeline_color_blend_state_create_info.logicOpEnable = VK_FALSE;
         pipeline_color_blend_state_create_info.logicOp = VK_LOGIC_OP_COPY;
-        pipeline_color_blend_state_create_info.attachmentCount = 1;
-        pipeline_color_blend_state_create_info.pAttachments = &pipeline_color_blend_attachment_state;
+        pipeline_color_blend_state_create_info.attachmentCount = 2;
+        pipeline_color_blend_state_create_info.pAttachments = p_pipeline_color_blend_attachment_states;
         pipeline_color_blend_state_create_info.blendConstants[0] = 0.0f;
         pipeline_color_blend_state_create_info.blendConstants[1] = 0.0f;
         pipeline_color_blend_state_create_info.blendConstants[2] = 0.0f;

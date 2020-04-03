@@ -50,6 +50,18 @@ ui32 tgm_ui32_min(ui32 v0, ui32 v1)
 
 
 
+tgm_vec2f* tgm_v2f_subtract_v2f(tgm_vec2f* p_result, tgm_vec2f* p_v0, tgm_vec2f* p_v1)
+{
+	TG_ASSERT(p_result && p_v0 && p_v1);
+
+	p_result->x = p_v0->x - p_v1->x;
+	p_result->y = p_v0->y - p_v1->y;
+
+	return p_result;
+}
+
+
+
 tgm_vec3f* tgm_v3f_add_v3f(tgm_vec3f* p_result, tgm_vec3f* p_v0, tgm_vec3f* p_v1)
 {
 	TG_ASSERT(p_result && p_v0 && p_v1);

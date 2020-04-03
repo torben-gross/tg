@@ -197,6 +197,8 @@ ui32          tgm_ui32_min(ui32 v0, ui32 v1);
 /*
 ---- Vectors ----
 */
+tgm_vec2f*    tgm_v2f_subtract_v2f(tgm_vec2f* p_result, tgm_vec2f* p_v0, tgm_vec2f* p_v1);
+
 tgm_vec3f*    tgm_v3f_add_v3f(tgm_vec3f* p_result, tgm_vec3f* p_v0, tgm_vec3f* p_v1);// TODO: every functions needs TG_ASSERT for args
 tgm_vec3f*    tgm_v3f_add_f(tgm_vec3f* p_result, tgm_vec3f* p_v, f32 f);
 tgm_vec3f*    tgm_v3f_cross(tgm_vec3f* p_result, tgm_vec3f* p_v0, tgm_vec3f* p_v1);
