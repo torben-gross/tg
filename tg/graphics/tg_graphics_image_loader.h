@@ -3,9 +3,9 @@
 
 #include "tg/tg_common.h"
 #include "tg/graphics/tg_graphics.h"
-#include <math.h>
+#include "tg/math/tg_math.h"
 
-#define TG_IMAGE_MAX_MIP_LEVELS(w, h) ((ui32)log2f((f32)max((ui32)w, (ui32)h)) + 1)
+#define TG_IMAGE_MAX_MIP_LEVELS(w, h) ((ui32)tgm_f32_log2((f32)tgm_ui32_max((ui32)w, (ui32)h)) + 1)
 
 void tg_image_load(const char* p_filename, ui32* p_width, ui32* p_height, tg_image_format* p_format, ui32** pp_data);
 void tg_image_free(ui32* p_data);

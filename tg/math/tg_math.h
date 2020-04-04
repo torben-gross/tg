@@ -11,7 +11,6 @@ TODO: Support other clipping setups via macros!
 #define TG_MATH
 
 #include "tg/tg_common.h"
-#include <stdbool.h>
 
 #define TGM_PI                      3.14159265358979323846
 #define TGM_TO_DEGREES(radians)     (radians * (360.0f / ((f32)TGM_PI * 2.0f)))
@@ -177,7 +176,19 @@ typedef struct tgm_vec4f
 /*
 ---- Intrinsics ----
 */
+f32           tgm_f32_log2(f32 v);
 f32           tgm_f32_sin(f32 v); // TODO
+
+i32           tgm_i32_abs(i32 v);
+ui32          tgm_i32_digits(i32 v);
+i32           tgm_i32_floor(i32 v);
+i32           tgm_i32_log10(i32 v);
+i32           tgm_i32_pow(i32 base, i32 exponent);
+
+ui32          tgm_ui32_digits(ui32 v);
+ui32          tgm_ui32_floor(ui32 v);
+ui32          tgm_ui32_log10(ui32 v);
+ui32          tgm_ui32_pow(ui32 base, ui32 exponent);
 
 /*
 ---- Functional ----
@@ -205,7 +216,7 @@ tgm_vec3f*    tgm_v3f_cross(tgm_vec3f* p_result, tgm_vec3f* p_v0, tgm_vec3f* p_v
 tgm_vec3f*    tgm_v3f_divide_v3f(tgm_vec3f* p_result, tgm_vec3f* p_v0, tgm_vec3f* p_v1);
 tgm_vec3f*    tgm_v3f_divide_f(tgm_vec3f* p_result, tgm_vec3f* p_v, f32 f);
 f32           tgm_v3f_dot(const tgm_vec3f* p_v0, const tgm_vec3f* p_v1);
-bool          tgm_v3f_equal(const tgm_vec3f* p_v0, const tgm_vec3f* p_v1);
+b32           tgm_v3f_equal(const tgm_vec3f* p_v0, const tgm_vec3f* p_v1);
 f32           tgm_v3f_magnitude(const tgm_vec3f* p_v);
 f32           tgm_v3f_magnitude_squared(const tgm_vec3f* p_v);
 tgm_vec3f*    tgm_v3f_multiply_v3f(tgm_vec3f* p_result, tgm_vec3f* p_v0, tgm_vec3f* p_v1);

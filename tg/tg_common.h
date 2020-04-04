@@ -34,6 +34,9 @@
 
 
 
+#define TG_TRUE               1
+#define TG_FALSE              0
+
 #define F32_MIN_POSITIVE      1.175494351e-38f
 #define F32_MAX_POSITIVE      3.402823466e+38f
 #define F32_EPSILON           1.192092896e-07f
@@ -56,6 +59,8 @@
 #define UI64_MAX              0xffffffffffffffffui64
 
 
+
+typedef int                   b32;
 
 typedef float                 f32;
 typedef double                f64;

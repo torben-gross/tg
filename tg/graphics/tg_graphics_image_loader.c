@@ -2,7 +2,6 @@
 
 #include "tg/platform/tg_allocator.h"
 #include "tg/util/tg_file_io.h"
-#include <stdbool.h>
 #include <string.h>
 
 #define TG_BMP_IDENTIFIER                         'MB'
@@ -242,25 +241,25 @@ void tg_image_convert_masks_to_format(ui32 r_mask, ui32 g_mask, ui32 b_mask, ui3
 	const ui32 mask_0x00ff0000 = 0x00ff0000;
 	const ui32 mask_0xff000000 = 0xff000000;
 
-	const bool r_0xff000000 = (r_mask & mask_0xff000000) == mask_0xff000000;
-	const bool r_0x00ff0000 = (r_mask & mask_0x00ff0000) == mask_0x00ff0000;
-	const bool r_0x0000ff00 = (r_mask & mask_0x0000ff00) == mask_0x0000ff00;
-	const bool r_0x000000ff = (r_mask & mask_0x000000ff) == mask_0x000000ff;
+	const b32 r_0xff000000 = (r_mask & mask_0xff000000) == mask_0xff000000;
+	const b32 r_0x00ff0000 = (r_mask & mask_0x00ff0000) == mask_0x00ff0000;
+	const b32 r_0x0000ff00 = (r_mask & mask_0x0000ff00) == mask_0x0000ff00;
+	const b32 r_0x000000ff = (r_mask & mask_0x000000ff) == mask_0x000000ff;
 
-	const bool g_0xff000000 = (g_mask & mask_0xff000000) == mask_0xff000000;
-	const bool g_0x00ff0000 = (g_mask & mask_0x00ff0000) == mask_0x00ff0000;
-	const bool g_0x0000ff00 = (g_mask & mask_0x0000ff00) == mask_0x0000ff00;
-	const bool g_0x000000ff = (g_mask & mask_0x000000ff) == mask_0x000000ff;
+	const b32 g_0xff000000 = (g_mask & mask_0xff000000) == mask_0xff000000;
+	const b32 g_0x00ff0000 = (g_mask & mask_0x00ff0000) == mask_0x00ff0000;
+	const b32 g_0x0000ff00 = (g_mask & mask_0x0000ff00) == mask_0x0000ff00;
+	const b32 g_0x000000ff = (g_mask & mask_0x000000ff) == mask_0x000000ff;
 
-	const bool b_0xff000000 = (b_mask & mask_0xff000000) == mask_0xff000000;
-	const bool b_0x00ff0000 = (b_mask & mask_0x00ff0000) == mask_0x00ff0000;
-	const bool b_0x0000ff00 = (b_mask & mask_0x0000ff00) == mask_0x0000ff00;
-	const bool b_0x000000ff = (b_mask & mask_0x000000ff) == mask_0x000000ff;
+	const b32 b_0xff000000 = (b_mask & mask_0xff000000) == mask_0xff000000;
+	const b32 b_0x00ff0000 = (b_mask & mask_0x00ff0000) == mask_0x00ff0000;
+	const b32 b_0x0000ff00 = (b_mask & mask_0x0000ff00) == mask_0x0000ff00;
+	const b32 b_0x000000ff = (b_mask & mask_0x000000ff) == mask_0x000000ff;
 
-	const bool a_0xff000000 = (a_mask & mask_0xff000000) == mask_0xff000000;
-	const bool a_0x00ff0000 = (a_mask & mask_0x00ff0000) == mask_0x00ff0000;
-	const bool a_0x0000ff00 = (a_mask & mask_0x0000ff00) == mask_0x0000ff00;
-	const bool a_0x000000ff = (a_mask & mask_0x000000ff) == mask_0x000000ff;
+	const b32 a_0xff000000 = (a_mask & mask_0xff000000) == mask_0xff000000;
+	const b32 a_0x00ff0000 = (a_mask & mask_0x00ff0000) == mask_0x00ff0000;
+	const b32 a_0x0000ff00 = (a_mask & mask_0x0000ff00) == mask_0x0000ff00;
+	const b32 a_0x000000ff = (a_mask & mask_0x000000ff) == mask_0x000000ff;
 
 	if (a_0x000000ff && r_0x0000ff00 && g_0x00ff0000 && b_0xff000000)
 	{
@@ -292,7 +291,7 @@ void tg_image_convert_masks_to_format(ui32 r_mask, ui32 g_mask, ui32 b_mask, ui3
 	}
 	else
 	{
-		TG_ASSERT(false);
+		TG_ASSERT(TG_FALSE);
 	}
 }
 void tg_image_convert_format_to_masks(tg_image_format format, ui32* r_mask, ui32* g_mask, ui32* b_mask, ui32* a_mask)
@@ -350,7 +349,7 @@ void tg_image_convert_format_to_masks(tg_image_format format, ui32* r_mask, ui32
 	} break;
 	default:
 	{
-		TG_ASSERT(false);
+		TG_ASSERT(TG_FALSE);
 	} break;
 	}
 }

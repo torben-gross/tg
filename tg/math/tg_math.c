@@ -3,6 +3,70 @@
 #include <math.h>
 #include <string.h>
 
+
+
+f32 tgm_f32_log2(f32 v)
+{
+	return logf(v);
+}
+
+
+
+i32 tgm_i32_abs(i32 v)
+{
+	TG_ASSERT(v != I32_MIN);
+
+	return v >= 0 ? v : -v;
+}
+
+ui32 tgm_i32_digits(i32 v)
+{
+	if (v == I32_MIN)
+	{
+		v += 1;
+	}
+	return v == 0 ? 1 : tgm_i32_floor(tgm_i32_log10(tgm_i32_abs(v))) + 1;
+}
+
+tgm_i32_floor(i32 v)
+{
+	return (i32)floor((f64)v);
+}
+
+i32 tgm_i32_log10(i32 v)
+{
+	return (i32)log10((f64)v);
+}
+
+i32 tgm_i32_pow(i32 base, i32 exponent)
+{
+	return (i32)pow((f64)base, (f64)exponent);
+}
+
+
+
+ui32 tgm_ui32_digits(ui32 v)
+{
+	return v == 0 ? 1 : tgm_ui32_floor(tgm_ui32_log10(v)) + 1;
+}
+
+ui32 tgm_ui32_floor(ui32 v)
+{
+	return (ui32)floor((f64)v);
+}
+
+ui32 tgm_ui32_log10(ui32 v)
+{
+	return (ui32)log10((f64)v);
+}
+
+ui32 tgm_ui32_pow(ui32 base, ui32 exponent)
+{
+	return (ui32)pow((f64)base, (f64)exponent);
+}
+
+
+
 f32 tgm_f32_clamp(f32 v, f32 low, f32 high)
 {
 	return tgm_f32_max(low, tgm_f32_min(high, v));
@@ -127,7 +191,7 @@ f32 tgm_v3f_dot(const tgm_vec3f* p_v0, const tgm_vec3f* p_v1)
 	return p_v0->x * p_v1->x + p_v0->y * p_v1->y + p_v0->z * p_v1->z;
 }
 
-bool tgm_v3f_equal(const tgm_vec3f* p_v0, const tgm_vec3f* p_v1)
+b32 tgm_v3f_equal(const tgm_vec3f* p_v0, const tgm_vec3f* p_v1)
 {
 	TG_ASSERT(p_v0 && p_v1);
 

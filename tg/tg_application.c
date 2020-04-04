@@ -3,14 +3,16 @@
 #define ASSET_PATH "assets"
 
 #include "tg/graphics/tg_graphics.h"
+#include "tg/platform/tg_allocator.h"
 #include "tg/platform/tg_platform.h"
 #include "tg/tg_input.h"
+#include "tg/util/tg_string.h"
 #include "tg/util/tg_timer.h"
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
-bool running = true;
+b32 running = TG_TRUE;
 const char* asset_path = ASSET_PATH; // TODO: determine this some other way
 
 typedef struct tg_camera_info
@@ -39,7 +41,14 @@ typedef struct tg_debug_info
 
 void tg_application_start()
 {
+    char test_buf[256] = { 0 };
+    tg_string_format(sizeof(test_buf), test_buf, "Hi! My name is %s and I am %u years old!", "little John", 12);
+    TG_DEBUG_PRINT(test_buf);
+
     tg_graphics_init();
+
+    tg_image_h img = NULL;
+    tg_graphics_image_create("test_icon.bmp", &img);
 
     tg_camera_info camera_info = { 0 };
     tg_input_get_mouse_position(&camera_info.last_mouse_x, &camera_info.last_mouse_y);
@@ -113,15 +122,11 @@ void tg_application_start()
     };
 
     tg_mesh_h mesh2_h = NULL;
-    tg_vertex_shader_h vertex_shader2_h = NULL;
-    tg_fragment_shader_h fragment_shader2_h = NULL;
     tg_material_h material2_h = NULL;
     tg_model_h model2_h = NULL;
 
     tg_graphics_mesh_create(3, positions2, NULL, uvs2, tangents, 0, NULL, &mesh2_h);
-    tg_graphics_vertex_shader_create("shaders/geometry.vert.spv", &vertex_shader2_h);
-    tg_graphics_fragment_shader_create("shaders/geometry.frag.spv", &fragment_shader2_h);
-    tg_graphics_material_create(vertex_shader2_h, fragment_shader2_h, &material2_h);
+    tg_graphics_material_create(vertex_shader_h, fragment_shader_h, &material2_h);
     tg_graphics_model_create(mesh2_h, material2_h, &model2_h);
 
 #ifdef TG_DEBUG
@@ -234,9 +239,9 @@ void tg_application_start()
         camera_info.last_mouse_x = mouse_x;
         camera_info.last_mouse_y = mouse_y;
 
-        if (tg_input_get_mouse_wheel_detents(false))
+        if (tg_input_get_mouse_wheel_detents(TG_FALSE))
         {
-            camera_info.fov_y_in_radians += 0.1f * tg_input_get_mouse_wheel_detents(true);
+            camera_info.fov_y_in_radians += 0.1f * tg_input_get_mouse_wheel_detents(TG_TRUE);
             tgm_m4f_perspective(&camera_info.camera.projection, camera_info.fov_y_in_radians, camera_info.aspect, camera_info.near, camera_info.far);
         }
     }
@@ -244,8 +249,6 @@ void tg_application_start()
 
     tg_graphics_model_destroy(model2_h);
     tg_graphics_material_destroy(material2_h);
-    tg_graphics_fragment_shader_destroy(fragment_shader2_h);
-    tg_graphics_vertex_shader_destroy(vertex_shader2_h);
     tg_graphics_mesh_destroy(mesh2_h);
 
     tg_graphics_model_destroy(model_h);
@@ -254,13 +257,15 @@ void tg_application_start()
     tg_graphics_vertex_shader_destroy(vertex_shader_h);
     tg_graphics_mesh_destroy(mesh_h);
 
+    tg_graphics_image_destroy(img);
+
     tg_graphics_renderer_3d_shutdown();
     tg_graphics_shutdown();
 }
 
 void tg_application_quit()
 {
-	running = false;
+	running = TG_FALSE;
 }
 
 const char* tg_application_get_asset_path()

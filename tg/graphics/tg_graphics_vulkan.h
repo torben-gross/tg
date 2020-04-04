@@ -5,7 +5,6 @@
 
 #ifdef TG_VULKAN
 
-#include <stdbool.h>
 #include <vulkan/vulkan.h>
 
 
@@ -199,10 +198,10 @@ void tg_graphics_vulkan_image_transition_layout(VkImage image, VkAccessFlags src
 void tg_graphics_vulkan_image_view_create(VkImage image, VkFormat format, ui32 mip_levels, VkImageAspectFlags image_aspect_flags, VkImageView* p_image_view);
 void tg_graphics_vulkan_image_view_destroy(VkImageView image_view);
 void tg_graphics_vulkan_memory_type_find(ui32 memory_type_bits, VkMemoryPropertyFlags memory_property_flags, ui32* p_memory_type);
-void tg_graphics_vulkan_physical_device_check_extension_support(VkPhysicalDevice physical_device, bool* p_result);
-void tg_graphics_vulkan_physical_device_find_queue_families(VkPhysicalDevice physical_device, tg_queue* p_graphics_queue, tg_queue* p_present_queue, bool* p_complete);
+void tg_graphics_vulkan_physical_device_check_extension_support(VkPhysicalDevice physical_device, b32* p_result);
+void tg_graphics_vulkan_physical_device_find_queue_families(VkPhysicalDevice physical_device, tg_queue* p_graphics_queue, tg_queue* p_present_queue, b32* p_complete);
 void tg_graphics_vulkan_physical_device_find_max_sample_count(VkPhysicalDevice physical_device, VkSampleCountFlagBits* p_max_sample_count_flag_bits);
-void tg_graphics_vulkan_physical_device_is_suitable(VkPhysicalDevice physical_device, bool* p_is_suitable);
+void tg_graphics_vulkan_physical_device_is_suitable(VkPhysicalDevice physical_device, b32* p_is_suitable);
 void tg_graphics_vulkan_pipeline_create(VkPipelineCache pipeline_cache, const VkGraphicsPipelineCreateInfo* p_graphics_pipeline_create_info, VkPipeline* p_pipeline);
 void tg_graphics_vulkan_pipeline_destroy(VkPipeline pipeline);
 void tg_graphics_vulkan_pipeline_layout_create(ui32 descriptor_set_layout_count, const VkDescriptorSetLayout* descriptor_set_layouts, ui32 push_constant_range_count, const VkPushConstantRange* push_constant_ranges, VkPipelineLayout* p_pipeline_layout);

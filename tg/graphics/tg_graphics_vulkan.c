@@ -7,9 +7,7 @@
 #include "tg/platform/tg_allocator.h"
 #include "tg/platform/tg_platform.h"
 #include "tg/util/tg_file_io.h"
-#include <stdbool.h>
 #include <stdio.h>
-#include <stdlib.h>
 
 
 
@@ -197,7 +195,7 @@ void tg_graphics_vulkan_depth_format_acquire(VkFormat* p_format)
             return;
         }
     }
-    TG_ASSERT(false);
+    TG_ASSERT(TG_FALSE);
 }
 void tg_graphics_vulkan_descriptor_pool_create(VkDescriptorPoolCreateFlags flags, ui32 max_sets, ui32 pool_size_count, const VkDescriptorPoolSize* pool_sizes, VkDescriptorPool* p_descriptor_pool)
 {
@@ -326,9 +324,11 @@ void tg_graphics_vulkan_image_destroy(VkImage image, VkDeviceMemory device_memor
 }
 void tg_graphics_vulkan_image_mipmaps_generate(VkImage image, ui32 width, ui32 height, VkFormat format, ui32 mip_levels)
 {
+#ifdef TG_DEBUG
     VkFormatProperties format_properties;
     vkGetPhysicalDeviceFormatProperties(physical_device, format, &format_properties);
     TG_ASSERT(format_properties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT);
+#endif
 
     VkCommandBuffer command_buffer;
     tg_graphics_vulkan_command_buffer_allocate(command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, &command_buffer);
@@ -338,10 +338,6 @@ void tg_graphics_vulkan_image_mipmaps_generate(VkImage image, ui32 width, ui32 h
     {
         image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
         image_memory_barrier.pNext = NULL;
-        image_memory_barrier.srcAccessMask = 0;
-        image_memory_barrier.dstAccessMask = 0;
-        image_memory_barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        image_memory_barrier.newLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         image_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         image_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         image_memory_barrier.image = image;
@@ -361,10 +357,10 @@ void tg_graphics_vulkan_image_mipmaps_generate(VkImage image, ui32 width, ui32 h
         ui32 next_mip_height = max(1, mip_height / 2);
 
         image_memory_barrier.subresourceRange.baseMipLevel = i - 1;
-        image_memory_barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        image_memory_barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
         image_memory_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
         image_memory_barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+        image_memory_barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        image_memory_barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 
         vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL, 0, NULL, 1, &image_memory_barrier);
 
@@ -455,8 +451,8 @@ void tg_graphics_vulkan_memory_type_find(ui32 memory_type_bits, VkMemoryProperty
 
     for (ui32 i = 0; i < physical_device_memory_properties.memoryTypeCount; i++)
     {
-        const bool is_memory_type_suitable = memory_type_bits & (1 << i);
-        const bool are_property_flags_suitable = (physical_device_memory_properties.memoryTypes[i].propertyFlags & memory_property_flags) == memory_property_flags;
+        const b32 is_memory_type_suitable = memory_type_bits & (1 << i);
+        const b32 are_property_flags_suitable = (physical_device_memory_properties.memoryTypes[i].propertyFlags & memory_property_flags) == memory_property_flags;
         if (is_memory_type_suitable && are_property_flags_suitable)
         {
             *p_memory_type = i;
@@ -466,7 +462,7 @@ void tg_graphics_vulkan_memory_type_find(ui32 memory_type_bits, VkMemoryProperty
 
     TG_ASSERT(0);
 }
-void tg_graphics_vulkan_physical_device_find_queue_families(VkPhysicalDevice physical_device, tg_queue* p_graphics_queue, tg_queue* p_present_queue, bool* p_complete)
+void tg_graphics_vulkan_physical_device_find_queue_families(VkPhysicalDevice physical_device, tg_queue* p_graphics_queue, tg_queue* p_present_queue, b32* p_complete)
 {
     ui32 queue_family_count;
     vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, NULL);
@@ -474,8 +470,8 @@ void tg_graphics_vulkan_physical_device_find_queue_families(VkPhysicalDevice phy
     VkQueueFamilyProperties* queue_family_properties = TG_ALLOCATOR_ALLOCATE(queue_family_count * sizeof(*queue_family_properties));
     vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, queue_family_properties);
 
-    bool supports_graphics_family = false;
-    VkBool32 supports_present_family = 0;
+    b32 supports_graphics_family = TG_FALSE;
+    VkBool32 supports_present_family = VK_FALSE;
     for (ui32 i = 0; i < queue_family_count; i++)
     {
         if (!supports_graphics_family)
@@ -483,7 +479,7 @@ void tg_graphics_vulkan_physical_device_find_queue_families(VkPhysicalDevice phy
             if (queue_family_properties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
             {
                 p_graphics_queue->index = i;
-                supports_graphics_family = true;
+                supports_graphics_family = TG_TRUE;
                 continue;
             }
         }
@@ -504,22 +500,22 @@ void tg_graphics_vulkan_physical_device_find_queue_families(VkPhysicalDevice phy
 
     TG_ALLOCATOR_FREE(queue_family_properties);
 }
-void tg_graphics_vulkan_physical_device_check_extension_support(VkPhysicalDevice physical_device, bool* p_result)
+void tg_graphics_vulkan_physical_device_check_extension_support(VkPhysicalDevice physical_device, b32* p_result)
 {
     ui32 device_extension_property_count;
     VK_CALL(vkEnumerateDeviceExtensionProperties(physical_device, NULL, &device_extension_property_count, NULL));
     VkExtensionProperties* device_extension_properties = TG_ALLOCATOR_ALLOCATE(device_extension_property_count * sizeof(*device_extension_properties));
     VK_CALL(vkEnumerateDeviceExtensionProperties(physical_device, NULL, &device_extension_property_count, device_extension_properties));
 
-    bool supports_extensions = true;
+    b32 supports_extensions = TG_TRUE;
     for (ui32 i = 0; i < DEVICE_EXTENSION_COUNT; i++)
     {
-        bool supports_extension = false;
+        b32 supports_extension = TG_FALSE;
         for (ui32 j = 0; j < device_extension_property_count; j++)
         {
             if (strcmp(DEVICE_EXTENSION_NAMES[i], device_extension_properties[j].extensionName) == 0)
             {
-                supports_extension = true;
+                supports_extension = TG_TRUE;
                 break;
             }
         }
@@ -565,7 +561,7 @@ void tg_graphics_vulkan_physical_device_find_max_sample_count(VkPhysicalDevice p
         *p_max_sample_count_flag_bits = VK_SAMPLE_COUNT_1_BIT;
     }
 }
-void tg_graphics_vulkan_physical_device_is_suitable(VkPhysicalDevice physical_device, bool* p_is_suitable)
+void tg_graphics_vulkan_physical_device_is_suitable(VkPhysicalDevice physical_device, b32* p_is_suitable)
 {
     VkPhysicalDeviceProperties physical_device_properties;
     vkGetPhysicalDeviceProperties(physical_device, &physical_device_properties);
@@ -573,14 +569,14 @@ void tg_graphics_vulkan_physical_device_is_suitable(VkPhysicalDevice physical_de
     VkPhysicalDeviceFeatures physical_device_features;
     vkGetPhysicalDeviceFeatures(physical_device, &physical_device_features);
 
-    const bool is_discrete_gpu = physical_device_properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
-    const bool supports_geometry_shader = physical_device_features.geometryShader;
-    const bool supports_sampler_anisotropy = physical_device_features.samplerAnisotropy;
+    const b32 is_discrete_gpu = physical_device_properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
+    const b32 supports_geometry_shader = physical_device_features.geometryShader;
+    const b32 supports_sampler_anisotropy = physical_device_features.samplerAnisotropy;
 
-    bool qfi_complete;
+    b32 qfi_complete = TG_FALSE;
     tg_graphics_vulkan_physical_device_find_queue_families(physical_device, &graphics_queue, &present_queue, &qfi_complete);
 
-    bool supports_extensions;
+    b32 supports_extensions = TG_FALSE;
     tg_graphics_vulkan_physical_device_check_extension_support(physical_device, &supports_extensions);
 
     ui32 physical_device_surface_format_count;
@@ -727,12 +723,12 @@ void tg_graphics_vulkan_instance_create(VkInstance* p_instance)
 
     for (ui32 i = 0; i < VALIDATION_LAYER_COUNT; i++)
     {
-        bool layer_found = false;
+        b32 layer_found = TG_FALSE;
         for (ui32 j = 0; j < layer_property_count; j++)
         {
             if (strcmp(VALIDATION_LAYER_NAMES[i], layer_properties[j].layerName) == 0)
             {
-                layer_found = true;
+                layer_found = TG_TRUE;
                 break;
             }
         }
@@ -808,7 +804,7 @@ void tg_graphics_vulkan_physical_device_create(VkPhysicalDevice* p_physical_devi
 
     for (ui32 i = 0; i < physical_device_count; i++)
     {
-        bool is_suitable;
+        b32 is_suitable = TG_FALSE;
         tg_graphics_vulkan_physical_device_is_suitable(physical_devices[i], &is_suitable);
         if (is_suitable)
         {

@@ -20,7 +20,7 @@ HWND    window_h = NULL;
 */
 typedef struct tg_timer
 {
-    bool             running;
+    b32              running;
     LONGLONG         counter_elapsed;
     LARGE_INTEGER    performance_frequency;
     LARGE_INTEGER    start_performance_counter;
@@ -32,7 +32,7 @@ void tg_timer_create(tg_timer_h* p_timer_h)
     TG_ASSERT(p_timer_h);
 
     *p_timer_h = TG_ALLOCATOR_ALLOCATE(sizeof(**p_timer_h));
-    (**p_timer_h).running = false;
+    (**p_timer_h).running = TG_FALSE;
     QueryPerformanceFrequency(&(**p_timer_h).performance_frequency);
     QueryPerformanceCounter(&(**p_timer_h).start_performance_counter);
     QueryPerformanceCounter(&(**p_timer_h).end_performance_counter);
@@ -43,7 +43,7 @@ void tg_timer_start(tg_timer_h timer_h)
 
     if (!timer_h->running)
     {
-        timer_h->running = true;
+        timer_h->running = TG_TRUE;
         QueryPerformanceCounter(&timer_h->start_performance_counter);
     }
 }
@@ -53,7 +53,7 @@ void tg_timer_stop(tg_timer_h timer_h)
 
     if (timer_h->running)
     {
-        timer_h->running = false;
+        timer_h->running = TG_FALSE;
         QueryPerformanceCounter(&timer_h->end_performance_counter);
         timer_h->counter_elapsed += timer_h->end_performance_counter.QuadPart - timer_h->start_performance_counter.QuadPart;
     }
@@ -62,7 +62,7 @@ void tg_timer_reset(tg_timer_h timer_h)
 {
     TG_ASSERT(timer_h);
 
-    timer_h->running = false;
+    timer_h->running = TG_FALSE;
     timer_h->counter_elapsed = 0;
     QueryPerformanceCounter(&timer_h->start_performance_counter);
     QueryPerformanceCounter(&timer_h->end_performance_counter);
@@ -175,7 +175,7 @@ LRESULT CALLBACK tg_platform_win32_window_proc(HWND window_h, UINT message, WPAR
     case WM_KEYDOWN:
     {
         const tg_key key = (tg_key)w_param;
-        const bool repeated = ((1ULL << 30) & (i64)l_param) >> 30;
+        const b32 repeated = ((1ULL << 30) & (i64)l_param) >> 30;
         const ui32 additional_key_repeat_count = (ui32)(0xffffULL & l_param);
         tg_input_on_key_pressed(key, repeated, additional_key_repeat_count);
     } break;

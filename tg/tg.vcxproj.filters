@@ -16,6 +16,7 @@
     <ClCompile Include="graphics\tg_graphics_vulkan_material.c" />
     <ClCompile Include="graphics\tg_graphics_vulkan_model.c" />
     <ClCompile Include="tg_input.c" />
+    <ClCompile Include="util\tg_string.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="tg_common.h" />
@@ -30,6 +31,7 @@
     <ClInclude Include="graphics\tg_graphics_vulkan_renderer_3d.h" />
     <ClInclude Include="tg_input.h" />
     <ClInclude Include="util\tg_timer.h" />
+    <ClInclude Include="util\tg_string.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="tg.ruleset" />

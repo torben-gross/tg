@@ -3,7 +3,6 @@
 
 #include "tg/tg_common.h"
 #include "tg/math/tg_math.h"
-#include <stdbool.h>
 
 
 

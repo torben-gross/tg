@@ -27,7 +27,7 @@ void tg_graphics_image_create(const char* p_filename, tg_image_h* p_image_h)
     vkUnmapMemory(device, staging_buffer_memory);
 
     tg_graphics_vulkan_image_create((**p_image_h).width, (**p_image_h).height, mip_levels, VK_FORMAT_R8G8B8A8_SRGB, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &(**p_image_h).image, &(**p_image_h).device_memory);
-    tg_graphics_vulkan_image_transition_layout((**p_image_h).image, 0, VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, mip_levels, VK_PIPELINE_STAGE_TRANSFER_BIT);
+    tg_graphics_vulkan_image_transition_layout((**p_image_h).image, 0, VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, mip_levels, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
     tg_graphics_vulkan_buffer_copy_to_image((**p_image_h).width, (**p_image_h).height, staging_buffer, (**p_image_h).image);
     tg_graphics_vulkan_buffer_destroy(staging_buffer, staging_buffer_memory);
     tg_graphics_vulkan_image_mipmaps_generate((**p_image_h).image, (**p_image_h).width, (**p_image_h).height, VK_FORMAT_R8G8B8A8_SRGB, mip_levels);
