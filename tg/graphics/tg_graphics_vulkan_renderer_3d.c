@@ -726,7 +726,7 @@ void tg_graphics_renderer_3d_draw(const tg_model_h model_h)
     VK_CALL(vkMapMemory(device, model_h->material->ubo.device_memory, 0, sizeof(*p_uniform_buffer_object), 0, &p_uniform_buffer_object));
     {
         const tgm_vec3f translation_vector = { 0.0f, 0.0f, -9.0f };
-        tgm_m4f_translate(&p_uniform_buffer_object->model, &translation_vector);
+        p_uniform_buffer_object->model = tgm_m4f_translate(&translation_vector);
         p_uniform_buffer_object->view = p_main_camera->view;
         p_uniform_buffer_object->projection = p_main_camera->projection;
     }

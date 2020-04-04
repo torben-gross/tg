@@ -1,7 +1,9 @@
+#include "tg/platform/tg_platform.h"
+
 #define _CRT_SECURE_NO_WARNINGS
 
 #include "tg/graphics/tg_graphics.h"
-#include "tg/platform/tg_allocator.h"
+#include "tg/memory/tg_allocator.h"
 #include "tg/tg_application.h"
 #include "tg/tg_input.h"
 #include "tg/util/tg_timer.h"
@@ -15,9 +17,11 @@
 
 HWND    window_h = NULL;
 
-/*
----- Timer ----
-*/
+
+/*------------------------------------------------------------+
+| Timer                                                       |
++------------------------------------------------------------*/
+
 typedef struct tg_timer
 {
     b32              running;
@@ -80,6 +84,12 @@ void tg_timer_destroy(tg_timer_h timer_h)
     TG_ALLOCATOR_FREE(timer_h);
 }
 
+
+
+/*------------------------------------------------------------+
+| Platform                                                    |
++------------------------------------------------------------*/
+
 #ifdef TG_DEBUG
 void tg_platform_debug_print(const char* p_message)
 {
@@ -133,9 +143,12 @@ void tg_platform_handle_events()
     }
 }
 
-/*
----- Windows Internals ----
-*/
+
+
+/*------------------------------------------------------------+
+| Windows Internals                                           |
++------------------------------------------------------------*/
+
 LRESULT CALLBACK tg_platform_win32_window_proc(HWND window_h, UINT message, WPARAM w_param, LPARAM l_param)
 {
     switch (message)

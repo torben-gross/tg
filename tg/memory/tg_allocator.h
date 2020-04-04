@@ -1,7 +1,6 @@
 #ifndef TG_ALLOCATOR_H
 #define TG_ALLOCATOR_H
 
-#include "tg_platform.h"
 #include "tg/tg_common.h"
 
 #ifndef TG_DEBUG

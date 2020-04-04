@@ -4,7 +4,7 @@
 #ifdef TG_VULKAN
 
 #include "tg/math/tg_math.h"
-#include "tg/platform/tg_allocator.h"
+#include "tg/memory/tg_allocator.h"
 #ifdef TG_DEBUG
 #endif
 

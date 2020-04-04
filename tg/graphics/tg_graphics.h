@@ -1,8 +1,8 @@
 #ifndef TG_GRAPHICS_H
 #define TG_GRAPHICS_H
 
-#include "tg/tg_common.h"
 #include "tg/math/tg_math.h"
+#include "tg/tg_common.h"
 
 
 
@@ -100,6 +100,12 @@ typedef enum tg_sampler_mipmap_mode {
 	TG_SAMPLER_MIPMAP_MODE_LINEAR     = 1
 } tg_sampler_mipmap_mode;
 
+typedef struct tg_camera
+{
+	tgm_mat4f view;
+	tgm_mat4f projection;
+} tg_camera;
+
 typedef struct tg_vertex
 {
 	tgm_vec3f    position;
@@ -135,9 +141,12 @@ void tg_graphics_model_destroy(tg_model_h model_h);
 void tg_graphics_vertex_shader_create(const char* p_filename, tg_vertex_shader_h* p_vertex_shader_h);
 void tg_graphics_vertex_shader_destroy(tg_vertex_shader_h p_vertex_shader_h);
 
-/*
----- 2D Renderer ----
-*/
+
+
+/*------------------------------------------------------------+
+| 2D Renderer                                                 |
++------------------------------------------------------------*/
+
 void tg_graphics_renderer_2d_init();
 void tg_graphics_renderer_2d_begin();
 void tg_graphics_renderer_2d_draw_sprite(f32 x, f32 y, f32 z, f32 w, f32 h, tg_image_h image);
@@ -150,14 +159,11 @@ void tg_graphics_renderer_2d_on_window_resize(ui32 w, ui32 h);
 void tg_graphics_renderer_2d_draw_call_count(ui32* draw_call_count);
 #endif
 
-/*
----- 3D Renderer
-*/
-typedef struct tg_camera
-{
-	tgm_mat4f view;
-	tgm_mat4f projection;
-} tg_camera;
+
+
+/*------------------------------------------------------------+
+| 3D Renderer                                                 |
++------------------------------------------------------------*/
 
 void tg_graphics_renderer_3d_init(const tg_camera* p_camera);
 void tg_graphics_renderer_3d_draw(const tg_model_h model_h);

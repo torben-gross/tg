@@ -1,4 +1,4 @@
-#include "tg_input.h"
+#include "tg/tg_input.h"
 
 #include "tg/platform/tg_platform.h"
 #include <string.h>

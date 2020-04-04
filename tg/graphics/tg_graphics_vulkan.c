@@ -2,10 +2,10 @@
 
 #ifdef TG_VULKAN
 
-#include "tg/tg_application.h"
 #include "tg/math/tg_math.h"
-#include "tg/platform/tg_allocator.h"
+#include "tg/memory/tg_allocator.h"
 #include "tg/platform/tg_platform.h"
+#include "tg/tg_application.h"
 #include "tg/util/tg_file_io.h"
 #include "tg/util/tg_string.h"
 
@@ -19,9 +19,12 @@ VKAPI_ATTR VkBool32 VKAPI_CALL tgvk_debug_callback(VkDebugUtilsMessageSeverityFl
 }
 #endif
 
-/*
----- General utilities ----
-*/
+
+
+/*------------------------------------------------------------+
+| General utilities                                           |
++------------------------------------------------------------*/
+
 void tg_graphics_vulkan_buffer_copy(VkDeviceSize size, VkBuffer source, VkBuffer target)
 {
     VkCommandBuffer command_buffer;
@@ -708,9 +711,10 @@ void tg_graphics_vulkan_shader_module_destroy(VkShaderModule shader_module)
 
 
 
-/*
----- Main utilities ----
-*/
+/*------------------------------------------------------------+
+| Main utilities                                              |
++------------------------------------------------------------*/
+
 void tg_graphics_vulkan_instance_create(VkInstance* p_instance)
 {
     TG_ASSERT(p_instance);
@@ -1015,9 +1019,10 @@ void tg_graphics_vulkan_swapchain_create()
 
 
 
-/*
----- Initialization, shutdown and other main functionality ----
-*/
+/*------------------------------------------------------------+
+| Initialization, shutdown and other main functionality       |
++------------------------------------------------------------*/
+
 void tg_graphics_init()
 {
     tg_graphics_vulkan_instance_create(&instance);

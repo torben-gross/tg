@@ -1,7 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="platform\tg_allocator.c" />
     <ClCompile Include="platform\tg_win32_platform.c" />
     <ClCompile Include="util\tg_file_io.c" />
     <ClCompile Include="math\tg_math.c" />
@@ -17,10 +16,10 @@
     <ClCompile Include="graphics\tg_graphics_vulkan_model.c" />
     <ClCompile Include="tg_input.c" />
     <ClCompile Include="util\tg_string.c" />
+    <ClCompile Include="memory\tg_allocator.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="tg_common.h" />
-    <ClInclude Include="platform\tg_allocator.h" />
     <ClInclude Include="platform\tg_platform.h" />
     <ClInclude Include="util\tg_file_io.h" />
     <ClInclude Include="math\tg_math.h" />
@@ -32,6 +31,7 @@
     <ClInclude Include="tg_input.h" />
     <ClInclude Include="util\tg_timer.h" />
     <ClInclude Include="util\tg_string.h" />
+    <ClInclude Include="memory\tg_allocator.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="tg.ruleset" />

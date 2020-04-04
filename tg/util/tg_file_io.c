@@ -1,10 +1,10 @@
+#include "tg/util/tg_file_io.h"
+
 #define _CRT_SECURE_NO_WARNINGS
 
-#include "tg_file_io.h"
-
+#include "tg/memory/tg_allocator.h"
 #include "tg/tg_application.h"
 #include "tg/tg_common.h"
-#include "tg/platform/tg_allocator.h"
 #include <stdio.h>
 
 #ifdef TG_WIN32

@@ -1,9 +1,9 @@
 #ifndef TG_IMAGE_H
 #define TG_IMAGE_H
 
-#include "tg/tg_common.h"
 #include "tg/graphics/tg_graphics.h"
 #include "tg/math/tg_math.h"
+#include "tg/tg_common.h"
 
 #define TG_IMAGE_MAX_MIP_LEVELS(w, h) ((ui32)tgm_f32_log2((f32)tgm_ui32_max((ui32)w, (ui32)h)) + 1)
 

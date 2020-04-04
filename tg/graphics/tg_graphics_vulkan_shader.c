@@ -2,8 +2,8 @@
 
 #ifdef TG_VULKAN
 
+#include "tg/memory/tg_allocator.h"
 #include "tg/tg_application.h"
-#include "tg/platform/tg_allocator.h"
 #include "tg/util/tg_file_io.h"
 
 void tg_graphics_vertex_shader_create(const char* p_filename, tg_vertex_shader_h* p_vertex_shader_h)

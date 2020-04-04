@@ -2,13 +2,13 @@
 
 #ifdef TG_VULKAN
 
-#include "tg/platform/tg_allocator.h"
+#include "tg/memory/tg_allocator.h"
 
 void tg_graphics_mesh_recalculate_normal(tg_vertex* p_v0, tg_vertex* p_v1, tg_vertex* p_v2)
 {
-    tgm_vec3f v01 = *tgm_v3f_subtract_v3f(&v01, &p_v1->position, &p_v0->position);
-    tgm_vec3f v02 = *tgm_v3f_subtract_v3f(&v02, &p_v2->position, &p_v0->position);
-    tgm_vec3f normal = *tgm_v3f_cross(&normal, &v01, &v02);
+    const tgm_vec3f v01 = tgm_v3f_subtract_v3f(&p_v1->position, &p_v0->position);
+    const tgm_vec3f v02 = tgm_v3f_subtract_v3f(&p_v2->position, &p_v0->position);
+    const tgm_vec3f normal = tgm_v3f_cross(&v01, &v02);
 
     p_v0->normal = normal;
     p_v1->normal = normal;
@@ -33,25 +33,27 @@ void tg_graphics_mesh_recalculate_normals(ui32 vertex_count, ui32 index_count, c
 }
 void tg_graphics_mesh_recalculate_tangent_bitangent(tg_vertex* p_v0, tg_vertex* p_v1, tg_vertex* p_v2)
 {
-    tgm_vec3f delta_p_01 = *tgm_v3f_subtract_v3f(&delta_p_01, &p_v1->position, &p_v0->position);
-    tgm_vec3f delta_p_02 = *tgm_v3f_subtract_v3f(&delta_p_02, &p_v2->position, &p_v0->position);
+    const tgm_vec3f delta_p_01 = tgm_v3f_subtract_v3f(&p_v1->position, &p_v0->position);
+    const tgm_vec3f delta_p_02 = tgm_v3f_subtract_v3f(&p_v2->position, &p_v0->position);
 
-    tgm_vec2f delta_uv_01 = *tgm_v2f_subtract_v2f(&delta_uv_01, &p_v1->uv, &p_v0->uv);
-    tgm_vec2f delta_uv_02 = *tgm_v2f_subtract_v2f(&delta_uv_02, &p_v2->uv, &p_v0->uv);
+    const tgm_vec2f delta_uv_01 = tgm_v2f_subtract_v2f(&p_v1->uv, &p_v0->uv);
+    const tgm_vec2f delta_uv_02 = tgm_v2f_subtract_v2f(&p_v2->uv, &p_v0->uv);
 
     const float f = 1.0f / (delta_uv_01.x * delta_uv_02.y - delta_uv_01.y * delta_uv_02.x);
 
-    tgm_vec3f tangent_l_part = *tgm_v3f_multiply_f(&tangent_l_part, &delta_p_01, delta_uv_02.y);
-    tgm_vec3f tangent_r_part = *tgm_v3f_multiply_f(&tangent_r_part, &delta_p_02, delta_uv_01.y);
-    tgm_vec3f tangent = *tgm_v3f_multiply_f(&tangent, tgm_v3f_subtract_v3f(&tangent, &tangent_l_part, &tangent_r_part), f);
+    const tgm_vec3f tangent_l_part = tgm_v3f_multiply_f(&delta_p_01, delta_uv_02.y);
+    const tgm_vec3f tangent_r_part = tgm_v3f_multiply_f(&delta_p_02, delta_uv_01.y);
+    const tgm_vec3f tlp_minus_trp = tgm_v3f_subtract_v3f(&tangent_l_part, &tangent_r_part);
+    const tgm_vec3f tangent = tgm_v3f_multiply_f(&tlp_minus_trp, f);
 
     p_v0->tangent = tangent;
     p_v1->tangent = tangent;
     p_v2->tangent = tangent;
 
-    tgm_vec3f bitangent_l_part = *tgm_v3f_multiply_f(&bitangent_l_part, &delta_p_02, delta_uv_01.x);
-    tgm_vec3f bitangent_r_part = *tgm_v3f_multiply_f(&bitangent_r_part, &delta_p_01, delta_uv_02.x);
-    tgm_vec3f bitangent = *tgm_v3f_multiply_f(&bitangent, tgm_v3f_subtract_v3f(&bitangent, &bitangent_l_part, &bitangent_r_part), f);
+    const tgm_vec3f bitangent_l_part = tgm_v3f_multiply_f(&delta_p_02, delta_uv_01.x);
+    const tgm_vec3f bitangent_r_part = tgm_v3f_multiply_f(&delta_p_01, delta_uv_02.x);
+    const tgm_vec3f blp_minus_brp = tgm_v3f_subtract_v3f(&bitangent_l_part, &bitangent_r_part);
+    const tgm_vec3f bitangent = tgm_v3f_multiply_f(&blp_minus_brp, f);
 
     p_v0->bitangent = bitangent;
     p_v1->bitangent = bitangent;
@@ -78,7 +80,7 @@ void tg_graphics_mesh_recalculate_bitangents(ui32 vertex_count, tg_vertex* p_ver
 {
     for (ui32 i = 0; i < vertex_count; i++)
     {
-        tgm_v3f_cross(&p_vertices[i].bitangent, &p_vertices[i].normal, &p_vertices[i].tangent);
+        p_vertices[i].bitangent = tgm_v3f_cross(&p_vertices[i].normal, &p_vertices[i].tangent);
     }
 }
 

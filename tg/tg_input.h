@@ -99,9 +99,12 @@ typedef enum tg_button
 	TG_BUTTON_X2 = 0x06
 } tg_button;
 
-/*
----- Internals ----
-*/
+
+
+/*------------------------------------------------------------+
+| Internals                                                   |
++------------------------------------------------------------*/
+
 void tg_input_clear();
 void tg_input_on_key_pressed(tg_key key, b32 repeated, ui32 additional_key_repeat_count);
 void tg_input_on_key_released(tg_key key);
@@ -109,9 +112,12 @@ void tg_input_on_mouse_button_pressed(tg_button button);
 void tg_input_on_mouse_button_released(tg_button button);
 void tg_input_on_mouse_wheel_rotated(f32 detents);
 
-/*
----- Public Functions ----
-*/
+
+
+/*------------------------------------------------------------+
+| Public functions                                            |
++------------------------------------------------------------*/
+
 ui32 tg_input_get_key_repeat_count(tg_key key);
 void tg_input_get_mouse_position(ui32* x, ui32* y);
 f32  tg_input_get_mouse_wheel_detents(b32 consume);

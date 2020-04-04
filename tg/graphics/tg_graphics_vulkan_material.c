@@ -3,7 +3,7 @@
 #ifdef TG_VULKAN
 
 #include "tg/graphics/tg_graphics_vulkan_renderer_3d.h"
-#include "tg/platform/tg_allocator.h"
+#include "tg/memory/tg_allocator.h"
 
 void tg_graphics_material_create(tg_vertex_shader_h vertex_shader_h, tg_fragment_shader_h fragment_shader_h, tg_material_h* p_material_h)
 {

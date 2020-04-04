@@ -1,9 +1,9 @@
-#include "tg_application.h"
+#include "tg/tg_application.h"
 
 #define ASSET_PATH "assets"
 
 #include "tg/graphics/tg_graphics.h"
-#include "tg/platform/tg_allocator.h"
+#include "tg/memory/tg_allocator.h"
 #include "tg/platform/tg_platform.h"
 #include "tg/tg_input.h"
 #include "tg/util/tg_string.h"
@@ -36,12 +36,10 @@ typedef struct tg_debug_info
 } tg_debug_info;
 #endif
 
+
+
 void tg_application_start()
 {
-    char test_buf[256] = { 0 };
-    tg_string_format(sizeof(test_buf), test_buf, "Hi! My name is %s and I am %u years old! Watch out! A floating-point-number: %d", "little John", 12, TGM_PI*1000.0f);
-    TG_DEBUG_PRINT(test_buf);
-
     tg_graphics_init();
 
     tg_image_h img = NULL;
@@ -54,16 +52,16 @@ void tg_application_start()
         camera_info.pitch = 0.0f;
         camera_info.yaw = 0.0f;
         camera_info.roll = 0.0f;
-        tgm_mat4f camera_rotation = *tgm_m4f_euler(&camera_rotation, TGM_TO_RADIANS(-camera_info.pitch), TGM_TO_RADIANS(-camera_info.yaw), TGM_TO_RADIANS(-camera_info.roll));
-        tgm_vec3f negated_camera_position = *tgm_v3f_negate(&negated_camera_position, &camera_info.position);
-        tgm_mat4f camera_translation = *tgm_m4f_translate(&camera_translation, &negated_camera_position);
-        tgm_m4f_multiply_m4f(&camera_info.camera.view, &camera_rotation, &camera_translation);
+        const tgm_mat4f camera_rotation = tgm_m4f_euler(TGM_TO_RADIANS(-camera_info.pitch), TGM_TO_RADIANS(-camera_info.yaw), TGM_TO_RADIANS(-camera_info.roll));
+        const tgm_vec3f negated_camera_position = tgm_v3f_negated(&camera_info.position);
+        const tgm_mat4f camera_translation = tgm_m4f_translate(&negated_camera_position);
+        camera_info.camera.view = tgm_m4f_multiply_m4f(&camera_rotation, &camera_translation);
 
         camera_info.fov_y_in_radians = TGM_TO_RADIANS(70.0f);
         camera_info.aspect = tg_platform_get_window_aspect_ratio(&camera_info.aspect);
         camera_info.near = -0.1f;
         camera_info.far = -1000.0f;
-        tgm_m4f_perspective(&camera_info.camera.projection, camera_info.fov_y_in_radians, camera_info.aspect, camera_info.near, camera_info.far);
+        camera_info.camera.projection = tgm_m4f_perspective(camera_info.fov_y_in_radians, camera_info.aspect, camera_info.near, camera_info.far);
     }
 
     tg_graphics_renderer_3d_init(&camera_info.camera);
@@ -175,71 +173,71 @@ void tg_application_start()
             camera_info.yaw += 0.064f * (f32)((i32)camera_info.last_mouse_x - (i32)mouse_x);
             camera_info.pitch += 0.064f * (f32)((i32)camera_info.last_mouse_y - (i32)mouse_y);
         }
-        tgm_mat4f camera_rotation = *tgm_m4f_euler(&camera_rotation, TGM_TO_RADIANS(camera_info.pitch), TGM_TO_RADIANS(camera_info.yaw), TGM_TO_RADIANS(camera_info.roll));
+        const tgm_mat4f camera_rotation = tgm_m4f_euler(TGM_TO_RADIANS(camera_info.pitch), TGM_TO_RADIANS(camera_info.yaw), TGM_TO_RADIANS(camera_info.roll));
 
         tgm_vec4f right = { 1.0f, 0.0f, 0.0f, 0.0f };
         tgm_vec4f up = { 0.0f, 1.0f, 0.0f, 0.0f };
         tgm_vec4f forward = { 0.0f, 0.0f, -1.0f, 0.0f };
 
-        tgm_m4f_multiply_v4f(&right, &camera_rotation, &right);
-        tgm_m4f_multiply_v4f(&forward, &camera_rotation, &forward);
+        right = tgm_m4f_multiply_v4f(&camera_rotation, &right);
+        forward = tgm_m4f_multiply_v4f(&camera_rotation, &forward);
 
         tgm_vec3f temp;
         tgm_vec3f velocity = { 0 };
         if (tg_input_is_key_down(TG_KEY_W))
         {
-            tgm_v4f_to_v3f(&temp, &forward);
-            tgm_v3f_add_v3f(&velocity, &velocity, &temp);
+            temp = tgm_v4f_to_v3f(&forward);
+            velocity = tgm_v3f_add_v3f(&velocity, &temp);
         }
         if (tg_input_is_key_down(TG_KEY_A))
         {
-            tgm_v4f_to_v3f(&temp, &right);
-            tgm_v3f_multiply_f(&temp, &temp, -1.0f);
-            tgm_v3f_add_v3f(&velocity, &velocity, &temp);
+            temp = tgm_v4f_to_v3f(&right);
+            temp = tgm_v3f_multiply_f(&temp, -1.0f);
+            velocity = tgm_v3f_add_v3f(&velocity, &temp);
         }
         if (tg_input_is_key_down(TG_KEY_S))
         {
-            tgm_v4f_to_v3f(&temp, &forward);
-            tgm_v3f_multiply_f(&temp, &temp, -1.0f);
-            tgm_v3f_add_v3f(&velocity, &velocity, &temp);
+            temp = tgm_v4f_to_v3f(&forward);
+            temp = tgm_v3f_multiply_f(&temp, -1.0f);
+            velocity = tgm_v3f_add_v3f(&velocity, &temp);
         }
         if (tg_input_is_key_down(TG_KEY_D))
         {
-            tgm_v4f_to_v3f(&temp, &right);
-            tgm_v3f_add_v3f(&velocity, &velocity, &temp);
+            temp = tgm_v4f_to_v3f(&right);
+            velocity = tgm_v3f_add_v3f(&velocity, &temp);
         }
         if (tg_input_is_key_down(TG_KEY_SPACE))
         {
-            tgm_v4f_to_v3f(&temp, &up);
-            tgm_v3f_add_v3f(&velocity, &velocity, &temp);
+            temp = tgm_v4f_to_v3f(&up);
+            velocity = tgm_v3f_add_v3f(&velocity, &temp);
         }
         if (tg_input_is_key_down(TG_KEY_CONTROL))
         {
-            tgm_v4f_to_v3f(&temp, &up);
-            tgm_v3f_multiply_f(&temp, &temp, -1.0f);
-            tgm_v3f_add_v3f(&velocity, &velocity, &temp);
+            temp = tgm_v4f_to_v3f(&up);
+            temp = tgm_v3f_multiply_f(&temp, -1.0f);
+            velocity = tgm_v3f_add_v3f(&velocity, &temp);
         }
 
         if (tgm_v3f_magnitude_squared(&velocity) != 0.0f)
         {
             const f32 camera_base_speed = tg_input_is_key_down(TG_KEY_SHIFT) ? 0.02f : 0.01f;
             const f32 camera_speed = camera_base_speed * delta_ms;
-            tgm_v3f_normalize(&velocity, &velocity);
-            tgm_v3f_multiply_f(&velocity, &velocity, camera_speed);
-            tgm_v3f_add_v3f(&camera_info.position, &camera_info.position, &velocity);
+            velocity = tgm_v3f_normalized(&velocity);
+            velocity = tgm_v3f_multiply_f(&velocity, camera_speed);
+            camera_info.position = tgm_v3f_add_v3f(&camera_info.position, &velocity);
         }
 
-        tgm_vec3f negated_camera_position = *tgm_v3f_negate(&negated_camera_position, &camera_info.position);
-        tgm_mat4f camera_translation = *tgm_m4f_translate(&camera_translation, &negated_camera_position);
-        tgm_mat4f inverse_camera_rotation = *tgm_m4f_euler(&inverse_camera_rotation, TGM_TO_RADIANS(-camera_info.pitch), TGM_TO_RADIANS(-camera_info.yaw), TGM_TO_RADIANS(-camera_info.roll));
-        tgm_m4f_multiply_m4f(&camera_info.camera.view, &inverse_camera_rotation, &camera_translation);
+        const tgm_vec3f negated_camera_position = tgm_v3f_negated(&camera_info.position);
+        const tgm_mat4f camera_translation = tgm_m4f_translate(&negated_camera_position);
+        const tgm_mat4f inverse_camera_rotation = tgm_m4f_euler(TGM_TO_RADIANS(-camera_info.pitch), TGM_TO_RADIANS(-camera_info.yaw), TGM_TO_RADIANS(-camera_info.roll));
+        camera_info.camera.view = tgm_m4f_multiply_m4f(&inverse_camera_rotation, &camera_translation);
         camera_info.last_mouse_x = mouse_x;
         camera_info.last_mouse_y = mouse_y;
 
         if (tg_input_get_mouse_wheel_detents(TG_FALSE))
         {
-            camera_info.fov_y_in_radians += 0.1f * tg_input_get_mouse_wheel_detents(TG_TRUE);
-            tgm_m4f_perspective(&camera_info.camera.projection, camera_info.fov_y_in_radians, camera_info.aspect, camera_info.near, camera_info.far);
+            camera_info.fov_y_in_radians -= 0.1f * tg_input_get_mouse_wheel_detents(TG_TRUE);
+            camera_info.camera.projection = tgm_m4f_perspective(camera_info.fov_y_in_radians, camera_info.aspect, camera_info.near, camera_info.far);
         }
     }
     tg_timer_destroy(timer_h);

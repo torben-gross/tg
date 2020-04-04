@@ -3,7 +3,7 @@
 #ifdef TG_VULKAN
 
 #include "tg/graphics/tg_graphics_image_loader.h"
-#include "tg/platform/tg_allocator.h"
+#include "tg/memory/tg_allocator.h"
 
 void tg_graphics_image_create(const char* p_filename, tg_image_h* p_image_h)
 {
