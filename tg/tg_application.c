@@ -8,9 +8,6 @@
 #include "tg/tg_input.h"
 #include "tg/util/tg_string.h"
 #include "tg/util/tg_timer.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 b32 running = TG_TRUE;
 const char* asset_path = ASSET_PATH; // TODO: determine this some other way
@@ -42,7 +39,7 @@ typedef struct tg_debug_info
 void tg_application_start()
 {
     char test_buf[256] = { 0 };
-    tg_string_format(sizeof(test_buf), test_buf, "Hi! My name is %s and I am %u years old!", "little John", 12);
+    tg_string_format(sizeof(test_buf), test_buf, "Hi! My name is %s and I am %u years old! Watch out! A floating-point-number: %d", "little John", 12, TGM_PI*1000.0f);
     TG_DEBUG_PRINT(test_buf);
 
     tg_graphics_init();
@@ -153,10 +150,10 @@ void tg_application_start()
                 TG_DEBUG_PRINT("Low framerate!");
             }
 
-            snprintf(debug_info.buffer, sizeof(debug_info.buffer), "%f ms", debug_info.ms_sum / debug_info.fps);
+            tg_string_format(sizeof(debug_info.buffer), debug_info.buffer, "%d ms", debug_info.ms_sum / debug_info.fps);
             TG_DEBUG_PRINT(debug_info.buffer);
 
-            snprintf(debug_info.buffer, sizeof(debug_info.buffer), "%lu fps", debug_info.fps);
+            tg_string_format(sizeof(debug_info.buffer), debug_info.buffer, "%u fps", debug_info.fps);
             TG_DEBUG_PRINT(debug_info.buffer);
 
             debug_info.ms_sum = 0.0f;

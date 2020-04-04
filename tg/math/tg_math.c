@@ -12,6 +12,13 @@ f32 tgm_f32_log2(f32 v)
 
 
 
+f64 tgm_f64_pow(f64 base, f64 exponent)
+{
+	return pow(base, exponent);
+}
+
+
+
 i32 tgm_i32_abs(i32 v)
 {
 	TG_ASSERT(v != I32_MIN);

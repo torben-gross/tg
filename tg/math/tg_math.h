@@ -179,6 +179,8 @@ typedef struct tgm_vec4f
 f32           tgm_f32_log2(f32 v);
 f32           tgm_f32_sin(f32 v); // TODO
 
+f64           tgm_f64_pow(f64 base, f64 exponent);
+
 i32           tgm_i32_abs(i32 v);
 ui32          tgm_i32_digits(i32 v);
 i32           tgm_i32_floor(i32 v);

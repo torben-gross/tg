@@ -31,8 +31,7 @@
 
 
 
-
-
+#define NULL                  0
 
 #define TG_TRUE               1
 #define TG_FALSE              0

@@ -6,7 +6,6 @@
 #include "tg/math/tg_math.h"
 #include "tg/platform/tg_allocator.h"
 #ifdef TG_DEBUG
-#include <stdio.h>
 #endif
 
 

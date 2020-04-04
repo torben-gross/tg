@@ -6,8 +6,6 @@
 #include "tg/tg_common.h"
 #include "tg/platform/tg_allocator.h"
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 #ifdef TG_WIN32
 #define MAX_PATH_LENGTH 260

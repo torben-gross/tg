@@ -22,6 +22,41 @@ void tg_string_format(ui32 size, char* p_buffer, const char* p_format, ...)
 			switch (format_parameter)
 			{
 
+			case 'd': // TODO: this does not generate a proper string! Exponent is missing entirely...
+			{
+				f64 f = va_arg(list, f64);
+
+				if (f < 0)
+				{
+					*p_buffer_position++ = '-';
+					f *= -1.0f;
+				}
+
+				ui32 integral_part = (ui32)f;
+				const ui32 integral_digit_count = tgm_i32_digits(integral_part); // TODO: this part can certainly be extracted
+				i32 integral_pow = tgm_i32_pow(10, integral_digit_count - 1);
+				for (ui32 i = 0; i < integral_digit_count; i++)
+				{
+					const i32 digit = integral_part / integral_pow;
+					*p_buffer_position++ = tgm_i32_abs(digit) + '0';
+					integral_part -= digit * integral_pow;
+					integral_pow /= 10;
+				}
+
+				*p_buffer_position++ = '.';
+
+				ui32 decimal_part = (ui32)((f - (f64)((ui32)f)) * tgm_f64_pow(10.0f, 9.0f));
+				const ui32 decimal_digit_count = tgm_i32_digits(decimal_part);
+				i32 decimal_pow = tgm_i32_pow(10, decimal_digit_count - 1);
+				for (ui32 i = 0; i < decimal_digit_count; i++)
+				{
+					const i32 digit = decimal_part / decimal_pow;
+					*p_buffer_position++ = tgm_i32_abs(digit) + '0';
+					decimal_part -= digit * decimal_pow;
+					decimal_pow /= 10;
+				}
+			} break;
+
 			case 'i':
 			{
 				i32 integer = va_arg(list, i32);
