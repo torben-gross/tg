@@ -71,6 +71,14 @@ typedef struct tg_renderer_3d_shading_pass
 
     struct
     {
+        VkImage              image;
+        VkDeviceMemory       device_memory;
+        VkImageView          image_view;
+        VkSampler            sampler;
+    } resolve_attachment;
+
+    struct
+    {
         VkBuffer             buffer;
         VkDeviceMemory       device_memory;
     } vbo;
@@ -317,10 +325,14 @@ void tg_graphics_renderer_3d_internal_init_resolve_pass()
 }
 void tg_graphics_renderer_3d_internal_init_shading_pass()
 {
-    tg_graphics_vulkan_image_create(swapchain_extent.width, swapchain_extent.height, 1, TG_RENDERER_3D_SHADING_FORMAT, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &shading_pass.color_attachment.image, &shading_pass.color_attachment.device_memory);
+    tg_graphics_vulkan_image_create(swapchain_extent.width, swapchain_extent.height, 1, TG_RENDERER_3D_SHADING_FORMAT, surface.msaa_sample_count, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &shading_pass.color_attachment.image, &shading_pass.color_attachment.device_memory);
     tg_graphics_vulkan_image_view_create(shading_pass.color_attachment.image, TG_RENDERER_3D_SHADING_FORMAT, 1, VK_IMAGE_ASPECT_COLOR_BIT, &shading_pass.color_attachment.image_view);
-    tg_graphics_vulkan_sampler_create(1, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, &shading_pass.color_attachment.sampler);
     tg_graphics_vulkan_image_transition_layout(shading_pass.color_attachment.image, 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, 1, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+    
+    tg_graphics_vulkan_image_create(swapchain_extent.width, swapchain_extent.height, 1, TG_RENDERER_3D_SHADING_FORMAT, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &shading_pass.resolve_attachment.image, &shading_pass.resolve_attachment.device_memory);
+    tg_graphics_vulkan_image_view_create(shading_pass.resolve_attachment.image, TG_RENDERER_3D_SHADING_FORMAT, 1, VK_IMAGE_ASPECT_COLOR_BIT, &shading_pass.resolve_attachment.image_view);
+    tg_graphics_vulkan_sampler_create(1, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, &shading_pass.resolve_attachment.sampler);
+    tg_graphics_vulkan_image_transition_layout(shading_pass.resolve_attachment.image, 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, 1, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
 
     VkBuffer staging_buffer = VK_NULL_HANDLE;
     VkDeviceMemory staging_buffer_memory = VK_NULL_HANDLE;
@@ -381,22 +393,37 @@ void tg_graphics_renderer_3d_internal_init_shading_pass()
     tg_graphics_vulkan_fence_create(VK_FENCE_CREATE_SIGNALED_BIT, &shading_pass.rendering_finished_fence);
     tg_graphics_vulkan_semaphore_create(&shading_pass.rendering_finished_semaphore);
 
+    VkAttachmentDescription p_attachment_descriptions[2] = { 0 };
+    {
+        p_attachment_descriptions[0].flags = 0;
+        p_attachment_descriptions[0].format = TG_RENDERER_3D_SHADING_FORMAT;
+        p_attachment_descriptions[0].samples = surface.msaa_sample_count;
+        p_attachment_descriptions[0].loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        p_attachment_descriptions[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        p_attachment_descriptions[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        p_attachment_descriptions[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        p_attachment_descriptions[0].initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        p_attachment_descriptions[0].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        
+        p_attachment_descriptions[1].flags = 0;
+        p_attachment_descriptions[1].format = TG_RENDERER_3D_SHADING_FORMAT;
+        p_attachment_descriptions[1].samples = VK_SAMPLE_COUNT_1_BIT;
+        p_attachment_descriptions[1].loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        p_attachment_descriptions[1].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        p_attachment_descriptions[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        p_attachment_descriptions[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        p_attachment_descriptions[1].initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        p_attachment_descriptions[1].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    }
     VkAttachmentReference color_attachment_reference = { 0 };
     {
         color_attachment_reference.attachment = 0;
         color_attachment_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     }
-    VkAttachmentDescription attachment_description = { 0 };
+    VkAttachmentReference resolve_attachment_reference = { 0 };
     {
-        attachment_description.flags = 0;
-        attachment_description.format = TG_RENDERER_3D_SHADING_FORMAT;
-        attachment_description.samples = VK_SAMPLE_COUNT_1_BIT;
-        attachment_description.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        attachment_description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        attachment_description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        attachment_description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        attachment_description.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        attachment_description.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        resolve_attachment_reference.attachment = 1;
+        resolve_attachment_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     }
     VkSubpassDescription subpass_description = { 0 };
     {
@@ -406,7 +433,7 @@ void tg_graphics_renderer_3d_internal_init_shading_pass()
         subpass_description.pInputAttachments = NULL;
         subpass_description.colorAttachmentCount = 1;
         subpass_description.pColorAttachments = &color_attachment_reference;
-        subpass_description.pResolveAttachments = NULL;
+        subpass_description.pResolveAttachments = &resolve_attachment_reference;
         subpass_description.pDepthStencilAttachment = NULL;
         subpass_description.preserveAttachmentCount = 0;
         subpass_description.pPreserveAttachments = NULL;
@@ -420,8 +447,10 @@ void tg_graphics_renderer_3d_internal_init_shading_pass()
         subpass_dependency.srcAccessMask = 0;
         subpass_dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
     }
-    tg_graphics_vulkan_render_pass_create(1, &attachment_description, 1, &subpass_description, 1, &subpass_dependency, &shading_pass.render_pass);
-    tg_graphics_vulkan_framebuffer_create(shading_pass.render_pass, 1, &shading_pass.color_attachment.image_view, swapchain_extent.width, swapchain_extent.height, &shading_pass.framebuffer);
+    tg_graphics_vulkan_render_pass_create(2, p_attachment_descriptions, 1, &subpass_description, 1, &subpass_dependency, &shading_pass.render_pass);
+
+    const VkImageView p_framebuffer_color_attachments[2] = { shading_pass.color_attachment.image_view, shading_pass.resolve_attachment.image_view };
+    tg_graphics_vulkan_framebuffer_create(shading_pass.render_pass, 2, p_framebuffer_color_attachments, swapchain_extent.width, swapchain_extent.height, &shading_pass.framebuffer);
 
     VkDescriptorPoolSize descriptor_pool_size = { 0 };
     {
@@ -483,6 +512,7 @@ void tg_graphics_renderer_3d_internal_init_shading_pass()
         p_vertex_input_attribute_descriptions[0].location = 0;
         p_vertex_input_attribute_descriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
         p_vertex_input_attribute_descriptions[0].offset = offsetof(tg_renderer_3d_screen_vertex, position);
+
         p_vertex_input_attribute_descriptions[1].binding = 0;
         p_vertex_input_attribute_descriptions[1].location = 1;
         p_vertex_input_attribute_descriptions[1].format = VK_FORMAT_R32G32_SFLOAT;
@@ -551,9 +581,9 @@ void tg_graphics_renderer_3d_internal_init_shading_pass()
         pipeline_multisample_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
         pipeline_multisample_state_create_info.pNext = NULL;
         pipeline_multisample_state_create_info.flags = 0;
-        pipeline_multisample_state_create_info.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-        pipeline_multisample_state_create_info.sampleShadingEnable = VK_FALSE;
-        pipeline_multisample_state_create_info.minSampleShading = 0.0f;
+        pipeline_multisample_state_create_info.rasterizationSamples = surface.msaa_sample_count;
+        pipeline_multisample_state_create_info.sampleShadingEnable = VK_TRUE;
+        pipeline_multisample_state_create_info.minSampleShading = 1.0f;
         pipeline_multisample_state_create_info.pSampleMask = NULL;
         pipeline_multisample_state_create_info.alphaToCoverageEnable = VK_FALSE;
         pipeline_multisample_state_create_info.alphaToOneEnable = VK_FALSE;
@@ -1022,8 +1052,8 @@ void tg_graphics_renderer_3d_internal_init_present_pass()
     const VkDeviceSize vertex_buffer_offsets[1] = { 0 };
     VkDescriptorImageInfo descriptor_image_info = { 0 };
     {
-        descriptor_image_info.sampler = shading_pass.color_attachment.sampler;
-        descriptor_image_info.imageView = shading_pass.color_attachment.image_view;
+        descriptor_image_info.sampler = shading_pass.resolve_attachment.sampler;
+        descriptor_image_info.imageView = shading_pass.resolve_attachment.image_view;
         descriptor_image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     }
     VkWriteDescriptorSet write_descriptor_set = { 0 };
@@ -1045,7 +1075,7 @@ void tg_graphics_renderer_3d_internal_init_present_pass()
 
         VK_CALL(vkBeginCommandBuffer(present_pass.command_buffers[i], &command_buffer_begin_info));
 
-        tg_graphics_vulkan_command_buffer_cmd_transition_image_layout(present_pass.command_buffers[i], shading_pass.color_attachment.image, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, 1, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT);
+        tg_graphics_vulkan_command_buffer_cmd_transition_image_layout(present_pass.command_buffers[i], shading_pass.resolve_attachment.image, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, 1, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT);
         vkCmdBindPipeline(present_pass.command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, present_pass.pipeline);
         vkCmdBindVertexBuffers(present_pass.command_buffers[i], 0, sizeof(vertex_buffer_offsets) / sizeof(*vertex_buffer_offsets), &present_pass.vbo.buffer, vertex_buffer_offsets);
         vkCmdBindIndexBuffer(present_pass.command_buffers[i], present_pass.ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
@@ -1065,7 +1095,7 @@ void tg_graphics_renderer_3d_internal_init_present_pass()
         vkCmdBeginRenderPass(present_pass.command_buffers[i], &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
         vkCmdDrawIndexed(present_pass.command_buffers[i], 6, 1, 0, 0, 0);
         vkCmdEndRenderPass(present_pass.command_buffers[i]);
-        tg_graphics_vulkan_command_buffer_cmd_transition_image_layout(present_pass.command_buffers[i], shading_pass.color_attachment.image, VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, 1, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+        tg_graphics_vulkan_command_buffer_cmd_transition_image_layout(present_pass.command_buffers[i], shading_pass.resolve_attachment.image, VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, 1, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
         VK_CALL(vkEndCommandBuffer(present_pass.command_buffers[i]));
     }
 }
