@@ -42,9 +42,6 @@ void tg_application_start()
 {
     tg_graphics_init();
 
-    tg_image_h img = NULL;
-    tg_graphics_image_create("test_icon.bmp", &img);
-
     tg_camera_info camera_info = { 0 };
     tg_input_get_mouse_position(&camera_info.last_mouse_x, &camera_info.last_mouse_y);
     {
@@ -251,8 +248,6 @@ void tg_application_start()
     tg_graphics_fragment_shader_destroy(fragment_shader_h);
     tg_graphics_vertex_shader_destroy(vertex_shader_h);
     tg_graphics_mesh_destroy(mesh_h);
-
-    tg_graphics_image_destroy(img);
 
     tg_graphics_renderer_3d_shutdown();
     tg_graphics_shutdown();

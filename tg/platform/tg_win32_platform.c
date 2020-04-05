@@ -212,7 +212,7 @@ int CALLBACK WinMain(_In_ HINSTANCE instance_h, _In_opt_ HINSTANCE prev_instance
         window_class_info.cbWndExtra = 0;
         window_class_info.hInstance = instance_h;
         window_class_info.hIcon = NULL;
-        window_class_info.hCursor = NULL;
+        window_class_info.hCursor = LoadCursor(NULL, IDC_ARROW);
         window_class_info.hbrBackground = NULL;
         window_class_info.lpszMenuName = NULL;
         window_class_info.lpszClassName = window_class_id;

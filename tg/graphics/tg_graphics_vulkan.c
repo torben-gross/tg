@@ -25,7 +25,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL tgvk_debug_callback(VkDebugUtilsMessageSeverityFl
 | General utilities                                           |
 +------------------------------------------------------------*/
 
-void tg_graphics_vulkan_buffer_copy(VkDeviceSize size, VkBuffer source, VkBuffer target)
+void                     tg_graphics_vulkan_buffer_copy(VkDeviceSize size, VkBuffer source, VkBuffer target)
 {
     VkCommandBuffer command_buffer;
     tg_graphics_vulkan_command_buffer_allocate(command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, &command_buffer);
@@ -42,7 +42,7 @@ void tg_graphics_vulkan_buffer_copy(VkDeviceSize size, VkBuffer source, VkBuffer
     tg_graphics_vulkan_command_buffer_end_and_submit(command_buffer);
     tg_graphics_vulkan_command_buffer_free(command_pool, command_buffer);
 }
-void tg_graphics_vulkan_buffer_copy_to_image(ui32 width, ui32 height, VkBuffer source, VkImage target)
+void                     tg_graphics_vulkan_buffer_copy_to_image(ui32 width, ui32 height, VkBuffer source, VkImage target)
 {
     VkCommandBuffer command_buffer;
     tg_graphics_vulkan_command_buffer_allocate(command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, &command_buffer);
@@ -69,7 +69,7 @@ void tg_graphics_vulkan_buffer_copy_to_image(ui32 width, ui32 height, VkBuffer s
     tg_graphics_vulkan_command_buffer_end_and_submit(command_buffer);
     tg_graphics_vulkan_command_buffer_free(command_pool, command_buffer);
 }
-void tg_graphics_vulkan_buffer_create(VkDeviceSize size, VkBufferUsageFlags buffer_usage_flags, VkMemoryPropertyFlags memory_property_flags, VkBuffer* p_buffer, VkDeviceMemory* p_device_memory)
+void                     tg_graphics_vulkan_buffer_create(VkDeviceSize size, VkBufferUsageFlags buffer_usage_flags, VkMemoryPropertyFlags memory_property_flags, VkBuffer* p_buffer, VkDeviceMemory* p_device_memory)
 {
     VkBufferCreateInfo buffer_create_info = { 0 };
     buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -90,17 +90,17 @@ void tg_graphics_vulkan_buffer_create(VkDeviceSize size, VkBufferUsageFlags buff
     memory_allocate_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     memory_allocate_info.pNext = NULL;
     memory_allocate_info.allocationSize = memory_requirements.size;
-    tg_graphics_vulkan_memory_type_find(memory_requirements.memoryTypeBits, memory_property_flags, &memory_allocate_info.memoryTypeIndex);
+    memory_allocate_info.memoryTypeIndex = tg_graphics_vulkan_memory_type_find(memory_requirements.memoryTypeBits, memory_property_flags);
 
     VK_CALL(vkAllocateMemory(device, &memory_allocate_info, NULL, p_device_memory));
     VK_CALL(vkBindBufferMemory(device, *p_buffer, *p_device_memory, 0));
 }
-void tg_graphics_vulkan_buffer_destroy(VkBuffer buffer, VkDeviceMemory device_memory)
+void                     tg_graphics_vulkan_buffer_destroy(VkBuffer buffer, VkDeviceMemory device_memory)
 {
     vkFreeMemory(device, device_memory, NULL);
     vkDestroyBuffer(device, buffer, NULL);
 }
-void tg_graphics_vulkan_command_buffer_allocate(VkCommandPool command_pool, VkCommandBufferLevel level, VkCommandBuffer* p_command_buffer)
+void                     tg_graphics_vulkan_command_buffer_allocate(VkCommandPool command_pool, VkCommandBufferLevel level, VkCommandBuffer* p_command_buffer)
 {
     VkCommandBufferAllocateInfo command_buffer_allocate_info = { 0 };
     {
@@ -112,7 +112,7 @@ void tg_graphics_vulkan_command_buffer_allocate(VkCommandPool command_pool, VkCo
     }
     VK_CALL(vkAllocateCommandBuffers(device, &command_buffer_allocate_info, p_command_buffer));
 }
-void tg_graphics_vulkan_command_buffer_begin(VkCommandBufferUsageFlags usage_flags, VkCommandBuffer command_buffer)
+void                     tg_graphics_vulkan_command_buffer_begin(VkCommandBufferUsageFlags usage_flags, VkCommandBuffer command_buffer)
 {
     VkCommandBufferBeginInfo command_buffer_begin_info = { 0 };
     {
@@ -123,7 +123,7 @@ void tg_graphics_vulkan_command_buffer_begin(VkCommandBufferUsageFlags usage_fla
     }
     VK_CALL(vkBeginCommandBuffer(command_buffer, &command_buffer_begin_info));
 }
-void tg_graphics_vulkan_command_buffer_cmd_transition_image_layout(VkCommandBuffer command_buffer, VkImage image, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkImageAspectFlags aspect_mask, ui32 mip_levels, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits)
+void                     tg_graphics_vulkan_command_buffer_cmd_transition_image_layout(VkCommandBuffer command_buffer, VkImage image, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkImageAspectFlags aspect_mask, ui32 mip_levels, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits)
 {
     VkImageMemoryBarrier image_memory_barrier = { 0 };
     {
@@ -144,7 +144,7 @@ void tg_graphics_vulkan_command_buffer_cmd_transition_image_layout(VkCommandBuff
     }
     vkCmdPipelineBarrier(command_buffer, src_stage_bits, dst_stage_bits, 0, 0, NULL, 0, NULL, 1, &image_memory_barrier);
 }
-void tg_graphics_vulkan_command_buffer_end_and_submit(VkCommandBuffer command_buffer)
+void                     tg_graphics_vulkan_command_buffer_end_and_submit(VkCommandBuffer command_buffer)
 {
     VK_CALL(vkEndCommandBuffer(command_buffer));
 
@@ -164,11 +164,11 @@ void tg_graphics_vulkan_command_buffer_end_and_submit(VkCommandBuffer command_bu
     VK_CALL(vkQueueSubmit(graphics_queue.queue, 1, &submit_info, VK_NULL_HANDLE));
     VK_CALL(vkQueueWaitIdle(graphics_queue.queue));
 }
-void tg_graphics_vulkan_command_buffer_free(VkCommandPool command_pool, VkCommandBuffer command_buffer)
+void                     tg_graphics_vulkan_command_buffer_free(VkCommandPool command_pool, VkCommandBuffer command_buffer)
 {
     vkFreeCommandBuffers(device, command_pool, 1, &command_buffer);
 }
-void tg_graphics_vulkan_command_buffers_allocate(VkCommandPool command_pool, VkCommandBufferLevel level, ui32 command_buffer_count, VkCommandBuffer* p_command_buffers)
+void                     tg_graphics_vulkan_command_buffers_allocate(VkCommandPool command_pool, VkCommandBufferLevel level, ui32 command_buffer_count, VkCommandBuffer* p_command_buffers)
 {
     VkCommandBufferAllocateInfo command_buffer_allocate_info = { 0 };
     {
@@ -180,11 +180,11 @@ void tg_graphics_vulkan_command_buffers_allocate(VkCommandPool command_pool, VkC
     }
     VK_CALL(vkAllocateCommandBuffers(device, &command_buffer_allocate_info, p_command_buffers));
 }
-void tg_graphics_vulkan_command_buffers_free(VkCommandPool command_pool, ui32 command_buffer_count, const VkCommandBuffer* p_command_buffers)
+void                     tg_graphics_vulkan_command_buffers_free(VkCommandPool command_pool, ui32 command_buffer_count, const VkCommandBuffer* p_command_buffers)
 {
     vkFreeCommandBuffers(device, command_pool, command_buffer_count, p_command_buffers);
 }
-void tg_graphics_vulkan_depth_format_acquire(VkFormat* p_format)
+VkFormat                 tg_graphics_vulkan_depth_format_acquire()
 {
     const VkFormat formats[] = { VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT };
     const size_t format_count = sizeof(formats) / sizeof(*formats);
@@ -194,13 +194,14 @@ void tg_graphics_vulkan_depth_format_acquire(VkFormat* p_format)
         vkGetPhysicalDeviceFormatProperties(physical_device, formats[i], &format_properties);
         if ((format_properties.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) == VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)
         {
-            *p_format = formats[i];
-            return;
+            return formats[i];
         }
     }
+
     TG_ASSERT(TG_FALSE);
+    return -1;
 }
-void tg_graphics_vulkan_descriptor_pool_create(VkDescriptorPoolCreateFlags flags, ui32 max_sets, ui32 pool_size_count, const VkDescriptorPoolSize* pool_sizes, VkDescriptorPool* p_descriptor_pool)
+void                     tg_graphics_vulkan_descriptor_pool_create(VkDescriptorPoolCreateFlags flags, ui32 max_sets, ui32 pool_size_count, const VkDescriptorPoolSize* pool_sizes, VkDescriptorPool* p_descriptor_pool)
 {
     VkDescriptorPoolCreateInfo descriptor_pool_create_info = { 0 };
     {
@@ -213,11 +214,11 @@ void tg_graphics_vulkan_descriptor_pool_create(VkDescriptorPoolCreateFlags flags
     }
     VK_CALL(vkCreateDescriptorPool(device, &descriptor_pool_create_info, NULL, p_descriptor_pool));
 }
-void tg_graphics_vulkan_descriptor_pool_destroy(VkDescriptorPool descriptor_pool)
+void                     tg_graphics_vulkan_descriptor_pool_destroy(VkDescriptorPool descriptor_pool)
 {
     vkDestroyDescriptorPool(device, descriptor_pool, NULL);
 }
-void tg_graphics_vulkan_descriptor_set_layout_create(VkDescriptorSetLayoutCreateFlags flags, ui32 binding_count, const VkDescriptorSetLayoutBinding* p_bindings, VkDescriptorSetLayout* p_descriptor_set_layout)
+void                     tg_graphics_vulkan_descriptor_set_layout_create(VkDescriptorSetLayoutCreateFlags flags, ui32 binding_count, const VkDescriptorSetLayoutBinding* p_bindings, VkDescriptorSetLayout* p_descriptor_set_layout)
 {
     VkDescriptorSetLayoutCreateInfo descriptor_set_layout_create_info = { 0 };
     {
@@ -229,11 +230,11 @@ void tg_graphics_vulkan_descriptor_set_layout_create(VkDescriptorSetLayoutCreate
     }
     VK_CALL(vkCreateDescriptorSetLayout(device, &descriptor_set_layout_create_info, NULL, p_descriptor_set_layout));
 }
-void tg_graphics_vulkan_descriptor_set_layout_destroy(VkDescriptorSetLayout descriptor_set_layout)
+void                     tg_graphics_vulkan_descriptor_set_layout_destroy(VkDescriptorSetLayout descriptor_set_layout)
 {
     vkDestroyDescriptorSetLayout(device, descriptor_set_layout, NULL);
 }
-void tg_graphics_vulkan_descriptor_set_allocate(VkDescriptorPool descriptor_pool, VkDescriptorSetLayout descriptor_set_layout, VkDescriptorSet* p_descriptor_set)
+void                     tg_graphics_vulkan_descriptor_set_allocate(VkDescriptorPool descriptor_pool, VkDescriptorSetLayout descriptor_set_layout, VkDescriptorSet* p_descriptor_set)
 {
     VkDescriptorSetAllocateInfo descriptor_set_allocate_info = { 0 };
     {
@@ -245,11 +246,11 @@ void tg_graphics_vulkan_descriptor_set_allocate(VkDescriptorPool descriptor_pool
     }
     VK_CALL(vkAllocateDescriptorSets(device, &descriptor_set_allocate_info, p_descriptor_set));
 }
-void tg_graphics_vulkan_descriptor_set_free(VkDescriptorPool descriptor_pool, VkDescriptorSet descriptor_set)
+void                     tg_graphics_vulkan_descriptor_set_free(VkDescriptorPool descriptor_pool, VkDescriptorSet descriptor_set)
 {
     VK_CALL(vkFreeDescriptorSets(device, descriptor_pool, 1, &descriptor_set));
 }
-void tg_graphics_vulkan_fence_create(VkFenceCreateFlags fence_create_flags, VkFence* p_fence)
+void                     tg_graphics_vulkan_fence_create(VkFenceCreateFlags fence_create_flags, VkFence* p_fence)
 {
     VkFenceCreateInfo fence_create_info = { 0 };
     {
@@ -259,11 +260,11 @@ void tg_graphics_vulkan_fence_create(VkFenceCreateFlags fence_create_flags, VkFe
     }
     VK_CALL(vkCreateFence(device, &fence_create_info, NULL, p_fence));
 }
-void tg_graphics_vulkan_fence_destroy(VkFence fence)
+void                     tg_graphics_vulkan_fence_destroy(VkFence fence)
 {
     vkDestroyFence(device, fence, NULL);
 }
-void tg_graphics_vulkan_framebuffer_create(VkRenderPass render_pass, ui32 attachment_count, const VkImageView* p_attachments, ui32 width, ui32 height, VkFramebuffer* p_framebuffer)
+void                     tg_graphics_vulkan_framebuffer_create(VkRenderPass render_pass, ui32 attachment_count, const VkImageView* p_attachments, ui32 width, ui32 height, VkFramebuffer* p_framebuffer)
 {
     VkFramebufferCreateInfo framebuffer_create_info = { 0 };
     {
@@ -279,11 +280,11 @@ void tg_graphics_vulkan_framebuffer_create(VkRenderPass render_pass, ui32 attach
     }
     VK_CALL(vkCreateFramebuffer(device, &framebuffer_create_info, NULL, p_framebuffer));
 }
-void tg_graphics_vulkan_framebuffer_destroy(VkFramebuffer framebuffer)
+void                     tg_graphics_vulkan_framebuffer_destroy(VkFramebuffer framebuffer)
 {
     vkDestroyFramebuffer(device, framebuffer, NULL);
 }
-void tg_graphics_vulkan_image_create(ui32 width, ui32 height, ui32 mip_levels, VkFormat format, VkSampleCountFlagBits sample_count_flag_bits, VkImageUsageFlags image_usage_flags, VkMemoryPropertyFlags memory_property_flags, VkImage* p_image, VkDeviceMemory* p_device_memory)
+void                     tg_graphics_vulkan_image_create(ui32 width, ui32 height, ui32 mip_levels, VkFormat format, VkSampleCountFlagBits sample_count_flag_bits, VkImageUsageFlags image_usage_flags, VkMemoryPropertyFlags memory_property_flags, VkImage* p_image, VkDeviceMemory* p_device_memory)
 {
     VkImageCreateInfo image_create_info = { 0 };
     {
@@ -315,17 +316,17 @@ void tg_graphics_vulkan_image_create(ui32 width, ui32 height, ui32 mip_levels, V
         memory_allocate_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         memory_allocate_info.pNext = NULL;
         memory_allocate_info.allocationSize = memory_requirements.size;
-        tg_graphics_vulkan_memory_type_find(memory_requirements.memoryTypeBits, memory_property_flags, &memory_allocate_info.memoryTypeIndex);
+        memory_allocate_info.memoryTypeIndex = tg_graphics_vulkan_memory_type_find(memory_requirements.memoryTypeBits, memory_property_flags);
     }
     VK_CALL(vkAllocateMemory(device, &memory_allocate_info, NULL, p_device_memory));
     VK_CALL(vkBindImageMemory(device, *p_image, *p_device_memory, 0));
 }
-void tg_graphics_vulkan_image_destroy(VkImage image, VkDeviceMemory device_memory)
+void                     tg_graphics_vulkan_image_destroy(VkImage image, VkDeviceMemory device_memory)
 {
     vkFreeMemory(device, device_memory, NULL);
     vkDestroyImage(device, image, NULL);
 }
-void tg_graphics_vulkan_image_mipmaps_generate(VkImage image, ui32 width, ui32 height, VkFormat format, ui32 mip_levels)
+void                     tg_graphics_vulkan_image_mipmaps_generate(VkImage image, ui32 width, ui32 height, VkFormat format, ui32 mip_levels)
 {
 #ifdef TG_DEBUG
     VkFormatProperties format_properties;
@@ -413,7 +414,7 @@ void tg_graphics_vulkan_image_mipmaps_generate(VkImage image, ui32 width, ui32 h
     tg_graphics_vulkan_command_buffer_end_and_submit(command_buffer);
     tg_graphics_vulkan_command_buffer_free(command_pool, command_buffer);
 }
-void tg_graphics_vulkan_image_transition_layout(VkImage image, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkImageAspectFlags aspect_mask, ui32 mip_levels, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits)
+void                     tg_graphics_vulkan_image_transition_layout(VkImage image, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkImageAspectFlags aspect_mask, ui32 mip_levels, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits)
 {
     VkCommandBuffer command_buffer;
     tg_graphics_vulkan_command_buffer_allocate(command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, &command_buffer);
@@ -422,7 +423,7 @@ void tg_graphics_vulkan_image_transition_layout(VkImage image, VkAccessFlags src
     tg_graphics_vulkan_command_buffer_end_and_submit(command_buffer);
     tg_graphics_vulkan_command_buffer_free(command_pool, command_buffer);
 }
-void tg_graphics_vulkan_image_view_create(VkImage image, VkFormat format, ui32 mip_levels, VkImageAspectFlags image_aspect_flags, VkImageView* p_image_view)
+void                     tg_graphics_vulkan_image_view_create(VkImage image, VkFormat format, ui32 mip_levels, VkImageAspectFlags image_aspect_flags, VkImageView* p_image_view)
 {
     VkImageViewCreateInfo image_view_create_info = { 0 };
     image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -443,11 +444,11 @@ void tg_graphics_vulkan_image_view_create(VkImage image, VkFormat format, ui32 m
 
     VK_CALL(vkCreateImageView(device, &image_view_create_info, NULL, p_image_view));
 }
-void tg_graphics_vulkan_image_view_destroy(VkImageView image_view)
+void                     tg_graphics_vulkan_image_view_destroy(VkImageView image_view)
 {
     vkDestroyImageView(device, image_view, NULL);
 }
-void tg_graphics_vulkan_memory_type_find(ui32 memory_type_bits, VkMemoryPropertyFlags memory_property_flags, ui32* p_memory_type)
+ui32                     tg_graphics_vulkan_memory_type_find(ui32 memory_type_bits, VkMemoryPropertyFlags memory_property_flags)
 {
     VkPhysicalDeviceMemoryProperties physical_device_memory_properties;
     vkGetPhysicalDeviceMemoryProperties(physical_device, &physical_device_memory_properties);
@@ -458,14 +459,38 @@ void tg_graphics_vulkan_memory_type_find(ui32 memory_type_bits, VkMemoryProperty
         const b32 are_property_flags_suitable = (physical_device_memory_properties.memoryTypes[i].propertyFlags & memory_property_flags) == memory_property_flags;
         if (is_memory_type_suitable && are_property_flags_suitable)
         {
-            *p_memory_type = i;
-            return;
+            return i;
         }
     }
-
     TG_ASSERT(0);
+    return -1;
 }
-void tg_graphics_vulkan_physical_device_find_queue_families(VkPhysicalDevice physical_device, tg_queue* p_graphics_queue, tg_queue* p_present_queue, b32* p_complete)
+b32                      tg_graphics_vulkan_physical_device_check_extension_support(VkPhysicalDevice physical_device)
+{
+    ui32 device_extension_property_count;
+    VK_CALL(vkEnumerateDeviceExtensionProperties(physical_device, NULL, &device_extension_property_count, NULL));
+    VkExtensionProperties* device_extension_properties = TG_ALLOCATOR_ALLOCATE(device_extension_property_count * sizeof(*device_extension_properties));
+    VK_CALL(vkEnumerateDeviceExtensionProperties(physical_device, NULL, &device_extension_property_count, device_extension_properties));
+
+    b32 supports_extensions = TG_TRUE;
+    for (ui32 i = 0; i < DEVICE_EXTENSION_COUNT; i++)
+    {
+        b32 supports_extension = TG_FALSE;
+        for (ui32 j = 0; j < device_extension_property_count; j++)
+        {
+            if (strcmp(DEVICE_EXTENSION_NAMES[i], device_extension_properties[j].extensionName) == 0)
+            {
+                supports_extension = TG_TRUE;
+                break;
+            }
+        }
+        supports_extensions &= supports_extension;
+    }
+
+    TG_ALLOCATOR_FREE(device_extension_properties);
+    return supports_extensions;
+}
+b32                      tg_graphics_vulkan_physical_device_find_queue_families(VkPhysicalDevice physical_device, tg_queue* p_graphics_queue, tg_queue* p_present_queue)
 {
     ui32 queue_family_count;
     vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, NULL);
@@ -499,36 +524,12 @@ void tg_graphics_vulkan_physical_device_find_queue_families(VkPhysicalDevice phy
             break;
         }
     }
-    *p_complete = supports_graphics_family && supports_present_family;
 
+    const b32 complete = supports_graphics_family && supports_present_family;
     TG_ALLOCATOR_FREE(queue_family_properties);
+    return complete;
 }
-void tg_graphics_vulkan_physical_device_check_extension_support(VkPhysicalDevice physical_device, b32* p_result)
-{
-    ui32 device_extension_property_count;
-    VK_CALL(vkEnumerateDeviceExtensionProperties(physical_device, NULL, &device_extension_property_count, NULL));
-    VkExtensionProperties* device_extension_properties = TG_ALLOCATOR_ALLOCATE(device_extension_property_count * sizeof(*device_extension_properties));
-    VK_CALL(vkEnumerateDeviceExtensionProperties(physical_device, NULL, &device_extension_property_count, device_extension_properties));
-
-    b32 supports_extensions = TG_TRUE;
-    for (ui32 i = 0; i < DEVICE_EXTENSION_COUNT; i++)
-    {
-        b32 supports_extension = TG_FALSE;
-        for (ui32 j = 0; j < device_extension_property_count; j++)
-        {
-            if (strcmp(DEVICE_EXTENSION_NAMES[i], device_extension_properties[j].extensionName) == 0)
-            {
-                supports_extension = TG_TRUE;
-                break;
-            }
-        }
-        supports_extensions &= supports_extension;
-    }
-
-    TG_ALLOCATOR_FREE(device_extension_properties);
-    *p_result = supports_extensions;
-}
-void tg_graphics_vulkan_physical_device_find_max_sample_count(VkPhysicalDevice physical_device, VkSampleCountFlagBits* p_max_sample_count_flag_bits)
+VkSampleCountFlagBits    tg_graphics_vulkan_physical_device_find_max_sample_count(VkPhysicalDevice physical_device)
 {
     VkPhysicalDeviceProperties physical_device_properties;
     vkGetPhysicalDeviceProperties(physical_device, &physical_device_properties);
@@ -537,34 +538,34 @@ void tg_graphics_vulkan_physical_device_find_max_sample_count(VkPhysicalDevice p
 
     if (sample_count_flags & VK_SAMPLE_COUNT_64_BIT)
     {
-        *p_max_sample_count_flag_bits = VK_SAMPLE_COUNT_64_BIT;
+        return VK_SAMPLE_COUNT_64_BIT;
     }
     else if (sample_count_flags & VK_SAMPLE_COUNT_32_BIT)
     {
-        *p_max_sample_count_flag_bits = VK_SAMPLE_COUNT_32_BIT;
+        return VK_SAMPLE_COUNT_32_BIT;
     }
     else if (sample_count_flags & VK_SAMPLE_COUNT_16_BIT)
     {
-        *p_max_sample_count_flag_bits = VK_SAMPLE_COUNT_16_BIT;
+        return VK_SAMPLE_COUNT_16_BIT;
     }
     else if (sample_count_flags & VK_SAMPLE_COUNT_8_BIT)
     {
-        *p_max_sample_count_flag_bits = VK_SAMPLE_COUNT_8_BIT;
+        return VK_SAMPLE_COUNT_8_BIT;
     }
     else if (sample_count_flags & VK_SAMPLE_COUNT_4_BIT)
     {
-        *p_max_sample_count_flag_bits = VK_SAMPLE_COUNT_4_BIT;
+        return VK_SAMPLE_COUNT_4_BIT;
     }
     else if (sample_count_flags & VK_SAMPLE_COUNT_2_BIT)
     {
-        *p_max_sample_count_flag_bits = VK_SAMPLE_COUNT_2_BIT;
+        return VK_SAMPLE_COUNT_2_BIT;
     }
     else
     {
-        *p_max_sample_count_flag_bits = VK_SAMPLE_COUNT_1_BIT;
+        return VK_SAMPLE_COUNT_1_BIT;
     }
 }
-void tg_graphics_vulkan_physical_device_is_suitable(VkPhysicalDevice physical_device, b32* p_is_suitable)
+b32                      tg_graphics_vulkan_physical_device_is_suitable(VkPhysicalDevice physical_device)
 {
     VkPhysicalDeviceProperties physical_device_properties;
     vkGetPhysicalDeviceProperties(physical_device, &physical_device_properties);
@@ -576,28 +577,26 @@ void tg_graphics_vulkan_physical_device_is_suitable(VkPhysicalDevice physical_de
     const b32 supports_geometry_shader = physical_device_features.geometryShader;
     const b32 supports_sampler_anisotropy = physical_device_features.samplerAnisotropy;
 
-    b32 qfi_complete = TG_FALSE;
-    tg_graphics_vulkan_physical_device_find_queue_families(physical_device, &graphics_queue, &present_queue, &qfi_complete);
-
-    b32 supports_extensions = TG_FALSE;
-    tg_graphics_vulkan_physical_device_check_extension_support(physical_device, &supports_extensions);
+    const b32 qfi_complete = tg_graphics_vulkan_physical_device_find_queue_families(physical_device, &graphics_queue, &present_queue);
+    const b32 supports_extensions = tg_graphics_vulkan_physical_device_check_extension_support(physical_device);
 
     ui32 physical_device_surface_format_count;
     VK_CALL(vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface.surface, &physical_device_surface_format_count, NULL));
     ui32 physical_device_present_mode_count;
     VK_CALL(vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface.surface, &physical_device_present_mode_count, NULL));
 
-    *p_is_suitable = is_discrete_gpu && supports_geometry_shader && supports_sampler_anisotropy && qfi_complete && supports_extensions && physical_device_surface_format_count && physical_device_present_mode_count;
+    const b32 is_suitable = is_discrete_gpu && supports_geometry_shader && supports_sampler_anisotropy && qfi_complete && supports_extensions && physical_device_surface_format_count && physical_device_present_mode_count;
+    return is_suitable;
 }
-void tg_graphics_vulkan_pipeline_create(VkPipelineCache pipeline_cache, const VkGraphicsPipelineCreateInfo* p_graphics_pipeline_create_info, VkPipeline* p_pipeline)
+void                     tg_graphics_vulkan_pipeline_create(VkPipelineCache pipeline_cache, const VkGraphicsPipelineCreateInfo* p_graphics_pipeline_create_info, VkPipeline* p_pipeline)
 {
     VK_CALL(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, p_graphics_pipeline_create_info, NULL, p_pipeline));
 }
-void tg_graphics_vulkan_pipeline_destroy(VkPipeline pipeline)
+void                     tg_graphics_vulkan_pipeline_destroy(VkPipeline pipeline)
 {
     vkDestroyPipeline(device, pipeline, NULL);
 }
-void tg_graphics_vulkan_pipeline_layout_create(ui32 descriptor_set_layout_count, const VkDescriptorSetLayout* descriptor_set_layouts, ui32 push_constant_range_count, const VkPushConstantRange* push_constant_ranges, VkPipelineLayout* p_pipeline_layout)
+void                     tg_graphics_vulkan_pipeline_layout_create(ui32 descriptor_set_layout_count, const VkDescriptorSetLayout* descriptor_set_layouts, ui32 push_constant_range_count, const VkPushConstantRange* push_constant_ranges, VkPipelineLayout* p_pipeline_layout)
 {
     VkPipelineLayoutCreateInfo pipeline_layout_create_info = { 0 };
     {
@@ -611,11 +610,11 @@ void tg_graphics_vulkan_pipeline_layout_create(ui32 descriptor_set_layout_count,
     }
     VK_CALL(vkCreatePipelineLayout(device, &pipeline_layout_create_info, NULL, p_pipeline_layout));
 }
-void tg_graphics_vulkan_pipeline_layout_destroy(VkPipelineLayout pipeline_layout)
+void                     tg_graphics_vulkan_pipeline_layout_destroy(VkPipelineLayout pipeline_layout)
 {
     vkDestroyPipelineLayout(device, pipeline_layout, NULL);
 }
-void tg_graphics_vulkan_render_pass_create(ui32 attachment_count, const VkAttachmentDescription* p_attachments, ui32 subpass_count, const VkSubpassDescription* p_subpasses, ui32 dependency_count, const VkSubpassDependency* p_dependencies, VkRenderPass* p_render_pass)
+void                     tg_graphics_vulkan_render_pass_create(ui32 attachment_count, const VkAttachmentDescription* p_attachments, ui32 subpass_count, const VkSubpassDescription* p_subpasses, ui32 dependency_count, const VkSubpassDependency* p_dependencies, VkRenderPass* p_render_pass)
 {
     VkRenderPassCreateInfo render_pass_create_info = { 0 };
     {
@@ -631,11 +630,11 @@ void tg_graphics_vulkan_render_pass_create(ui32 attachment_count, const VkAttach
     }
     VK_CALL(vkCreateRenderPass(device, &render_pass_create_info, NULL, p_render_pass));
 }
-void tg_graphics_vulkan_render_pass_destroy(VkRenderPass render_pass)
+void                     tg_graphics_vulkan_render_pass_destroy(VkRenderPass render_pass)
 {
     vkDestroyRenderPass(device, render_pass, NULL);
 }
-void tg_graphics_vulkan_sampler_create(ui32 mip_levels, VkFilter min_filter, VkFilter mag_filter, VkSamplerAddressMode address_mode_u, VkSamplerAddressMode address_mode_v, VkSamplerAddressMode address_mode_w, VkSampler* p_sampler)
+void                     tg_graphics_vulkan_sampler_create(ui32 mip_levels, VkFilter min_filter, VkFilter mag_filter, VkSamplerAddressMode address_mode_u, VkSamplerAddressMode address_mode_v, VkSamplerAddressMode address_mode_w, VkSampler* p_sampler)
 {
     VkSamplerCreateInfo sampler_create_info = { 0 };
     sampler_create_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -659,11 +658,11 @@ void tg_graphics_vulkan_sampler_create(ui32 mip_levels, VkFilter min_filter, VkF
 
     VK_CALL(vkCreateSampler(device, &sampler_create_info, NULL, p_sampler));
 }
-void tg_graphics_vulkan_sampler_destroy(VkSampler sampler)
+void                     tg_graphics_vulkan_sampler_destroy(VkSampler sampler)
 {
     vkDestroySampler(device, sampler, NULL);
 }
-void tg_graphics_vulkan_semaphore_create(VkSemaphore* p_semaphore)
+void                     tg_graphics_vulkan_semaphore_create(VkSemaphore* p_semaphore)
 {
     VkSemaphoreCreateInfo semaphore_create_info = { 0 };
     {
@@ -673,11 +672,11 @@ void tg_graphics_vulkan_semaphore_create(VkSemaphore* p_semaphore)
     }
     VK_CALL(vkCreateSemaphore(device, &semaphore_create_info, NULL, p_semaphore));
 }
-void tg_graphics_vulkan_semaphore_destroy(VkSemaphore semaphore)
+void                     tg_graphics_vulkan_semaphore_destroy(VkSemaphore semaphore)
 {
     vkDestroySemaphore(device, semaphore, NULL);
 }
-void tg_graphics_vulkan_shader_module_create(const char* p_filename, VkShaderModule* p_shader_module)
+void                     tg_graphics_vulkan_shader_module_create(const char* p_filename, VkShaderModule* p_shader_module)
 {
 #ifdef TG_DEBUG
     char filename_buffer[256] = { 0 };
@@ -704,7 +703,7 @@ void tg_graphics_vulkan_shader_module_create(const char* p_filename, VkShaderMod
     VK_CALL(vkCreateShaderModule(device, &shader_module_create_info, NULL, p_shader_module));
     tg_file_io_free(content);
 }
-void tg_graphics_vulkan_shader_module_destroy(VkShaderModule shader_module)
+void                     tg_graphics_vulkan_shader_module_destroy(VkShaderModule shader_module)
 {
     vkDestroyShaderModule(device, shader_module, NULL);
 }
@@ -715,7 +714,7 @@ void tg_graphics_vulkan_shader_module_destroy(VkShaderModule shader_module)
 | Main utilities                                              |
 +------------------------------------------------------------*/
 
-void tg_graphics_vulkan_instance_create(VkInstance* p_instance)
+void                     tg_graphics_vulkan_instance_create(VkInstance* p_instance)
 {
     TG_ASSERT(p_instance);
 
@@ -763,7 +762,7 @@ void tg_graphics_vulkan_instance_create(VkInstance* p_instance)
     VK_CALL(vkCreateInstance(&instance_create_info, NULL, p_instance));
 }
 #ifdef TG_DEBUG
-void tg_graphics_vulkan_debug_utils_manager_create(VkDebugUtilsMessengerEXT* p_debug_utils_messenger)
+void                     tg_graphics_vulkan_debug_utils_manager_create(VkDebugUtilsMessengerEXT* p_debug_utils_messenger)
 {
     TG_ASSERT(p_debug_utils_messenger);
 
@@ -782,7 +781,7 @@ void tg_graphics_vulkan_debug_utils_manager_create(VkDebugUtilsMessengerEXT* p_d
 }
 #endif
 #ifdef TG_WIN32
-void tg_graphics_vulkan_surface_create(tg_surface* p_surface)
+void                     tg_graphics_vulkan_surface_create(tg_surface* p_surface)
 {
     TG_ASSERT(p_surface);
 
@@ -796,7 +795,7 @@ void tg_graphics_vulkan_surface_create(tg_surface* p_surface)
     VK_CALL(vkCreateWin32SurfaceKHR(instance, &win32_surface_create_info, NULL, &p_surface->surface));
 }
 #endif
-void tg_graphics_vulkan_physical_device_create(VkPhysicalDevice* p_physical_device)
+void                     tg_graphics_vulkan_physical_device_create(VkPhysicalDevice* p_physical_device)
 {
     TG_ASSERT(p_physical_device);
 
@@ -808,12 +807,11 @@ void tg_graphics_vulkan_physical_device_create(VkPhysicalDevice* p_physical_devi
 
     for (ui32 i = 0; i < physical_device_count; i++)
     {
-        b32 is_suitable = TG_FALSE;
-        tg_graphics_vulkan_physical_device_is_suitable(physical_devices[i], &is_suitable);
+        const b32 is_suitable = tg_graphics_vulkan_physical_device_is_suitable(physical_devices[i]);
         if (is_suitable)
         {
             *p_physical_device = physical_devices[i];
-            tg_graphics_vulkan_physical_device_find_max_sample_count(physical_devices[i], &surface.msaa_sample_count);
+            surface.msaa_sample_count = tg_graphics_vulkan_physical_device_find_max_sample_count(physical_devices[i]);
             break;
         }
     }
@@ -821,7 +819,7 @@ void tg_graphics_vulkan_physical_device_create(VkPhysicalDevice* p_physical_devi
 
     TG_ALLOCATOR_FREE(physical_devices);
 }
-void tg_graphics_vulkan_device_create(VkDevice* p_device)
+void                     tg_graphics_vulkan_device_create(VkDevice* p_device)
 {
     TG_ASSERT(p_device);
 
@@ -912,14 +910,14 @@ void tg_graphics_vulkan_device_create(VkDevice* p_device)
 
     VK_CALL(vkCreateDevice(physical_device, &device_create_info, NULL, p_device));
 }
-void tg_graphics_vulkan_queues_create(tg_queue* p_graphics_queue, tg_queue* p_present_queue)
+void                     tg_graphics_vulkan_queues_create(tg_queue* p_graphics_queue, tg_queue* p_present_queue)
 {
     TG_ASSERT(p_graphics_queue && p_present_queue);
 
     vkGetDeviceQueue(device, p_graphics_queue->index, 0, &p_graphics_queue->queue);
     vkGetDeviceQueue(device, p_present_queue->index, 0, &p_present_queue->queue);
 }
-void tg_graphics_vulkan_command_pool_create(VkCommandPool* p_command_pool)
+void                     tg_graphics_vulkan_command_pool_create(VkCommandPool* p_command_pool)
 {
     TG_ASSERT(p_command_pool);
 
@@ -931,7 +929,7 @@ void tg_graphics_vulkan_command_pool_create(VkCommandPool* p_command_pool)
 
     VK_CALL(vkCreateCommandPool(device, &command_pool_create_info, NULL, p_command_pool));
 }
-void tg_graphics_vulkan_swapchain_create()
+void                     tg_graphics_vulkan_swapchain_create()
 {
     VkSurfaceCapabilitiesKHR surface_capabilities;
     VK_CALL(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device, surface.surface, &surface_capabilities));
@@ -1023,7 +1021,7 @@ void tg_graphics_vulkan_swapchain_create()
 | Initialization, shutdown and other main functionality       |
 +------------------------------------------------------------*/
 
-void tg_graphics_init()
+void                     tg_graphics_init()
 {
     tg_graphics_vulkan_instance_create(&instance);
 #ifdef TG_DEBUG
@@ -1036,7 +1034,7 @@ void tg_graphics_init()
     tg_graphics_vulkan_command_pool_create(&command_pool);
     tg_graphics_vulkan_swapchain_create();
 }
-void tg_graphics_shutdown()
+void                     tg_graphics_shutdown()
 {
     vkDeviceWaitIdle(device);
 
@@ -1055,7 +1053,7 @@ void tg_graphics_shutdown()
     vkDestroySurfaceKHR(instance, surface.surface, NULL);
     vkDestroyInstance(instance, NULL);
 }
-void tg_graphics_on_window_resize(ui32 width, ui32 height)
+void                     tg_graphics_on_window_resize(ui32 width, ui32 height)
 {
     vkDeviceWaitIdle(device);
     
