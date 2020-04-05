@@ -121,6 +121,20 @@ void tg_application_start()
     tg_graphics_material_create(vertex_shader_h, fragment_shader_h, &material2_h);
     tg_graphics_model_create(mesh2_h, material2_h, &model2_h);
 
+    tg_mesh_h ground_mesh_h = NULL;
+    tg_material_h ground_material_h = NULL;
+    tg_model_h ground_model_h = NULL;
+
+    const tgm_vec3f ground_positions[4] = {
+        { -100.0f, -2.0f,  100.0f },
+        {  100.0f, -2.0f,  100.0f },
+        {  100.0f, -2.0f, -100.0f },
+        { -100.0f, -2.0f, -100.0f }
+    };
+    tg_graphics_mesh_create(4, ground_positions, NULL, uvs, NULL, 6, indices, &ground_mesh_h);
+    tg_graphics_material_create(vertex_shader_h, fragment_shader_h, &ground_material_h);
+    tg_graphics_model_create(ground_mesh_h, ground_material_h, &ground_model_h);
+
 #ifdef TG_DEBUG
     tg_debug_info debug_info = { 0 };
 #endif
@@ -160,6 +174,7 @@ void tg_application_start()
         tg_platform_handle_events();
         tg_graphics_renderer_3d_draw(model_h);
         tg_graphics_renderer_3d_draw(model2_h);
+        tg_graphics_renderer_3d_draw(ground_model_h);
         tg_graphics_renderer_3d_present();
 
         ui32 mouse_x;
@@ -238,6 +253,10 @@ void tg_application_start()
         }
     }
     tg_timer_destroy(timer_h);
+
+    tg_graphics_model_destroy(ground_model_h);
+    tg_graphics_material_destroy(ground_material_h);
+    tg_graphics_mesh_destroy(ground_mesh_h);
 
     tg_graphics_model_destroy(model2_h);
     tg_graphics_material_destroy(material2_h);

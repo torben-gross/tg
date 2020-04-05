@@ -8,7 +8,8 @@ void tg_graphics_mesh_recalculate_normal(tg_vertex* p_v0, tg_vertex* p_v1, tg_ve
 {
     const tgm_vec3f v01 = tgm_v3f_subtract_v3f(&p_v1->position, &p_v0->position);
     const tgm_vec3f v02 = tgm_v3f_subtract_v3f(&p_v2->position, &p_v0->position);
-    const tgm_vec3f normal = tgm_v3f_cross(&v01, &v02);
+    const tgm_vec3f normal_direction = tgm_v3f_cross(&v01, &v02);
+    const tgm_vec3f normal = tgm_v3f_normalized(&normal_direction);
 
     p_v0->normal = normal;
     p_v1->normal = normal;
@@ -45,19 +46,21 @@ void tg_graphics_mesh_recalculate_tangent_bitangent(tg_vertex* p_v0, tg_vertex* 
     const tgm_vec3f tangent_r_part = tgm_v3f_multiply_f(&delta_p_02, delta_uv_01.y);
     const tgm_vec3f tlp_minus_trp = tgm_v3f_subtract_v3f(&tangent_l_part, &tangent_r_part);
     const tgm_vec3f tangent = tgm_v3f_multiply_f(&tlp_minus_trp, f);
+    const tgm_vec3f normalized_tangent = tgm_v3f_normalized(&tangent);
 
-    p_v0->tangent = tangent;
-    p_v1->tangent = tangent;
-    p_v2->tangent = tangent;
+    p_v0->tangent = normalized_tangent;
+    p_v1->tangent = normalized_tangent;
+    p_v2->tangent = normalized_tangent;
 
     const tgm_vec3f bitangent_l_part = tgm_v3f_multiply_f(&delta_p_02, delta_uv_01.x);
     const tgm_vec3f bitangent_r_part = tgm_v3f_multiply_f(&delta_p_01, delta_uv_02.x);
     const tgm_vec3f blp_minus_brp = tgm_v3f_subtract_v3f(&bitangent_l_part, &bitangent_r_part);
     const tgm_vec3f bitangent = tgm_v3f_multiply_f(&blp_minus_brp, f);
+    const tgm_vec3f normalized_bitangent = tgm_v3f_normalized(&bitangent);
 
-    p_v0->bitangent = bitangent;
-    p_v1->bitangent = bitangent;
-    p_v2->bitangent = bitangent;
+    p_v0->bitangent = normalized_bitangent;
+    p_v1->bitangent = normalized_bitangent;
+    p_v2->bitangent = normalized_bitangent;
 }
 void tg_graphics_mesh_recalculate_tangents_bitangents(ui32 vertex_count, ui32 index_count, const ui16* p_indices, tg_vertex* p_vertices)
 {
@@ -81,6 +84,7 @@ void tg_graphics_mesh_recalculate_bitangents(ui32 vertex_count, tg_vertex* p_ver
     for (ui32 i = 0; i < vertex_count; i++)
     {
         p_vertices[i].bitangent = tgm_v3f_cross(&p_vertices[i].normal, &p_vertices[i].tangent);
+        p_vertices[i].bitangent = tgm_v3f_normalized(&p_vertices[i].bitangent);
     }
 }
 
