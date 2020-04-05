@@ -1,5 +1,7 @@
 #include "tg/math/tg_math.h"
 
+#include "tg/memory/tg_allocator.h"
+
 #ifdef _M_X64
 #include <immintrin.h>
 #else
@@ -7,6 +9,81 @@
 #endif
 
 #include <string.h>
+
+
+
+/*------------------------------------------------------------+
+| Random                                                      |
++------------------------------------------------------------*/
+
+typedef struct tgm_random_lcg
+{
+	ui32 state;
+} tgm_random_lcg;
+
+
+
+void tgm_random_lcg_create(ui32 seed, tgm_random_lcg_h* p_random_lcg_h)
+{
+	*p_random_lcg_h = TG_ALLOCATOR_ALLOCATE(sizeof(**p_random_lcg_h));
+	(**p_random_lcg_h).state = seed;
+}
+
+f32 tgm_random_lcg_next_f32(tgm_random_lcg_h random_lcg_h)
+{
+	const f32 result = (f32)tgm_random_lcg_next_ui32(random_lcg_h) / (f32)UI32_MAX;
+	return result;
+}
+
+ui32 tgm_random_lcg_next_ui32(tgm_random_lcg_h random_lcg_h)
+{
+	const ui32 result = 1103515245 * random_lcg_h->state + 12345 % tgm_ui32_pow(2, 31);
+	random_lcg_h->state = result;
+	return result;
+}
+
+void tgm_random_lcg_destroy(tgm_random_lcg_h random_lcg_h)
+{
+	TG_ALLOCATOR_FREE(random_lcg_h);
+}
+
+
+
+typedef struct tgm_random_xorshift
+{
+	ui32 state;
+} tgm_random_xorshift;
+
+
+
+void tgm_random_xorshift_create(ui32 seed, tgm_random_xorshift_h* p_random_xorshift_h)
+{
+	TG_ASSERT(seed);
+
+	*p_random_xorshift_h = TG_ALLOCATOR_ALLOCATE(sizeof(**p_random_xorshift_h));
+	(**p_random_xorshift_h).state = seed;
+}
+
+f32 tgm_random_xorshift_next_f32(tgm_random_xorshift_h random_xorshift_h)
+{
+	const f32 result = (f32)tgm_random_xorshift_next_ui32(random_xorshift_h) / (f32)UI32_MAX;
+	return result;
+}
+
+ui32 tgm_random_xorshift_next_ui32(tgm_random_xorshift_h random_xorshift_h)
+{
+	ui32 result = random_xorshift_h->state;
+	result ^= result << 13;
+	result ^= result >> 17;
+	result ^= result << 5;
+	random_xorshift_h->state = result;
+	return result;
+}
+
+void tgm_random_xorshift_destroy(tgm_random_xorshift_h random_xorshift_h)
+{
+	TG_ALLOCATOR_FREE(random_xorshift_h);
+}
 
 
 

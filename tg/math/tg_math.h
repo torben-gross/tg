@@ -176,6 +176,30 @@ typedef struct tgm_vec4f
 
 
 /*------------------------------------------------------------+
+| Random                                                      |
++------------------------------------------------------------*/
+
+typedef struct tgm_random_lcg tgm_random_lcg;
+typedef tgm_random_lcg* tgm_random_lcg_h;
+
+void          tgm_random_lcg_create(ui32 seed, tgm_random_lcg_h* p_random_lcg_h);
+f32           tgm_random_lcg_next_f32(tgm_random_lcg_h random_lcg_h);
+ui32          tgm_random_lcg_next_ui32(tgm_random_lcg_h random_lcg_h);
+void          tgm_random_lcg_destroy(tgm_random_lcg_h random_lcg_h);
+
+
+
+typedef struct tgm_random_xorshift tgm_random_xorshift; // TODO: Unity uses Marsaglia's Xorshift 128, this is the basic variation.
+typedef tgm_random_xorshift* tgm_random_xorshift_h;
+
+void          tgm_random_xorshift_create(ui32 seed, tgm_random_xorshift_h* p_random_xorshift_h);
+f32           tgm_random_xorshift_next_f32(tgm_random_xorshift_h random_xorshift_h);
+ui32          tgm_random_xorshift_next_ui32(tgm_random_xorshift_h random_xorshift_h);
+void          tgm_random_xorshift_destroy(tgm_random_xorshift_h random_xorshift_h);
+
+
+
+/*------------------------------------------------------------+
 | Intrinsics                                                  |
 +------------------------------------------------------------*/
 

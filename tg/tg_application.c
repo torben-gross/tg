@@ -38,6 +38,10 @@ typedef struct tg_debug_info
 
 
 
+#define TERRAIN_WIDTH             10
+#define TERRAIN_DEPTH             10
+#define TERRAIN_POSITION_COUNT    TERRAIN_WIDTH * TERRAIN_DEPTH
+#define TERRAIN_INDEX_COUNT       6 * (TERRAIN_WIDTH - 1) * (TERRAIN_DEPTH - 1)
 void tg_application_start()
 {
     tg_graphics_init();

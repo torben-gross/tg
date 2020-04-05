@@ -21,6 +21,7 @@ void tg_graphics_mesh_recalculate_normals(ui32 vertex_count, ui32 index_count, c
     {
         for (ui32 i = 0; i < index_count; i += 3)
         {
+            // TODO: these will override normals, that have been set before. this should be interpolated.
             tg_graphics_mesh_recalculate_normal(&p_vertices[p_indices[i + 0]], &p_vertices[p_indices[i + 1]], &p_vertices[p_indices[i + 2]]);
         }
     }
