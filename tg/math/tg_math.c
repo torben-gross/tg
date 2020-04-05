@@ -770,18 +770,37 @@ tgm_mat4f tgm_m4f_angle_axis(f32 angle_in_radians, const tgm_vec3f* p_axis)
 	return result;
 }
 
-tgm_mat4f tgm_m4f_euler(f32 pitch_in_radians, f32 yaw_in_radians, f32 roll_in_radians)
+f32 tgm_m4f_det(const tgm_mat4f* p_m)
 {
-	tgm_mat4f result = { 0 };
+	TG_ASSERT(p_m);
 
-	tgm_mat4f x = tgm_m4f_rotate_x(pitch_in_radians);
-	tgm_mat4f y = tgm_m4f_rotate_y(yaw_in_radians);
-	tgm_mat4f z = tgm_m4f_rotate_z(roll_in_radians);
-
-	result = tgm_m4f_multiply_m4f(&y, &z);
-	result = tgm_m4f_multiply_m4f(&x, &result);
+	const f32 result =
+		p_m->m03 * p_m->m12 * p_m->m21 * p_m->m30 - p_m->m02 * p_m->m03 * p_m->m21 * p_m->m30 -
+		p_m->m03 * p_m->m11 * p_m->m22 * p_m->m30 + p_m->m01 * p_m->m03 * p_m->m22 * p_m->m30 +
+		p_m->m02 * p_m->m11 * p_m->m23 * p_m->m30 - p_m->m01 * p_m->m02 * p_m->m23 * p_m->m30 -
+		p_m->m03 * p_m->m12 * p_m->m20 * p_m->m31 + p_m->m02 * p_m->m03 * p_m->m20 * p_m->m31 +
+		p_m->m03 * p_m->m10 * p_m->m22 * p_m->m31 - p_m->m00 * p_m->m03 * p_m->m22 * p_m->m31 -
+		p_m->m02 * p_m->m10 * p_m->m23 * p_m->m31 + p_m->m00 * p_m->m02 * p_m->m23 * p_m->m31 +
+		p_m->m03 * p_m->m11 * p_m->m20 * p_m->m32 - p_m->m01 * p_m->m03 * p_m->m20 * p_m->m32 -
+		p_m->m03 * p_m->m10 * p_m->m21 * p_m->m32 + p_m->m00 * p_m->m03 * p_m->m21 * p_m->m32 +
+		p_m->m01 * p_m->m10 * p_m->m23 * p_m->m32 - p_m->m00 * p_m->m01 * p_m->m23 * p_m->m32 -
+		p_m->m02 * p_m->m11 * p_m->m20 * p_m->m33 + p_m->m01 * p_m->m02 * p_m->m20 * p_m->m33 +
+		p_m->m02 * p_m->m10 * p_m->m21 * p_m->m33 - p_m->m00 * p_m->m02 * p_m->m21 * p_m->m33 -
+		p_m->m01 * p_m->m10 * p_m->m22 * p_m->m33 + p_m->m00 * p_m->m01 * p_m->m22 * p_m->m33;
 
 	return result;
+}
+
+tgm_mat4f tgm_m4f_euler(f32 pitch_in_radians, f32 yaw_in_radians, f32 roll_in_radians)
+{
+	const tgm_mat4f x = tgm_m4f_rotate_x(pitch_in_radians);
+	const tgm_mat4f y = tgm_m4f_rotate_y(yaw_in_radians);
+	const tgm_mat4f z = tgm_m4f_rotate_z(roll_in_radians);
+	const tgm_mat4f yx = tgm_m4f_multiply_m4f(&y, &x);
+	return yx;
+	const tgm_mat4f zyx = tgm_m4f_multiply_m4f(&z, &yx);
+
+	return zyx;
 }
 
 tgm_mat4f tgm_m4f_identity()
@@ -807,6 +826,55 @@ tgm_mat4f tgm_m4f_identity()
 	result.m13 = 0.0f;
 	result.m23 = 0.0f;
 	result.m33 = 1.0f;
+
+	return result;
+}
+
+tgm_mat4f tgm_m4f_inverse(const tgm_mat4f* p_m)
+{
+	tgm_mat4f result = { 0 };
+
+	const f32 m2323 = p_m->m22 * p_m->m33 - p_m->m23 * p_m->m32;
+	const f32 m1323 = p_m->m21 * p_m->m33 - p_m->m23 * p_m->m31;
+	const f32 m1223 = p_m->m21 * p_m->m32 - p_m->m22 * p_m->m31;
+	const f32 m0323 = p_m->m20 * p_m->m33 - p_m->m23 * p_m->m30;
+	const f32 m0223 = p_m->m20 * p_m->m32 - p_m->m22 * p_m->m30;
+	const f32 m0123 = p_m->m20 * p_m->m31 - p_m->m21 * p_m->m30;
+	const f32 m2313 = p_m->m12 * p_m->m33 - p_m->m13 * p_m->m32;
+	const f32 m1313 = p_m->m11 * p_m->m33 - p_m->m13 * p_m->m31;
+	const f32 m1213 = p_m->m11 * p_m->m32 - p_m->m12 * p_m->m31;
+	const f32 m2312 = p_m->m12 * p_m->m23 - p_m->m13 * p_m->m22;
+	const f32 m1312 = p_m->m11 * p_m->m23 - p_m->m13 * p_m->m21;
+	const f32 m1212 = p_m->m11 * p_m->m22 - p_m->m12 * p_m->m21;
+	const f32 m0313 = p_m->m10 * p_m->m33 - p_m->m13 * p_m->m30;
+	const f32 m0213 = p_m->m10 * p_m->m32 - p_m->m12 * p_m->m30;
+	const f32 m0312 = p_m->m10 * p_m->m23 - p_m->m13 * p_m->m20;
+	const f32 m0212 = p_m->m10 * p_m->m22 - p_m->m12 * p_m->m20;
+	const f32 m0113 = p_m->m10 * p_m->m31 - p_m->m11 * p_m->m30;
+	const f32 m0112 = p_m->m10 * p_m->m21 - p_m->m11 * p_m->m20;
+
+	const f32 det = 1.0f / (
+		p_m->m00 * (p_m->m11 * m2323 - p_m->m12 * m1323 + p_m->m13 * m1223) -
+		p_m->m01 * (p_m->m10 * m2323 - p_m->m12 * m0323 + p_m->m13 * m0223) +
+		p_m->m02 * (p_m->m10 * m1323 - p_m->m11 * m0323 + p_m->m13 * m0123) -
+		p_m->m03 * (p_m->m10 * m1223 - p_m->m11 * m0223 + p_m->m12 * m0123));
+
+	result.m00 = det *  (p_m->m11 * m2323 - p_m->m12 * m1323 + p_m->m13 * m1223);
+	result.m01 = det * -(p_m->m01 * m2323 - p_m->m02 * m1323 + p_m->m03 * m1223);
+	result.m02 = det *  (p_m->m01 * m2313 - p_m->m02 * m1313 + p_m->m03 * m1213);
+	result.m03 = det * -(p_m->m01 * m2312 - p_m->m02 * m1312 + p_m->m03 * m1212);
+	result.m10 = det * -(p_m->m10 * m2323 - p_m->m12 * m0323 + p_m->m13 * m0223);
+	result.m11 = det *  (p_m->m00 * m2323 - p_m->m02 * m0323 + p_m->m03 * m0223);
+	result.m12 = det * -(p_m->m00 * m2313 - p_m->m02 * m0313 + p_m->m03 * m0213);
+	result.m13 = det *  (p_m->m00 * m2312 - p_m->m02 * m0312 + p_m->m03 * m0212);
+	result.m20 = det *  (p_m->m10 * m1323 - p_m->m11 * m0323 + p_m->m13 * m0123);
+	result.m21 = det * -(p_m->m00 * m1323 - p_m->m01 * m0323 + p_m->m03 * m0123);
+	result.m22 = det *  (p_m->m00 * m1313 - p_m->m01 * m0313 + p_m->m03 * m0113);
+	result.m23 = det * -(p_m->m00 * m1312 - p_m->m01 * m0312 + p_m->m03 * m0112);
+	result.m30 = det * -(p_m->m10 * m1223 - p_m->m11 * m0223 + p_m->m12 * m0123);
+	result.m31 = det *  (p_m->m00 * m1223 - p_m->m01 * m0223 + p_m->m02 * m0123);
+	result.m32 = det * -(p_m->m00 * m1213 - p_m->m01 * m0213 + p_m->m02 * m0113);
+	result.m33 = det *  (p_m->m00 * m1212 - p_m->m01 * m0212 + p_m->m02 * m0112);
 
 	return result;
 }

@@ -286,8 +286,10 @@ tgm_mat3f    tgm_m3f_orthographic(f32 left, f32 right, f32 bottom, f32 top);
 tgm_mat3f    tgm_m3f_transposed(const tgm_mat3f* p_m);
 
 tgm_mat4f    tgm_m4f_angle_axis(f32 angle_in_radians, const tgm_vec3f* p_axis);
+f32          tgm_m4f_det(const tgm_mat4f* p_m);
 tgm_mat4f    tgm_m4f_euler(f32 pitch_in_radians, f32 yaw_in_radians, f32 roll_in_radians);
 tgm_mat4f    tgm_m4f_identity();
+tgm_mat4f    tgm_m4f_inverse(const tgm_mat4f* p_m);
 tgm_mat4f    tgm_m4f_look_at(const tgm_vec3f* p_from, const tgm_vec3f* p_to, const tgm_vec3f* p_up);
 tgm_mat4f    tgm_m4f_multiply_m4f(const tgm_mat4f* p_m0, const tgm_mat4f* p_m1);
 tgm_vec4f    tgm_m4f_multiply_v4f(const tgm_mat4f* p_m, const tgm_vec4f* p_v);

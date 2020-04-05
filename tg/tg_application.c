@@ -189,13 +189,14 @@ void tg_application_start()
             camera_info.yaw += 0.064f * (f32)((i32)camera_info.last_mouse_x - (i32)mouse_x);
             camera_info.pitch += 0.064f * (f32)((i32)camera_info.last_mouse_y - (i32)mouse_y);
         }
-        const tgm_mat4f camera_rotation = tgm_m4f_euler(TGM_TO_RADIANS(camera_info.pitch), TGM_TO_RADIANS(camera_info.yaw), TGM_TO_RADIANS(camera_info.roll));
+        const tgm_mat4f camera_rotation = tgm_m4f_euler(TGM_TO_RADIANS(camera_info.pitch), TGM_TO_RADIANS(camera_info.yaw), TGM_TO_RADIANS(camera_info.roll)); // TODO: why is this wrong
 
-        tgm_vec4f right = { 1.0f, 0.0f, 0.0f, 0.0f };
-        tgm_vec4f up = { 0.0f, 1.0f, 0.0f, 0.0f };
-        tgm_vec4f forward = { 0.0f, 0.0f, -1.0f, 0.0f };
-
+        tgm_vec4f right = (tgm_vec4f){ 1.0f, 0.0f, 0.0f, 0.0f };
         right = tgm_m4f_multiply_v4f(&camera_rotation, &right);
+
+        const tgm_vec4f up = { 0.0f, 1.0f, 0.0f, 0.0f };
+
+        tgm_vec4f forward = (tgm_vec4f){ 0.0f, 0.0f, -1.0f, 0.0f };
         forward = tgm_m4f_multiply_v4f(&camera_rotation, &forward);
 
         tgm_vec3f temp;
@@ -244,9 +245,9 @@ void tg_application_start()
         }
 
         const tgm_vec3f negated_camera_position = tgm_v3f_negated(&camera_info.position);
-        const tgm_mat4f camera_translation = tgm_m4f_translate(&negated_camera_position);
-        const tgm_mat4f inverse_camera_rotation = tgm_m4f_euler(TGM_TO_RADIANS(-camera_info.pitch), TGM_TO_RADIANS(-camera_info.yaw), TGM_TO_RADIANS(-camera_info.roll));
-        camera_info.camera.view = tgm_m4f_multiply_m4f(&inverse_camera_rotation, &camera_translation);
+        const tgm_mat4f inverse_camera_translation = tgm_m4f_translate(&negated_camera_position);
+        const tgm_mat4f inverse_camera_rotation = tgm_m4f_inverse(&camera_rotation);
+        camera_info.camera.view = tgm_m4f_multiply_m4f(&inverse_camera_rotation, &inverse_camera_translation);
         camera_info.last_mouse_x = mouse_x;
         camera_info.last_mouse_y = mouse_y;
 
