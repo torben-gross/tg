@@ -47,19 +47,14 @@ u32 tg_u32_hash_fn(const u32* element) // Knuth's Multiplicative Method
     return result;
 }
 
+b32 tg_u32_equals(const void* v0, const void* v1)
+{
+    const b32 result = *(u32*)v0 == *(u32*)v1;
+    return result;
+}
+
 void tg_application_start()
 {
-
-
-
-    //tg_hashmap_h hashmap_h = TG_NULL;
-    //tg_hashmap_create(TG_HASHMAP_DEFAULT_SIZE, &tg_u32_hash_fn, &hashmap_h);
-    //const u32 key = 123456789;
-    //const u32 value = 987654321;
-    //tg_hashmap_insert(hashmap_h, &key, &value);
-    //tg_hashmap_destroy(hashmap_h);
-
-
     tg_graphics_init();
 
     tg_camera_info camera_info = { 0 };

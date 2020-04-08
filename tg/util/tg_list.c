@@ -26,7 +26,22 @@ void tg_list_create_impl(u32 capacity, u32 element_size, tg_list_h* p_list_h)
 
 	(**p_list_h).capacity = capacity;
 	(**p_list_h).element_size = element_size;
+	(**p_list_h).count = 0;
 	(**p_list_h).elements = TG_MEMORY_ALLOCATOR_ALLOCATE((u64)capacity * (u64)element_size);
+}
+
+u32 tg_list_capacity(tg_list_h list_h)
+{
+	TG_ASSERT(list_h);
+
+	return list_h->capacity;
+}
+
+u32 tg_list_count(tg_list_h list_h)
+{
+	TG_ASSERT(list_h);
+
+	return list_h->count;
 }
 
 void tg_list_reserve(tg_list_h list_h, u32 capacity)
@@ -34,7 +49,7 @@ void tg_list_reserve(tg_list_h list_h, u32 capacity)
 	TG_ASSERT(list_h && capacity > list_h->capacity);
 
 	list_h->capacity = capacity;
-	TG_MEMORY_ALLOCATOR_REALLOCATE(list_h->elements, (u64)capacity * (u64)list_h->element_size);
+	list_h->elements = TG_MEMORY_ALLOCATOR_REALLOCATE(list_h->elements, (u64)capacity * (u64)list_h->element_size);
 }
 
 void tg_list_insert(tg_list_h list_h, const void* p_value)
@@ -90,11 +105,36 @@ void tg_list_replace_at(tg_list_h list_h, u32 index, const void* p_value)
 	TG_LIST_SET_AT(list_h, index, p_value);
 }
 
+void tg_list_replace_region(tg_list_h list_h, u32 start_index, u32 offset, u32 stride, const void* p_buffer)
+{
+	TG_ASSERT(list_h && start_index < list_h->count && (start_index * list_h->element_size) + offset + stride < list_h->count * list_h->element_size && stride);
+
+	memcpy(&list_h->elements[(start_index * list_h->element_size) + offset], p_buffer, stride);
+}
+
 void* tg_list_at(tg_list_h list_h, u32 index)
 {
 	TG_ASSERT(list_h && index < list_h->count);
 
 	return TG_LIST_GET_POINTER_AT(list_h, index);
+}
+
+void* tg_list_at_region(tg_list_h list_h, u32 start_index, u32 offset)
+{
+	TG_ASSERT(list_h && start_index * list_h->element_size + offset < list_h->count * list_h->element_size);
+
+	return &list_h[start_index * list_h->element_size + offset];
+}
+
+void tg_list_remove_at(tg_list_h list_h, u32 index)
+{
+	TG_ASSERT(list_h && index <= list_h->count);
+
+	for (u32 i = index + 1; i < list_h->count; i++)
+	{
+		TG_LIST_SET_AT(list_h, i - 1, TG_LIST_GET_POINTER_AT(list_h, i));
+	}
+	list_h->count--;
 }
 
 void tg_list_destroy(tg_list_h list_h)
