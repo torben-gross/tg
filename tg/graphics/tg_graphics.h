@@ -6,30 +6,38 @@
 
 
 
-typedef struct tg_image tg_image;
-typedef tg_image* tg_image_h;
+typedef struct tg_camera tg_camera;
+typedef tg_camera* tg_camera_h;
 
-typedef struct tg_vertex_buffer tg_vertex_buffer;
-typedef tg_vertex_buffer* tg_vertex_buffer_h;
-
-typedef struct tg_index_buffer tg_index_buffer;
-typedef tg_index_buffer* tg_index_buffer_h;
-
-typedef struct tg_uniform_buffer tg_uniform_buffer;
-typedef tg_uniform_buffer* tg_uniform_buffer_h;
-
-typedef struct tg_vertex_shader tg_vertex_shader;
-typedef tg_vertex_shader* tg_vertex_shader_h;
+typedef struct tg_entity tg_entity;
+typedef tg_entity* tg_entity_h;
 
 typedef struct tg_fragment_shader tg_fragment_shader;
 typedef tg_fragment_shader* tg_fragment_shader_h;
 
-typedef struct tg_mesh tg_mesh;
-typedef tg_mesh* tg_mesh_h;
+typedef struct tg_image tg_image;
+typedef tg_image* tg_image_h;
+
 typedef struct tg_material tg_material;
 typedef tg_material* tg_material_h;
+
+typedef struct tg_mesh tg_mesh;
+typedef tg_mesh* tg_mesh_h;
+
 typedef struct tg_model tg_model;
 typedef tg_model* tg_model_h;
+
+typedef struct tg_index_buffer tg_index_buffer;
+typedef tg_index_buffer* tg_index_buffer_h;
+
+typedef struct tg_scene tg_scene;
+typedef tg_scene* tg_scene_h;
+
+typedef struct tg_vertex_buffer tg_vertex_buffer;
+typedef tg_vertex_buffer* tg_vertex_buffer_h;
+
+typedef struct tg_vertex_shader tg_vertex_shader;
+typedef tg_vertex_shader* tg_vertex_shader_h;
 
 
 
@@ -100,46 +108,48 @@ typedef enum tg_sampler_mipmap_mode {
 	TG_SAMPLER_MIPMAP_MODE_LINEAR     = 1
 } tg_sampler_mipmap_mode;
 
-typedef struct tg_camera
-{
-	tgm_mat4f view;
-	tgm_mat4f projection;
-} tg_camera;
-
 typedef struct tg_vertex
 {
-	tgm_vec3f    position;
-	tgm_vec3f    normal;
-	tgm_vec2f    uv;
-	tgm_vec3f    tangent;
-	tgm_vec3f    bitangent;
+	v3    position;
+	v3    normal;
+	v2    uv;
+	v3    tangent;
+	v3    bitangent;
 } tg_vertex;
 
 typedef struct tg_uniform_buffer_object
 {
-	tgm_mat4f    model;
-	tgm_mat4f    view;
-	tgm_mat4f    projection;
+	m4    model;
+	m4    view;
+	m4    projection;
 } tg_uniform_buffer_object;
 
 
 
-void tg_graphics_init();
-void tg_graphics_on_window_resize(ui32 width, ui32 height);
-void tg_graphics_shutdown();
+void    tg_graphics_init();
+void    tg_graphics_on_window_resize(u32 width, u32 height);
+void    tg_graphics_shutdown();
 
-void tg_graphics_fragment_shader_create(const char* p_filename, tg_fragment_shader_h* p_fragment_shader_h);
-void tg_graphics_fragment_shader_destroy(tg_fragment_shader_h fragment_shader_h);
-void tg_graphics_image_create(const char* p_filename, tg_image_h* p_image_h);
-void tg_graphics_image_destroy(tg_image_h image_h);
-void tg_graphics_material_create(tg_vertex_shader_h vertex_shader_h, tg_fragment_shader_h fragment_shader_h, tg_material_h* p_material_h);
-void tg_graphics_material_destroy(tg_material_h material_h);
-void tg_graphics_mesh_create(ui32 vertex_count, const tgm_vec3f* p_positions, const tgm_vec3f* p_normals, const tgm_vec2f* p_uvs, const tgm_vec3f* p_tangents, ui32 index_count, const ui16* p_indices, tg_mesh_h* p_mesh_h);
-void tg_graphics_mesh_destroy(tg_mesh_h mesh_h);
-void tg_graphics_model_create(tg_mesh_h mesh_h, tg_material_h material_h, tg_model_h* p_model_h);
-void tg_graphics_model_destroy(tg_model_h model_h);
-void tg_graphics_vertex_shader_create(const char* p_filename, tg_vertex_shader_h* p_vertex_shader_h);
-void tg_graphics_vertex_shader_destroy(tg_vertex_shader_h p_vertex_shader_h);
+void    tg_graphics_camera_create(const v3* p_position, f32 pitch, f32 yaw, f32 roll, f32 fov_y, f32 near, f32 far, tg_camera_h* p_camera_h);
+m4      tg_graphics_camera_get_projection(tg_camera_h camera_h);
+m4      tg_graphics_camera_get_view(tg_camera_h camera_h);
+void    tg_graphics_camera_set_projection(f32 fov_y, f32 near, f32 far, tg_camera_h camera_h);
+void    tg_graphics_camera_set_view(const v3* p_position, f32 pitch, f32 yaw, f32 roll, tg_camera_h camera_h);
+void    tg_graphics_camera_destroy(tg_camera_h camera_h);
+void    tg_graphics_fragment_shader_create(const char* p_filename, tg_fragment_shader_h* p_fragment_shader_h);
+void    tg_graphics_fragment_shader_destroy(tg_fragment_shader_h fragment_shader_h);
+void    tg_graphics_image_create(const char* p_filename, tg_image_h* p_image_h);
+void    tg_graphics_image_destroy(tg_image_h image_h);
+void    tg_graphics_material_create(tg_vertex_shader_h vertex_shader_h, tg_fragment_shader_h fragment_shader_h, tg_material_h* p_material_h);
+void    tg_graphics_material_destroy(tg_material_h material_h);
+void    tg_graphics_mesh_create(u32 vertex_count, const v3* p_positions, const v3* p_normals, const v2* p_uvs, const v3* p_tangents, u32 index_count, const u16* p_indices, tg_mesh_h* p_mesh_h);
+void    tg_graphics_mesh_destroy(tg_mesh_h mesh_h);
+void    tg_graphics_model_create(tg_mesh_h mesh_h, tg_material_h material_h, tg_model_h* p_model_h);
+void    tg_graphics_model_destroy(tg_model_h model_h);
+void    tg_graphics_scene_create(tg_scene_h* p_scene_h);
+void    tg_graphics_scene_destroy(tg_scene_h scene_h);
+void    tg_graphics_vertex_shader_create(const char* p_filename, tg_vertex_shader_h* p_vertex_shader_h);
+void    tg_graphics_vertex_shader_destroy(tg_vertex_shader_h p_vertex_shader_h);
 
 
 
@@ -147,16 +157,16 @@ void tg_graphics_vertex_shader_destroy(tg_vertex_shader_h p_vertex_shader_h);
 | 2D Renderer                                                 |
 +------------------------------------------------------------*/
 
-void tg_graphics_renderer_2d_init();
-void tg_graphics_renderer_2d_begin();
-void tg_graphics_renderer_2d_draw_sprite(f32 x, f32 y, f32 z, f32 w, f32 h, tg_image_h image);
-void tg_graphics_renderer_2d_end();
-void tg_graphics_renderer_2d_present();
-void tg_graphics_renderer_2d_shutdown();
-void tg_graphics_renderer_2d_on_window_resize(ui32 w, ui32 h);
+void    tg_graphics_renderer_2d_init();
+void    tg_graphics_renderer_2d_begin();
+void    tg_graphics_renderer_2d_draw_sprite(f32 x, f32 y, f32 z, f32 w, f32 h, tg_image_h image);
+void    tg_graphics_renderer_2d_end();
+void    tg_graphics_renderer_2d_present();
+void    tg_graphics_renderer_2d_shutdown();
+void    tg_graphics_renderer_2d_on_window_resize(u32 w, u32 h);
 
 #ifdef TG_DEBUG
-void tg_graphics_renderer_2d_draw_call_count(ui32* draw_call_count);
+void    tg_graphics_renderer_2d_draw_call_count(u32* draw_call_count);
 #endif
 
 
@@ -165,10 +175,14 @@ void tg_graphics_renderer_2d_draw_call_count(ui32* draw_call_count);
 | 3D Renderer                                                 |
 +------------------------------------------------------------*/
 
-void tg_graphics_renderer_3d_init(const tg_camera* p_camera);
-void tg_graphics_renderer_3d_draw(const tg_model_h model_h);
-void tg_graphics_renderer_3d_present();
-void tg_graphics_renderer_3d_shutdown();
-void tg_graphics_renderer_3d_on_window_resize(ui32 w, ui32 h);
+void    tg_graphics_renderer_3d_init(const tg_camera_h camera_h);
+void    tg_graphics_renderer_3d_draw(const tg_model_h model_h);
+void    tg_graphics_renderer_3d_present();
+void    tg_graphics_renderer_3d_shutdown();
+void    tg_graphics_renderer_3d_on_window_resize(u32 w, u32 h);
+
+void    tg_graphics_renderer_3d_register(const tg_entity_h entity_h);
+void    tg_graphics_renderer_3d_deregister(const tg_entity_h entity_h);
+void    tg_graphics_renderer_3d_render();
 
 #endif

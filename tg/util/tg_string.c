@@ -3,7 +3,7 @@
 #include "tg/math/tg_math.h"
 #include <stdarg.h>
 
-void tg_string_format(ui32 size, char* p_buffer, const char* p_format, ...)
+void tg_string_format(u32 size, char* p_buffer, const char* p_format, ...)
 {
 	TG_ASSERT(size && p_buffer && p_format);
 
@@ -32,10 +32,10 @@ void tg_string_format(ui32 size, char* p_buffer, const char* p_format, ...)
 					f *= -1.0f;
 				}
 
-				ui32 integral_part = (ui32)f;
-				const ui32 integral_digit_count = tgm_i32_digits(integral_part); // TODO: this part can certainly be extracted
+				u32 integral_part = (u32)f;
+				const u32 integral_digit_count = tgm_i32_digits(integral_part); // TODO: this part can certainly be extracted
 				i32 integral_pow = tgm_i32_pow(10, integral_digit_count - 1);
-				for (ui32 i = 0; i < integral_digit_count; i++)
+				for (u32 i = 0; i < integral_digit_count; i++)
 				{
 					const i32 digit = integral_part / integral_pow;
 					*p_buffer_position++ = tgm_i32_abs(digit) + '0';
@@ -45,10 +45,10 @@ void tg_string_format(ui32 size, char* p_buffer, const char* p_format, ...)
 
 				*p_buffer_position++ = '.';
 
-				ui32 decimal_part = (ui32)((f - (f64)((ui32)f)) * tgm_f64_pow(10.0f, 9.0f));
-				const ui32 decimal_digit_count = tgm_i32_digits(decimal_part);
+				u32 decimal_part = (u32)((f - (f64)((u32)f)) * tgm_f64_pow(10.0f, 9.0f));
+				const u32 decimal_digit_count = tgm_i32_digits(decimal_part);
 				i32 decimal_pow = tgm_i32_pow(10, decimal_digit_count - 1);
-				for (ui32 i = 0; i < decimal_digit_count; i++)
+				for (u32 i = 0; i < decimal_digit_count; i++)
 				{
 					const i32 digit = decimal_part / decimal_pow;
 					*p_buffer_position++ = tgm_i32_abs(digit) + '0';
@@ -66,9 +66,9 @@ void tg_string_format(ui32 size, char* p_buffer, const char* p_format, ...)
 					*p_buffer_position++ = '-';
 				}
 
-				const ui32 digit_count = tgm_i32_digits(integer);
+				const u32 digit_count = tgm_i32_digits(integer);
 				i32 pow = tgm_i32_pow(10, digit_count - 1);
-				for (ui32 i = 0; i < digit_count; i++)
+				for (u32 i = 0; i < digit_count; i++)
 				{
 					const i32 digit = integer / pow;
 					*p_buffer_position++ = tgm_i32_abs(digit) + '0';
@@ -88,13 +88,13 @@ void tg_string_format(ui32 size, char* p_buffer, const char* p_format, ...)
 
 			case 'u':
 			{
-				ui32 integer = va_arg(list, ui32);
+				u32 integer = va_arg(list, u32);
 
-				const ui32 digit_count = tgm_ui32_digits(integer);
-				ui32 pow = tgm_ui32_pow(10, digit_count - 1);
-				for (ui32 i = 0; i < digit_count; i++)
+				const u32 digit_count = tgm_ui32_digits(integer);
+				u32 pow = tgm_ui32_pow(10, digit_count - 1);
+				for (u32 i = 0; i < digit_count; i++)
 				{
-					const ui32 digit = integer / pow;
+					const u32 digit = integer / pow;
 					*p_buffer_position++ = tgm_i32_abs(digit) + '0';
 					integer -= digit * pow;
 					pow /= 10;
@@ -117,9 +117,9 @@ void tg_string_format(ui32 size, char* p_buffer, const char* p_format, ...)
 	va_end(list);
 }
 
-ui32 tg_string_length(const char* p_string)
+u32 tg_string_length(const char* p_string)
 {
-	ui32 length = 0;
+	u32 length = 0;
 	while (*p_string++)
 	{
 		length++;

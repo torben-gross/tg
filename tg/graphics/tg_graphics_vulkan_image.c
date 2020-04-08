@@ -2,24 +2,24 @@
 
 #ifdef TG_VULKAN
 
-#include "tg/graphics/tg_graphics_image_loader.h"
-#include "tg/memory/tg_allocator.h"
+#include "tg/graphics/tg_graphics_internal_image_loader.h"
+#include "tg/memory/tg_memory_allocator.h"
 
 void tg_graphics_image_create(const char* p_filename, tg_image_h* p_image_h)
 {
     TG_ASSERT(p_filename && p_image_h);
 
-    *p_image_h = TG_ALLOCATOR_ALLOCATE(sizeof(**p_image_h));
+    *p_image_h = TG_MEMORY_ALLOCATOR_ALLOCATE(sizeof(**p_image_h));
     tg_image_load(p_filename, &(**p_image_h).width, &(**p_image_h).height, &(**p_image_h).format, &(**p_image_h).data);
     tg_image_convert_format((**p_image_h).data, (**p_image_h).width, (**p_image_h).height, (**p_image_h).format, TG_IMAGE_FORMAT_R8G8B8A8);
-    const ui32 mip_levels = TG_IMAGE_MAX_MIP_LEVELS((**p_image_h).width, (**p_image_h).height);
-    const VkDeviceSize size = (ui64)(**p_image_h).width * (ui64)(**p_image_h).height * sizeof(*(**p_image_h).data);
+    const u32 mip_levels = TG_IMAGE_MAX_MIP_LEVELS((**p_image_h).width, (**p_image_h).height);
+    const VkDeviceSize size = (u64)(**p_image_h).width * (u64)(**p_image_h).height * sizeof(*(**p_image_h).data);
 
     VkBuffer staging_buffer = VK_NULL_HANDLE;
     VkDeviceMemory staging_buffer_memory = VK_NULL_HANDLE;
     tg_graphics_vulkan_buffer_create(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &staging_buffer, &staging_buffer_memory);
 
-    void* data = NULL;
+    void* data = TG_NULL;
     VK_CALL(vkMapMemory(device, staging_buffer_memory, 0, size, 0, &data));
     {
         memcpy(data, (**p_image_h).data, (size_t)size);
@@ -43,7 +43,7 @@ void tg_graphics_image_destroy(tg_image_h image_h)
     tg_graphics_vulkan_image_view_destroy(image_h->image_view);
     tg_graphics_vulkan_image_destroy(image_h->image, image_h->device_memory);
     tg_image_free(image_h->data);
-    TG_ALLOCATOR_FREE(image_h);
+    TG_MEMORY_ALLOCATOR_FREE(image_h);
 }
 
 #endif

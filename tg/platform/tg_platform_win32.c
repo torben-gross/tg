@@ -3,7 +3,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 
 #include "tg/graphics/tg_graphics.h"
-#include "tg/memory/tg_allocator.h"
+#include "tg/memory/tg_memory_allocator.h"
 #include "tg/tg_application.h"
 #include "tg/tg_input.h"
 #include "tg/util/tg_timer.h"
@@ -15,7 +15,7 @@
 #define WIN32_CALL(x) x
 #endif
 
-HWND    window_h = NULL;
+HWND    window_h = TG_NULL;
 
 
 /*------------------------------------------------------------+
@@ -35,7 +35,7 @@ void tg_timer_create(tg_timer_h* p_timer_h)
 {
     TG_ASSERT(p_timer_h);
 
-    *p_timer_h = TG_ALLOCATOR_ALLOCATE(sizeof(**p_timer_h));
+    *p_timer_h = TG_MEMORY_ALLOCATOR_ALLOCATE(sizeof(**p_timer_h));
     (**p_timer_h).running = TG_FALSE;
     QueryPerformanceFrequency(&(**p_timer_h).performance_frequency);
     QueryPerformanceCounter(&(**p_timer_h).start_performance_counter);
@@ -81,7 +81,7 @@ void tg_timer_destroy(tg_timer_h timer_h)
 {
     TG_ASSERT(timer_h);
 
-    TG_ALLOCATOR_FREE(timer_h);
+    TG_MEMORY_ALLOCATOR_FREE(timer_h);
 }
 
 
@@ -97,18 +97,18 @@ void tg_platform_debug_print(const char* p_message)
     OutputDebugStringA("\n");
 }
 #endif
-void tg_platform_get_mouse_position(ui32* p_x, ui32* p_y)
+void tg_platform_get_mouse_position(u32* p_x, u32* p_y)
 {
     POINT point = { 0 };
     WIN32_CALL(GetCursorPos(&point));
     WIN32_CALL(ScreenToClient(window_h, &point));
-    ui32 width;
-    ui32 height;
+    u32 width;
+    u32 height;
     tg_platform_get_window_size(&width, &height);
-    *p_x = (ui32)tgm_i32_clamp(point.x, 0, width - 1);
-    *p_y = (ui32)tgm_i32_clamp(point.y, 0, height - 1);
+    *p_x = (u32)tgm_i32_clamp(point.x, 0, width - 1);
+    *p_y = (u32)tgm_i32_clamp(point.y, 0, height - 1);
 }
-void tg_platform_get_screen_size(ui32* p_width, ui32* p_height)
+void tg_platform_get_screen_size(u32* p_width, u32* p_height)
 {
     RECT rect;
     WIN32_CALL(GetWindowRect(GetDesktopWindow(), &rect));
@@ -117,8 +117,8 @@ void tg_platform_get_screen_size(ui32* p_width, ui32* p_height)
 }
 f32  tg_platform_get_window_aspect_ratio()
 {
-    ui32 width;
-    ui32 height;
+    u32 width;
+    u32 height;
     tg_platform_get_window_size(&width, &height);
     return (f32)width / (f32)height;
 }
@@ -126,7 +126,7 @@ void tg_platform_get_window_handle(tg_window_h* p_window_h)
 {
     *p_window_h = window_h;
 }
-void tg_platform_get_window_size(ui32* p_width, ui32* p_height)
+void tg_platform_get_window_size(u32* p_width, u32* p_height)
 {
     RECT rect;
     WIN32_CALL(GetWindowRect(window_h, &rect));
@@ -136,7 +136,7 @@ void tg_platform_get_window_size(ui32* p_width, ui32* p_height)
 void tg_platform_handle_events()
 {
     MSG msg = { 0 };
-    while (PeekMessageA(&msg, NULL, 0, 0, PM_REMOVE))
+    while (PeekMessageA(&msg, TG_NULL, 0, 0, PM_REMOVE))
     {
         TranslateMessage(&msg);
         DispatchMessageA(&msg);
@@ -165,9 +165,9 @@ LRESULT CALLBACK tg_platform_win32_window_proc(HWND window_h, UINT message, WPAR
     } break;
     case WM_SIZE:
     {
-        tg_graphics_on_window_resize((ui32)LOWORD(l_param), (ui32)HIWORD(l_param));
-        //tg_graphics_renderer_2d_on_window_resize((ui32)LOWORD(l_param), (ui32)HIWORD(l_param)); TODO
-        //tg_graphics_renderer_3d_on_window_resize((ui32)LOWORD(l_param), (ui32)HIWORD(l_param)); TODO
+        tg_graphics_on_window_resize((u32)LOWORD(l_param), (u32)HIWORD(l_param));
+        //tg_graphics_renderer_2d_on_window_resize((u32)LOWORD(l_param), (u32)HIWORD(l_param)); TODO
+        //tg_graphics_renderer_3d_on_window_resize((u32)LOWORD(l_param), (u32)HIWORD(l_param)); TODO
     } break;
 
     case WM_LBUTTONDOWN: tg_input_on_mouse_button_pressed(TG_BUTTON_LEFT);              break;
@@ -189,7 +189,7 @@ LRESULT CALLBACK tg_platform_win32_window_proc(HWND window_h, UINT message, WPAR
     {
         const tg_key key = (tg_key)w_param;
         const b32 repeated = ((1ULL << 30) & (i64)l_param) >> 30;
-        const ui32 additional_key_repeat_count = (ui32)(0xffffULL & l_param);
+        const u32 additional_key_repeat_count = (u32)(0xffffULL & l_param);
         tg_input_on_key_pressed(key, repeated, additional_key_repeat_count);
     } break;
     case WM_KEYUP: tg_input_on_key_released((tg_key)w_param);                           break;
@@ -211,20 +211,20 @@ int CALLBACK WinMain(_In_ HINSTANCE instance_h, _In_opt_ HINSTANCE prev_instance
         window_class_info.cbClsExtra = 0;
         window_class_info.cbWndExtra = 0;
         window_class_info.hInstance = instance_h;
-        window_class_info.hIcon = NULL;
-        window_class_info.hCursor = LoadCursor(NULL, IDC_ARROW);
-        window_class_info.hbrBackground = NULL;
-        window_class_info.lpszMenuName = NULL;
+        window_class_info.hIcon = TG_NULL;
+        window_class_info.hCursor = LoadCursor(TG_NULL, IDC_ARROW);
+        window_class_info.hbrBackground = TG_NULL;
+        window_class_info.lpszMenuName = TG_NULL;
         window_class_info.lpszClassName = window_class_id;
-        window_class_info.hIconSm = NULL;
+        window_class_info.hIconSm = TG_NULL;
     }
     const ATOM atom = RegisterClassExA(&window_class_info);
     TG_ASSERT(atom);
 
     SetProcessDPIAware();
-    ui32 w, h;
+    u32 w, h;
     tg_platform_get_screen_size(&w, &h);
-    window_h = CreateWindowExA(0, window_class_id, window_title, WS_OVERLAPPEDWINDOW, 0, 0, w, h, NULL, NULL, instance_h, NULL);
+    window_h = CreateWindowExA(0, window_class_id, window_title, WS_OVERLAPPEDWINDOW, 0, 0, w, h, TG_NULL, TG_NULL, instance_h, TG_NULL);
     TG_ASSERT(window_h);
 
     ShowWindow(window_h, show_cmd);

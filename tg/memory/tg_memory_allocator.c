@@ -1,13 +1,13 @@
-#include "tg/memory/tg_allocator.h"
+#include "tg/memory/tg_memory_allocator.h"
 
 #ifdef TG_DEBUG
 
 #include <memory.h>
 #include <stdlib.h>
 
-ui64 total_allocation_count = 0;
+u64 total_allocation_count = 0;
 
-void* tg_allocator_allocate_impl(ui64 size)
+void* tg_allocator_allocate_impl(u64 size)
 {
 	total_allocation_count++;
 
@@ -24,7 +24,7 @@ void tg_allocator_free_impl(void* p_memory)
 	free(p_memory);
 }
 
-ui64 tg_allocator_unfreed_allocation_count()
+u64 tg_allocator_unfreed_allocation_count()
 {
 	return total_allocation_count;
 }

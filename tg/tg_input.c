@@ -5,14 +5,14 @@
 
 typedef struct tg_input
 {
-	b32     down_buttons[8];
-	b32     pressed_buttons[8];
+	b32    down_buttons[8];
+	b32    pressed_buttons[8];
 
-	b32     down_keys[256];
-	b32     pressed_keys[256];
-	ui32    key_repeat_counts[256];
+	b32    down_keys[256];
+	b32    pressed_keys[256];
+	u32    key_repeat_counts[256];
 
-	f32     mouse_wheel_detents;
+	f32    mouse_wheel_detents;
 } tg_input;
 
 tg_input input = { 0 };
@@ -40,7 +40,7 @@ void tg_input_on_mouse_wheel_rotated(f32 detents)
 	input.mouse_wheel_detents += detents;
 }
 
-void tg_input_on_key_pressed(tg_key key, b32 repeated, ui32 additional_key_repeat_count)
+void tg_input_on_key_pressed(tg_key key, b32 repeated, u32 additional_key_repeat_count)
 {
 	input.down_keys[key] = TG_TRUE;
 	if (!repeated)
@@ -61,12 +61,12 @@ void tg_input_on_key_released(tg_key key)
 
 
 
-ui32 tg_input_get_key_repeat_count(tg_key key)
+u32 tg_input_get_key_repeat_count(tg_key key)
 {
 	return input.key_repeat_counts[key];
 }
 
-void tg_input_get_mouse_position(ui32* x, ui32* y)
+void tg_input_get_mouse_position(u32* x, u32* y)
 {
 	tg_platform_get_mouse_position(x, y);
 }

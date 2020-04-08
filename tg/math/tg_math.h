@@ -16,44 +16,27 @@ TODO: Support other clipping setups via macros!
 #define TGM_TO_DEGREES(radians)     (radians * (360.0f / ((f32)TGM_PI * 2.0f)))
 #define TGM_TO_RADIANS(degrees)     (degrees * (((f32)TGM_PI * 2.0f) / 360.0f))
 
-#define TGM_MAT2F_ELEMENT_COUNT     4
-#define TGM_MAT2F_ROW_COUNT         2
-#define TGM_MAT2F_COLUMN_COUNT      2
-#define TGM_MAT3F_ELEMENT_COUNT     9
-#define TGM_MAT3F_ROW_COUNT         3
-#define TGM_MAT3F_COLUMN_COUNT      3
-#define TGM_MAT4F_ELEMENT_COUNT     16
-#define TGM_MAT4F_ROW_COUNT         4
-#define TGM_MAT4F_COLUMN_COUNT      4
-
-#define TGM_VEC2F_ELEMENT_COUNT     2
-#define TGM_VEC3F_ELEMENT_COUNT     3
-#define TGM_VEC4F_ELEMENT_COUNT     4
-
 /*
 +-       -+
 | m00 m01 |
 | m10 m11 |
 +-       -+
 */
-typedef struct tgm_mat2f
+typedef struct m2
 {
 	union
 	{
 		struct
 		{
-			f32 m00;
-			f32 m10;
+			f32    m00;
+			f32    m10;
 
-			f32 m01;
-			f32 m11;
+			f32    m01;
+			f32    m11;
 		};
-		struct
-		{
-			f32 data[TGM_MAT2F_ELEMENT_COUNT];
-		};
+		f32        data[4];
 	};
-} tgm_mat2f;
+} m2;
 
 /*
 +-           -+
@@ -62,30 +45,27 @@ typedef struct tgm_mat2f
 | m20 m21 m22 |
 +-           -+
 */
-typedef struct tgm_mat3f
+typedef struct m3
 {
 	union
 	{
 		struct
 		{
-			f32 m00;
-			f32 m10;
-			f32 m20;
+			f32    m00;
+			f32    m10;
+			f32    m20;
 
-			f32 m01;
-			f32 m11;
-			f32 m21;
+			f32    m01;
+			f32    m11;
+			f32    m21;
 
-			f32 m02;
-			f32 m12;
-			f32 m22;
+			f32    m02;
+			f32    m12;
+			f32    m22;
 		};
-		struct
-		{
-			f32 data[TGM_MAT3F_ELEMENT_COUNT];
-		};
+		f32        data[9];
 	};
-} tgm_mat3f;
+} m3;
 
 /*
 +-               -+
@@ -95,83 +75,77 @@ typedef struct tgm_mat3f
 | m30 m31 m32 m33 |
 +-               -+
 */
-typedef struct tgm_mat4f
+typedef struct m4
 {
 	union
 	{
 		struct
 		{
-			f32 m00;
-			f32 m10;
-			f32 m20;
-			f32 m30;
+			f32    m00;
+			f32    m10;
+			f32    m20;
+			f32    m30;
 
-			f32 m01;
-			f32 m11;
-			f32 m21;
-			f32 m31;
+			f32    m01;
+			f32    m11;
+			f32    m21;
+			f32    m31;
 			
-			f32 m02;
-			f32 m12;
-			f32 m22;
-			f32 m32;
+			f32    m02;
+			f32    m12;
+			f32    m22;
+			f32    m32;
 			
-			f32 m03;
-			f32 m13;
-			f32 m23;
-			f32 m33;
+			f32    m03;
+			f32    m13;
+			f32    m23;
+			f32    m33;
 		};
-		struct
-		{
-			f32 data[TGM_MAT4F_ELEMENT_COUNT];
-		};
+		f32        data[16];
 	};
-} tgm_mat4f;
+} m4;
 
-typedef struct tgm_vec2f
+typedef struct v2
 {
 	union
 	{
 		struct
 		{
-			f32 x, y;
+			f32    x;
+			f32    y;
 		};
-		struct
-		{
-			f32 data[TGM_VEC2F_ELEMENT_COUNT];
-		};
+		f32        data[2];
 	};
-} tgm_vec2f;
+} v2;
 
-typedef struct tgm_vec3f
+typedef struct v3
 {
 	union
 	{
 		struct
 		{
-			f32 x, y, z;
+			f32    x;
+			f32    y;
+			f32    z;
 		};
-		struct
-		{
-			f32 data[TGM_VEC3F_ELEMENT_COUNT];
-		};
+		f32        data[3];
 	};
-} tgm_vec3f;
+} v3;
 
-typedef struct tgm_vec4f
+typedef struct v4
 {
 	union
 	{
 		struct
 		{
-			f32 x, y, z, w;
+			f32    x;
+			f32    y;
+			f32    z;
+			f32    w;
 		};
-		struct
-		{
-			f32 data[TGM_VEC4F_ELEMENT_COUNT];
-		};
+		f32        data[4];
 	};
-} tgm_vec4f;
+} v4;
 
 
 
@@ -182,20 +156,20 @@ typedef struct tgm_vec4f
 typedef struct tgm_random_lcg tgm_random_lcg;
 typedef tgm_random_lcg* tgm_random_lcg_h;
 
-void          tgm_random_lcg_create(ui32 seed, tgm_random_lcg_h* p_random_lcg_h);
-f32           tgm_random_lcg_next_f32(tgm_random_lcg_h random_lcg_h);
-ui32          tgm_random_lcg_next_ui32(tgm_random_lcg_h random_lcg_h);
-void          tgm_random_lcg_destroy(tgm_random_lcg_h random_lcg_h);
+void    tgm_random_lcg_create(u32 seed, tgm_random_lcg_h* p_random_lcg_h);
+f32     tgm_random_lcg_next_f32(tgm_random_lcg_h random_lcg_h);
+u32     tgm_random_lcg_next_ui32(tgm_random_lcg_h random_lcg_h);
+void    tgm_random_lcg_destroy(tgm_random_lcg_h random_lcg_h);
 
 
 
 typedef struct tgm_random_xorshift tgm_random_xorshift; // TODO: Unity uses Marsaglia's Xorshift 128, this is the basic variation.
 typedef tgm_random_xorshift* tgm_random_xorshift_h;
 
-void          tgm_random_xorshift_create(ui32 seed, tgm_random_xorshift_h* p_random_xorshift_h);
-f32           tgm_random_xorshift_next_f32(tgm_random_xorshift_h random_xorshift_h);
-ui32          tgm_random_xorshift_next_ui32(tgm_random_xorshift_h random_xorshift_h);
-void          tgm_random_xorshift_destroy(tgm_random_xorshift_h random_xorshift_h);
+void    tgm_random_xorshift_create(u32 seed, tgm_random_xorshift_h* p_random_xorshift_h);
+f32     tgm_random_xorshift_next_f32(tgm_random_xorshift_h random_xorshift_h);
+u32     tgm_random_xorshift_next_ui32(tgm_random_xorshift_h random_xorshift_h);
+void    tgm_random_xorshift_destroy(tgm_random_xorshift_h random_xorshift_h);
 
 
 
@@ -203,24 +177,24 @@ void          tgm_random_xorshift_destroy(tgm_random_xorshift_h random_xorshift_
 | Intrinsics                                                  |
 +------------------------------------------------------------*/
 
-f32           tgm_f32_cos(f32 v);
-f32           tgm_f32_floor(f32 v);
-f32           tgm_f32_log2(f32 v);
-f32           tgm_f32_sin(f32 v);
-f32           tgm_f32_sqrt(f32 v);
-f32           tgm_f32_tan(f32 v);
+f32     tgm_f32_cos(f32 v);
+f32     tgm_f32_floor(f32 v);
+f32     tgm_f32_log2(f32 v);
+f32     tgm_f32_sin(f32 v);
+f32     tgm_f32_sqrt(f32 v);
+f32     tgm_f32_tan(f32 v);
 
-f64           tgm_f64_pow(f64 base, f64 exponent);
+f64     tgm_f64_pow(f64 base, f64 exponent);
 
-i32           tgm_i32_abs(i32 v);
-ui32          tgm_i32_digits(i32 v);
-f32           tgm_i32_log10(i32 v);
-i32           tgm_i32_pow(i32 base, i32 exponent);
+i32     tgm_i32_abs(i32 v);
+u32     tgm_i32_digits(i32 v);
+f32     tgm_i32_log10(i32 v);
+i32     tgm_i32_pow(i32 base, i32 exponent);
 
-ui32          tgm_ui32_digits(ui32 v);
-ui32          tgm_ui32_floor(ui32 v);
-f32           tgm_ui32_log10(ui32 v);
-ui32          tgm_ui32_pow(ui32 base, ui32 exponent);
+u32     tgm_ui32_digits(u32 v);
+u32     tgm_ui32_floor(u32 v);
+f32     tgm_ui32_log10(u32 v);
+u32     tgm_ui32_pow(u32 base, u32 exponent);
 
 
 
@@ -228,17 +202,17 @@ ui32          tgm_ui32_pow(ui32 base, ui32 exponent);
 | Functional                                                  |
 +------------------------------------------------------------*/
 
-f32           tgm_f32_clamp(f32 v, f32 low, f32 high);
-f32           tgm_f32_max(f32 v0, f32 v1);
-f32           tgm_f32_min(f32 v0, f32 v1);
+f32     tgm_f32_clamp(f32 v, f32 low, f32 high);
+f32     tgm_f32_max(f32 v0, f32 v1);
+f32     tgm_f32_min(f32 v0, f32 v1);
 
-i32           tgm_i32_clamp(i32 v, i32 low, i32 high);
-i32           tgm_i32_max(i32 v0, i32 v1);
-i32           tgm_i32_min(i32 v0, i32 v1);
+i32     tgm_i32_clamp(i32 v, i32 low, i32 high);
+i32     tgm_i32_max(i32 v0, i32 v1);
+i32     tgm_i32_min(i32 v0, i32 v1);
 
-ui32          tgm_ui32_clamp(ui32 v, ui32 low, ui32 high);
-ui32          tgm_ui32_max(ui32 v0, ui32 v1);
-ui32          tgm_ui32_min(ui32 v0, ui32 v1);
+u32     tgm_ui32_clamp(u32 v, u32 low, u32 high);
+u32     tgm_ui32_max(u32 v0, u32 v1);
+u32     tgm_ui32_min(u32 v0, u32 v1);
 
 
 
@@ -246,27 +220,27 @@ ui32          tgm_ui32_min(ui32 v0, ui32 v1);
 | Vectors                                                     |
 +------------------------------------------------------------*/
 
-tgm_vec2f    tgm_v2f_subtract_v2f(const tgm_vec2f* p_v0, const tgm_vec2f* p_v1);
+v2      tgm_v2_subtract_v2(const v2* p_v0, const v2* p_v1);
 
-tgm_vec3f    tgm_v3f_add_v3f(const tgm_vec3f* p_v0, const tgm_vec3f* p_v1);
-tgm_vec3f    tgm_v3f_add_f(const tgm_vec3f* p_v, f32 f);
-tgm_vec3f    tgm_v3f_cross(const tgm_vec3f* p_v0, const tgm_vec3f* p_v1);
-tgm_vec3f    tgm_v3f_divide_v3f(const tgm_vec3f* p_v0, const tgm_vec3f* p_v1);
-tgm_vec3f    tgm_v3f_divide_f(const tgm_vec3f* p_v, f32 f);
-f32          tgm_v3f_dot(const tgm_vec3f* p_v0, const tgm_vec3f* p_v1);
-b32          tgm_v3f_equal(const tgm_vec3f* p_v0, const tgm_vec3f* p_v1);
-f32          tgm_v3f_magnitude(const tgm_vec3f* p_v);
-f32          tgm_v3f_magnitude_squared(const tgm_vec3f* p_v);
-tgm_vec3f    tgm_v3f_multiply_v3f(const tgm_vec3f* p_v0, const tgm_vec3f* p_v1);
-tgm_vec3f    tgm_v3f_multiply_f(const tgm_vec3f* p_v, f32 f);
-tgm_vec3f    tgm_v3f_negated(const tgm_vec3f* p_v0);
-tgm_vec3f    tgm_v3f_normalized(const tgm_vec3f* p_v0);
-tgm_vec3f    tgm_v3f_subtract_v3f(const tgm_vec3f* p_v0, const tgm_vec3f* p_v1);
-tgm_vec3f    tgm_v3f_subtract_f(const tgm_vec3f* p_v, f32 f);
-tgm_vec4f    tgm_v3f_to_v4f(const tgm_vec3f* p_v, f32 w);
+v3      tgm_v3_add_v3(const v3* p_v0, const v3* p_v1);
+v3      tgm_v3_add_f(const v3* p_v, f32 f);
+v3      tgm_v3_cross(const v3* p_v0, const v3* p_v1);
+v3      tgm_v3_divide_v3(const v3* p_v0, const v3* p_v1);
+v3      tgm_v3_divide_f(const v3* p_v, f32 f);
+f32     tgm_v3_dot(const v3* p_v0, const v3* p_v1);
+b32     tgm_v3_equal(const v3* p_v0, const v3* p_v1);
+f32     tgm_v3_magnitude(const v3* p_v);
+f32     tgm_v3_magnitude_squared(const v3* p_v);
+v3      tgm_v3_multiply_v3(const v3* p_v0, const v3* p_v1);
+v3      tgm_v3_multiply_f(const v3* p_v, f32 f);
+v3      tgm_v3_negated(const v3* p_v0);
+v3      tgm_v3_normalized(const v3* p_v0);
+v3      tgm_v3_subtract_v3(const v3* p_v0, const v3* p_v1);
+v3      tgm_v3_subtract_f(const v3* p_v, f32 f);
+v4      tgm_v3_to_v4(const v3* p_v, f32 w);
 
-tgm_vec4f    tgm_v4f_negated(const tgm_vec4f* p_v);
-tgm_vec3f    tgm_v4f_to_v3f(const tgm_vec4f* p_v);
+v4      tgm_v4_negated(const v4* p_v);
+v3      tgm_v4_to_v3(const v4* p_v);
 
 
 
@@ -274,31 +248,31 @@ tgm_vec3f    tgm_v4f_to_v3f(const tgm_vec4f* p_v);
 | Matrices                                                    |
 +------------------------------------------------------------*/
 
-tgm_mat2f    tgm_m2f_identity();
-tgm_mat2f    tgm_m2f_multiply_m2f(const tgm_mat2f* p_m0, const tgm_mat2f* p_m1);
-tgm_vec2f    tgm_m2f_multiply_v2f(const tgm_mat2f* p_m, const tgm_vec2f* p_v);
-tgm_mat2f    tgm_m2f_transposed(const tgm_mat2f* p_m);
+m2      tgm_m2_identity();
+m2      tgm_m2_multiply_m2(const m2* p_m0, const m2* p_m1);
+v2      tgm_m2_multiply_v2(const m2* p_m, const v2* p_v);
+m2      tgm_m2_transposed(const m2* p_m);
 
-tgm_mat3f    tgm_m3f_identity();
-tgm_mat3f    tgm_m3f_multiply_m3f(const tgm_mat3f* p_m0, const tgm_mat3f* p_m1);
-tgm_vec3f    tgm_m3f_multiply_v3f(const tgm_mat3f* p_m, const tgm_vec3f* p_v);
-tgm_mat3f    tgm_m3f_orthographic(f32 left, f32 right, f32 bottom, f32 top);
-tgm_mat3f    tgm_m3f_transposed(const tgm_mat3f* p_m);
+m3      tgm_m3_identity();
+m3      tgm_m3_multiply_m3(const m3* p_m0, const m3* p_m1);
+v3      tgm_m3_multiply_v3(const m3* p_m, const v3* p_v);
+m3      tgm_m3_orthographic(f32 left, f32 right, f32 bottom, f32 top);
+m3      tgm_m3_transposed(const m3* p_m);
 
-tgm_mat4f    tgm_m4f_angle_axis(f32 angle_in_radians, const tgm_vec3f* p_axis);
-f32          tgm_m4f_det(const tgm_mat4f* p_m);
-tgm_mat4f    tgm_m4f_euler(f32 pitch_in_radians, f32 yaw_in_radians, f32 roll_in_radians);
-tgm_mat4f    tgm_m4f_identity();
-tgm_mat4f    tgm_m4f_inverse(const tgm_mat4f* p_m);
-tgm_mat4f    tgm_m4f_look_at(const tgm_vec3f* p_from, const tgm_vec3f* p_to, const tgm_vec3f* p_up);
-tgm_mat4f    tgm_m4f_multiply_m4f(const tgm_mat4f* p_m0, const tgm_mat4f* p_m1);
-tgm_vec4f    tgm_m4f_multiply_v4f(const tgm_mat4f* p_m, const tgm_vec4f* p_v);
-tgm_mat4f    tgm_m4f_orthographic(f32 left, f32 right, f32 bottom, f32 top, f32 far, f32 near);
-tgm_mat4f    tgm_m4f_perspective(f32 fov_y_in_radians, f32 aspect, f32 near, f32 far);
-tgm_mat4f    tgm_m4f_rotate_x(f32 angle_in_radians);
-tgm_mat4f    tgm_m4f_rotate_y(f32 angle_in_radians);
-tgm_mat4f    tgm_m4f_rotate_z(f32 angle_in_radians);
-tgm_mat4f    tgm_m4f_translate(const tgm_vec3f* p_v);
-tgm_mat4f    tgm_m4f_transposed(const tgm_mat4f* p_m);
+m4      tgm_m4_angle_axis(f32 angle_in_radians, const v3* p_axis);
+f32     tgm_m4_det(const m4* p_m);
+m4      tgm_m4_euler(f32 pitch_in_radians, f32 yaw_in_radians, f32 roll_in_radians);
+m4      tgm_m4_identity();
+m4      tgm_m4_inverse(const m4* p_m);
+m4      tgm_m4_look_at(const v3* p_from, const v3* p_to, const v3* p_up);
+m4      tgm_m4_multiply_m4(const m4* p_m0, const m4* p_m1);
+v4      tgm_m4_multiply_v4(const m4* p_m, const v4* p_v);
+m4      tgm_m4_orthographic(f32 left, f32 right, f32 bottom, f32 top, f32 far, f32 near);
+m4      tgm_m4_perspective(f32 fov_y_in_radians, f32 aspect, f32 near, f32 far);
+m4      tgm_m4_rotate_x(f32 angle_in_radians);
+m4      tgm_m4_rotate_y(f32 angle_in_radians);
+m4      tgm_m4_rotate_z(f32 angle_in_radians);
+m4      tgm_m4_translate(const v3* p_v);
+m4      tgm_m4_transposed(const m4* p_m);
 
 #endif

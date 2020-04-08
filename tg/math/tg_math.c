@@ -1,6 +1,6 @@
 #include "tg/math/tg_math.h"
 
-#include "tg/memory/tg_allocator.h"
+#include "tg/memory/tg_memory_allocator.h"
 
 #ifdef _M_X64
 #include <immintrin.h>
@@ -18,61 +18,61 @@
 
 typedef struct tgm_random_lcg
 {
-	ui32 state;
+	u32    state;
 } tgm_random_lcg;
 
 
 
-void tgm_random_lcg_create(ui32 seed, tgm_random_lcg_h* p_random_lcg_h)
+void tgm_random_lcg_create(u32 seed, tgm_random_lcg_h* p_random_lcg_h)
 {
-	*p_random_lcg_h = TG_ALLOCATOR_ALLOCATE(sizeof(**p_random_lcg_h));
+	*p_random_lcg_h = TG_MEMORY_ALLOCATOR_ALLOCATE(sizeof(**p_random_lcg_h));
 	(**p_random_lcg_h).state = seed;
 }
 
 f32 tgm_random_lcg_next_f32(tgm_random_lcg_h random_lcg_h)
 {
-	const f32 result = (f32)tgm_random_lcg_next_ui32(random_lcg_h) / (f32)UI32_MAX;
+	const f32 result = (f32)tgm_random_lcg_next_ui32(random_lcg_h) / (f32)TG_U32_MAX;
 	return result;
 }
 
-ui32 tgm_random_lcg_next_ui32(tgm_random_lcg_h random_lcg_h)
+u32 tgm_random_lcg_next_ui32(tgm_random_lcg_h random_lcg_h)
 {
-	const ui32 result = 1103515245 * random_lcg_h->state + 12345 % tgm_ui32_pow(2, 31);
+	const u32 result = 1103515245 * random_lcg_h->state + 12345 % tgm_ui32_pow(2, 31);
 	random_lcg_h->state = result;
 	return result;
 }
 
 void tgm_random_lcg_destroy(tgm_random_lcg_h random_lcg_h)
 {
-	TG_ALLOCATOR_FREE(random_lcg_h);
+	TG_MEMORY_ALLOCATOR_FREE(random_lcg_h);
 }
 
 
 
 typedef struct tgm_random_xorshift
 {
-	ui32 state;
+	u32    state;
 } tgm_random_xorshift;
 
 
 
-void tgm_random_xorshift_create(ui32 seed, tgm_random_xorshift_h* p_random_xorshift_h)
+void tgm_random_xorshift_create(u32 seed, tgm_random_xorshift_h* p_random_xorshift_h)
 {
 	TG_ASSERT(seed);
 
-	*p_random_xorshift_h = TG_ALLOCATOR_ALLOCATE(sizeof(**p_random_xorshift_h));
+	*p_random_xorshift_h = TG_MEMORY_ALLOCATOR_ALLOCATE(sizeof(**p_random_xorshift_h));
 	(**p_random_xorshift_h).state = seed;
 }
 
 f32 tgm_random_xorshift_next_f32(tgm_random_xorshift_h random_xorshift_h)
 {
-	const f32 result = (f32)tgm_random_xorshift_next_ui32(random_xorshift_h) / (f32)UI32_MAX;
+	const f32 result = (f32)tgm_random_xorshift_next_ui32(random_xorshift_h) / (f32)TG_U32_MAX;
 	return result;
 }
 
-ui32 tgm_random_xorshift_next_ui32(tgm_random_xorshift_h random_xorshift_h)
+u32 tgm_random_xorshift_next_ui32(tgm_random_xorshift_h random_xorshift_h)
 {
-	ui32 result = random_xorshift_h->state;
+	u32 result = random_xorshift_h->state;
 	result ^= result << 13;
 	result ^= result >> 17;
 	result ^= result << 5;
@@ -82,7 +82,7 @@ ui32 tgm_random_xorshift_next_ui32(tgm_random_xorshift_h random_xorshift_h)
 
 void tgm_random_xorshift_destroy(tgm_random_xorshift_h random_xorshift_h)
 {
-	TG_ALLOCATOR_FREE(random_xorshift_h);
+	TG_MEMORY_ALLOCATOR_FREE(random_xorshift_h);
 }
 
 
@@ -182,19 +182,19 @@ f64 tgm_f64_pow(f64 base, f64 exponent)
 
 i32 tgm_i32_abs(i32 v)
 {
-	TG_ASSERT(v != I32_MIN);
+	TG_ASSERT(v != TG_I32_MIN);
 
 	const i32 result = v >= 0 ? v : -v;
 	return result;
 }
 
-ui32 tgm_i32_digits(i32 v)
+u32 tgm_i32_digits(i32 v)
 {
-	if (v == I32_MIN)
+	if (v == TG_I32_MIN)
 	{
 		v += 1;
 	}
-	const ui32 result = v == 0 ? 1 : (ui32)tgm_f32_floor(tgm_ui32_log10((ui32)tgm_i32_abs(v))) + 1;
+	const u32 result = v == 0 ? 1 : (u32)tgm_f32_floor(tgm_ui32_log10((u32)tgm_i32_abs(v))) + 1;
 	return result;
 }
 
@@ -225,25 +225,25 @@ i32 tgm_i32_pow(i32 base, i32 exponent)
 
 
 
-ui32 tgm_ui32_digits(ui32 v)
+u32 tgm_ui32_digits(u32 v)
 {
-	const ui32 result = v == 0 ? 1 : (ui32)tgm_f32_floor(tgm_ui32_log10(v)) + 1;
+	const u32 result = v == 0 ? 1 : (u32)tgm_f32_floor(tgm_ui32_log10(v)) + 1;
 	return result;
 }
 
-ui32 tgm_ui32_floor(ui32 v)
+u32 tgm_ui32_floor(u32 v)
 {
 #ifdef _M_X64
 	const __m128 simd_v = _mm_set_ss((f32)v);
 	const __m128 simd_result = _mm_floor_ps(simd_v);
-	const ui32 result = (ui32)simd_result.m128_f32[0];
+	const u32 result = (u32)simd_result.m128_f32[0];
 #else
 	const ui32 result = (ui32)floor((f64)v);
 #endif
 	return result;
 }
 
-f32 tgm_ui32_log10(ui32 v)
+f32 tgm_ui32_log10(u32 v)
 {
 #ifdef _M_X64
 	const __m128 simd_v = _mm_set_ss((f32)v);
@@ -255,13 +255,13 @@ f32 tgm_ui32_log10(ui32 v)
 	return result;
 }
 
-ui32 tgm_ui32_pow(ui32 base, ui32 exponent)
+u32 tgm_ui32_pow(u32 base, u32 exponent)
 {
 #ifdef _M_X64
 	const __m128 simd_base = _mm_set_ss((f32)base);
 	const __m128 simd_exponent = _mm_set_ss((f32)exponent);
 	const __m128 simd_result = _mm_pow_ps(simd_base, simd_exponent);
-	const ui32 result = (ui32)simd_result.m128_f32[0];
+	const u32 result = (u32)simd_result.m128_f32[0];
 #else
 	const ui32 result = (ui32)pow((f64)base, (f64)exponent);
 #endif
@@ -310,21 +310,21 @@ i32 tgm_i32_min(i32 v0, i32 v1)
 	return result;
 }
 
-ui32 tgm_ui32_clamp(ui32 v, ui32 low, ui32 high)
+u32 tgm_ui32_clamp(u32 v, u32 low, u32 high)
 {
-	const ui32 result = tgm_ui32_max(low, tgm_ui32_min(high, v));
+	const u32 result = tgm_ui32_max(low, tgm_ui32_min(high, v));
 	return result;
 }
 
-ui32 tgm_ui32_max(ui32 v0, ui32 v1)
+u32 tgm_ui32_max(u32 v0, u32 v1)
 {
-	const ui32 result = v0 > v1 ? v0 : v1;
+	const u32 result = v0 > v1 ? v0 : v1;
 	return result;
 }
 
-ui32 tgm_ui32_min(ui32 v0, ui32 v1)
+u32 tgm_ui32_min(u32 v0, u32 v1)
 {
-	const ui32 result = v0 < v1 ? v0 : v1;
+	const u32 result = v0 < v1 ? v0 : v1;
 	return result;
 }
 
@@ -334,11 +334,11 @@ ui32 tgm_ui32_min(ui32 v0, ui32 v1)
 | Vectors                                                     |
 +------------------------------------------------------------*/
 
-tgm_vec2f tgm_v2f_subtract_v2f(const tgm_vec2f* p_v0, const tgm_vec2f* p_v1)
+v2 tgm_v2_subtract_v2(const v2* p_v0, const v2* p_v1)
 {
 	TG_ASSERT(p_v0 && p_v1);
 
-	tgm_vec2f result = { 0 };
+	v2 result = { 0 };
 
 	result.x = p_v0->x - p_v1->x;
 	result.y = p_v0->y - p_v1->y;
@@ -348,11 +348,11 @@ tgm_vec2f tgm_v2f_subtract_v2f(const tgm_vec2f* p_v0, const tgm_vec2f* p_v1)
 
 
 
-tgm_vec3f tgm_v3f_add_v3f(const tgm_vec3f* p_v0, const tgm_vec3f* p_v1)
+v3 tgm_v3_add_v3(const v3* p_v0, const v3* p_v1)
 {
 	TG_ASSERT(p_v0 && p_v1);
 
-	tgm_vec3f result = { 0 };
+	v3 result = { 0 };
 
 	result.x = p_v0->x + p_v1->x;
 	result.y = p_v0->y + p_v1->y;
@@ -361,11 +361,11 @@ tgm_vec3f tgm_v3f_add_v3f(const tgm_vec3f* p_v0, const tgm_vec3f* p_v1)
 	return result;
 }
 
-tgm_vec3f tgm_v3f_add_f(const tgm_vec3f* p_v, f32 f)
+v3 tgm_v3_add_f(const v3* p_v, f32 f)
 {
 	TG_ASSERT(p_v);
 
-	tgm_vec3f result = { 0 };
+	v3 result = { 0 };
 
 	result.x = p_v->x + f;
 	result.y = p_v->y + f;
@@ -374,11 +374,11 @@ tgm_vec3f tgm_v3f_add_f(const tgm_vec3f* p_v, f32 f)
 	return result;
 }
 
-tgm_vec3f tgm_v3f_cross(const tgm_vec3f* p_v0, const tgm_vec3f* p_v1)
+v3 tgm_v3_cross(const v3* p_v0, const v3* p_v1)
 {
 	TG_ASSERT(p_v0 && p_v1);
 
-	tgm_vec3f result = { 0 };
+	v3 result = { 0 };
 
 	result.x = p_v0->y * p_v1->z - p_v0->z * p_v1->y;
 	result.y = p_v0->z * p_v1->x - p_v0->x * p_v1->z;
@@ -387,11 +387,11 @@ tgm_vec3f tgm_v3f_cross(const tgm_vec3f* p_v0, const tgm_vec3f* p_v1)
 	return result;
 }
 
-tgm_vec3f tgm_v3f_divide_v3f(const tgm_vec3f* p_v0, const tgm_vec3f* p_v1)
+v3 tgm_v3_divide_v3(const v3* p_v0, const v3* p_v1)
 {
 	TG_ASSERT(p_v0 && p_v1 && p_v1->x && p_v1->y && p_v1->z);
 
-	tgm_vec3f result = { 0 };
+	v3 result = { 0 };
 
 	result.x = p_v0->x / p_v1->x;
 	result.y = p_v0->y / p_v1->y;
@@ -400,11 +400,11 @@ tgm_vec3f tgm_v3f_divide_v3f(const tgm_vec3f* p_v0, const tgm_vec3f* p_v1)
 	return result;
 }
 
-tgm_vec3f tgm_v3f_divide_f(const tgm_vec3f* p_v, f32 f)
+v3 tgm_v3_divide_f(const v3* p_v, f32 f)
 {
 	TG_ASSERT(p_v && f);
 
-	tgm_vec3f result = { 0 };
+	v3 result = { 0 };
 
 	result.x = p_v->x / f;
 	result.y = p_v->y / f;
@@ -413,39 +413,39 @@ tgm_vec3f tgm_v3f_divide_f(const tgm_vec3f* p_v, f32 f)
 	return result;
 }
 
-f32 tgm_v3f_dot(const tgm_vec3f* p_v0, const tgm_vec3f* p_v1)
+f32 tgm_v3_dot(const v3* p_v0, const v3* p_v1)
 {
 	TG_ASSERT(p_v0 && p_v1);
 
 	return p_v0->x * p_v1->x + p_v0->y * p_v1->y + p_v0->z * p_v1->z;
 }
 
-b32 tgm_v3f_equal(const tgm_vec3f* p_v0, const tgm_vec3f* p_v1)
+b32 tgm_v3_equal(const v3* p_v0, const v3* p_v1)
 {
 	TG_ASSERT(p_v0 && p_v1);
 
-	return p_v0 == p_v1 || memcmp(p_v0, p_v1, sizeof(tgm_vec3f)) == 0;
+	return p_v0 == p_v1 || memcmp(p_v0, p_v1, sizeof(v3)) == 0;
 }
 
-f32 tgm_v3f_magnitude(const tgm_vec3f* p_v0)
+f32 tgm_v3_magnitude(const v3* p_v0)
 {
 	TG_ASSERT(p_v0);
 
 	return tgm_f32_sqrt(p_v0->x * p_v0->x + p_v0->y * p_v0->y + p_v0->z * p_v0->z);
 }
 
-f32 tgm_v3f_magnitude_squared(const tgm_vec3f* p_v)
+f32 tgm_v3_magnitude_squared(const v3* p_v)
 {
 	TG_ASSERT(p_v);
 
 	return p_v->x * p_v->x + p_v->y * p_v->y + p_v->z * p_v->z;
 }
 
-tgm_vec3f tgm_v3f_multiply_v3f(const tgm_vec3f* p_v0, const tgm_vec3f* p_v1)
+v3 tgm_v3_multiply_v3(const v3* p_v0, const v3* p_v1)
 {
 	TG_ASSERT(p_v0 && p_v1);
 
-	tgm_vec3f result = { 0 };
+	v3 result = { 0 };
 
 	result.x = p_v0->x * p_v1->x;
 	result.y = p_v0->y * p_v1->y;
@@ -454,11 +454,11 @@ tgm_vec3f tgm_v3f_multiply_v3f(const tgm_vec3f* p_v0, const tgm_vec3f* p_v1)
 	return result;
 }
 
-tgm_vec3f tgm_v3f_multiply_f(const tgm_vec3f* p_v, f32 f)
+v3 tgm_v3_multiply_f(const v3* p_v, f32 f)
 {
 	TG_ASSERT(p_v);
 
-	tgm_vec3f result = { 0 };
+	v3 result = { 0 };
 
 	result.x = p_v->x * f;
 	result.y = p_v->y * f;
@@ -467,11 +467,11 @@ tgm_vec3f tgm_v3f_multiply_f(const tgm_vec3f* p_v, f32 f)
 	return result;
 }
 
-tgm_vec3f tgm_v3f_negated(const tgm_vec3f* p_v)
+v3 tgm_v3_negated(const v3* p_v)
 {
 	TG_ASSERT(p_v);
 
-	tgm_vec3f result = { 0 };
+	v3 result = { 0 };
 
 	result.x = -p_v->x;
 	result.y = -p_v->y;
@@ -480,13 +480,13 @@ tgm_vec3f tgm_v3f_negated(const tgm_vec3f* p_v)
 	return result;
 }
 
-tgm_vec3f tgm_v3f_normalized(const tgm_vec3f* p_v)
+v3 tgm_v3_normalized(const v3* p_v)
 {
 	TG_ASSERT(p_v);
 
-	tgm_vec3f result = { 0 };
+	v3 result = { 0 };
 
-	const f32 magnitude = tgm_v3f_magnitude(p_v);
+	const f32 magnitude = tgm_v3_magnitude(p_v);
 	TG_ASSERT(magnitude);
 
 	result.x = p_v->x / magnitude;
@@ -496,11 +496,11 @@ tgm_vec3f tgm_v3f_normalized(const tgm_vec3f* p_v)
 	return result;
 }
 
-tgm_vec3f tgm_v3f_subtract_v3f(const tgm_vec3f* p_v0, const tgm_vec3f* p_v1)
+v3 tgm_v3_subtract_v3(const v3* p_v0, const v3* p_v1)
 {
 	TG_ASSERT(p_v0 && p_v1);
 
-	tgm_vec3f result = { 0 };
+	v3 result = { 0 };
 
 	result.x = p_v0->x - p_v1->x;
 	result.y = p_v0->y - p_v1->y;
@@ -509,11 +509,11 @@ tgm_vec3f tgm_v3f_subtract_v3f(const tgm_vec3f* p_v0, const tgm_vec3f* p_v1)
 	return result;
 }
 
-tgm_vec3f tgm_v3f_subtract_f(const tgm_vec3f* p_v, f32 f)
+v3 tgm_v3_subtract_f(const v3* p_v, f32 f)
 {
 	TG_ASSERT(p_v);
 
-	tgm_vec3f result = { 0 };
+	v3 result = { 0 };
 
 	result.x = p_v->x - f;
 	result.y = p_v->y - f;
@@ -522,11 +522,11 @@ tgm_vec3f tgm_v3f_subtract_f(const tgm_vec3f* p_v, f32 f)
 	return result;
 }
 
-tgm_vec4f tgm_v3f_to_v4f(const tgm_vec3f* p_v, f32 w)
+v4 tgm_v3_to_v4(const v3* p_v, f32 w)
 {
 	TG_ASSERT(p_v);
 
-	tgm_vec4f result = { 0 };
+	v4 result = { 0 };
 
 	result.x = p_v->x;
 	result.y = p_v->y;
@@ -538,11 +538,11 @@ tgm_vec4f tgm_v3f_to_v4f(const tgm_vec3f* p_v, f32 w)
 
 
 
-tgm_vec4f tgm_v4f_negated(const tgm_vec4f* p_v)
+v4 tgm_v4_negated(const v4* p_v)
 {
 	TG_ASSERT(p_v);
 
-	tgm_vec4f result = { 0 };
+	v4 result = { 0 };
 
 	result.x = -p_v->x;
 	result.y = -p_v->y;
@@ -552,11 +552,11 @@ tgm_vec4f tgm_v4f_negated(const tgm_vec4f* p_v)
 	return result;
 }
 
-tgm_vec3f tgm_v4f_to_v3f(const tgm_vec4f* p_v)
+v3 tgm_v4_to_v3(const v4* p_v)
 {
 	TG_ASSERT(p_v);
 
-	tgm_vec3f result = { 0 };
+	v3 result = { 0 };
 
 	if (p_v->w == 0.0f)
 	{
@@ -579,9 +579,9 @@ tgm_vec3f tgm_v4f_to_v3f(const tgm_vec4f* p_v)
 | Matrices                                                    |
 +------------------------------------------------------------*/
 
-tgm_mat2f tgm_m2f_identity()
+m2 tgm_m2_identity()
 {
-	tgm_mat2f result = { 0 };
+	m2 result = { 0 };
 
 	result.m00 = 1.0f;
 	result.m10 = 0.0f;
@@ -592,11 +592,11 @@ tgm_mat2f tgm_m2f_identity()
 	return result;
 }
 
-tgm_mat2f tgm_m2f_multiply_m2f(const tgm_mat2f* p_m0, const tgm_mat2f* p_m1)
+m2 tgm_m2_multiply_m2(const m2* p_m0, const m2* p_m1)
 {
 	TG_ASSERT(p_m0 && p_m1);
 
-	tgm_mat2f result = { 0 };
+	m2 result = { 0 };
 
 	result.m00 = p_m0->m00 * p_m1->m00 + p_m0->m01 * p_m1->m10;
 	result.m10 = p_m0->m10 * p_m1->m00 + p_m0->m11 * p_m1->m10;
@@ -607,11 +607,11 @@ tgm_mat2f tgm_m2f_multiply_m2f(const tgm_mat2f* p_m0, const tgm_mat2f* p_m1)
 	return result;
 }
 
-tgm_vec2f tgm_m2f_multiply_v2f(const tgm_mat2f* p_m, const tgm_vec2f* p_v)
+v2 tgm_m2_multiply_v2(const m2* p_m, const v2* p_v)
 {
 	TG_ASSERT(p_m && p_v);
 
-	tgm_vec2f result = { 0 };
+	v2 result = { 0 };
 
 	result.x = p_v->x * p_m->m00 + p_v->y * p_m->m01;
 	result.y = p_v->x * p_m->m10 + p_v->y * p_m->m11;
@@ -619,11 +619,11 @@ tgm_vec2f tgm_m2f_multiply_v2f(const tgm_mat2f* p_m, const tgm_vec2f* p_v)
 	return result;
 }
 
-tgm_mat2f tgm_m2f_transposed(const tgm_mat2f* p_m)
+m2 tgm_m2_transposed(const m2* p_m)
 {
 	TG_ASSERT(p_m);
 
-	tgm_mat2f result = { 0 };
+	m2 result = { 0 };
 
 	result.m00 = p_m->m00;
 	result.m10 = p_m->m01;
@@ -635,9 +635,9 @@ tgm_mat2f tgm_m2f_transposed(const tgm_mat2f* p_m)
 
 
 
-tgm_mat3f tgm_m3f_identity()
+m3 tgm_m3_identity()
 {
-	tgm_mat3f result = { 0 };
+	m3 result = { 0 };
 
 	result.m00 = 1.0f;
 	result.m10 = 0.0f;
@@ -654,11 +654,11 @@ tgm_mat3f tgm_m3f_identity()
 	return result;
 }
 
-tgm_mat3f tgm_m3f_multiply_m3f(const tgm_mat3f* p_m0, const tgm_mat3f* p_m1)
+m3 tgm_m3_multiply_m3(const m3* p_m0, const m3* p_m1)
 {
 	TG_ASSERT(p_m0 && p_m1);
 
-	tgm_mat3f result = { 0 };
+	m3 result = { 0 };
 
 	result.m00 = p_m0->m00 * p_m1->m00 + p_m0->m01 * p_m1->m10 + p_m0->m02 * p_m1->m20;
 	result.m10 = p_m0->m10 * p_m1->m00 + p_m0->m11 * p_m1->m10 + p_m0->m12 * p_m1->m20;
@@ -675,11 +675,11 @@ tgm_mat3f tgm_m3f_multiply_m3f(const tgm_mat3f* p_m0, const tgm_mat3f* p_m1)
 	return result;
 }
 
-tgm_vec3f tgm_m3f_multiply_v3f(const tgm_mat3f* p_m, const tgm_vec3f* p_v)
+v3 tgm_m3_multiply_v3(const m3* p_m, const v3* p_v)
 {
 	TG_ASSERT(p_m && p_v);
 
-	tgm_vec3f result = { 0 };
+	v3 result = { 0 };
 
 	result.x = p_v->x * p_m->m00 + p_v->y * p_m->m01 + p_v->z * p_m->m02;
 	result.y = p_v->x * p_m->m10 + p_v->y * p_m->m11 + p_v->z * p_m->m12;
@@ -688,11 +688,11 @@ tgm_vec3f tgm_m3f_multiply_v3f(const tgm_mat3f* p_m, const tgm_vec3f* p_v)
 	return result;
 }
 
-tgm_mat3f tgm_m3f_orthographic(f32 left, f32 right, f32 bottom, f32 top)
+m3 tgm_m3_orthographic(f32 left, f32 right, f32 bottom, f32 top)
 {
 	TG_ASSERT(right != left && top != bottom);
 
-	tgm_mat3f result = { 0 };
+	m3 result = { 0 };
 
 	result.m00 = 2.0f / (right - left);
 	result.m10 = 0.0f;
@@ -709,11 +709,11 @@ tgm_mat3f tgm_m3f_orthographic(f32 left, f32 right, f32 bottom, f32 top)
 	return result;
 }
 
-tgm_mat3f tgm_m3f_transposed(const tgm_mat3f* p_m)
+m3 tgm_m3_transposed(const m3* p_m)
 {
 	TG_ASSERT(p_m);
 
-	tgm_mat3f result = { 0 };
+	m3 result = { 0 };
 
 	result.m00 = p_m->m00;
 	result.m10 = p_m->m01;
@@ -732,16 +732,16 @@ tgm_mat3f tgm_m3f_transposed(const tgm_mat3f* p_m)
 
 
 
-tgm_mat4f tgm_m4f_angle_axis(f32 angle_in_radians, const tgm_vec3f* p_axis)
+m4 tgm_m4_angle_axis(f32 angle_in_radians, const v3* p_axis)
 {
 	TG_ASSERT(p_axis);
 
-	tgm_mat4f result = { 0 };
+	m4 result = { 0 };
 
 	const f32 c = tgm_f32_cos(angle_in_radians);
 	const f32 s = tgm_f32_sin(angle_in_radians);
 	const f32 omc = 1.0f - c;
-	const f32 l = tgm_v3f_magnitude(p_axis);
+	const f32 l = tgm_v3_magnitude(p_axis);
 	TG_ASSERT(l);
 	const f32 x = p_axis->x / l;
 	const f32 y = p_axis->y / l;
@@ -770,7 +770,7 @@ tgm_mat4f tgm_m4f_angle_axis(f32 angle_in_radians, const tgm_vec3f* p_axis)
 	return result;
 }
 
-f32 tgm_m4f_det(const tgm_mat4f* p_m)
+f32 tgm_m4_det(const m4* p_m)
 {
 	TG_ASSERT(p_m);
 
@@ -791,21 +791,21 @@ f32 tgm_m4f_det(const tgm_mat4f* p_m)
 	return result;
 }
 
-tgm_mat4f tgm_m4f_euler(f32 pitch_in_radians, f32 yaw_in_radians, f32 roll_in_radians)
+m4 tgm_m4_euler(f32 pitch_in_radians, f32 yaw_in_radians, f32 roll_in_radians)
 {
-	const tgm_mat4f x = tgm_m4f_rotate_x(pitch_in_radians);
-	const tgm_mat4f y = tgm_m4f_rotate_y(yaw_in_radians);
-	const tgm_mat4f z = tgm_m4f_rotate_z(roll_in_radians);
-	const tgm_mat4f yx = tgm_m4f_multiply_m4f(&y, &x);
+	const m4 x = tgm_m4_rotate_x(pitch_in_radians);
+	const m4 y = tgm_m4_rotate_y(yaw_in_radians);
+	const m4 z = tgm_m4_rotate_z(roll_in_radians);
+	const m4 yx = tgm_m4_multiply_m4(&y, &x);
 	return yx;
-	const tgm_mat4f zyx = tgm_m4f_multiply_m4f(&z, &yx);
+	const m4 zyx = tgm_m4_multiply_m4(&z, &yx);
 
 	return zyx;
 }
 
-tgm_mat4f tgm_m4f_identity()
+m4 tgm_m4_identity()
 {
-	tgm_mat4f result = { 0 };
+	m4 result = { 0 };
 
 	result.m00 = 1.0f;
 	result.m10 = 0.0f;
@@ -830,9 +830,9 @@ tgm_mat4f tgm_m4f_identity()
 	return result;
 }
 
-tgm_mat4f tgm_m4f_inverse(const tgm_mat4f* p_m)
+m4 tgm_m4_inverse(const m4* p_m)
 {
-	tgm_mat4f result = { 0 };
+	m4 result = { 0 };
 
 	const f32 m2323 = p_m->m22 * p_m->m33 - p_m->m23 * p_m->m32;
 	const f32 m1323 = p_m->m21 * p_m->m33 - p_m->m23 * p_m->m31;
@@ -879,26 +879,26 @@ tgm_mat4f tgm_m4f_inverse(const tgm_mat4f* p_m)
 	return result;
 }
 
-tgm_mat4f tgm_m4f_look_at(const tgm_vec3f* p_from, const tgm_vec3f* p_to, const tgm_vec3f* p_up)
+m4 tgm_m4_look_at(const v3* p_from, const v3* p_to, const v3* p_up)
 {
-	TG_ASSERT(p_from && p_to && p_up && !tgm_v3f_equal(p_from, p_to) && !tgm_v3f_equal(p_from, p_up) && !tgm_v3f_equal(p_to, p_up));
+	TG_ASSERT(p_from && p_to && p_up && !tgm_v3_equal(p_from, p_to) && !tgm_v3_equal(p_from, p_up) && !tgm_v3_equal(p_to, p_up));
 
-	tgm_mat4f result = { 0 };
-	tgm_vec3f temp = { 0 };
+	m4 result = { 0 };
+	v3 temp = { 0 };
 	
-	temp = tgm_v3f_subtract_v3f(p_to, p_from);
-	const tgm_vec3f f_negated = tgm_v3f_normalized(&temp);
+	temp = tgm_v3_subtract_v3(p_to, p_from);
+	const v3 f_negated = tgm_v3_normalized(&temp);
 
-	temp = tgm_v3f_normalized(p_up);
-	temp = tgm_v3f_cross(&f_negated, &temp);
-	const tgm_vec3f r = tgm_v3f_normalized(&temp);
+	temp = tgm_v3_normalized(p_up);
+	temp = tgm_v3_cross(&f_negated, &temp);
+	const v3 r = tgm_v3_normalized(&temp);
 
-	temp = tgm_v3f_cross(&r, &f_negated);
-	const tgm_vec3f u = tgm_v3f_normalized(&temp);
+	temp = tgm_v3_cross(&r, &f_negated);
+	const v3 u = tgm_v3_normalized(&temp);
 
-	const tgm_vec3f f = tgm_v3f_negated(&f_negated);
+	const v3 f = tgm_v3_negated(&f_negated);
 
-	tgm_vec3f from_negated = tgm_v3f_negated(p_from);
+	v3 from_negated = tgm_v3_negated(p_from);
 	
 	result.m00 = r.x;
 	result.m10 = u.x;
@@ -915,19 +915,19 @@ tgm_mat4f tgm_m4f_look_at(const tgm_vec3f* p_from, const tgm_vec3f* p_to, const 
 	result.m22 = f.z;
 	result.m32 = 0.0f;
 
-	result.m03 = tgm_v3f_dot(&r, &from_negated);
-	result.m13 = tgm_v3f_dot(&u, &from_negated);
-	result.m23 = tgm_v3f_dot(&f, &from_negated);
+	result.m03 = tgm_v3_dot(&r, &from_negated);
+	result.m13 = tgm_v3_dot(&u, &from_negated);
+	result.m23 = tgm_v3_dot(&f, &from_negated);
 	result.m33 = 1.0f;
 
 	return result;
 }
 
-tgm_mat4f tgm_m4f_multiply_m4f(const tgm_mat4f* p_m0, const tgm_mat4f* p_m1)
+m4 tgm_m4_multiply_m4(const m4* p_m0, const m4* p_m1)
 {
 	TG_ASSERT(p_m0 && p_m1);
 
-	tgm_mat4f result = { 0 };
+	m4 result = { 0 };
 
 	result.m00 = p_m0->m00 * p_m1->m00 + p_m0->m01 * p_m1->m10 + p_m0->m02 * p_m1->m20 + p_m0->m03 * p_m1->m30;
 	result.m10 = p_m0->m10 * p_m1->m00 + p_m0->m11 * p_m1->m10 + p_m0->m12 * p_m1->m20 + p_m0->m13 * p_m1->m30;
@@ -952,11 +952,11 @@ tgm_mat4f tgm_m4f_multiply_m4f(const tgm_mat4f* p_m0, const tgm_mat4f* p_m1)
 	return result;
 }
 
-tgm_vec4f tgm_m4f_multiply_v4f(const tgm_mat4f* p_m, const tgm_vec4f* p_v)
+v4 tgm_m4_multiply_v4(const m4* p_m, const v4* p_v)
 {
 	TG_ASSERT(p_m && p_v);
 
-	tgm_vec4f result = { 0 };
+	v4 result = { 0 };
 
 	result.x = p_v->x * p_m->m00 + p_v->y * p_m->m01 + p_v->z * p_m->m02 + p_v->w * p_m->m03;
 	result.y = p_v->x * p_m->m10 + p_v->y * p_m->m11 + p_v->z * p_m->m12 + p_v->w * p_m->m13;
@@ -966,11 +966,11 @@ tgm_vec4f tgm_m4f_multiply_v4f(const tgm_mat4f* p_m, const tgm_vec4f* p_v)
 	return result;
 }
 
-tgm_mat4f tgm_m4f_orthographic(f32 left, f32 right, f32 bottom, f32 top, f32 far, f32 near)
+m4 tgm_m4_orthographic(f32 left, f32 right, f32 bottom, f32 top, f32 far, f32 near)
 {
 	TG_ASSERT(left != right && top != bottom && near != far);
 
-	tgm_mat4f result = { 0 };
+	m4 result = { 0 };
 
 	result.m00 = 2.0f / (right - left);
 	result.m10 = 0.0f;
@@ -995,9 +995,9 @@ tgm_mat4f tgm_m4f_orthographic(f32 left, f32 right, f32 bottom, f32 top, f32 far
 	return result;
 }
 
-tgm_mat4f tgm_m4f_perspective(f32 fov_y_in_radians, f32 aspect, f32 near, f32 far)
+m4 tgm_m4_perspective(f32 fov_y_in_radians, f32 aspect, f32 near, f32 far)
 {
-	tgm_mat4f result = { 0 };
+	m4 result = { 0 };
 
 	const f32 tan_half_fov_y = tgm_f32_tan(fov_y_in_radians / 2.0f);
 
@@ -1027,9 +1027,9 @@ tgm_mat4f tgm_m4f_perspective(f32 fov_y_in_radians, f32 aspect, f32 near, f32 fa
 	return result;
 }
 
-tgm_mat4f tgm_m4f_rotate_x(f32 angle_in_radians)
+m4 tgm_m4_rotate_x(f32 angle_in_radians)
 {
-	tgm_mat4f result = { 0 };
+	m4 result = { 0 };
 
 	result.m00 = 1.0f;
 	result.m10 = 0.0f;
@@ -1054,9 +1054,9 @@ tgm_mat4f tgm_m4f_rotate_x(f32 angle_in_radians)
 	return result;
 }
 
-tgm_mat4f tgm_m4f_rotate_y(f32 angle_in_radians)
+m4 tgm_m4_rotate_y(f32 angle_in_radians)
 {
-	tgm_mat4f result = { 0 };
+	m4 result = { 0 };
 
 	result.m00 = tgm_f32_cos(angle_in_radians);
 	result.m10 = 0.0f;
@@ -1081,9 +1081,9 @@ tgm_mat4f tgm_m4f_rotate_y(f32 angle_in_radians)
 	return result;
 }
 
-tgm_mat4f tgm_m4f_rotate_z(f32 angle_in_radians)
+m4 tgm_m4_rotate_z(f32 angle_in_radians)
 {
-	tgm_mat4f result = { 0 };
+	m4 result = { 0 };
 
 	result.m00 = tgm_f32_cos(angle_in_radians);
 	result.m10 = tgm_f32_sin(angle_in_radians);
@@ -1108,11 +1108,11 @@ tgm_mat4f tgm_m4f_rotate_z(f32 angle_in_radians)
 	return result;
 }
 
-tgm_mat4f tgm_m4f_translate(const tgm_vec3f* p_v)
+m4 tgm_m4_translate(const v3* p_v)
 {
 	TG_ASSERT(p_v);
 
-	tgm_mat4f result = { 0 };
+	m4 result = { 0 };
 
 	result.m00 = 1.0f;
 	result.m10 = 0.0f;
@@ -1137,11 +1137,11 @@ tgm_mat4f tgm_m4f_translate(const tgm_vec3f* p_v)
 	return result;
 }
 
-tgm_mat4f tgm_m4f_transposed(const tgm_mat4f* p_m)
+m4 tgm_m4_transposed(const m4* p_m)
 {
 	TG_ASSERT(p_m);
 
-	tgm_mat4f result = { 0 };
+	m4 result = { 0 };
 
 	result.m00 = p_m->m00;
 	result.m10 = p_m->m01;
