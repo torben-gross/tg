@@ -49,7 +49,9 @@
 
 typedef struct tg_entity
 {
-    u32    id;
+    u32           id;
+    v3            position;
+    tg_model_h    model_h;
 } tg_entity;
 
 typedef struct tg_fragment_shader

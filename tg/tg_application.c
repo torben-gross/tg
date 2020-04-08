@@ -38,8 +38,42 @@ typedef struct tg_debug_info
 
 
 
+#include "tg/util/tg_hashmap.h"
+#include "tg/util/tg_list.h"
+
+u32 tg_u32_hash_fn(const u32* element) // Knuth's Multiplicative Method
+{
+    const u32 result = *element * 2654435761;
+    return result;
+}
+
 void tg_application_start()
 {
+    tg_list_h list = TG_NULL;
+    tg_list_create(u32, &list);
+
+    u32 test_value = 123456789;
+    tg_list_insert_unchecked(list, &test_value);
+    for (u32 i = 0; i < TG_LIST_DEFAULT_CAPACITY; i++)
+    {
+        tg_list_insert(list, &i);
+    }
+
+    u32* result = tg_list_at(list, 0);
+    TG_ASSERT(test_value == *result);
+
+    tg_list_destroy(list);
+
+
+
+    //tg_hashmap_h hashmap_h = TG_NULL;
+    //tg_hashmap_create(TG_HASHMAP_DEFAULT_SIZE, &tg_u32_hash_fn, &hashmap_h);
+    //const u32 key = 123456789;
+    //const u32 value = 987654321;
+    //tg_hashmap_insert(hashmap_h, &key, &value);
+    //tg_hashmap_destroy(hashmap_h);
+
+
     tg_graphics_init();
 
     tg_camera_info camera_info = { 0 };

@@ -17,6 +17,13 @@ void* tg_allocator_allocate_impl(u64 size)
 	return memory;
 }
 
+void* tg_allocator_reallocate_impl(void* p_memory, u64 size)
+{
+	void* p_reallocated_memory = realloc(p_memory, size);
+	TG_ASSERT(p_reallocated_memory);
+	return p_reallocated_memory;
+}
+
 void tg_allocator_free_impl(void* p_memory)
 {
 	total_allocation_count--;

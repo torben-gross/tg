@@ -130,24 +130,34 @@ void    tg_graphics_init();
 void    tg_graphics_on_window_resize(u32 width, u32 height);
 void    tg_graphics_shutdown();
 
+
+
 void    tg_graphics_camera_create(const v3* p_position, f32 pitch, f32 yaw, f32 roll, f32 fov_y, f32 near, f32 far, tg_camera_h* p_camera_h);
 m4      tg_graphics_camera_get_projection(tg_camera_h camera_h);
 m4      tg_graphics_camera_get_view(tg_camera_h camera_h);
 void    tg_graphics_camera_set_projection(f32 fov_y, f32 near, f32 far, tg_camera_h camera_h);
 void    tg_graphics_camera_set_view(const v3* p_position, f32 pitch, f32 yaw, f32 roll, tg_camera_h camera_h);
 void    tg_graphics_camera_destroy(tg_camera_h camera_h);
+
 void    tg_graphics_fragment_shader_create(const char* p_filename, tg_fragment_shader_h* p_fragment_shader_h);
 void    tg_graphics_fragment_shader_destroy(tg_fragment_shader_h fragment_shader_h);
+
 void    tg_graphics_image_create(const char* p_filename, tg_image_h* p_image_h);
 void    tg_graphics_image_destroy(tg_image_h image_h);
+
 void    tg_graphics_material_create(tg_vertex_shader_h vertex_shader_h, tg_fragment_shader_h fragment_shader_h, tg_material_h* p_material_h);
 void    tg_graphics_material_destroy(tg_material_h material_h);
+
 void    tg_graphics_mesh_create(u32 vertex_count, const v3* p_positions, const v3* p_normals, const v2* p_uvs, const v3* p_tangents, u32 index_count, const u16* p_indices, tg_mesh_h* p_mesh_h);
 void    tg_graphics_mesh_destroy(tg_mesh_h mesh_h);
+
 void    tg_graphics_model_create(tg_mesh_h mesh_h, tg_material_h material_h, tg_model_h* p_model_h);
 void    tg_graphics_model_destroy(tg_model_h model_h);
-void    tg_graphics_scene_create(tg_scene_h* p_scene_h);
+
+void    tg_graphics_scene_create(tg_camera_h camera_h, tg_scene_h* p_scene_h);
+void    tg_graphics_scene_spawn_entities(u32 count, const v3* p_positions, const tg_model_h* p_models, tg_entity_h* p_entities_h); // TODO: rotation and maybe scale
 void    tg_graphics_scene_destroy(tg_scene_h scene_h);
+
 void    tg_graphics_vertex_shader_create(const char* p_filename, tg_vertex_shader_h* p_vertex_shader_h);
 void    tg_graphics_vertex_shader_destroy(tg_vertex_shader_h p_vertex_shader_h);
 

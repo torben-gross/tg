@@ -134,6 +134,8 @@
     <ClCompile Include="memory\tg_memory_allocator.c" />
     <ClCompile Include="platform\tg_platform_win32.c" />
     <ClCompile Include="graphics\tg_graphics_vulkan_scene.c" />
+    <ClCompile Include="util\tg_hashmap.c" />
+    <ClCompile Include="util\tg_list.c" />
     <ClCompile Include="util\tg_string.c" />
     <ClCompile Include="util\tg_file_io.c" />
   </ItemGroup>
@@ -147,6 +149,8 @@
     <ClInclude Include="memory\tg_memory_allocator.h" />
     <ClInclude Include="platform\tg_platform.h" />
     <ClInclude Include="tg_common.h" />
+    <ClInclude Include="util\tg_hashmap.h" />
+    <ClInclude Include="util\tg_list.h" />
     <ClInclude Include="util\tg_string.h" />
     <ClInclude Include="util\tg_file_io.h" />
     <ClInclude Include="util\tg_timer.h" />

@@ -20,6 +20,8 @@
     <ClCompile Include="graphics\tg_graphics_vulkan_scene.c" />
     <ClCompile Include="graphics\tg_graphics_vulkan_shader.c" />
     <ClCompile Include="graphics\tg_graphics_camera.c" />
+    <ClCompile Include="util\tg_hashmap.c" />
+    <ClCompile Include="util\tg_list.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="tg_common.h" />
@@ -34,6 +36,8 @@
     <ClInclude Include="util\tg_string.h" />
     <ClInclude Include="memory\tg_memory_allocator.h" />
     <ClInclude Include="graphics\tg_graphics_internal_image_loader.h" />
+    <ClInclude Include="util\tg_hashmap.h" />
+    <ClInclude Include="util\tg_list.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="tg.ruleset" />
