@@ -49,20 +49,6 @@ u32 tg_u32_hash_fn(const u32* element) // Knuth's Multiplicative Method
 
 void tg_application_start()
 {
-    tg_list_h list = TG_NULL;
-    tg_list_create(u32, &list);
-
-    u32 test_value = 123456789;
-    tg_list_insert_unchecked(list, &test_value);
-    for (u32 i = 0; i < TG_LIST_DEFAULT_CAPACITY; i++)
-    {
-        tg_list_insert(list, &i);
-    }
-
-    u32* result = tg_list_at(list, 0);
-    TG_ASSERT(test_value == *result);
-
-    tg_list_destroy(list);
 
 
 
