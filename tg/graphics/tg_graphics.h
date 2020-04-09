@@ -3,14 +3,12 @@
 
 #include "tg/math/tg_math.h"
 #include "tg/tg_common.h"
+#include "tg/tg_entity.h"
 
 
 
 typedef struct tg_camera tg_camera;
 typedef tg_camera* tg_camera_h;
-
-typedef struct tg_entity tg_entity;
-typedef tg_entity* tg_entity_h;
 
 typedef struct tg_fragment_shader tg_fragment_shader;
 typedef tg_fragment_shader* tg_fragment_shader_h;
@@ -155,7 +153,7 @@ void    tg_graphics_model_create(tg_mesh_h mesh_h, tg_material_h material_h, tg_
 void    tg_graphics_model_destroy(tg_model_h model_h);
 
 void    tg_graphics_scene_create(tg_camera_h camera_h, tg_scene_h* p_scene_h);
-void    tg_graphics_scene_spawn_entities(u32 count, const v3* p_positions, const tg_model_h* p_models, tg_entity_h* p_entities_h); // TODO: rotation and maybe scale
+void    tg_graphics_scene_spawn_entity(tg_scene_h scene_h, const v3* p_position, const tg_model_h model_h, tg_entity_h* p_entity_h); // TODO: rotation and maybe scale
 void    tg_graphics_scene_destroy(tg_scene_h scene_h);
 
 void    tg_graphics_vertex_shader_create(const char* p_filename, tg_vertex_shader_h* p_vertex_shader_h);

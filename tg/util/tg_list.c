@@ -30,6 +30,14 @@ void tg_list_create_impl(u32 capacity, u32 element_size, tg_list_h* p_list_h)
 	(**p_list_h).elements = TG_MEMORY_ALLOCATOR_ALLOCATE((u64)capacity * (u64)element_size);
 }
 
+void tg_list_destroy(tg_list_h list_h)
+{
+	TG_ASSERT(list_h);
+
+	TG_MEMORY_ALLOCATOR_FREE(list_h->elements);
+	TG_MEMORY_ALLOCATOR_FREE(list_h);
+}
+
 u32 tg_list_capacity(tg_list_h list_h)
 {
 	TG_ASSERT(list_h);
@@ -37,19 +45,28 @@ u32 tg_list_capacity(tg_list_h list_h)
 	return list_h->capacity;
 }
 
+b32 tg_list_contains(tg_list_h list_h, const void* p_value)
+{
+	TG_ASSERT(list_h && p_value);
+
+	b32 contains = TG_FALSE;
+	for (u32 i = 0; i < list_h->count; i++)
+	{
+		b32 equal = TG_TRUE;
+		for (u32 b = 0; b < list_h->element_size; b++)
+		{
+			equal |= list_h->elements[i * list_h->element_size + b] == ((u8*)p_value)[b];
+		}
+		contains &= equal;
+	}
+	return contains;
+}
+
 u32 tg_list_count(tg_list_h list_h)
 {
 	TG_ASSERT(list_h);
 
 	return list_h->count;
-}
-
-void tg_list_reserve(tg_list_h list_h, u32 capacity)
-{
-	TG_ASSERT(list_h && capacity > list_h->capacity);
-
-	list_h->capacity = capacity;
-	list_h->elements = TG_MEMORY_ALLOCATOR_REALLOCATE(list_h->elements, (u64)capacity * (u64)list_h->element_size);
 }
 
 void tg_list_insert(tg_list_h list_h, const void* p_value)
@@ -63,14 +80,6 @@ void tg_list_insert(tg_list_h list_h, const void* p_value)
 	}
 
 	tg_list_insert_unchecked(list_h, p_value);
-}
-
-void tg_list_insert_unchecked(tg_list_h list_h, const void* p_value)
-{
-	TG_ASSERT(list_h && p_value && list_h->capacity != list_h->count);
-
-	TG_LIST_SET_AT(list_h, list_h->count, p_value);
-	list_h->count++;
 }
 
 void tg_list_insert_at(tg_list_h list_h, u32 index, const void* p_value)
@@ -98,32 +107,19 @@ void tg_list_insert_at_unchecked(tg_list_h list_h, u32 index, const void* p_valu
 	list_h->count++;
 }
 
-void tg_list_replace_at(tg_list_h list_h, u32 index, const void* p_value)
+void tg_list_insert_unchecked(tg_list_h list_h, const void* p_value)
 {
-	TG_ASSERT(list_h && index < list_h->count && p_value);
+	TG_ASSERT(list_h && p_value && list_h->capacity != list_h->count);
 
-	TG_LIST_SET_AT(list_h, index, p_value);
+	TG_LIST_SET_AT(list_h, list_h->count, p_value);
+	list_h->count++;
 }
 
-void tg_list_replace_region(tg_list_h list_h, u32 start_index, u32 offset, u32 stride, const void* p_buffer)
-{
-	TG_ASSERT(list_h && start_index < list_h->count && (start_index * list_h->element_size) + offset + stride < list_h->count * list_h->element_size && stride);
-
-	memcpy(&list_h->elements[(start_index * list_h->element_size) + offset], p_buffer, stride);
-}
-
-void* tg_list_at(tg_list_h list_h, u32 index)
+void* tg_list_pointer_to(tg_list_h list_h, u32 index)
 {
 	TG_ASSERT(list_h && index < list_h->count);
 
 	return TG_LIST_GET_POINTER_AT(list_h, index);
-}
-
-void* tg_list_at_region(tg_list_h list_h, u32 start_index, u32 offset)
-{
-	TG_ASSERT(list_h && start_index * list_h->element_size + offset < list_h->count * list_h->element_size);
-
-	return &list_h[start_index * list_h->element_size + offset];
 }
 
 void tg_list_remove_at(tg_list_h list_h, u32 index)
@@ -137,10 +133,17 @@ void tg_list_remove_at(tg_list_h list_h, u32 index)
 	list_h->count--;
 }
 
-void tg_list_destroy(tg_list_h list_h)
+void tg_list_replace_at(tg_list_h list_h, u32 index, const void* p_value)
 {
-	TG_ASSERT(list_h);
+	TG_ASSERT(list_h && index < list_h->count && p_value);
 
-	TG_MEMORY_ALLOCATOR_FREE(list_h->elements);
-	TG_MEMORY_ALLOCATOR_FREE(list_h);
+	TG_LIST_SET_AT(list_h, index, p_value);
+}
+
+void tg_list_reserve(tg_list_h list_h, u32 capacity)
+{
+	TG_ASSERT(list_h && capacity > list_h->capacity);
+
+	list_h->capacity = capacity;
+	list_h->elements = TG_MEMORY_ALLOCATOR_REALLOCATE(list_h->elements, (u64)capacity * (u64)list_h->element_size);
 }

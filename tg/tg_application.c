@@ -2,6 +2,8 @@
 
 #define ASSET_PATH "assets"
 
+
+
 #include "tg/graphics/tg_graphics.h"
 #include "tg/memory/tg_memory_allocator.h"
 #include "tg/platform/tg_platform.h"
@@ -9,8 +11,7 @@
 #include "tg/util/tg_string.h"
 #include "tg/util/tg_timer.h"
 
-b32 running = TG_TRUE;
-const char* asset_path = ASSET_PATH; // TODO: determine this some other way
+
 
 typedef struct tg_camera_info
 {
@@ -38,36 +39,28 @@ typedef struct tg_debug_info
 
 
 
+b32 running = TG_TRUE;
+const char* asset_path = ASSET_PATH; // TODO: determine this some other way
+
+
+
 #include "tg/util/tg_hashmap.h"
-#include "tg/util/tg_list.h"
-
-u32 tg_u32_hash_fn(const u32* element) // Knuth's Multiplicative Method
-{
-    const u32 result = *element * 2654435761;
-    return result;
-}
-
-b32 tg_u32_equals(const void* v0, const void* v1)
-{
-    const b32 result = *(u32*)v0 == *(u32*)v1;
-    return result;
-}
-
 void tg_application_start()
 {
     tg_graphics_init();
 
     tg_camera_info camera_info = { 0 };
-    tg_input_get_mouse_position(&camera_info.last_mouse_x, &camera_info.last_mouse_y);
-
-    camera_info.position = (v3){ 0.0f, 0.0f, 0.0f };
-    camera_info.pitch = 0.0f;
-    camera_info.yaw = 0.0f;
-    camera_info.roll = 0.0f;
-    camera_info.fov_y_in_radians = TGM_TO_RADIANS(70.0f);
-    camera_info.aspect = tg_platform_get_window_aspect_ratio(&camera_info.aspect);
-    camera_info.near = -0.1f;
-    camera_info.far = -1000.0f;
+    {
+        camera_info.position = (v3){ 0.0f, 0.0f, 0.0f };
+        camera_info.pitch = 0.0f;
+        camera_info.yaw = 0.0f;
+        camera_info.roll = 0.0f;
+        camera_info.fov_y_in_radians = TGM_TO_RADIANS(70.0f);
+        camera_info.aspect = tg_platform_get_window_aspect_ratio(&camera_info.aspect);
+        camera_info.near = -0.1f;
+        camera_info.far = -1000.0f;
+        tg_input_get_mouse_position(&camera_info.last_mouse_x, &camera_info.last_mouse_y);
+    }
     tg_graphics_camera_create(&camera_info.position, camera_info.pitch, camera_info.yaw, camera_info.roll, camera_info.fov_y_in_radians, camera_info.near, camera_info.far, &camera_info.camera_h);
 
     tg_graphics_renderer_3d_init(camera_info.camera_h);
@@ -143,6 +136,14 @@ void tg_application_start()
     tg_graphics_mesh_create(4, ground_positions, TG_NULL, uvs, TG_NULL, 6, indices, &ground_mesh_h);
     tg_graphics_material_create(vertex_shader_h, fragment_shader_h, &ground_material_h);
     tg_graphics_model_create(ground_mesh_h, ground_material_h, &ground_model_h);
+
+    tg_scene_h scene_h = TG_NULL;
+    tg_graphics_scene_create(camera_info.camera_h, &scene_h);
+    v3 entity_position = { 0.0f, 0.0f, 0.0f };
+    tg_model_h entity_model_h = model2_h;
+    u32 u = 123456789;
+    tg_entity_h entity_h = &u;
+    tg_graphics_scene_spawn_entity(scene_h, &entity_position, entity_model_h, &entity_h);
 
 #ifdef TG_DEBUG
     tg_debug_info debug_info = { 0 };
@@ -260,6 +261,7 @@ void tg_application_start()
         }
     }
     tg_graphics_camera_destroy(camera_info.camera_h);
+    tg_graphics_scene_destroy(scene_h);
     tg_timer_destroy(timer_h);
 
     tg_graphics_model_destroy(ground_model_h);

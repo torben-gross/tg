@@ -42,9 +42,12 @@ typedef tg_hashmap* tg_hashmap_h;
 
 
 void    tg_hashmap_create_impl(u32 key_size, u32 value_size, u32 count, u32 bucket_capacity, const tg_hash_fn key_hash_fn, const tg_equals_fn key_equals_fn, tg_hashmap_h* p_hashmap_h);
-void    tg_hashmap_insert(tg_hashmap_h hashmap_h, const void* p_key, const void* p_value);
-void*   tg_hashmap_at(tg_hashmap_h hashmap_h, const void* p_key);
-void    tg_hashmap_remove(tg_hashmap_h hashmap_h, const void* p_key);
 void    tg_hashmap_destroy(tg_hashmap_h hashmap_h);
+
+u32     tg_hashmap_bucket_count(tg_hashmap_h hashmap_h);
+b32     tg_hashmap_contains(tg_hashmap_h hashmap_h, const void* p_key);
+void    tg_hashmap_insert(tg_hashmap_h hashmap_h, const void* p_key, const void* p_value);
+void*   tg_hashmap_pointer_to(tg_hashmap_h hashmap_h, const void* p_key);
+void    tg_hashmap_remove(tg_hashmap_h hashmap_h, const void* p_key);
 
 #endif
