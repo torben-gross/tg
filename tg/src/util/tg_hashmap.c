@@ -225,7 +225,7 @@ tg_hashmap_h tg_hashmap_create_copy(const tg_hashmap_h hashmap_h)
 	return copied_hashmap_h;
 }
 
-tg_list_h tg_hashmap_create_key_list(const tg_hashmap_h hashmap_h)
+tg_list_h tg_hashmap_key_list_create(const tg_hashmap_h hashmap_h)
 {
 	tg_list_h list_h = tg_list_create__element_size__capacity(hashmap_h->key_size, hashmap_h->element_count);
 	for (u32 i = 0; i < hashmap_h->bucket_count; i++)
@@ -236,7 +236,7 @@ tg_list_h tg_hashmap_create_key_list(const tg_hashmap_h hashmap_h)
 	return list_h;
 }
 
-tg_list_h tg_hashmap_create_value_list(const tg_hashmap_h hashmap_h)
+tg_list_h tg_hashmap_value_list_create(const tg_hashmap_h hashmap_h)
 {
 	tg_list_h list_h = tg_list_create__element_size__capacity(hashmap_h->value_size, hashmap_h->element_count);
 	for (u32 i = 0; i < hashmap_h->bucket_count; i++)
