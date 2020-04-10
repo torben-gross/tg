@@ -1,43 +1,47 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="util\tg_file_io.c" />
-    <ClCompile Include="math\tg_math.c" />
-    <ClCompile Include="graphics\tg_graphics_vulkan.c" />
-    <ClCompile Include="graphics\tg_graphics_vulkan_image.c" />
-    <ClCompile Include="graphics\tg_graphics_vulkan_mesh.c" />
-    <ClCompile Include="graphics\tg_graphics_vulkan_renderer_3d.c" />
-    <ClCompile Include="graphics\tg_graphics_vulkan_renderer_2d.c" />
-    <ClCompile Include="tg_application.c" />
-    <ClCompile Include="graphics\tg_graphics_vulkan_material.c" />
-    <ClCompile Include="graphics\tg_graphics_vulkan_model.c" />
-    <ClCompile Include="tg_input.c" />
-    <ClCompile Include="util\tg_string.c" />
-    <ClCompile Include="platform\tg_platform_win32.c" />
-    <ClCompile Include="memory\tg_memory_allocator.c" />
-    <ClCompile Include="graphics\tg_graphics_internal_image_loader.c" />
-    <ClCompile Include="graphics\tg_graphics_vulkan_scene.c" />
-    <ClCompile Include="graphics\tg_graphics_vulkan_shader.c" />
-    <ClCompile Include="graphics\tg_graphics_camera.c" />
-    <ClCompile Include="util\tg_hashmap.c" />
-    <ClCompile Include="util\tg_list.c" />
+    <ClCompile Include="src\util\tg_file_io.c" />
+    <ClCompile Include="src\math\tg_math.c" />
+    <ClCompile Include="src\tg_application.c" />
+    <ClCompile Include="src\tg_input.c" />
+    <ClCompile Include="src\util\tg_string.c" />
+    <ClCompile Include="src\platform\tg_platform_win32.c" />
+    <ClCompile Include="src\memory\tg_memory_allocator.c" />
+    <ClCompile Include="src\graphics\tg_graphics_camera.c" />
+    <ClCompile Include="src\util\tg_hashmap.c" />
+    <ClCompile Include="src\util\tg_list.c" />
+    <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan.c" />
+    <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan_image.c" />
+    <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan_material.c" />
+    <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan_mesh.c" />
+    <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan_model.c" />
+    <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan_renderer_2d.c" />
+    <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan_renderer_3d.c" />
+    <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan_shader.c" />
+    <ClCompile Include="src\graphics\tg_graphics_image_loader.c" />
+    <ClCompile Include="src\tg_scene.c" />
+    <ClCompile Include="src\tg_entity.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="tg_common.h" />
-    <ClInclude Include="platform\tg_platform.h" />
-    <ClInclude Include="util\tg_file_io.h" />
-    <ClInclude Include="math\tg_math.h" />
-    <ClInclude Include="graphics\tg_graphics.h" />
-    <ClInclude Include="graphics\tg_graphics_vulkan.h" />
-    <ClInclude Include="tg_application.h" />
-    <ClInclude Include="tg_input.h" />
-    <ClInclude Include="util\tg_timer.h" />
-    <ClInclude Include="util\tg_string.h" />
-    <ClInclude Include="memory\tg_memory_allocator.h" />
-    <ClInclude Include="graphics\tg_graphics_internal_image_loader.h" />
-    <ClInclude Include="util\tg_hashmap.h" />
-    <ClInclude Include="util\tg_list.h" />
-    <ClInclude Include="tg_entity.h" />
+    <ClInclude Include="src\tg_common.h" />
+    <ClInclude Include="src\platform\tg_platform.h" />
+    <ClInclude Include="src\util\tg_file_io.h" />
+    <ClInclude Include="src\math\tg_math.h" />
+    <ClInclude Include="src\graphics\tg_graphics.h" />
+    <ClInclude Include="src\tg_application.h" />
+    <ClInclude Include="src\tg_input.h" />
+    <ClInclude Include="src\util\tg_timer.h" />
+    <ClInclude Include="src\util\tg_string.h" />
+    <ClInclude Include="src\memory\tg_memory_allocator.h" />
+    <ClInclude Include="src\util\tg_hashmap.h" />
+    <ClInclude Include="src\util\tg_list.h" />
+    <ClInclude Include="src\tg_entity.h" />
+    <ClInclude Include="src\graphics\vulkan\tg_graphics_vulkan.h" />
+    <ClInclude Include="src\assets\tg_assets.h" />
+    <ClInclude Include="src\graphics\tg_graphics_image_loader.h" />
+    <ClInclude Include="src\graphics\vulkan\tg_graphics_vulkan_shader.h" />
+    <ClInclude Include="src\tg_scene.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="tg.ruleset" />
