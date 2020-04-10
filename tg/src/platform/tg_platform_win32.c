@@ -6,6 +6,8 @@
 #include "memory/tg_memory_allocator.h"
 #include "tg_application.h"
 #include "tg_input.h"
+#include "util/tg_list.h"
+#include "util/tg_string.h"
 #include "util/tg_timer.h"
 #include <windows.h>
 
@@ -200,6 +202,8 @@ LRESULT CALLBACK tg_platform_win32_window_proc(HWND window_h, UINT message, WPAR
 }
 int CALLBACK WinMain(_In_ HINSTANCE instance_h, _In_opt_ HINSTANCE prev_instance_h, _In_ LPSTR cmd_line, _In_ int show_cmd)
 {
+    tg_memory_init();
+
     const char* window_class_id = "tg";
     const char* window_title = "tg";
 
@@ -233,6 +237,27 @@ int CALLBACK WinMain(_In_ HINSTANCE instance_h, _In_opt_ HINSTANCE prev_instance
 
     tg_application_start();
 
-    TG_ASSERT(tg_allocator_unfreed_allocation_count() == 0);
+#ifdef TG_DEBUG
+    const u32 alloc_count = tg_allocator_unfreed_allocation_count();
+    if (alloc_count != 0)
+    {
+        tg_list_h unfreed_allocations_list = tg_allocator_create_unfreed_allocations_list();
+        const u32 unfreed_allocations_count = tg_list_count(unfreed_allocations_list);
+        char buffer[512] = { 0 };
+        TG_DEBUG_PRINT("");
+        TG_DEBUG_PRINT("MEMORY LEAKS:");
+        for (u32 i = 0; i < unfreed_allocations_count; i++)
+        {
+            const tg_memory_allocator_allocation* p_allocation = tg_list_pointer_to(unfreed_allocations_list, i);
+            tg_string_format(sizeof(buffer), buffer, "\tFilename: %s, Line: %u", p_allocation->p_filename, p_allocation->line);
+            TG_DEBUG_PRINT(buffer);
+            memset(buffer, 0, sizeof(buffer));
+        }
+        TG_DEBUG_PRINT("");
+        tg_list_destroy(unfreed_allocations_list);
+    }
+    TG_ASSERT(alloc_count == 0);
+#endif
+    tg_memory_shutdown();
     return EXIT_SUCCESS;
 }

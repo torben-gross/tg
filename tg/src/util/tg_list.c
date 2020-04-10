@@ -18,16 +18,18 @@ typedef struct tg_list
 
 
 
-void tg_list_create_impl(u32 capacity, u32 element_size, tg_list_h* p_list_h)
+tg_list_h tg_list_create_impl(u32 capacity, u32 element_size)
 {
-	TG_ASSERT(capacity && element_size && p_list_h);
+	TG_ASSERT(capacity && element_size);
 
-	*p_list_h = TG_MEMORY_ALLOCATOR_ALLOCATE(sizeof(**p_list_h));
+	tg_list_h list_h = TG_MEMORY_ALLOCATOR_ALLOCATE(sizeof(*list_h));
 
-	(**p_list_h).capacity = capacity;
-	(**p_list_h).element_size = element_size;
-	(**p_list_h).count = 0;
-	(**p_list_h).elements = TG_MEMORY_ALLOCATOR_ALLOCATE((u64)capacity * (u64)element_size);
+	list_h->capacity = capacity;
+	list_h->element_size = element_size;
+	list_h->count = 0;
+	list_h->elements = TG_MEMORY_ALLOCATOR_ALLOCATE((u64)capacity * (u64)element_size);
+
+	return list_h;
 }
 
 void tg_list_destroy(tg_list_h list_h)
@@ -80,6 +82,16 @@ void tg_list_insert(tg_list_h list_h, const void* p_value)
 	}
 
 	tg_list_insert_unchecked(list_h, p_value);
+}
+
+void tg_list_insert_list(tg_list_h list0_h, const tg_list_h list1_h)
+{
+	TG_ASSERT(list0_h && list1_h);
+
+	for (u32 i = 0; i < list1_h->count; i++)
+	{
+		tg_list_insert(list0_h, TG_LIST_GET_POINTER_AT(list1_h, i));
+	}
 }
 
 void tg_list_insert_at(tg_list_h list_h, u32 index, const void* p_value)

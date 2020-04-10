@@ -141,6 +141,8 @@ void                    tg_graphics_vertex_shader_destroy(tg_vertex_shader_h p_v
 +------------------------------------------------------------*/
 
 void                    tg_graphics_renderer_3d_init(const tg_camera_h camera_h);
+void                    tg_graphics_renderer_3d_register(tg_model_h model_h);
+void                    tg_graphics_renderer_3d_render();
 void                    tg_graphics_renderer_3d_draw(const tg_model_h model_h);
 void                    tg_graphics_renderer_3d_present();
 void                    tg_graphics_renderer_3d_shutdown();

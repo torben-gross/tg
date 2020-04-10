@@ -2,6 +2,8 @@
 
 #ifdef TG_VULKAN
 
+#include "util/tg_list.h"
+
 #define TG_RENDERER_3D_G_BUFFER_FORMAT         VK_FORMAT_R32G32B32A32_SFLOAT
 #define TG_RENDERER_3D_NORMAL_BUFFER_FORMAT    VK_FORMAT_R16G16B16A16_SFLOAT
 #define TG_RENDERER_3D_SHADING_FORMAT          VK_FORMAT_B8G8R8A8_UNORM
@@ -157,6 +159,7 @@ typedef struct tg_renderer_3d_screen_vertex
 
 
 tg_camera_h                     main_camera_h;
+tg_list_h                       models;
 tg_renderer_3d_geometry_pass    geometry_pass;
 tg_renderer_3d_resolve_pass     resolve_pass;
 tg_renderer_3d_shading_pass     shading_pass;
@@ -1156,6 +1159,15 @@ void tg_graphics_renderer_3d_init(const tg_camera_h camera_h)
     tg_graphics_renderer_3d_internal_init_shading_pass();
     tg_graphics_renderer_3d_internal_init_present_pass();
     tg_graphics_renderer_3d_internal_init_clear_pass();
+    models = tg_list_create_capacity(tg_model_h, 256);
+}
+void tg_graphics_renderer_3d_register(tg_model_h model_h)
+{
+
+}
+void tg_graphics_renderer_3d_render()
+{
+
 }
 void tg_graphics_renderer_3d_draw(const tg_model_h model_h)
 {
@@ -1265,7 +1277,7 @@ void tg_graphics_renderer_3d_present()
 }
 void tg_graphics_renderer_3d_shutdown()
 {
-
+    tg_list_destroy(models);
 }
 
 #endif
