@@ -3,12 +3,12 @@
 
 #include "tg_common.h"
 
-#define    TG_LIST_DEFAULT_CAPACITY                        32
+#define    TG_LIST_DEFAULT_CAPACITY                                          32
 
-#define    tg_list_create(type)                            tg_list_create_impl(TG_LIST_DEFAULT_CAPACITY, sizeof(type));
-#define    tg_list_create_capacity(type, capacity)         tg_list_create_impl(capacity, sizeof(type));
-#define    tg_list_create_capacity_size(capacity, size)    tg_list_create_impl(capacity, size);
-#define    tg_list_create_size(type, size)                 tg_list_create_impl(TG_LIST_DEFAULT_CAPACITY, size);
+#define    tg_list_create(type)                                              tg_list_create_impl(sizeof(type), TG_LIST_DEFAULT_CAPACITY);
+#define    tg_list_create__capacity(type, capacity)                          tg_list_create_impl(sizeof(type), capacity);
+#define    tg_list_create__element_size(element_size)                        tg_list_create_impl(element_size, TG_LIST_DEFAULT_CAPACITY);
+#define    tg_list_create__element_size__capacity(element_size, capacity)    tg_list_create_impl(element_size, capacity);
 
 
 
@@ -16,7 +16,7 @@ TG_DECLARE_HANDLE(tg_list);
 
 
 
-tg_list_h    tg_list_create_impl(u32 capacity, u32 element_size);
+tg_list_h    tg_list_create_impl(u32 element_size, u32 capacity);
 void         tg_list_destroy(tg_list_h list_h);
 
 u32          tg_list_capacity(const tg_list_h list_h);

@@ -1159,7 +1159,7 @@ void tg_graphics_renderer_3d_init(const tg_camera_h camera_h)
     tg_graphics_renderer_3d_internal_init_shading_pass();
     tg_graphics_renderer_3d_internal_init_present_pass();
     tg_graphics_renderer_3d_internal_init_clear_pass();
-    models = tg_list_create_capacity(tg_model_h, 256);
+    models = tg_list_create__capacity(tg_model_h, 256);
 }
 void tg_graphics_renderer_3d_register(tg_model_h model_h)
 {

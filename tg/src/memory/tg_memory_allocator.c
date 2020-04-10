@@ -35,10 +35,10 @@ b32 tg_memory_allocator_internal_voidpointer_equals(const void** pp_v0, const vo
 
 void tg_memory_init()
 {
-	memory_allocations = tg_hashmap_create_count_capacity(
+	memory_allocations = tg_hashmap_create_custom_count_capacity(
 		void*, tg_memory_allocator_allocation,
-		1024, 4,
-		tg_memory_allocator_internal_voidpointer_hash, tg_memory_allocator_internal_voidpointer_equals
+		tg_memory_allocator_internal_voidpointer_hash, tg_memory_allocator_internal_voidpointer_equals,
+		1024, 4
 	);
 	recording_allocations = TG_TRUE;
 }
@@ -59,12 +59,13 @@ void* tg_allocator_allocate_impl(u64 size, const char* p_filename, u32 line)
 
 	if (recording_allocations)
 	{
+		recording_allocations = TG_FALSE;
 		tg_memory_allocator_allocation allocation = { 0 };
 		allocation.line = line;
 		memcpy(allocation.p_filename, p_filename, tg_string_length(p_filename) * sizeof(*p_filename));
 		tg_hashmap_insert(memory_allocations, &memory, &allocation);
+		recording_allocations = TG_TRUE;
 	}
-
 
 	return memory;
 }
@@ -76,11 +77,13 @@ void* tg_allocator_reallocate_impl(void* p_memory, u64 size, const char* p_filen
 
 	if (recording_allocations)
 	{
+		recording_allocations = TG_FALSE;
 		tg_hashmap_remove(memory_allocations, &p_memory);
 		tg_memory_allocator_allocation allocation = { 0 };
 		allocation.line = line;
 		memcpy(allocation.p_filename, p_filename, tg_string_length(p_filename) * sizeof(*p_filename));
 		tg_hashmap_insert(memory_allocations, &p_reallocated_memory, &allocation);
+		recording_allocations = TG_TRUE;
 	}
 
 	return p_reallocated_memory;
@@ -90,7 +93,9 @@ void tg_allocator_free_impl(void* p_memory, const char* p_filename, u32 line)
 {
 	if (recording_allocations)
 	{
+		recording_allocations = TG_FALSE;
 		tg_hashmap_try_remove(memory_allocations, &p_memory);
+		recording_allocations = TG_TRUE;
 	}
 
 	free(p_memory);

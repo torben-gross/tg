@@ -24,9 +24,174 @@ typedef struct tg_hashmap
 
 
 
-tg_hashmap_h tg_hashmap_create_impl(u32 key_size, u32 value_size, u32 bucket_count, u32 bucket_capacity, const tg_hash_fn key_hash_fn, const tg_equals_fn key_equals_fn)
+b32 tg_f32_equals_fn(const void* p_v0, const void* p_v1)
 {
-	TG_ASSERT(key_size && value_size && bucket_count && bucket_capacity && key_hash_fn && key_equals_fn);
+	TG_ASSERT(p_v0 && p_v1);
+
+	const b32 result = *(f32*)p_v0 == *(f32*)p_v1;
+	return result;
+}
+
+b32 tg_f64_equals_fn(const void* p_v0, const void* p_v1)
+{
+	TG_ASSERT(p_v0 && p_v1);
+
+	const b32 result = *(f64*)p_v0 == *(f64*)p_v1;
+	return result;
+}
+
+b32 tg_i8_equals_fn(const void* p_v0, const void* p_v1)
+{
+	TG_ASSERT(p_v0 && p_v1);
+
+	const b32 result = *(i8*)p_v0 == *(i8*)p_v1;
+	return result;
+}
+
+b32 tg_i16_equals_fn(const void* p_v0, const void* p_v1)
+{
+	TG_ASSERT(p_v0 && p_v1);
+
+	const b32 result = *(i16*)p_v0 == *(i16*)p_v1;
+	return result;
+}
+
+b32 tg_i32_equals_fn(const void* p_v0, const void* p_v1)
+{
+	TG_ASSERT(p_v0 && p_v1);
+
+	const b32 result = *(i32*)p_v0 == *(i32*)p_v1;
+	return result;
+}
+
+b32 tg_i64_equals_fn(const void* p_v0, const void* p_v1)
+{
+	TG_ASSERT(p_v0 && p_v1);
+
+	const b32 result = *(i64*)p_v0 == *(i64*)p_v1;
+	return result;
+}
+
+b32 tg_u8_equals_fn(const void* p_v0, const void* p_v1)
+{
+	TG_ASSERT(p_v0 && p_v1);
+
+	const b32 result = *(u8*)p_v0 == *(u8*)p_v1;
+	return result;
+}
+
+b32 tg_u16_equals_fn(const void* p_v0, const void* p_v1)
+{
+	TG_ASSERT(p_v0 && p_v1);
+
+	const b32 result = *(u16*)p_v0 == *(u16*)p_v1;
+	return result;
+}
+
+b32 tg_u32_equals_fn(const void* p_v0, const void* p_v1)
+{
+	TG_ASSERT(p_v0 && p_v1);
+
+	const b32 result = *(u32*)p_v0 == *(u32*)p_v1;
+	return result;
+}
+
+b32 tg_u64_equals_fn(const void* p_v0, const void* p_v1)
+{
+	TG_ASSERT(p_v0 && p_v1);
+
+	const b32 result = *(u64*)p_v0 == *(u64*)p_v1;
+	return result;
+}
+
+
+
+u32 tg_f32_hash_fn(const void* p_v)
+{
+	TG_ASSERT(p_v);
+
+	const u32 result = (u32)(*(f32*)p_v * 2654435761);
+	return result;
+}
+
+u32 tg_f64_hash_fn(const void* p_v)
+{
+	TG_ASSERT(p_v);
+
+	const u32 result = (u32)(*(f64*)p_v * 2654435761);
+	return result;
+}
+
+u32 tg_i8_hash_fn(const void* p_v)
+{
+	TG_ASSERT(p_v);
+
+	const u32 result = (u32)(*(i8*)p_v * 2654435761);
+	return result;
+}
+
+u32 tg_i16_hash_fn(const void* p_v)
+{
+	TG_ASSERT(p_v);
+
+	const u32 result = (u32)(*(i16*)p_v * 2654435761);
+	return result;
+}
+
+u32 tg_i32_hash_fn(const void* p_v)
+{
+	TG_ASSERT(p_v);
+
+	const u32 result = (u32)(*(i32*)p_v * 2654435761);
+	return result;
+}
+
+u32 tg_i64_hash_fn(const void* p_v)
+{
+	TG_ASSERT(p_v);
+
+	const u32 result = (u32)(*(i64*)p_v * 2654435761);
+	return result;
+}
+
+u32 tg_u8_hash_fn(const void* p_v)
+{
+	TG_ASSERT(p_v);
+
+	const u32 result = (u32)(*(u8*)p_v * 2654435761);
+	return result;
+}
+
+u32 tg_u16_hash_fn(const void* p_v)
+{
+	TG_ASSERT(p_v);
+
+	const u32 result = (u32)(*(u16*)p_v * 2654435761);
+	return result;
+}
+
+u32 tg_u32_hash_fn(const void* p_v)
+{
+	TG_ASSERT(p_v);
+
+	const u32 result = (u32)(*(u32*)p_v * 2654435761);
+	return result;
+}
+
+u32 tg_u64_hash_fn(const void* p_v)
+{
+	TG_ASSERT(p_v);
+
+	const u32 result = (u32)(*(u64*)p_v * 2654435761);
+	return result;
+}
+
+
+
+
+tg_hashmap_h tg_hashmap_create_impl(u32 key_size, u32 value_size, const tg_hash_fn key_hash_fn, const tg_equals_fn key_equals_fn, u32 bucket_count, u32 bucket_capacity)
+{
+	TG_ASSERT(key_size && value_size && key_hash_fn && key_equals_fn && bucket_count && bucket_capacity);
 
 	tg_hashmap_h hashmap_h = TG_MEMORY_ALLOCATOR_ALLOCATE(sizeof(*hashmap_h) + bucket_count * sizeof(*hashmap_h->buckets));
 	
@@ -39,8 +204,8 @@ tg_hashmap_h tg_hashmap_create_impl(u32 key_size, u32 value_size, u32 bucket_cou
 
 	for (u32 i = 0; i < bucket_count; i++)
 	{
-		hashmap_h->buckets[i].keys = tg_list_create_capacity_size(bucket_capacity, key_size);
-		hashmap_h->buckets[i].values = tg_list_create_capacity_size(bucket_capacity, value_size);
+		hashmap_h->buckets[i].keys = tg_list_create__element_size__capacity(key_size, bucket_capacity);
+		hashmap_h->buckets[i].values = tg_list_create__element_size__capacity(value_size, bucket_capacity);
 	}
 
 	return hashmap_h;
@@ -48,7 +213,7 @@ tg_hashmap_h tg_hashmap_create_impl(u32 key_size, u32 value_size, u32 bucket_cou
 
 tg_hashmap_h tg_hashmap_create_copy(const tg_hashmap_h hashmap_h)
 {
-	tg_hashmap_h copied_hashmap_h = tg_hashmap_create_impl(hashmap_h->key_size, hashmap_h->value_size, hashmap_h->bucket_count, TG_HASHMAP_DEFAULT_BUCKET_CAPACITY, hashmap_h->key_hash_fn, hashmap_h->key_equals_fn);
+	tg_hashmap_h copied_hashmap_h = tg_hashmap_create_impl(hashmap_h->key_size, hashmap_h->value_size, hashmap_h->key_hash_fn, hashmap_h->key_equals_fn, hashmap_h->bucket_count, TG_HASHMAP_DEFAULT_BUCKET_CAPACITY);
 
 	for (u32 i = 0; i < hashmap_h->bucket_count; i++)
 	{
@@ -60,9 +225,9 @@ tg_hashmap_h tg_hashmap_create_copy(const tg_hashmap_h hashmap_h)
 	return copied_hashmap_h;
 }
 
-tg_list_h tg_hashmap_create_key_list(tg_hashmap_h hashmap_h)
+tg_list_h tg_hashmap_create_key_list(const tg_hashmap_h hashmap_h)
 {
-	tg_list_h list_h = tg_list_create_capacity_size(hashmap_h->element_count, hashmap_h->key_size);
+	tg_list_h list_h = tg_list_create__element_size__capacity(hashmap_h->key_size, hashmap_h->element_count);
 	for (u32 i = 0; i < hashmap_h->bucket_count; i++)
 	{
 		const tg_hashmap_bucket* p_bucket = &hashmap_h->buckets[i];
@@ -73,7 +238,7 @@ tg_list_h tg_hashmap_create_key_list(tg_hashmap_h hashmap_h)
 
 tg_list_h tg_hashmap_create_value_list(const tg_hashmap_h hashmap_h)
 {
-	tg_list_h list_h = tg_list_create_capacity_size(hashmap_h->element_count, hashmap_h->value_size);
+	tg_list_h list_h = tg_list_create__element_size__capacity(hashmap_h->value_size, hashmap_h->element_count);
 	for (u32 i = 0; i < hashmap_h->bucket_count; i++)
 	{
 		const tg_hashmap_bucket* p_bucket = &hashmap_h->buckets[i];

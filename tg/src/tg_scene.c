@@ -49,7 +49,7 @@ void tg_scene_create(tg_camera_h camera_h, tg_scene_h* p_scene_h)
 	*p_scene_h = TG_MEMORY_ALLOCATOR_ALLOCATE(sizeof(**p_scene_h));
 
 	(**p_scene_h).next_entity_id = 0;
-	(**p_scene_h).entities = tg_list_create_capacity(tg_entity_h, 256);
+	(**p_scene_h).entities = tg_list_create__capacity(tg_entity_h, 256);
 }
 
 void tg_scene_destroy(tg_scene_h scene_h)

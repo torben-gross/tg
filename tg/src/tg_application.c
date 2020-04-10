@@ -43,6 +43,7 @@ const char* asset_path = ASSET_PATH; // TODO: determine this some other way
 
 
 
+#include "util/tg_hashmap.h"
 void tg_application_start()
 {
     tg_graphics_init();

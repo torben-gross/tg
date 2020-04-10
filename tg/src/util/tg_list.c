@@ -10,22 +10,22 @@
 
 typedef struct tg_list
 {
-	u32    capacity;
 	u32    element_size;
+	u32    capacity;
 	u32    count;
 	u8*    elements;
 } tg_list;
 
 
 
-tg_list_h tg_list_create_impl(u32 capacity, u32 element_size)
+tg_list_h tg_list_create_impl(u32 element_size, u32 capacity)
 {
-	TG_ASSERT(capacity && element_size);
+	TG_ASSERT(element_size && capacity);
 
 	tg_list_h list_h = TG_MEMORY_ALLOCATOR_ALLOCATE(sizeof(*list_h));
 
-	list_h->capacity = capacity;
 	list_h->element_size = element_size;
+	list_h->capacity = capacity;
 	list_h->count = 0;
 	list_h->elements = TG_MEMORY_ALLOCATOR_ALLOCATE((u64)capacity * (u64)element_size);
 

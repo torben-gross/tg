@@ -5,41 +5,68 @@
 
 
 
-#define TG_HASHMAP_DEFAULT_BUCKET_COUNT       32
-#define TG_HASHMAP_DEFAULT_BUCKET_CAPACITY    4
+#define TG_HASHMAP_DEFAULT_BUCKET_COUNT              32
+#define TG_HASHMAP_DEFAULT_BUCKET_CAPACITY           4
 
-#define tg_hashmap_create(                    \
-    key_type, value_type,                     \
-    key_hash_fn, key_equals_fn)               tg_hashmap_create_impl(sizeof(key_type), sizeof(value_type), TG_HASHMAP_DEFAULT_BUCKET_COUNT, TG_HASHMAP_DEFAULT_BUCKET_CAPACITY, key_hash_fn, key_equals_fn)
+#define tg_hashmap_create_default(                   \
+    key_type, value_type)                            tg_hashmap_create_impl(sizeof(key_type), sizeof(value_type), tg_##key_type##_hash_fn, tg_##key_type##_equals_fn, TG_HASHMAP_DEFAULT_BUCKET_COUNT, TG_HASHMAP_DEFAULT_BUCKET_CAPACITY)
 
-#define tg_hashmap_create_capacity(           \
-    key_type, value_type,                     \
-    bucket_capacity,                          \
-    key_hash_fn, key_equals_fn)               tg_hashmap_create_impl(sizeof(key_type), sizeof(value_type), TG_HASHMAP_DEFAULT_BUCKET_COUNT, bucket_capacity, key_hash_fn, key_equals_fn)
+#define tg_hashmap_create_custom(                    \
+    key_type, value_type,                            \
+    key_hash_fn, key_equals_fn)                      tg_hashmap_create_impl(sizeof(key_type), sizeof(value_type), key_hash_fn, key_equals_fn, TG_HASHMAP_DEFAULT_BUCKET_COUNT, TG_HASHMAP_DEFAULT_BUCKET_CAPACITY)
 
-#define tg_hashmap_create_count(              \
-    key_type, value_type,                     \
-    bucket_count,                             \
-    key_hash_fn, key_equals_fn)               tg_hashmap_create_impl(sizeof(key_type), sizeof(value_type), bucket_count, TG_HASHMAP_DEFAULT_BUCKET_CAPACITY, key_hash_fn, key_equals_fn)
+#define tg_hashmap_create_custom_capacity(           \
+    key_type, value_type,                            \
+    key_hash_fn, key_equals_fn,                      \
+    bucket_capacity)                                 tg_hashmap_create_impl(sizeof(key_type), sizeof(value_type), key_hash_fn, key_equals_fn, TG_HASHMAP_DEFAULT_BUCKET_COUNT, bucket_capacity)
 
-#define tg_hashmap_create_count_capacity(     \
-    key_type, value_type,                     \
-    bucket_count, bucket_capacity,            \
-    key_hash_fn, key_equals_fn)               tg_hashmap_create_impl(sizeof(key_type), sizeof(value_type), bucket_count, bucket_capacity, key_hash_fn, key_equals_fn)
+#define tg_hashmap_create_custom_count(              \
+    key_type, value_type,                            \
+    key_hash_fn, key_equals_fn,                      \
+    bucket_count)                                    tg_hashmap_create_impl(sizeof(key_type), sizeof(value_type), key_hash_fn, key_equals_fn, bucket_count, TG_HASHMAP_DEFAULT_BUCKET_CAPACITY)
+
+#define tg_hashmap_create_custom_count_capacity(     \
+    key_type, value_type,                            \
+    key_hash_fn, key_equals_fn,                      \
+    bucket_count, bucket_capacity)                   tg_hashmap_create_impl(sizeof(key_type), sizeof(value_type), key_hash_fn, key_equals_fn, bucket_count, bucket_capacity)
 
 
 
 TG_DECLARE_HANDLE(tg_hashmap);
 TG_DECLARE_HANDLE(tg_list);
 
-typedef u32(*tg_hash_fn)(const void* v);
-typedef b32(*tg_equals_fn)(const void* v0, const void* v1);
+typedef u32(*tg_hash_fn)(const void* p_v);
+typedef b32(*tg_equals_fn)(const void* p_v0, const void* p_v1);
 
 
 
-tg_hashmap_h    tg_hashmap_create_impl(u32 key_size, u32 value_size, u32 bucket_count, u32 bucket_capacity, const tg_hash_fn key_hash_fn, const tg_equals_fn key_equals_fn);
+b32             tg_f32_equals_fn(const void* p_v0, const void* p_v1);
+b32             tg_f64_equals_fn(const void* p_v0, const void* p_v1);
+b32             tg_i8_equals_fn(const void* p_v0, const void* p_v1);
+b32             tg_i16_equals_fn(const void* p_v0, const void* p_v1);
+b32             tg_i32_equals_fn(const void* p_v0, const void* p_v1);
+b32             tg_i64_equals_fn(const void* p_v0, const void* p_v1);
+b32             tg_u8_equals_fn(const void* p_v0, const void* p_v1);
+b32             tg_u16_equals_fn(const void* p_v0, const void* p_v1);
+b32             tg_u32_equals_fn(const void* p_v0, const void* p_v1);
+b32             tg_u64_equals_fn(const void* p_v0, const void* p_v1);
+
+u32             tg_f32_hash_fn(const void* p_v);
+u32             tg_f64_hash_fn(const void* p_v);
+u32             tg_i8_hash_fn(const void* p_v);
+u32             tg_i16_hash_fn(const void* p_v);
+u32             tg_i32_hash_fn(const void* p_v);
+u32             tg_i64_hash_fn(const void* p_v);
+u32             tg_u8_hash_fn(const void* p_v);
+u32             tg_u16_hash_fn(const void* p_v);
+u32             tg_u32_hash_fn(const void* p_v);
+u32             tg_u64_hash_fn(const void* p_v);
+
+
+
+tg_hashmap_h    tg_hashmap_create_impl(u32 key_size, u32 value_size, const tg_hash_fn key_hash_fn, const tg_equals_fn key_equals_fn, u32 bucket_count, u32 bucket_capacity);
 tg_hashmap_h    tg_hashmap_create_copy(const tg_hashmap_h hashmap_h);
-tg_list_h       tg_hashmap_create_key_list(tg_hashmap_h hashmap_h);
+tg_list_h       tg_hashmap_create_key_list(const tg_hashmap_h hashmap_h);
 tg_list_h       tg_hashmap_create_value_list(const tg_hashmap_h hashmap_h);
 void            tg_hashmap_destroy(tg_hashmap_h hashmap_h);
 
