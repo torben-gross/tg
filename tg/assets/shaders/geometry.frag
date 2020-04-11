@@ -8,9 +8,11 @@ layout(location = 3) in mat3    v_tbn; // TODO: this will be needed for normal m
 
 layout(location = 0) out vec4    out_position;
 layout(location = 1) out vec4    out_normal;
+layout(location = 2) out vec4    out_albedo;
 
 void main()
 {
     out_position    = v_position;
     out_normal      = vec4(normalize(normalize(v_normal)), 1.0);
+    out_albedo      = vec4(1.0, 0.4, 0.2, 1.0);
 }

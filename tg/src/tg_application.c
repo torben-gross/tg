@@ -69,12 +69,6 @@ void tg_application_start()
         {  1.5f,  1.5f, 0.0f },
         { -1.5f,  1.5f, 0.0f }
     };
-    const v3 normals[4] = {
-        { 0.0f, 0.0f, 1.0f },
-        { 0.0f, 0.0f, 1.0f },
-        { 0.0f, 0.0f, 1.0f },
-        { 0.0f, 0.0f, 1.0f }
-    };
     const v2 uvs[4] = {
         { 0.0f, 0.0f },
         { 1.0f, 0.0f },
@@ -85,7 +79,7 @@ void tg_application_start()
         0, 1, 2, 2, 3, 0
     };
 
-    tg_mesh_h mesh_h = tg_graphics_mesh_create(4, positions, normals, uvs, TG_NULL, 6, indices);
+    tg_mesh_h mesh_h = tg_graphics_mesh_create(4, positions, TG_NULL, uvs, TG_NULL, 6, indices);
     tg_vertex_shader_h vertex_shader_h = tg_graphics_vertex_shader_create("shaders/geometry.vert.spv");
     tg_fragment_shader_h fragment_shader_h = tg_graphics_fragment_shader_create("shaders/geometry.frag.spv");
     tg_material_h material_h = tg_graphics_material_create(vertex_shader_h, fragment_shader_h);
@@ -101,13 +95,8 @@ void tg_application_start()
         { 1.0f, 0.0f },
         { 0.5f, 1.0f }
     };
-    const v3 tangents[3] = {
-        { 1.0f, 0.0f, 0.0f },
-        { 1.0f, 0.0f, 0.0f },
-        { 1.0f, 0.0f, 0.0f }
-    };
 
-    tg_mesh_h mesh2_h = tg_graphics_mesh_create(3, positions2, TG_NULL, uvs2, tangents, 0, TG_NULL);
+    tg_mesh_h mesh2_h = tg_graphics_mesh_create(3, positions2, TG_NULL, uvs2, TG_NULL, 0, TG_NULL);
     tg_material_h material2_h = tg_graphics_material_create(vertex_shader_h, fragment_shader_h);
     tg_model_h model2_h = tg_graphics_model_create(mesh2_h, material2_h);
 
@@ -121,6 +110,10 @@ void tg_application_start()
     tg_mesh_h ground_mesh_h = tg_graphics_mesh_create(4, ground_positions, TG_NULL, uvs, TG_NULL, 6, indices);
     tg_material_h ground_material_h = tg_graphics_material_create(vertex_shader_h, fragment_shader_h);
     tg_model_h ground_model_h = tg_graphics_model_create(ground_mesh_h, ground_material_h);
+
+    tg_graphics_renderer_3d_register(model_h);
+    tg_graphics_renderer_3d_register(model2_h);
+    tg_graphics_renderer_3d_register(ground_model_h);
 
 #ifdef TG_DEBUG
     tg_debug_info debug_info = { 0 };
@@ -158,9 +151,7 @@ void tg_application_start()
 
         tg_input_clear();
         tg_platform_handle_events();
-        tg_graphics_renderer_3d_draw(model_h);
-        tg_graphics_renderer_3d_draw(model2_h);
-        tg_graphics_renderer_3d_draw(ground_model_h);
+        tg_graphics_renderer_3d_draw();
         tg_graphics_renderer_3d_present();
 
         u32 mouse_x;

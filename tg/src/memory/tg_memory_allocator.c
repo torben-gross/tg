@@ -1,6 +1,11 @@
 #include "memory/tg_memory_allocator.h"
 
-#ifdef TG_DEBUG
+#ifndef TG_DEBUG
+
+void tg_memory_init()     { }
+void tg_memory_shutdown() { }
+
+#else
 
 #include "util/tg_hashmap.h"
 #include "util/tg_string.h"

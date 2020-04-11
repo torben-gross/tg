@@ -218,7 +218,7 @@ tg_material_h tg_graphics_material_create(tg_vertex_shader_h vertex_shader_h, tg
         pipeline_depth_stencil_state_create_info.minDepthBounds = 0.0f;
         pipeline_depth_stencil_state_create_info.maxDepthBounds = 0.0f;
     }
-    VkPipelineColorBlendAttachmentState p_pipeline_color_blend_attachment_states[2] = { 0 };
+    VkPipelineColorBlendAttachmentState p_pipeline_color_blend_attachment_states[3] = { 0 };
     {
         p_pipeline_color_blend_attachment_states[0].blendEnable = VK_TRUE;
         p_pipeline_color_blend_attachment_states[0].srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
@@ -237,6 +237,15 @@ tg_material_h tg_graphics_material_create(tg_vertex_shader_h vertex_shader_h, tg
         p_pipeline_color_blend_attachment_states[1].dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
         p_pipeline_color_blend_attachment_states[1].alphaBlendOp = VK_BLEND_OP_ADD;
         p_pipeline_color_blend_attachment_states[1].colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+
+        p_pipeline_color_blend_attachment_states[2].blendEnable = VK_TRUE;
+        p_pipeline_color_blend_attachment_states[2].srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+        p_pipeline_color_blend_attachment_states[2].dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+        p_pipeline_color_blend_attachment_states[2].colorBlendOp = VK_BLEND_OP_ADD;
+        p_pipeline_color_blend_attachment_states[2].srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+        p_pipeline_color_blend_attachment_states[2].dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+        p_pipeline_color_blend_attachment_states[2].alphaBlendOp = VK_BLEND_OP_ADD;
+        p_pipeline_color_blend_attachment_states[2].colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
     }
     VkPipelineColorBlendStateCreateInfo pipeline_color_blend_state_create_info = { 0 };
     {
@@ -245,7 +254,7 @@ tg_material_h tg_graphics_material_create(tg_vertex_shader_h vertex_shader_h, tg
         pipeline_color_blend_state_create_info.flags = 0;
         pipeline_color_blend_state_create_info.logicOpEnable = VK_FALSE;
         pipeline_color_blend_state_create_info.logicOp = VK_LOGIC_OP_COPY;
-        pipeline_color_blend_state_create_info.attachmentCount = 2;
+        pipeline_color_blend_state_create_info.attachmentCount = sizeof(p_pipeline_color_blend_attachment_states) / sizeof(*p_pipeline_color_blend_attachment_states);
         pipeline_color_blend_state_create_info.pAttachments = p_pipeline_color_blend_attachment_states;
         pipeline_color_blend_state_create_info.blendConstants[0] = 0.0f;
         pipeline_color_blend_state_create_info.blendConstants[1] = 0.0f;
