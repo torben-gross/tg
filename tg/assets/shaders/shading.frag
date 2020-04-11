@@ -19,7 +19,7 @@ void main()
 
     // geometry
     vec3 position             = texture(positions, v_uv).xyz;
-    vec3 normal               = texture(normals, v_uv).xyz;
+    vec3 normal               = normalize(texture(normals, v_uv).xyz);
     vec4 albedo               = texture(albedos, v_uv);
 
     // ambient

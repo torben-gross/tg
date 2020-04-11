@@ -13,6 +13,6 @@ layout(location = 2) out vec4    out_albedo;
 void main()
 {
     out_position    = v_position;
-    out_normal      = vec4(normalize(normalize(v_normal)), 1.0);
-    out_albedo      = vec4(1.0, 0.4, 0.2, 1.0);
+    out_normal      = vec4(normalize(v_normal), 1.0);
+    out_albedo      = vec4(1.0, 0.8, 0.5, 1.0);
 }

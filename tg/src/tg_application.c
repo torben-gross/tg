@@ -86,8 +86,8 @@ void tg_application_start()
     tg_model_h model_h = tg_graphics_model_create(mesh_h, material_h);
 
     const v3 positions2[3] = {
-        { -5.0f, -3.0f, 0.0f },
         { -2.0f, -3.0f, 0.0f },
+        { -5.0f, -3.0f, 0.0f },
         { -3.5f,  2.0f, 0.0f }
     };
     const v2 uvs2[3] = {
