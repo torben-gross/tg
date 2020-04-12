@@ -2,13 +2,9 @@
 
 #include "memory/tg_memory_allocator.h"
 
-#ifdef _M_X64
-#include <immintrin.h>
-#else
+#ifndef TG_CPU_x64
 #include <math.h>
 #endif
-
-#include <string.h>
 
 
 
@@ -20,6 +16,11 @@ typedef struct tgm_random_lcg
 {
 	u32    state;
 } tgm_random_lcg;
+
+typedef struct tgm_random_xorshift
+{
+	u32    state;
+} tgm_random_xorshift;
 
 
 
@@ -47,13 +48,6 @@ void tgm_random_lcg_destroy(tgm_random_lcg_h random_lcg_h)
 {
 	TG_MEMORY_ALLOCATOR_FREE(random_lcg_h);
 }
-
-
-
-typedef struct tgm_random_xorshift
-{
-	u32    state;
-} tgm_random_xorshift;
 
 
 
@@ -93,75 +87,125 @@ void tgm_random_xorshift_destroy(tgm_random_xorshift_h random_xorshift_h)
 | Intrinsics                                                  |
 +------------------------------------------------------------*/
 
+#ifdef TG_CPU_x64
+
+f32 tgm_f32_arccos(f32 v)
+{
+	const __m128 simd_v = _mm_set_ss(v);
+	const __m128 simd_result = _mm_acos_ps(simd_v);
+	const f32 result = simd_result.m128_f32[0];
+	return result;
+}
+
+f32 tgm_f32_arccosh(f32 v)
+{
+	const __m128 simd_v = _mm_set_ss(v);
+	const __m128 simd_result = _mm_acosh_ps(simd_v);
+	const f32 result = simd_result.m128_f32[0];
+	return result;
+}
+
+f32 tgm_f32_arcsin(f32 v)
+{
+	const __m128 simd_v = _mm_set_ss(v);
+	const __m128 simd_result = _mm_asin_ps(simd_v);
+	const f32 result = simd_result.m128_f32[0];
+	return result;
+}
+
+f32 tgm_f32_arcsinh(f32 v)
+{
+	const __m128 simd_v = _mm_set_ss(v);
+	const __m128 simd_result = _mm_asinh_ps(simd_v);
+	const f32 result = simd_result.m128_f32[0];
+	return result;
+}
+
+f32 tgm_f32_arctan(f32 v)
+{
+	const __m128 simd_v = _mm_set_ss(v);
+	const __m128 simd_result = _mm_atan_ps(simd_v);
+	const f32 result = simd_result.m128_f32[0];
+	return result;
+}
+
+f32 tgm_f32_arctanh(f32 v)
+{
+	const __m128 simd_v = _mm_set_ss(v);
+	const __m128 simd_result = _mm_atanh_ps(simd_v);
+	const f32 result = simd_result.m128_f32[0];
+	return result;
+}
+
 f32 tgm_f32_cos(f32 v)
 {
-#ifdef _M_X64
 	const __m128 simd_v = _mm_set_ss(v);
 	const __m128 simd_result = _mm_cos_ps(simd_v);
 	const f32 result = simd_result.m128_f32[0];
-#else
-	const f32 result = cosf(v);
-#endif
+	return result;
+}
+
+f32 tgm_f32_cosh(f32 v)
+{
+	const __m128 simd_v = _mm_set_ss(v);
+	const __m128 simd_result = _mm_cosh_ps(simd_v);
+	const f32 result = simd_result.m128_f32[0];
 	return result;
 }
 
 f32 tgm_f32_floor(f32 v)
 {
-#ifdef _M_X64
 	const __m128 simd_v = _mm_set_ss(v);
 	const __m128 simd_result = _mm_floor_ps(simd_v);
 	const f32 result = simd_result.m128_f32[0];
-#else
-	const f32 result = floorf(v);
-#endif
 	return result;
 }
 
 f32 tgm_f32_log2(f32 v)
 {
-#ifdef _M_X64
 	const __m128 simd_v = _mm_set_ss(v);
 	const __m128 simd_result = _mm_log2_ps(simd_v);
 	const f32 result = simd_result.m128_f32[0];
-#else
-	const f32 result = logf(v);
-#endif
 	return result;
 }
 
 f32 tgm_f32_sin(f32 v)
 {
-#ifdef _M_X64
 	const __m128 simd_v = _mm_set_ss(v);
 	const __m128 simd_result = _mm_sin_ps(simd_v);
 	const f32 result = simd_result.m128_f32[0];
-#else
-	const f32 result = sinf(v);
-#endif
+	return result;
+}
+
+f32 tgm_f32_sinh(f32 v)
+{
+	const __m128 simd_v = _mm_set_ss(v);
+	const __m128 simd_result = _mm_sinh_ps(simd_v);
+	const f32 result = simd_result.m128_f32[0];
 	return result;
 }
 
 f32 tgm_f32_sqrt(f32 v)
 {
-#ifdef _M_X64
 	const __m128 simd_v = _mm_set_ss(v);
 	const __m128 simd_result = _mm_sqrt_ps(simd_v);
 	const f32 result = simd_result.m128_f32[0];
-#else
-	const f32 result = sqrtf(v);
-#endif
 	return result;
 }
 
 f32 tgm_f32_tan(f32 v)
 {
-#ifdef _M_X64
 	const __m128 simd_v = _mm_set_ss(v);
 	const __m128 simd_result = _mm_tan_ps(simd_v);
 	const f32 result = simd_result.m128_f32[0];
-#else
-	const f32 result = tanf(v);
-#endif
+	return result;
+}
+
+f32 tgm_f32_tanh(f32 v)
+{
+	const __m128 simd_v = _mm_set_ss(v);
+	const __m128 simd_result = _mm_tanh_ps(simd_v);
+	const f32 result = simd_result.m128_f32[0];
 	return result;
 }
 
@@ -169,14 +213,166 @@ f32 tgm_f32_tan(f32 v)
 
 f64 tgm_f64_pow(f64 base, f64 exponent)
 {
-#ifdef _M_X64
 	const __m128d simd_base = _mm_set_sd(base);
 	const __m128d simd_exponent = _mm_set_sd(exponent);
 	const __m128d simd_result = _mm_pow_pd(simd_base, simd_exponent);
 	const f64 result = simd_result.m128d_f64[0];
+	return result;
+}
+
+
+
+i32 tgm_i32_abs(i32 v)
+{
+	TG_ASSERT(v != TG_I32_MIN);
+
+	const __m128i simd_v = _mm_set1_epi32(v);
+	const __m128i simd_result = _mm_abs_epi32(simd_v);
+	const i32 result = simd_result.m128i_i32[0];
+	return result;
+}
+
+f32 tgm_i32_log10(i32 v)
+{
+	const __m128 simd_v = _mm_set_ss((f32)v);
+	const __m128 simd_result = _mm_log10_ps(simd_v);
+	const f32 result = simd_result.m128_f32[0];
+	return result;
+}
+
+i32 tgm_i32_pow(i32 base, i32 exponent)
+{
+	const __m128 simd_base = _mm_set_ss((f32)base);
+	const __m128 simd_exponent = _mm_set_ss((f32)exponent);
+	const __m128 simd_result = _mm_pow_ps(simd_base, simd_exponent);
+	const i32 result = (i32)simd_result.m128_f32[0];
+	return result;
+}
+
+
+
+u32 tgm_ui32_floor(u32 v)
+{
+	const __m128 simd_v = _mm_set_ss((f32)v);
+	const __m128 simd_result = _mm_floor_ps(simd_v);
+	const u32 result = (u32)simd_result.m128_f32[0];
+	return result;
+}
+
+f32 tgm_ui32_log10(u32 v)
+{
+	const __m128 simd_v = _mm_set_ss((f32)v);
+	const __m128 simd_result = _mm_log10_ps(simd_v);
+	const f32 result = simd_result.m128_f32[0];
+	return result;
+}
+
+u32 tgm_ui32_pow(u32 base, u32 exponent)
+{
+	const __m128 simd_base = _mm_set_ss((f32)base);
+	const __m128 simd_exponent = _mm_set_ss((f32)exponent);
+	const __m128 simd_result = _mm_pow_ps(simd_base, simd_exponent);
+	const u32 result = (u32)simd_result.m128_f32[0];
+	return result;
+}
+
 #else
+
+f32 tgm_f32_arccos(f32 v)
+{
+	const f32 result = acosf(v);
+	return result;
+}
+
+f32 tgm_f32_arccosh(f32 v)
+{
+	const f32 result = acoshf(v);
+	return result;
+}
+
+f32 tgm_f32_arcsin(f32 v)
+{
+	const f32 result = asinf(v);
+	return result;
+}
+
+f32 tgm_f32_arcsinh(f32 v)
+{
+	const f32 result = asinhf(v);
+	return result;
+}
+
+f32 tgm_f32_arctan(f32 v)
+{
+	const f32 result = atanf(v);
+	return result;
+}
+
+f32 tgm_f32_arctanh(f32 v)
+{
+	const f32 result = atanhf(v);
+	return result;
+}
+
+f32 tgm_f32_cos(f32 v)
+{
+	const f32 result = cosf(v);
+	return result;
+}
+
+f32 tgm_f32_cosh(f32 v)
+{
+	const f32 result = coshf(v);
+	return result;
+}
+
+f32 tgm_f32_floor(f32 v)
+{
+	const f32 result = floorf(v);
+	return result;
+}
+
+f32 tgm_f32_log2(f32 v)
+{
+	const f32 result = logf(v);
+	return result;
+}
+
+f32 tgm_f32_sin(f32 v)
+{
+	const f32 result = sinf(v);
+	return result;
+}
+
+f32 tgm_f32_sinh(f32 v)
+{
+	const f32 result = sinhf(v);
+	return result;
+}
+
+f32 tgm_f32_sqrt(f32 v)
+{
+	const f32 result = sqrtf(v);
+	return result;
+}
+
+f32 tgm_f32_tan(f32 v)
+{
+	const f32 result = tanf(v);
+	return result;
+}
+
+f32 tgm_f32_tanh(f32 v)
+{
+	const f32 result = tanhf(v);
+	return result;
+}
+
+
+
+f64 tgm_f64_pow(f64 base, f64 exponent)
+{
 	const f64 result = pow(base, exponent);
-#endif
 	return result;
 }
 
@@ -190,85 +386,39 @@ i32 tgm_i32_abs(i32 v)
 	return result;
 }
 
-u32 tgm_i32_digits(i32 v)
-{
-	if (v == TG_I32_MIN)
-	{
-		v += 1;
-	}
-	const u32 result = v == 0 ? 1 : (u32)tgm_f32_floor(tgm_ui32_log10((u32)tgm_i32_abs(v))) + 1;
-	return result;
-}
-
 f32 tgm_i32_log10(i32 v)
 {
-#ifdef _M_X64
-	const __m128 simd_v = _mm_set_ss((f32)v);
-	const __m128 simd_result = _mm_log10_ps(simd_v);
-	const f32 result = simd_result.m128_f32[0];
-#else
 	const f32 result = log10f((f32)v);
-#endif
 	return result;
 }
 
 i32 tgm_i32_pow(i32 base, i32 exponent)
 {
-#ifdef _M_X64
-	const __m128 simd_base = _mm_set_ss((f32)base);
-	const __m128 simd_exponent = _mm_set_ss((f32)exponent);
-	const __m128 simd_result = _mm_pow_ps(simd_base, simd_exponent);
-	const i32 result = (i32)simd_result.m128_f32[0];
-#else
 	const i32 result = (i32)pow((f64)base, (f64)exponent);
-#endif
 	return result;
 }
 
 
-
-u32 tgm_ui32_digits(u32 v)
-{
-	const u32 result = v == 0 ? 1 : (u32)tgm_f32_floor(tgm_ui32_log10(v)) + 1;
-	return result;
-}
 
 u32 tgm_ui32_floor(u32 v)
 {
-#ifdef _M_X64
-	const __m128 simd_v = _mm_set_ss((f32)v);
-	const __m128 simd_result = _mm_floor_ps(simd_v);
-	const u32 result = (u32)simd_result.m128_f32[0];
-#else
-	const ui32 result = (ui32)floor((f64)v);
-#endif
+	const u32 result = (u32)floor((f64)v);
 	return result;
 }
 
 f32 tgm_ui32_log10(u32 v)
 {
-#ifdef _M_X64
-	const __m128 simd_v = _mm_set_ss((f32)v);
-	const __m128 simd_result = _mm_log10_ps(simd_v);
-	const f32 result = simd_result.m128_f32[0];
-#else
 	const f32 result = log10f((f32)v);
-#endif
 	return result;
 }
 
 u32 tgm_ui32_pow(u32 base, u32 exponent)
 {
-#ifdef _M_X64
-	const __m128 simd_base = _mm_set_ss((f32)base);
-	const __m128 simd_exponent = _mm_set_ss((f32)exponent);
-	const __m128 simd_result = _mm_pow_ps(simd_base, simd_exponent);
-	const u32 result = (u32)simd_result.m128_f32[0];
-#else
-	const ui32 result = (ui32)pow((f64)base, (f64)exponent);
-#endif
+	const u32 result = (u32)pow((f64)base, (f64)exponent);
 	return result;
 }
+
+#endif
 
 
 
@@ -300,6 +450,16 @@ i32 tgm_i32_clamp(i32 v, i32 low, i32 high)
 	return result;
 }
 
+u32 tgm_i32_digits(i32 v)
+{
+	if (v == TG_I32_MIN)
+	{
+		v += 1;
+	}
+	const u32 result = v == 0 ? 1 : (u32)tgm_f32_floor(tgm_ui32_log10((u32)tgm_i32_abs(v))) + 1;
+	return result;
+}
+
 i32 tgm_i32_max(i32 v0, i32 v1)
 {
 	const i32 result = v0 > v1 ? v0 : v1;
@@ -315,6 +475,12 @@ i32 tgm_i32_min(i32 v0, i32 v1)
 u32 tgm_ui32_clamp(u32 v, u32 low, u32 high)
 {
 	const u32 result = tgm_ui32_max(low, tgm_ui32_min(high, v));
+	return result;
+}
+
+u32 tgm_ui32_digits(u32 v)
+{
+	const u32 result = v == 0 ? 1 : (u32)tgm_f32_floor(tgm_ui32_log10(v)) + 1;
 	return result;
 }
 
@@ -419,28 +585,32 @@ f32 tgm_v3_dot(const v3* p_v0, const v3* p_v1)
 {
 	TG_ASSERT(p_v0 && p_v1);
 
-	return p_v0->x * p_v1->x + p_v0->y * p_v1->y + p_v0->z * p_v1->z;
+	const f32 result = p_v0->x * p_v1->x + p_v0->y * p_v1->y + p_v0->z * p_v1->z;
+	return result;
 }
 
 b32 tgm_v3_equal(const v3* p_v0, const v3* p_v1)
 {
 	TG_ASSERT(p_v0 && p_v1);
 
-	return p_v0 == p_v1 || memcmp(p_v0, p_v1, sizeof(v3)) == 0;
+	const b32 result = p_v0 == p_v1 || p_v0->x == p_v1->x && p_v0->y == p_v1->y && p_v0->z == p_v1->z;
+	return result;
 }
 
-f32 tgm_v3_magnitude(const v3* p_v0)
+f32 tgm_v3_magnitude(const v3* p_v)
 {
-	TG_ASSERT(p_v0);
+	TG_ASSERT(p_v);
 
-	return tgm_f32_sqrt(p_v0->x * p_v0->x + p_v0->y * p_v0->y + p_v0->z * p_v0->z);
+	const f32 result = tgm_f32_sqrt(p_v->x * p_v->x + p_v->y * p_v->y + p_v->z * p_v->z);
+	return result;
 }
 
 f32 tgm_v3_magnitude_squared(const v3* p_v)
 {
 	TG_ASSERT(p_v);
 
-	return p_v->x * p_v->x + p_v->y * p_v->y + p_v->z * p_v->z;
+	const f32 result = p_v->x * p_v->x + p_v->y * p_v->y + p_v->z * p_v->z;
+	return result;
 }
 
 v3 tgm_v3_multiply_v3(const v3* p_v0, const v3* p_v1)
@@ -540,6 +710,122 @@ v4 tgm_v3_to_v4(const v3* p_v, f32 w)
 
 
 
+v4 tgm_v4_add_v4(const v4* p_v0, const v4* p_v1)
+{
+	TG_ASSERT(p_v0 && p_v1);
+	
+	v4 result = { 0 };
+
+	result.x = p_v0->x + p_v1->x;
+	result.y = p_v0->y + p_v1->y;
+	result.z = p_v0->z + p_v1->z;
+	result.w = p_v0->w + p_v1->w;
+
+	return result;
+}
+
+v4 tgm_v4_add_f(const v4* p_v, f32 f)
+{
+	TG_ASSERT(p_v);
+
+	v4 result = { 0 };
+
+	result.x = p_v->x + f;
+	result.y = p_v->y + f;
+	result.z = p_v->z + f;
+	result.w = p_v->w + f;
+
+	return result;
+}
+
+v4 tgm_v4_divide_v4(const v4* p_v0, const v4* p_v1)
+{
+	TG_ASSERT(p_v0 && p_v1);
+
+	v4 result = { 0 };
+
+	result.x = p_v0->x / p_v1->x;
+	result.y = p_v0->y / p_v1->y;
+	result.z = p_v0->z / p_v1->z;
+	result.w = p_v0->w / p_v1->w;
+
+	return result;
+}
+
+v4 tgm_v4_divide_f(const v4* p_v, f32 f)
+{
+	TG_ASSERT(p_v);
+	
+	v4 result = { 0 };
+
+	result.x = p_v->x / f;
+	result.y = p_v->y / f;
+	result.z = p_v->z / f;
+	result.w = p_v->w / f;
+
+	return result;
+}
+
+f32 tgm_v4_dot(const v4* p_v0, const v4* p_v1)
+{
+	TG_ASSERT(p_v0 && p_v1);
+
+	const f32 result = p_v0->x * p_v1->x + p_v0->y * p_v1->y + p_v0->z * p_v1->z + p_v0->w * p_v1->w;
+	return result;
+}
+
+b32 tgm_v4_equal(const v4* p_v0, const v4* p_v1)
+{
+	TG_ASSERT(p_v0 && p_v1);
+
+	const b32 result = p_v0 == p_v1 || p_v0->x == p_v1->x && p_v0->y == p_v1->y && p_v0->z == p_v1->z && p_v0->w == p_v1->w;
+	return result;
+}
+
+f32 tgm_v4_magnitude(const v4* p_v)
+{
+	TG_ASSERT(p_v);
+
+	const f32 result = tgm_f32_sqrt(p_v->x * p_v->x + p_v->y * p_v->y + p_v->z * p_v->z + p_v->w * p_v->w);
+	return result;
+}
+
+f32 tgm_v4_magnitude_squared(const v4* p_v)
+{
+	TG_ASSERT(p_v);
+
+	const f32 result = p_v->x * p_v->x + p_v->y * p_v->y + p_v->z * p_v->z + p_v->w * p_v->w;
+	return result;
+}
+
+v4 tgm_v4_multiply_v4(const v4* p_v0, const v4* p_v1)
+{
+	TG_ASSERT(p_v0 && p_v1);
+
+	v4 result = { 0 };
+
+	result.x = p_v0->x * p_v1->x;
+	result.y = p_v0->y * p_v1->y;
+	result.z = p_v0->z * p_v1->z;
+	result.w = p_v0->w * p_v1->w;
+
+	return result;
+}
+
+v4 tgm_v4_multiply_f(const v4* p_v, f32 f)
+{
+	TG_ASSERT(p_v);
+
+	v4 result = { 0 };
+
+	result.x = p_v->x * f;
+	result.y = p_v->y * f;
+	result.z = p_v->z * f;
+	result.w = p_v->w * f;
+
+	return result;
+}
+
 v4 tgm_v4_negated(const v4* p_v)
 {
 	TG_ASSERT(p_v);
@@ -550,6 +836,51 @@ v4 tgm_v4_negated(const v4* p_v)
 	result.y = -p_v->y;
 	result.z = -p_v->z;
 	result.w = -p_v->w;
+
+	return result;
+}
+
+v4 tgm_v4_normalized(const v4* p_v)
+{
+	TG_ASSERT(p_v);
+
+	v4 result = { 0 };
+
+	const f32 magnitude = tgm_v4_magnitude(p_v);
+	TG_ASSERT(magnitude);
+
+	result.x = p_v->x / magnitude;
+	result.y = p_v->y / magnitude;
+	result.z = p_v->z / magnitude;
+	result.w = p_v->w / magnitude;
+
+	return result;
+}
+
+v4 tgm_v4_subtract_v4(const v4* p_v0, const v4* p_v1)
+{
+	TG_ASSERT(p_v0 && p_v1);
+
+	v4 result = { 0 };
+
+	result.x = p_v0->x - p_v1->x;
+	result.y = p_v0->y - p_v1->y;
+	result.z = p_v0->z - p_v1->z;
+	result.w = p_v0->w - p_v1->w;
+
+	return result;
+}
+
+v4 tgm_v4_subtract_f(const v4* p_v, f32 f)
+{
+	TG_ASSERT(p_v);
+
+	v4 result = { 0 };
+
+	result.x = p_v->x - f;
+	result.y = p_v->y - f;
+	result.z = p_v->z - f;
+	result.w = p_v->w - f;
 
 	return result;
 }
@@ -665,11 +996,11 @@ m3 tgm_m3_multiply_m3(const m3* p_m0, const m3* p_m1)
 	result.m00 = p_m0->m00 * p_m1->m00 + p_m0->m01 * p_m1->m10 + p_m0->m02 * p_m1->m20;
 	result.m10 = p_m0->m10 * p_m1->m00 + p_m0->m11 * p_m1->m10 + p_m0->m12 * p_m1->m20;
 	result.m20 = p_m0->m20 * p_m1->m00 + p_m0->m21 * p_m1->m10 + p_m0->m22 * p_m1->m20;
-	
+
 	result.m01 = p_m0->m00 * p_m1->m01 + p_m0->m01 * p_m1->m11 + p_m0->m02 * p_m1->m21;
 	result.m11 = p_m0->m10 * p_m1->m01 + p_m0->m11 * p_m1->m11 + p_m0->m12 * p_m1->m21;
 	result.m21 = p_m0->m20 * p_m1->m01 + p_m0->m21 * p_m1->m11 + p_m0->m22 * p_m1->m21;
-	
+
 	result.m02 = p_m0->m00 * p_m1->m02 + p_m0->m01 * p_m1->m12 + p_m0->m02 * p_m1->m22;
 	result.m12 = p_m0->m10 * p_m1->m02 + p_m0->m11 * p_m1->m12 + p_m0->m12 * p_m1->m22;
 	result.m22 = p_m0->m20 * p_m1->m02 + p_m0->m21 * p_m1->m12 + p_m0->m22 * p_m1->m22;
@@ -768,11 +1099,11 @@ m4 tgm_m4_angle_axis(f32 angle_in_radians, const v3* p_axis)
 	result.m13 = 0.0f;
 	result.m23 = 0.0f;
 	result.m33 = 1.0f;
-	
+
 	return result;
 }
 
-f32 tgm_m4_det(const m4* p_m)
+f32 tgm_m4_determinant(const m4* p_m)
 {
 	TG_ASSERT(p_m);
 
@@ -823,7 +1154,7 @@ m4 tgm_m4_identity()
 	result.m12 = 0.0f;
 	result.m22 = 1.0f;
 	result.m32 = 0.0f;
-	
+
 	result.m03 = 0.0f;
 	result.m13 = 0.0f;
 	result.m23 = 0.0f;
@@ -861,22 +1192,22 @@ m4 tgm_m4_inverse(const m4* p_m)
 		p_m->m02 * (p_m->m10 * m1323 - p_m->m11 * m0323 + p_m->m13 * m0123) -
 		p_m->m03 * (p_m->m10 * m1223 - p_m->m11 * m0223 + p_m->m12 * m0123));
 
-	result.m00 = det *  (p_m->m11 * m2323 - p_m->m12 * m1323 + p_m->m13 * m1223);
+	result.m00 = det * (p_m->m11 * m2323 - p_m->m12 * m1323 + p_m->m13 * m1223);
 	result.m01 = det * -(p_m->m01 * m2323 - p_m->m02 * m1323 + p_m->m03 * m1223);
-	result.m02 = det *  (p_m->m01 * m2313 - p_m->m02 * m1313 + p_m->m03 * m1213);
+	result.m02 = det * (p_m->m01 * m2313 - p_m->m02 * m1313 + p_m->m03 * m1213);
 	result.m03 = det * -(p_m->m01 * m2312 - p_m->m02 * m1312 + p_m->m03 * m1212);
 	result.m10 = det * -(p_m->m10 * m2323 - p_m->m12 * m0323 + p_m->m13 * m0223);
-	result.m11 = det *  (p_m->m00 * m2323 - p_m->m02 * m0323 + p_m->m03 * m0223);
+	result.m11 = det * (p_m->m00 * m2323 - p_m->m02 * m0323 + p_m->m03 * m0223);
 	result.m12 = det * -(p_m->m00 * m2313 - p_m->m02 * m0313 + p_m->m03 * m0213);
-	result.m13 = det *  (p_m->m00 * m2312 - p_m->m02 * m0312 + p_m->m03 * m0212);
-	result.m20 = det *  (p_m->m10 * m1323 - p_m->m11 * m0323 + p_m->m13 * m0123);
+	result.m13 = det * (p_m->m00 * m2312 - p_m->m02 * m0312 + p_m->m03 * m0212);
+	result.m20 = det * (p_m->m10 * m1323 - p_m->m11 * m0323 + p_m->m13 * m0123);
 	result.m21 = det * -(p_m->m00 * m1323 - p_m->m01 * m0323 + p_m->m03 * m0123);
-	result.m22 = det *  (p_m->m00 * m1313 - p_m->m01 * m0313 + p_m->m03 * m0113);
+	result.m22 = det * (p_m->m00 * m1313 - p_m->m01 * m0313 + p_m->m03 * m0113);
 	result.m23 = det * -(p_m->m00 * m1312 - p_m->m01 * m0312 + p_m->m03 * m0112);
 	result.m30 = det * -(p_m->m10 * m1223 - p_m->m11 * m0223 + p_m->m12 * m0123);
-	result.m31 = det *  (p_m->m00 * m1223 - p_m->m01 * m0223 + p_m->m02 * m0123);
+	result.m31 = det * (p_m->m00 * m1223 - p_m->m01 * m0223 + p_m->m02 * m0123);
 	result.m32 = det * -(p_m->m00 * m1213 - p_m->m01 * m0213 + p_m->m02 * m0113);
-	result.m33 = det *  (p_m->m00 * m1212 - p_m->m01 * m0212 + p_m->m02 * m0112);
+	result.m33 = det * (p_m->m00 * m1212 - p_m->m01 * m0212 + p_m->m02 * m0112);
 
 	return result;
 }
@@ -887,7 +1218,7 @@ m4 tgm_m4_look_at(const v3* p_from, const v3* p_to, const v3* p_up)
 
 	m4 result = { 0 };
 	v3 temp = { 0 };
-	
+
 	temp = tgm_v3_subtract_v3(p_to, p_from);
 	const v3 f_negated = tgm_v3_normalized(&temp);
 
@@ -901,7 +1232,7 @@ m4 tgm_m4_look_at(const v3* p_from, const v3* p_to, const v3* p_up)
 	const v3 f = tgm_v3_negated(&f_negated);
 
 	v3 from_negated = tgm_v3_negated(p_from);
-	
+
 	result.m00 = r.x;
 	result.m10 = u.x;
 	result.m20 = f.x;

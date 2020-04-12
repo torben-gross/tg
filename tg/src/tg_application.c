@@ -47,6 +47,8 @@ void tg_application_start()
 {
     tg_graphics_init();
 
+    i32 r = tgm_i32_abs(-2343);
+
     tg_camera_info camera_info = { 0 };
     {
         camera_info.position = (v3){ 0.0f, 0.0f, 0.0f };

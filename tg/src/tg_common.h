@@ -15,6 +15,10 @@
 #define TG_COMPILER_MSVC
 #endif
 
+#if defined(TG_COMPILER_MSVC) && _M_X64 == 100
+#define TG_CPU_x64
+#endif
+
 
 
 #ifdef TG_WIN32
