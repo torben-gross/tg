@@ -8,7 +8,6 @@
     <ClCompile Include="src\util\tg_string.c" />
     <ClCompile Include="src\platform\tg_platform_win32.c" />
     <ClCompile Include="src\memory\tg_memory_allocator.c" />
-    <ClCompile Include="src\graphics\tg_graphics_camera.c" />
     <ClCompile Include="src\util\tg_hashmap.c" />
     <ClCompile Include="src\util\tg_list.c" />
     <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan.c" />
@@ -22,6 +21,7 @@
     <ClCompile Include="src\graphics\tg_graphics_image_loader.c" />
     <ClCompile Include="src\tg_scene.c" />
     <ClCompile Include="src\tg_entity.c" />
+    <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan_camera.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\tg_common.h" />

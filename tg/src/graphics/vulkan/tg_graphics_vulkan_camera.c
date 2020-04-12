@@ -1,31 +1,9 @@
-#include "graphics/tg_graphics.h"
+#include "graphics/vulkan/tg_graphics_vulkan.h"
+
+#ifdef TG_VULKAN
 
 #include "memory/tg_memory_allocator.h"
 #include "platform/tg_platform.h"
-
-
-
-typedef struct tg_camera
-{
-
-	struct
-	{
-		f32    fov_y;
-		f32    near;
-		f32    far;
-		m4     projection;
-	} projection;
-
-	struct
-	{
-		v3     position;
-		f32    pitch;
-		f32    yaw;
-		f32    roll;
-		m4     view;
-	} view;
-
-} tg_camera;
 
 
 
@@ -85,3 +63,5 @@ void tg_graphics_camera_destroy(tg_camera_h camera_h)
 
 	TG_MEMORY_ALLOCATOR_FREE(camera_h);
 }
+
+#endif

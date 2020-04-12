@@ -9,9 +9,13 @@ layout(location = 4) in vec3    in_bitangent;
 
 layout(set = 0, binding = 0) uniform matrices
 {
-    mat4    u_model;
     mat4    u_view;
     mat4    u_projection;
+};
+
+layout(push_constant) uniform model_block
+{
+	mat4    u_model;
 };
 
 layout(location = 0) out vec4    v_position;

@@ -47,8 +47,6 @@ void tg_application_start()
 {
     tg_graphics_init();
 
-    i32 r = tgm_i32_abs(-2343);
-
     tg_camera_info camera_info = { 0 };
     {
         camera_info.position = (v3){ 0.0f, 0.0f, 0.0f };
@@ -63,7 +61,7 @@ void tg_application_start()
     }
     camera_info.camera_h = tg_graphics_camera_create(&camera_info.position, camera_info.pitch, camera_info.yaw, camera_info.roll, camera_info.fov_y_in_radians, camera_info.near, camera_info.far);
 
-    tg_graphics_renderer_3d_init(camera_info.camera_h);
+    tg_renderer_3d_h renderer_3d_h = tg_graphics_renderer_3d_create(camera_info.camera_h);
 
     const v3 positions[4] = {
         { -1.5f, -1.5f, 0.0f },
@@ -113,9 +111,9 @@ void tg_application_start()
     tg_material_h ground_material_h = tg_graphics_material_create(vertex_shader_h, fragment_shader_h);
     tg_model_h ground_model_h = tg_graphics_model_create(ground_mesh_h, ground_material_h);
 
-    tg_graphics_renderer_3d_register(model_h);
-    tg_graphics_renderer_3d_register(model2_h);
-    tg_graphics_renderer_3d_register(ground_model_h);
+    tg_graphics_renderer_3d_register(renderer_3d_h, model_h);
+    tg_graphics_renderer_3d_register(renderer_3d_h, model2_h);
+    tg_graphics_renderer_3d_register(renderer_3d_h, ground_model_h);
 
 #ifdef TG_DEBUG
     tg_debug_info debug_info = { 0 };
@@ -153,8 +151,8 @@ void tg_application_start()
 
         tg_input_clear();
         tg_platform_handle_events();
-        tg_graphics_renderer_3d_draw();
-        tg_graphics_renderer_3d_present();
+        tg_graphics_renderer_3d_draw(renderer_3d_h);
+        tg_graphics_renderer_3d_present(renderer_3d_h);
 
         u32 mouse_x;
         u32 mouse_y;
@@ -229,7 +227,6 @@ void tg_application_start()
             tg_graphics_camera_set_projection(camera_info.fov_y_in_radians, camera_info.near, camera_info.far, camera_info.camera_h);
         }
     }
-    tg_graphics_camera_destroy(camera_info.camera_h);
     tg_timer_destroy(timer_h);
 
     tg_graphics_model_destroy(ground_model_h);
@@ -246,7 +243,8 @@ void tg_application_start()
     tg_graphics_vertex_shader_destroy(vertex_shader_h);
     tg_graphics_mesh_destroy(mesh_h);
 
-    tg_graphics_renderer_3d_shutdown();
+    tg_graphics_camera_destroy(camera_info.camera_h);
+    tg_graphics_renderer_3d_shutdown(renderer_3d_h);
     tg_graphics_shutdown();
 }
 

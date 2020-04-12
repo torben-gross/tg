@@ -6,6 +6,8 @@
 #ifdef TG_VULKAN
 
 #include <vulkan/vulkan.h>
+#undef near
+#undef far
 
 
 
@@ -47,21 +49,34 @@
 
 
 
-typedef struct tg_material
+typedef struct tg_camera
 {
+
+    tg_renderer_3d_h    renderer_3d_h;
+
     struct
     {
-        VkBuffer             buffer;
-        VkDeviceMemory       device_memory;
-    } ubo;
+        f32             fov_y;
+        f32             near;
+        f32             far;
+        m4              projection;
+    } projection;
 
+    struct
+    {
+        v3              position;
+        f32             pitch;
+        f32             yaw;
+        f32             roll;
+        m4              view;
+    } view;
+
+} tg_camera;
+
+typedef struct tg_material
+{
     tg_vertex_shader_h       vertex_shader;
     tg_fragment_shader_h     fragment_shader;
-    VkDescriptorPool         descriptor_pool;
-    VkDescriptorSetLayout    descriptor_set_layout;
-    VkDescriptorSet          descriptor_set;
-    VkPipelineLayout         pipeline_layout;
-    VkPipeline               pipeline;
 } tg_material;
 
 typedef struct tg_mesh
@@ -83,10 +98,18 @@ typedef struct tg_mesh
 
 typedef struct tg_model
 {
-    tg_mesh_h          mesh;
-    tg_material_h      material;
-    VkCommandPool      command_pool;
-    VkCommandBuffer    command_buffer;
+    tg_mesh_h          mesh_h;
+    tg_material_h      material_h;
+
+    struct
+    {
+        VkDescriptorPool         descriptor_pool;
+        VkDescriptorSetLayout    descriptor_set_layout;
+        VkDescriptorSet          descriptor_set;
+        VkPipelineLayout         pipeline_layout;
+        VkPipeline               pipeline;
+    } render_data;
+
 } tg_model;
 
 
@@ -198,8 +221,17 @@ void                     tg_graphics_vulkan_shader_module_destroy(VkShaderModule
 | Renderer 3D                                                 |
 +------------------------------------------------------------*/
 
-void                     tg_graphics_vulkan_renderer_3d_get_geometry_framebuffer(VkFramebuffer* p_framebuffer);
-void                     tg_graphics_vulkan_renderer_3d_get_geometry_render_pass(VkRenderPass* p_render_pass);
+void                     tg_graphics_vulkan_renderer_3d_get_geometry_framebuffer(tg_renderer_3d_h renderer_3d_h, VkFramebuffer* p_framebuffer);
+void                     tg_graphics_vulkan_renderer_3d_get_geometry_render_pass(tg_renderer_3d_h renderer_3d_h, VkRenderPass* p_render_pass);
+
+
+
+
+
+
+VkShaderModule tg_graphics_vulkan_fragment_shader_get_shader_module(tg_fragment_shader_h fragment_shader_h);
+VkShaderModule tg_graphics_vulkan_vertex_shader_get_shader_module(tg_vertex_shader_h vertex_shader_h);
+
 
 
 

@@ -117,7 +117,7 @@
     </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\graphics\tg_graphics_camera.c" />
+    <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan_camera.c" />
     <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan_material.c" />
     <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan_model.c" />
     <ClCompile Include="src\tg_entity.c" />

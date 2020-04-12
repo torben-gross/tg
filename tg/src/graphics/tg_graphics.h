@@ -13,6 +13,7 @@ TG_DECLARE_HANDLE(tg_material);
 TG_DECLARE_HANDLE(tg_mesh);
 TG_DECLARE_HANDLE(tg_model);
 TG_DECLARE_HANDLE(tg_index_buffer);
+TG_DECLARE_HANDLE(tg_renderer_3d);
 TG_DECLARE_HANDLE(tg_vertex_buffer);
 TG_DECLARE_HANDLE(tg_vertex_shader);
 
@@ -96,7 +97,6 @@ typedef struct tg_vertex
 
 typedef struct tg_uniform_buffer_object
 {
-	m4    model;
 	m4    view;
 	m4    projection;
 } tg_uniform_buffer_object;
@@ -140,11 +140,11 @@ void                    tg_graphics_vertex_shader_destroy(tg_vertex_shader_h p_v
 | 3D Renderer                                                 |
 +------------------------------------------------------------*/
 
-void                    tg_graphics_renderer_3d_init(const tg_camera_h camera_h);
-void                    tg_graphics_renderer_3d_register(tg_model_h model_h);
-void                    tg_graphics_renderer_3d_draw();
-void                    tg_graphics_renderer_3d_present();
-void                    tg_graphics_renderer_3d_shutdown();
-void                    tg_graphics_renderer_3d_on_window_resize(u32 w, u32 h);
+tg_renderer_3d_h        tg_graphics_renderer_3d_create(const tg_camera_h camera_h);
+void                    tg_graphics_renderer_3d_register(tg_renderer_3d_h renderer_3d_h, tg_model_h model_h);
+void                    tg_graphics_renderer_3d_draw(tg_renderer_3d_h renderer_3d_h);
+void                    tg_graphics_renderer_3d_present(tg_renderer_3d_h renderer_3d_h);
+void                    tg_graphics_renderer_3d_shutdown(tg_renderer_3d_h renderer_3d_h);
+void                    tg_graphics_renderer_3d_on_window_resize(tg_renderer_3d_h renderer_3d_h, u32 w, u32 h);
 
 #endif
