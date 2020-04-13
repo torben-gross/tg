@@ -472,27 +472,39 @@ i32 tgm_i32_min(i32 v0, i32 v1)
 	return result;
 }
 
-u32 tgm_ui32_clamp(u32 v, u32 low, u32 high)
+u32 tgm_u32_clamp(u32 v, u32 low, u32 high)
 {
-	const u32 result = tgm_ui32_max(low, tgm_ui32_min(high, v));
+	const u32 result = tgm_u32_max(low, tgm_u32_min(high, v));
 	return result;
 }
 
-u32 tgm_ui32_digits(u32 v)
+u32 tgm_u32_digits(u32 v)
 {
 	const u32 result = v == 0 ? 1 : (u32)tgm_f32_floor(tgm_ui32_log10(v)) + 1;
 	return result;
 }
 
-u32 tgm_ui32_max(u32 v0, u32 v1)
+u32 tgm_u32_max(u32 v0, u32 v1)
 {
 	const u32 result = v0 > v1 ? v0 : v1;
 	return result;
 }
 
-u32 tgm_ui32_min(u32 v0, u32 v1)
+u32 tgm_u32_min(u32 v0, u32 v1)
 {
 	const u32 result = v0 < v1 ? v0 : v1;
+	return result;
+}
+
+u64 tgm_u64_max(u64 v0, u64 v1)
+{
+	const u64 result = v0 > v1 ? v0 : v1;
+	return result;
+}
+
+u64 tgm_u64_min(u64 v0, u64 v1)
+{
+	const u64 result = v0 < v1 ? v0 : v1;
 	return result;
 }
 

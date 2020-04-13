@@ -1,32 +1,26 @@
-#include "tg_entity.h"
+#include "tg_entity_internal.h"
 
-#include "graphics/tg_graphics.h"
 #include "memory/tg_memory_allocator.h"
-#include "tg_scene.h"
 
 
 
-typedef struct tg_entity
+u32 entity_next_id = 0;
+
+
+
+tg_entity_h tg_entity_create(tg_renderer_3d_h renderer_3d_h, tg_model_h model_h) // TODO: allocate model internally before and set after creation
 {
-	u32           id;
-	tg_scene_h    scene_h;
-	tg_model_h    model_h;
-} tg_entity;
+	TG_ASSERT(renderer_3d_h && model_h);
 
+	tg_entity_h entity_h = TG_MEMORY_ALLOCATOR_ALLOCATE(sizeof(*entity_h));
 
+	entity_h->id = entity_next_id++;
+	entity_h->renderer_3d_h = renderer_3d_h;
+	entity_h->model_h = model_h; // TODO: this call wil probably go
 
-u32 entity_next_id = 1;
+	tg_graphics_renderer_3d_register(renderer_3d_h, entity_h);
 
-
-
-void tg_entity_create(tg_entity_h* p_entity_h)
-{
-	TG_ASSERT(p_entity_h);
-
-	*p_entity_h = TG_MEMORY_ALLOCATOR_ALLOCATE(sizeof(**p_entity_h));
-	(**p_entity_h).id = entity_next_id++;
-	(**p_entity_h).scene_h = TG_NULL;
-	(**p_entity_h).model_h = TG_NULL;
+	return entity_h;
 }
 
 void tg_entity_destroy(tg_entity_h entity_h)
@@ -34,13 +28,4 @@ void tg_entity_destroy(tg_entity_h entity_h)
 	TG_ASSERT(entity_h);
 
 	TG_MEMORY_ALLOCATOR_FREE(entity_h);
-}
-
-
-
-void tg_entity_set_model(tg_entity_h entity_h, tg_model_h model_h)
-{
-	TG_ASSERT(entity_h && model_h);
-
-	entity_h->model_h = model_h;
 }

@@ -565,6 +565,14 @@ VkSampleCountFlagBits    tg_graphics_vulkan_physical_device_find_max_sample_coun
         return VK_SAMPLE_COUNT_1_BIT;
     }
 }
+VkDeviceSize             tg_graphics_vulkan_physical_device_find_min_uniform_buffer_offset_alignment(VkPhysicalDevice physical_device)
+{
+    VkPhysicalDeviceProperties physical_device_properties;
+    vkGetPhysicalDeviceProperties(physical_device, &physical_device_properties);
+
+    const VkDeviceSize result = physical_device_properties.limits.minUniformBufferOffsetAlignment;
+    return result;
+}
 b32                      tg_graphics_vulkan_physical_device_is_suitable(VkPhysicalDevice physical_device)
 {
     VkPhysicalDeviceProperties physical_device_properties;
@@ -969,10 +977,10 @@ void                     tg_graphics_vulkan_swapchain_create()
     }
 
     tg_platform_get_window_size(&swapchain_extent.width, &swapchain_extent.height);
-    swapchain_extent.width = tgm_ui32_clamp(swapchain_extent.width, surface_capabilities.minImageExtent.width, surface_capabilities.maxImageExtent.width);
-    swapchain_extent.height = tgm_ui32_clamp(swapchain_extent.height, surface_capabilities.minImageExtent.height, surface_capabilities.maxImageExtent.height);
+    swapchain_extent.width = tgm_u32_clamp(swapchain_extent.width, surface_capabilities.minImageExtent.width, surface_capabilities.maxImageExtent.width);
+    swapchain_extent.height = tgm_u32_clamp(swapchain_extent.height, surface_capabilities.minImageExtent.height, surface_capabilities.maxImageExtent.height);
 
-    TG_ASSERT(tgm_ui32_clamp(SURFACE_IMAGE_COUNT, surface_capabilities.minImageCount, surface_capabilities.maxImageCount) == SURFACE_IMAGE_COUNT);
+    TG_ASSERT(tgm_u32_clamp(SURFACE_IMAGE_COUNT, surface_capabilities.minImageCount, surface_capabilities.maxImageCount) == SURFACE_IMAGE_COUNT);
 
     VkSwapchainCreateInfoKHR swapchain_create_info = { 0 };
     swapchain_create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;

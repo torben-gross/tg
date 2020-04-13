@@ -7,6 +7,7 @@
 
 
 TG_DECLARE_HANDLE(tg_camera);
+TG_DECLARE_HANDLE(tg_entity);
 TG_DECLARE_HANDLE(tg_fragment_shader);
 TG_DECLARE_HANDLE(tg_image);
 TG_DECLARE_HANDLE(tg_material);
@@ -95,12 +96,6 @@ typedef struct tg_vertex
 	v3    bitangent;
 } tg_vertex;
 
-typedef struct tg_uniform_buffer_object
-{
-	m4    view;
-	m4    projection;
-} tg_uniform_buffer_object;
-
 
 
 void                    tg_graphics_init();
@@ -141,7 +136,7 @@ void                    tg_graphics_vertex_shader_destroy(tg_vertex_shader_h p_v
 +------------------------------------------------------------*/
 
 tg_renderer_3d_h        tg_graphics_renderer_3d_create(const tg_camera_h camera_h);
-void                    tg_graphics_renderer_3d_register(tg_renderer_3d_h renderer_3d_h, tg_model_h model_h);
+void                    tg_graphics_renderer_3d_register(tg_renderer_3d_h renderer_3d_h, tg_entity_h entity_h);
 void                    tg_graphics_renderer_3d_draw(tg_renderer_3d_h renderer_3d_h);
 void                    tg_graphics_renderer_3d_present(tg_renderer_3d_h renderer_3d_h);
 void                    tg_graphics_renderer_3d_shutdown(tg_renderer_3d_h renderer_3d_h);

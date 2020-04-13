@@ -201,6 +201,7 @@ u32                      tg_graphics_vulkan_memory_type_find(u32 memory_type_bit
 b32                      tg_graphics_vulkan_physical_device_check_extension_support(VkPhysicalDevice physical_device);
 b32                      tg_graphics_vulkan_physical_device_find_queue_families(VkPhysicalDevice physical_device, tg_queue* p_graphics_queue, tg_queue* p_present_queue);
 VkSampleCountFlagBits    tg_graphics_vulkan_physical_device_find_max_sample_count(VkPhysicalDevice physical_device);
+VkDeviceSize             tg_graphics_vulkan_physical_device_find_min_uniform_buffer_offset_alignment(VkPhysicalDevice physical_device);
 b32                      tg_graphics_vulkan_physical_device_is_suitable(VkPhysicalDevice physical_device);
 void                     tg_graphics_vulkan_pipeline_create(VkPipelineCache pipeline_cache, const VkGraphicsPipelineCreateInfo* p_graphics_pipeline_create_info, VkPipeline* p_pipeline);
 void                     tg_graphics_vulkan_pipeline_destroy(VkPipeline pipeline);
@@ -217,21 +218,8 @@ void                     tg_graphics_vulkan_shader_module_destroy(VkShaderModule
 
 
 
-/*------------------------------------------------------------+
-| Renderer 3D                                                 |
-+------------------------------------------------------------*/
-
-void                     tg_graphics_vulkan_renderer_3d_get_geometry_framebuffer(tg_renderer_3d_h renderer_3d_h, VkFramebuffer* p_framebuffer);
-void                     tg_graphics_vulkan_renderer_3d_get_geometry_render_pass(tg_renderer_3d_h renderer_3d_h, VkRenderPass* p_render_pass);
-
-
-
-
-
-
 VkShaderModule tg_graphics_vulkan_fragment_shader_get_shader_module(tg_fragment_shader_h fragment_shader_h);
 VkShaderModule tg_graphics_vulkan_vertex_shader_get_shader_module(tg_vertex_shader_h vertex_shader_h);
-
 
 
 

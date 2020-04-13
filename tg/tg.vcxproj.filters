@@ -19,7 +19,6 @@
     <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan_renderer_3d.c" />
     <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan_shader.c" />
     <ClCompile Include="src\graphics\tg_graphics_image_loader.c" />
-    <ClCompile Include="src\tg_scene.c" />
     <ClCompile Include="src\tg_entity.c" />
     <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan_camera.c" />
   </ItemGroup>
@@ -41,7 +40,7 @@
     <ClInclude Include="src\assets\tg_assets.h" />
     <ClInclude Include="src\graphics\tg_graphics_image_loader.h" />
     <ClInclude Include="src\graphics\vulkan\tg_graphics_vulkan_shader.h" />
-    <ClInclude Include="src\tg_scene.h" />
+    <ClInclude Include="src\tg_entity_internal.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="tg.ruleset" />

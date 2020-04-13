@@ -90,7 +90,7 @@ void tg_string_format(u32 size, char* p_buffer, const char* p_format, ...)
 			{
 				u32 integer = va_arg(list, u32);
 
-				const u32 digit_count = tgm_ui32_digits(integer);
+				const u32 digit_count = tgm_u32_digits(integer);
 				u32 pow = tgm_ui32_pow(10, digit_count - 1);
 				for (u32 i = 0; i < digit_count; i++)
 				{

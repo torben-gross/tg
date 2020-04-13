@@ -6,6 +6,8 @@
 
 #include "graphics/tg_graphics.h"
 #include "platform/tg_platform.h"
+#include "tg_entity.h"
+#include "tg_entity_internal.h"
 #include "tg_input.h"
 #include "util/tg_string.h"
 #include "util/tg_timer.h"
@@ -86,8 +88,8 @@ void tg_application_start()
     tg_model_h model_h = tg_graphics_model_create(mesh_h, material_h);
 
     const v3 positions2[3] = {
-        { -2.0f, -3.0f, 0.0f },
         { -5.0f, -3.0f, 0.0f },
+        { -2.0f, -3.0f, 0.0f },
         { -3.5f,  2.0f, 0.0f }
     };
     const v2 uvs2[3] = {
@@ -111,9 +113,8 @@ void tg_application_start()
     tg_material_h ground_material_h = tg_graphics_material_create(vertex_shader_h, fragment_shader_h);
     tg_model_h ground_model_h = tg_graphics_model_create(ground_mesh_h, ground_material_h);
 
-    tg_graphics_renderer_3d_register(renderer_3d_h, model_h);
-    tg_graphics_renderer_3d_register(renderer_3d_h, model2_h);
-    tg_graphics_renderer_3d_register(renderer_3d_h, ground_model_h);
+    tg_entity_h ground_entity_h = tg_entity_create(renderer_3d_h, ground_model_h);
+    tg_entity_h quad_entity_h = tg_entity_create(renderer_3d_h, model_h);
 
 #ifdef TG_DEBUG
     tg_debug_info debug_info = { 0 };
@@ -121,6 +122,14 @@ void tg_application_start()
 
     tg_timer_h timer_h = tg_timer_create();
     tg_timer_start(timer_h);
+
+
+
+    /*--------------------------------------------------------+
+    | Start main loop                                         |
+    +--------------------------------------------------------*/
+
+    f32 quad_offset = -9.0f; // TODO: temporary testing variable
     while (running)
     {
         tg_timer_stop(timer_h);
@@ -151,8 +160,17 @@ void tg_application_start()
 
         tg_input_clear();
         tg_platform_handle_events();
-        tg_graphics_renderer_3d_draw(renderer_3d_h);
-        tg_graphics_renderer_3d_present(renderer_3d_h);
+
+        if (tg_input_is_key_down(TG_KEY_K))
+        {
+            quad_offset += 0.01f * delta_ms;
+        }
+        if (tg_input_is_key_down(TG_KEY_L))
+        {
+            quad_offset -= 0.01f * delta_ms;
+        }
+        v3 quad_offset_translation_z = { 0.0f, 0.0f, quad_offset };
+        *quad_entity_h->p_model_matrix = tgm_m4_translate(&quad_offset_translation_z);
 
         u32 mouse_x;
         u32 mouse_y;
@@ -162,15 +180,11 @@ void tg_application_start()
             camera_info.yaw += 0.064f * (f32)((i32)camera_info.last_mouse_x - (i32)mouse_x);
             camera_info.pitch += 0.064f * (f32)((i32)camera_info.last_mouse_y - (i32)mouse_y);
         }
-        const m4 camera_rotation = tgm_m4_euler(TGM_TO_RADIANS(camera_info.pitch), TGM_TO_RADIANS(camera_info.yaw), TGM_TO_RADIANS(camera_info.roll)); // TODO: why is this wrong
-
-        v4 right = (v4){ 1.0f, 0.0f, 0.0f, 0.0f };
-        right = tgm_m4_multiply_v4(&camera_rotation, &right);
-
+        const m4 camera_rotation = tgm_m4_euler(TGM_TO_RADIANS(camera_info.pitch), TGM_TO_RADIANS(camera_info.yaw), TGM_TO_RADIANS(camera_info.roll));
+        
+        const v4 right = { camera_rotation.m00, camera_rotation.m10, camera_rotation.m20, camera_rotation.m30 };
         const v4 up = { 0.0f, 1.0f, 0.0f, 0.0f };
-
-        v4 forward = (v4){ 0.0f, 0.0f, -1.0f, 0.0f };
-        forward = tgm_m4_multiply_v4(&camera_rotation, &forward);
+        const v4 forward = { -camera_rotation.m02, -camera_rotation.m12, -camera_rotation.m22, -camera_rotation.m32 };
 
         v3 temp;
         v3 velocity = { 0 };
@@ -226,8 +240,21 @@ void tg_application_start()
             camera_info.fov_y_in_radians -= 0.1f * tg_input_get_mouse_wheel_detents(TG_TRUE);
             tg_graphics_camera_set_projection(camera_info.fov_y_in_radians, camera_info.near, camera_info.far, camera_info.camera_h);
         }
+
+        tg_graphics_renderer_3d_draw(renderer_3d_h);
+        tg_graphics_renderer_3d_present(renderer_3d_h);
     }
+
+    /*--------------------------------------------------------+
+    | End main loop                                           |
+    +--------------------------------------------------------*/
+
+
+
     tg_timer_destroy(timer_h);
+
+    tg_entity_destroy(quad_entity_h);
+    tg_entity_destroy(ground_entity_h);
 
     tg_graphics_model_destroy(ground_model_h);
     tg_graphics_material_destroy(ground_material_h);
