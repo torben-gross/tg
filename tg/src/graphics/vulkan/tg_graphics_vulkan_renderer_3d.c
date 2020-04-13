@@ -1460,7 +1460,7 @@ void tg_graphics_renderer_3d_register(tg_renderer_3d_h renderer_3d_h, tg_entity_
 
     const VkDeviceSize vertex_buffer_offset = 0;
     vkCmdBindVertexBuffers(entity_h->model_h->render_data.command_buffer, 0, 1, &entity_h->model_h->mesh_h->vbo.buffer, &vertex_buffer_offset);
-    if (entity_h->model_h->mesh_h->ibo.index_count != 0) // TODO: do we accept no indices atm? check below aswell
+    if (entity_h->model_h->mesh_h->ibo.index_count != 0)
     {
         vkCmdBindIndexBuffer(entity_h->model_h->render_data.command_buffer, entity_h->model_h->mesh_h->ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
     }
@@ -1496,13 +1496,6 @@ void tg_graphics_renderer_3d_draw(tg_renderer_3d_h renderer_3d_h)
     VK_CALL(vkResetFences(device, 1, &renderer_3d_h->shading_pass.geometry_pass_attachments_cleared_fence));
     VK_CALL(vkBeginCommandBuffer(renderer_3d_h->geometry_pass.main_command_buffer, &command_buffer_begin_info));
 
-    VkClearValue clear_values[2] = { 0 };
-    {
-        clear_values[0].color = (VkClearColorValue){ 0.0f, 0.0f, 0.0f, 1.0f };
-        clear_values[0].depthStencil = (VkClearDepthStencilValue){ 0.0f, 0 };
-        clear_values[1].color = (VkClearColorValue){ 0.0f, 0.0f, 0.0f, 0.0f };
-        clear_values[1].depthStencil = (VkClearDepthStencilValue){ 1.0f, 0 };
-    }
     VkRenderPassBeginInfo render_pass_begin_info = { 0 };
     {
         render_pass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -1511,8 +1504,8 @@ void tg_graphics_renderer_3d_draw(tg_renderer_3d_h renderer_3d_h)
         render_pass_begin_info.framebuffer = renderer_3d_h->geometry_pass.framebuffer;
         render_pass_begin_info.renderArea.offset = (VkOffset2D){ 0, 0 };
         render_pass_begin_info.renderArea.extent = swapchain_extent;
-        render_pass_begin_info.clearValueCount = sizeof(clear_values) / sizeof(*clear_values);
-        render_pass_begin_info.pClearValues = clear_values; // TODO: TG_NULL?
+        render_pass_begin_info.clearValueCount = 0;
+        render_pass_begin_info.pClearValues = TG_NULL;
     }
     vkCmdBeginRenderPass(renderer_3d_h->geometry_pass.main_command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
     const u32 secondary_command_buffer_count = tg_list_count(renderer_3d_h->geometry_pass.secondary_command_buffers);
@@ -1533,40 +1526,6 @@ void tg_graphics_renderer_3d_draw(tg_renderer_3d_h renderer_3d_h)
         submit_info.pSignalSemaphores = TG_NULL;
     }
     VK_CALL(vkQueueSubmit(graphics_queue.queue, 1, &submit_info, renderer_3d_h->shading_pass.geometry_pass_attachments_cleared_fence));
-
-
-
-
-
-#if 0
-    const u32 model_count = tg_list_count(renderer_3d_h->models);
-    for (u32 i = 0; i < model_count; i++)
-    {
-        tg_model_h model_h = *(tg_model_h*)tg_list_pointer_to(renderer_3d_h->models, i);
-        tg_uniform_buffer_object* p_uniform_buffer_object = TG_NULL;
-        VK_CALL(vkMapMemory(device, model_h->material->ubo.device_memory, 0, sizeof(*p_uniform_buffer_object), 0, &p_uniform_buffer_object));
-        {
-            p_uniform_buffer_object->view = tg_graphics_camera_get_view(renderer_3d_h->main_camera_h);
-            p_uniform_buffer_object->projection = tg_graphics_camera_get_projection(renderer_3d_h->main_camera_h);
-        }
-        vkUnmapMemory(device, model_h->material->ubo.device_memory);
-
-        VkSubmitInfo submit_info = { 0 };
-        {
-            submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-            submit_info.pNext = TG_NULL;
-            submit_info.waitSemaphoreCount = 0;
-            submit_info.pWaitSemaphores = TG_NULL;
-            submit_info.pWaitDstStageMask = TG_NULL;
-            submit_info.commandBufferCount = 1;
-            submit_info.pCommandBuffers = &model_h->command_buffer;
-            submit_info.signalSemaphoreCount = 0;
-            submit_info.pSignalSemaphores = TG_NULL;
-        }
-        VK_CALL(vkWaitForFences(device, 1, &renderer_3d_h->shading_pass.geometry_pass_attachments_cleared_fence, VK_TRUE, UINT64_MAX));
-        VK_CALL(vkQueueSubmit(graphics_queue.queue, 1, &submit_info, VK_NULL_HANDLE));
-    }
-#endif
 }
 void tg_graphics_renderer_3d_present(tg_renderer_3d_h renderer_3d_h)
 {

@@ -65,56 +65,39 @@ void tg_application_start()
 
     tg_renderer_3d_h renderer_3d_h = tg_graphics_renderer_3d_create(camera_info.camera_h);
 
-    const v3 positions[4] = {
+    const v3 p_quad_positions[4] = {
         { -1.5f, -1.5f, 0.0f },
         {  1.5f, -1.5f, 0.0f },
         {  1.5f,  1.5f, 0.0f },
         { -1.5f,  1.5f, 0.0f }
     };
-    const v2 uvs[4] = {
+    const v3 p_ground_positions[4] = {
+        { -1000.0f, -2.0f,  1000.0f },
+        {  1000.0f, -2.0f,  1000.0f },
+        {  1000.0f, -2.0f, -1000.0f },
+        { -1000.0f, -2.0f, -1000.0f }
+    };
+    const v2 p_uvs[4] = {
         { 0.0f, 0.0f },
         { 1.0f, 0.0f },
         { 1.0f, 1.0f },
         { 0.0f, 1.0f }
     };
-    const u16 indices[6] = {
+    const u16 p_indices[6] = {
         0, 1, 2, 2, 3, 0
     };
 
-    tg_mesh_h mesh_h = tg_graphics_mesh_create(4, positions, TG_NULL, uvs, TG_NULL, 6, indices);
+    tg_mesh_h mesh_h = tg_graphics_mesh_create(4, p_quad_positions, TG_NULL, p_uvs, TG_NULL, 6, p_indices);
     tg_vertex_shader_h vertex_shader_h = tg_graphics_vertex_shader_create("shaders/geometry.vert.spv");
     tg_fragment_shader_h fragment_shader_h = tg_graphics_fragment_shader_create("shaders/geometry.frag.spv");
     tg_material_h material_h = tg_graphics_material_create(vertex_shader_h, fragment_shader_h);
     tg_model_h model_h = tg_graphics_model_create(mesh_h, material_h);
+    tg_entity_h quad_entity_h = tg_entity_create(renderer_3d_h, model_h);
 
-    const v3 positions2[3] = {
-        { -5.0f, -3.0f, 0.0f },
-        { -2.0f, -3.0f, 0.0f },
-        { -3.5f,  2.0f, 0.0f }
-    };
-    const v2 uvs2[3] = {
-        { 0.0f, 0.0f },
-        { 1.0f, 0.0f },
-        { 0.5f, 1.0f }
-    };
-
-    tg_mesh_h mesh2_h = tg_graphics_mesh_create(3, positions2, TG_NULL, uvs2, TG_NULL, 0, TG_NULL);
-    tg_material_h material2_h = tg_graphics_material_create(vertex_shader_h, fragment_shader_h);
-    tg_model_h model2_h = tg_graphics_model_create(mesh2_h, material2_h);
-
-    const v3 ground_positions[4] = {
-        { -100.0f, -2.0f,  100.0f },
-        {  100.0f, -2.0f,  100.0f },
-        {  100.0f, -2.0f, -100.0f },
-        { -100.0f, -2.0f, -100.0f }
-    };
-
-    tg_mesh_h ground_mesh_h = tg_graphics_mesh_create(4, ground_positions, TG_NULL, uvs, TG_NULL, 6, indices);
+    tg_mesh_h ground_mesh_h = tg_graphics_mesh_create(4, p_ground_positions, TG_NULL, p_uvs, TG_NULL, 6, p_indices);
     tg_material_h ground_material_h = tg_graphics_material_create(vertex_shader_h, fragment_shader_h);
     tg_model_h ground_model_h = tg_graphics_model_create(ground_mesh_h, ground_material_h);
-
     tg_entity_h ground_entity_h = tg_entity_create(renderer_3d_h, ground_model_h);
-    tg_entity_h quad_entity_h = tg_entity_create(renderer_3d_h, model_h);
 
 #ifdef TG_DEBUG
     tg_debug_info debug_info = { 0 };
@@ -259,10 +242,6 @@ void tg_application_start()
     tg_graphics_model_destroy(ground_model_h);
     tg_graphics_material_destroy(ground_material_h);
     tg_graphics_mesh_destroy(ground_mesh_h);
-
-    tg_graphics_model_destroy(model2_h);
-    tg_graphics_material_destroy(material2_h);
-    tg_graphics_mesh_destroy(mesh2_h);
 
     tg_graphics_model_destroy(model_h);
     tg_graphics_material_destroy(material_h);

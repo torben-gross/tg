@@ -14,5 +14,5 @@ void main()
 {
     out_position    = v_position;
     out_normal      = vec4(normalize(v_normal), 1.0);
-    out_albedo      = vec4(1.0, 0.8, 0.5, 1.0);
+    out_albedo      = vec4(1.0, 1.0, 1.0, 1.0);
 }
