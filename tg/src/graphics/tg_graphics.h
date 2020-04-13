@@ -87,14 +87,14 @@ typedef enum tg_sampler_mipmap_mode {
 	TG_SAMPLER_MIPMAP_MODE_LINEAR     = 1
 } tg_sampler_mipmap_mode;
 
-typedef struct tg_vertex
+typedef struct tg_vertex_3d
 {
 	v3    position;
 	v3    normal;
 	v2    uv;
 	v3    tangent;
 	v3    bitangent;
-} tg_vertex;
+} tg_vertex_3d;
 
 
 

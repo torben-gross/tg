@@ -4,7 +4,7 @@
 
 #include "memory/tg_memory_allocator.h"
 
-void tg_graphics_mesh_recalculate_normal(tg_vertex* p_v0, tg_vertex* p_v1, tg_vertex* p_v2)
+void tg_graphics_mesh_recalculate_normal(tg_vertex_3d* p_v0, tg_vertex_3d* p_v1, tg_vertex_3d* p_v2)
 {
     const v3 v01 = tgm_v3_subtract_v3(&p_v1->position, &p_v0->position);
     const v3 v02 = tgm_v3_subtract_v3(&p_v2->position, &p_v0->position);
@@ -15,7 +15,7 @@ void tg_graphics_mesh_recalculate_normal(tg_vertex* p_v0, tg_vertex* p_v1, tg_ve
     p_v1->normal = normal;
     p_v2->normal = normal;
 }
-void tg_graphics_mesh_recalculate_normals(u32 vertex_count, u32 index_count, const u16* p_indices, tg_vertex* p_vertices)
+void tg_graphics_mesh_recalculate_normals(u32 vertex_count, u32 index_count, const u16* p_indices, tg_vertex_3d* p_vertices)
 {
     if (index_count != 0)
     {
@@ -33,7 +33,7 @@ void tg_graphics_mesh_recalculate_normals(u32 vertex_count, u32 index_count, con
         }
     }
 }
-void tg_graphics_mesh_recalculate_tangent_bitangent(tg_vertex* p_v0, tg_vertex* p_v1, tg_vertex* p_v2)
+void tg_graphics_mesh_recalculate_tangent_bitangent(tg_vertex_3d* p_v0, tg_vertex_3d* p_v1, tg_vertex_3d* p_v2)
 {
     const v3 delta_p_01 = tgm_v3_subtract_v3(&p_v1->position, &p_v0->position);
     const v3 delta_p_02 = tgm_v3_subtract_v3(&p_v2->position, &p_v0->position);
@@ -63,7 +63,7 @@ void tg_graphics_mesh_recalculate_tangent_bitangent(tg_vertex* p_v0, tg_vertex* 
     p_v1->bitangent = normalized_bitangent;
     p_v2->bitangent = normalized_bitangent;
 }
-void tg_graphics_mesh_recalculate_tangents_bitangents(u32 vertex_count, u32 index_count, const u16* p_indices, tg_vertex* p_vertices)
+void tg_graphics_mesh_recalculate_tangents_bitangents(u32 vertex_count, u32 index_count, const u16* p_indices, tg_vertex_3d* p_vertices)
 {
     if (index_count != 0)
     {
@@ -80,7 +80,7 @@ void tg_graphics_mesh_recalculate_tangents_bitangents(u32 vertex_count, u32 inde
         }
     }
 }
-void tg_graphics_mesh_recalculate_bitangents(u32 vertex_count, tg_vertex* p_vertices)
+void tg_graphics_mesh_recalculate_bitangents(u32 vertex_count, tg_vertex_3d* p_vertices)
 {
     for (u32 i = 0; i < vertex_count; i++)
     {
@@ -102,7 +102,7 @@ tg_mesh_h tg_graphics_mesh_create(u32 vertex_count, const v3* p_positions, const
     VkBuffer staging_buffer = VK_NULL_HANDLE;
     VkDeviceMemory staging_buffer_memory = VK_NULL_HANDLE;
 
-    tg_vertex* vbo_data;
+    tg_vertex_3d* vbo_data;
     const u32 vbo_size = vertex_count * sizeof(*vbo_data);
     u16* ibo_data;
     const u32 ibo_size = index_count * sizeof(*ibo_data);

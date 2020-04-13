@@ -8,30 +8,6 @@
 
 
 
-typedef struct tg_fragment_shader
-{
-    VkShaderModule    shader_module;
-} tg_fragment_shader;
-
-typedef struct tg_vertex_shader
-{
-    VkShaderModule    shader_module;
-} tg_vertex_shader;
-
-
-
-VkShaderModule tg_graphics_vulkan_fragment_shader_get_shader_module(tg_fragment_shader_h fragment_shader_h)
-{
-    return fragment_shader_h->shader_module;
-}
-
-VkShaderModule tg_graphics_vulkan_vertex_shader_get_shader_module(tg_vertex_shader_h vertex_shader_h)
-{
-    return vertex_shader_h->shader_module;
-}
-
-
-
 tg_vertex_shader_h tg_graphics_vertex_shader_create(const char* p_filename)
 {
     TG_ASSERT(p_filename);

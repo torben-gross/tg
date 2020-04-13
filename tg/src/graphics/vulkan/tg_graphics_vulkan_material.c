@@ -11,8 +11,8 @@ tg_material_h tg_graphics_material_create(tg_vertex_shader_h vertex_shader_h, tg
 
 	tg_material_h material_h = TG_MEMORY_ALLOCATOR_ALLOCATE(sizeof(*material_h));
 
-    material_h->vertex_shader = vertex_shader_h;
-    material_h->fragment_shader = fragment_shader_h;
+    material_h->vertex_shader_h = vertex_shader_h;
+    material_h->fragment_shader_h = fragment_shader_h;
 
     return material_h;
 }

@@ -73,10 +73,15 @@ typedef struct tg_camera
 
 } tg_camera;
 
+typedef struct tg_fragment_shader
+{
+    VkShaderModule    shader_module;
+} tg_fragment_shader;
+
 typedef struct tg_material
 {
-    tg_vertex_shader_h       vertex_shader;
-    tg_fragment_shader_h     fragment_shader;
+    tg_vertex_shader_h       vertex_shader_h;
+    tg_fragment_shader_h     fragment_shader_h;
 } tg_material;
 
 typedef struct tg_mesh
@@ -108,9 +113,15 @@ typedef struct tg_model
         VkDescriptorSet          descriptor_set;
         VkPipelineLayout         pipeline_layout;
         VkPipeline               pipeline;
+        VkCommandBuffer          command_buffer;
     } render_data;
 
 } tg_model;
+
+typedef struct tg_vertex_shader
+{
+    VkShaderModule    shader_module;
+} tg_vertex_shader;
 
 
 
@@ -215,13 +226,6 @@ void                     tg_graphics_vulkan_semaphore_create(VkSemaphore* p_sema
 void                     tg_graphics_vulkan_semaphore_destroy(VkSemaphore semaphore);
 void                     tg_graphics_vulkan_shader_module_create(const char* p_filename, VkShaderModule* p_shader_module);
 void                     tg_graphics_vulkan_shader_module_destroy(VkShaderModule shader_module);
-
-
-
-VkShaderModule tg_graphics_vulkan_fragment_shader_get_shader_module(tg_fragment_shader_h fragment_shader_h);
-VkShaderModule tg_graphics_vulkan_vertex_shader_get_shader_module(tg_vertex_shader_h vertex_shader_h);
-
-
 
 #endif
 

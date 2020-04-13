@@ -123,7 +123,6 @@
     <ClCompile Include="src\tg_entity.c" />
     <ClCompile Include="src\tg_input.c" />
     <ClCompile Include="src\tg_application.c" />
-    <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan_renderer_2d.c" />
     <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan_renderer_3d.c" />
     <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan_image.c" />
     <ClCompile Include="src\graphics\tg_graphics_image_loader.c" />
