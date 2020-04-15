@@ -1094,6 +1094,7 @@ void tg_graphics_renderer_3d_internal_init_present_pass(tg_renderer_3d_h rendere
     }
 }
 
+// TODO: move clean into draw+shading+clean
 tg_renderer_3d_h tg_graphics_renderer_3d_create(const tg_camera_h camera_h)
 {
     TG_ASSERT(camera_h);
@@ -1409,7 +1410,7 @@ void tg_graphics_renderer_3d_register(tg_renderer_3d_h renderer_3d_h, tg_entity_
         view_projection_descriptor_buffer_info.offset = 0;
         view_projection_descriptor_buffer_info.range = sizeof(tg_camera_uniform_buffer);
     }
-    VkWriteDescriptorSet p_write_descriptor_sets[2] = { 0 };
+    VkWriteDescriptorSet p_write_descriptor_sets[2] = { 0 }; // TODO: potentially more for specific material
     {
         p_write_descriptor_sets[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         p_write_descriptor_sets[0].pNext = TG_NULL;
