@@ -240,7 +240,6 @@ f32    tgm_f32_tanh(f32 v);
 
 f64    tgm_f64_pow(f64 base, f64 exponent);
 
-i32    tgm_i32_abs(i32 v);
 f32    tgm_i32_log10(i32 v);
 i32    tgm_i32_pow(i32 base, i32 exponent);
 
@@ -254,11 +253,13 @@ u32    tgm_ui32_pow(u32 base, u32 exponent);
 | Functional                                                  |
 +------------------------------------------------------------*/
 
+f32    tgm_f32_abs(f32 v);
 f32    tgm_f32_clamp(f32 v, f32 low, f32 high);
 f32    tgm_f32_lerp(f32 v0, f32 v1, f32 t);
 f32    tgm_f32_max(f32 v0, f32 v1);
 f32    tgm_f32_min(f32 v0, f32 v1);
 
+i32    tgm_i32_abs(i32 v);
 i32    tgm_i32_clamp(i32 v, i32 low, i32 high);
 u32    tgm_i32_digits(i32 v);
 i32    tgm_i32_max(i32 v0, i32 v1);

@@ -20,6 +20,7 @@
     <ClCompile Include="src\graphics\tg_graphics_image_loader.c" />
     <ClCompile Include="src\tg_entity.c" />
     <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan_camera.c" />
+    <ClCompile Include="src\tg_marching_cubes.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\tg_common.h" />
@@ -40,6 +41,7 @@
     <ClInclude Include="src\graphics\tg_graphics_image_loader.h" />
     <ClInclude Include="src\graphics\vulkan\tg_graphics_vulkan_shader.h" />
     <ClInclude Include="src\tg_entity_internal.h" />
+    <ClInclude Include="src\tg_marching_cubes.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="tg.ruleset" />

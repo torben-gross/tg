@@ -84,16 +84,6 @@ void tg_list_insert(tg_list_h list_h, const void* p_value)
 	tg_list_insert_unchecked(list_h, p_value);
 }
 
-void tg_list_insert_list(tg_list_h list0_h, const tg_list_h list1_h)
-{
-	TG_ASSERT(list0_h && list1_h);
-
-	for (u32 i = 0; i < list1_h->count; i++)
-	{
-		tg_list_insert(list0_h, TG_LIST_GET_POINTER_AT(list1_h, i));
-	}
-}
-
 void tg_list_insert_at(tg_list_h list_h, u32 index, const void* p_value)
 {
 	TG_ASSERT(list_h && index <= list_h->count && p_value);
@@ -117,6 +107,16 @@ void tg_list_insert_at_unchecked(tg_list_h list_h, u32 index, const void* p_valu
 	}
 	TG_LIST_SET_AT(list_h, index, p_value);
 	list_h->count++;
+}
+
+void tg_list_insert_list(tg_list_h list0_h, const tg_list_h list1_h)
+{
+	TG_ASSERT(list0_h && list1_h);
+
+	for (u32 i = 0; i < list1_h->count; i++)
+	{
+		tg_list_insert(list0_h, TG_LIST_GET_POINTER_AT(list1_h, i));
+	}
 }
 
 void tg_list_insert_unchecked(tg_list_h list_h, const void* p_value)

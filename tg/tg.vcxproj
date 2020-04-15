@@ -132,6 +132,7 @@
     <ClCompile Include="src\math\tg_math.c" />
     <ClCompile Include="src\memory\tg_memory_allocator.c" />
     <ClCompile Include="src\platform\tg_platform_win32.c" />
+    <ClCompile Include="src\tg_marching_cubes.c" />
     <ClCompile Include="src\util\tg_hashmap.c" />
     <ClCompile Include="src\util\tg_list.c" />
     <ClCompile Include="src\util\tg_string.c" />
@@ -150,6 +151,7 @@
     <ClInclude Include="src\platform\tg_platform.h" />
     <ClInclude Include="src\tg_common.h" />
     <ClInclude Include="src\tg_entity.h" />
+    <ClInclude Include="src\tg_marching_cubes.h" />
     <ClInclude Include="src\util\tg_hashmap.h" />
     <ClInclude Include="src\util\tg_list.h" />
     <ClInclude Include="src\util\tg_string.h" />

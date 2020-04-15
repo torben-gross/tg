@@ -369,16 +369,6 @@ f64 tgm_f64_pow(f64 base, f64 exponent)
 
 
 
-i32 tgm_i32_abs(i32 v)
-{
-	TG_ASSERT(v != TG_I32_MIN);
-
-	const __m128i simd_v = _mm_set1_epi32(v);
-	const __m128i simd_result = _mm_abs_epi32(simd_v);
-	const i32 result = simd_result.m128i_i32[0];
-	return result;
-}
-
 f32 tgm_i32_log10(i32 v)
 {
 	const __m128 simd_v = _mm_set_ss((f32)v);
@@ -525,14 +515,6 @@ f64 tgm_f64_pow(f64 base, f64 exponent)
 
 
 
-i32 tgm_i32_abs(i32 v)
-{
-	TG_ASSERT(v != TG_I32_MIN);
-
-	const i32 result = v >= 0 ? v : -v;
-	return result;
-}
-
 f32 tgm_i32_log10(i32 v)
 {
 	const f32 result = log10f((f32)v);
@@ -573,6 +555,12 @@ u32 tgm_ui32_pow(u32 base, u32 exponent)
 | Functional                                                  |
 +------------------------------------------------------------*/
 
+f32 tgm_f32_abs(f32 v)
+{
+	const f32 result = v < 0 ? -v : v;
+	return result;
+}
+
 f32 tgm_f32_clamp(f32 v, f32 low, f32 high)
 {
 	const f32 result = tgm_f32_max(low, tgm_f32_min(high, v));
@@ -594,6 +582,14 @@ f32 tgm_f32_max(f32 v0, f32 v1)
 f32 tgm_f32_min(f32 v0, f32 v1)
 {
 	const f32 result = v0 < v1 ? v0 : v1;
+	return result;
+}
+
+i32 tgm_i32_abs(i32 v)
+{
+	TG_ASSERT(v != TG_I32_MIN);
+
+	const result = v < 0 ? -v : v;
 	return result;
 }
 
