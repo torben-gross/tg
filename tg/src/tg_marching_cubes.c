@@ -306,7 +306,7 @@ u32 tg_marching_cubes_polygonise(const tg_marching_cubes_grid_cell* p_grid_cell,
 
 	for (u32 i = 0; i < 8; i++)
 	{
-		if (p_grid_cell->values[i] > isolevel)
+		if (p_grid_cell->values[i] < isolevel)
 		{
 			cubeindex |= 1 << i;
 		}

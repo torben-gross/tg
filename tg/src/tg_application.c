@@ -109,67 +109,70 @@ void tg_application_start()
 
     
     
-
-    const u32 size = 128;
-    const f32 s0 = 0.02f;
-    const f32 s1 = 0.3f;
-    f32* chunk = TG_MEMORY_ALLOCATOR_ALLOCATE((u64)size * (u64)size * (u64)size * sizeof(*chunk));
-    for (u32 z = 0; z < size; z++)
+    const u32 chunk_count = 4;
+    for (u32 chunk_x = 0; chunk_x < chunk_count; chunk_x++)
     {
-        for (u32 y = 0; y < size; y++)
+        for (u32 chunk_z = 0; chunk_z < chunk_count; chunk_z++)
         {
-            for (u32 x = 0; x < size; x++)
+            const u32 size = 64;
+            f32* chunk = TG_MEMORY_ALLOCATOR_ALLOCATE((u64)size * (u64)size * (u64)size * sizeof(*chunk));
+            for (u32 z = 0; z < size; z++)
             {
-                const f32 f0 = tgm_simplex_noise((f32)x * s0, (f32)y * s0, (f32)z * s0);
-                const f32 f1 = tgm_simplex_noise((f32)x * s1, (f32)y * s1, (f32)z * s1);
-                const f32 t = 0.1f;
-                const f32 f = tgm_f32_lerp(f0, f1, t);
-
-                chunk[size * size * z + size * y + x] = f;
-            }
-        }
-    }
-
-    tg_marching_cubes_triangle* p_triangles = TG_MEMORY_ALLOCATOR_ALLOCATE((u64)size * (u64)size * (u64)size * 12 * sizeof(*p_triangles));
-    u32 triangle_count = 0;
-    const f32 stride = 3.1f;
-    for (u32 z = 0; z < size - 1; z++)
-    {
-        for (u32 y = 0; y < size - 1; y++)
-        {
-            for (u32 x = 0; x < size - 1; x++)
-            {
-                tg_marching_cubes_grid_cell grid_cell = { 0 };
+                for (u32 y = 0; y < size; y++)
                 {
-                    grid_cell.positions[0] = (v3){ (f32) x      * stride, (f32) y      * stride, (f32)(size - z)     * stride };
-                    grid_cell.positions[1] = (v3){ (f32)(x + 1) * stride, (f32) y      * stride, (f32)(size - z)     * stride };
-                    grid_cell.positions[2] = (v3){ (f32)(x + 1) * stride, (f32) y      * stride, (f32)(size - z + 1) * stride };
-                    grid_cell.positions[3] = (v3){ (f32) x      * stride, (f32) y      * stride, (f32)(size - z + 1) * stride };
-                    grid_cell.positions[4] = (v3){ (f32) x      * stride, (f32)(y + 1) * stride, (f32)(size - z)     * stride };
-                    grid_cell.positions[5] = (v3){ (f32)(x + 1) * stride, (f32)(y + 1) * stride, (f32)(size - z)     * stride };
-                    grid_cell.positions[6] = (v3){ (f32)(x + 1) * stride, (f32)(y + 1) * stride, (f32)(size - z + 1) * stride };
-                    grid_cell.positions[7] = (v3){ (f32) x      * stride, (f32)(y + 1) * stride, (f32)(size - z + 1) * stride };
-
-                    grid_cell.values[0] = chunk[size * size * (z + 1) + size *  y      +  x     ];
-                    grid_cell.values[1] = chunk[size * size * (z + 1) + size *  y      + (x + 1)];
-                    grid_cell.values[2] = chunk[size * size *  z      + size *  y      + (x + 1)];
-                    grid_cell.values[3] = chunk[size * size *  z      + size *  y      +  x     ];
-                    grid_cell.values[4] = chunk[size * size * (z + 1) + size * (y + 1) +  x     ];
-                    grid_cell.values[5] = chunk[size * size * (z + 1) + size * (y + 1) + (x + 1)];
-                    grid_cell.values[6] = chunk[size * size *  z      + size * (y + 1) + (x + 1)];
-                    grid_cell.values[7] = chunk[size * size *  z      + size * (y + 1) +  x     ];
+                    for (u32 x = 0; x < size; x++)
+                    {
+                        const f32 s0 = 0.02f;
+                        const f32 f0 = tgm_noise(((f32)size * (f32)chunk_x + (f32)x) * s0, (f32)y * s0, ((f32)size * (f32)chunk_z + (f32)z) * s0);
+                        chunk[size * size * ((size - 1) - z) + size * y + x] = f0;
+                    }
                 }
-                triangle_count += tg_marching_cubes_polygonise(&grid_cell, 0.1f, &p_triangles[triangle_count]);
             }
+
+            tg_marching_cubes_triangle* p_triangles = TG_MEMORY_ALLOCATOR_ALLOCATE((u64)size * (u64)size * (u64)size * 12 * sizeof(*p_triangles));
+            u32 triangle_count = 0;
+            const f32 stride = 3.1f;
+            for (u32 z = 0; z < size - 1; z++)
+            {
+                for (u32 y = 0; y < size - 1; y++)
+                {
+                    for (u32 x = 0; x < size - 1; x++)
+                    {
+                        tg_marching_cubes_grid_cell grid_cell = { 0 };
+                        {
+                            grid_cell.positions[0] = (v3){ (f32) x      * stride, (f32) y      * stride, -(f32)(z + 1) * stride };
+                            grid_cell.positions[1] = (v3){ (f32)(x + 1) * stride, (f32) y      * stride, -(f32)(z + 1) * stride };
+                            grid_cell.positions[2] = (v3){ (f32)(x + 1) * stride, (f32) y      * stride, -(f32) z      * stride };
+                            grid_cell.positions[3] = (v3){ (f32) x      * stride, (f32) y      * stride, -(f32) z      * stride };
+                            grid_cell.positions[4] = (v3){ (f32) x      * stride, (f32)(y + 1) * stride, -(f32)(z + 1) * stride };
+                            grid_cell.positions[5] = (v3){ (f32)(x + 1) * stride, (f32)(y + 1) * stride, -(f32)(z + 1) * stride };
+                            grid_cell.positions[6] = (v3){ (f32)(x + 1) * stride, (f32)(y + 1) * stride, -(f32) z      * stride };
+                            grid_cell.positions[7] = (v3){ (f32) x      * stride, (f32)(y + 1) * stride, -(f32) z      * stride };
+
+                            grid_cell.values[0] = chunk[size * size * ((size - 1) - z - 1) + size *  y      +  x     ];
+                            grid_cell.values[1] = chunk[size * size * ((size - 1) - z - 1) + size *  y      + (x + 1)];
+                            grid_cell.values[2] = chunk[size * size * ((size - 1) - z)     + size *  y      + (x + 1)];
+                            grid_cell.values[3] = chunk[size * size * ((size - 1) - z)     + size *  y      +  x     ];
+                            grid_cell.values[4] = chunk[size * size * ((size - 1) - z - 1) + size * (y + 1) +  x     ];
+                            grid_cell.values[5] = chunk[size * size * ((size - 1) - z - 1) + size * (y + 1) + (x + 1)];
+                            grid_cell.values[6] = chunk[size * size * ((size - 1) - z)     + size * (y + 1) + (x + 1)];
+                            grid_cell.values[7] = chunk[size * size * ((size - 1) - z)     + size * (y + 1) +  x     ];
+                        }
+                        triangle_count += tg_marching_cubes_polygonise(&grid_cell, -0.2f, &p_triangles[triangle_count]);
+                    }
+                }
+            }
+            const v3* p_tri_positions = (v3*)p_triangles;
+            const u32 tri_position_count = triangle_count * 3;
+
+            tg_mesh_h tri_mesh_h = tg_graphics_mesh_create(tri_position_count, p_tri_positions, TG_NULL, TG_NULL, TG_NULL, 0, TG_NULL);
+            tg_material_h tri_material_h = tg_graphics_material_create(vertex_shader_h, fragment_shader_h);
+            tg_model_h tri_model_h = tg_graphics_model_create(tri_mesh_h, tri_material_h);
+            tg_entity_h tri_entity_h = tg_entity_create(renderer_3d_h, tri_model_h);
+            v3 chunk_translation = { (f32)size * stride * (f32)chunk_x, 0.0f, -(f32)size * stride * (f32)chunk_z };
+            *tri_entity_h->p_model_matrix = tgm_m4_translate(&chunk_translation);
         }
     }
-    const v3* p_tri_positions = (v3*)p_triangles;
-    const u32 tri_position_count = triangle_count * 3;
-
-    tg_mesh_h tri_mesh_h = tg_graphics_mesh_create(tri_position_count, p_tri_positions, TG_NULL, TG_NULL, TG_NULL, 0, TG_NULL);
-    tg_material_h tri_material_h = tg_graphics_material_create(vertex_shader_h, fragment_shader_h);
-    tg_model_h tri_model_h = tg_graphics_model_create(tri_mesh_h, tri_material_h);
-    tg_entity_h tri_entity_h = tg_entity_create(renderer_3d_h, tri_model_h);
 
 
 

@@ -1,3 +1,19 @@
+/*
+Vertex indices:
+
+      4 _____________ 5
+       /|           /|
+      / |          / |
+   7 /__|_________/6 |
+    |   |        |   |
+    |  0|________|___|1
+    |  /         |  /
+    | /          | /
+    |/___________|/
+   3              2
+
+Source: http://paulbourke.net/geometry/polygonise/
+*/
 #ifndef TG_MARCHING_CUBES_H
 #define TG_MARCHING_CUBES_H
 

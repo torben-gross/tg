@@ -1,4 +1,5 @@
 /*
+Noise uses Simplex Noise.
 Random uses Marsaglia's Xorshift.
 
 Matrices are layed out in column major.
@@ -199,7 +200,7 @@ typedef struct tgm_random
 | Noise                                                       |
 +------------------------------------------------------------*/
 
-f32    tgm_simplex_noise(f32 x, f32 y, f32 z);
+f32    tgm_noise(f32 x, f32 y, f32 z);
 
 
 

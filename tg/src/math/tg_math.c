@@ -55,7 +55,7 @@ const u8 permutation_table[256] = {
 
 #define TGM_SIMPLEX_NOISE_FASTFLOOR(x)    ((x) > 0.0f ? (i32)(x) : (i32)(x) - 1)
 
-f32 tgm_simplex_noise(f32 x, f32 y, f32 z) // see: http://staffwww.itn.liu.se/~stegu/simplexnoise/simplexnoise.pdf
+f32 tgm_noise(f32 x, f32 y, f32 z) // see: http://staffwww.itn.liu.se/~stegu/simplexnoise/simplexnoise.pdf
 {
 	const f32 s = (x + y + z) * 0.333333333f;
 	const i32 i = TGM_SIMPLEX_NOISE_FASTFLOOR(x + s);
