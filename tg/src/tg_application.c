@@ -110,8 +110,9 @@ void tg_application_start()
     
     
 
-    
-    const u32 size = 16;
+    const u32 size = 128;
+    const f32 s0 = 0.02f;
+    const f32 s1 = 0.3f;
     f32* chunk = TG_MEMORY_ALLOCATOR_ALLOCATE((u64)size * (u64)size * (u64)size * sizeof(*chunk));
     for (u32 z = 0; z < size; z++)
     {
@@ -119,16 +120,12 @@ void tg_application_start()
         {
             for (u32 x = 0; x < size; x++)
             {
-                const f32 n = tgm_perlin_noise((f32)x, (f32)y, (f32)z);
-                const f32 nzo = n / 4.0f + 1.0f;
-                const f32 factor = nzo * (1.0f - (f32)y / (f32)size);
-                chunk[size * size * z + size * y + x] = factor;
-                //if (factor > 1.0f)
-                //{
-                //    tg_entity_h temp = tg_entity_create(renderer_3d_h, model_h);
-                //    v3 trn = { (f32)x * stride, (f32)y * stride, -(f32)z * stride  };
-                //    *temp->p_model_matrix = tgm_m4_translate(&trn);
-                //}
+                const f32 f0 = tgm_simplex_noise((f32)x * s0, (f32)y * s0, (f32)z * s0);
+                const f32 f1 = tgm_simplex_noise((f32)x * s1, (f32)y * s1, (f32)z * s1);
+                const f32 t = 0.1f;
+                const f32 f = tgm_f32_lerp(f0, f1, t);
+
+                chunk[size * size * z + size * y + x] = f;
             }
         }
     }
@@ -162,15 +159,14 @@ void tg_application_start()
                     grid_cell.values[6] = chunk[size * size *  z      + size * (y + 1) + (x + 1)];
                     grid_cell.values[7] = chunk[size * size *  z      + size * (y + 1) +  x     ];
                 }
-                triangle_count += tg_marching_cubes_polygonise(&grid_cell, 2.0f, &p_triangles[triangle_count]);
+                triangle_count += tg_marching_cubes_polygonise(&grid_cell, 0.1f, &p_triangles[triangle_count]);
             }
         }
     }
     const v3* p_tri_positions = (v3*)p_triangles;
     const u32 tri_position_count = triangle_count * 3;
-    const v2* p_tri_uvs = TG_MEMORY_ALLOCATOR_ALLOCATE(tri_position_count * sizeof(*p_tri_uvs));
 
-    tg_mesh_h tri_mesh_h = tg_graphics_mesh_create(tri_position_count, p_tri_positions, TG_NULL, p_tri_uvs, TG_NULL, 0, TG_NULL);
+    tg_mesh_h tri_mesh_h = tg_graphics_mesh_create(tri_position_count, p_tri_positions, TG_NULL, TG_NULL, TG_NULL, 0, TG_NULL);
     tg_material_h tri_material_h = tg_graphics_material_create(vertex_shader_h, fragment_shader_h);
     tg_model_h tri_model_h = tg_graphics_model_create(tri_mesh_h, tri_material_h);
     tg_entity_h tri_entity_h = tg_entity_create(renderer_3d_h, tri_model_h);
@@ -306,7 +302,7 @@ void tg_application_start()
 
         if (tgm_v3_magnitude_squared(&velocity) != 0.0f)
         {
-            const f32 camera_base_speed = tg_input_is_key_down(TG_KEY_SHIFT) ? 0.02f : 0.01f;
+            const f32 camera_base_speed = tg_input_is_key_down(TG_KEY_SHIFT) ? 0.1f : 0.01f;
             const f32 camera_speed = camera_base_speed * delta_ms;
             velocity = tgm_v3_normalized(&velocity);
             velocity = tgm_v3_multiply_f(&velocity, camera_speed);

@@ -693,8 +693,8 @@ void                     tg_graphics_vulkan_shader_module_create(const char* p_f
 
     char system_buffer[256] = { 0 };
     // TODO: this path should be relative somehow
-    tg_string_format(sizeof(system_buffer), system_buffer, "del \"assets\\shaders\\*.spv\"");
-    TG_ASSERT(system(system_buffer) != -1);
+    //tg_string_format(sizeof(system_buffer), system_buffer, "del \"assets\\shaders\\*.spv\"");
+    //TG_ASSERT(system(system_buffer) != -1);
     tg_string_format(sizeof(system_buffer), system_buffer, "C:/VulkanSDK/1.2.131.2/Bin/glslc.exe %s/%s -o %s/%s.spv", tg_application_get_asset_path(), filename_buffer, tg_application_get_asset_path(), filename_buffer);
     TG_ASSERT(system(system_buffer) != -1);
 #endif

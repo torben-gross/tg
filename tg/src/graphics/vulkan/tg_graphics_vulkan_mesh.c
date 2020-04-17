@@ -41,7 +41,7 @@ void tg_graphics_mesh_recalculate_tangent_bitangent(tg_vertex_3d* p_v0, tg_verte
     const v2 delta_uv_01 = tgm_v2_subtract_v2(&p_v1->uv, &p_v0->uv);
     const v2 delta_uv_02 = tgm_v2_subtract_v2(&p_v2->uv, &p_v0->uv);
 
-    const float f = 1.0f / (delta_uv_01.x * delta_uv_02.y - delta_uv_01.y * delta_uv_02.x);
+    const f32 f = 1.0f / (delta_uv_01.x * delta_uv_02.y - delta_uv_01.y * delta_uv_02.x);
 
     const v3 tangent_l_part = tgm_v3_multiply_f(&delta_p_01, delta_uv_02.y);
     const v3 tangent_r_part = tgm_v3_multiply_f(&delta_p_02, delta_uv_01.y);
@@ -93,7 +93,7 @@ void tg_graphics_mesh_recalculate_bitangents(u32 vertex_count, tg_vertex_3d* p_v
 
 tg_mesh_h tg_graphics_mesh_create(u32 vertex_count, const v3* p_positions, const v3* p_normals, const v2* p_uvs, const v3* p_tangents, u32 index_count, const u16* p_indices)
 {
-	TG_ASSERT(vertex_count && p_positions && p_uvs && ((index_count && index_count % 3 == 0) || (vertex_count && vertex_count % 3 == 0)));
+	TG_ASSERT(vertex_count && p_positions && ((index_count && index_count % 3 == 0) || (vertex_count && vertex_count % 3 == 0)));
 
 	tg_mesh_h mesh_h = TG_MEMORY_ALLOCATOR_ALLOCATE(sizeof(*mesh_h));
     mesh_h->vbo.vertex_count = vertex_count;
@@ -110,11 +110,26 @@ tg_mesh_h tg_graphics_mesh_create(u32 vertex_count, const v3* p_positions, const
     tg_graphics_vulkan_buffer_create(vbo_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &staging_buffer, &staging_buffer_memory);
     VK_CALL(vkMapMemory(device, staging_buffer_memory, 0, vbo_size, 0, &vbo_data));
     {
-        // positions, uvs
+        // positions
         for (u32 i = 0; i < vertex_count; i++)
         {
             vbo_data[i].position = p_positions[i];
-            vbo_data[i].uv = p_uvs[i];
+        }
+
+        // uvs
+        if (p_uvs)
+        {
+            for (u32 i = 0; i < vertex_count; i++)
+            {
+                vbo_data[i].uv = p_uvs[i];
+            }
+        }
+        else
+        {
+            for (u32 i = 0; i < vertex_count; i++)
+            {
+                vbo_data[i].uv = (v2){ 0.0f, 0.0f };
+            }
         }
 
         // normals
@@ -131,17 +146,28 @@ tg_mesh_h tg_graphics_mesh_create(u32 vertex_count, const v3* p_positions, const
         }
 
         // tangents, bitangents
-        if (p_tangents)
+        if (p_uvs)
         {
-            for (u32 i = 0; i < vertex_count; i++)
+            if (p_tangents)
             {
-                vbo_data[i].tangent = p_tangents[i];
+                for (u32 i = 0; i < vertex_count; i++)
+                {
+                    vbo_data[i].tangent = p_tangents[i];
+                }
+                tg_graphics_mesh_recalculate_bitangents(vertex_count, vbo_data);
             }
-            tg_graphics_mesh_recalculate_bitangents(vertex_count, vbo_data);
+            else
+            {
+                tg_graphics_mesh_recalculate_tangents_bitangents(vertex_count, index_count, p_indices, vbo_data);
+            }
         }
         else
         {
-            tg_graphics_mesh_recalculate_tangents_bitangents(vertex_count, index_count, p_indices, vbo_data);
+            for (u32 i = 0; i < vertex_count; i++)
+            {
+                vbo_data[i].tangent = (v3){ 0.0f, 0.0f, 0.0f };
+                vbo_data[i].bitangent = (v3){ 0.0f, 0.0f, 0.0f };
+            }
         }
     }
     vkUnmapMemory(device, staging_buffer_memory);

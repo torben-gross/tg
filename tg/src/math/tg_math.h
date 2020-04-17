@@ -1,4 +1,6 @@
 /*
+Random uses Marsaglia's Xorshift.
+
 Matrices are layed out in column major.
 
 Projection matrices are currently layed out for following clipping setup:
@@ -186,13 +188,18 @@ typedef struct v4
 	};
 } v4;
 
+typedef struct tgm_random
+{
+	u32    state;
+} tgm_random;
+
 
 
 /*------------------------------------------------------------+
 | Noise                                                       |
 +------------------------------------------------------------*/
 
-f32    tgm_perlin_noise(f32 x, f32 y, f32 z);
+f32    tgm_simplex_noise(f32 x, f32 y, f32 z);
 
 
 
@@ -200,21 +207,10 @@ f32    tgm_perlin_noise(f32 x, f32 y, f32 z);
 | Random                                                      |
 +------------------------------------------------------------*/
 
-TG_DECLARE_HANDLE(tgm_random_lcg);
-
-tgm_random_lcg_h         tgm_random_lcg_create(u32 seed);
-f32                      tgm_random_lcg_next_f32(tgm_random_lcg_h random_lcg_h);
-u32                      tgm_random_lcg_next_ui32(tgm_random_lcg_h random_lcg_h);
-void                     tgm_random_lcg_destroy(tgm_random_lcg_h random_lcg_h);
-
-
-
-TG_DECLARE_HANDLE(tgm_random_xorshift); // TODO: Unity uses Marsaglia's Xorshift 128, this is the basic variation.
-
-tgm_random_xorshift_h    tgm_random_xorshift_create(u32 seed);
-f32                      tgm_random_xorshift_next_f32(tgm_random_xorshift_h random_xorshift_h);
-u32                      tgm_random_xorshift_next_ui32(tgm_random_xorshift_h random_xorshift_h);
-void                     tgm_random_xorshift_destroy(tgm_random_xorshift_h random_xorshift_h);
+// TODO: Unity uses Marsaglia's Xorshift 128, this is the basic variation.
+void    tgm_random_init(tgm_random* p_random, u32 seed);
+f32     tgm_random_next_f32(tgm_random* p_random);
+u32     tgm_random_next_ui32(tgm_random* p_random);
 
 
 
@@ -254,10 +250,12 @@ u32    tgm_ui32_pow(u32 base, u32 exponent);
 +------------------------------------------------------------*/
 
 f32    tgm_f32_abs(f32 v);
+f32    tgm_f32_blerp(f32 v00, f32 v01, f32 v10, f32 v11, f32 tx, f32 ty);
 f32    tgm_f32_clamp(f32 v, f32 low, f32 high);
 f32    tgm_f32_lerp(f32 v0, f32 v1, f32 t);
 f32    tgm_f32_max(f32 v0, f32 v1);
 f32    tgm_f32_min(f32 v0, f32 v1);
+f32    tgm_f32_tlerp(f32 v000, f32 v001, f32 v010, f32 v011, f32 v100, f32 v101, f32 v110, f32 v111, f32 tx, f32 ty, f32 tz);
 
 i32    tgm_i32_abs(i32 v);
 i32    tgm_i32_clamp(i32 v, i32 low, i32 high);

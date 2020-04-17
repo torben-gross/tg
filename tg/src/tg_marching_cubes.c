@@ -394,10 +394,16 @@ u32 tg_marching_cubes_polygonise(const tg_marching_cubes_grid_cell* p_grid_cell,
 	u32 triangle_count = 0;
 	for (u32 i = 0; marching_cubes_triangle_table[cubeindex][i] != -1; i += 3)
 	{
-		p_triangles[triangle_count].positions[0] = vertices[marching_cubes_triangle_table[cubeindex][i]];
-		p_triangles[triangle_count].positions[1] = vertices[marching_cubes_triangle_table[cubeindex][i + 1]];
-		p_triangles[triangle_count].positions[2] = vertices[marching_cubes_triangle_table[cubeindex][i + 2]];
-		triangle_count++;
+        const v3 v0 = vertices[marching_cubes_triangle_table[cubeindex][i]];
+        const v3 v1 = vertices[marching_cubes_triangle_table[cubeindex][i + 1]];
+        const v3 v2 = vertices[marching_cubes_triangle_table[cubeindex][i + 2]];
+        if (!tgm_v3_equal(&v0, &v1) && !tgm_v3_equal(&v0, &v2) && !tgm_v3_equal(&v1, &v2))
+        {
+		    p_triangles[triangle_count].positions[0] = vertices[marching_cubes_triangle_table[cubeindex][i]];
+		    p_triangles[triangle_count].positions[1] = vertices[marching_cubes_triangle_table[cubeindex][i + 1]];
+		    p_triangles[triangle_count].positions[2] = vertices[marching_cubes_triangle_table[cubeindex][i + 2]];
+    		triangle_count++;
+        }
 	}
 
 	return triangle_count;
@@ -407,23 +413,25 @@ v3 tg_marching_cubes_vertex_interpolate(f32 isolevel, const v3* p_position0, con
 {
 	TG_ASSERT(p_position0 && p_position1);
 
-	if (tgm_f32_abs(isolevel - value0) < 0.00001f)
+	if (tgm_f32_abs(isolevel - value0) < TG_F32_EPSILON)
 	{
 		return *p_position0;
 	}
-	if (tgm_f32_abs(isolevel - value1) < 0.00001f)
+	if (tgm_f32_abs(isolevel - value1) < TG_F32_EPSILON)
 	{
 		return *p_position1;
 	}
-	if (tgm_f32_abs(value1 - value0) < 0.00001f)
+	if (tgm_f32_abs(value1 - value0) < TG_F32_EPSILON)
 	{
 		return *p_position0;
 	}
 
 	const f32 scale = (isolevel - value0) / (value1 - value0);
-	const v3 delta_p01 = tgm_v3_subtract_v3(p_position1, p_position0);
-	const v3 scaled_delta_p01 = tgm_v3_multiply_f(&delta_p01, scale);
-	const v3 position = tgm_v3_add_v3(p_position0, &scaled_delta_p01);
-
+    // TODO: this could possibly use some SIMD
+    const v3 position = {
+        p_position0->x + (scale * (p_position1->x - p_position0->x)),
+        p_position0->y + (scale * (p_position1->y - p_position0->y)),
+        p_position0->z + (scale * (p_position1->z - p_position0->z))
+    };
 	return position;
 }
