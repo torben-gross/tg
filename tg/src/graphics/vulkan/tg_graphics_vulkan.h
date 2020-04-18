@@ -49,14 +49,17 @@ typedef struct tg_compute_buffer
 
 typedef struct tg_compute_shader
 {
-    VkShaderModule           shader_module;
-    VkDescriptorPool         descriptor_pool;
-    VkDescriptorSetLayout    descriptor_set_layout;
-    VkDescriptorSet          descriptor_set;
-    VkPipelineLayout         pipeline_layout;
-    VkPipeline               pipeline;
-    VkCommandPool            command_pool;
-    VkCommandBuffer          command_buffer;
+    u32                                      input_element_count;
+    tg_compute_shader_input_element_type*    p_input_element_types;
+
+    VkShaderModule                           shader_module;
+    VkDescriptorPool                         descriptor_pool;
+    VkDescriptorSetLayout                    descriptor_set_layout;
+    VkDescriptorSet                          descriptor_set;
+    VkPipelineLayout                         pipeline_layout;
+    VkPipeline                               pipeline;
+    VkCommandPool                            command_pool;
+    VkCommandBuffer                          command_buffer;
 } tg_compute_shader;
 
 typedef struct tg_fragment_shader

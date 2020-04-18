@@ -213,7 +213,21 @@ void tg_application_start()
         p_compute_buffer0_data[i] = (f32)i;
     }
 
-    tg_compute_shader_h compute_shader_h = tg_graphics_compute_shader_create(compute_buffer0_h, compute_buffer1_h, "shaders/compute.comp.spv");
+    u32 input_element_count = 2;
+    tg_compute_shader_input_element_type p_types[2] = {
+        TG_COMPUTE_SHADER_INPUT_ELEMENT_TYPE_COMPUTE_BUFFER,
+        TG_COMPUTE_SHADER_INPUT_ELEMENT_TYPE_COMPUTE_BUFFER
+    };
+    tg_compute_shader_h compute_shader_h = tg_graphics_compute_shader_create(input_element_count, p_types, "shaders/compute.comp.spv");
+
+    void* pp_handles[2] = {
+        &compute_buffer0_h,
+        &compute_buffer1_h
+    };
+    tg_graphics_compute_shader_bind_input_elements(compute_shader_h, pp_handles);
+    tg_graphics_compute_shader_dispatch(compute_shader_h);
+    tg_graphics_compute_shader_bind_input_elements(compute_shader_h, pp_handles);
+    tg_graphics_compute_shader_bind_input_elements(compute_shader_h, pp_handles);
     tg_graphics_compute_shader_dispatch(compute_shader_h);
     tg_graphics_compute_shader_destroy(compute_shader_h);
 

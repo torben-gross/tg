@@ -22,6 +22,11 @@ TG_DECLARE_HANDLE(tg_vertex_shader);
 
 
 
+typedef enum tg_compute_shader_input_element_type
+{
+	TG_COMPUTE_SHADER_INPUT_ELEMENT_TYPE_COMPUTE_BUFFER    = 0
+} tg_compute_shader_input_element_type;
+
 typedef enum tg_filter
 {
 	TG_FILTER_NEAREST    = 0,
@@ -66,7 +71,8 @@ typedef enum tg_image_usage
 	TG_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT    = 0x00000200
 } tg_image_usage;
 
-typedef enum tg_image_view_type {
+typedef enum tg_image_view_type
+{
 	TG_IMAGE_VIEW_TYPE_1D            = 0,
 	TG_IMAGE_VIEW_TYPE_2D            = 1,
 	TG_IMAGE_VIEW_TYPE_3D            = 2,
@@ -76,7 +82,8 @@ typedef enum tg_image_view_type {
 	TG_IMAGE_VIEW_TYPE_CUBE_ARRAY    = 6
 } tg_image_view_type;
 
-typedef enum tg_sampler_address_mode {
+typedef enum tg_sampler_address_mode
+{
 	TG_SAMPLER_ADDRESS_MODE_REPEAT                  = 0,
 	TG_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT         = 1,
 	TG_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE           = 2,
@@ -84,7 +91,8 @@ typedef enum tg_sampler_address_mode {
 	TG_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE    = 4
 } tg_sampler_address_mode;
 
-typedef enum tg_sampler_mipmap_mode {
+typedef enum tg_sampler_mipmap_mode
+{
 	TG_SAMPLER_MIPMAP_MODE_NEAREST    = 0,
 	TG_SAMPLER_MIPMAP_MODE_LINEAR     = 1
 } tg_sampler_mipmap_mode;
@@ -117,7 +125,8 @@ tg_compute_buffer_h     tg_graphics_compute_buffer_create(u64 size);
 void*                   tg_graphics_compute_buffer_data(tg_compute_buffer_h compute_buffer_h);
 void                    tg_graphics_compute_buffer_destroy(tg_compute_buffer_h compute_buffer_h);
 
-tg_compute_shader_h     tg_graphics_compute_shader_create(tg_compute_buffer_h b0, tg_compute_buffer_h b1, const char* filename);
+tg_compute_shader_h     tg_graphics_compute_shader_create(u32 input_element_count, tg_compute_shader_input_element_type* p_input_element_types, const char* filename);
+void                    tg_graphics_compute_shader_bind_input_elements(tg_compute_shader_h compute_shader_h, void** pp_handles);
 void                    tg_graphics_compute_shader_dispatch(tg_compute_shader_h compute_shader_h);
 void                    tg_graphics_compute_shader_destroy(tg_compute_shader_h compute_shader_h);
 
