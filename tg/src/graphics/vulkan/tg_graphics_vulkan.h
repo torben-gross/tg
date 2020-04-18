@@ -107,6 +107,14 @@ typedef struct tg_model
 
 } tg_model;
 
+typedef struct tg_uniform_buffer
+{
+    u64               size;
+    VkBuffer          buffer;
+    VkDeviceMemory    device_memory;
+    void*             p_mapped_memory;
+} tg_uniform_buffer;
+
 typedef struct tg_vertex_shader
 {
     VkShaderModule    shader_module;

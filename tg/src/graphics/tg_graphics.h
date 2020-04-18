@@ -17,6 +17,7 @@ TG_DECLARE_HANDLE(tg_mesh);
 TG_DECLARE_HANDLE(tg_model);
 TG_DECLARE_HANDLE(tg_index_buffer);
 TG_DECLARE_HANDLE(tg_renderer_3d);
+TG_DECLARE_HANDLE(tg_uniform_buffer);
 TG_DECLARE_HANDLE(tg_vertex_buffer);
 TG_DECLARE_HANDLE(tg_vertex_shader);
 
@@ -24,7 +25,8 @@ TG_DECLARE_HANDLE(tg_vertex_shader);
 
 typedef enum tg_compute_shader_input_element_type
 {
-	TG_COMPUTE_SHADER_INPUT_ELEMENT_TYPE_COMPUTE_BUFFER    = 0
+	TG_COMPUTE_SHADER_INPUT_ELEMENT_TYPE_COMPUTE_BUFFER    = 0,
+	TG_COMPUTE_SHADER_INPUT_ELEMENT_TYPE_UNIFORM_BUFFER    = 1
 } tg_compute_shader_input_element_type;
 
 typedef enum tg_filter
@@ -127,7 +129,7 @@ void                    tg_graphics_compute_buffer_destroy(tg_compute_buffer_h c
 
 tg_compute_shader_h     tg_graphics_compute_shader_create(u32 input_element_count, tg_compute_shader_input_element_type* p_input_element_types, const char* filename);
 void                    tg_graphics_compute_shader_bind_input_elements(tg_compute_shader_h compute_shader_h, void** pp_handles);
-void                    tg_graphics_compute_shader_dispatch(tg_compute_shader_h compute_shader_h);
+void                    tg_graphics_compute_shader_dispatch(tg_compute_shader_h compute_shader_h, u32 group_count_x, u32 group_count_y, u32 group_count_z);
 void                    tg_graphics_compute_shader_destroy(tg_compute_shader_h compute_shader_h);
 
 tg_fragment_shader_h    tg_graphics_fragment_shader_create(const char* p_filename);
@@ -144,6 +146,10 @@ void                    tg_graphics_mesh_destroy(tg_mesh_h mesh_h);
 
 tg_model_h              tg_graphics_model_create(tg_mesh_h mesh_h, tg_material_h material_h);
 void                    tg_graphics_model_destroy(tg_model_h model_h);
+
+tg_uniform_buffer_h     tg_graphics_uniform_buffer_create(u64 size);
+void*                   tg_graphics_uniform_buffer_data(tg_uniform_buffer_h uniform_buffer_h);
+void                    tg_graphics_uniform_buffer_destroy(tg_uniform_buffer_h uniform_buffer_h);
 
 tg_vertex_shader_h      tg_graphics_vertex_shader_create(const char* p_filename);
 void                    tg_graphics_vertex_shader_destroy(tg_vertex_shader_h p_vertex_shader_h);

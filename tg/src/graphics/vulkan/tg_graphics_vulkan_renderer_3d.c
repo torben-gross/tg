@@ -1402,7 +1402,7 @@ void tg_graphics_renderer_3d_register(tg_renderer_3d_h renderer_3d_h, tg_entity_
     {
         model_descriptor_buffer_info.buffer = renderer_3d_h->geometry_pass.model_ubo.buffer;
         model_descriptor_buffer_info.offset = 0;
-        model_descriptor_buffer_info.range = 65536;
+        model_descriptor_buffer_info.range = 65536; // TODO: fix this m8
     }
     VkDescriptorBufferInfo view_projection_descriptor_buffer_info = { 0 };
     {

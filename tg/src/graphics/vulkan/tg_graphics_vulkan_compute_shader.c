@@ -9,6 +9,7 @@ VkDescriptorType tg_graphics_compute_shader_internal_convert_type(tg_compute_sha
 	switch (type)
 	{
 	case TG_COMPUTE_SHADER_INPUT_ELEMENT_TYPE_COMPUTE_BUFFER: return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	case TG_COMPUTE_SHADER_INPUT_ELEMENT_TYPE_UNIFORM_BUFFER: return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	}
 
 	TG_ASSERT(TG_FALSE);
@@ -114,24 +115,48 @@ void tg_graphics_compute_shader_bind_input_elements(tg_compute_shader_h compute_
 				write_descriptor_set.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 				write_descriptor_set.pImageInfo = TG_NULL;
 				write_descriptor_set.pBufferInfo = &descriptor_buffer_info;
-				write_descriptor_set.pTexelBufferView;
+				write_descriptor_set.pTexelBufferView = TG_NULL;
+			}
+			vkUpdateDescriptorSets(device, 1, &write_descriptor_set, 0, TG_NULL);
+		} break;
+		case TG_COMPUTE_SHADER_INPUT_ELEMENT_TYPE_UNIFORM_BUFFER:
+		{
+			tg_uniform_buffer_h uniform_buffer_h = *(tg_uniform_buffer_h*)pp_handles[i];
+			VkDescriptorBufferInfo descriptor_buffer_info = { 0 };
+			{
+				descriptor_buffer_info.buffer = uniform_buffer_h->buffer;
+				descriptor_buffer_info.offset = 0;
+				descriptor_buffer_info.range = VK_WHOLE_SIZE;
+			}
+			VkWriteDescriptorSet write_descriptor_set = { 0 };
+			{
+				write_descriptor_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+				write_descriptor_set.pNext = TG_NULL;
+				write_descriptor_set.dstSet = compute_shader_h->descriptor_set;
+				write_descriptor_set.dstBinding = i;
+				write_descriptor_set.dstArrayElement = 0;
+				write_descriptor_set.descriptorCount = 1;
+				write_descriptor_set.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+				write_descriptor_set.pImageInfo = TG_NULL;
+				write_descriptor_set.pBufferInfo = &descriptor_buffer_info;
+				write_descriptor_set.pTexelBufferView = TG_NULL;
 			}
 			vkUpdateDescriptorSets(device, 1, &write_descriptor_set, 0, TG_NULL);
 		} break;
 		default: TG_ASSERT(TG_FALSE);
 		}
 	}
+}
+
+void tg_graphics_compute_shader_dispatch(tg_compute_shader_h compute_shader_h, u32 group_count_x, u32 group_count_y, u32 group_count_z)
+{
+	TG_ASSERT(compute_shader_h && group_count_x && group_count_y && group_count_z);
 
 	tg_graphics_vulkan_command_buffer_begin(0, compute_shader_h->command_buffer);
 	vkCmdBindPipeline(compute_shader_h->command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute_shader_h->pipeline);
 	vkCmdBindDescriptorSets(compute_shader_h->command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute_shader_h->pipeline_layout, 0, 1, &compute_shader_h->descriptor_set, 0, TG_NULL);
-	vkCmdDispatch(compute_shader_h->command_buffer, 10, 1, 1);
+	vkCmdDispatch(compute_shader_h->command_buffer, group_count_x, group_count_y, group_count_z);
 	VK_CALL(vkEndCommandBuffer(compute_shader_h->command_buffer));
-}
-
-void tg_graphics_compute_shader_dispatch(tg_compute_shader_h compute_shader_h)
-{
-	TG_ASSERT(compute_shader_h);
 
 	VkSubmitInfo submit_info = { 0 };// TODO: add fence to compute shader
 	{
