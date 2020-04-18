@@ -11,6 +11,42 @@
 
 
 
+#ifdef TG_WIN32
+
+#ifdef TG_DEBUG
+#define TG_GRAPHICS_VULKAN_INSTANCE_EXTENSION_COUNT 3
+#define TG_GRAPHICS_VULKAN_INSTANCE_EXTENSION_NAMES (char*[]){ VK_EXT_DEBUG_UTILS_EXTENSION_NAME, VK_KHR_SURFACE_EXTENSION_NAME, VK_KHR_WIN32_SURFACE_EXTENSION_NAME }
+#else
+#define TG_GRAPHICS_VULKAN_INSTANCE_EXTENSION_COUNT 2
+#define TG_GRAPHICS_VULKAN_INSTANCE_EXTENSION_NAMES (char*[]){ VK_KHR_SURFACE_EXTENSION_NAME, VK_KHR_WIN32_SURFACE_EXTENSION_NAME }
+#endif
+
+#else
+
+#define TG_GRAPHICS_VULKAN_INSTANCE_EXTENSION_COUNT 0
+#define TG_GRAPHICS_VULKAN_INSTANCE_EXTENSION_NAMES TG_NULL
+
+#endif
+
+#define TG_GRAPHICS_VULKAN_DEVICE_EXTENSION_COUNT 1
+#define TG_GRAPHICS_VULKAN_DEVICE_EXTENSION_NAMES (char*[]){ VK_KHR_SWAPCHAIN_EXTENSION_NAME }
+
+#ifdef TG_DEBUG
+#define TG_GRAPHICS_VULKAN_VALIDATION_LAYER_COUNT 1
+#define TG_GRAPHICS_VULKAN_VALIDATION_LAYER_NAMES (char*[]){ "VK_LAYER_KHRONOS_validation" }
+#else
+#define TG_GRAPHICS_VULKAN_VALIDATION_LAYER_COUNT 0
+#define TG_GRAPHICS_VULKAN_VALIDATION_LAYER_NAMES TG_NULL
+#endif
+
+
+
+#ifdef TG_DEBUG
+VkDebugUtilsMessengerEXT    debug_utils_messenger;
+#endif
+
+
+
 #ifdef TG_DEBUG
 VKAPI_ATTR VkBool32 VKAPI_CALL tgvk_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity, VkDebugUtilsMessageTypeFlagsEXT message_type, const VkDebugUtilsMessengerCallbackDataEXT* callback_data, void* user_data)
 {
@@ -183,6 +219,21 @@ void                     tg_graphics_vulkan_command_buffers_allocate(VkCommandPo
 void                     tg_graphics_vulkan_command_buffers_free(VkCommandPool command_pool, u32 command_buffer_count, const VkCommandBuffer* p_command_buffers)
 {
     vkFreeCommandBuffers(device, command_pool, command_buffer_count, p_command_buffers);
+}
+VkCommandPool            tg_graphics_vulkan_command_pool_create(VkCommandPoolCreateFlags command_pool_create_flags, u32 queue_family_index)
+{
+    VkCommandPool command_pool = VK_NULL_HANDLE;
+
+    VkCommandPoolCreateInfo command_pool_create_info = { 0 };
+    {
+        command_pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+        command_pool_create_info.pNext = TG_NULL;
+        command_pool_create_info.flags = command_pool_create_flags;
+        command_pool_create_info.queueFamilyIndex = queue_family_index;
+    }
+    VK_CALL(vkCreateCommandPool(device, &command_pool_create_info, TG_NULL, &command_pool));
+
+    return command_pool;
 }
 VkFormat                 tg_graphics_vulkan_depth_format_acquire()
 {
@@ -473,12 +524,12 @@ b32                      tg_graphics_vulkan_physical_device_check_extension_supp
     VK_CALL(vkEnumerateDeviceExtensionProperties(physical_device, TG_NULL, &device_extension_property_count, device_extension_properties));
 
     b32 supports_extensions = TG_TRUE;
-    for (u32 i = 0; i < DEVICE_EXTENSION_COUNT; i++)
+    for (u32 i = 0; i < TG_GRAPHICS_VULKAN_DEVICE_EXTENSION_COUNT; i++)
     {
         b32 supports_extension = TG_FALSE;
         for (u32 j = 0; j < device_extension_property_count; j++)
         {
-            if (strcmp(DEVICE_EXTENSION_NAMES[i], device_extension_properties[j].extensionName) == 0)
+            if (strcmp(TG_GRAPHICS_VULKAN_DEVICE_EXTENSION_NAMES[i], device_extension_properties[j].extensionName) == 0)
             {
                 supports_extension = TG_TRUE;
                 break;
@@ -490,7 +541,7 @@ b32                      tg_graphics_vulkan_physical_device_check_extension_supp
     TG_MEMORY_ALLOCATOR_FREE(device_extension_properties);
     return supports_extensions;
 }
-b32                      tg_graphics_vulkan_physical_device_find_queue_families(VkPhysicalDevice physical_device, tg_queue* p_graphics_queue, tg_queue* p_present_queue)
+b32                      tg_graphics_vulkan_physical_device_find_queue_families(VkPhysicalDevice physical_device, tg_queue* p_graphics_queue, tg_queue* p_present_queue, tg_queue* p_compute_queue)
 {
     u32 queue_family_count;
     vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, TG_NULL);
@@ -500,6 +551,7 @@ b32                      tg_graphics_vulkan_physical_device_find_queue_families(
 
     b32 supports_graphics_family = TG_FALSE;
     VkBool32 supports_present_family = VK_FALSE;
+    b32 supports_compute_family = TG_FALSE;
     for (u32 i = 0; i < queue_family_count; i++)
     {
         if (!supports_graphics_family)
@@ -519,13 +571,21 @@ b32                      tg_graphics_vulkan_physical_device_find_queue_families(
                 p_present_queue->index = i;
             }
         }
-        if (supports_graphics_family && supports_present_family)
+        if (!supports_compute_family)
+        {
+            if (queue_family_properties[i].queueFlags & VK_QUEUE_COMPUTE_BIT)
+            {
+                p_compute_queue->index = i;
+                supports_compute_family = TG_TRUE;
+            }
+        }
+        if (supports_graphics_family && supports_present_family && supports_compute_family)
         {
             break;
         }
     }
 
-    const b32 complete = supports_graphics_family && supports_present_family;
+    const b32 complete = supports_graphics_family && supports_present_family && supports_compute_family;
     TG_MEMORY_ALLOCATOR_FREE(queue_family_properties);
     return complete;
 }
@@ -585,7 +645,7 @@ b32                      tg_graphics_vulkan_physical_device_is_suitable(VkPhysic
     const b32 supports_geometry_shader = physical_device_features.geometryShader;
     const b32 supports_sampler_anisotropy = physical_device_features.samplerAnisotropy;
 
-    const b32 qfi_complete = tg_graphics_vulkan_physical_device_find_queue_families(physical_device, &graphics_queue, &present_queue);
+    const b32 qfi_complete = tg_graphics_vulkan_physical_device_find_queue_families(physical_device, &graphics_queue, &present_queue, &compute_queue);
     const b32 supports_extensions = tg_graphics_vulkan_physical_device_check_extension_support(physical_device);
 
     u32 physical_device_surface_format_count;
@@ -692,6 +752,7 @@ void                     tg_graphics_vulkan_shader_module_create(const char* p_f
     strncpy(filename_buffer, p_filename, filename_length - 4);
 
     char system_buffer[256] = { 0 };
+    // TODO: fix and uncomment this
     // TODO: this path should be relative somehow
     //tg_string_format(sizeof(system_buffer), system_buffer, "del \"assets\\shaders\\*.spv\"");
     //TG_ASSERT(system(system_buffer) != -1);
@@ -734,12 +795,12 @@ void                     tg_graphics_vulkan_instance_create(VkInstance* p_instan
     VkLayerProperties* layer_properties = TG_MEMORY_ALLOCATOR_ALLOCATE(layer_property_count * sizeof(*layer_properties));
     vkEnumerateInstanceLayerProperties(&layer_property_count, layer_properties);
 
-    for (u32 i = 0; i < VALIDATION_LAYER_COUNT; i++)
+    for (u32 i = 0; i < TG_GRAPHICS_VULKAN_VALIDATION_LAYER_COUNT; i++)
     {
         b32 layer_found = TG_FALSE;
         for (u32 j = 0; j < layer_property_count; j++)
         {
-            if (strcmp(VALIDATION_LAYER_NAMES[i], layer_properties[j].layerName) == 0)
+            if (strcmp(TG_GRAPHICS_VULKAN_VALIDATION_LAYER_NAMES[i], layer_properties[j].layerName) == 0)
             {
                 layer_found = TG_TRUE;
                 break;
@@ -764,10 +825,10 @@ void                     tg_graphics_vulkan_instance_create(VkInstance* p_instan
     instance_create_info.pNext = TG_NULL;
     instance_create_info.flags = 0;
     instance_create_info.pApplicationInfo = &application_info;
-    instance_create_info.enabledLayerCount = VALIDATION_LAYER_COUNT;
-    instance_create_info.ppEnabledLayerNames = VALIDATION_LAYER_NAMES;
-    instance_create_info.enabledExtensionCount = INSTANCE_EXTENSION_COUNT;
-    instance_create_info.ppEnabledExtensionNames = INSTANCE_EXTENSION_NAMES;
+    instance_create_info.enabledLayerCount = TG_GRAPHICS_VULKAN_VALIDATION_LAYER_COUNT;
+    instance_create_info.ppEnabledLayerNames = TG_GRAPHICS_VULKAN_VALIDATION_LAYER_NAMES;
+    instance_create_info.enabledExtensionCount = TG_GRAPHICS_VULKAN_INSTANCE_EXTENSION_COUNT;
+    instance_create_info.ppEnabledExtensionNames = TG_GRAPHICS_VULKAN_INSTANCE_EXTENSION_NAMES;
 
     VK_CALL(vkCreateInstance(&instance_create_info, TG_NULL, p_instance));
 }
@@ -821,7 +882,6 @@ void                     tg_graphics_vulkan_physical_device_create(VkPhysicalDev
         if (is_suitable)
         {
             *p_physical_device = physical_devices[i];
-            surface.msaa_sample_count = tg_graphics_vulkan_physical_device_find_max_sample_count(physical_devices[i]);
             break;
         }
     }
@@ -835,7 +895,7 @@ void                     tg_graphics_vulkan_device_create(VkDevice* p_device)
 
     const float queue_priority = 1.0f;
 
-    VkDeviceQueueCreateInfo device_queue_create_infos[2] = { 0 };
+    VkDeviceQueueCreateInfo device_queue_create_infos[3] = { 0 };
     {
         device_queue_create_infos[0].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
         device_queue_create_infos[0].pNext = TG_NULL;
@@ -850,6 +910,13 @@ void                     tg_graphics_vulkan_device_create(VkDevice* p_device)
         device_queue_create_infos[1].queueFamilyIndex = present_queue.index;
         device_queue_create_infos[1].queueCount = 1;
         device_queue_create_infos[1].pQueuePriorities = &queue_priority;
+
+        device_queue_create_infos[2].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+        device_queue_create_infos[2].pNext = TG_NULL;
+        device_queue_create_infos[2].flags = 0;
+        device_queue_create_infos[2].queueFamilyIndex = compute_queue.index;
+        device_queue_create_infos[2].queueCount = 1;
+        device_queue_create_infos[2].pQueuePriorities = &queue_priority;
     }
 
     VkPhysicalDeviceFeatures physical_device_features = { 0 };
@@ -914,32 +981,21 @@ void                     tg_graphics_vulkan_device_create(VkDevice* p_device)
     device_create_info.flags = 0;
     device_create_info.queueCreateInfoCount = 2;
     device_create_info.pQueueCreateInfos = device_queue_create_infos;
-    device_create_info.enabledLayerCount = VALIDATION_LAYER_COUNT;
-    device_create_info.ppEnabledLayerNames = VALIDATION_LAYER_NAMES;
-    device_create_info.enabledExtensionCount = DEVICE_EXTENSION_COUNT;
-    device_create_info.ppEnabledExtensionNames = DEVICE_EXTENSION_NAMES;
+    device_create_info.enabledLayerCount = TG_GRAPHICS_VULKAN_VALIDATION_LAYER_COUNT;
+    device_create_info.ppEnabledLayerNames = TG_GRAPHICS_VULKAN_VALIDATION_LAYER_NAMES;
+    device_create_info.enabledExtensionCount = TG_GRAPHICS_VULKAN_DEVICE_EXTENSION_COUNT;
+    device_create_info.ppEnabledExtensionNames = TG_GRAPHICS_VULKAN_DEVICE_EXTENSION_NAMES;
     device_create_info.pEnabledFeatures = &physical_device_features;
 
     VK_CALL(vkCreateDevice(physical_device, &device_create_info, TG_NULL, p_device));
 }
-void                     tg_graphics_vulkan_queues_create(tg_queue* p_graphics_queue, tg_queue* p_present_queue)
+void                     tg_graphics_vulkan_queues_create(tg_queue* p_graphics_queue, tg_queue* p_present_queue, tg_queue* p_compute_queue)
 {
     TG_ASSERT(p_graphics_queue && p_present_queue);
 
     vkGetDeviceQueue(device, p_graphics_queue->index, 0, &p_graphics_queue->queue);
     vkGetDeviceQueue(device, p_present_queue->index, 0, &p_present_queue->queue);
-}
-void                     tg_graphics_vulkan_command_pool_create(VkCommandPool* p_command_pool)
-{
-    TG_ASSERT(p_command_pool);
-
-    VkCommandPoolCreateInfo command_pool_create_info = { 0 };
-    command_pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    command_pool_create_info.pNext = TG_NULL;
-    command_pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    command_pool_create_info.queueFamilyIndex = graphics_queue.index;
-
-    VK_CALL(vkCreateCommandPool(device, &command_pool_create_info, TG_NULL, p_command_pool));
+    vkGetDeviceQueue(device, p_compute_queue->index, 0, &p_compute_queue->queue);
 }
 void                     tg_graphics_vulkan_swapchain_create()
 {
@@ -980,14 +1036,14 @@ void                     tg_graphics_vulkan_swapchain_create()
     swapchain_extent.width = tgm_u32_clamp(swapchain_extent.width, surface_capabilities.minImageExtent.width, surface_capabilities.maxImageExtent.width);
     swapchain_extent.height = tgm_u32_clamp(swapchain_extent.height, surface_capabilities.minImageExtent.height, surface_capabilities.maxImageExtent.height);
 
-    TG_ASSERT(tgm_u32_clamp(SURFACE_IMAGE_COUNT, surface_capabilities.minImageCount, surface_capabilities.maxImageCount) == SURFACE_IMAGE_COUNT);
+    TG_ASSERT(tgm_u32_clamp(TG_GRAPHICS_VULKAN_SURFACE_IMAGE_COUNT, surface_capabilities.minImageCount, surface_capabilities.maxImageCount) == TG_GRAPHICS_VULKAN_SURFACE_IMAGE_COUNT);
 
     VkSwapchainCreateInfoKHR swapchain_create_info = { 0 };
     swapchain_create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     swapchain_create_info.pNext = TG_NULL;
     swapchain_create_info.flags = 0;
     swapchain_create_info.surface = surface.surface;
-    swapchain_create_info.minImageCount = SURFACE_IMAGE_COUNT;
+    swapchain_create_info.minImageCount = TG_GRAPHICS_VULKAN_SURFACE_IMAGE_COUNT;
     swapchain_create_info.imageFormat = surface.format.format;
     swapchain_create_info.imageColorSpace = surface.format.colorSpace;
     swapchain_create_info.imageExtent = swapchain_extent;
@@ -1016,14 +1072,14 @@ void                     tg_graphics_vulkan_swapchain_create()
 
     VK_CALL(vkCreateSwapchainKHR(device, &swapchain_create_info, TG_NULL, &swapchain));
     
-    u32 surface_image_count = SURFACE_IMAGE_COUNT;
+    u32 surface_image_count = TG_GRAPHICS_VULKAN_SURFACE_IMAGE_COUNT;
 #ifdef TG_DEBUG
     VK_CALL(vkGetSwapchainImagesKHR(device, swapchain, &surface_image_count, TG_NULL));
-    TG_ASSERT(surface_image_count == SURFACE_IMAGE_COUNT);
+    TG_ASSERT(surface_image_count == TG_GRAPHICS_VULKAN_SURFACE_IMAGE_COUNT);
 #endif
     VK_CALL(vkGetSwapchainImagesKHR(device, swapchain, &surface_image_count, swapchain_images));
 
-    for (u32 i = 0; i < SURFACE_IMAGE_COUNT; i++)
+    for (u32 i = 0; i < TG_GRAPHICS_VULKAN_SURFACE_IMAGE_COUNT; i++)
     {
         tg_graphics_vulkan_image_view_create(swapchain_images[i], surface.format.format, 1, VK_IMAGE_ASPECT_COLOR_BIT, &swapchain_image_views[i]);
     }
@@ -1044,15 +1100,15 @@ void                     tg_graphics_init()
     tg_graphics_vulkan_surface_create(&surface);
     tg_graphics_vulkan_physical_device_create(&physical_device);
     tg_graphics_vulkan_device_create(&device);
-    tg_graphics_vulkan_queues_create(&graphics_queue, &present_queue);
-    tg_graphics_vulkan_command_pool_create(&command_pool);
+    tg_graphics_vulkan_queues_create(&graphics_queue, &present_queue, &compute_queue);
+    command_pool = tg_graphics_vulkan_command_pool_create(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, graphics_queue.index);
     tg_graphics_vulkan_swapchain_create();
 }
 void                     tg_graphics_shutdown()
 {
     vkDeviceWaitIdle(device);
 
-    for (u32 i = 0; i < SURFACE_IMAGE_COUNT; i++)
+    for (u32 i = 0; i < TG_GRAPHICS_VULKAN_SURFACE_IMAGE_COUNT; i++)
     {
         vkDestroyImageView(device, swapchain_image_views[i], TG_NULL);
     }
@@ -1071,7 +1127,7 @@ void                     tg_graphics_on_window_resize(u32 width, u32 height)
 {
     vkDeviceWaitIdle(device);
     
-    for (u32 i = 0; i < SURFACE_IMAGE_COUNT; i++)
+    for (u32 i = 0; i < TG_GRAPHICS_VULKAN_SURFACE_IMAGE_COUNT; i++)
     {
         vkDestroyImageView(device, swapchain_image_views[i], TG_NULL);
     }

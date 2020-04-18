@@ -7,6 +7,8 @@
 
 
 TG_DECLARE_HANDLE(tg_camera);
+TG_DECLARE_HANDLE(tg_compute_buffer);
+TG_DECLARE_HANDLE(tg_compute_shader);
 TG_DECLARE_HANDLE(tg_entity);
 TG_DECLARE_HANDLE(tg_fragment_shader);
 TG_DECLARE_HANDLE(tg_image);
@@ -110,6 +112,14 @@ m4                      tg_graphics_camera_get_view(tg_camera_h camera_h);
 void                    tg_graphics_camera_set_projection(f32 fov_y, f32 near, f32 far, tg_camera_h camera_h);
 void                    tg_graphics_camera_set_view(const v3* p_position, f32 pitch, f32 yaw, f32 roll, tg_camera_h camera_h);
 void                    tg_graphics_camera_destroy(tg_camera_h camera_h);
+
+tg_compute_buffer_h     tg_graphics_compute_buffer_create(u64 size);
+void*                   tg_graphics_compute_buffer_data(tg_compute_buffer_h compute_buffer_h);
+void                    tg_graphics_compute_buffer_destroy(tg_compute_buffer_h compute_buffer_h);
+
+tg_compute_shader_h     tg_graphics_compute_shader_create(tg_compute_buffer_h b0, tg_compute_buffer_h b1, const char* filename);
+void                    tg_graphics_compute_shader_dispatch(tg_compute_shader_h compute_shader_h);
+void                    tg_graphics_compute_shader_destroy(tg_compute_shader_h compute_shader_h);
 
 tg_fragment_shader_h    tg_graphics_fragment_shader_create(const char* p_filename);
 void                    tg_graphics_fragment_shader_destroy(tg_fragment_shader_h fragment_shader_h);

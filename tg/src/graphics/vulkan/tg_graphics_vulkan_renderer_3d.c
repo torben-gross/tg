@@ -122,7 +122,7 @@ typedef struct tg_renderer_3d_present_pass
     VkSemaphore              rendering_finished_semaphore;
 
     VkRenderPass             render_pass;
-    VkFramebuffer            framebuffers[SURFACE_IMAGE_COUNT];
+    VkFramebuffer            framebuffers[TG_GRAPHICS_VULKAN_SURFACE_IMAGE_COUNT];
 
     VkDescriptorPool         descriptor_pool;
     VkDescriptorSetLayout    descriptor_set_layout;
@@ -133,7 +133,7 @@ typedef struct tg_renderer_3d_present_pass
     VkPipelineLayout         pipeline_layout;
     VkPipeline               pipeline;
 
-    VkCommandBuffer          command_buffers[SURFACE_IMAGE_COUNT];
+    VkCommandBuffer          command_buffers[TG_GRAPHICS_VULKAN_SURFACE_IMAGE_COUNT];
 } tg_renderer_3d_present_pass;
 
 typedef struct tg_renderer_3d
@@ -821,7 +821,7 @@ void tg_graphics_renderer_3d_internal_init_present_pass(tg_renderer_3d_h rendere
     }
     tg_graphics_vulkan_render_pass_create(1, &attachment_description, 1, &subpass_description, 0, TG_NULL, &renderer_3d_h->present_pass.render_pass);
 
-    for (u32 i = 0; i < SURFACE_IMAGE_COUNT; i++)
+    for (u32 i = 0; i < TG_GRAPHICS_VULKAN_SURFACE_IMAGE_COUNT; i++)
     {
         tg_graphics_vulkan_framebuffer_create(renderer_3d_h->present_pass.render_pass, 1, &swapchain_image_views[i], swapchain_extent.width, swapchain_extent.height, &renderer_3d_h->present_pass.framebuffers[i]);
     }
@@ -1032,7 +1032,7 @@ void tg_graphics_renderer_3d_internal_init_present_pass(tg_renderer_3d_h rendere
     }
     tg_graphics_vulkan_pipeline_create(VK_NULL_HANDLE, &graphics_pipeline_create_info, &renderer_3d_h->present_pass.pipeline);
 
-    tg_graphics_vulkan_command_buffers_allocate(command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, SURFACE_IMAGE_COUNT, renderer_3d_h->present_pass.command_buffers);
+    tg_graphics_vulkan_command_buffers_allocate(command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, TG_GRAPHICS_VULKAN_SURFACE_IMAGE_COUNT, renderer_3d_h->present_pass.command_buffers);
 
     VkCommandBufferBeginInfo command_buffer_begin_info = { 0 };
     {
@@ -1063,7 +1063,7 @@ void tg_graphics_renderer_3d_internal_init_present_pass(tg_renderer_3d_h rendere
     }
     vkUpdateDescriptorSets(device, 1, &write_descriptor_set, 0, TG_NULL);
 
-    for (u32 i = 0; i < SURFACE_IMAGE_COUNT; i++)
+    for (u32 i = 0; i < TG_GRAPHICS_VULKAN_SURFACE_IMAGE_COUNT; i++)
     {
 
         VK_CALL(vkBeginCommandBuffer(renderer_3d_h->present_pass.command_buffers[i], &command_buffer_begin_info));

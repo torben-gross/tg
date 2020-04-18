@@ -9,51 +9,18 @@
 #undef near
 #undef far
 
-
-
 #ifdef TG_DEBUG
 #define VK_CALL(x) TG_ASSERT(x == VK_SUCCESS)
 #else
 #define VK_CALL(x) x
 #endif
 
-#ifdef TG_WIN32
-
-#ifdef TG_DEBUG
-#define INSTANCE_EXTENSION_COUNT 3
-#define INSTANCE_EXTENSION_NAMES (char*[]){ VK_EXT_DEBUG_UTILS_EXTENSION_NAME, VK_KHR_SURFACE_EXTENSION_NAME, VK_KHR_WIN32_SURFACE_EXTENSION_NAME }
-#else
-#define INSTANCE_EXTENSION_COUNT 2
-#define INSTANCE_EXTENSION_NAMES (char*[]){ VK_KHR_SURFACE_EXTENSION_NAME, VK_KHR_WIN32_SURFACE_EXTENSION_NAME }
-#endif
-
-#else
-
-#define INSTANCE_EXTENSION_COUNT 0
-#define INSTANCE_EXTENSION_NAMES TG_NULL
-
-#endif
-
-#define DEVICE_EXTENSION_COUNT 1
-#define DEVICE_EXTENSION_NAMES (char*[]){ VK_KHR_SWAPCHAIN_EXTENSION_NAME }
-
-#ifdef TG_DEBUG
-#define VALIDATION_LAYER_COUNT 1
-#define VALIDATION_LAYER_NAMES (char*[]){ "VK_LAYER_KHRONOS_validation" }
-#else
-#define VALIDATION_LAYER_COUNT 0
-#define VALIDATION_LAYER_NAMES TG_NULL
-#endif
-
-#define SURFACE_IMAGE_COUNT 3
+#define TG_GRAPHICS_VULKAN_SURFACE_IMAGE_COUNT 3
 
 
 
 typedef struct tg_camera
 {
-
-    tg_renderer_3d_h    renderer_3d_h;
-
     struct
     {
         f32             fov_y;
@@ -70,8 +37,27 @@ typedef struct tg_camera
         f32             roll;
         m4              view;
     } view;
-
 } tg_camera;
+
+typedef struct tg_compute_buffer
+{
+    VkBuffer          buffer;
+    u64               size;
+    VkDeviceMemory    device_memory;
+    void*             p_mapped_memory;
+} tg_compute_buffer;
+
+typedef struct tg_compute_shader
+{
+    VkShaderModule           shader_module;
+    VkDescriptorPool         descriptor_pool;
+    VkDescriptorSetLayout    descriptor_set_layout;
+    VkDescriptorSet          descriptor_set;
+    VkPipelineLayout         pipeline_layout;
+    VkPipeline               pipeline;
+    VkCommandPool            command_pool;
+    VkCommandBuffer          command_buffer;
+} tg_compute_shader;
 
 typedef struct tg_fragment_shader
 {
@@ -127,9 +113,8 @@ typedef struct tg_vertex_shader
 
 typedef struct tg_surface
 {
-    VkSurfaceKHR             surface;
-    VkSurfaceFormatKHR       format;
-    VkSampleCountFlagBits    msaa_sample_count;
+    VkSurfaceKHR          surface;
+    VkSurfaceFormatKHR    format;
 } tg_surface;
 
 typedef struct tg_queue
@@ -155,30 +140,23 @@ TODO: use above for image creation
 
 
 
-VkInstance                  instance;
-tg_surface                  surface;
-VkPhysicalDevice            physical_device;
-VkDevice                    device;
-tg_queue                    graphics_queue;
-tg_queue                    present_queue;
-VkCommandPool               command_pool;
-
-#ifdef TG_DEBUG
-VkDebugUtilsMessengerEXT    debug_utils_messenger;
-#endif
+VkInstance          instance;
+tg_surface          surface;
+VkPhysicalDevice    physical_device;
+VkDevice            device;
+tg_queue            graphics_queue;
+tg_queue            present_queue;
+tg_queue            compute_queue;
+VkCommandPool       command_pool;
 
 
 
-VkSwapchainKHR              swapchain;
-VkExtent2D                  swapchain_extent;
-VkImage                     swapchain_images[SURFACE_IMAGE_COUNT];
-VkImageView                 swapchain_image_views[SURFACE_IMAGE_COUNT];
+VkSwapchainKHR      swapchain;
+VkExtent2D          swapchain_extent;
+VkImage             swapchain_images[TG_GRAPHICS_VULKAN_SURFACE_IMAGE_COUNT];
+VkImageView         swapchain_image_views[TG_GRAPHICS_VULKAN_SURFACE_IMAGE_COUNT];
 
 
-
-/*------------------------------------------------------------+
-| General utilities                                           |
-+------------------------------------------------------------*/
 
 void                     tg_graphics_vulkan_buffer_copy(VkDeviceSize size, VkBuffer source, VkBuffer target);
 void                     tg_graphics_vulkan_buffer_copy_to_image(u32 width, u32 height, VkBuffer source, VkImage target);
@@ -191,6 +169,7 @@ void                     tg_graphics_vulkan_command_buffer_end_and_submit(VkComm
 void                     tg_graphics_vulkan_command_buffer_free(VkCommandPool command_pool, VkCommandBuffer command_buffer);
 void                     tg_graphics_vulkan_command_buffers_allocate(VkCommandPool command_pool, VkCommandBufferLevel level, u32 command_buffer_count, VkCommandBuffer* p_command_buffers);
 void                     tg_graphics_vulkan_command_buffers_free(VkCommandPool command_pool, u32 command_buffer_count, const VkCommandBuffer* p_command_buffers);
+VkCommandPool            tg_graphics_vulkan_command_pool_create(VkCommandPoolCreateFlags command_pool_create_flags, u32 queue_family_index);
 VkFormat                 tg_graphics_vulkan_depth_format_acquire();
 void                     tg_graphics_vulkan_descriptor_pool_create(VkDescriptorPoolCreateFlags flags, u32 max_sets, u32 pool_size_count, const VkDescriptorPoolSize* pool_sizes, VkDescriptorPool* p_descriptor_pool);
 void                     tg_graphics_vulkan_descriptor_pool_destroy(VkDescriptorPool descriptor_pool);
@@ -210,7 +189,7 @@ void                     tg_graphics_vulkan_image_view_create(VkImage image, VkF
 void                     tg_graphics_vulkan_image_view_destroy(VkImageView image_view);
 u32                      tg_graphics_vulkan_memory_type_find(u32 memory_type_bits, VkMemoryPropertyFlags memory_property_flags);
 b32                      tg_graphics_vulkan_physical_device_check_extension_support(VkPhysicalDevice physical_device);
-b32                      tg_graphics_vulkan_physical_device_find_queue_families(VkPhysicalDevice physical_device, tg_queue* p_graphics_queue, tg_queue* p_present_queue);
+b32                      tg_graphics_vulkan_physical_device_find_queue_families(VkPhysicalDevice physical_device, tg_queue* p_graphics_queue, tg_queue* p_present_queue, tg_queue* p_compute_queue);
 VkSampleCountFlagBits    tg_graphics_vulkan_physical_device_find_max_sample_count(VkPhysicalDevice physical_device);
 VkDeviceSize             tg_graphics_vulkan_physical_device_find_min_uniform_buffer_offset_alignment(VkPhysicalDevice physical_device);
 b32                      tg_graphics_vulkan_physical_device_is_suitable(VkPhysicalDevice physical_device);

@@ -12,7 +12,7 @@ typedef struct tg_image
     u32                width;
     u32                height;
     tg_image_format    format;
-    u32* data;
+    u32*               data;
     VkImage            image;
     VkDeviceMemory     device_memory;
     VkImageView        image_view;
