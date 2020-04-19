@@ -92,7 +92,7 @@ void tg_graphics_compute_shader_bind_input_elements(tg_compute_shader_h compute_
 			tg_compute_buffer_h compute_buffer_h = *(tg_compute_buffer_h*)pp_handles[i];
 			VkDescriptorBufferInfo descriptor_buffer_info = { 0 };
 			{
-				descriptor_buffer_info.buffer = compute_buffer_h->buffer;
+				descriptor_buffer_info.buffer = compute_buffer_h->buffer.buffer;
 				descriptor_buffer_info.offset = 0;
 				descriptor_buffer_info.range = VK_WHOLE_SIZE;
 			}
@@ -116,7 +116,7 @@ void tg_graphics_compute_shader_bind_input_elements(tg_compute_shader_h compute_
 			tg_uniform_buffer_h uniform_buffer_h = *(tg_uniform_buffer_h*)pp_handles[i];
 			VkDescriptorBufferInfo descriptor_buffer_info = { 0 };
 			{
-				descriptor_buffer_info.buffer = uniform_buffer_h->buffer;
+				descriptor_buffer_info.buffer = uniform_buffer_h->buffer.buffer;
 				descriptor_buffer_info.offset = 0;
 				descriptor_buffer_info.range = VK_WHOLE_SIZE;
 			}

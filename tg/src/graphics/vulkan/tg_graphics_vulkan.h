@@ -19,6 +19,32 @@
 
 
 
+
+
+typedef struct tg_vulkan_buffer
+{
+    u64               size;
+    VkBuffer          buffer;
+    VkDeviceMemory    device_memory;
+    void* p_mapped_device_memory;
+} tg_vulkan_buffer;
+
+typedef struct tg_vulkan_surface
+{
+    VkSurfaceKHR          surface;
+    VkSurfaceFormatKHR    format;
+} tg_vulkan_surface;
+
+typedef struct tg_vulkan_queue
+{
+    u8         index;
+    VkQueue    queue;
+} tg_vulkan_queue;
+
+
+
+
+
 typedef struct tg_camera
 {
     struct
@@ -41,10 +67,7 @@ typedef struct tg_camera
 
 typedef struct tg_compute_buffer
 {
-    VkBuffer          buffer;
-    u64               size;
-    VkDeviceMemory    device_memory;
-    void*             p_mapped_memory;
+    tg_vulkan_buffer    buffer;
 } tg_compute_buffer;
 
 typedef struct tg_compute_shader
@@ -75,19 +98,8 @@ typedef struct tg_material
 
 typedef struct tg_mesh
 {
-    struct
-    {
-        u32               vertex_count;
-        VkBuffer          buffer;
-        VkDeviceMemory    device_memory;
-    } vbo;
-
-    struct
-    {
-        u32               index_count;
-        VkBuffer          buffer;
-        VkDeviceMemory    device_memory;
-    } ibo;
+    tg_vulkan_buffer    vbo;
+    tg_vulkan_buffer    ibo;
 } tg_mesh;
 
 typedef struct tg_model
@@ -109,10 +121,7 @@ typedef struct tg_model
 
 typedef struct tg_uniform_buffer
 {
-    u64               size;
-    VkBuffer          buffer;
-    VkDeviceMemory    device_memory;
-    void*             p_mapped_memory;
+    tg_vulkan_buffer    buffer;
 } tg_uniform_buffer;
 
 typedef struct tg_vertex_shader
@@ -122,43 +131,14 @@ typedef struct tg_vertex_shader
 
 
 
-typedef struct tg_surface
-{
-    VkSurfaceKHR          surface;
-    VkSurfaceFormatKHR    format;
-} tg_surface;
-
-typedef struct tg_queue
-{
-    u8         index;
-    VkQueue    queue;
-} tg_queue;
-
-typedef struct tg_vulkan_image_create_info
-{
-    VkFormat                 format;
-    u32                      width;
-    u32                      height;
-    u32                      mip_levels;
-    VkSampleCountFlagBits    sample_count_flag_bits;
-    VkImageUsageFlags        image_usage_flags;
-    VkMemoryPropertyFlags    memory_property_flags;
-    VkImageLayout            image_layout;
-} tg_vulkan_image_create_info;
-/*
-TODO: use above for image creation
-*/
-
-
-
-VkInstance          instance;
-tg_surface          surface;
-VkPhysicalDevice    physical_device;
-VkDevice            device;
-tg_queue            graphics_queue;
-tg_queue            present_queue;
-tg_queue            compute_queue;
-VkCommandPool       command_pool;
+VkInstance           instance;
+tg_vulkan_surface    surface;
+VkPhysicalDevice     physical_device;
+VkDevice             device;
+tg_vulkan_queue      graphics_queue;
+tg_vulkan_queue      present_queue;
+tg_vulkan_queue      compute_queue;
+VkCommandPool        command_pool;
 
 
 
@@ -171,8 +151,8 @@ VkImageView         swapchain_image_views[TG_GRAPHICS_VULKAN_SURFACE_IMAGE_COUNT
 
 void                     tg_graphics_vulkan_buffer_copy(VkDeviceSize size, VkBuffer source, VkBuffer target);
 void                     tg_graphics_vulkan_buffer_copy_to_image(u32 width, u32 height, VkBuffer source, VkImage target);
-void                     tg_graphics_vulkan_buffer_create(VkDeviceSize size, VkBufferUsageFlags buffer_usage_flags, VkMemoryPropertyFlags memory_property_flags, VkBuffer* p_buffer, VkDeviceMemory* p_device_memory);
-void                     tg_graphics_vulkan_buffer_destroy(VkBuffer buffer, VkDeviceMemory device_memory);
+tg_vulkan_buffer         tg_graphics_vulkan_buffer_create(VkDeviceSize size, VkBufferUsageFlags buffer_usage_flags, VkMemoryPropertyFlags memory_property_flags);
+void                     tg_graphics_vulkan_buffer_destroy(tg_vulkan_buffer* p_vulkan_buffer);
 void                     tg_graphics_vulkan_command_buffer_allocate(VkCommandPool command_pool, VkCommandBufferLevel level, VkCommandBuffer* p_command_buffer);
 void                     tg_graphics_vulkan_command_buffer_begin(VkCommandBufferUsageFlags usage_flags, VkCommandBuffer command_buffer);
 void                     tg_graphics_vulkan_command_buffer_cmd_transition_image_layout(VkCommandBuffer command_buffer, VkImage image, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkImageAspectFlags aspect_mask, u32 mip_levels, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits);
@@ -181,6 +161,7 @@ void                     tg_graphics_vulkan_command_buffer_free(VkCommandPool co
 void                     tg_graphics_vulkan_command_buffers_allocate(VkCommandPool command_pool, VkCommandBufferLevel level, u32 command_buffer_count, VkCommandBuffer* p_command_buffers);
 void                     tg_graphics_vulkan_command_buffers_free(VkCommandPool command_pool, u32 command_buffer_count, const VkCommandBuffer* p_command_buffers);
 VkCommandPool            tg_graphics_vulkan_command_pool_create(VkCommandPoolCreateFlags command_pool_create_flags, u32 queue_family_index);
+void                     tg_graphics_vulkan_command_pool_destroy(VkCommandPool command_pool);
 VkFormat                 tg_graphics_vulkan_depth_format_acquire();
 void                     tg_graphics_vulkan_descriptor_pool_create(VkDescriptorPoolCreateFlags flags, u32 max_sets, u32 pool_size_count, const VkDescriptorPoolSize* pool_sizes, VkDescriptorPool* p_descriptor_pool);
 void                     tg_graphics_vulkan_descriptor_pool_destroy(VkDescriptorPool descriptor_pool);
@@ -200,7 +181,7 @@ void                     tg_graphics_vulkan_image_view_create(VkImage image, VkF
 void                     tg_graphics_vulkan_image_view_destroy(VkImageView image_view);
 u32                      tg_graphics_vulkan_memory_type_find(u32 memory_type_bits, VkMemoryPropertyFlags memory_property_flags);
 b32                      tg_graphics_vulkan_physical_device_check_extension_support(VkPhysicalDevice physical_device);
-b32                      tg_graphics_vulkan_physical_device_find_queue_families(VkPhysicalDevice physical_device, tg_queue* p_graphics_queue, tg_queue* p_present_queue, tg_queue* p_compute_queue);
+b32                      tg_graphics_vulkan_physical_device_find_queue_families(VkPhysicalDevice physical_device, tg_vulkan_queue* p_graphics_queue, tg_vulkan_queue* p_present_queue, tg_vulkan_queue* p_compute_queue);
 VkSampleCountFlagBits    tg_graphics_vulkan_physical_device_find_max_sample_count(VkPhysicalDevice physical_device);
 VkDeviceSize             tg_graphics_vulkan_physical_device_find_min_uniform_buffer_offset_alignment(VkPhysicalDevice physical_device);
 b32                      tg_graphics_vulkan_physical_device_is_suitable(VkPhysicalDevice physical_device);

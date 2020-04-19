@@ -105,36 +105,45 @@ void                     tg_graphics_vulkan_buffer_copy_to_image(u32 width, u32 
     tg_graphics_vulkan_command_buffer_end_and_submit(command_buffer);
     tg_graphics_vulkan_command_buffer_free(command_pool, command_buffer);
 }
-void                     tg_graphics_vulkan_buffer_create(VkDeviceSize size, VkBufferUsageFlags buffer_usage_flags, VkMemoryPropertyFlags memory_property_flags, VkBuffer* p_buffer, VkDeviceMemory* p_device_memory)
+tg_vulkan_buffer         tg_graphics_vulkan_buffer_create(VkDeviceSize size, VkBufferUsageFlags buffer_usage_flags, VkMemoryPropertyFlags memory_property_flags)
 {
-    VkBufferCreateInfo buffer_create_info = { 0 };
-    buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    buffer_create_info.pNext = TG_NULL;
-    buffer_create_info.flags = 0;
-    buffer_create_info.size = size;
-    buffer_create_info.usage = buffer_usage_flags;
-    buffer_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    buffer_create_info.queueFamilyIndexCount = 0;
-    buffer_create_info.pQueueFamilyIndices = TG_NULL;
+    tg_vulkan_buffer buffer = { 0 };
 
-    VK_CALL(vkCreateBuffer(device, &buffer_create_info, TG_NULL, p_buffer));
+    buffer.size = size;
+
+    VkBufferCreateInfo buffer_create_info = { 0 };
+    {
+        buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        buffer_create_info.pNext = TG_NULL;
+        buffer_create_info.flags = 0;
+        buffer_create_info.size = size;
+        buffer_create_info.usage = buffer_usage_flags;
+        buffer_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        buffer_create_info.queueFamilyIndexCount = 0;
+        buffer_create_info.pQueueFamilyIndices = TG_NULL;
+    }
+    VK_CALL(vkCreateBuffer(device, &buffer_create_info, TG_NULL, &buffer.buffer));
 
     VkMemoryRequirements memory_requirements;
-    vkGetBufferMemoryRequirements(device, *p_buffer, &memory_requirements);
-
+    vkGetBufferMemoryRequirements(device, buffer.buffer, &memory_requirements);
     VkMemoryAllocateInfo memory_allocate_info = { 0 };
-    memory_allocate_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    memory_allocate_info.pNext = TG_NULL;
-    memory_allocate_info.allocationSize = memory_requirements.size;
-    memory_allocate_info.memoryTypeIndex = tg_graphics_vulkan_memory_type_find(memory_requirements.memoryTypeBits, memory_property_flags);
+    {
+        memory_allocate_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        memory_allocate_info.pNext = TG_NULL;
+        memory_allocate_info.allocationSize = memory_requirements.size;
+        memory_allocate_info.memoryTypeIndex = tg_graphics_vulkan_memory_type_find(memory_requirements.memoryTypeBits, memory_property_flags);
+    }
+    VK_CALL(vkAllocateMemory(device, &memory_allocate_info, TG_NULL, &buffer.device_memory));
+    VK_CALL(vkBindBufferMemory(device, buffer.buffer, buffer.device_memory, 0));
 
-    VK_CALL(vkAllocateMemory(device, &memory_allocate_info, TG_NULL, p_device_memory));
-    VK_CALL(vkBindBufferMemory(device, *p_buffer, *p_device_memory, 0));
+    buffer.p_mapped_device_memory = TG_NULL;
+
+    return buffer;
 }
-void                     tg_graphics_vulkan_buffer_destroy(VkBuffer buffer, VkDeviceMemory device_memory)
+void                     tg_graphics_vulkan_buffer_destroy(tg_vulkan_buffer* p_vulkan_buffer)
 {
-    vkFreeMemory(device, device_memory, TG_NULL);
-    vkDestroyBuffer(device, buffer, TG_NULL);
+    vkFreeMemory(device, p_vulkan_buffer->device_memory, TG_NULL);
+    vkDestroyBuffer(device, p_vulkan_buffer->buffer, TG_NULL);
 }
 void                     tg_graphics_vulkan_command_buffer_allocate(VkCommandPool command_pool, VkCommandBufferLevel level, VkCommandBuffer* p_command_buffer)
 {
@@ -234,6 +243,10 @@ VkCommandPool            tg_graphics_vulkan_command_pool_create(VkCommandPoolCre
     VK_CALL(vkCreateCommandPool(device, &command_pool_create_info, TG_NULL, &command_pool));
 
     return command_pool;
+}
+void                     tg_graphics_vulkan_command_pool_destroy(VkCommandPool command_pool)
+{
+    vkDestroyCommandPool(device, command_pool, TG_NULL);
 }
 VkFormat                 tg_graphics_vulkan_depth_format_acquire()
 {
@@ -541,7 +554,7 @@ b32                      tg_graphics_vulkan_physical_device_check_extension_supp
     TG_MEMORY_ALLOCATOR_FREE(device_extension_properties);
     return supports_extensions;
 }
-b32                      tg_graphics_vulkan_physical_device_find_queue_families(VkPhysicalDevice physical_device, tg_queue* p_graphics_queue, tg_queue* p_present_queue, tg_queue* p_compute_queue)
+b32                      tg_graphics_vulkan_physical_device_find_queue_families(VkPhysicalDevice physical_device, tg_vulkan_queue* p_graphics_queue, tg_vulkan_queue* p_present_queue, tg_vulkan_queue* p_compute_queue)
 {
     u32 queue_family_count;
     vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, TG_NULL);
@@ -852,7 +865,7 @@ void                     tg_graphics_vulkan_debug_utils_manager_create(VkDebugUt
 }
 #endif
 #ifdef TG_WIN32
-void                     tg_graphics_vulkan_surface_create(tg_surface* p_surface)
+void                     tg_graphics_vulkan_surface_create(tg_vulkan_surface* p_surface)
 {
     TG_ASSERT(p_surface);
 
@@ -989,7 +1002,7 @@ void                     tg_graphics_vulkan_device_create(VkDevice* p_device)
 
     VK_CALL(vkCreateDevice(physical_device, &device_create_info, TG_NULL, p_device));
 }
-void                     tg_graphics_vulkan_queues_create(tg_queue* p_graphics_queue, tg_queue* p_present_queue, tg_queue* p_compute_queue)
+void                     tg_graphics_vulkan_queues_create(tg_vulkan_queue* p_graphics_queue, tg_vulkan_queue* p_present_queue, tg_vulkan_queue* p_compute_queue)
 {
     TG_ASSERT(p_graphics_queue && p_present_queue);
 
