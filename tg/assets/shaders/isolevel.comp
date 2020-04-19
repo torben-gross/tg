@@ -194,9 +194,9 @@ void main()
 	const precise uint y = gl_GlobalInvocationID.y;
 	const precise uint z = gl_GlobalInvocationID.z;
 
-    const precise float noise_x = (float(chunk_vertex_count_x) * float(chunk_coordinate_x) + float(x)) * noise_scale_x;
-    const precise float noise_y = (float(chunk_vertex_count_y) * float(chunk_coordinate_y) + float(y)) * noise_scale_y;
-    const precise float noise_z = (float(chunk_vertex_count_z) * float(chunk_coordinate_z) + float(z)) * noise_scale_z;
+    const precise float noise_x = (float(chunk_vertex_count_x - 1) * float(chunk_coordinate_x) + float(x)) * noise_scale_x;
+    const precise float noise_y = (float(chunk_vertex_count_y - 1) * float(chunk_coordinate_y) + float(y)) * noise_scale_y;
+    const precise float noise_z = (float(chunk_vertex_count_z - 1) * float(chunk_coordinate_z) + float(z)) * noise_scale_z;
 	const precise float noise = simplex_noise(noise_x, noise_y, noise_z);
 
 	isolevels[chunk_vertex_count_x * chunk_vertex_count_y * ((chunk_vertex_count_z - 1) - z) + chunk_vertex_count_x * y + x] = noise;

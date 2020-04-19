@@ -155,24 +155,24 @@ void tg_application_start()
 
 
 
-    const u32 chunk_count_x = 4;
-    const u32 chunk_count_z = 4;
-    const u32 chunk_grid_size = 64;
-    const f32 chunk_grid_cell_stride = 1.1f;
-    const f32 noise_scale = 0.02f;
+    const u32 chunk_count_x = 3;
+    const u32 chunk_count_z = 3;
+    const u32 chunk_vertex_count = 64;
+    const f32 cell_stride = 1.1f;
+    const f32 noise_scale = 0.1f;
 
     tg_uniform_buffer_h chunk_uniform_buffer_h = tg_graphics_uniform_buffer_create(sizeof(tg_chunk_uniform_buffer));
     tg_chunk_uniform_buffer* p_chunk_uniform_buffer_data = tg_graphics_uniform_buffer_data(chunk_uniform_buffer_h);
     {
-        p_chunk_uniform_buffer_data->chunk_vertex_count_x = 64;
-        p_chunk_uniform_buffer_data->chunk_vertex_count_y = 64;
-        p_chunk_uniform_buffer_data->chunk_vertex_count_z = 64;
-        p_chunk_uniform_buffer_data->cell_stride_x = 1.1f;
-        p_chunk_uniform_buffer_data->cell_stride_y = 1.1f;
-        p_chunk_uniform_buffer_data->cell_stride_z = 1.1f;
-        p_chunk_uniform_buffer_data->noise_scale_x = 0.02f;
-        p_chunk_uniform_buffer_data->noise_scale_y = 0.02f;
-        p_chunk_uniform_buffer_data->noise_scale_z = 0.02f;
+        p_chunk_uniform_buffer_data->chunk_vertex_count_x = chunk_vertex_count;
+        p_chunk_uniform_buffer_data->chunk_vertex_count_y = chunk_vertex_count;
+        p_chunk_uniform_buffer_data->chunk_vertex_count_z = chunk_vertex_count;
+        p_chunk_uniform_buffer_data->cell_stride_x = cell_stride;
+        p_chunk_uniform_buffer_data->cell_stride_y = cell_stride;
+        p_chunk_uniform_buffer_data->cell_stride_z = cell_stride;
+        p_chunk_uniform_buffer_data->noise_scale_x = noise_scale;
+        p_chunk_uniform_buffer_data->noise_scale_y = noise_scale;
+        p_chunk_uniform_buffer_data->noise_scale_z = noise_scale;
     }
     tg_compute_buffer_h isolevel_buffer_h = tg_graphics_compute_buffer_create((u64)p_chunk_uniform_buffer_data->chunk_vertex_count_x * (u64)p_chunk_uniform_buffer_data->chunk_vertex_count_y * (u64)p_chunk_uniform_buffer_data->chunk_vertex_count_z * sizeof(f32));
     f32* p_isolevel_buffer_data = tg_graphics_compute_buffer_data(isolevel_buffer_h);
@@ -187,7 +187,7 @@ void tg_application_start()
     };
     tg_graphics_compute_shader_bind_input_elements(isolevel_compute_shader_h, pp_handles);
 
-    tg_marching_cubes_triangle* p_chunk_triangles = TG_MEMORY_ALLOCATOR_ALLOCATE((u64)chunk_grid_size * (u64)chunk_grid_size * (u64)chunk_grid_size * 12 * sizeof(*p_chunk_triangles));
+    tg_marching_cubes_triangle* p_chunk_triangles = TG_MEMORY_ALLOCATOR_ALLOCATE((u64)chunk_vertex_count * (u64)chunk_vertex_count * (u64)chunk_vertex_count * 12 * sizeof(*p_chunk_triangles));
     tg_material_h chunk_material_h = tg_graphics_material_create(vertex_shader_h, fragment_shader_h);
     tg_mesh_h* p_chunk_meshes = TG_MEMORY_ALLOCATOR_ALLOCATE((u64)chunk_count_x * (u64)chunk_count_z * sizeof(*p_chunk_meshes));
     tg_model_h* p_chunk_models = TG_MEMORY_ALLOCATOR_ALLOCATE((u64)chunk_count_x * (u64)chunk_count_z * sizeof(*p_chunk_models));
@@ -202,31 +202,31 @@ void tg_application_start()
             tg_graphics_compute_shader_dispatch(isolevel_compute_shader_h, p_chunk_uniform_buffer_data->chunk_vertex_count_x, p_chunk_uniform_buffer_data->chunk_vertex_count_y, p_chunk_uniform_buffer_data->chunk_vertex_count_z);
 
             u32 triangle_count = 0;
-            for (u32 z = 0; z < chunk_grid_size - 1; z++)
+            for (u32 z = 0; z < chunk_vertex_count - 1; z++)
             {
-                for (u32 y = 0; y < chunk_grid_size - 1; y++)
+                for (u32 y = 0; y < chunk_vertex_count - 1; y++)
                 {
-                    for (u32 x = 0; x < chunk_grid_size - 1; x++)
+                    for (u32 x = 0; x < chunk_vertex_count - 1; x++)
                     {
                         tg_marching_cubes_grid_cell grid_cell = { 0 };
                         {
-                            grid_cell.positions[0] = (v3){ (f32) x      * chunk_grid_cell_stride, (f32) y      * chunk_grid_cell_stride, -(f32)(z + 1) * chunk_grid_cell_stride };
-                            grid_cell.positions[1] = (v3){ (f32)(x + 1) * chunk_grid_cell_stride, (f32) y      * chunk_grid_cell_stride, -(f32)(z + 1) * chunk_grid_cell_stride };
-                            grid_cell.positions[2] = (v3){ (f32)(x + 1) * chunk_grid_cell_stride, (f32) y      * chunk_grid_cell_stride, -(f32) z      * chunk_grid_cell_stride };
-                            grid_cell.positions[3] = (v3){ (f32) x      * chunk_grid_cell_stride, (f32) y      * chunk_grid_cell_stride, -(f32) z      * chunk_grid_cell_stride };
-                            grid_cell.positions[4] = (v3){ (f32) x      * chunk_grid_cell_stride, (f32)(y + 1) * chunk_grid_cell_stride, -(f32)(z + 1) * chunk_grid_cell_stride };
-                            grid_cell.positions[5] = (v3){ (f32)(x + 1) * chunk_grid_cell_stride, (f32)(y + 1) * chunk_grid_cell_stride, -(f32)(z + 1) * chunk_grid_cell_stride };
-                            grid_cell.positions[6] = (v3){ (f32)(x + 1) * chunk_grid_cell_stride, (f32)(y + 1) * chunk_grid_cell_stride, -(f32) z      * chunk_grid_cell_stride };
-                            grid_cell.positions[7] = (v3){ (f32) x      * chunk_grid_cell_stride, (f32)(y + 1) * chunk_grid_cell_stride, -(f32) z      * chunk_grid_cell_stride };
+                            grid_cell.positions[0] = (v3){ (f32) x      * cell_stride, (f32) y      * cell_stride, -(f32)(z + 1) * cell_stride };
+                            grid_cell.positions[1] = (v3){ (f32)(x + 1) * cell_stride, (f32) y      * cell_stride, -(f32)(z + 1) * cell_stride };
+                            grid_cell.positions[2] = (v3){ (f32)(x + 1) * cell_stride, (f32) y      * cell_stride, -(f32) z      * cell_stride };
+                            grid_cell.positions[3] = (v3){ (f32) x      * cell_stride, (f32) y      * cell_stride, -(f32) z      * cell_stride };
+                            grid_cell.positions[4] = (v3){ (f32) x      * cell_stride, (f32)(y + 1) * cell_stride, -(f32)(z + 1) * cell_stride };
+                            grid_cell.positions[5] = (v3){ (f32)(x + 1) * cell_stride, (f32)(y + 1) * cell_stride, -(f32)(z + 1) * cell_stride };
+                            grid_cell.positions[6] = (v3){ (f32)(x + 1) * cell_stride, (f32)(y + 1) * cell_stride, -(f32) z      * cell_stride };
+                            grid_cell.positions[7] = (v3){ (f32) x      * cell_stride, (f32)(y + 1) * cell_stride, -(f32) z      * cell_stride };
 
-                            grid_cell.values[0] = p_isolevel_buffer_data[chunk_grid_size * chunk_grid_size * ((chunk_grid_size - 1) - z - 1) + chunk_grid_size *  y      +  x     ];
-                            grid_cell.values[1] = p_isolevel_buffer_data[chunk_grid_size * chunk_grid_size * ((chunk_grid_size - 1) - z - 1) + chunk_grid_size *  y      + (x + 1)];
-                            grid_cell.values[2] = p_isolevel_buffer_data[chunk_grid_size * chunk_grid_size * ((chunk_grid_size - 1) - z)     + chunk_grid_size *  y      + (x + 1)];
-                            grid_cell.values[3] = p_isolevel_buffer_data[chunk_grid_size * chunk_grid_size * ((chunk_grid_size - 1) - z)     + chunk_grid_size *  y      +  x     ];
-                            grid_cell.values[4] = p_isolevel_buffer_data[chunk_grid_size * chunk_grid_size * ((chunk_grid_size - 1) - z - 1) + chunk_grid_size * (y + 1) +  x     ];
-                            grid_cell.values[5] = p_isolevel_buffer_data[chunk_grid_size * chunk_grid_size * ((chunk_grid_size - 1) - z - 1) + chunk_grid_size * (y + 1) + (x + 1)];
-                            grid_cell.values[6] = p_isolevel_buffer_data[chunk_grid_size * chunk_grid_size * ((chunk_grid_size - 1) - z)     + chunk_grid_size * (y + 1) + (x + 1)];
-                            grid_cell.values[7] = p_isolevel_buffer_data[chunk_grid_size * chunk_grid_size * ((chunk_grid_size - 1) - z)     + chunk_grid_size * (y + 1) +  x     ];
+                            grid_cell.values[0] = p_isolevel_buffer_data[chunk_vertex_count * chunk_vertex_count * ((chunk_vertex_count - 1) - z - 1) + chunk_vertex_count *  y      +  x     ];
+                            grid_cell.values[1] = p_isolevel_buffer_data[chunk_vertex_count * chunk_vertex_count * ((chunk_vertex_count - 1) - z - 1) + chunk_vertex_count *  y      + (x + 1)];
+                            grid_cell.values[2] = p_isolevel_buffer_data[chunk_vertex_count * chunk_vertex_count * ((chunk_vertex_count - 1) - z)     + chunk_vertex_count *  y      + (x + 1)];
+                            grid_cell.values[3] = p_isolevel_buffer_data[chunk_vertex_count * chunk_vertex_count * ((chunk_vertex_count - 1) - z)     + chunk_vertex_count *  y      +  x     ];
+                            grid_cell.values[4] = p_isolevel_buffer_data[chunk_vertex_count * chunk_vertex_count * ((chunk_vertex_count - 1) - z - 1) + chunk_vertex_count * (y + 1) +  x     ];
+                            grid_cell.values[5] = p_isolevel_buffer_data[chunk_vertex_count * chunk_vertex_count * ((chunk_vertex_count - 1) - z - 1) + chunk_vertex_count * (y + 1) + (x + 1)];
+                            grid_cell.values[6] = p_isolevel_buffer_data[chunk_vertex_count * chunk_vertex_count * ((chunk_vertex_count - 1) - z)     + chunk_vertex_count * (y + 1) + (x + 1)];
+                            grid_cell.values[7] = p_isolevel_buffer_data[chunk_vertex_count * chunk_vertex_count * ((chunk_vertex_count - 1) - z)     + chunk_vertex_count * (y + 1) +  x     ];
                         }
                         triangle_count += tg_marching_cubes_polygonise(&grid_cell, -0.2f, &p_chunk_triangles[triangle_count]);
                     }
@@ -236,12 +236,12 @@ void tg_application_start()
             if (triangle_count != 0)
             {
                 const v3* p_chunk_positions = (v3*)p_chunk_triangles;
-                const u32 chunk_vertex_count = 3 * triangle_count;
+                const u32 chunk_total_vertex_count = 3 * triangle_count;
 
-                tg_mesh_h chunk_mesh_h = tg_graphics_mesh_create(chunk_vertex_count, p_chunk_positions, TG_NULL, TG_NULL, TG_NULL, 0, TG_NULL);
+                tg_mesh_h chunk_mesh_h = tg_graphics_mesh_create(chunk_total_vertex_count, p_chunk_positions, TG_NULL, TG_NULL, TG_NULL, 0, TG_NULL);
                 tg_model_h chunk_model_h = tg_graphics_model_create(chunk_mesh_h, chunk_material_h);
                 tg_entity_h chunk_entity_h = tg_entity_create(renderer_3d_h, chunk_model_h);
-                v3 chunk_translation = { (f32)chunk_grid_size * chunk_grid_cell_stride * (f32)chunk_x, 0.0f, -(f32)chunk_grid_size * chunk_grid_cell_stride * (f32)chunk_z }; // TODO: could be baked in
+                v3 chunk_translation = { (f32)(chunk_vertex_count - 1) * cell_stride * (f32)chunk_x, 0.0f, -(f32)(chunk_vertex_count - 1) * cell_stride * (f32)chunk_z }; // TODO: could be baked in
                 *chunk_entity_h->p_model_matrix = tgm_m4_translate(&chunk_translation);
 
                 p_chunk_entities[chunk_z * chunk_count_x + chunk_x] = chunk_entity_h;
@@ -252,6 +252,7 @@ void tg_application_start()
     }
     tg_graphics_compute_shader_destroy(isolevel_compute_shader_h);
     tg_graphics_compute_buffer_destroy(isolevel_buffer_h);
+    tg_graphics_uniform_buffer_destroy(chunk_uniform_buffer_h);
 
     TG_MEMORY_ALLOCATOR_FREE(p_chunk_triangles);
 

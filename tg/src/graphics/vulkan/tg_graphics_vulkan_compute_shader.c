@@ -47,14 +47,6 @@ tg_compute_shader_h tg_graphics_compute_shader_create(u32 input_element_count, t
 		p_descriptor_set_layout_bindings[i].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 		p_descriptor_set_layout_bindings[i].pImmutableSamplers = TG_NULL;
 	}
-	VkDescriptorSetLayoutCreateInfo descriptor_set_layout_create_info = { 0 };
-	{
-		descriptor_set_layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		descriptor_set_layout_create_info.pNext = TG_NULL;
-		descriptor_set_layout_create_info.flags = 0;
-		descriptor_set_layout_create_info.bindingCount;
-		descriptor_set_layout_create_info.pBindings = p_descriptor_set_layout_bindings;
-	}
     tg_graphics_vulkan_descriptor_set_layout_create(0, input_element_count, p_descriptor_set_layout_bindings, &compute_shader_h->descriptor_set_layout);
 	TG_MEMORY_ALLOCATOR_FREE(p_descriptor_set_layout_bindings);
 	tg_graphics_vulkan_descriptor_set_allocate(compute_shader_h->descriptor_pool, compute_shader_h->descriptor_set_layout, &compute_shader_h->descriptor_set);
