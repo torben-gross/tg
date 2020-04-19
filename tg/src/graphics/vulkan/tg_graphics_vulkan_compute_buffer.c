@@ -10,7 +10,6 @@ tg_compute_buffer_h tg_graphics_compute_buffer_create(u64 size)
 
 	tg_compute_buffer_h compute_buffer_h = TG_MEMORY_ALLOCATOR_ALLOCATE(sizeof(*compute_buffer_h));
 	compute_buffer_h->buffer = tg_graphics_vulkan_buffer_create(size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-	VK_CALL(vkMapMemory(device, compute_buffer_h->buffer.device_memory, 0, size, 0, &compute_buffer_h->buffer.p_mapped_device_memory)); // TODO: abstract
 
 	return compute_buffer_h;
 }
@@ -29,7 +28,6 @@ void tg_graphics_compute_buffer_destroy(tg_compute_buffer_h compute_buffer_h)
 {
 	TG_ASSERT(compute_buffer_h);
 
-	vkUnmapMemory(device, compute_buffer_h->buffer.device_memory); // TODO: unmapping before destruction is unnecessary
 	tg_graphics_vulkan_buffer_destroy(&compute_buffer_h->buffer);
 	TG_MEMORY_ALLOCATOR_FREE(compute_buffer_h);
 }

@@ -29,14 +29,14 @@ tg_compute_shader_h tg_graphics_compute_shader_create(u32 input_element_count, t
 		compute_shader_h->p_input_element_types[i] = p_input_element_types[i];
 	}
 	
-	tg_graphics_vulkan_shader_module_create(filename, &compute_shader_h->shader_module);
+	compute_shader_h->shader_module = tg_graphics_vulkan_shader_module_create(filename);
 
 	VkDescriptorPoolSize descriptor_pool_size = { 0 };
 	{
 		descriptor_pool_size.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 		descriptor_pool_size.descriptorCount = 1;
 	}
-	tg_graphics_vulkan_descriptor_pool_create(0, 1, 1, &descriptor_pool_size, &compute_shader_h->descriptor_pool);
+	compute_shader_h->descriptor_pool = tg_graphics_vulkan_descriptor_pool_create(0, 1, 1, &descriptor_pool_size);
 
 	VkDescriptorSetLayoutBinding* p_descriptor_set_layout_bindings = TG_MEMORY_ALLOCATOR_ALLOCATE(input_element_count * sizeof(*p_descriptor_set_layout_bindings));
 	for (u32 i = 0; i < input_element_count; i++)
@@ -47,36 +47,15 @@ tg_compute_shader_h tg_graphics_compute_shader_create(u32 input_element_count, t
 		p_descriptor_set_layout_bindings[i].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 		p_descriptor_set_layout_bindings[i].pImmutableSamplers = TG_NULL;
 	}
-    tg_graphics_vulkan_descriptor_set_layout_create(0, input_element_count, p_descriptor_set_layout_bindings, &compute_shader_h->descriptor_set_layout);
+	compute_shader_h->descriptor_set_layout = tg_graphics_vulkan_descriptor_set_layout_create(0, input_element_count, p_descriptor_set_layout_bindings);
 	TG_MEMORY_ALLOCATOR_FREE(p_descriptor_set_layout_bindings);
-	tg_graphics_vulkan_descriptor_set_allocate(compute_shader_h->descriptor_pool, compute_shader_h->descriptor_set_layout, &compute_shader_h->descriptor_set);
+	compute_shader_h->descriptor_set = tg_graphics_vulkan_descriptor_set_allocate(compute_shader_h->descriptor_pool, compute_shader_h->descriptor_set_layout);
 
-	tg_graphics_vulkan_pipeline_layout_create(1, &compute_shader_h->descriptor_set_layout, 0, TG_NULL, &compute_shader_h->pipeline_layout);
-
-	VkPipelineShaderStageCreateInfo pipeline_shader_stage_create_info = { 0 };
-	{
-		pipeline_shader_stage_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-		pipeline_shader_stage_create_info.pNext = TG_NULL;
-		pipeline_shader_stage_create_info.flags = 0;
-		pipeline_shader_stage_create_info.stage = VK_SHADER_STAGE_COMPUTE_BIT;
-		pipeline_shader_stage_create_info.module = compute_shader_h->shader_module;
-		pipeline_shader_stage_create_info.pName = "main";
-		pipeline_shader_stage_create_info.pSpecializationInfo = TG_NULL;
-	}
-	VkComputePipelineCreateInfo compute_pipeline_create_info = { 0 };
-	{
-		compute_pipeline_create_info.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-		compute_pipeline_create_info.pNext = TG_NULL;
-		compute_pipeline_create_info.flags = 0;
-		compute_pipeline_create_info.stage = pipeline_shader_stage_create_info;
-		compute_pipeline_create_info.layout = compute_shader_h->pipeline_layout;
-		compute_pipeline_create_info.basePipelineHandle = VK_NULL_HANDLE;
-		compute_pipeline_create_info.basePipelineIndex = -1;
-	}
-	VK_CALL(vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &compute_pipeline_create_info, TG_NULL, &compute_shader_h->pipeline)); // TODO: abstract
+	compute_shader_h->pipeline_layout = tg_graphics_vulkan_pipeline_layout_create(1, &compute_shader_h->descriptor_set_layout, 0, TG_NULL);
+	compute_shader_h->pipeline = tg_graphics_vulkan_compute_pipeline_create(compute_shader_h->shader_module, compute_shader_h->pipeline_layout);
 
 	compute_shader_h->command_pool = tg_graphics_vulkan_command_pool_create(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, compute_queue.index);
-	tg_graphics_vulkan_command_buffer_allocate(compute_shader_h->command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, &compute_shader_h->command_buffer);
+	compute_shader_h->command_buffer = tg_graphics_vulkan_command_buffer_allocate(compute_shader_h->command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
 	return compute_shader_h;
 }
@@ -144,7 +123,7 @@ void tg_graphics_compute_shader_dispatch(tg_compute_shader_h compute_shader_h, u
 {
 	TG_ASSERT(compute_shader_h && group_count_x && group_count_y && group_count_z);
 
-	tg_graphics_vulkan_command_buffer_begin(0, compute_shader_h->command_buffer);
+	tg_graphics_vulkan_command_buffer_begin(compute_shader_h->command_buffer, 0, TG_NULL);
 	vkCmdBindPipeline(compute_shader_h->command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute_shader_h->pipeline);
 	vkCmdBindDescriptorSets(compute_shader_h->command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute_shader_h->pipeline_layout, 0, 1, &compute_shader_h->descriptor_set, 0, TG_NULL);
 	vkCmdDispatch(compute_shader_h->command_buffer, group_count_x, group_count_y, group_count_z);

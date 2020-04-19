@@ -106,8 +106,8 @@ void tg_application_start()
     };
 
     tg_mesh_h mesh_h = tg_graphics_mesh_create(4, p_quad_positions, TG_NULL, p_uvs, TG_NULL, 6, p_indices);
-    tg_vertex_shader_h vertex_shader_h = tg_graphics_vertex_shader_create("shaders/geometry.vert.spv");
-    tg_fragment_shader_h fragment_shader_h = tg_graphics_fragment_shader_create("shaders/geometry.frag.spv");
+    tg_vertex_shader_h vertex_shader_h = tg_graphics_vertex_shader_create("shaders/geometry.vert");
+    tg_fragment_shader_h fragment_shader_h = tg_graphics_fragment_shader_create("shaders/geometry.frag");
     tg_material_h material_h = tg_graphics_material_create(vertex_shader_h, fragment_shader_h);
     tg_model_h model_h = tg_graphics_model_create(mesh_h, material_h);
     tg_entity_h quad_entity_h = tg_entity_create(renderer_3d_h, model_h);
@@ -180,7 +180,7 @@ void tg_application_start()
         TG_COMPUTE_SHADER_INPUT_ELEMENT_TYPE_COMPUTE_BUFFER,
         TG_COMPUTE_SHADER_INPUT_ELEMENT_TYPE_UNIFORM_BUFFER
     };
-    tg_compute_shader_h isolevel_compute_shader_h = tg_graphics_compute_shader_create(2, p_types, "shaders/isolevel.comp.spv");
+    tg_compute_shader_h isolevel_compute_shader_h = tg_graphics_compute_shader_create(2, p_types, "shaders/isolevel.comp");
     void* pp_handles[2] = {
         &isolevel_buffer_h,
         &chunk_uniform_buffer_h
