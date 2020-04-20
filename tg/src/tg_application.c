@@ -299,6 +299,7 @@ void tg_application_start()
     +--------------------------------------------------------*/
 
     f32 quad_offset = -9.0f; // TODO: temporary testing variable
+    f32 dtsum = 0.0f;
     while (running)
     {
         tg_timer_stop(timer_h);
@@ -330,6 +331,8 @@ void tg_application_start()
         tg_input_clear();
         tg_platform_handle_events();
 
+
+
         if (tg_input_is_key_down(TG_KEY_K))
         {
             quad_offset += 0.01f * delta_ms;
@@ -340,6 +343,19 @@ void tg_application_start()
         }
         v3 quad_offset_translation_z = { 0.0f, 0.0f, quad_offset };
         *quad_entity_h->p_model_matrix = tgm_m4_translate(&quad_offset_translation_z);
+
+        dtsum += delta_ms;
+        if (dtsum >= 10000.0f)
+        {
+            dtsum -= 10000.0f;
+        }
+        const f32 sint = tgm_f32_sin(0.001f * dtsum * 2.0f * (f32)TGM_PI);
+        const f32 noise_x = tgm_noise(sint, 0.1f, 0.1f) + 0.5f;
+        const f32 noise_y = tgm_noise(0.1f, sint, 0.1f) + 0.5f;
+        const f32 noise_z = tgm_noise(0.1f, 0.1f, sint) + 0.5f;
+        *p_custom_uniform_buffer_data = (v3){ noise_x, noise_y, noise_z };
+
+
 
         u32 mouse_x;
         u32 mouse_y;
