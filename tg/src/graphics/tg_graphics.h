@@ -23,11 +23,11 @@ TG_DECLARE_HANDLE(tg_vertex_shader);
 
 
 
-typedef enum tg_compute_shader_input_element_type
+typedef enum tg_shader_input_element_type
 {
-	TG_COMPUTE_SHADER_INPUT_ELEMENT_TYPE_COMPUTE_BUFFER    = 0,
-	TG_COMPUTE_SHADER_INPUT_ELEMENT_TYPE_UNIFORM_BUFFER    = 1
-} tg_compute_shader_input_element_type;
+	TG_SHADER_INPUT_ELEMENT_TYPE_COMPUTE_BUFFER    = 0,
+	TG_SHADER_INPUT_ELEMENT_TYPE_UNIFORM_BUFFER    = 1
+} tg_shader_input_element_type;
 
 typedef enum tg_filter
 {
@@ -99,6 +99,12 @@ typedef enum tg_sampler_mipmap_mode
 	TG_SAMPLER_MIPMAP_MODE_LINEAR     = 1
 } tg_sampler_mipmap_mode;
 
+typedef struct tg_shader_input_element
+{
+	tg_shader_input_element_type    type;
+	u32                             array_element_count;
+} tg_shader_input_element;
+
 typedef struct tg_vertex_3d
 {
 	v3    position;
@@ -127,8 +133,8 @@ tg_compute_buffer_h     tg_graphics_compute_buffer_create(u64 size);
 void*                   tg_graphics_compute_buffer_data(tg_compute_buffer_h compute_buffer_h);
 void                    tg_graphics_compute_buffer_destroy(tg_compute_buffer_h compute_buffer_h);
 
-tg_compute_shader_h     tg_graphics_compute_shader_create(u32 input_element_count, tg_compute_shader_input_element_type* p_input_element_types, const char* filename);
-void                    tg_graphics_compute_shader_bind_input_elements(tg_compute_shader_h compute_shader_h, void** pp_handles);
+tg_compute_shader_h     tg_graphics_compute_shader_create(u32 input_element_count, tg_shader_input_element* p_input_elements, const char* filename);
+void                    tg_graphics_compute_shader_bind_input(tg_compute_shader_h compute_shader_h, void** pp_handles);
 void                    tg_graphics_compute_shader_dispatch(tg_compute_shader_h compute_shader_h, u32 group_count_x, u32 group_count_y, u32 group_count_z);
 void                    tg_graphics_compute_shader_destroy(tg_compute_shader_h compute_shader_h);
 
@@ -138,7 +144,7 @@ void                    tg_graphics_fragment_shader_destroy(tg_fragment_shader_h
 tg_image_h              tg_graphics_image_create(const char* p_filename);
 void                    tg_graphics_image_destroy(tg_image_h image_h);
 
-tg_material_h           tg_graphics_material_create(tg_vertex_shader_h vertex_shader_h, tg_fragment_shader_h fragment_shader_h);
+tg_material_h           tg_graphics_material_create(tg_vertex_shader_h vertex_shader_h, tg_fragment_shader_h fragment_shader_h, u32 input_element_count, tg_shader_input_element* p_input_elements, void** pp_input_element_handles);
 void                    tg_graphics_material_destroy(tg_material_h material_h);
 
 tg_mesh_h               tg_graphics_mesh_create(u32 vertex_count, const v3* p_positions, const v3* p_normals, const v2* p_uvs, const v3* p_tangents, u32 index_count, const u16* p_indices);

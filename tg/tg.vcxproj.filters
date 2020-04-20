@@ -22,7 +22,6 @@
     <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan_camera.c" />
     <ClCompile Include="src\tg_marching_cubes.c" />
     <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan_compute_buffer.c" />
-    <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan_compute_shader.c" />
     <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan_uniform_buffer.c" />
   </ItemGroup>
   <ItemGroup>

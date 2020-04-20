@@ -119,7 +119,6 @@
   <ItemGroup>
     <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan_compute_buffer.c" />
     <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan_camera.c" />
-    <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan_compute_shader.c" />
     <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan_material.c" />
     <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan_model.c" />
     <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan_uniform_buffer.c" />

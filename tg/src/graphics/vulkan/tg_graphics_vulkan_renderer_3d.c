@@ -40,14 +40,6 @@ typedef struct tg_renderer_3d_screen_vertex
 
 
 
-typedef struct tg_renderer_3d_attachment
-{
-    VkImage           image;
-    VkDeviceMemory    device_memory;
-    VkImageView       image_view;
-    VkSampler         sampler;
-} tg_renderer_3d_attachment;
-
 typedef struct tg_camera_uniform_buffer
 {
     m4    view;
@@ -58,10 +50,10 @@ typedef struct tg_camera_uniform_buffer
 
 typedef struct tg_renderer_3d_geometry_pass
 {
-    tg_renderer_3d_attachment    position_attachment;
-    tg_renderer_3d_attachment    normal_attachment;
-    tg_renderer_3d_attachment    albedo_attachment;
-    tg_renderer_3d_attachment    depth_attachment;
+    tg_vulkan_image              position_attachment;
+    tg_vulkan_image              normal_attachment;
+    tg_vulkan_image              albedo_attachment;
+    tg_vulkan_image              depth_attachment;
 
     VkFence                      rendering_finished_fence;
     VkSemaphore                  rendering_finished_semaphore;
@@ -80,7 +72,7 @@ typedef struct tg_renderer_3d_geometry_pass
 
 typedef struct tg_renderer_3d_shading_pass
 {
-    tg_renderer_3d_attachment    color_attachment;
+    tg_vulkan_image              color_attachment;
 
     tg_vulkan_buffer             vbo;
     tg_vulkan_buffer             ibo;
@@ -141,10 +133,26 @@ typedef struct tg_renderer_3d
 // TODO: presenting should only be done in main vulkan file.
 void tg_graphics_renderer_3d_internal_init_geometry_pass(tg_renderer_3d_h renderer_3d_h)
 {
-    tg_graphics_vulkan_image_create(swapchain_extent.width, swapchain_extent.height, 1, TG_RENDERER_3D_GEOMETRY_PASS_POSITION_FORMAT, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &renderer_3d_h->geometry_pass.position_attachment.image, &renderer_3d_h->geometry_pass.position_attachment.device_memory);
-    tg_graphics_vulkan_image_transition_layout(renderer_3d_h->geometry_pass.position_attachment.image, 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, 1, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
-    tg_graphics_vulkan_image_view_create(renderer_3d_h->geometry_pass.position_attachment.image, TG_RENDERER_3D_GEOMETRY_PASS_POSITION_FORMAT, 1, VK_IMAGE_ASPECT_COLOR_BIT, &renderer_3d_h->geometry_pass.position_attachment.image_view);
-    renderer_3d_h->geometry_pass.position_attachment.sampler = tg_graphics_vulkan_sampler_create(1, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT);
+    tg_vulkan_image_create_info vulkan_image_create_info = { 0 };
+    {
+        vulkan_image_create_info.width = swapchain_extent.width;
+        vulkan_image_create_info.height = swapchain_extent.height;
+        vulkan_image_create_info.mip_levels = 1;
+        vulkan_image_create_info.format = TG_RENDERER_3D_GEOMETRY_PASS_POSITION_FORMAT;
+        vulkan_image_create_info.sample_count = VK_SAMPLE_COUNT_1_BIT;
+        vulkan_image_create_info.image_usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        vulkan_image_create_info.memory_properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+        vulkan_image_create_info.image_aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+        vulkan_image_create_info.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        vulkan_image_create_info.aspect_mask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+        vulkan_image_create_info.min_filter = VK_FILTER_LINEAR;
+        vulkan_image_create_info.mag_filter = VK_FILTER_LINEAR;
+        vulkan_image_create_info.address_mode_u = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        vulkan_image_create_info.address_mode_v = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        vulkan_image_create_info.address_mode_w = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    }
+    renderer_3d_h->geometry_pass.position_attachment = tg_graphics_vulkan_image_create2(&vulkan_image_create_info);
 
     tg_graphics_vulkan_image_create(swapchain_extent.width, swapchain_extent.height, 1, TG_RENDERER_3D_GEOMETRY_PASS_NORMAL_FORMAT, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &renderer_3d_h->geometry_pass.normal_attachment.image, &renderer_3d_h->geometry_pass.normal_attachment.device_memory);
     tg_graphics_vulkan_image_transition_layout(renderer_3d_h->geometry_pass.normal_attachment.image, 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, 1, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
@@ -791,6 +799,8 @@ void tg_graphics_renderer_3d_register(tg_renderer_3d_h renderer_3d_h, tg_entity_
 {
     TG_ASSERT(renderer_3d_h && entity_h);
 
+    const b32 has_custom_descriptor_set = entity_h->model_h->material_h->descriptor_pool != VK_NULL_HANDLE;
+
     tg_list_insert(renderer_3d_h->geometry_pass.models, &entity_h->model_h);
     entity_h->p_model_matrix = (m4*)&((u8*)renderer_3d_h->geometry_pass.model_ubo.p_mapped_device_memory)[entity_h->id * renderer_3d_h->geometry_pass.model_ubo_element_size];
     *entity_h->p_model_matrix = tgm_m4_identity();
@@ -798,12 +808,15 @@ void tg_graphics_renderer_3d_register(tg_renderer_3d_h renderer_3d_h, tg_entity_
     entity_h->model_h->render_data.command_buffer = tg_graphics_vulkan_command_buffer_allocate(command_pool, VK_COMMAND_BUFFER_LEVEL_SECONDARY);
     tg_list_insert(renderer_3d_h->geometry_pass.secondary_command_buffers, &entity_h->model_h->render_data.command_buffer);
 
-    VkDescriptorPoolSize descriptor_pool_size = { 0 };
+    VkDescriptorPoolSize p_descriptor_pool_sizes[2] = { 0 };
     {
-        descriptor_pool_size.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-        descriptor_pool_size.descriptorCount = 1;
+        p_descriptor_pool_sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+        p_descriptor_pool_sizes[0].descriptorCount = 1;
+
+        p_descriptor_pool_sizes[1].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        p_descriptor_pool_sizes[1].descriptorCount = 1;
     }
-    entity_h->model_h->render_data.descriptor_pool = tg_graphics_vulkan_descriptor_pool_create(0, 1, 1, &descriptor_pool_size);
+    entity_h->model_h->render_data.descriptor_pool = tg_graphics_vulkan_descriptor_pool_create(0, 1, 1, p_descriptor_pool_sizes);
 
     VkDescriptorSetLayoutBinding p_descriptor_set_layout_bindings[2] = { 0 };
     {
@@ -822,7 +835,16 @@ void tg_graphics_renderer_3d_register(tg_renderer_3d_h renderer_3d_h, tg_entity_
     entity_h->model_h->render_data.descriptor_set_layout = tg_graphics_vulkan_descriptor_set_layout_create(0, 2, p_descriptor_set_layout_bindings);
 
     entity_h->model_h->render_data.descriptor_set = tg_graphics_vulkan_descriptor_set_allocate(entity_h->model_h->render_data.descriptor_pool, entity_h->model_h->render_data.descriptor_set_layout);
-    entity_h->model_h->render_data.pipeline_layout = tg_graphics_vulkan_pipeline_layout_create(1, &entity_h->model_h->render_data.descriptor_set_layout, 0, TG_NULL);
+
+    if (has_custom_descriptor_set)
+    {
+        const VkDescriptorSetLayout p_descriptor_set_layouts[2] = { entity_h->model_h->render_data.descriptor_set_layout, entity_h->model_h->material_h->descriptor_set_layout };
+        entity_h->model_h->render_data.pipeline_layout = tg_graphics_vulkan_pipeline_layout_create(2, p_descriptor_set_layouts, 0, TG_NULL);
+    }
+    else
+    {
+        entity_h->model_h->render_data.pipeline_layout = tg_graphics_vulkan_pipeline_layout_create(1, &entity_h->model_h->render_data.descriptor_set_layout, 0, TG_NULL);
+    }
 
     VkVertexInputBindingDescription vertex_input_binding_description = { 0 };
     {
@@ -943,8 +965,17 @@ void tg_graphics_renderer_3d_register(tg_renderer_3d_h renderer_3d_h, tg_entity_
         vkCmdBindIndexBuffer(entity_h->model_h->render_data.command_buffer, entity_h->model_h->mesh_h->ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
     }
 
+    const u32 descriptor_set_count = has_custom_descriptor_set ? 2 : 1;
+    VkDescriptorSet p_descriptor_sets[2] = { 0 };
+    {
+        p_descriptor_sets[0] = entity_h->model_h->render_data.descriptor_set;
+        if (has_custom_descriptor_set)
+        {
+            p_descriptor_sets[1] = entity_h->model_h->material_h->descriptor_set;
+        }
+    }
     const u32 dynamic_offset = entity_h->id * (u32)renderer_3d_h->geometry_pass.model_ubo_element_size;
-    vkCmdBindDescriptorSets(entity_h->model_h->render_data.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, entity_h->model_h->render_data.pipeline_layout, 0, 1, &entity_h->model_h->render_data.descriptor_set, 1, &dynamic_offset);
+    vkCmdBindDescriptorSets(entity_h->model_h->render_data.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, entity_h->model_h->render_data.pipeline_layout, 0, descriptor_set_count, p_descriptor_sets, 1, &dynamic_offset);
 
     if (entity_h->model_h->mesh_h->ibo.size != 0)
     {
