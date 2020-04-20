@@ -61,7 +61,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL tgvk_debug_callback(VkDebugUtilsMessageSeverityFl
 | General utilities                                           |
 +------------------------------------------------------------*/
 
-u32                      tg_graphics_vulkan_memory_type_find(u32 memory_type_bits, VkMemoryPropertyFlags memory_property_flags)
+u32 tg_graphics_vulkan_memory_type_find(u32 memory_type_bits, VkMemoryPropertyFlags memory_property_flags)
 {
     VkPhysicalDeviceMemoryProperties physical_device_memory_properties;
     vkGetPhysicalDeviceMemoryProperties(physical_device, &physical_device_memory_properties);
@@ -81,7 +81,9 @@ u32                      tg_graphics_vulkan_memory_type_find(u32 memory_type_bit
 
 
 
-void                     tg_graphics_vulkan_buffer_copy(VkDeviceSize size, VkBuffer source, VkBuffer target)
+
+
+void tg_graphics_vulkan_buffer_copy(VkDeviceSize size, VkBuffer source, VkBuffer target)
 {
     VkCommandBuffer command_buffer = tg_graphics_vulkan_command_buffer_allocate(command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     tg_graphics_vulkan_command_buffer_begin(command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
@@ -97,7 +99,8 @@ void                     tg_graphics_vulkan_buffer_copy(VkDeviceSize size, VkBuf
     tg_graphics_vulkan_command_buffer_end_and_submit(command_buffer);
     tg_graphics_vulkan_command_buffer_free(command_pool, command_buffer);
 }
-void                     tg_graphics_vulkan_buffer_copy_to_image(u32 width, u32 height, VkBuffer source, VkImage target)
+
+void tg_graphics_vulkan_buffer_copy_to_image(u32 width, u32 height, VkBuffer source, VkImage target)
 {
     VkCommandBuffer command_buffer = tg_graphics_vulkan_command_buffer_allocate(command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     tg_graphics_vulkan_command_buffer_begin(command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
@@ -123,7 +126,8 @@ void                     tg_graphics_vulkan_buffer_copy_to_image(u32 width, u32 
     tg_graphics_vulkan_command_buffer_end_and_submit(command_buffer);
     tg_graphics_vulkan_command_buffer_free(command_pool, command_buffer);
 }
-tg_vulkan_buffer         tg_graphics_vulkan_buffer_create(VkDeviceSize size, VkBufferUsageFlags buffer_usage_flags, VkMemoryPropertyFlags memory_property_flags)
+
+tg_vulkan_buffer tg_graphics_vulkan_buffer_create(VkDeviceSize size, VkBufferUsageFlags buffer_usage_flags, VkMemoryPropertyFlags memory_property_flags)
 {
     tg_vulkan_buffer buffer = { 0 };
 
@@ -165,13 +169,16 @@ tg_vulkan_buffer         tg_graphics_vulkan_buffer_create(VkDeviceSize size, VkB
 
     return buffer;
 }
-void                     tg_graphics_vulkan_buffer_destroy(tg_vulkan_buffer* p_vulkan_buffer)
+
+void tg_graphics_vulkan_buffer_destroy(tg_vulkan_buffer* p_vulkan_buffer)
 {
     vkFreeMemory(device, p_vulkan_buffer->device_memory, TG_NULL);
     vkDestroyBuffer(device, p_vulkan_buffer->buffer, TG_NULL);
 }
 
-VkCommandBuffer          tg_graphics_vulkan_command_buffer_allocate(VkCommandPool command_pool, VkCommandBufferLevel level)
+
+
+VkCommandBuffer tg_graphics_vulkan_command_buffer_allocate(VkCommandPool command_pool, VkCommandBufferLevel level)
 {
     VkCommandBuffer command_buffer = VK_NULL_HANDLE;
 
@@ -187,7 +194,8 @@ VkCommandBuffer          tg_graphics_vulkan_command_buffer_allocate(VkCommandPoo
 
     return command_buffer;
 }
-void                     tg_graphics_vulkan_command_buffer_begin(VkCommandBuffer command_buffer, VkCommandBufferUsageFlags usage_flags, const VkCommandBufferInheritanceInfo* p_inheritance_info)
+
+void tg_graphics_vulkan_command_buffer_begin(VkCommandBuffer command_buffer, VkCommandBufferUsageFlags usage_flags, const VkCommandBufferInheritanceInfo* p_inheritance_info)
 {
     VkCommandBufferBeginInfo command_buffer_begin_info = { 0 };
     {
@@ -198,7 +206,8 @@ void                     tg_graphics_vulkan_command_buffer_begin(VkCommandBuffer
     }
     VK_CALL(vkBeginCommandBuffer(command_buffer, &command_buffer_begin_info));
 }
-void                     tg_graphics_vulkan_command_buffer_cmd_begin_render_pass(VkCommandBuffer command_buffer, VkRenderPass render_pass, VkFramebuffer framebuffer, VkSubpassContents subpass_contents)
+
+void tg_graphics_vulkan_command_buffer_cmd_begin_render_pass(VkCommandBuffer command_buffer, VkRenderPass render_pass, VkFramebuffer framebuffer, VkSubpassContents subpass_contents)
 {
     VkRenderPassBeginInfo render_pass_begin_info = { 0 };
     {
@@ -213,7 +222,8 @@ void                     tg_graphics_vulkan_command_buffer_cmd_begin_render_pass
     }
     vkCmdBeginRenderPass(command_buffer, &render_pass_begin_info, subpass_contents);
 }
-void                     tg_graphics_vulkan_command_buffer_cmd_transition_image_layout(VkCommandBuffer command_buffer, VkImage image, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkImageAspectFlags aspect_mask, u32 mip_levels, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits)
+
+void tg_graphics_vulkan_command_buffer_cmd_transition_image_layout(VkCommandBuffer command_buffer, VkImage image, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkImageAspectFlags aspect_mask, u32 mip_levels, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits)
 {
     VkImageMemoryBarrier image_memory_barrier = { 0 };
     {
@@ -234,7 +244,8 @@ void                     tg_graphics_vulkan_command_buffer_cmd_transition_image_
     }
     vkCmdPipelineBarrier(command_buffer, src_stage_bits, dst_stage_bits, 0, 0, TG_NULL, 0, TG_NULL, 1, &image_memory_barrier);
 }
-void                     tg_graphics_vulkan_command_buffer_end_and_submit(VkCommandBuffer command_buffer)
+
+void tg_graphics_vulkan_command_buffer_end_and_submit(VkCommandBuffer command_buffer)
 {
     VK_CALL(vkEndCommandBuffer(command_buffer));
 
@@ -254,11 +265,13 @@ void                     tg_graphics_vulkan_command_buffer_end_and_submit(VkComm
     VK_CALL(vkQueueSubmit(graphics_queue.queue, 1, &submit_info, VK_NULL_HANDLE));
     VK_CALL(vkQueueWaitIdle(graphics_queue.queue));
 }
-void                     tg_graphics_vulkan_command_buffer_free(VkCommandPool command_pool, VkCommandBuffer command_buffer)
+
+void tg_graphics_vulkan_command_buffer_free(VkCommandPool command_pool, VkCommandBuffer command_buffer)
 {
     vkFreeCommandBuffers(device, command_pool, 1, &command_buffer);
 }
-void                     tg_graphics_vulkan_command_buffers_allocate(VkCommandPool command_pool, VkCommandBufferLevel level, u32 command_buffer_count, VkCommandBuffer* p_command_buffers)
+
+void tg_graphics_vulkan_command_buffers_allocate(VkCommandPool command_pool, VkCommandBufferLevel level, u32 command_buffer_count, VkCommandBuffer* p_command_buffers)
 {
     VkCommandBufferAllocateInfo command_buffer_allocate_info = { 0 };
     {
@@ -270,12 +283,15 @@ void                     tg_graphics_vulkan_command_buffers_allocate(VkCommandPo
     }
     VK_CALL(vkAllocateCommandBuffers(device, &command_buffer_allocate_info, p_command_buffers));
 }
-void                     tg_graphics_vulkan_command_buffers_free(VkCommandPool command_pool, u32 command_buffer_count, const VkCommandBuffer* p_command_buffers)
+
+void tg_graphics_vulkan_command_buffers_free(VkCommandPool command_pool, u32 command_buffer_count, const VkCommandBuffer* p_command_buffers)
 {
     vkFreeCommandBuffers(device, command_pool, command_buffer_count, p_command_buffers);
 }
 
-VkCommandPool            tg_graphics_vulkan_command_pool_create(VkCommandPoolCreateFlags command_pool_create_flags, u32 queue_family_index)
+
+
+VkCommandPool tg_graphics_vulkan_command_pool_create(VkCommandPoolCreateFlags command_pool_create_flags, u32 queue_family_index)
 {
     VkCommandPool command_pool = VK_NULL_HANDLE;
 
@@ -290,12 +306,15 @@ VkCommandPool            tg_graphics_vulkan_command_pool_create(VkCommandPoolCre
 
     return command_pool;
 }
-void                     tg_graphics_vulkan_command_pool_destroy(VkCommandPool command_pool)
+
+void tg_graphics_vulkan_command_pool_destroy(VkCommandPool command_pool)
 {
     vkDestroyCommandPool(device, command_pool, TG_NULL);
 }
 
-VkPipeline               tg_graphics_vulkan_compute_pipeline_create(VkShaderModule shader_module, VkPipelineLayout pipeline_layout)
+
+
+VkPipeline tg_graphics_vulkan_compute_pipeline_create(VkShaderModule shader_module, VkPipelineLayout pipeline_layout)
 {
     VkPipeline pipeline = VK_NULL_HANDLE;
 
@@ -324,7 +343,9 @@ VkPipeline               tg_graphics_vulkan_compute_pipeline_create(VkShaderModu
     return pipeline;
 }
 
-VkFormat                 tg_graphics_vulkan_depth_format_acquire()
+
+
+VkFormat tg_graphics_vulkan_depth_format_acquire()
 {
     const VkFormat formats[] = { VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT };
     const size_t format_count = sizeof(formats) / sizeof(*formats);
@@ -342,7 +363,9 @@ VkFormat                 tg_graphics_vulkan_depth_format_acquire()
     return -1;
 }
 
-VkDescriptorPool         tg_graphics_vulkan_descriptor_pool_create(VkDescriptorPoolCreateFlags flags, u32 max_sets, u32 pool_size_count, const VkDescriptorPoolSize* pool_sizes)
+
+
+VkDescriptorPool tg_graphics_vulkan_descriptor_pool_create(VkDescriptorPoolCreateFlags flags, u32 max_sets, u32 pool_size_count, const VkDescriptorPoolSize* pool_sizes)
 {
     VkDescriptorPool descriptor_pool = VK_NULL_HANDLE;
 
@@ -359,12 +382,15 @@ VkDescriptorPool         tg_graphics_vulkan_descriptor_pool_create(VkDescriptorP
 
     return descriptor_pool;
 }
-void                     tg_graphics_vulkan_descriptor_pool_destroy(VkDescriptorPool descriptor_pool)
+
+void tg_graphics_vulkan_descriptor_pool_destroy(VkDescriptorPool descriptor_pool)
 {
     vkDestroyDescriptorPool(device, descriptor_pool, TG_NULL);
 }
 
-VkDescriptorSetLayout    tg_graphics_vulkan_descriptor_set_layout_create(VkDescriptorSetLayoutCreateFlags flags, u32 binding_count, const VkDescriptorSetLayoutBinding* p_bindings)
+
+
+VkDescriptorSetLayout tg_graphics_vulkan_descriptor_set_layout_create(VkDescriptorSetLayoutCreateFlags flags, u32 binding_count, const VkDescriptorSetLayoutBinding* p_bindings)
 {
     VkDescriptorSetLayout descriptor_set_layout = VK_NULL_HANDLE;
 
@@ -380,12 +406,15 @@ VkDescriptorSetLayout    tg_graphics_vulkan_descriptor_set_layout_create(VkDescr
 
     return descriptor_set_layout;
 }
-void                     tg_graphics_vulkan_descriptor_set_layout_destroy(VkDescriptorSetLayout descriptor_set_layout)
+
+void tg_graphics_vulkan_descriptor_set_layout_destroy(VkDescriptorSetLayout descriptor_set_layout)
 {
     vkDestroyDescriptorSetLayout(device, descriptor_set_layout, TG_NULL);
 }
 
-VkDescriptorSet          tg_graphics_vulkan_descriptor_set_allocate(VkDescriptorPool descriptor_pool, VkDescriptorSetLayout descriptor_set_layout)
+
+
+VkDescriptorSet tg_graphics_vulkan_descriptor_set_allocate(VkDescriptorPool descriptor_pool, VkDescriptorSetLayout descriptor_set_layout)
 {
     VkDescriptorSet descriptor_set = VK_NULL_HANDLE;
 
@@ -401,12 +430,20 @@ VkDescriptorSet          tg_graphics_vulkan_descriptor_set_allocate(VkDescriptor
 
     return descriptor_set;
 }
-void                     tg_graphics_vulkan_descriptor_set_free(VkDescriptorPool descriptor_pool, VkDescriptorSet descriptor_set)
+
+void tg_graphics_vulkan_descriptor_set_free(VkDescriptorPool descriptor_pool, VkDescriptorSet descriptor_set)
 {
     VK_CALL(vkFreeDescriptorSets(device, descriptor_pool, 1, &descriptor_set));
 }
 
-VkFence                  tg_graphics_vulkan_fence_create(VkFenceCreateFlags fence_create_flags)
+void tg_graphics_vulkan_descriptor_sets_update(u32 write_descriptor_set_count, const VkWriteDescriptorSet* p_write_descriptor_sets)
+{
+    vkUpdateDescriptorSets(device, write_descriptor_set_count, p_write_descriptor_sets, 0, TG_NULL);
+}
+
+
+
+VkFence tg_graphics_vulkan_fence_create(VkFenceCreateFlags fence_create_flags)
 {
     VkFence fence = VK_NULL_HANDLE;
 
@@ -420,20 +457,25 @@ VkFence                  tg_graphics_vulkan_fence_create(VkFenceCreateFlags fenc
 
     return fence;
 }
-void                     tg_graphics_vulkan_fence_destroy(VkFence fence)
+
+void tg_graphics_vulkan_fence_destroy(VkFence fence)
 {
     vkDestroyFence(device, fence, TG_NULL);
 }
-void                     tg_graphics_vulkan_fence_reset(VkFence fence)
+
+void tg_graphics_vulkan_fence_reset(VkFence fence)
 {
     VK_CALL(vkResetFences(device, 1, &fence));
 }
-void                     tg_graphics_vulkan_fence_wait(VkFence fence)
+
+void tg_graphics_vulkan_fence_wait(VkFence fence)
 {
     VK_CALL(vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX));
 }
 
-VkFramebuffer            tg_graphics_vulkan_framebuffer_create(VkRenderPass render_pass, u32 attachment_count, const VkImageView* p_attachments, u32 width, u32 height)
+
+
+VkFramebuffer tg_graphics_vulkan_framebuffer_create(VkRenderPass render_pass, u32 attachment_count, const VkImageView* p_attachments, u32 width, u32 height)
 {
     VkFramebuffer framebuffer = VK_NULL_HANDLE;
 
@@ -453,25 +495,204 @@ VkFramebuffer            tg_graphics_vulkan_framebuffer_create(VkRenderPass rend
 
     return framebuffer;
 }
-void                     tg_graphics_vulkan_framebuffer_destroy(VkFramebuffer framebuffer)
+
+void tg_graphics_vulkan_framebuffer_destroy(VkFramebuffer framebuffer)
 {
     vkDestroyFramebuffer(device, framebuffer, TG_NULL);
 }
 
-VkPipeline               tg_graphics_vulkan_graphics_pipeline_create(const VkGraphicsPipelineCreateInfo* p_graphics_pipeline_create_info)
+
+
+VkPipeline tg_graphics_vulkan_graphics_pipeline_create(const tg_vulkan_graphics_pipeline_create_info* p_vulkan_graphics_pipeline_create_info)
 {
     VkPipeline pipeline = VK_NULL_HANDLE;
 
-    VK_CALL(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, p_graphics_pipeline_create_info, TG_NULL, &pipeline));
+    VkPipelineShaderStageCreateInfo p_pipeline_shader_stage_create_infos[2] = { 0 };
+    {
+        p_pipeline_shader_stage_create_infos[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        p_pipeline_shader_stage_create_infos[0].pNext = TG_NULL;
+        p_pipeline_shader_stage_create_infos[0].flags = 0;
+        p_pipeline_shader_stage_create_infos[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
+        p_pipeline_shader_stage_create_infos[0].module = p_vulkan_graphics_pipeline_create_info->vertex_shader;
+        p_pipeline_shader_stage_create_infos[0].pName = "main";
+        p_pipeline_shader_stage_create_infos[0].pSpecializationInfo = TG_NULL;
+
+        p_pipeline_shader_stage_create_infos[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        p_pipeline_shader_stage_create_infos[1].pNext = TG_NULL;
+        p_pipeline_shader_stage_create_infos[1].flags = 0;
+        p_pipeline_shader_stage_create_infos[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+        p_pipeline_shader_stage_create_infos[1].module = p_vulkan_graphics_pipeline_create_info->fragment_shader;
+        p_pipeline_shader_stage_create_infos[1].pName = "main";
+        p_pipeline_shader_stage_create_infos[1].pSpecializationInfo = TG_NULL;
+    }
+    VkPipelineInputAssemblyStateCreateInfo pipeline_input_assembly_state_create_info = { 0 };
+    {
+        pipeline_input_assembly_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+        pipeline_input_assembly_state_create_info.pNext = TG_NULL;
+        pipeline_input_assembly_state_create_info.flags = 0;
+        pipeline_input_assembly_state_create_info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        pipeline_input_assembly_state_create_info.primitiveRestartEnable = VK_FALSE;
+    }
+    VkViewport viewport = { 0 };
+    {
+        viewport.x = 0.0f;
+        viewport.y = 0.0f;
+        viewport.width = (f32)swapchain_extent.width;
+        viewport.height = (f32)swapchain_extent.height;
+        viewport.minDepth = 0.0f;
+        viewport.maxDepth = 1.0f;
+    }
+    VkRect2D scissors = { 0 };
+    {
+        scissors.offset = (VkOffset2D){ 0, 0 };
+        scissors.extent = swapchain_extent;
+    }
+    VkPipelineViewportStateCreateInfo pipeline_viewport_state_create_info = { 0 };
+    {
+        pipeline_viewport_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+        pipeline_viewport_state_create_info.pNext = TG_NULL;
+        pipeline_viewport_state_create_info.flags = 0;
+        pipeline_viewport_state_create_info.viewportCount = 1;
+        pipeline_viewport_state_create_info.pViewports = &viewport;
+        pipeline_viewport_state_create_info.scissorCount = 1;
+        pipeline_viewport_state_create_info.pScissors = &scissors;
+    }
+    VkPipelineRasterizationStateCreateInfo pipeline_rasterization_state_create_info = { 0 };
+    {
+        pipeline_rasterization_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+        pipeline_rasterization_state_create_info.pNext = TG_NULL;
+        pipeline_rasterization_state_create_info.flags = 0;
+        pipeline_rasterization_state_create_info.depthClampEnable = VK_FALSE;
+        pipeline_rasterization_state_create_info.rasterizerDiscardEnable = VK_FALSE;
+        pipeline_rasterization_state_create_info.polygonMode = VK_POLYGON_MODE_FILL;
+        pipeline_rasterization_state_create_info.cullMode = p_vulkan_graphics_pipeline_create_info->cull_mode;
+        pipeline_rasterization_state_create_info.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+        pipeline_rasterization_state_create_info.depthBiasEnable = VK_FALSE;
+        pipeline_rasterization_state_create_info.depthBiasConstantFactor = 0.0f;
+        pipeline_rasterization_state_create_info.depthBiasClamp = 0.0f;
+        pipeline_rasterization_state_create_info.depthBiasSlopeFactor = 0.0f;
+        pipeline_rasterization_state_create_info.lineWidth = 1.0f;
+    }
+    VkPipelineMultisampleStateCreateInfo pipeline_multisample_state_create_info = { 0 };
+    {
+        pipeline_multisample_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+        pipeline_multisample_state_create_info.pNext = TG_NULL;
+        pipeline_multisample_state_create_info.flags = 0;
+        pipeline_multisample_state_create_info.rasterizationSamples = p_vulkan_graphics_pipeline_create_info->sample_count;
+        pipeline_multisample_state_create_info.sampleShadingEnable = p_vulkan_graphics_pipeline_create_info->sample_count == VK_SAMPLE_COUNT_1_BIT ? VK_FALSE : VK_TRUE;
+        pipeline_multisample_state_create_info.minSampleShading = p_vulkan_graphics_pipeline_create_info->sample_count == VK_SAMPLE_COUNT_1_BIT ? 0.0f : 1.0f;
+        pipeline_multisample_state_create_info.pSampleMask = TG_NULL;
+        pipeline_multisample_state_create_info.alphaToCoverageEnable = VK_FALSE;
+        pipeline_multisample_state_create_info.alphaToOneEnable = VK_FALSE;
+    }
+    VkPipelineDepthStencilStateCreateInfo pipeline_depth_stencil_state_create_info = { 0 };
+    {
+        pipeline_depth_stencil_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+        pipeline_depth_stencil_state_create_info.pNext = TG_NULL;
+        pipeline_depth_stencil_state_create_info.flags = 0;
+        pipeline_depth_stencil_state_create_info.depthTestEnable = p_vulkan_graphics_pipeline_create_info->depth_test_enable;
+        pipeline_depth_stencil_state_create_info.depthWriteEnable = p_vulkan_graphics_pipeline_create_info->depth_write_enable;
+        pipeline_depth_stencil_state_create_info.depthCompareOp = VK_COMPARE_OP_LESS;
+        pipeline_depth_stencil_state_create_info.depthBoundsTestEnable = VK_FALSE;
+        pipeline_depth_stencil_state_create_info.stencilTestEnable = VK_FALSE;
+        pipeline_depth_stencil_state_create_info.front.failOp = VK_STENCIL_OP_KEEP;
+        pipeline_depth_stencil_state_create_info.front.passOp = VK_STENCIL_OP_KEEP;
+        pipeline_depth_stencil_state_create_info.front.depthFailOp = VK_STENCIL_OP_KEEP;
+        pipeline_depth_stencil_state_create_info.front.compareOp = VK_COMPARE_OP_NEVER;
+        pipeline_depth_stencil_state_create_info.front.compareMask = 0;
+        pipeline_depth_stencil_state_create_info.front.writeMask = 0;
+        pipeline_depth_stencil_state_create_info.front.reference = 0;
+        pipeline_depth_stencil_state_create_info.back.failOp = VK_STENCIL_OP_KEEP;
+        pipeline_depth_stencil_state_create_info.back.passOp = VK_STENCIL_OP_KEEP;
+        pipeline_depth_stencil_state_create_info.back.depthFailOp = VK_STENCIL_OP_KEEP;
+        pipeline_depth_stencil_state_create_info.back.compareOp = VK_COMPARE_OP_NEVER;
+        pipeline_depth_stencil_state_create_info.back.compareMask = 0;
+        pipeline_depth_stencil_state_create_info.back.writeMask = 0;
+        pipeline_depth_stencil_state_create_info.back.reference = 0;
+        pipeline_depth_stencil_state_create_info.minDepthBounds = 0.0f;
+        pipeline_depth_stencil_state_create_info.maxDepthBounds = 0.0f;
+    }
+    VkPipelineColorBlendAttachmentState* p_pipeline_color_blend_attachment_states = TG_MEMORY_ALLOCATOR_ALLOCATE(p_vulkan_graphics_pipeline_create_info->attachment_count * sizeof(*p_pipeline_color_blend_attachment_states));
+    for (u32 i = 0; i < p_vulkan_graphics_pipeline_create_info->attachment_count; i++)
+    {
+        p_pipeline_color_blend_attachment_states[i].blendEnable = p_vulkan_graphics_pipeline_create_info->blend_enable;
+        p_pipeline_color_blend_attachment_states[i].srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+        p_pipeline_color_blend_attachment_states[i].dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+        p_pipeline_color_blend_attachment_states[i].colorBlendOp = VK_BLEND_OP_ADD;
+        p_pipeline_color_blend_attachment_states[i].srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+        p_pipeline_color_blend_attachment_states[i].dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+        p_pipeline_color_blend_attachment_states[i].alphaBlendOp = VK_BLEND_OP_ADD;
+        p_pipeline_color_blend_attachment_states[i].colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    }
+    VkPipelineColorBlendStateCreateInfo pipeline_color_blend_state_create_info = { 0 };
+    {
+        pipeline_color_blend_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+        pipeline_color_blend_state_create_info.pNext = TG_NULL;
+        pipeline_color_blend_state_create_info.flags = 0;
+        pipeline_color_blend_state_create_info.logicOpEnable = VK_FALSE;
+        pipeline_color_blend_state_create_info.logicOp = VK_LOGIC_OP_COPY;
+        pipeline_color_blend_state_create_info.attachmentCount = p_vulkan_graphics_pipeline_create_info->attachment_count;
+        pipeline_color_blend_state_create_info.pAttachments = p_pipeline_color_blend_attachment_states;
+        pipeline_color_blend_state_create_info.blendConstants[0] = 0.0f;
+        pipeline_color_blend_state_create_info.blendConstants[1] = 0.0f;
+        pipeline_color_blend_state_create_info.blendConstants[2] = 0.0f;
+        pipeline_color_blend_state_create_info.blendConstants[3] = 0.0f;
+    }
+    VkGraphicsPipelineCreateInfo graphics_pipeline_create_info = { 0 };
+    {
+        graphics_pipeline_create_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+        graphics_pipeline_create_info.pNext = TG_NULL;
+        graphics_pipeline_create_info.flags = 0;
+        graphics_pipeline_create_info.stageCount = 2;
+        graphics_pipeline_create_info.pStages = p_pipeline_shader_stage_create_infos;
+        graphics_pipeline_create_info.pVertexInputState = p_vulkan_graphics_pipeline_create_info->p_pipeline_vertex_input_state_create_info;
+        graphics_pipeline_create_info.pInputAssemblyState = &pipeline_input_assembly_state_create_info;
+        graphics_pipeline_create_info.pTessellationState = TG_NULL;
+        graphics_pipeline_create_info.pViewportState = &pipeline_viewport_state_create_info;
+        graphics_pipeline_create_info.pRasterizationState = &pipeline_rasterization_state_create_info;
+        graphics_pipeline_create_info.pMultisampleState = &pipeline_multisample_state_create_info;
+        graphics_pipeline_create_info.pDepthStencilState = &pipeline_depth_stencil_state_create_info;
+        graphics_pipeline_create_info.pColorBlendState = &pipeline_color_blend_state_create_info;
+        graphics_pipeline_create_info.pDynamicState = TG_NULL;
+        graphics_pipeline_create_info.layout = p_vulkan_graphics_pipeline_create_info->pipeline_layout;
+        graphics_pipeline_create_info.renderPass = p_vulkan_graphics_pipeline_create_info->render_pass;
+        graphics_pipeline_create_info.subpass = 0;
+        graphics_pipeline_create_info.basePipelineHandle = VK_NULL_HANDLE;
+        graphics_pipeline_create_info.basePipelineIndex = -1;
+    }
+    VK_CALL(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &graphics_pipeline_create_info, TG_NULL, &pipeline));
+    TG_MEMORY_ALLOCATOR_FREE(p_pipeline_color_blend_attachment_states);
 
     return pipeline;
 }
-void                     tg_graphics_vulkan_graphics_pipeline_destroy(VkPipeline pipeline)
+
+void tg_graphics_vulkan_graphics_pipeline_destroy(VkPipeline pipeline)
 {
     vkDestroyPipeline(device, pipeline, TG_NULL);
 }
 
-void                     tg_graphics_vulkan_image_create(u32 width, u32 height, u32 mip_levels, VkFormat format, VkSampleCountFlagBits sample_count_flag_bits, VkImageUsageFlags image_usage_flags, VkMemoryPropertyFlags memory_property_flags, VkImage* p_image, VkDeviceMemory* p_device_memory)
+void tg_graphics_vulkan_graphics_pipeline_initialize_pipeline_shader_stage_create_infos(VkShaderModule vertex_shader, VkShaderModule fragment_shader, VkPipelineShaderStageCreateInfo* p_pipeline_shader_stage_create_infos)
+{
+    p_pipeline_shader_stage_create_infos[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    p_pipeline_shader_stage_create_infos[0].pNext = TG_NULL;
+    p_pipeline_shader_stage_create_infos[0].flags = 0;
+    p_pipeline_shader_stage_create_infos[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
+    p_pipeline_shader_stage_create_infos[0].module = vertex_shader;
+    p_pipeline_shader_stage_create_infos[0].pName = "main";
+    p_pipeline_shader_stage_create_infos[0].pSpecializationInfo = TG_NULL;
+
+    p_pipeline_shader_stage_create_infos[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    p_pipeline_shader_stage_create_infos[1].pNext = TG_NULL;
+    p_pipeline_shader_stage_create_infos[1].flags = 0;
+    p_pipeline_shader_stage_create_infos[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+    p_pipeline_shader_stage_create_infos[1].module = fragment_shader;
+    p_pipeline_shader_stage_create_infos[1].pName = "main";
+    p_pipeline_shader_stage_create_infos[1].pSpecializationInfo = TG_NULL;
+}
+
+
+
+void tg_graphics_vulkan_image_create(u32 width, u32 height, u32 mip_levels, VkFormat format, VkSampleCountFlagBits sample_count_flag_bits, VkImageUsageFlags image_usage_flags, VkMemoryPropertyFlags memory_property_flags, VkImage* p_image, VkDeviceMemory* p_device_memory)
 {
     VkImageCreateInfo image_create_info = { 0 };
     {
@@ -508,12 +729,14 @@ void                     tg_graphics_vulkan_image_create(u32 width, u32 height, 
     VK_CALL(vkAllocateMemory(device, &memory_allocate_info, TG_NULL, p_device_memory));
     VK_CALL(vkBindImageMemory(device, *p_image, *p_device_memory, 0));
 }
-void                     tg_graphics_vulkan_image_destroy(VkImage image, VkDeviceMemory device_memory)
+
+void tg_graphics_vulkan_image_destroy(VkImage image, VkDeviceMemory device_memory)
 {
     vkFreeMemory(device, device_memory, TG_NULL);
     vkDestroyImage(device, image, TG_NULL);
 }
-void                     tg_graphics_vulkan_image_mipmaps_generate(VkImage image, u32 width, u32 height, VkFormat format, u32 mip_levels)
+
+void tg_graphics_vulkan_image_mipmaps_generate(VkImage image, u32 width, u32 height, VkFormat format, u32 mip_levels)
 {
 #ifdef TG_DEBUG
     VkFormatProperties format_properties;
@@ -600,7 +823,8 @@ void                     tg_graphics_vulkan_image_mipmaps_generate(VkImage image
     tg_graphics_vulkan_command_buffer_end_and_submit(command_buffer);
     tg_graphics_vulkan_command_buffer_free(command_pool, command_buffer);
 }
-void                     tg_graphics_vulkan_image_transition_layout(VkImage image, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkImageAspectFlags aspect_mask, u32 mip_levels, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits)
+
+void tg_graphics_vulkan_image_transition_layout(VkImage image, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkImageAspectFlags aspect_mask, u32 mip_levels, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits)
 {
     VkCommandBuffer command_buffer = tg_graphics_vulkan_command_buffer_allocate(command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     tg_graphics_vulkan_command_buffer_begin(command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
@@ -608,7 +832,8 @@ void                     tg_graphics_vulkan_image_transition_layout(VkImage imag
     tg_graphics_vulkan_command_buffer_end_and_submit(command_buffer);
     tg_graphics_vulkan_command_buffer_free(command_pool, command_buffer);
 }
-void                     tg_graphics_vulkan_image_view_create(VkImage image, VkFormat format, u32 mip_levels, VkImageAspectFlags image_aspect_flags, VkImageView* p_image_view)
+
+void tg_graphics_vulkan_image_view_create(VkImage image, VkFormat format, u32 mip_levels, VkImageAspectFlags image_aspect_flags, VkImageView* p_image_view)
 {
     VkImageViewCreateInfo image_view_create_info = { 0 };
     image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -629,12 +854,15 @@ void                     tg_graphics_vulkan_image_view_create(VkImage image, VkF
 
     VK_CALL(vkCreateImageView(device, &image_view_create_info, TG_NULL, p_image_view));
 }
-void                     tg_graphics_vulkan_image_view_destroy(VkImageView image_view)
+
+void tg_graphics_vulkan_image_view_destroy(VkImageView image_view)
 {
     vkDestroyImageView(device, image_view, TG_NULL);
 }
 
-VkPipelineLayout         tg_graphics_vulkan_pipeline_layout_create(u32 descriptor_set_layout_count, const VkDescriptorSetLayout* descriptor_set_layouts, u32 push_constant_range_count, const VkPushConstantRange* push_constant_ranges)
+
+
+VkPipelineLayout tg_graphics_vulkan_pipeline_layout_create(u32 descriptor_set_layout_count, const VkDescriptorSetLayout* descriptor_set_layouts, u32 push_constant_range_count, const VkPushConstantRange* push_constant_ranges)
 {
     VkPipelineLayout pipeline_layout = VK_NULL_HANDLE;
 
@@ -652,12 +880,107 @@ VkPipelineLayout         tg_graphics_vulkan_pipeline_layout_create(u32 descripto
 
     return pipeline_layout;
 }
-void                     tg_graphics_vulkan_pipeline_layout_destroy(VkPipelineLayout pipeline_layout)
+
+void tg_graphics_vulkan_pipeline_layout_destroy(VkPipelineLayout pipeline_layout)
 {
     vkDestroyPipelineLayout(device, pipeline_layout, TG_NULL);
 }
 
-VkRenderPass             tg_graphics_vulkan_render_pass_create(u32 attachment_count, const VkAttachmentDescription* p_attachments, u32 subpass_count, const VkSubpassDescription* p_subpasses, u32 dependency_count, const VkSubpassDependency* p_dependencies)
+
+
+VkPipelineColorBlendAttachmentState tg_graphics_vulkan_pipeline_color_blend_attachment_state_create(VkBool32 blend_enable)
+{
+    VkPipelineColorBlendAttachmentState pipeline_color_blend_attachment_state = { 0 };
+    {
+        pipeline_color_blend_attachment_state.blendEnable = blend_enable;
+        pipeline_color_blend_attachment_state.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+        pipeline_color_blend_attachment_state.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+        pipeline_color_blend_attachment_state.colorBlendOp = VK_BLEND_OP_ADD;
+        pipeline_color_blend_attachment_state.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+        pipeline_color_blend_attachment_state.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+        pipeline_color_blend_attachment_state.alphaBlendOp = VK_BLEND_OP_ADD;
+        pipeline_color_blend_attachment_state.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    }
+
+    return pipeline_color_blend_attachment_state;
+}
+
+VkPipelineDepthStencilStateCreateInfo tg_graphics_vulkan_pipeline_depth_stencil_state_create_info_create(VkBool32 depth_test_enable, VkBool32 depth_write_enable)
+{
+    VkPipelineDepthStencilStateCreateInfo pipeline_depth_stencil_state_create_info = { 0 };
+    {
+        pipeline_depth_stencil_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+        pipeline_depth_stencil_state_create_info.pNext = TG_NULL;
+        pipeline_depth_stencil_state_create_info.flags = 0;
+        pipeline_depth_stencil_state_create_info.depthTestEnable = depth_test_enable;
+        pipeline_depth_stencil_state_create_info.depthWriteEnable = depth_write_enable;
+        pipeline_depth_stencil_state_create_info.depthCompareOp = VK_COMPARE_OP_LESS;
+        pipeline_depth_stencil_state_create_info.depthBoundsTestEnable = VK_FALSE;
+        pipeline_depth_stencil_state_create_info.stencilTestEnable = VK_FALSE;
+        pipeline_depth_stencil_state_create_info.front.failOp = VK_STENCIL_OP_KEEP;
+        pipeline_depth_stencil_state_create_info.front.passOp = VK_STENCIL_OP_KEEP;
+        pipeline_depth_stencil_state_create_info.front.depthFailOp = VK_STENCIL_OP_KEEP;
+        pipeline_depth_stencil_state_create_info.front.compareOp = VK_COMPARE_OP_NEVER;
+        pipeline_depth_stencil_state_create_info.front.compareMask = 0;
+        pipeline_depth_stencil_state_create_info.front.writeMask = 0;
+        pipeline_depth_stencil_state_create_info.front.reference = 0;
+        pipeline_depth_stencil_state_create_info.back.failOp = VK_STENCIL_OP_KEEP;
+        pipeline_depth_stencil_state_create_info.back.passOp = VK_STENCIL_OP_KEEP;
+        pipeline_depth_stencil_state_create_info.back.depthFailOp = VK_STENCIL_OP_KEEP;
+        pipeline_depth_stencil_state_create_info.back.compareOp = VK_COMPARE_OP_NEVER;
+        pipeline_depth_stencil_state_create_info.back.compareMask = 0;
+        pipeline_depth_stencil_state_create_info.back.writeMask = 0;
+        pipeline_depth_stencil_state_create_info.back.reference = 0;
+        pipeline_depth_stencil_state_create_info.minDepthBounds = 0.0f;
+        pipeline_depth_stencil_state_create_info.maxDepthBounds = 0.0f;
+    }
+
+    return pipeline_depth_stencil_state_create_info;
+}
+
+VkPipelineMultisampleStateCreateInfo tg_graphics_vulkan_pipeline_multisample_state_create_info_create(VkSampleCountFlagBits sample_count)
+{
+    VkPipelineMultisampleStateCreateInfo pipeline_multisample_state_create_info = { 0 };
+    {
+        pipeline_multisample_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+        pipeline_multisample_state_create_info.pNext = TG_NULL;
+        pipeline_multisample_state_create_info.flags = 0;
+        pipeline_multisample_state_create_info.rasterizationSamples = sample_count;
+        pipeline_multisample_state_create_info.sampleShadingEnable = sample_count == VK_SAMPLE_COUNT_1_BIT ? VK_FALSE : VK_TRUE;
+        pipeline_multisample_state_create_info.minSampleShading = sample_count == VK_SAMPLE_COUNT_1_BIT ? 0.0f : 1.0f;
+        pipeline_multisample_state_create_info.pSampleMask = TG_NULL;
+        pipeline_multisample_state_create_info.alphaToCoverageEnable = VK_FALSE;
+        pipeline_multisample_state_create_info.alphaToOneEnable = VK_FALSE;
+    }
+
+    return pipeline_multisample_state_create_info;
+}
+
+VkPipelineRasterizationStateCreateInfo tg_graphics_vulkan_pipeline_rasterization_state_create_info_create(VkCullModeFlags cull_mode)
+{
+    VkPipelineRasterizationStateCreateInfo pipeline_rasterization_state_create_info = { 0 };
+    {
+        pipeline_rasterization_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+        pipeline_rasterization_state_create_info.pNext = TG_NULL;
+        pipeline_rasterization_state_create_info.flags = 0;
+        pipeline_rasterization_state_create_info.depthClampEnable = VK_FALSE;
+        pipeline_rasterization_state_create_info.rasterizerDiscardEnable = VK_FALSE;
+        pipeline_rasterization_state_create_info.polygonMode = VK_POLYGON_MODE_FILL;
+        pipeline_rasterization_state_create_info.cullMode = cull_mode;
+        pipeline_rasterization_state_create_info.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+        pipeline_rasterization_state_create_info.depthBiasEnable = VK_FALSE;
+        pipeline_rasterization_state_create_info.depthBiasConstantFactor = 0.0f;
+        pipeline_rasterization_state_create_info.depthBiasClamp = 0.0f;
+        pipeline_rasterization_state_create_info.depthBiasSlopeFactor = 0.0f;
+        pipeline_rasterization_state_create_info.lineWidth = 1.0f;
+    }
+
+    return pipeline_rasterization_state_create_info;
+}
+
+
+
+VkRenderPass tg_graphics_vulkan_render_pass_create(u32 attachment_count, const VkAttachmentDescription* p_attachments, u32 subpass_count, const VkSubpassDescription* p_subpasses, u32 dependency_count, const VkSubpassDependency* p_dependencies)
 {
     VkRenderPass render_pass = VK_NULL_HANDLE;
 
@@ -677,12 +1000,15 @@ VkRenderPass             tg_graphics_vulkan_render_pass_create(u32 attachment_co
 
     return render_pass;
 }
-void                     tg_graphics_vulkan_render_pass_destroy(VkRenderPass render_pass)
+
+void tg_graphics_vulkan_render_pass_destroy(VkRenderPass render_pass)
 {
     vkDestroyRenderPass(device, render_pass, TG_NULL);
 }
 
-VkSampler                tg_graphics_vulkan_sampler_create(u32 mip_levels, VkFilter min_filter, VkFilter mag_filter, VkSamplerAddressMode address_mode_u, VkSamplerAddressMode address_mode_v, VkSamplerAddressMode address_mode_w)
+
+
+VkSampler tg_graphics_vulkan_sampler_create(u32 mip_levels, VkFilter min_filter, VkFilter mag_filter, VkSamplerAddressMode address_mode_u, VkSamplerAddressMode address_mode_v, VkSamplerAddressMode address_mode_w)
 {
     VkSampler sampler = VK_NULL_HANDLE;
 
@@ -711,11 +1037,13 @@ VkSampler                tg_graphics_vulkan_sampler_create(u32 mip_levels, VkFil
 
     return sampler;
 }
-void                     tg_graphics_vulkan_sampler_destroy(VkSampler sampler)
+
+void tg_graphics_vulkan_sampler_destroy(VkSampler sampler)
 {
     vkDestroySampler(device, sampler, TG_NULL);
 }
-VkSemaphore              tg_graphics_vulkan_semaphore_create()
+
+VkSemaphore tg_graphics_vulkan_semaphore_create()
 {
     VkSemaphore semaphore = VK_NULL_HANDLE;
 
@@ -729,12 +1057,15 @@ VkSemaphore              tg_graphics_vulkan_semaphore_create()
 
     return semaphore;
 }
-void                     tg_graphics_vulkan_semaphore_destroy(VkSemaphore semaphore)
+
+void tg_graphics_vulkan_semaphore_destroy(VkSemaphore semaphore)
 {
     vkDestroySemaphore(device, semaphore, TG_NULL);
 }
 
-VkShaderModule           tg_graphics_vulkan_shader_module_create(const char* p_filename)
+
+
+VkShaderModule tg_graphics_vulkan_shader_module_create(const char* p_filename)
 {
     VkShaderModule shader_module = VK_NULL_HANDLE;
 
@@ -764,12 +1095,15 @@ VkShaderModule           tg_graphics_vulkan_shader_module_create(const char* p_f
 
     return shader_module;
 }
-void                     tg_graphics_vulkan_shader_module_destroy(VkShaderModule shader_module)
+
+void tg_graphics_vulkan_shader_module_destroy(VkShaderModule shader_module)
 {
     vkDestroyShaderModule(device, shader_module, TG_NULL);
 }
 
-VkDeviceSize             tg_graphics_vulkan_uniform_buffer_min_offset_alignment()
+
+
+VkDeviceSize tg_graphics_vulkan_uniform_buffer_min_offset_alignment()
 {
     VkPhysicalDeviceProperties physical_device_properties;
     vkGetPhysicalDeviceProperties(physical_device, &physical_device_properties);
@@ -779,11 +1113,12 @@ VkDeviceSize             tg_graphics_vulkan_uniform_buffer_min_offset_alignment(
 }
 
 
+
 /*------------------------------------------------------------+
 | Main utilities                                              |
 +------------------------------------------------------------*/
 
-b32                      tg_graphics_vulkan_physical_device_check_extension_support(VkPhysicalDevice physical_device)
+b32 tg_graphics_vulkan_physical_device_check_extension_support(VkPhysicalDevice physical_device)
 {
     u32 device_extension_property_count;
     VK_CALL(vkEnumerateDeviceExtensionProperties(physical_device, TG_NULL, &device_extension_property_count, TG_NULL));
@@ -808,7 +1143,8 @@ b32                      tg_graphics_vulkan_physical_device_check_extension_supp
     TG_MEMORY_ALLOCATOR_FREE(device_extension_properties);
     return supports_extensions;
 }
-b32                      tg_graphics_vulkan_physical_device_find_queue_families(VkPhysicalDevice physical_device, tg_vulkan_queue* p_graphics_queue, tg_vulkan_queue* p_present_queue, tg_vulkan_queue* p_compute_queue)
+
+b32 tg_graphics_vulkan_physical_device_find_queue_families(VkPhysicalDevice physical_device, tg_vulkan_queue* p_graphics_queue, tg_vulkan_queue* p_present_queue, tg_vulkan_queue* p_compute_queue)
 {
     u32 queue_family_count;
     vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, TG_NULL);
@@ -856,7 +1192,8 @@ b32                      tg_graphics_vulkan_physical_device_find_queue_families(
     TG_MEMORY_ALLOCATOR_FREE(queue_family_properties);
     return complete;
 }
-VkSampleCountFlagBits    tg_graphics_vulkan_physical_device_find_max_sample_count(VkPhysicalDevice physical_device)
+
+VkSampleCountFlagBits tg_graphics_vulkan_physical_device_find_max_sample_count(VkPhysicalDevice physical_device)
 {
     VkPhysicalDeviceProperties physical_device_properties;
     vkGetPhysicalDeviceProperties(physical_device, &physical_device_properties);
@@ -892,7 +1229,8 @@ VkSampleCountFlagBits    tg_graphics_vulkan_physical_device_find_max_sample_coun
         return VK_SAMPLE_COUNT_1_BIT;
     }
 }
-b32                      tg_graphics_vulkan_physical_device_is_suitable(VkPhysicalDevice physical_device)
+
+b32 tg_graphics_vulkan_physical_device_is_suitable(VkPhysicalDevice physical_device)
 {
     VkPhysicalDeviceProperties physical_device_properties;
     vkGetPhysicalDeviceProperties(physical_device, &physical_device_properties);
@@ -918,7 +1256,9 @@ b32                      tg_graphics_vulkan_physical_device_is_suitable(VkPhysic
 
 
 
-void                     tg_graphics_vulkan_instance_create(VkInstance* p_instance)
+
+
+void tg_graphics_vulkan_instance_create(VkInstance* p_instance)
 {
     TG_ASSERT(p_instance);
 
@@ -965,8 +1305,9 @@ void                     tg_graphics_vulkan_instance_create(VkInstance* p_instan
 
     VK_CALL(vkCreateInstance(&instance_create_info, TG_NULL, p_instance));
 }
+
 #ifdef TG_DEBUG
-void                     tg_graphics_vulkan_debug_utils_manager_create(VkDebugUtilsMessengerEXT* p_debug_utils_messenger)
+void tg_graphics_vulkan_debug_utils_manager_create(VkDebugUtilsMessengerEXT* p_debug_utils_messenger)
 {
     TG_ASSERT(p_debug_utils_messenger);
 
@@ -984,8 +1325,9 @@ void                     tg_graphics_vulkan_debug_utils_manager_create(VkDebugUt
     VK_CALL(vkCreateDebugUtilsMessengerEXT(instance, &debug_utils_messenger_create_info, TG_NULL, p_debug_utils_messenger));
 }
 #endif
+
 #ifdef TG_WIN32
-void                     tg_graphics_vulkan_surface_create(tg_vulkan_surface* p_surface)
+void tg_graphics_vulkan_surface_create(tg_vulkan_surface* p_surface)
 {
     TG_ASSERT(p_surface);
 
@@ -999,7 +1341,8 @@ void                     tg_graphics_vulkan_surface_create(tg_vulkan_surface* p_
     VK_CALL(vkCreateWin32SurfaceKHR(instance, &win32_surface_create_info, TG_NULL, &p_surface->surface));
 }
 #endif
-void                     tg_graphics_vulkan_physical_device_create(VkPhysicalDevice* p_physical_device)
+
+void tg_graphics_vulkan_physical_device_create(VkPhysicalDevice* p_physical_device)
 {
     TG_ASSERT(p_physical_device);
 
@@ -1022,7 +1365,8 @@ void                     tg_graphics_vulkan_physical_device_create(VkPhysicalDev
 
     TG_MEMORY_ALLOCATOR_FREE(physical_devices);
 }
-void                     tg_graphics_vulkan_device_create(VkDevice* p_device)
+
+void tg_graphics_vulkan_device_create(VkDevice* p_device)
 {
     TG_ASSERT(p_device);
 
@@ -1122,7 +1466,8 @@ void                     tg_graphics_vulkan_device_create(VkDevice* p_device)
 
     VK_CALL(vkCreateDevice(physical_device, &device_create_info, TG_NULL, p_device));
 }
-void                     tg_graphics_vulkan_queues_create(tg_vulkan_queue* p_graphics_queue, tg_vulkan_queue* p_present_queue, tg_vulkan_queue* p_compute_queue)
+
+void tg_graphics_vulkan_queues_create(tg_vulkan_queue* p_graphics_queue, tg_vulkan_queue* p_present_queue, tg_vulkan_queue* p_compute_queue)
 {
     TG_ASSERT(p_graphics_queue && p_present_queue);
 
@@ -1130,7 +1475,8 @@ void                     tg_graphics_vulkan_queues_create(tg_vulkan_queue* p_gra
     vkGetDeviceQueue(device, p_present_queue->index, 0, &p_present_queue->queue);
     vkGetDeviceQueue(device, p_compute_queue->index, 0, &p_compute_queue->queue);
 }
-void                     tg_graphics_vulkan_swapchain_create()
+
+void tg_graphics_vulkan_swapchain_create()
 {
     VkSurfaceCapabilitiesKHR surface_capabilities;
     VK_CALL(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device, surface.surface, &surface_capabilities));
@@ -1224,7 +1570,7 @@ void                     tg_graphics_vulkan_swapchain_create()
 | Initialization, shutdown and other main functionality       |
 +------------------------------------------------------------*/
 
-void                     tg_graphics_init()
+void tg_graphics_init()
 {
 #ifdef TG_DEBUG
     // TODO: relative asset path?
@@ -1243,7 +1589,8 @@ void                     tg_graphics_init()
     command_pool = tg_graphics_vulkan_command_pool_create(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, graphics_queue.index);
     tg_graphics_vulkan_swapchain_create();
 }
-void                     tg_graphics_shutdown()
+
+void tg_graphics_shutdown()
 {
     vkDeviceWaitIdle(device);
 
@@ -1262,7 +1609,8 @@ void                     tg_graphics_shutdown()
     vkDestroySurfaceKHR(instance, surface.surface, TG_NULL);
     vkDestroyInstance(instance, TG_NULL);
 }
-void                     tg_graphics_on_window_resize(u32 width, u32 height)
+
+void tg_graphics_on_window_resize(u32 width, u32 height)
 {
     vkDeviceWaitIdle(device);
     
