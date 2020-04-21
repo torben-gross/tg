@@ -63,7 +63,7 @@ typedef struct tg_renderer_3d_geometry_pass
     VkRenderPass                 render_pass;
     VkFramebuffer                framebuffer;
 
-    VkCommandBuffer              main_command_buffer;
+    VkCommandBuffer              command_buffer;
 } tg_renderer_3d_geometry_pass;
 
 typedef struct tg_renderer_3d_shading_pass
@@ -254,7 +254,7 @@ void tgg_renderer_3d_internal_init_geometry_pass(tg_renderer_3d_h renderer_3d_h)
     };
     renderer_3d_h->geometry_pass.framebuffer = tgg_vulkan_framebuffer_create(renderer_3d_h->geometry_pass.render_pass, TG_RENDERER_3D_GEOMETRY_PASS_ATTACHMENT_COUNT, p_framebuffer_attachments, swapchain_extent.width, swapchain_extent.height);
 
-    renderer_3d_h->geometry_pass.main_command_buffer = tgg_vulkan_command_buffer_allocate(command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+    renderer_3d_h->geometry_pass.command_buffer = tgg_vulkan_command_buffer_allocate(command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 }
 void tgg_renderer_3d_internal_init_shading_pass(tg_renderer_3d_h renderer_3d_h)
 {
@@ -449,60 +449,9 @@ void tgg_renderer_3d_internal_init_shading_pass(tg_renderer_3d_h renderer_3d_h)
     }
     renderer_3d_h->shading_pass.pipeline = tgg_vulkan_graphics_pipeline_create(&vulkan_graphics_pipeline_create_info);
 
-    VkDescriptorImageInfo position_buffer_descriptor_image_info = { 0 };
-    {
-        position_buffer_descriptor_image_info.sampler = renderer_3d_h->geometry_pass.position_attachment.sampler;
-        position_buffer_descriptor_image_info.imageView = renderer_3d_h->geometry_pass.position_attachment.image_view;
-        position_buffer_descriptor_image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    }
-    VkDescriptorImageInfo normal_buffer_descriptor_image_info = { 0 };
-    {
-        normal_buffer_descriptor_image_info.sampler = renderer_3d_h->geometry_pass.normal_attachment.sampler;
-        normal_buffer_descriptor_image_info.imageView = renderer_3d_h->geometry_pass.normal_attachment.image_view;
-        normal_buffer_descriptor_image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    }
-    VkDescriptorImageInfo albedo_buffer_descriptor_image_info = { 0 };
-    {
-        albedo_buffer_descriptor_image_info.sampler = renderer_3d_h->geometry_pass.albedo_attachment.sampler;
-        albedo_buffer_descriptor_image_info.imageView = renderer_3d_h->geometry_pass.albedo_attachment.image_view;
-        albedo_buffer_descriptor_image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    }
-    VkWriteDescriptorSet p_write_descriptor_sets[3] = { 0 };
-    {
-        p_write_descriptor_sets[TG_RENDERER_3D_GEOMETRY_PASS_POSITION_ATTACHMENT].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        p_write_descriptor_sets[TG_RENDERER_3D_GEOMETRY_PASS_POSITION_ATTACHMENT].pNext = TG_NULL;
-        p_write_descriptor_sets[TG_RENDERER_3D_GEOMETRY_PASS_POSITION_ATTACHMENT].dstSet = renderer_3d_h->shading_pass.descriptor_set;
-        p_write_descriptor_sets[TG_RENDERER_3D_GEOMETRY_PASS_POSITION_ATTACHMENT].dstBinding = TG_RENDERER_3D_GEOMETRY_PASS_POSITION_ATTACHMENT;
-        p_write_descriptor_sets[TG_RENDERER_3D_GEOMETRY_PASS_POSITION_ATTACHMENT].dstArrayElement = 0;
-        p_write_descriptor_sets[TG_RENDERER_3D_GEOMETRY_PASS_POSITION_ATTACHMENT].descriptorCount = 1;
-        p_write_descriptor_sets[TG_RENDERER_3D_GEOMETRY_PASS_POSITION_ATTACHMENT].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        p_write_descriptor_sets[TG_RENDERER_3D_GEOMETRY_PASS_POSITION_ATTACHMENT].pImageInfo = &position_buffer_descriptor_image_info;
-        p_write_descriptor_sets[TG_RENDERER_3D_GEOMETRY_PASS_POSITION_ATTACHMENT].pBufferInfo = TG_NULL;
-        p_write_descriptor_sets[TG_RENDERER_3D_GEOMETRY_PASS_POSITION_ATTACHMENT].pTexelBufferView = TG_NULL;
-
-        p_write_descriptor_sets[TG_RENDERER_3D_GEOMETRY_PASS_NORMAL_ATTACHMENT].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        p_write_descriptor_sets[TG_RENDERER_3D_GEOMETRY_PASS_NORMAL_ATTACHMENT].pNext = TG_NULL;
-        p_write_descriptor_sets[TG_RENDERER_3D_GEOMETRY_PASS_NORMAL_ATTACHMENT].dstSet = renderer_3d_h->shading_pass.descriptor_set;
-        p_write_descriptor_sets[TG_RENDERER_3D_GEOMETRY_PASS_NORMAL_ATTACHMENT].dstBinding = TG_RENDERER_3D_GEOMETRY_PASS_NORMAL_ATTACHMENT;
-        p_write_descriptor_sets[TG_RENDERER_3D_GEOMETRY_PASS_NORMAL_ATTACHMENT].dstArrayElement = 0;
-        p_write_descriptor_sets[TG_RENDERER_3D_GEOMETRY_PASS_NORMAL_ATTACHMENT].descriptorCount = 1;
-        p_write_descriptor_sets[TG_RENDERER_3D_GEOMETRY_PASS_NORMAL_ATTACHMENT].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        p_write_descriptor_sets[TG_RENDERER_3D_GEOMETRY_PASS_NORMAL_ATTACHMENT].pImageInfo = &normal_buffer_descriptor_image_info;
-        p_write_descriptor_sets[TG_RENDERER_3D_GEOMETRY_PASS_NORMAL_ATTACHMENT].pBufferInfo = TG_NULL;
-        p_write_descriptor_sets[TG_RENDERER_3D_GEOMETRY_PASS_NORMAL_ATTACHMENT].pTexelBufferView = TG_NULL;
-
-        p_write_descriptor_sets[TG_RENDERER_3D_GEOMETRY_PASS_ALBEDO_ATTACHMENT].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        p_write_descriptor_sets[TG_RENDERER_3D_GEOMETRY_PASS_ALBEDO_ATTACHMENT].pNext = TG_NULL;
-        p_write_descriptor_sets[TG_RENDERER_3D_GEOMETRY_PASS_ALBEDO_ATTACHMENT].dstSet = renderer_3d_h->shading_pass.descriptor_set;
-        p_write_descriptor_sets[TG_RENDERER_3D_GEOMETRY_PASS_ALBEDO_ATTACHMENT].dstBinding = TG_RENDERER_3D_GEOMETRY_PASS_ALBEDO_ATTACHMENT;
-        p_write_descriptor_sets[TG_RENDERER_3D_GEOMETRY_PASS_ALBEDO_ATTACHMENT].dstArrayElement = 0;
-        p_write_descriptor_sets[TG_RENDERER_3D_GEOMETRY_PASS_ALBEDO_ATTACHMENT].descriptorCount = 1;
-        p_write_descriptor_sets[TG_RENDERER_3D_GEOMETRY_PASS_ALBEDO_ATTACHMENT].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        p_write_descriptor_sets[TG_RENDERER_3D_GEOMETRY_PASS_ALBEDO_ATTACHMENT].pImageInfo = &albedo_buffer_descriptor_image_info;
-        p_write_descriptor_sets[TG_RENDERER_3D_GEOMETRY_PASS_ALBEDO_ATTACHMENT].pBufferInfo = TG_NULL;
-        p_write_descriptor_sets[TG_RENDERER_3D_GEOMETRY_PASS_ALBEDO_ATTACHMENT].pTexelBufferView = TG_NULL;
-    }
-    tgg_vulkan_descriptor_sets_update(TG_RENDERER_3D_GEOMETRY_PASS_COLOR_ATTACHMENT_COUNT, p_write_descriptor_sets); // TODO: move this call up to the rest of the descriptor calls
+    tgg_vulkan_descriptor_set_update_image(renderer_3d_h->shading_pass.descriptor_set, &renderer_3d_h->geometry_pass.position_attachment, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, TG_RENDERER_3D_GEOMETRY_PASS_POSITION_ATTACHMENT);
+    tgg_vulkan_descriptor_set_update_image(renderer_3d_h->shading_pass.descriptor_set, &renderer_3d_h->geometry_pass.normal_attachment, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, TG_RENDERER_3D_GEOMETRY_PASS_NORMAL_ATTACHMENT);
+    tgg_vulkan_descriptor_set_update_image(renderer_3d_h->shading_pass.descriptor_set, &renderer_3d_h->geometry_pass.albedo_attachment, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, TG_RENDERER_3D_GEOMETRY_PASS_ALBEDO_ATTACHMENT);
 
     renderer_3d_h->shading_pass.command_buffer = tgg_vulkan_command_buffer_allocate(command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
@@ -1049,21 +998,21 @@ void tgg_renderer_3d_begin(tg_renderer_3d_h renderer_3d_h)
 
     tgg_vulkan_fence_wait(renderer_3d_h->shading_pass.geometry_pass_attachments_cleared_fence);
     tgg_vulkan_fence_reset(renderer_3d_h->shading_pass.geometry_pass_attachments_cleared_fence);
-    tgg_vulkan_command_buffer_begin(renderer_3d_h->geometry_pass.main_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, TG_NULL);
-    tgg_vulkan_command_buffer_cmd_begin_render_pass(renderer_3d_h->geometry_pass.main_command_buffer, renderer_3d_h->geometry_pass.render_pass, renderer_3d_h->geometry_pass.framebuffer, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+    tgg_vulkan_command_buffer_begin(renderer_3d_h->geometry_pass.command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, TG_NULL);
+    tgg_vulkan_command_buffer_cmd_begin_render_pass(renderer_3d_h->geometry_pass.command_buffer, renderer_3d_h->geometry_pass.render_pass, renderer_3d_h->geometry_pass.framebuffer, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 }
 void tgg_renderer_3d_draw_entity(tg_renderer_3d_h renderer_3d_h, tg_entity_h entity_h)
 {
     TG_ASSERT(renderer_3d_h && entity_h);
 
-    vkCmdExecuteCommands(renderer_3d_h->geometry_pass.main_command_buffer, 1, &entity_h->model_h->render_data.command_buffer);
+    vkCmdExecuteCommands(renderer_3d_h->geometry_pass.command_buffer, 1, &entity_h->model_h->render_data.command_buffer);
 }
 void tgg_renderer_3d_end(tg_renderer_3d_h renderer_3d_h)
 {
     TG_ASSERT(renderer_3d_h);
 
-    vkCmdEndRenderPass(renderer_3d_h->geometry_pass.main_command_buffer);
-    VK_CALL(vkEndCommandBuffer(renderer_3d_h->geometry_pass.main_command_buffer));
+    vkCmdEndRenderPass(renderer_3d_h->geometry_pass.command_buffer);
+    VK_CALL(vkEndCommandBuffer(renderer_3d_h->geometry_pass.command_buffer));
 
     VkSubmitInfo submit_info = { 0 };
     {
@@ -1073,7 +1022,7 @@ void tgg_renderer_3d_end(tg_renderer_3d_h renderer_3d_h)
         submit_info.pWaitSemaphores = TG_NULL;
         submit_info.pWaitDstStageMask = TG_NULL;
         submit_info.commandBufferCount = 1;
-        submit_info.pCommandBuffers = &renderer_3d_h->geometry_pass.main_command_buffer;
+        submit_info.pCommandBuffers = &renderer_3d_h->geometry_pass.command_buffer;
         submit_info.signalSemaphoreCount = 0;
         submit_info.pSignalSemaphores = TG_NULL;
     }

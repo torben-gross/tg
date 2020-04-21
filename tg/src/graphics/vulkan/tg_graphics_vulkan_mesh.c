@@ -99,8 +99,8 @@ void tgg_mesh_recalculate_normals(u32 vertex_count, u32 index_count, const u16* 
         ((tg_normals_compute_shader_uniform_buffer*)uniform_buffer.p_mapped_device_memory)->offset_floats_tangent = offsetof(tg_vertex_3d, tangent) / sizeof(f32);
         ((tg_normals_compute_shader_uniform_buffer*)uniform_buffer.p_mapped_device_memory)->offset_floats_bitangent = offsetof(tg_vertex_3d, bitangent) / sizeof(f32);
 
-        tgg_vulkan_descriptor_set_update_storage_buffer(descriptor_set, p_staging_buffer->buffer, 0, 1);
-        tgg_vulkan_descriptor_set_update_uniform_buffer(descriptor_set, uniform_buffer.buffer, 1, 1);
+        tgg_vulkan_descriptor_set_update_storage_buffer(descriptor_set, p_staging_buffer->buffer, 0);
+        tgg_vulkan_descriptor_set_update_uniform_buffer(descriptor_set, uniform_buffer.buffer, 1);
         
         tgg_vulkan_command_buffer_begin(command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
         vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);

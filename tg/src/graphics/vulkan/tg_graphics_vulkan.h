@@ -236,9 +236,12 @@ void                     tgg_vulkan_descriptor_set_layout_destroy(VkDescriptorSe
 VkDescriptorSet          tgg_vulkan_descriptor_set_allocate(VkDescriptorPool descriptor_pool, VkDescriptorSetLayout descriptor_set_layout);
 void                     tgg_vulkan_descriptor_set_free(VkDescriptorPool descriptor_pool, VkDescriptorSet descriptor_set);
 void                     tgg_vulkan_descriptor_set_update(VkDescriptorSet descriptor_set, tg_shader_input_element* p_shader_input_element, tg_handle shader_input_element_handle, u32 dst_binding);
-void                     tgg_vulkan_descriptor_set_update_storage_buffer(VkDescriptorSet descriptor_set, VkBuffer buffer, u32 dst_binding, u32 descriptor_count);
-void                     tgg_vulkan_descriptor_set_update_uniform_buffer(VkDescriptorSet descriptor_set, VkBuffer buffer, u32 dst_binding, u32 descriptor_count);
-void                     tgg_vulkan_descriptor_set_update_image(VkDescriptorSet descriptor_set, tg_image* p_image, u32 dst_binding, u32 descriptor_count);
+void                     tgg_vulkan_descriptor_set_update_storage_buffer(VkDescriptorSet descriptor_set, VkBuffer buffer, u32 dst_binding);
+void                     tgg_vulkan_descriptor_set_update_storage_buffer_array(VkDescriptorSet descriptor_set, VkBuffer buffer, u32 dst_binding, u32 array_index);
+void                     tgg_vulkan_descriptor_set_update_uniform_buffer(VkDescriptorSet descriptor_set, VkBuffer buffer, u32 dst_binding);
+void                     tgg_vulkan_descriptor_set_update_uniform_buffer_array(VkDescriptorSet descriptor_set, VkBuffer buffer, u32 dst_binding, u32 array_index);
+void                     tgg_vulkan_descriptor_set_update_image(VkDescriptorSet descriptor_set, tg_image* p_image, VkImageLayout image_layout_on_access, u32 dst_binding);
+void                     tgg_vulkan_descriptor_set_update_image_array(VkDescriptorSet descriptor_set, tg_image* p_image, VkImageLayout image_layout_on_access, u32 dst_binding, u32 array_index);
 void                     tgg_vulkan_descriptor_sets_update(u32 write_descriptor_set_count, const VkWriteDescriptorSet* p_write_descriptor_sets);
 
 VkFence                  tgg_vulkan_fence_create(VkFenceCreateFlags fence_create_flags);

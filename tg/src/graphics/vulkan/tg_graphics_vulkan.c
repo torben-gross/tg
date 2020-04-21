@@ -455,28 +455,28 @@ void tgg_vulkan_descriptor_set_free(VkDescriptorPool descriptor_pool, VkDescript
 
 void tgg_vulkan_descriptor_set_update(VkDescriptorSet descriptor_set, tg_shader_input_element* p_shader_input_element, tg_handle shader_input_element_handle, u32 dst_binding)
 {
-    switch (p_shader_input_element->type)
+    switch (p_shader_input_element->type) // TODO: arrays not supported: see e.g. tgg_vulkan_descriptor_set_update_storage_buffer_array
     {
     case TG_SHADER_INPUT_ELEMENT_TYPE_COMPUTE_BUFFER:
     {
         tg_compute_buffer_h compute_buffer_h = (tg_compute_buffer_h)shader_input_element_handle;
-        tgg_vulkan_descriptor_set_update_storage_buffer(descriptor_set, compute_buffer_h->buffer.buffer, dst_binding, p_shader_input_element->array_element_count);
+        tgg_vulkan_descriptor_set_update_storage_buffer(descriptor_set, compute_buffer_h->buffer.buffer, dst_binding);
     } break;
     case TG_SHADER_INPUT_ELEMENT_TYPE_UNIFORM_BUFFER:
     {
         tg_uniform_buffer_h uniform_buffer_h = (tg_uniform_buffer_h)shader_input_element_handle;
-        tgg_vulkan_descriptor_set_update_uniform_buffer(descriptor_set, uniform_buffer_h->buffer.buffer, dst_binding, p_shader_input_element->array_element_count);
+        tgg_vulkan_descriptor_set_update_uniform_buffer(descriptor_set, uniform_buffer_h->buffer.buffer, dst_binding);
     } break;
     case TG_SHADER_INPUT_ELEMENT_TYPE_IMAGE:
     {
         tg_image_h image_h = (tg_image_h)shader_input_element_handle;
-        tgg_vulkan_descriptor_set_update_image(descriptor_set, image_h, dst_binding, p_shader_input_element->array_element_count);
+        tgg_vulkan_descriptor_set_update_image(descriptor_set, image_h, image_h->layout, dst_binding);
     } break;
     default: TG_ASSERT(TG_FALSE);
     }
 }
 
-void tgg_vulkan_descriptor_set_update_storage_buffer(VkDescriptorSet descriptor_set, VkBuffer buffer, u32 dst_binding, u32 descriptor_count)
+void tgg_vulkan_descriptor_set_update_storage_buffer(VkDescriptorSet descriptor_set, VkBuffer buffer, u32 dst_binding)
 {
     VkDescriptorBufferInfo descriptor_buffer_info = { 0 };
     {
@@ -491,7 +491,7 @@ void tgg_vulkan_descriptor_set_update_storage_buffer(VkDescriptorSet descriptor_
         write_descriptor_set.dstSet = descriptor_set;
         write_descriptor_set.dstBinding = dst_binding;
         write_descriptor_set.dstArrayElement = 0;
-        write_descriptor_set.descriptorCount = descriptor_count;
+        write_descriptor_set.descriptorCount = 1;
         write_descriptor_set.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
         write_descriptor_set.pImageInfo = TG_NULL;
         write_descriptor_set.pBufferInfo = &descriptor_buffer_info;
@@ -500,7 +500,31 @@ void tgg_vulkan_descriptor_set_update_storage_buffer(VkDescriptorSet descriptor_
     vkUpdateDescriptorSets(device, 1, &write_descriptor_set, 0, TG_NULL);
 }
 
-void tgg_vulkan_descriptor_set_update_uniform_buffer(VkDescriptorSet descriptor_set, VkBuffer buffer, u32 dst_binding, u32 descriptor_count)
+void tgg_vulkan_descriptor_set_update_storage_buffer_array(VkDescriptorSet descriptor_set, VkBuffer buffer, u32 dst_binding, u32 array_index)
+{
+    VkDescriptorBufferInfo descriptor_buffer_info = { 0 };
+    {
+        descriptor_buffer_info.buffer = buffer;
+        descriptor_buffer_info.offset = 0;
+        descriptor_buffer_info.range = VK_WHOLE_SIZE;
+    }
+    VkWriteDescriptorSet write_descriptor_set = { 0 };
+    {
+        write_descriptor_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        write_descriptor_set.pNext = TG_NULL;
+        write_descriptor_set.dstSet = descriptor_set;
+        write_descriptor_set.dstBinding = dst_binding;
+        write_descriptor_set.dstArrayElement = array_index;
+        write_descriptor_set.descriptorCount = 1;
+        write_descriptor_set.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        write_descriptor_set.pImageInfo = TG_NULL;
+        write_descriptor_set.pBufferInfo = &descriptor_buffer_info;
+        write_descriptor_set.pTexelBufferView = TG_NULL;
+    }
+    vkUpdateDescriptorSets(device, 1, &write_descriptor_set, 0, TG_NULL);
+}
+
+void tgg_vulkan_descriptor_set_update_uniform_buffer(VkDescriptorSet descriptor_set, VkBuffer buffer, u32 dst_binding)
 {
     VkDescriptorBufferInfo descriptor_buffer_info = { 0 };
     {
@@ -515,7 +539,7 @@ void tgg_vulkan_descriptor_set_update_uniform_buffer(VkDescriptorSet descriptor_
         write_descriptor_set.dstSet = descriptor_set;
         write_descriptor_set.dstBinding = dst_binding;
         write_descriptor_set.dstArrayElement = 0;
-        write_descriptor_set.descriptorCount = descriptor_count;
+        write_descriptor_set.descriptorCount = 1;
         write_descriptor_set.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         write_descriptor_set.pImageInfo = TG_NULL;
         write_descriptor_set.pBufferInfo = &descriptor_buffer_info;
@@ -524,13 +548,37 @@ void tgg_vulkan_descriptor_set_update_uniform_buffer(VkDescriptorSet descriptor_
     vkUpdateDescriptorSets(device, 1, &write_descriptor_set, 0, TG_NULL);
 }
 
-void tgg_vulkan_descriptor_set_update_image(VkDescriptorSet descriptor_set, tg_image* p_image, u32 dst_binding, u32 descriptor_count)
+void tgg_vulkan_descriptor_set_update_uniform_buffer_array(VkDescriptorSet descriptor_set, VkBuffer buffer, u32 dst_binding, u32 array_index)
+{
+    VkDescriptorBufferInfo descriptor_buffer_info = { 0 };
+    {
+        descriptor_buffer_info.buffer = buffer;
+        descriptor_buffer_info.offset = 0;
+        descriptor_buffer_info.range = VK_WHOLE_SIZE;
+    }
+    VkWriteDescriptorSet write_descriptor_set = { 0 };
+    {
+        write_descriptor_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        write_descriptor_set.pNext = TG_NULL;
+        write_descriptor_set.dstSet = descriptor_set;
+        write_descriptor_set.dstBinding = dst_binding;
+        write_descriptor_set.dstArrayElement = array_index;
+        write_descriptor_set.descriptorCount = 1;
+        write_descriptor_set.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        write_descriptor_set.pImageInfo = TG_NULL;
+        write_descriptor_set.pBufferInfo = &descriptor_buffer_info;
+        write_descriptor_set.pTexelBufferView = TG_NULL;
+    }
+    vkUpdateDescriptorSets(device, 1, &write_descriptor_set, 0, TG_NULL);
+}
+
+void tgg_vulkan_descriptor_set_update_image(VkDescriptorSet descriptor_set, tg_image* p_image, VkImageLayout image_layout_on_access, u32 dst_binding)
 {
     VkDescriptorImageInfo descriptor_image_info = { 0 };
     {
         descriptor_image_info.sampler = p_image->sampler;
         descriptor_image_info.imageView = p_image->image_view;
-        descriptor_image_info.imageLayout = p_image->layout;
+        descriptor_image_info.imageLayout = image_layout_on_access;
     }
     VkWriteDescriptorSet write_descriptor_set = { 0 };
     {
@@ -539,7 +587,31 @@ void tgg_vulkan_descriptor_set_update_image(VkDescriptorSet descriptor_set, tg_i
         write_descriptor_set.dstSet = descriptor_set;
         write_descriptor_set.dstBinding = dst_binding;
         write_descriptor_set.dstArrayElement = 0;
-        write_descriptor_set.descriptorCount = descriptor_count;
+        write_descriptor_set.descriptorCount = 1;
+        write_descriptor_set.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        write_descriptor_set.pImageInfo = &descriptor_image_info;
+        write_descriptor_set.pBufferInfo = TG_NULL;
+        write_descriptor_set.pTexelBufferView = TG_NULL;
+    }
+    vkUpdateDescriptorSets(device, 1, &write_descriptor_set, 0, TG_NULL);
+}
+
+void tgg_vulkan_descriptor_set_update_image_array(VkDescriptorSet descriptor_set, tg_image* p_image, VkImageLayout image_layout_on_access, u32 dst_binding, u32 array_index)
+{
+    VkDescriptorImageInfo descriptor_image_info = { 0 };
+    {
+        descriptor_image_info.sampler = p_image->sampler;
+        descriptor_image_info.imageView = p_image->image_view;
+        descriptor_image_info.imageLayout = image_layout_on_access;
+    }
+    VkWriteDescriptorSet write_descriptor_set = { 0 };
+    {
+        write_descriptor_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        write_descriptor_set.pNext = TG_NULL;
+        write_descriptor_set.dstSet = descriptor_set;
+        write_descriptor_set.dstBinding = dst_binding;
+        write_descriptor_set.dstArrayElement = array_index;
+        write_descriptor_set.descriptorCount = 1;
         write_descriptor_set.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         write_descriptor_set.pImageInfo = &descriptor_image_info;
         write_descriptor_set.pBufferInfo = TG_NULL;
