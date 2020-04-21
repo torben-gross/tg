@@ -18,7 +18,7 @@ tg_entity_h tg_entity_create(tg_renderer_3d_h renderer_3d_h, tg_model_h model_h)
 	entity_h->renderer_3d_h = renderer_3d_h;
 	entity_h->model_h = model_h; // TODO: this call wil probably go
 
-	tg_graphics_renderer_3d_register(renderer_3d_h, entity_h);
+	tgg_renderer_3d_register(renderer_3d_h, entity_h);
 
 	return entity_h;
 }

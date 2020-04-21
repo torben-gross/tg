@@ -1,5 +1,5 @@
-#ifndef TG_GRAPHICS_IMAGE_LOADER_H
-#define TG_GRAPHICS_IMAGE_LOADER_H
+#ifndef tgg_IMAGE_LOADER_H
+#define tgg_IMAGE_LOADER_H
 
 #include "graphics/tg_graphics.h"
 #include "math/tg_math.h"

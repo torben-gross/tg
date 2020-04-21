@@ -7,29 +7,29 @@
 
 
 
-tg_camera_h tg_graphics_camera_create(const v3* p_position, f32 pitch, f32 yaw, f32 roll, f32 fov_y, f32 near, f32 far)
+tg_camera_h tgg_camera_create(const v3* p_position, f32 pitch, f32 yaw, f32 roll, f32 fov_y, f32 near, f32 far)
 {
 	TG_ASSERT(near < 0 && far < 0 && near > far);
 
 	tg_camera_h camera_h = TG_MEMORY_ALLOCATOR_ALLOCATE(sizeof(*camera_h));
 
-	tg_graphics_camera_set_projection(fov_y, near, far, camera_h);
-	tg_graphics_camera_set_view(p_position, pitch, yaw, roll, camera_h);
+	tgg_camera_set_projection(fov_y, near, far, camera_h);
+	tgg_camera_set_view(p_position, pitch, yaw, roll, camera_h);
 
 	return camera_h;
 }
 
-m4 tg_graphics_camera_get_projection(tg_camera_h camera_h)
+m4 tgg_camera_get_projection(tg_camera_h camera_h)
 {
 	return camera_h->projection.projection;
 }
 
-m4 tg_graphics_camera_get_view(tg_camera_h camera_h)
+m4 tgg_camera_get_view(tg_camera_h camera_h)
 {
 	return camera_h->view.view;
 }
 
-void tg_graphics_camera_set_projection(f32 fov_y, f32 near, f32 far, tg_camera_h camera_h)
+void tgg_camera_set_projection(f32 fov_y, f32 near, f32 far, tg_camera_h camera_h)
 {
 	TG_ASSERT(near < 0 && far < 0 && near > far && camera_h);
 
@@ -40,7 +40,7 @@ void tg_graphics_camera_set_projection(f32 fov_y, f32 near, f32 far, tg_camera_h
 	camera_h->projection.projection = tgm_m4_perspective(fov_y, tg_platform_get_window_aspect_ratio(), near, far);
 }
 
-void tg_graphics_camera_set_view(const v3* p_position, f32 pitch, f32 yaw, f32 roll, tg_camera_h camera_h)
+void tgg_camera_set_view(const v3* p_position, f32 pitch, f32 yaw, f32 roll, tg_camera_h camera_h)
 {
 	TG_ASSERT(camera_h);
 
@@ -57,7 +57,7 @@ void tg_graphics_camera_set_view(const v3* p_position, f32 pitch, f32 yaw, f32 r
 	camera_h->view.view = tgm_m4_multiply_m4(&inverse_rotation, &inverse_translation);
 }
 
-void tg_graphics_camera_destroy(tg_camera_h camera_h)
+void tgg_camera_destroy(tg_camera_h camera_h)
 {
 	TG_ASSERT(camera_h);
 

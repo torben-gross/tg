@@ -50,10 +50,10 @@ typedef struct tg_camera_uniform_buffer
 
 typedef struct tg_renderer_3d_geometry_pass
 {
-    tg_vulkan_image              position_attachment;
-    tg_vulkan_image              normal_attachment;
-    tg_vulkan_image              albedo_attachment;
-    tg_vulkan_image              depth_attachment;
+    tg_image                     position_attachment;
+    tg_image                     normal_attachment;
+    tg_image                     albedo_attachment;
+    tg_image                     depth_attachment;
 
     VkFence                      rendering_finished_fence;
     VkSemaphore                  rendering_finished_semaphore;
@@ -72,7 +72,7 @@ typedef struct tg_renderer_3d_geometry_pass
 
 typedef struct tg_renderer_3d_shading_pass
 {
-    tg_vulkan_image              color_attachment;
+    tg_image                     color_attachment;
 
     tg_vulkan_buffer             vbo;
     tg_vulkan_buffer             ibo;
@@ -106,7 +106,7 @@ typedef struct tg_renderer_3d_present_pass
     VkSemaphore              rendering_finished_semaphore;
 
     VkRenderPass             render_pass;
-    VkFramebuffer            framebuffers[TG_GRAPHICS_VULKAN_SURFACE_IMAGE_COUNT];
+    VkFramebuffer            framebuffers[TG_SURFACE_IMAGE_COUNT];
 
     VkDescriptorPool         descriptor_pool;
     VkDescriptorSetLayout    descriptor_set_layout;
@@ -117,7 +117,7 @@ typedef struct tg_renderer_3d_present_pass
     VkPipelineLayout         pipeline_layout;
     VkPipeline               pipeline;
 
-    VkCommandBuffer          command_buffers[TG_GRAPHICS_VULKAN_SURFACE_IMAGE_COUNT];
+    VkCommandBuffer          command_buffers[TG_SURFACE_IMAGE_COUNT];
 } tg_renderer_3d_present_pass;
 
 typedef struct tg_renderer_3d
@@ -131,7 +131,7 @@ typedef struct tg_renderer_3d
 
 
 // TODO: presenting should only be done in main vulkan file.
-void tg_graphics_renderer_3d_internal_init_geometry_pass(tg_renderer_3d_h renderer_3d_h)
+void tgg_renderer_3d_internal_init_geometry_pass(tg_renderer_3d_h renderer_3d_h)
 {
     tg_vulkan_image_create_info vulkan_image_create_info = { 0 };
     {
@@ -139,44 +139,40 @@ void tg_graphics_renderer_3d_internal_init_geometry_pass(tg_renderer_3d_h render
         vulkan_image_create_info.height = swapchain_extent.height;
         vulkan_image_create_info.mip_levels = 1;
         vulkan_image_create_info.format = TG_RENDERER_3D_GEOMETRY_PASS_POSITION_FORMAT;
+        vulkan_image_create_info.aspect_mask = VK_IMAGE_ASPECT_COLOR_BIT;
+        vulkan_image_create_info.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         vulkan_image_create_info.sample_count = VK_SAMPLE_COUNT_1_BIT;
         vulkan_image_create_info.image_usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
         vulkan_image_create_info.memory_properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-        vulkan_image_create_info.image_aspect = VK_IMAGE_ASPECT_COLOR_BIT;
-        vulkan_image_create_info.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        vulkan_image_create_info.aspect_mask = VK_IMAGE_ASPECT_COLOR_BIT;
-
         vulkan_image_create_info.min_filter = VK_FILTER_LINEAR;
         vulkan_image_create_info.mag_filter = VK_FILTER_LINEAR;
         vulkan_image_create_info.address_mode_u = VK_SAMPLER_ADDRESS_MODE_REPEAT;
         vulkan_image_create_info.address_mode_v = VK_SAMPLER_ADDRESS_MODE_REPEAT;
         vulkan_image_create_info.address_mode_w = VK_SAMPLER_ADDRESS_MODE_REPEAT;
     }
-    renderer_3d_h->geometry_pass.position_attachment = tg_graphics_vulkan_image_create2(&vulkan_image_create_info);
 
-    tg_graphics_vulkan_image_create(swapchain_extent.width, swapchain_extent.height, 1, TG_RENDERER_3D_GEOMETRY_PASS_NORMAL_FORMAT, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &renderer_3d_h->geometry_pass.normal_attachment.image, &renderer_3d_h->geometry_pass.normal_attachment.device_memory);
-    tg_graphics_vulkan_image_transition_layout(renderer_3d_h->geometry_pass.normal_attachment.image, 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, 1, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
-    tg_graphics_vulkan_image_view_create(renderer_3d_h->geometry_pass.normal_attachment.image, TG_RENDERER_3D_GEOMETRY_PASS_NORMAL_FORMAT, 1, VK_IMAGE_ASPECT_COLOR_BIT, &renderer_3d_h->geometry_pass.normal_attachment.image_view);
-    renderer_3d_h->geometry_pass.normal_attachment.sampler = tg_graphics_vulkan_sampler_create(1, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT);
+    renderer_3d_h->geometry_pass.position_attachment = tgg_vulkan_image_create(&vulkan_image_create_info);
     
-    tg_graphics_vulkan_image_create(swapchain_extent.width, swapchain_extent.height, 1, TG_RENDERER_3D_GEOMETRY_PASS_ALBEDO_FORMAT, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &renderer_3d_h->geometry_pass.albedo_attachment.image, &renderer_3d_h->geometry_pass.albedo_attachment.device_memory);
-    tg_graphics_vulkan_image_transition_layout(renderer_3d_h->geometry_pass.albedo_attachment.image, 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, 1, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
-    tg_graphics_vulkan_image_view_create(renderer_3d_h->geometry_pass.albedo_attachment.image, TG_RENDERER_3D_GEOMETRY_PASS_ALBEDO_FORMAT, 1, VK_IMAGE_ASPECT_COLOR_BIT, &renderer_3d_h->geometry_pass.albedo_attachment.image_view);
-    renderer_3d_h->geometry_pass.albedo_attachment.sampler = tg_graphics_vulkan_sampler_create(1, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT);
+    vulkan_image_create_info.format = TG_RENDERER_3D_GEOMETRY_PASS_NORMAL_FORMAT;
+    renderer_3d_h->geometry_pass.normal_attachment = tgg_vulkan_image_create(&vulkan_image_create_info);
+    
+    vulkan_image_create_info.format = TG_RENDERER_3D_GEOMETRY_PASS_ALBEDO_FORMAT;
+    renderer_3d_h->geometry_pass.albedo_attachment = tgg_vulkan_image_create(&vulkan_image_create_info);
+    
+    vulkan_image_create_info.format = TG_RENDERER_3D_GEOMETRY_PASS_DEPTH_FORMAT;
+    vulkan_image_create_info.image_usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    vulkan_image_create_info.aspect_mask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    vulkan_image_create_info.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    renderer_3d_h->geometry_pass.depth_attachment = tgg_vulkan_image_create(&vulkan_image_create_info);
 
-    tg_graphics_vulkan_image_create(swapchain_extent.width, swapchain_extent.height, 1, TG_RENDERER_3D_GEOMETRY_PASS_DEPTH_FORMAT, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &renderer_3d_h->geometry_pass.depth_attachment.image, &renderer_3d_h->geometry_pass.depth_attachment.device_memory);
-    tg_graphics_vulkan_image_transition_layout(renderer_3d_h->geometry_pass.depth_attachment.image, 0, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT, 1, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT);
-    tg_graphics_vulkan_image_view_create(renderer_3d_h->geometry_pass.depth_attachment.image, TG_RENDERER_3D_GEOMETRY_PASS_DEPTH_FORMAT, 1, VK_IMAGE_ASPECT_DEPTH_BIT, &renderer_3d_h->geometry_pass.depth_attachment.image_view);
-    renderer_3d_h->geometry_pass.depth_attachment.sampler = tg_graphics_vulkan_sampler_create(1, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT);
+    renderer_3d_h->geometry_pass.rendering_finished_fence = tgg_vulkan_fence_create(VK_FENCE_CREATE_SIGNALED_BIT);
+    renderer_3d_h->geometry_pass.rendering_finished_semaphore = tgg_vulkan_semaphore_create();
 
-    renderer_3d_h->geometry_pass.rendering_finished_fence = tg_graphics_vulkan_fence_create(VK_FENCE_CREATE_SIGNALED_BIT);
-    renderer_3d_h->geometry_pass.rendering_finished_semaphore = tg_graphics_vulkan_semaphore_create();
-
-    const u64 min_uniform_buffer_offset_alignment = (u64)tg_graphics_vulkan_uniform_buffer_min_offset_alignment();
+    const u64 min_uniform_buffer_offset_alignment = (u64)tgg_vulkan_uniform_buffer_min_offset_alignment();
     renderer_3d_h->geometry_pass.model_ubo_element_size = tgm_u64_max(sizeof(m4), min_uniform_buffer_offset_alignment);
-    renderer_3d_h->geometry_pass.model_ubo = tg_graphics_vulkan_buffer_create(TG_RENDERER_3D_MAX_ENTITY_COUNT * (u64)renderer_3d_h->geometry_pass.model_ubo_element_size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    renderer_3d_h->geometry_pass.model_ubo = tgg_vulkan_buffer_create(TG_RENDERER_3D_MAX_ENTITY_COUNT * (u64)renderer_3d_h->geometry_pass.model_ubo_element_size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-    renderer_3d_h->geometry_pass.view_projection_ubo = tg_graphics_vulkan_buffer_create(sizeof(tg_camera_uniform_buffer), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    renderer_3d_h->geometry_pass.view_projection_ubo = tgg_vulkan_buffer_create(sizeof(tg_camera_uniform_buffer), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
     VkAttachmentDescription p_attachment_descriptions[4] = { 0 };
     {
@@ -256,7 +252,7 @@ void tg_graphics_renderer_3d_internal_init_geometry_pass(tg_renderer_3d_h render
         subpass_dependency.srcAccessMask = 0;
         subpass_dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
     }
-    renderer_3d_h->geometry_pass.render_pass = tg_graphics_vulkan_render_pass_create(TG_RENDERER_3D_GEOMETRY_PASS_ATTACHMENT_COUNT, p_attachment_descriptions, 1, &subpass_description, 1, &subpass_dependency);
+    renderer_3d_h->geometry_pass.render_pass = tgg_vulkan_render_pass_create(TG_RENDERER_3D_GEOMETRY_PASS_ATTACHMENT_COUNT, p_attachment_descriptions, 1, &subpass_description, 1, &subpass_dependency);
 
     const VkImageView p_framebuffer_attachments[] = {
         renderer_3d_h->geometry_pass.position_attachment.image_view,
@@ -264,16 +260,30 @@ void tg_graphics_renderer_3d_internal_init_geometry_pass(tg_renderer_3d_h render
         renderer_3d_h->geometry_pass.albedo_attachment.image_view,
         renderer_3d_h->geometry_pass.depth_attachment.image_view
     };
-    renderer_3d_h->geometry_pass.framebuffer = tg_graphics_vulkan_framebuffer_create(renderer_3d_h->geometry_pass.render_pass, TG_RENDERER_3D_GEOMETRY_PASS_ATTACHMENT_COUNT, p_framebuffer_attachments, swapchain_extent.width, swapchain_extent.height);
+    renderer_3d_h->geometry_pass.framebuffer = tgg_vulkan_framebuffer_create(renderer_3d_h->geometry_pass.render_pass, TG_RENDERER_3D_GEOMETRY_PASS_ATTACHMENT_COUNT, p_framebuffer_attachments, swapchain_extent.width, swapchain_extent.height);
 
-    renderer_3d_h->geometry_pass.main_command_buffer = tg_graphics_vulkan_command_buffer_allocate(command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+    renderer_3d_h->geometry_pass.main_command_buffer = tgg_vulkan_command_buffer_allocate(command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 }
-void tg_graphics_renderer_3d_internal_init_shading_pass(tg_renderer_3d_h renderer_3d_h)
+void tgg_renderer_3d_internal_init_shading_pass(tg_renderer_3d_h renderer_3d_h)
 {
-    tg_graphics_vulkan_image_create(swapchain_extent.width, swapchain_extent.height, 1, TG_RENDERER_3D_SHADING_PASS_COLOR_ATTACHMENT_FORMAT, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &renderer_3d_h->shading_pass.color_attachment.image, &renderer_3d_h->shading_pass.color_attachment.device_memory);
-    tg_graphics_vulkan_image_transition_layout(renderer_3d_h->shading_pass.color_attachment.image, 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, 1, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
-    tg_graphics_vulkan_image_view_create(renderer_3d_h->shading_pass.color_attachment.image, TG_RENDERER_3D_SHADING_PASS_COLOR_ATTACHMENT_FORMAT, 1, VK_IMAGE_ASPECT_COLOR_BIT, &renderer_3d_h->shading_pass.color_attachment.image_view);
-    renderer_3d_h->shading_pass.color_attachment.sampler = tg_graphics_vulkan_sampler_create(1, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT);
+    tg_vulkan_image_create_info vulkan_image_create_info = { 0 };
+    {
+        vulkan_image_create_info.width = swapchain_extent.width;
+        vulkan_image_create_info.height = swapchain_extent.height;
+        vulkan_image_create_info.mip_levels = 1;
+        vulkan_image_create_info.format = TG_RENDERER_3D_SHADING_PASS_COLOR_ATTACHMENT_FORMAT;
+        vulkan_image_create_info.aspect_mask = VK_IMAGE_ASPECT_COLOR_BIT;
+        vulkan_image_create_info.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        vulkan_image_create_info.sample_count = VK_SAMPLE_COUNT_1_BIT;
+        vulkan_image_create_info.image_usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        vulkan_image_create_info.memory_properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+        vulkan_image_create_info.min_filter = VK_FILTER_LINEAR;
+        vulkan_image_create_info.mag_filter = VK_FILTER_LINEAR;
+        vulkan_image_create_info.address_mode_u = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        vulkan_image_create_info.address_mode_v = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        vulkan_image_create_info.address_mode_w = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    }
+    renderer_3d_h->shading_pass.color_attachment = tgg_vulkan_image_create(&vulkan_image_create_info);
     
     tg_vulkan_buffer staging_buffer = { 0 };
 
@@ -300,11 +310,11 @@ void tg_graphics_renderer_3d_internal_init_shading_pass(tg_renderer_3d_h rendere
         p_vertices[3].uv.x = 0.0f;
         p_vertices[3].uv.y = 1.0f;
     }
-    staging_buffer = tg_graphics_vulkan_buffer_create(sizeof(p_vertices), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    staging_buffer = tgg_vulkan_buffer_create(sizeof(p_vertices), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
     memcpy(staging_buffer.p_mapped_device_memory, p_vertices, sizeof(p_vertices));
-    renderer_3d_h->shading_pass.vbo = tg_graphics_vulkan_buffer_create(sizeof(p_vertices), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    tg_graphics_vulkan_buffer_copy(sizeof(p_vertices), staging_buffer.buffer, renderer_3d_h->shading_pass.vbo.buffer);
-    tg_graphics_vulkan_buffer_destroy(&staging_buffer);
+    renderer_3d_h->shading_pass.vbo = tgg_vulkan_buffer_create(sizeof(p_vertices), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    tgg_vulkan_buffer_copy(sizeof(p_vertices), staging_buffer.buffer, renderer_3d_h->shading_pass.vbo.buffer);
+    tgg_vulkan_buffer_destroy(&staging_buffer);
 
     u16 p_indices[6] = { 0 };
     {
@@ -315,15 +325,15 @@ void tg_graphics_renderer_3d_internal_init_shading_pass(tg_renderer_3d_h rendere
         p_indices[4] = 3;
         p_indices[5] = 0;
     }
-    staging_buffer = tg_graphics_vulkan_buffer_create(sizeof(p_indices), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    staging_buffer = tgg_vulkan_buffer_create(sizeof(p_indices), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
     memcpy(staging_buffer.p_mapped_device_memory, p_indices, sizeof(p_indices));
-    renderer_3d_h->shading_pass.ibo = tg_graphics_vulkan_buffer_create(sizeof(p_indices), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    tg_graphics_vulkan_buffer_copy(sizeof(p_indices), staging_buffer.buffer, renderer_3d_h->shading_pass.ibo.buffer);
-    tg_graphics_vulkan_buffer_destroy(&staging_buffer);
+    renderer_3d_h->shading_pass.ibo = tgg_vulkan_buffer_create(sizeof(p_indices), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    tgg_vulkan_buffer_copy(sizeof(p_indices), staging_buffer.buffer, renderer_3d_h->shading_pass.ibo.buffer);
+    tgg_vulkan_buffer_destroy(&staging_buffer);
 
-    renderer_3d_h->shading_pass.rendering_finished_fence = tg_graphics_vulkan_fence_create(VK_FENCE_CREATE_SIGNALED_BIT);
-    renderer_3d_h->shading_pass.rendering_finished_semaphore = tg_graphics_vulkan_semaphore_create();
-    renderer_3d_h->shading_pass.geometry_pass_attachments_cleared_fence = tg_graphics_vulkan_fence_create(VK_FENCE_CREATE_SIGNALED_BIT);
+    renderer_3d_h->shading_pass.rendering_finished_fence = tgg_vulkan_fence_create(VK_FENCE_CREATE_SIGNALED_BIT);
+    renderer_3d_h->shading_pass.rendering_finished_semaphore = tgg_vulkan_semaphore_create();
+    renderer_3d_h->shading_pass.geometry_pass_attachments_cleared_fence = tgg_vulkan_fence_create(VK_FENCE_CREATE_SIGNALED_BIT);
 
     VkAttachmentDescription attachment_description = { 0 };
     {
@@ -364,16 +374,16 @@ void tg_graphics_renderer_3d_internal_init_shading_pass(tg_renderer_3d_h rendere
         subpass_dependency.srcAccessMask = 0;
         subpass_dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
     }
-    renderer_3d_h->shading_pass.render_pass = tg_graphics_vulkan_render_pass_create(TG_RENDERER_3D_SHADING_PASS_ATTACHMENT_COUNT, &attachment_description, 1, &subpass_description, 1, &subpass_dependency);
+    renderer_3d_h->shading_pass.render_pass = tgg_vulkan_render_pass_create(TG_RENDERER_3D_SHADING_PASS_ATTACHMENT_COUNT, &attachment_description, 1, &subpass_description, 1, &subpass_dependency);
 
-    renderer_3d_h->shading_pass.framebuffer = tg_graphics_vulkan_framebuffer_create(renderer_3d_h->shading_pass.render_pass, TG_RENDERER_3D_SHADING_PASS_ATTACHMENT_COUNT, &renderer_3d_h->shading_pass.color_attachment.image_view, swapchain_extent.width, swapchain_extent.height);
+    renderer_3d_h->shading_pass.framebuffer = tgg_vulkan_framebuffer_create(renderer_3d_h->shading_pass.render_pass, TG_RENDERER_3D_SHADING_PASS_ATTACHMENT_COUNT, &renderer_3d_h->shading_pass.color_attachment.image_view, swapchain_extent.width, swapchain_extent.height);
 
     VkDescriptorPoolSize descriptor_pool_size = { 0 };
     {
         descriptor_pool_size.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         descriptor_pool_size.descriptorCount = 1;
     }
-    renderer_3d_h->shading_pass.descriptor_pool = tg_graphics_vulkan_descriptor_pool_create(0, 1, 1, &descriptor_pool_size);
+    renderer_3d_h->shading_pass.descriptor_pool = tgg_vulkan_descriptor_pool_create(0, 1, 1, &descriptor_pool_size);
 
     VkDescriptorSetLayoutBinding p_descriptor_set_layout_bindings[3] = { 0 };
     {
@@ -395,13 +405,13 @@ void tg_graphics_renderer_3d_internal_init_shading_pass(tg_renderer_3d_h rendere
         p_descriptor_set_layout_bindings[TG_RENDERER_3D_GEOMETRY_PASS_ALBEDO_ATTACHMENT].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
         p_descriptor_set_layout_bindings[TG_RENDERER_3D_GEOMETRY_PASS_ALBEDO_ATTACHMENT].pImmutableSamplers = TG_NULL;
     }
-    renderer_3d_h->shading_pass.descriptor_set_layout = tg_graphics_vulkan_descriptor_set_layout_create(0, TG_RENDERER_3D_GEOMETRY_PASS_COLOR_ATTACHMENT_COUNT, p_descriptor_set_layout_bindings);
-    renderer_3d_h->shading_pass.descriptor_set = tg_graphics_vulkan_descriptor_set_allocate(renderer_3d_h->shading_pass.descriptor_pool, renderer_3d_h->shading_pass.descriptor_set_layout);
+    renderer_3d_h->shading_pass.descriptor_set_layout = tgg_vulkan_descriptor_set_layout_create(0, TG_RENDERER_3D_GEOMETRY_PASS_COLOR_ATTACHMENT_COUNT, p_descriptor_set_layout_bindings);
+    renderer_3d_h->shading_pass.descriptor_set = tgg_vulkan_descriptor_set_allocate(renderer_3d_h->shading_pass.descriptor_pool, renderer_3d_h->shading_pass.descriptor_set_layout);
 
-    renderer_3d_h->shading_pass.vertex_shader_h = tg_graphics_vulkan_shader_module_create("shaders/shading.vert");
-    renderer_3d_h->shading_pass.fragment_shader_h = tg_graphics_vulkan_shader_module_create("shaders/shading.frag");
+    renderer_3d_h->shading_pass.vertex_shader_h = tgg_vulkan_shader_module_create("shaders/shading.vert");
+    renderer_3d_h->shading_pass.fragment_shader_h = tgg_vulkan_shader_module_create("shaders/shading.frag");
 
-    renderer_3d_h->shading_pass.pipeline_layout = tg_graphics_vulkan_pipeline_layout_create(1, &renderer_3d_h->shading_pass.descriptor_set_layout, 0, TG_NULL);
+    renderer_3d_h->shading_pass.pipeline_layout = tgg_vulkan_pipeline_layout_create(1, &renderer_3d_h->shading_pass.descriptor_set_layout, 0, TG_NULL);
 
     VkVertexInputBindingDescription vertex_input_binding_description = { 0 };
     {
@@ -445,7 +455,7 @@ void tg_graphics_renderer_3d_internal_init_shading_pass(tg_renderer_3d_h rendere
         vulkan_graphics_pipeline_create_info.pipeline_layout = renderer_3d_h->shading_pass.pipeline_layout;
         vulkan_graphics_pipeline_create_info.render_pass = renderer_3d_h->shading_pass.render_pass;
     }
-    renderer_3d_h->shading_pass.pipeline = tg_graphics_vulkan_graphics_pipeline_create(&vulkan_graphics_pipeline_create_info);
+    renderer_3d_h->shading_pass.pipeline = tgg_vulkan_graphics_pipeline_create(&vulkan_graphics_pipeline_create_info);
 
     VkDescriptorImageInfo position_buffer_descriptor_image_info = { 0 };
     {
@@ -500,15 +510,15 @@ void tg_graphics_renderer_3d_internal_init_shading_pass(tg_renderer_3d_h rendere
         p_write_descriptor_sets[TG_RENDERER_3D_GEOMETRY_PASS_ALBEDO_ATTACHMENT].pBufferInfo = TG_NULL;
         p_write_descriptor_sets[TG_RENDERER_3D_GEOMETRY_PASS_ALBEDO_ATTACHMENT].pTexelBufferView = TG_NULL;
     }
-    tg_graphics_vulkan_descriptor_sets_update(TG_RENDERER_3D_GEOMETRY_PASS_COLOR_ATTACHMENT_COUNT, p_write_descriptor_sets); // TODO: move this call up to the rest of the descriptor calls
+    tgg_vulkan_descriptor_sets_update(TG_RENDERER_3D_GEOMETRY_PASS_COLOR_ATTACHMENT_COUNT, p_write_descriptor_sets); // TODO: move this call up to the rest of the descriptor calls
 
-    renderer_3d_h->shading_pass.command_buffer = tg_graphics_vulkan_command_buffer_allocate(command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+    renderer_3d_h->shading_pass.command_buffer = tgg_vulkan_command_buffer_allocate(command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
-    tg_graphics_vulkan_command_buffer_begin(renderer_3d_h->shading_pass.command_buffer, 0, TG_NULL);
+    tgg_vulkan_command_buffer_begin(renderer_3d_h->shading_pass.command_buffer, 0, TG_NULL);
     {
-        tg_graphics_vulkan_command_buffer_cmd_transition_image_layout(renderer_3d_h->shading_pass.command_buffer, renderer_3d_h->geometry_pass.position_attachment.image, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, 1, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT);
-        tg_graphics_vulkan_command_buffer_cmd_transition_image_layout(renderer_3d_h->shading_pass.command_buffer, renderer_3d_h->geometry_pass.normal_attachment.image, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, 1, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT);
-        tg_graphics_vulkan_command_buffer_cmd_transition_image_layout(renderer_3d_h->shading_pass.command_buffer, renderer_3d_h->geometry_pass.albedo_attachment.image, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, 1, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT);
+        tgg_vulkan_command_buffer_cmd_transition_image_layout(renderer_3d_h->shading_pass.command_buffer, &renderer_3d_h->geometry_pass.position_attachment, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT);
+        tgg_vulkan_command_buffer_cmd_transition_image_layout(renderer_3d_h->shading_pass.command_buffer, &renderer_3d_h->geometry_pass.normal_attachment, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT);
+        tgg_vulkan_command_buffer_cmd_transition_image_layout(renderer_3d_h->shading_pass.command_buffer, &renderer_3d_h->geometry_pass.albedo_attachment, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT);
 
         vkCmdBindPipeline(renderer_3d_h->shading_pass.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer_3d_h->shading_pass.pipeline);
 
@@ -532,44 +542,73 @@ void tg_graphics_renderer_3d_internal_init_shading_pass(tg_renderer_3d_h rendere
         vkCmdDrawIndexed(renderer_3d_h->shading_pass.command_buffer, 6, 1, 0, 0, 0);
         vkCmdEndRenderPass(renderer_3d_h->shading_pass.command_buffer);
         
-        const VkClearColorValue clear_color_value = { 0.0f, 0.0f, 0.0f, 0.0f };
-        const VkClearDepthStencilValue clear_depth_stencil_value = { 1.0f, 0 };
-        VkImageSubresourceRange color_image_subresource_range = { 0 };
-        {
-            color_image_subresource_range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            color_image_subresource_range.baseMipLevel = 0;
-            color_image_subresource_range.levelCount = 1;
-            color_image_subresource_range.baseArrayLayer = 0;
-            color_image_subresource_range.layerCount = 1;
-        }
-        VkImageSubresourceRange depth_image_subresource_range = { 0 };
-        {
-            depth_image_subresource_range.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-            depth_image_subresource_range.baseMipLevel = 0;
-            depth_image_subresource_range.levelCount = 1;
-            depth_image_subresource_range.baseArrayLayer = 0;
-            depth_image_subresource_range.layerCount = 1;
-        }
+        tgg_vulkan_command_buffer_cmd_transition_image_layout(
+            renderer_3d_h->shading_pass.command_buffer,
+            &renderer_3d_h->geometry_pass.position_attachment,
+            VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT
+        );
+        tgg_vulkan_command_buffer_cmd_clear_image(renderer_3d_h->shading_pass.command_buffer, &renderer_3d_h->geometry_pass.position_attachment);
+        tgg_vulkan_command_buffer_cmd_transition_image_layout(
+            renderer_3d_h->shading_pass.command_buffer,
+            &renderer_3d_h->geometry_pass.position_attachment,
+            VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+            VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
+        );
 
-        tg_graphics_vulkan_command_buffer_cmd_transition_image_layout(renderer_3d_h->shading_pass.command_buffer, renderer_3d_h->geometry_pass.position_attachment.image, VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, 1, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
-        vkCmdClearColorImage(renderer_3d_h->shading_pass.command_buffer, renderer_3d_h->geometry_pass.position_attachment.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color_value, 1, &color_image_subresource_range);
-        tg_graphics_vulkan_command_buffer_cmd_transition_image_layout(renderer_3d_h->shading_pass.command_buffer, renderer_3d_h->geometry_pass.position_attachment.image, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, 1, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+        tgg_vulkan_command_buffer_cmd_transition_image_layout(
+            renderer_3d_h->shading_pass.command_buffer,
+            &renderer_3d_h->geometry_pass.normal_attachment,
+            VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT
+        );
+        tgg_vulkan_command_buffer_cmd_clear_image(renderer_3d_h->shading_pass.command_buffer, &renderer_3d_h->geometry_pass.normal_attachment);
+        tgg_vulkan_command_buffer_cmd_transition_image_layout(
+            renderer_3d_h->shading_pass.command_buffer,
+            &renderer_3d_h->geometry_pass.normal_attachment,
+            VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+            VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
+        );
 
-        tg_graphics_vulkan_command_buffer_cmd_transition_image_layout(renderer_3d_h->shading_pass.command_buffer, renderer_3d_h->geometry_pass.normal_attachment.image, VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, 1, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
-        vkCmdClearColorImage(renderer_3d_h->shading_pass.command_buffer, renderer_3d_h->geometry_pass.normal_attachment.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color_value, 1, &color_image_subresource_range);
-        tg_graphics_vulkan_command_buffer_cmd_transition_image_layout(renderer_3d_h->shading_pass.command_buffer, renderer_3d_h->geometry_pass.normal_attachment.image, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, 1, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+        tgg_vulkan_command_buffer_cmd_transition_image_layout(
+            renderer_3d_h->shading_pass.command_buffer,
+            &renderer_3d_h->geometry_pass.albedo_attachment,
+            VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT
+        );
+        tgg_vulkan_command_buffer_cmd_clear_image(renderer_3d_h->shading_pass.command_buffer, &renderer_3d_h->geometry_pass.albedo_attachment);
+        tgg_vulkan_command_buffer_cmd_transition_image_layout(
+            renderer_3d_h->shading_pass.command_buffer,
+            &renderer_3d_h->geometry_pass.albedo_attachment,
+            VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+            VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
+        );
 
-        tg_graphics_vulkan_command_buffer_cmd_transition_image_layout(renderer_3d_h->shading_pass.command_buffer, renderer_3d_h->geometry_pass.albedo_attachment.image, VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, 1, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
-        vkCmdClearColorImage(renderer_3d_h->shading_pass.command_buffer, renderer_3d_h->geometry_pass.albedo_attachment.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color_value, 1, &color_image_subresource_range);
-        tg_graphics_vulkan_command_buffer_cmd_transition_image_layout(renderer_3d_h->shading_pass.command_buffer, renderer_3d_h->geometry_pass.albedo_attachment.image, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, 1, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
-
-        tg_graphics_vulkan_command_buffer_cmd_transition_image_layout(renderer_3d_h->shading_pass.command_buffer, renderer_3d_h->geometry_pass.depth_attachment.image, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT, 1, VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
-        vkCmdClearDepthStencilImage(renderer_3d_h->shading_pass.command_buffer, renderer_3d_h->geometry_pass.depth_attachment.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_depth_stencil_value, 1, &depth_image_subresource_range);
-        tg_graphics_vulkan_command_buffer_cmd_transition_image_layout(renderer_3d_h->shading_pass.command_buffer, renderer_3d_h->geometry_pass.depth_attachment.image, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT, 1, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT);
+        tgg_vulkan_command_buffer_cmd_transition_image_layout(
+            renderer_3d_h->shading_pass.command_buffer,
+            &renderer_3d_h->geometry_pass.depth_attachment,
+            VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT
+        );
+        tgg_vulkan_command_buffer_cmd_clear_image(renderer_3d_h->shading_pass.command_buffer, &renderer_3d_h->geometry_pass.depth_attachment);
+        tgg_vulkan_command_buffer_cmd_transition_image_layout(
+            renderer_3d_h->shading_pass.command_buffer,
+            &renderer_3d_h->geometry_pass.depth_attachment,
+            VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+            VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT
+        );
     }
     VK_CALL(vkEndCommandBuffer(renderer_3d_h->shading_pass.command_buffer));
 }
-void tg_graphics_renderer_3d_internal_init_present_pass(tg_renderer_3d_h renderer_3d_h)
+void tgg_renderer_3d_internal_init_present_pass(tg_renderer_3d_h renderer_3d_h)
 {
     tg_vulkan_buffer staging_buffer = { 0 };
 
@@ -596,11 +635,11 @@ void tg_graphics_renderer_3d_internal_init_present_pass(tg_renderer_3d_h rendere
         p_vertices[3].uv.x       =  0.0f;
         p_vertices[3].uv.y       =  1.0f;
     }                     
-    staging_buffer = tg_graphics_vulkan_buffer_create(sizeof(p_vertices), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    staging_buffer = tgg_vulkan_buffer_create(sizeof(p_vertices), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
     memcpy(staging_buffer.p_mapped_device_memory, p_vertices, sizeof(p_vertices));
-    renderer_3d_h->present_pass.vbo = tg_graphics_vulkan_buffer_create(sizeof(p_vertices), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    tg_graphics_vulkan_buffer_copy(sizeof(p_vertices), staging_buffer.buffer, renderer_3d_h->present_pass.vbo.buffer);
-    tg_graphics_vulkan_buffer_destroy(&staging_buffer);
+    renderer_3d_h->present_pass.vbo = tgg_vulkan_buffer_create(sizeof(p_vertices), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    tgg_vulkan_buffer_copy(sizeof(p_vertices), staging_buffer.buffer, renderer_3d_h->present_pass.vbo.buffer);
+    tgg_vulkan_buffer_destroy(&staging_buffer);
 
     u16 p_indices[6] = { 0 };
     {
@@ -611,15 +650,15 @@ void tg_graphics_renderer_3d_internal_init_present_pass(tg_renderer_3d_h rendere
         p_indices[4] = 3;
         p_indices[5] = 0;
     }
-    staging_buffer = tg_graphics_vulkan_buffer_create(sizeof(p_indices), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    staging_buffer = tgg_vulkan_buffer_create(sizeof(p_indices), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
     memcpy(staging_buffer.p_mapped_device_memory, p_indices, sizeof(p_indices));
-    renderer_3d_h->present_pass.ibo = tg_graphics_vulkan_buffer_create(sizeof(p_indices), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    tg_graphics_vulkan_buffer_copy(sizeof(p_indices), staging_buffer.buffer, renderer_3d_h->present_pass.ibo.buffer);
-    tg_graphics_vulkan_buffer_destroy(&staging_buffer);
+    renderer_3d_h->present_pass.ibo = tgg_vulkan_buffer_create(sizeof(p_indices), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    tgg_vulkan_buffer_copy(sizeof(p_indices), staging_buffer.buffer, renderer_3d_h->present_pass.ibo.buffer);
+    tgg_vulkan_buffer_destroy(&staging_buffer);
 
-    renderer_3d_h->present_pass.image_acquired_semaphore = tg_graphics_vulkan_semaphore_create();
-    renderer_3d_h->present_pass.rendering_finished_fence = tg_graphics_vulkan_fence_create(VK_FENCE_CREATE_SIGNALED_BIT);
-    renderer_3d_h->present_pass.rendering_finished_semaphore = tg_graphics_vulkan_semaphore_create();
+    renderer_3d_h->present_pass.image_acquired_semaphore = tgg_vulkan_semaphore_create();
+    renderer_3d_h->present_pass.rendering_finished_fence = tgg_vulkan_fence_create(VK_FENCE_CREATE_SIGNALED_BIT);
+    renderer_3d_h->present_pass.rendering_finished_semaphore = tgg_vulkan_semaphore_create();
 
     VkAttachmentReference color_attachment_reference = { 0 };
     {
@@ -651,11 +690,11 @@ void tg_graphics_renderer_3d_internal_init_present_pass(tg_renderer_3d_h rendere
         subpass_description.preserveAttachmentCount = 0;
         subpass_description.pPreserveAttachments = TG_NULL;
     }
-    renderer_3d_h->present_pass.render_pass = tg_graphics_vulkan_render_pass_create(1, &attachment_description, 1, &subpass_description, 0, TG_NULL);
+    renderer_3d_h->present_pass.render_pass = tgg_vulkan_render_pass_create(1, &attachment_description, 1, &subpass_description, 0, TG_NULL);
 
-    for (u32 i = 0; i < TG_GRAPHICS_VULKAN_SURFACE_IMAGE_COUNT; i++)
+    for (u32 i = 0; i < TG_SURFACE_IMAGE_COUNT; i++)
     {
-        renderer_3d_h->present_pass.framebuffers[i] = tg_graphics_vulkan_framebuffer_create(renderer_3d_h->present_pass.render_pass, 1, &swapchain_image_views[i], swapchain_extent.width, swapchain_extent.height);
+        renderer_3d_h->present_pass.framebuffers[i] = tgg_vulkan_framebuffer_create(renderer_3d_h->present_pass.render_pass, 1, &swapchain_image_views[i], swapchain_extent.width, swapchain_extent.height);
     }
 
     VkDescriptorPoolSize descriptor_pool_size = { 0 };
@@ -663,7 +702,7 @@ void tg_graphics_renderer_3d_internal_init_present_pass(tg_renderer_3d_h rendere
         descriptor_pool_size.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         descriptor_pool_size.descriptorCount = 1;
     }
-    renderer_3d_h->present_pass.descriptor_pool = tg_graphics_vulkan_descriptor_pool_create(0, 1, 1, &descriptor_pool_size);
+    renderer_3d_h->present_pass.descriptor_pool = tgg_vulkan_descriptor_pool_create(0, 1, 1, &descriptor_pool_size);
 
     VkDescriptorSetLayoutBinding descriptor_set_layout_binding = { 0 };
     {
@@ -673,13 +712,13 @@ void tg_graphics_renderer_3d_internal_init_present_pass(tg_renderer_3d_h rendere
         descriptor_set_layout_binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
         descriptor_set_layout_binding.pImmutableSamplers = TG_NULL;
     }
-    renderer_3d_h->present_pass.descriptor_set_layout = tg_graphics_vulkan_descriptor_set_layout_create(0, 1, &descriptor_set_layout_binding);
-    renderer_3d_h->present_pass.descriptor_set = tg_graphics_vulkan_descriptor_set_allocate(renderer_3d_h->present_pass.descriptor_pool, renderer_3d_h->present_pass.descriptor_set_layout);
+    renderer_3d_h->present_pass.descriptor_set_layout = tgg_vulkan_descriptor_set_layout_create(0, 1, &descriptor_set_layout_binding);
+    renderer_3d_h->present_pass.descriptor_set = tgg_vulkan_descriptor_set_allocate(renderer_3d_h->present_pass.descriptor_pool, renderer_3d_h->present_pass.descriptor_set_layout);
     
-    renderer_3d_h->present_pass.vertex_shader_h = tg_graphics_vulkan_shader_module_create("shaders/present.vert");
-    renderer_3d_h->present_pass.fragment_shader_h = tg_graphics_vulkan_shader_module_create("shaders/present.frag");
+    renderer_3d_h->present_pass.vertex_shader_h = tgg_vulkan_shader_module_create("shaders/present.vert");
+    renderer_3d_h->present_pass.fragment_shader_h = tgg_vulkan_shader_module_create("shaders/present.frag");
 
-    renderer_3d_h->present_pass.pipeline_layout = tg_graphics_vulkan_pipeline_layout_create(1, &renderer_3d_h->present_pass.descriptor_set_layout, 0, TG_NULL);
+    renderer_3d_h->present_pass.pipeline_layout = tgg_vulkan_pipeline_layout_create(1, &renderer_3d_h->present_pass.descriptor_set_layout, 0, TG_NULL);
 
     VkVertexInputBindingDescription vertex_input_binding_description = { 0 };
     {
@@ -723,9 +762,9 @@ void tg_graphics_renderer_3d_internal_init_present_pass(tg_renderer_3d_h rendere
         vulkan_graphics_pipeline_create_info.pipeline_layout = renderer_3d_h->present_pass.pipeline_layout;
         vulkan_graphics_pipeline_create_info.render_pass = renderer_3d_h->present_pass.render_pass;
     }
-    renderer_3d_h->present_pass.pipeline = tg_graphics_vulkan_graphics_pipeline_create(&vulkan_graphics_pipeline_create_info);
+    renderer_3d_h->present_pass.pipeline = tgg_vulkan_graphics_pipeline_create(&vulkan_graphics_pipeline_create_info);
 
-    tg_graphics_vulkan_command_buffers_allocate(command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, TG_GRAPHICS_VULKAN_SURFACE_IMAGE_COUNT, renderer_3d_h->present_pass.command_buffers);
+    tgg_vulkan_command_buffers_allocate(command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, TG_SURFACE_IMAGE_COUNT, renderer_3d_h->present_pass.command_buffers);
 
     const VkDeviceSize vertex_buffer_offset = 0;
     VkDescriptorImageInfo descriptor_image_info = { 0 };
@@ -747,13 +786,19 @@ void tg_graphics_renderer_3d_internal_init_present_pass(tg_renderer_3d_h rendere
         write_descriptor_set.pBufferInfo = TG_NULL;
         write_descriptor_set.pTexelBufferView = TG_NULL;
     }
-    tg_graphics_vulkan_descriptor_sets_update(1, &write_descriptor_set);
+    tgg_vulkan_descriptor_sets_update(1, &write_descriptor_set);
 
-    for (u32 i = 0; i < TG_GRAPHICS_VULKAN_SURFACE_IMAGE_COUNT; i++)
+    for (u32 i = 0; i < TG_SURFACE_IMAGE_COUNT; i++)
     {
-        tg_graphics_vulkan_command_buffer_begin(renderer_3d_h->present_pass.command_buffers[i], 0, TG_NULL);
+        tgg_vulkan_command_buffer_begin(renderer_3d_h->present_pass.command_buffers[i], 0, TG_NULL);
 
-        tg_graphics_vulkan_command_buffer_cmd_transition_image_layout(renderer_3d_h->present_pass.command_buffers[i], renderer_3d_h->shading_pass.color_attachment.image, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, 1, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT);
+        tgg_vulkan_command_buffer_cmd_transition_image_layout(
+            renderer_3d_h->present_pass.command_buffers[i],
+            &renderer_3d_h->shading_pass.color_attachment,
+            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT
+        );
         vkCmdBindPipeline(renderer_3d_h->present_pass.command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, renderer_3d_h->present_pass.pipeline);
         vkCmdBindVertexBuffers(renderer_3d_h->present_pass.command_buffers[i], 0, 1, &renderer_3d_h->present_pass.vbo.buffer, &vertex_buffer_offset);
         vkCmdBindIndexBuffer(renderer_3d_h->present_pass.command_buffers[i], renderer_3d_h->present_pass.ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
@@ -773,29 +818,35 @@ void tg_graphics_renderer_3d_internal_init_present_pass(tg_renderer_3d_h rendere
         vkCmdBeginRenderPass(renderer_3d_h->present_pass.command_buffers[i], &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
         vkCmdDrawIndexed(renderer_3d_h->present_pass.command_buffers[i], 6, 1, 0, 0, 0);
         vkCmdEndRenderPass(renderer_3d_h->present_pass.command_buffers[i]);
-        tg_graphics_vulkan_command_buffer_cmd_transition_image_layout(renderer_3d_h->present_pass.command_buffers[i], renderer_3d_h->shading_pass.color_attachment.image, VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, 1, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+        tgg_vulkan_command_buffer_cmd_transition_image_layout(
+            renderer_3d_h->present_pass.command_buffers[i],
+            &renderer_3d_h->shading_pass.color_attachment,
+            VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+            VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
+        );
 
         VK_CALL(vkEndCommandBuffer(renderer_3d_h->present_pass.command_buffers[i]));
     }
 }
 
 // TODO: move clean into draw+shading+clean
-tg_renderer_3d_h tg_graphics_renderer_3d_create(const tg_camera_h camera_h)
+tg_renderer_3d_h tgg_renderer_3d_create(const tg_camera_h camera_h)
 {
     TG_ASSERT(camera_h);
 
     tg_renderer_3d_h renderer_3d_h = TG_MEMORY_ALLOCATOR_ALLOCATE(sizeof(*renderer_3d_h));
 
     renderer_3d_h->main_camera_h = camera_h;
-    tg_graphics_renderer_3d_internal_init_geometry_pass(renderer_3d_h);
-    tg_graphics_renderer_3d_internal_init_shading_pass(renderer_3d_h);
-    tg_graphics_renderer_3d_internal_init_present_pass(renderer_3d_h);
+    tgg_renderer_3d_internal_init_geometry_pass(renderer_3d_h);
+    tgg_renderer_3d_internal_init_shading_pass(renderer_3d_h);
+    tgg_renderer_3d_internal_init_present_pass(renderer_3d_h);
     renderer_3d_h->geometry_pass.models = tg_list_create__capacity(tg_model_h, 256);
     renderer_3d_h->geometry_pass.secondary_command_buffers = tg_list_create__capacity(VkCommandBuffer, 256);
 
     return renderer_3d_h;
 }
-void tg_graphics_renderer_3d_register(tg_renderer_3d_h renderer_3d_h, tg_entity_h entity_h)
+void tgg_renderer_3d_register(tg_renderer_3d_h renderer_3d_h, tg_entity_h entity_h)
 {
     TG_ASSERT(renderer_3d_h && entity_h);
 
@@ -805,7 +856,7 @@ void tg_graphics_renderer_3d_register(tg_renderer_3d_h renderer_3d_h, tg_entity_
     entity_h->p_model_matrix = (m4*)&((u8*)renderer_3d_h->geometry_pass.model_ubo.p_mapped_device_memory)[entity_h->id * renderer_3d_h->geometry_pass.model_ubo_element_size];
     *entity_h->p_model_matrix = tgm_m4_identity();
 
-    entity_h->model_h->render_data.command_buffer = tg_graphics_vulkan_command_buffer_allocate(command_pool, VK_COMMAND_BUFFER_LEVEL_SECONDARY);
+    entity_h->model_h->render_data.command_buffer = tgg_vulkan_command_buffer_allocate(command_pool, VK_COMMAND_BUFFER_LEVEL_SECONDARY);
     tg_list_insert(renderer_3d_h->geometry_pass.secondary_command_buffers, &entity_h->model_h->render_data.command_buffer);
 
     VkDescriptorPoolSize p_descriptor_pool_sizes[2] = { 0 };
@@ -816,7 +867,7 @@ void tg_graphics_renderer_3d_register(tg_renderer_3d_h renderer_3d_h, tg_entity_
         p_descriptor_pool_sizes[1].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         p_descriptor_pool_sizes[1].descriptorCount = 1;
     }
-    entity_h->model_h->render_data.descriptor_pool = tg_graphics_vulkan_descriptor_pool_create(0, 1, 1, p_descriptor_pool_sizes);
+    entity_h->model_h->render_data.descriptor_pool = tgg_vulkan_descriptor_pool_create(0, 1, 1, p_descriptor_pool_sizes);
 
     VkDescriptorSetLayoutBinding p_descriptor_set_layout_bindings[2] = { 0 };
     {
@@ -832,18 +883,18 @@ void tg_graphics_renderer_3d_register(tg_renderer_3d_h renderer_3d_h, tg_entity_
         p_descriptor_set_layout_bindings[1].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
         p_descriptor_set_layout_bindings[1].pImmutableSamplers = TG_NULL;
     }
-    entity_h->model_h->render_data.descriptor_set_layout = tg_graphics_vulkan_descriptor_set_layout_create(0, 2, p_descriptor_set_layout_bindings);
+    entity_h->model_h->render_data.descriptor_set_layout = tgg_vulkan_descriptor_set_layout_create(0, 2, p_descriptor_set_layout_bindings);
 
-    entity_h->model_h->render_data.descriptor_set = tg_graphics_vulkan_descriptor_set_allocate(entity_h->model_h->render_data.descriptor_pool, entity_h->model_h->render_data.descriptor_set_layout);
+    entity_h->model_h->render_data.descriptor_set = tgg_vulkan_descriptor_set_allocate(entity_h->model_h->render_data.descriptor_pool, entity_h->model_h->render_data.descriptor_set_layout);
 
     if (has_custom_descriptor_set)
     {
         const VkDescriptorSetLayout p_descriptor_set_layouts[2] = { entity_h->model_h->render_data.descriptor_set_layout, entity_h->model_h->material_h->descriptor_set_layout };
-        entity_h->model_h->render_data.pipeline_layout = tg_graphics_vulkan_pipeline_layout_create(2, p_descriptor_set_layouts, 0, TG_NULL);
+        entity_h->model_h->render_data.pipeline_layout = tgg_vulkan_pipeline_layout_create(2, p_descriptor_set_layouts, 0, TG_NULL);
     }
     else
     {
-        entity_h->model_h->render_data.pipeline_layout = tg_graphics_vulkan_pipeline_layout_create(1, &entity_h->model_h->render_data.descriptor_set_layout, 0, TG_NULL);
+        entity_h->model_h->render_data.pipeline_layout = tgg_vulkan_pipeline_layout_create(1, &entity_h->model_h->render_data.descriptor_set_layout, 0, TG_NULL);
     }
 
     VkVertexInputBindingDescription vertex_input_binding_description = { 0 };
@@ -903,7 +954,7 @@ void tg_graphics_renderer_3d_register(tg_renderer_3d_h renderer_3d_h, tg_entity_
         vulkan_graphics_pipeline_create_info.pipeline_layout = entity_h->model_h->render_data.pipeline_layout;
         vulkan_graphics_pipeline_create_info.render_pass = renderer_3d_h->geometry_pass.render_pass;
     }
-    entity_h->model_h->render_data.pipeline = tg_graphics_vulkan_graphics_pipeline_create(&vulkan_graphics_pipeline_create_info);
+    entity_h->model_h->render_data.pipeline = tgg_vulkan_graphics_pipeline_create(&vulkan_graphics_pipeline_create_info);
 
     VkDescriptorBufferInfo model_descriptor_buffer_info = { 0 };
     {
@@ -941,7 +992,7 @@ void tg_graphics_renderer_3d_register(tg_renderer_3d_h renderer_3d_h, tg_entity_
         p_write_descriptor_sets[1].pBufferInfo = &view_projection_descriptor_buffer_info;
         p_write_descriptor_sets[1].pTexelBufferView = TG_NULL;
     }
-    tg_graphics_vulkan_descriptor_sets_update(2, p_write_descriptor_sets);
+    tgg_vulkan_descriptor_sets_update(2, p_write_descriptor_sets);
 
     VkCommandBufferInheritanceInfo command_buffer_inheritance_info = { 0 };
     {
@@ -954,7 +1005,7 @@ void tg_graphics_renderer_3d_register(tg_renderer_3d_h renderer_3d_h, tg_entity_
         command_buffer_inheritance_info.queryFlags = 0;
         command_buffer_inheritance_info.pipelineStatistics = 0;
     }
-    tg_graphics_vulkan_command_buffer_begin(entity_h->model_h->render_data.command_buffer, VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, &command_buffer_inheritance_info);
+    tgg_vulkan_command_buffer_begin(entity_h->model_h->render_data.command_buffer, VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, &command_buffer_inheritance_info);
 
     vkCmdBindPipeline(entity_h->model_h->render_data.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, entity_h->model_h->render_data.pipeline);
 
@@ -987,18 +1038,18 @@ void tg_graphics_renderer_3d_register(tg_renderer_3d_h renderer_3d_h, tg_entity_
     }
     VK_CALL(vkEndCommandBuffer(entity_h->model_h->render_data.command_buffer));
 }
-void tg_graphics_renderer_3d_draw(tg_renderer_3d_h renderer_3d_h)
+void tgg_renderer_3d_draw(tg_renderer_3d_h renderer_3d_h)
 {
     TG_ASSERT(renderer_3d_h);
 
-    ((tg_camera_uniform_buffer*)renderer_3d_h->geometry_pass.view_projection_ubo.p_mapped_device_memory)->view = tg_graphics_camera_get_view(renderer_3d_h->main_camera_h);
-    ((tg_camera_uniform_buffer*)renderer_3d_h->geometry_pass.view_projection_ubo.p_mapped_device_memory)->projection = tg_graphics_camera_get_projection(renderer_3d_h->main_camera_h);
+    ((tg_camera_uniform_buffer*)renderer_3d_h->geometry_pass.view_projection_ubo.p_mapped_device_memory)->view = tgg_camera_get_view(renderer_3d_h->main_camera_h);
+    ((tg_camera_uniform_buffer*)renderer_3d_h->geometry_pass.view_projection_ubo.p_mapped_device_memory)->projection = tgg_camera_get_projection(renderer_3d_h->main_camera_h);
 
-    tg_graphics_vulkan_fence_wait(renderer_3d_h->shading_pass.geometry_pass_attachments_cleared_fence);
-    tg_graphics_vulkan_fence_reset(renderer_3d_h->shading_pass.geometry_pass_attachments_cleared_fence);
-    tg_graphics_vulkan_command_buffer_begin(renderer_3d_h->geometry_pass.main_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, TG_NULL);
+    tgg_vulkan_fence_wait(renderer_3d_h->shading_pass.geometry_pass_attachments_cleared_fence);
+    tgg_vulkan_fence_reset(renderer_3d_h->shading_pass.geometry_pass_attachments_cleared_fence);
+    tgg_vulkan_command_buffer_begin(renderer_3d_h->geometry_pass.main_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, TG_NULL);
 
-    tg_graphics_vulkan_command_buffer_cmd_begin_render_pass(renderer_3d_h->geometry_pass.main_command_buffer, renderer_3d_h->geometry_pass.render_pass, renderer_3d_h->geometry_pass.framebuffer, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+    tgg_vulkan_command_buffer_cmd_begin_render_pass(renderer_3d_h->geometry_pass.main_command_buffer, renderer_3d_h->geometry_pass.render_pass, renderer_3d_h->geometry_pass.framebuffer, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
     const u32 secondary_command_buffer_count = tg_list_count(renderer_3d_h->geometry_pass.secondary_command_buffers);
     vkCmdExecuteCommands(renderer_3d_h->geometry_pass.main_command_buffer, secondary_command_buffer_count, tg_list_pointer_to(renderer_3d_h->geometry_pass.secondary_command_buffers, 0));
     vkCmdEndRenderPass(renderer_3d_h->geometry_pass.main_command_buffer);
@@ -1018,10 +1069,10 @@ void tg_graphics_renderer_3d_draw(tg_renderer_3d_h renderer_3d_h)
     }
     VK_CALL(vkQueueSubmit(graphics_queue.queue, 1, &submit_info, renderer_3d_h->shading_pass.geometry_pass_attachments_cleared_fence));
 }
-void tg_graphics_renderer_3d_present(tg_renderer_3d_h renderer_3d_h)
+void tgg_renderer_3d_present(tg_renderer_3d_h renderer_3d_h)
 {
-    tg_graphics_vulkan_fence_wait(renderer_3d_h->shading_pass.geometry_pass_attachments_cleared_fence);
-    tg_graphics_vulkan_fence_reset(renderer_3d_h->shading_pass.geometry_pass_attachments_cleared_fence);
+    tgg_vulkan_fence_wait(renderer_3d_h->shading_pass.geometry_pass_attachments_cleared_fence);
+    tgg_vulkan_fence_reset(renderer_3d_h->shading_pass.geometry_pass_attachments_cleared_fence);
 
     VkSubmitInfo shading_submit_info = { 0 };
     {
@@ -1069,7 +1120,7 @@ void tg_graphics_renderer_3d_present(tg_renderer_3d_h renderer_3d_h)
     }
     VK_CALL(vkQueuePresentKHR(present_queue.queue, &present_info));
 }
-void tg_graphics_renderer_3d_shutdown(tg_renderer_3d_h renderer_3d_h)
+void tgg_renderer_3d_shutdown(tg_renderer_3d_h renderer_3d_h)
 {
     TG_ASSERT(renderer_3d_h);
 
