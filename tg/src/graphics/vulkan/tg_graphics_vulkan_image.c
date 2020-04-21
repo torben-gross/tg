@@ -17,7 +17,7 @@ tg_image_h tgg_image_create(const char* p_filename)
     tg_image_load(p_filename, &image_h->width, &image_h->height, &image_h->format, &p_data);
     tg_image_convert_format(p_data, image_h->width, image_h->height, image_h->format, TG_IMAGE_FORMAT_R8G8B8A8);
     image_h->mip_levels = TG_IMAGE_MAX_MIP_LEVELS(image_h->width, image_h->height);
-    const VkDeviceSize size = (u64)image_h->width * (u64)image_h->height * sizeof(*p_data);
+    const u64 size = (u64)image_h->width * (u64)image_h->height * sizeof(*p_data);
 
     tg_vulkan_buffer staging_buffer = { 0 };
     staging_buffer = tgg_vulkan_buffer_create(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
@@ -46,15 +46,17 @@ tg_image_h tgg_image_create(const char* p_filename)
     tgg_vulkan_command_buffer_begin(command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
     tgg_vulkan_command_buffer_cmd_copy_buffer_to_image(command_buffer, staging_buffer.buffer, image_h);
     tgg_vulkan_command_buffer_cmd_transition_image_layout(command_buffer, image_h, 0, 0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
-    tgg_vulkan_command_buffer_end_and_submit(command_buffer);
+    tgg_vulkan_command_buffer_end_and_submit(command_buffer, &graphics_queue);
     tgg_vulkan_command_buffer_free(command_pool, command_buffer);
+
+    tg_image_free(p_data);
 
     return image_h;
 }
 
 void tgg_image_destroy(tg_image_h image_h)
 {
-    vkDeviceWaitIdle(device); // TODO: for all destroys
+    TG_ASSERT(image_h);
 
     tgg_vulkan_image_destroy(image_h);
     TG_MEMORY_ALLOCATOR_FREE(image_h);

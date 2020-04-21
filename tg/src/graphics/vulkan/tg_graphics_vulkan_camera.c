@@ -21,11 +21,15 @@ tg_camera_h tgg_camera_create(const v3* p_position, f32 pitch, f32 yaw, f32 roll
 
 m4 tgg_camera_get_projection(tg_camera_h camera_h)
 {
+	TG_ASSERT(camera_h);
+
 	return camera_h->projection.projection;
 }
 
 m4 tgg_camera_get_view(tg_camera_h camera_h)
 {
+	TG_ASSERT(camera_h);
+
 	return camera_h->view.view;
 }
 

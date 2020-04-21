@@ -41,7 +41,6 @@
     <ClInclude Include="src\graphics\vulkan\tg_graphics_vulkan.h" />
     <ClInclude Include="src\assets\tg_assets.h" />
     <ClInclude Include="src\graphics\tg_graphics_image_loader.h" />
-    <ClInclude Include="src\graphics\vulkan\tg_graphics_vulkan_shader.h" />
     <ClInclude Include="src\tg_entity_internal.h" />
     <ClInclude Include="src\tg_marching_cubes.h" />
   </ItemGroup>

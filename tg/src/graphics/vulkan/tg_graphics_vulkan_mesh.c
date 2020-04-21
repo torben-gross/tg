@@ -35,7 +35,7 @@ void tgg_mesh_recalculate_normals(u32 vertex_count, u32 index_count, const u16* 
     {
         for (u32 i = 0; i < index_count; i += 3)
         {
-            // TODO: these will override normals, that have been set before. this should be interpolated.
+            // TODO: these will override normals, that have been set before. this should be interpolated (only relevant if indices exits).
             tgg_mesh_recalculate_normal(
                 &((tg_vertex_3d*)p_staging_buffer->p_mapped_device_memory)[p_indices[i + 0]],
                 &((tg_vertex_3d*)p_staging_buffer->p_mapped_device_memory)[p_indices[i + 1]],
@@ -99,64 +99,14 @@ void tgg_mesh_recalculate_normals(u32 vertex_count, u32 index_count, const u16* 
         ((tg_normals_compute_shader_uniform_buffer*)uniform_buffer.p_mapped_device_memory)->offset_floats_tangent = offsetof(tg_vertex_3d, tangent) / sizeof(f32);
         ((tg_normals_compute_shader_uniform_buffer*)uniform_buffer.p_mapped_device_memory)->offset_floats_bitangent = offsetof(tg_vertex_3d, bitangent) / sizeof(f32);
 
-        VkDescriptorBufferInfo storage_descriptor_buffer_info = { 0 };
-        {
-            storage_descriptor_buffer_info.buffer = p_staging_buffer->buffer;
-            storage_descriptor_buffer_info.offset = 0;
-            storage_descriptor_buffer_info.range = VK_WHOLE_SIZE;
-        }
-        VkDescriptorBufferInfo uniform_descriptor_buffer_info = { 0 };
-        {
-            uniform_descriptor_buffer_info.buffer = uniform_buffer.buffer;
-            uniform_descriptor_buffer_info.offset = 0;
-            uniform_descriptor_buffer_info.range = VK_WHOLE_SIZE;
-        }
-        VkWriteDescriptorSet p_write_descriptor_sets[2] = { 0 };
-        {
-            p_write_descriptor_sets[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            p_write_descriptor_sets[0].pNext = TG_NULL;
-            p_write_descriptor_sets[0].dstSet = descriptor_set;
-            p_write_descriptor_sets[0].dstBinding = 0;
-            p_write_descriptor_sets[0].dstArrayElement = 0;
-            p_write_descriptor_sets[0].descriptorCount = 1;
-            p_write_descriptor_sets[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-            p_write_descriptor_sets[0].pImageInfo = TG_NULL;
-            p_write_descriptor_sets[0].pBufferInfo = &storage_descriptor_buffer_info;
-            p_write_descriptor_sets[0].pTexelBufferView = TG_NULL;
-
-            p_write_descriptor_sets[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            p_write_descriptor_sets[1].pNext = TG_NULL;
-            p_write_descriptor_sets[1].dstSet = descriptor_set;
-            p_write_descriptor_sets[1].dstBinding = 1;
-            p_write_descriptor_sets[1].dstArrayElement = 0;
-            p_write_descriptor_sets[1].descriptorCount = 1;
-            p_write_descriptor_sets[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            p_write_descriptor_sets[1].pImageInfo = TG_NULL;
-            p_write_descriptor_sets[1].pBufferInfo = &uniform_descriptor_buffer_info;
-            p_write_descriptor_sets[1].pTexelBufferView = TG_NULL;
-        }
-        vkUpdateDescriptorSets(device, 2, p_write_descriptor_sets, 0, TG_NULL);
-
+        tgg_vulkan_descriptor_set_update_storage_buffer(descriptor_set, p_staging_buffer->buffer, 0, 1);
+        tgg_vulkan_descriptor_set_update_uniform_buffer(descriptor_set, uniform_buffer.buffer, 1, 1);
+        
         tgg_vulkan_command_buffer_begin(command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
         vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
         vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_layout, 0, 1, &descriptor_set, 0, TG_NULL);
         vkCmdDispatch(command_buffer, vertex_count, 1, 1);
-        VK_CALL(vkEndCommandBuffer(command_buffer));
-
-        VkSubmitInfo submit_info = { 0 };
-        {
-            submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-            submit_info.pNext = TG_NULL;
-            submit_info.waitSemaphoreCount = 0;
-            submit_info.pWaitSemaphores = TG_NULL;
-            submit_info.pWaitDstStageMask = TG_NULL;
-            submit_info.commandBufferCount = 1;
-            submit_info.pCommandBuffers = &command_buffer;
-            submit_info.signalSemaphoreCount = 0;
-            submit_info.pSignalSemaphores = TG_NULL;
-        }
-        VK_CALL(vkQueueSubmit(compute_queue.queue, 1, &submit_info, TG_NULL));
-        VK_CALL(vkQueueWaitIdle(compute_queue.queue));
+        tgg_vulkan_command_buffer_end_and_submit(command_buffer, &compute_queue);
 
 
 

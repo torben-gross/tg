@@ -21,6 +21,8 @@ TG_DECLARE_HANDLE(tg_uniform_buffer);
 TG_DECLARE_HANDLE(tg_vertex_buffer);
 TG_DECLARE_HANDLE(tg_vertex_shader);
 
+typedef void* tg_handle;
+
 
 
 typedef enum tg_shader_input_element_type
@@ -134,8 +136,8 @@ tg_compute_buffer_h     tgg_compute_buffer_create(u64 size);
 void*                   tgg_compute_buffer_data(tg_compute_buffer_h compute_buffer_h);
 void                    tgg_compute_buffer_destroy(tg_compute_buffer_h compute_buffer_h);
 
-tg_compute_shader_h     tgg_compute_shader_create(u32 input_element_count, tg_shader_input_element* p_input_elements, const char* filename);
-void                    tgg_compute_shader_bind_input(tg_compute_shader_h compute_shader_h, void** pp_input_element_handles);
+tg_compute_shader_h     tgg_compute_shader_create(u32 input_element_count, tg_shader_input_element* p_shader_input_elements, const char* filename);
+void                    tgg_compute_shader_bind_input(tg_compute_shader_h compute_shader_h, tg_handle* p_shader_input_element_handles);
 void                    tgg_compute_shader_dispatch(tg_compute_shader_h compute_shader_h, u32 group_count_x, u32 group_count_y, u32 group_count_z);
 void                    tgg_compute_shader_destroy(tg_compute_shader_h compute_shader_h);
 
@@ -145,7 +147,7 @@ void                    tgg_fragment_shader_destroy(tg_fragment_shader_h fragmen
 tg_image_h              tgg_image_create(const char* p_filename);
 void                    tgg_image_destroy(tg_image_h image_h);
 
-tg_material_h           tgg_material_create(tg_vertex_shader_h vertex_shader_h, tg_fragment_shader_h fragment_shader_h, u32 input_element_count, tg_shader_input_element* p_input_elements, void** pp_input_element_handles);
+tg_material_h           tgg_material_create(tg_vertex_shader_h vertex_shader_h, tg_fragment_shader_h fragment_shader_h, u32 input_element_count, tg_shader_input_element* p_input_elements, tg_handle* p_input_element_handles);
 void                    tgg_material_destroy(tg_material_h material_h);
 
 tg_mesh_h               tgg_mesh_create(u32 vertex_count, const v3* p_positions, const v3* p_normals, const v2* p_uvs, const v3* p_tangents, u32 index_count, const u16* p_indices);
@@ -169,7 +171,9 @@ void                    tgg_vertex_shader_destroy(tg_vertex_shader_h p_vertex_sh
 
 tg_renderer_3d_h        tgg_renderer_3d_create(const tg_camera_h camera_h);
 void                    tgg_renderer_3d_register(tg_renderer_3d_h renderer_3d_h, tg_entity_h entity_h);
-void                    tgg_renderer_3d_draw(tg_renderer_3d_h renderer_3d_h);
+void                    tgg_renderer_3d_begin(tg_renderer_3d_h renderer_3d_h);
+void                    tgg_renderer_3d_draw_entity(tg_renderer_3d_h renderer_3d_h, tg_entity_h entity_h);
+void                    tgg_renderer_3d_end(tg_renderer_3d_h renderer_3d_h);
 void                    tgg_renderer_3d_present(tg_renderer_3d_h renderer_3d_h);
 void                    tgg_renderer_3d_shutdown(tg_renderer_3d_h renderer_3d_h);
 void                    tgg_renderer_3d_on_window_resize(tg_renderer_3d_h renderer_3d_h, u32 w, u32 h);

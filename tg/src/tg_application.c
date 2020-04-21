@@ -8,8 +8,8 @@
 #include "memory/tg_memory_allocator.h"
 #include "platform/tg_platform.h"
 #include "tg_entity.h"
-#include "tg_entity_internal.h"
 #include "tg_input.h"
+#include "util/tg_list.h"
 #include "util/tg_string.h"
 #include "util/tg_timer.h"
 
@@ -67,6 +67,11 @@ void tg_application_start()
 {
     tg_graphics_init();
 
+
+    tg_list_h entities = tg_list_create(tg_entity_h);
+
+
+
     tg_camera_info camera_info = { 0 };
     {
         camera_info.position = (v3){ 0.0f, 0.0f, 0.0f };
@@ -121,17 +126,19 @@ void tg_application_start()
         p_shader_input_elements[1].type = TG_SHADER_INPUT_ELEMENT_TYPE_IMAGE;
         p_shader_input_elements[1].array_element_count = 1;
     }
-    void* pp_custom_handles[2] = { custom_uniform_buffer_h, image_h };
+    tg_handle p_custom_handles[2] = { custom_uniform_buffer_h, image_h };
     tg_vertex_shader_h custom_vertex_shader_h = tgg_vertex_shader_create("shaders/custom_geometry.vert");
     tg_fragment_shader_h custom_fragment_shader_h = tgg_fragment_shader_create("shaders/custom_geometry.frag");
-    tg_material_h custom_material_h = tgg_material_create(custom_vertex_shader_h, custom_fragment_shader_h, 2, p_shader_input_elements, pp_custom_handles);
+    tg_material_h custom_material_h = tgg_material_create(custom_vertex_shader_h, custom_fragment_shader_h, 2, p_shader_input_elements, p_custom_handles);
 
     tg_model_h quad_model_h = tgg_model_create(quad_mesh_h, custom_material_h);
     tg_entity_h quad_entity_h = tg_entity_create(renderer_3d_h, quad_model_h);
+    tg_list_insert(entities, &quad_entity_h);
 
     tg_mesh_h ground_mesh_h = tgg_mesh_create(4, p_ground_positions, TG_NULL, p_uvs, TG_NULL, 6, p_indices);
     tg_model_h ground_model_h = tgg_model_create(ground_mesh_h, default_material_h);
     tg_entity_h ground_entity_h = tg_entity_create(renderer_3d_h, ground_model_h);
+    tg_list_insert(entities, &ground_entity_h);
 
 
 
@@ -201,10 +208,7 @@ void tg_application_start()
         p_isolevel_compute_shader_input_elements[1].array_element_count = 1;
     }
     tg_compute_shader_h isolevel_compute_shader_h = tgg_compute_shader_create(2, p_isolevel_compute_shader_input_elements, "shaders/isolevel.comp");
-    void* pp_handles[2] = {
-        isolevel_buffer_h,
-        chunk_uniform_buffer_h
-    };
+    tg_handle pp_handles[2] = { isolevel_buffer_h, chunk_uniform_buffer_h };
     tgg_compute_shader_bind_input(isolevel_compute_shader_h, pp_handles);
 
     tg_marching_cubes_triangle* p_chunk_triangles = TG_MEMORY_ALLOCATOR_ALLOCATE((u64)chunk_vertex_count * (u64)chunk_vertex_count * (u64)chunk_vertex_count * 12 * sizeof(*p_chunk_triangles));
@@ -260,8 +264,9 @@ void tg_application_start()
                 tg_mesh_h chunk_mesh_h = tgg_mesh_create(chunk_total_vertex_count, p_chunk_positions, TG_NULL, TG_NULL, TG_NULL, 0, TG_NULL);
                 tg_model_h chunk_model_h = tgg_model_create(chunk_mesh_h, default_material_h);
                 tg_entity_h chunk_entity_h = tg_entity_create(renderer_3d_h, chunk_model_h);
+                tg_list_insert(entities, &chunk_entity_h);
                 v3 chunk_translation = { (f32)(chunk_vertex_count - 1) * cell_stride * (f32)chunk_x, 0.0f, -(f32)(chunk_vertex_count - 1) * cell_stride * (f32)chunk_z }; // TODO: could be baked in
-                *chunk_entity_h->p_model_matrix = tgm_m4_translate(&chunk_translation);
+                tg_entity_set_position(chunk_entity_h, &chunk_translation);
 
                 p_chunk_entities[chunk_z * chunk_count_x + chunk_x] = chunk_entity_h;
                 p_chunk_meshes[chunk_z * chunk_count_x + chunk_x] = chunk_mesh_h;
@@ -345,7 +350,7 @@ void tg_application_start()
             quad_offset -= 0.01f * delta_ms;
         }
         v3 quad_offset_translation_z = { 0.0f, 0.0f, quad_offset };
-        *quad_entity_h->p_model_matrix = tgm_m4_translate(&quad_offset_translation_z);
+        tg_entity_set_position(quad_entity_h, &quad_offset_translation_z);
 
         dtsum += delta_ms;
         if (dtsum >= 10000.0f)
@@ -429,7 +434,14 @@ void tg_application_start()
             tgg_camera_set_projection(camera_info.fov_y_in_radians, camera_info.near, camera_info.far, camera_info.camera_h);
         }
 
-        tgg_renderer_3d_draw(renderer_3d_h);
+        tgg_renderer_3d_begin(renderer_3d_h);
+        const u32 entity_count = tg_list_count(entities);
+        tg_entity_h* p_entities = tg_list_pointer_to(entities, 0);
+        for (u32 i = 0; i < entity_count; i++)
+        {
+            tgg_renderer_3d_draw_entity(renderer_3d_h, p_entities[i]);
+        }
+        tgg_renderer_3d_end(renderer_3d_h);
         tgg_renderer_3d_present(renderer_3d_h);
     }
 
@@ -470,6 +482,7 @@ void tg_application_start()
     tgg_vertex_shader_destroy(default_vertex_shader_h);
 
     tgg_camera_destroy(camera_info.camera_h);
+    tg_list_destroy(entities);
     tgg_renderer_3d_shutdown(renderer_3d_h);
     tg_graphics_shutdown();
 }

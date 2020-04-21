@@ -5,12 +5,23 @@
 
 
 
+typedef struct tg_entity_uniform_buffer
+{
+	m4    model_matrix;
+} tg_entity_uniform_buffer;
+
 typedef struct tg_entity
 {
-	u32                 id;
-	tg_renderer_3d_h    renderer_3d_h;
-	tg_model_h          model_h;
-	m4*                 p_model_matrix;
+	u32                              id;
+	tg_model_h                       model_h;
+	struct
+	{
+		v3                           position;
+		m4                           position_matrix;
+
+		tg_uniform_buffer_h          uniform_buffer_h;
+		tg_entity_uniform_buffer*    p_uniform_buffer_data;
+	} transform;
 } tg_entity;
 
 

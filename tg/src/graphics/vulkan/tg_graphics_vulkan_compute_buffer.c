@@ -16,11 +16,15 @@ tg_compute_buffer_h tgg_compute_buffer_create(u64 size)
 
 u64 tgg_compute_buffer_size(tg_compute_buffer_h compute_buffer_h)
 {
+	TG_ASSERT(compute_buffer_h);
+
 	return compute_buffer_h->buffer.size;
 }
 
 void* tgg_compute_buffer_data(tg_compute_buffer_h compute_buffer_h)
 {
+	TG_ASSERT(compute_buffer_h);
+
 	return compute_buffer_h->buffer.p_mapped_device_memory;
 }
 

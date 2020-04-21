@@ -96,7 +96,7 @@ void tgg_vulkan_buffer_copy(VkDeviceSize size, VkBuffer source, VkBuffer target)
     }
     vkCmdCopyBuffer(command_buffer, source, target, 1, &buffer_copy);
 
-    tgg_vulkan_command_buffer_end_and_submit(command_buffer);
+    tgg_vulkan_command_buffer_end_and_submit(command_buffer, &graphics_queue);
     tgg_vulkan_command_buffer_free(command_pool, command_buffer);
 }
 
@@ -105,7 +105,7 @@ void tgg_vulkan_buffer_copy_to_image(VkBuffer source, tg_image* p_target)
     VkCommandBuffer command_buffer = tgg_vulkan_command_buffer_allocate(command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     tgg_vulkan_command_buffer_begin(command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
     tgg_vulkan_command_buffer_cmd_copy_buffer_to_image(command_buffer, source, p_target);
-    tgg_vulkan_command_buffer_end_and_submit(command_buffer);
+    tgg_vulkan_command_buffer_end_and_submit(command_buffer, &graphics_queue);
     tgg_vulkan_command_buffer_free(command_pool, command_buffer);
 }
 
@@ -282,7 +282,7 @@ void tgg_vulkan_command_buffer_cmd_transition_image_layout(VkCommandBuffer comma
     p_image->layout = new_layout;
 }
 
-void tgg_vulkan_command_buffer_end_and_submit(VkCommandBuffer command_buffer)
+void tgg_vulkan_command_buffer_end_and_submit(VkCommandBuffer command_buffer, tg_vulkan_queue* p_vulkan_queue)
 {
     VK_CALL(vkEndCommandBuffer(command_buffer));
 
@@ -298,9 +298,9 @@ void tgg_vulkan_command_buffer_end_and_submit(VkCommandBuffer command_buffer)
         submit_info.signalSemaphoreCount = 0;
         submit_info.pSignalSemaphores = TG_NULL;
     }
+    VK_CALL(vkQueueSubmit(p_vulkan_queue->queue, 1, &submit_info, VK_NULL_HANDLE));
 
-    VK_CALL(vkQueueSubmit(graphics_queue.queue, 1, &submit_info, VK_NULL_HANDLE));
-    VK_CALL(vkQueueWaitIdle(graphics_queue.queue));
+    VK_CALL(vkQueueWaitIdle(p_vulkan_queue->queue));
 }
 
 void tgg_vulkan_command_buffer_free(VkCommandPool command_pool, VkCommandBuffer command_buffer)
@@ -451,6 +451,29 @@ VkDescriptorSet tgg_vulkan_descriptor_set_allocate(VkDescriptorPool descriptor_p
 void tgg_vulkan_descriptor_set_free(VkDescriptorPool descriptor_pool, VkDescriptorSet descriptor_set)
 {
     VK_CALL(vkFreeDescriptorSets(device, descriptor_pool, 1, &descriptor_set));
+}
+
+void tgg_vulkan_descriptor_set_update(VkDescriptorSet descriptor_set, tg_shader_input_element* p_shader_input_element, tg_handle shader_input_element_handle, u32 dst_binding)
+{
+    switch (p_shader_input_element->type)
+    {
+    case TG_SHADER_INPUT_ELEMENT_TYPE_COMPUTE_BUFFER:
+    {
+        tg_compute_buffer_h compute_buffer_h = (tg_compute_buffer_h)shader_input_element_handle;
+        tgg_vulkan_descriptor_set_update_storage_buffer(descriptor_set, compute_buffer_h->buffer.buffer, dst_binding, p_shader_input_element->array_element_count);
+    } break;
+    case TG_SHADER_INPUT_ELEMENT_TYPE_UNIFORM_BUFFER:
+    {
+        tg_uniform_buffer_h uniform_buffer_h = (tg_uniform_buffer_h)shader_input_element_handle;
+        tgg_vulkan_descriptor_set_update_uniform_buffer(descriptor_set, uniform_buffer_h->buffer.buffer, dst_binding, p_shader_input_element->array_element_count);
+    } break;
+    case TG_SHADER_INPUT_ELEMENT_TYPE_IMAGE:
+    {
+        tg_image_h image_h = (tg_image_h)shader_input_element_handle;
+        tgg_vulkan_descriptor_set_update_image(descriptor_set, image_h, dst_binding, p_shader_input_element->array_element_count);
+    } break;
+    default: TG_ASSERT(TG_FALSE);
+    }
 }
 
 void tgg_vulkan_descriptor_set_update_storage_buffer(VkDescriptorSet descriptor_set, VkBuffer buffer, u32 dst_binding, u32 descriptor_count)
@@ -854,7 +877,7 @@ tg_image tgg_vulkan_image_create(const tg_vulkan_image_create_info* p_vulkan_ima
         image_memory_barrier.subresourceRange.layerCount = 1;
     }
     vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, TG_NULL, 0, TG_NULL, 1, &image_memory_barrier);
-    tgg_vulkan_command_buffer_end_and_submit(command_buffer);
+    tgg_vulkan_command_buffer_end_and_submit(command_buffer, &graphics_queue);
     // TODO: combine command buffers
     // TODO: mipmapping only works with specific layout...
 
@@ -938,7 +961,7 @@ tg_image tgg_vulkan_image_create(const tg_vulkan_image_create_info* p_vulkan_ima
     mipmap_image_memory_barrier.subresourceRange.baseMipLevel = image.mip_levels - 1;
 
     vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, TG_NULL, 0, TG_NULL, 1, &image_memory_barrier);
-    tgg_vulkan_command_buffer_end_and_submit(command_buffer);
+    tgg_vulkan_command_buffer_end_and_submit(command_buffer, &graphics_queue);
     tgg_vulkan_command_buffer_free(command_pool, command_buffer);
 
     VkImageViewCreateInfo image_view_create_info = { 0 };
