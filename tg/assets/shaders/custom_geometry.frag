@@ -15,9 +15,11 @@ layout(set = 1, binding = 0) uniform color
 	vec3    u_color;
 };
 
+layout(set = 1, binding = 1) uniform sampler2D test_icon;
+
 void main()
 {
     out_position    = v_position;
     out_normal      = vec4(normalize(v_normal), 1.0);
-    out_albedo      = vec4(u_color, 1.0);
+    out_albedo      = vec4(u_color * texture(test_icon, v_uv).xyz, 1.0);
 }

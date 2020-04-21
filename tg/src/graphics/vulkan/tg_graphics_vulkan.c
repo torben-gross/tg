@@ -104,25 +104,7 @@ void tgg_vulkan_buffer_copy_to_image(VkBuffer source, tg_image* p_target)
 {
     VkCommandBuffer command_buffer = tgg_vulkan_command_buffer_allocate(command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     tgg_vulkan_command_buffer_begin(command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
-
-    VkBufferImageCopy buffer_image_copy = { 0 };
-    {
-        buffer_image_copy.bufferOffset = 0;
-        buffer_image_copy.bufferRowLength = 0;
-        buffer_image_copy.bufferImageHeight = 0;
-        buffer_image_copy.imageSubresource.aspectMask = p_target->aspect_mask;
-        buffer_image_copy.imageSubresource.mipLevel = 0;
-        buffer_image_copy.imageSubresource.baseArrayLayer = 0;
-        buffer_image_copy.imageSubresource.layerCount = 1;
-        buffer_image_copy.imageOffset.x = 0;
-        buffer_image_copy.imageOffset.y = 0;
-        buffer_image_copy.imageOffset.z = 0;
-        buffer_image_copy.imageExtent.width = p_target->width;
-        buffer_image_copy.imageExtent.height = p_target->height;
-        buffer_image_copy.imageExtent.depth = 1;
-    }
-    vkCmdCopyBufferToImage(command_buffer, source, p_target->image, p_target->layout, 1, &buffer_image_copy);
-
+    tgg_vulkan_command_buffer_cmd_copy_buffer_to_image(command_buffer, source, p_target);
     tgg_vulkan_command_buffer_end_and_submit(command_buffer);
     tgg_vulkan_command_buffer_free(command_pool, command_buffer);
 }
@@ -253,6 +235,27 @@ void tgg_vulkan_command_buffer_cmd_clear_image(VkCommandBuffer command_buffer, t
         }
         vkCmdClearDepthStencilImage(command_buffer, p_image->image, p_image->layout, &clear_depth_stencil_value, 1, &image_subresource_range);
     }
+}
+
+void tgg_vulkan_command_buffer_cmd_copy_buffer_to_image(VkCommandBuffer command_buffer, VkBuffer source, tg_image* p_target)
+{
+    VkBufferImageCopy buffer_image_copy = { 0 };
+    {
+        buffer_image_copy.bufferOffset = 0;
+        buffer_image_copy.bufferRowLength = 0;
+        buffer_image_copy.bufferImageHeight = 0;
+        buffer_image_copy.imageSubresource.aspectMask = p_target->aspect_mask;
+        buffer_image_copy.imageSubresource.mipLevel = 0;
+        buffer_image_copy.imageSubresource.baseArrayLayer = 0;
+        buffer_image_copy.imageSubresource.layerCount = 1;
+        buffer_image_copy.imageOffset.x = 0;
+        buffer_image_copy.imageOffset.y = 0;
+        buffer_image_copy.imageOffset.z = 0;
+        buffer_image_copy.imageExtent.width = p_target->width;
+        buffer_image_copy.imageExtent.height = p_target->height;
+        buffer_image_copy.imageExtent.depth = 1;
+    }
+    vkCmdCopyBufferToImage(command_buffer, source, p_target->image, p_target->layout, 1, &buffer_image_copy);
 }
 
 void tgg_vulkan_command_buffer_cmd_transition_image_layout(VkCommandBuffer command_buffer, tg_image* p_image, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits)
@@ -493,6 +496,30 @@ void tgg_vulkan_descriptor_set_update_uniform_buffer(VkDescriptorSet descriptor_
         write_descriptor_set.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         write_descriptor_set.pImageInfo = TG_NULL;
         write_descriptor_set.pBufferInfo = &descriptor_buffer_info;
+        write_descriptor_set.pTexelBufferView = TG_NULL;
+    }
+    vkUpdateDescriptorSets(device, 1, &write_descriptor_set, 0, TG_NULL);
+}
+
+void tgg_vulkan_descriptor_set_update_image(VkDescriptorSet descriptor_set, tg_image* p_image, u32 dst_binding, u32 descriptor_count)
+{
+    VkDescriptorImageInfo descriptor_image_info = { 0 };
+    {
+        descriptor_image_info.sampler = p_image->sampler;
+        descriptor_image_info.imageView = p_image->image_view;
+        descriptor_image_info.imageLayout = p_image->layout;
+    }
+    VkWriteDescriptorSet write_descriptor_set = { 0 };
+    {
+        write_descriptor_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        write_descriptor_set.pNext = TG_NULL;
+        write_descriptor_set.dstSet = descriptor_set;
+        write_descriptor_set.dstBinding = dst_binding;
+        write_descriptor_set.dstArrayElement = 0;
+        write_descriptor_set.descriptorCount = descriptor_count;
+        write_descriptor_set.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        write_descriptor_set.pImageInfo = &descriptor_image_info;
+        write_descriptor_set.pBufferInfo = TG_NULL;
         write_descriptor_set.pTexelBufferView = TG_NULL;
     }
     vkUpdateDescriptorSets(device, 1, &write_descriptor_set, 0, TG_NULL);
@@ -829,6 +856,7 @@ tg_image tgg_vulkan_image_create(const tg_vulkan_image_create_info* p_vulkan_ima
     vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, TG_NULL, 0, TG_NULL, 1, &image_memory_barrier);
     tgg_vulkan_command_buffer_end_and_submit(command_buffer);
     // TODO: combine command buffers
+    // TODO: mipmapping only works with specific layout...
 
 #ifdef TG_DEBUG
     VkFormatProperties format_properties;
@@ -1090,6 +1118,7 @@ VkDescriptorType tgg_vulkan_shader_input_element_type_convert(tg_shader_input_el
     {
     case TG_SHADER_INPUT_ELEMENT_TYPE_COMPUTE_BUFFER: return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     case TG_SHADER_INPUT_ELEMENT_TYPE_UNIFORM_BUFFER: return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    case TG_SHADER_INPUT_ELEMENT_TYPE_IMAGE:          return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     }
 
     TG_ASSERT(TG_FALSE);

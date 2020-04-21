@@ -113,15 +113,18 @@ void tg_application_start()
     tg_uniform_buffer_h custom_uniform_buffer_h = tgg_uniform_buffer_create(sizeof(v3));
     v3* p_custom_uniform_buffer_data = tgg_uniform_buffer_data(custom_uniform_buffer_h);
     *p_custom_uniform_buffer_data = (v3){ 1.0f, 0.0f, 0.0f };
-    tg_shader_input_element p_shader_input_elements[1] = { 0 };
+    tg_image_h image_h = tgg_image_create("test_icon.bmp");
+    tg_shader_input_element p_shader_input_elements[2] = { 0 };
     {
         p_shader_input_elements[0].type = TG_SHADER_INPUT_ELEMENT_TYPE_UNIFORM_BUFFER;
         p_shader_input_elements[0].array_element_count = 1;
+        p_shader_input_elements[1].type = TG_SHADER_INPUT_ELEMENT_TYPE_IMAGE;
+        p_shader_input_elements[1].array_element_count = 1;
     }
-    void* pp_custom_handles[1] = { custom_uniform_buffer_h };
+    void* pp_custom_handles[2] = { custom_uniform_buffer_h, image_h };
     tg_vertex_shader_h custom_vertex_shader_h = tgg_vertex_shader_create("shaders/custom_geometry.vert");
     tg_fragment_shader_h custom_fragment_shader_h = tgg_fragment_shader_create("shaders/custom_geometry.frag");
-    tg_material_h custom_material_h = tgg_material_create(custom_vertex_shader_h, custom_fragment_shader_h, 1, p_shader_input_elements, pp_custom_handles);
+    tg_material_h custom_material_h = tgg_material_create(custom_vertex_shader_h, custom_fragment_shader_h, 2, p_shader_input_elements, pp_custom_handles);
 
     tg_model_h quad_model_h = tgg_model_create(quad_mesh_h, custom_material_h);
     tg_entity_h quad_entity_h = tg_entity_create(renderer_3d_h, quad_model_h);
@@ -456,6 +459,7 @@ void tg_application_start()
     tgg_model_destroy(quad_model_h);
     tgg_mesh_destroy(quad_mesh_h);
 
+    tgg_image_destroy(image_h);
     tgg_uniform_buffer_destroy(custom_uniform_buffer_h);
     tgg_material_destroy(custom_material_h);
     tgg_fragment_shader_destroy(custom_fragment_shader_h);

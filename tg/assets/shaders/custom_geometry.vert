@@ -18,11 +18,6 @@ layout(set = 0, binding = 1) uniform view_projection
     mat4    u_projection;
 };
 
-layout(set = 1, binding = 0) uniform color
-{
-	vec3    u_color;
-};
-
 layout(location = 0) out vec4    v_position;
 layout(location = 1) out vec3    v_normal;
 layout(location = 2) out vec2    v_uv;

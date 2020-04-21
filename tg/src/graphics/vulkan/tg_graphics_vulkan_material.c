@@ -53,6 +53,11 @@ tg_material_h tgg_material_create(tg_vertex_shader_h vertex_shader_h, tg_fragmen
                 tg_uniform_buffer_h uniform_buffer_h = ((tg_uniform_buffer_h*)pp_input_element_handles)[i];
                 tgg_vulkan_descriptor_set_update_uniform_buffer(material_h->descriptor_set, uniform_buffer_h->buffer.buffer, i, p_input_elements[i].array_element_count);
             } break;
+            case TG_SHADER_INPUT_ELEMENT_TYPE_IMAGE:
+            {
+                tg_image_h image_h = ((tg_image_h*)pp_input_element_handles)[i];
+                tgg_vulkan_descriptor_set_update_image(material_h->descriptor_set, image_h, i, p_input_elements[i].array_element_count);
+            } break;
             default: TG_ASSERT(TG_FALSE);
             }
         }

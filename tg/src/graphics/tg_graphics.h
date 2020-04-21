@@ -26,7 +26,8 @@ TG_DECLARE_HANDLE(tg_vertex_shader);
 typedef enum tg_shader_input_element_type
 {
 	TG_SHADER_INPUT_ELEMENT_TYPE_COMPUTE_BUFFER    = 0,
-	TG_SHADER_INPUT_ELEMENT_TYPE_UNIFORM_BUFFER    = 1
+	TG_SHADER_INPUT_ELEMENT_TYPE_UNIFORM_BUFFER    = 1,
+	TG_SHADER_INPUT_ELEMENT_TYPE_IMAGE             = 2
 } tg_shader_input_element_type;
 
 typedef enum tg_filter
