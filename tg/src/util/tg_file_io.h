@@ -5,5 +5,6 @@
 
 void    tg_file_io_read(const char* p_filename, u64* p_size, char** pp_data);
 void    tg_file_io_free(char* p_data);
+b32     tg_file_io_exists(const char* p_filename);
 
 #endif

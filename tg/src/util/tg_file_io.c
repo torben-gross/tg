@@ -5,19 +5,25 @@
 #include "tg_common.h"
 #include "util/tg_string.h"
 #include <stdio.h>
+#include <sys/stat.h>
 
 #ifdef TG_WIN32
 #define MAX_PATH_LENGTH 260
 #endif
 
+void tg_file_io_internal_prepend_asset_path(const char* p_filename, u32 buffer_size, char* p_buffer)
+{
+    tg_string_format(buffer_size, p_buffer, "%s/%s", tg_application_get_asset_path(), p_filename);
+}
+
 void tg_file_io_read(const char* p_filename, u64* p_size, char** pp_data)
 {
     TG_ASSERT(p_filename && p_size && pp_data);
 
-    char path[MAX_PATH_LENGTH];
-    tg_string_format(sizeof(path), path, "%s/%s", tg_application_get_asset_path(), p_filename);
+    char p_path[MAX_PATH_LENGTH] = { 0 };
+    tg_file_io_internal_prepend_asset_path(p_filename, sizeof(p_path), p_path);
 
-    FILE* file = fopen(path, "rb");
+    FILE* file = fopen(p_path, "rb");
     TG_ASSERT(file);
 
     fseek(file, 0, SEEK_END);
@@ -31,5 +37,18 @@ void tg_file_io_read(const char* p_filename, u64* p_size, char** pp_data)
 
 void tg_file_io_free(char* p_data)
 {
+    TG_ASSERT(p_data);
+
     TG_MEMORY_ALLOCATOR_FREE(p_data);
+}
+
+b32 tg_file_io_exists(const char* p_filename)
+{
+    TG_ASSERT(p_filename);
+
+    char p_path[MAX_PATH_LENGTH] = { 0 };
+    tg_file_io_internal_prepend_asset_path(p_filename, sizeof(p_path), p_path);
+
+    struct stat buffer;
+    return (stat(p_path, &buffer) == 0);
 }

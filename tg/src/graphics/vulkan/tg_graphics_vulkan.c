@@ -1228,9 +1228,12 @@ VkShaderModule tgg_vulkan_shader_module_create(const char* p_filename)
 
 #ifdef TG_DEBUG
     char p_debug_buffer[256] = { 0 };
-    // TODO: this path should be relative somehow, above aswell
-    tg_string_format(sizeof(p_debug_buffer), p_debug_buffer, "C:/VulkanSDK/1.2.131.2/Bin/glslc.exe %s/%s -o %s/%s.spv", tg_application_get_asset_path(), p_filename, tg_application_get_asset_path(), p_filename);
-    TG_ASSERT(system(p_debug_buffer) != -1);
+    tg_string_format(sizeof(p_debug_buffer), p_debug_buffer, "%s.spv", p_filename);
+    if (!tg_file_io_exists(p_debug_buffer))
+    {
+        tg_string_format(sizeof(p_debug_buffer), p_debug_buffer, "C:/VulkanSDK/1.2.131.2/Bin/glslc.exe %s/%s -o %s/%s.spv", tg_application_get_asset_path(), p_filename, tg_application_get_asset_path(), p_filename);
+        TG_ASSERT(system(p_debug_buffer) != -1);
+    }
 #endif
 
     char p_filename_buffer[256] = { 0 };

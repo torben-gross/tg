@@ -198,8 +198,8 @@ void tg_application_start()
 
 
 
-    const u32 chunk_count_x = 2;
-    const u32 chunk_count_z = 2;
+    const u32 chunk_count_x = 6;
+    const u32 chunk_count_z = 6;
     const u32 chunk_vertex_count = 32;
     const f32 cell_stride = 1.1f;
     const f32 noise_scale = 0.1f;
