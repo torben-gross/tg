@@ -3,6 +3,7 @@
 
 #include "math/tg_math.h"
 #include "tg_common.h"
+#include "util/tg_list.h"
 
 
 
@@ -117,6 +118,13 @@ typedef struct tg_vertex_3d
 	v3    bitangent;
 } tg_vertex_3d;
 
+typedef struct tg_point_light
+{
+	v3    position;
+	v3    color;
+	f32   radius;
+} tg_point_light;
+
 
 
 void                    tg_graphics_init();
@@ -169,7 +177,7 @@ void                    tgg_vertex_shader_destroy(tg_vertex_shader_h p_vertex_sh
 | 3D Renderer                                                 |
 +------------------------------------------------------------*/
 
-tg_renderer_3d_h        tgg_renderer_3d_create(const tg_camera_h camera_h);
+tg_renderer_3d_h        tgg_renderer_3d_create(const tg_camera_h camera_h, u32 point_light_count, const tg_point_light* p_point_lights);
 void                    tgg_renderer_3d_register(tg_renderer_3d_h renderer_3d_h, tg_entity_h entity_h);
 void                    tgg_renderer_3d_begin(tg_renderer_3d_h renderer_3d_h);
 void                    tgg_renderer_3d_draw_entity(tg_renderer_3d_h renderer_3d_h, tg_entity_h entity_h);

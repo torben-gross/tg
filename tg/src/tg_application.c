@@ -1,7 +1,5 @@
 #include "tg_application.h"
 
-#define ASSET_PATH "assets"
-
 
 
 #include "graphics/tg_graphics.h"
@@ -9,6 +7,7 @@
 #include "platform/tg_platform.h"
 #include "tg_entity.h"
 #include "tg_input.h"
+#include "tg_marching_cubes.h"
 #include "util/tg_list.h"
 #include "util/tg_string.h"
 #include "util/tg_timer.h"
@@ -58,11 +57,10 @@ typedef struct tg_chunk_uniform_buffer
 
 
 b32 running = TG_TRUE;
-const char* asset_path = ASSET_PATH; // TODO: determine this some other way
+const char* asset_path = "assets"; // TODO: determine this some other way
 
 
 
-#include "tg_marching_cubes.h"
 void tg_application_start()
 {
     tg_graphics_init();
@@ -86,7 +84,29 @@ void tg_application_start()
     }
     camera_info.camera_h = tgg_camera_create(&camera_info.position, camera_info.pitch, camera_info.yaw, camera_info.roll, camera_info.fov_y_in_radians, camera_info.near, camera_info.far);
 
-    tg_renderer_3d_h renderer_3d_h = tgg_renderer_3d_create(camera_info.camera_h);
+    tg_point_light p_point_lights[5] = { 0 };
+    {
+        p_point_lights[0].position = (v3){ 0.0f, 0.0f, 0.5f };
+        p_point_lights[0].color = (v3){ 1.0f, 1.0f, 1.0f };
+        p_point_lights[0].radius = 20.0f;
+
+        p_point_lights[1].position = (v3){ 0.0f, 25.0f, 0.0f };
+        p_point_lights[1].color = (v3){ 1.0f, 0.0f, 0.0f };
+        p_point_lights[1].radius = 30.0f;
+
+        p_point_lights[2].position = (v3){ 10.0f, 10.0f, 0.0f };
+        p_point_lights[2].color = (v3){ 0.0f, 0.0f, 1.0f };
+        p_point_lights[2].radius = 50.0f;
+
+        p_point_lights[3].position = (v3){ 40.0f, 50.0f, 0.0f };
+        p_point_lights[3].color = (v3){ 0.0f, 0.1f, 0.0f };
+        p_point_lights[3].radius = 200.0f;
+
+        p_point_lights[4].position = (v3){ 10.0f, 10.0f, -20.0f };
+        p_point_lights[4].color = (v3){ 1.0f, 1.0f, 0.8f };
+        p_point_lights[4].radius = 50.0f;
+    }
+    tg_renderer_3d_h renderer_3d_h = tgg_renderer_3d_create(camera_info.camera_h, 5, p_point_lights);
 
     const v3 p_quad_positions[4] = {
         { -1.5f, -1.5f, 0.0f },
