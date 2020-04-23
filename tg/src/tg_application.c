@@ -14,6 +14,10 @@
 
 
 
+#define TG_POINT_LIGHT_COUNT 64
+
+
+
 typedef struct tg_camera_info
 {
     tg_camera_h    camera_h;
@@ -60,15 +64,11 @@ b32 running = TG_TRUE;
 const char* asset_path = "assets"; // TODO: determine this some other way
 
 
-
 void tg_application_start()
 {
     tg_graphics_init();
 
-
     tg_list_h entities = tg_list_create(tg_entity_h);
-
-
 
     tg_camera_info camera_info = { 0 };
     {
@@ -84,29 +84,16 @@ void tg_application_start()
     }
     camera_info.camera_h = tgg_camera_create(&camera_info.position, camera_info.pitch, camera_info.yaw, camera_info.roll, camera_info.fov_y_in_radians, camera_info.near, camera_info.far);
 
-    tg_point_light p_point_lights[5] = { 0 };
+    tg_point_light p_point_lights[TG_POINT_LIGHT_COUNT] = { 0 };
+    tg_random random = { 0 };
+    tgm_random_init(&random, 13031995);
+    for (u32 i = 0; i < TG_POINT_LIGHT_COUNT; i++)
     {
-        p_point_lights[0].position = (v3){ 0.0f, 0.0f, 0.5f };
-        p_point_lights[0].color = (v3){ 1.0f, 1.0f, 1.0f };
-        p_point_lights[0].radius = 20.0f;
-
-        p_point_lights[1].position = (v3){ 0.0f, 25.0f, 0.0f };
-        p_point_lights[1].color = (v3){ 1.0f, 0.0f, 0.0f };
-        p_point_lights[1].radius = 30.0f;
-
-        p_point_lights[2].position = (v3){ 10.0f, 10.0f, 0.0f };
-        p_point_lights[2].color = (v3){ 0.0f, 0.0f, 1.0f };
-        p_point_lights[2].radius = 50.0f;
-
-        p_point_lights[3].position = (v3){ 40.0f, 50.0f, 0.0f };
-        p_point_lights[3].color = (v3){ 0.0f, 0.1f, 0.0f };
-        p_point_lights[3].radius = 200.0f;
-
-        p_point_lights[4].position = (v3){ 10.0f, 10.0f, -20.0f };
-        p_point_lights[4].color = (v3){ 1.0f, 1.0f, 0.8f };
-        p_point_lights[4].radius = 50.0f;
+        p_point_lights[i].position = (v3){ tgm_random_next_f32(&random) * 100.0f, tgm_random_next_f32(&random) * 50.0f, -tgm_random_next_f32(&random) * 100.0f };
+        p_point_lights[i].color = (v3){ tgm_random_next_f32(&random), tgm_random_next_f32(&random), tgm_random_next_f32(&random) };
+        p_point_lights[i].radius = tgm_random_next_f32(&random) * 50.0f;
     }
-    tg_renderer_3d_h renderer_3d_h = tgg_renderer_3d_create(camera_info.camera_h, 5, p_point_lights);
+    tg_renderer_3d_h renderer_3d_h = tgg_renderer_3d_create(camera_info.camera_h, TG_POINT_LIGHT_COUNT, p_point_lights);
 
     const v3 p_quad_positions[4] = {
         { -1.5f, -1.5f, 0.0f },
@@ -138,7 +125,7 @@ void tg_application_start()
     tg_uniform_buffer_h custom_uniform_buffer_h = tgg_uniform_buffer_create(sizeof(v3));
     v3* p_custom_uniform_buffer_data = tgg_uniform_buffer_data(custom_uniform_buffer_h);
     *p_custom_uniform_buffer_data = (v3){ 1.0f, 0.0f, 0.0f };
-    tg_image_h image_h = tgg_image_create("test_icon.bmp");
+    tg_image_h image_h = tgg_image_create("textures/test_icon.bmp");
     tg_shader_input_element p_shader_input_elements[2] = { 0 };
     {
         p_shader_input_elements[0].type = TG_SHADER_INPUT_ELEMENT_TYPE_UNIFORM_BUFFER;
@@ -227,7 +214,7 @@ void tg_application_start()
         p_isolevel_compute_shader_input_elements[1].type = TG_SHADER_INPUT_ELEMENT_TYPE_UNIFORM_BUFFER;
         p_isolevel_compute_shader_input_elements[1].array_element_count = 1;
     }
-    tg_compute_shader_h isolevel_compute_shader_h = tgg_compute_shader_create(2, p_isolevel_compute_shader_input_elements, "shaders/isolevel.comp");
+    tg_compute_shader_h isolevel_compute_shader_h = tgg_compute_shader_create("shaders/isolevel.comp", 2, p_isolevel_compute_shader_input_elements);
     tg_handle pp_handles[2] = { isolevel_buffer_h, chunk_uniform_buffer_h };
     tgg_compute_shader_bind_input(isolevel_compute_shader_h, pp_handles);
 

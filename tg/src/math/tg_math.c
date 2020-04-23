@@ -182,14 +182,14 @@ f32 tgm_noise(f32 x, f32 y, f32 z) // see: http://staffwww.itn.liu.se/~stegu/sim
 
 
 
-void tgm_random_init(tgm_random* p_random, u32 seed)
+void tgm_random_init(tg_random* p_random, u32 seed)
 {
 	TG_ASSERT(p_random && seed);
 
 	p_random->state = seed;
 }
 
-f32 tgm_random_next_f32(tgm_random* p_random)
+f32 tgm_random_next_f32(tg_random* p_random)
 {
 	TG_ASSERT(p_random);
 
@@ -197,7 +197,7 @@ f32 tgm_random_next_f32(tgm_random* p_random)
 	return result;
 }
 
-u32 tgm_random_next_ui32(tgm_random* p_random)
+u32 tgm_random_next_ui32(tg_random* p_random)
 {
 	TG_ASSERT(p_random);
 

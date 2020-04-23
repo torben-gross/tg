@@ -85,7 +85,7 @@ u32 tgg_vulkan_memory_type_find(u32 memory_type_bits, VkMemoryPropertyFlags memo
 
 void tgg_vulkan_buffer_copy(VkDeviceSize size, VkBuffer source, VkBuffer target)
 {
-    VkCommandBuffer command_buffer = tgg_vulkan_command_buffer_allocate(command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+    VkCommandBuffer command_buffer = tgg_vulkan_command_buffer_allocate(graphics_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     tgg_vulkan_command_buffer_begin(command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
 
     VkBufferCopy buffer_copy = { 0 };
@@ -97,16 +97,16 @@ void tgg_vulkan_buffer_copy(VkDeviceSize size, VkBuffer source, VkBuffer target)
     vkCmdCopyBuffer(command_buffer, source, target, 1, &buffer_copy);
 
     tgg_vulkan_command_buffer_end_and_submit(command_buffer, &graphics_queue);
-    tgg_vulkan_command_buffer_free(command_pool, command_buffer);
+    tgg_vulkan_command_buffer_free(graphics_command_pool, command_buffer);
 }
 
 void tgg_vulkan_buffer_copy_to_image(VkBuffer source, tg_image* p_target)
 {
-    VkCommandBuffer command_buffer = tgg_vulkan_command_buffer_allocate(command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+    VkCommandBuffer command_buffer = tgg_vulkan_command_buffer_allocate(graphics_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     tgg_vulkan_command_buffer_begin(command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
     tgg_vulkan_command_buffer_cmd_copy_buffer_to_image(command_buffer, source, p_target);
     tgg_vulkan_command_buffer_end_and_submit(command_buffer, &graphics_queue);
-    tgg_vulkan_command_buffer_free(command_pool, command_buffer);
+    tgg_vulkan_command_buffer_free(graphics_command_pool, command_buffer);
 }
 
 tg_vulkan_buffer tgg_vulkan_buffer_create(VkDeviceSize size, VkBufferUsageFlags buffer_usage_flags, VkMemoryPropertyFlags memory_property_flags)
@@ -328,29 +328,6 @@ void tgg_vulkan_command_buffers_free(VkCommandPool command_pool, u32 command_buf
 
 
 
-VkCommandPool tgg_vulkan_command_pool_create(VkCommandPoolCreateFlags command_pool_create_flags, u32 queue_family_index)
-{
-    VkCommandPool command_pool = VK_NULL_HANDLE;
-
-    VkCommandPoolCreateInfo command_pool_create_info = { 0 };
-    {
-        command_pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-        command_pool_create_info.pNext = TG_NULL;
-        command_pool_create_info.flags = command_pool_create_flags;
-        command_pool_create_info.queueFamilyIndex = queue_family_index;
-    }
-    VK_CALL(vkCreateCommandPool(device, &command_pool_create_info, TG_NULL, &command_pool));
-
-    return command_pool;
-}
-
-void tgg_vulkan_command_pool_destroy(VkCommandPool command_pool)
-{
-    vkDestroyCommandPool(device, command_pool, TG_NULL);
-}
-
-
-
 VkPipeline tgg_vulkan_compute_pipeline_create(VkShaderModule shader_module, VkPipelineLayout pipeline_layout)
 {
     VkPipeline pipeline = VK_NULL_HANDLE;
@@ -379,6 +356,38 @@ VkPipeline tgg_vulkan_compute_pipeline_create(VkShaderModule shader_module, VkPi
 
     return pipeline;
 }
+
+void tgg_vulkan_compute_pipeline_destroy(VkPipeline compute_pipeline)
+{
+    vkDestroyPipeline(device, compute_pipeline, TG_NULL);
+}
+
+
+
+tg_vulkan_compute_shader tgg_vulkan_compute_shader_create(const char* filename, u32 input_element_count, VkDescriptorPoolSize* p_descriptor_pool_sizes, VkDescriptorSetLayoutBinding* p_descriptor_set_layout_bindings)
+{
+    tg_vulkan_compute_shader vulkan_compute_shader = { 0 };
+
+    vulkan_compute_shader.shader_module = tgg_vulkan_shader_module_create(filename);
+    vulkan_compute_shader.descriptor_pool = tgg_vulkan_descriptor_pool_create(0, 1, input_element_count, p_descriptor_pool_sizes);
+    vulkan_compute_shader.descriptor_set_layout = tgg_vulkan_descriptor_set_layout_create(0, input_element_count, p_descriptor_set_layout_bindings);
+    vulkan_compute_shader.descriptor_set = tgg_vulkan_descriptor_set_allocate(vulkan_compute_shader.descriptor_pool, vulkan_compute_shader.descriptor_set_layout);
+    vulkan_compute_shader.pipeline_layout = tgg_vulkan_pipeline_layout_create(1, &vulkan_compute_shader.descriptor_set_layout, 0, TG_NULL);
+    vulkan_compute_shader.pipeline = tgg_vulkan_compute_pipeline_create(vulkan_compute_shader.shader_module, vulkan_compute_shader.pipeline_layout);
+
+    return vulkan_compute_shader;
+}
+
+void tgg_vulkan_compute_shader_destroy(tg_vulkan_compute_shader* p_vulkan_compute_shader)
+{
+    tgg_vulkan_shader_module_destroy(p_vulkan_compute_shader->shader_module);
+    tgg_vulkan_descriptor_pool_destroy(p_vulkan_compute_shader->descriptor_pool);
+    tgg_vulkan_descriptor_set_layout_destroy(p_vulkan_compute_shader->descriptor_set_layout);
+    tgg_vulkan_descriptor_set_free(p_vulkan_compute_shader->descriptor_pool, p_vulkan_compute_shader->descriptor_set);
+    tgg_vulkan_pipeline_layout_destroy(p_vulkan_compute_shader->pipeline_layout);
+    tgg_vulkan_compute_pipeline_destroy(p_vulkan_compute_shader->pipeline);
+}
+
 
 
 
@@ -850,9 +859,9 @@ VkPipeline tgg_vulkan_graphics_pipeline_create(const tg_vulkan_graphics_pipeline
     return pipeline;
 }
 
-void tgg_vulkan_graphics_pipeline_destroy(VkPipeline pipeline)
+void tgg_vulkan_graphics_pipeline_destroy(VkPipeline graphics_pipeline)
 {
-    vkDestroyPipeline(device, pipeline, TG_NULL);
+    vkDestroyPipeline(device, graphics_pipeline, TG_NULL);
 }
 
 void tgg_vulkan_graphics_pipeline_initialize_pipeline_shader_stage_create_infos(VkShaderModule vertex_shader, VkShaderModule fragment_shader, VkPipelineShaderStageCreateInfo* p_pipeline_shader_stage_create_infos)
@@ -929,7 +938,7 @@ tg_image tgg_vulkan_image_create(const tg_vulkan_image_create_info* p_vulkan_ima
         image.p_mapped_device_memory = TG_NULL;
     }
 
-    VkCommandBuffer command_buffer = tgg_vulkan_command_buffer_allocate(command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+    VkCommandBuffer command_buffer = tgg_vulkan_command_buffer_allocate(graphics_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     tgg_vulkan_command_buffer_begin(command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
     VkImageMemoryBarrier image_memory_barrier = { 0 };
     {
@@ -951,6 +960,7 @@ tg_image tgg_vulkan_image_create(const tg_vulkan_image_create_info* p_vulkan_ima
     vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, TG_NULL, 0, TG_NULL, 1, &image_memory_barrier);
     tgg_vulkan_command_buffer_end_and_submit(command_buffer, &graphics_queue);
     // TODO: combine command buffers
+
     // TODO: mipmapping only works with specific layout...
 
 #ifdef TG_DEBUG
@@ -1034,7 +1044,7 @@ tg_image tgg_vulkan_image_create(const tg_vulkan_image_create_info* p_vulkan_ima
 
     vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, TG_NULL, 0, TG_NULL, 1, &image_memory_barrier);
     tgg_vulkan_command_buffer_end_and_submit(command_buffer, &graphics_queue);
-    tgg_vulkan_command_buffer_free(command_pool, command_buffer);
+    tgg_vulkan_command_buffer_free(graphics_command_pool, command_buffer);
 
     VkImageViewCreateInfo image_view_create_info = { 0 };
     {
@@ -1277,6 +1287,27 @@ VkDeviceSize tgg_vulkan_uniform_buffer_min_offset_alignment()
 /*------------------------------------------------------------+
 | Main utilities                                              |
 +------------------------------------------------------------*/
+
+VkCommandPool tgg_vulkan_command_pool_create(VkCommandPoolCreateFlags command_pool_create_flags, u32 queue_family_index)
+{
+    VkCommandPool command_pool = VK_NULL_HANDLE;
+
+    VkCommandPoolCreateInfo command_pool_create_info = { 0 };
+    {
+        command_pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+        command_pool_create_info.pNext = TG_NULL;
+        command_pool_create_info.flags = command_pool_create_flags;
+        command_pool_create_info.queueFamilyIndex = queue_family_index;
+    }
+    VK_CALL(vkCreateCommandPool(device, &command_pool_create_info, TG_NULL, &command_pool));
+
+    return command_pool;
+}
+
+void tgg_vulkan_command_pool_destroy(VkCommandPool command_pool)
+{
+    vkDestroyCommandPool(device, command_pool, TG_NULL);
+}
 
 b32 tgg_vulkan_physical_device_check_extension_support(VkPhysicalDevice physical_device)
 {
@@ -1764,7 +1795,8 @@ void tg_graphics_init()
     tgg_vulkan_physical_device_create(&physical_device);
     tgg_vulkan_device_create(&device);
     tgg_vulkan_queues_create(&graphics_queue, &present_queue, &compute_queue);
-    command_pool = tgg_vulkan_command_pool_create(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, graphics_queue.index);
+    graphics_command_pool = tgg_vulkan_command_pool_create(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, graphics_queue.index);
+    compute_command_pool = tgg_vulkan_command_pool_create(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, compute_queue.index);
     tgg_vulkan_swapchain_create();
 }
 
@@ -1777,7 +1809,7 @@ void tg_graphics_shutdown()
         vkDestroyImageView(device, swapchain_image_views[i], TG_NULL);
     }
     vkDestroySwapchainKHR(device, swapchain, TG_NULL);
-    vkDestroyCommandPool(device, command_pool, TG_NULL);
+    vkDestroyCommandPool(device, graphics_command_pool, TG_NULL);
     vkDestroyDevice(device, TG_NULL);
 #ifdef TG_DEBUG
     PFN_vkDestroyDebugUtilsMessengerEXT vkDestroyDebugUtilsMessengerEXT = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");

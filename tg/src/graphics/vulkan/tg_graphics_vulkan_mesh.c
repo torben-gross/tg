@@ -53,7 +53,6 @@ void tgg_mesh_recalculate_normals(u32 vertex_count, u32 index_count, const u16* 
         VkDescriptorSet descriptor_set = VK_NULL_HANDLE;
         VkPipelineLayout pipeline_layout = VK_NULL_HANDLE;
         VkPipeline pipeline = VK_NULL_HANDLE;
-        VkCommandPool command_pool = VK_NULL_HANDLE;
         VkCommandBuffer command_buffer = VK_NULL_HANDLE;
         tg_vulkan_buffer uniform_buffer = { 0 };
 
@@ -88,8 +87,7 @@ void tgg_mesh_recalculate_normals(u32 vertex_count, u32 index_count, const u16* 
         pipeline_layout = tgg_vulkan_pipeline_layout_create(1, &descriptor_set_layout, 0, TG_NULL);
         pipeline = tgg_vulkan_compute_pipeline_create(shader_module, pipeline_layout);
 
-        command_pool = tgg_vulkan_command_pool_create(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, compute_queue.index);
-        command_buffer = tgg_vulkan_command_buffer_allocate(command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+        command_buffer = tgg_vulkan_command_buffer_allocate(compute_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
         uniform_buffer = tgg_vulkan_buffer_create(sizeof(tg_normals_compute_shader_uniform_buffer), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
         ((tg_normals_compute_shader_uniform_buffer*)uniform_buffer.p_mapped_device_memory)->vertex_float_count = sizeof(tg_vertex_3d) / sizeof(f32);
@@ -111,8 +109,7 @@ void tgg_mesh_recalculate_normals(u32 vertex_count, u32 index_count, const u16* 
 
 
         tgg_vulkan_buffer_destroy(&uniform_buffer);
-        tgg_vulkan_command_buffer_free(command_pool, command_buffer);
-        tgg_vulkan_command_pool_destroy(command_pool);
+        tgg_vulkan_command_buffer_free(compute_command_pool, command_buffer);
         tgg_vulkan_graphics_pipeline_destroy(pipeline);
         tgg_vulkan_pipeline_layout_destroy(pipeline_layout);
         tgg_vulkan_descriptor_set_free(descriptor_pool, descriptor_set);

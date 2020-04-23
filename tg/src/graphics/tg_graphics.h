@@ -144,7 +144,7 @@ tg_compute_buffer_h     tgg_compute_buffer_create(u64 size);
 void*                   tgg_compute_buffer_data(tg_compute_buffer_h compute_buffer_h);
 void                    tgg_compute_buffer_destroy(tg_compute_buffer_h compute_buffer_h);
 
-tg_compute_shader_h     tgg_compute_shader_create(u32 input_element_count, tg_shader_input_element* p_shader_input_elements, const char* filename);
+tg_compute_shader_h     tgg_compute_shader_create(const char* filename, u32 input_element_count, tg_shader_input_element* p_shader_input_elements);
 void                    tgg_compute_shader_bind_input(tg_compute_shader_h compute_shader_h, tg_handle* p_shader_input_element_handles);
 void                    tgg_compute_shader_dispatch(tg_compute_shader_h compute_shader_h, u32 group_count_x, u32 group_count_y, u32 group_count_z);
 void                    tgg_compute_shader_destroy(tg_compute_shader_h compute_shader_h);

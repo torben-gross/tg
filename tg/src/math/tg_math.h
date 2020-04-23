@@ -189,10 +189,10 @@ typedef struct v4
 	};
 } v4;
 
-typedef struct tgm_random
+typedef struct tg_random
 {
 	u32    state;
-} tgm_random;
+} tg_random;
 
 
 
@@ -209,9 +209,9 @@ f32    tgm_noise(f32 x, f32 y, f32 z);
 +------------------------------------------------------------*/
 
 // TODO: Unity uses Marsaglia's Xorshift 128, this is the basic variation.
-void    tgm_random_init(tgm_random* p_random, u32 seed);
-f32     tgm_random_next_f32(tgm_random* p_random);
-u32     tgm_random_next_ui32(tgm_random* p_random);
+void    tgm_random_init(tg_random* p_random, u32 seed);
+f32     tgm_random_next_f32(tg_random* p_random);
+u32     tgm_random_next_ui32(tg_random* p_random);
 
 
 

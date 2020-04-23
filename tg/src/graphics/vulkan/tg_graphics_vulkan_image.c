@@ -42,12 +42,12 @@ tg_image_h tgg_image_create(const char* p_filename)
     }
     *image_h = tgg_vulkan_image_create(&vulkan_image_create_info);
 
-    VkCommandBuffer command_buffer = tgg_vulkan_command_buffer_allocate(command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+    VkCommandBuffer command_buffer = tgg_vulkan_command_buffer_allocate(graphics_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     tgg_vulkan_command_buffer_begin(command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
     tgg_vulkan_command_buffer_cmd_copy_buffer_to_image(command_buffer, staging_buffer.buffer, image_h);
     tgg_vulkan_command_buffer_cmd_transition_image_layout(command_buffer, image_h, 0, 0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
     tgg_vulkan_command_buffer_end_and_submit(command_buffer, &graphics_queue);
-    tgg_vulkan_command_buffer_free(command_pool, command_buffer);
+    tgg_vulkan_command_buffer_free(graphics_command_pool, command_buffer);
 
     tg_image_free(p_data);
 

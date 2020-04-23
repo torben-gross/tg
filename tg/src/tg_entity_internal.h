@@ -14,6 +14,8 @@ typedef struct tg_entity
 {
 	u32                              id;
 	tg_model_h                       model_h;
+	// TODO: move from model to here
+	//tg_entity_graphics_h             entity_graphics_h;
 	struct
 	{
 		v3                           position;
