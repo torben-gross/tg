@@ -9,8 +9,8 @@ layout(set = 0, binding = 2) uniform    sampler2D albedos;
 
 layout(set = 0, binding = 3) uniform light_setup
 {
-    uint          directional_light_count;
-    uint          point_light_count;
+    uint         directional_light_count;
+    uint         point_light_count;
     vec4[512]    directional_light_positions_radii;
     vec3[512]    directional_light_colors;
     vec4[512]    point_light_positions_radii;
@@ -23,30 +23,39 @@ void main()
 {
     // geometry
     vec3 position = texture(positions, v_uv).xyz;
-    vec3 normal = normalize(texture(normals, v_uv).xyz);
-    vec4 albedo = texture(albedos, v_uv);
+    vec3 normal = texture(normals, v_uv).xyz;
 
-    // ambient
-    float ambient_strength = 0.16;
-    vec3 ambient = ambient_strength * vec3(1.0);
-
-    // diffuse
-    vec3 diffuse = vec3(0.0);
-    for (uint i = 0; i < point_light_count; i++)
+    if (dot(normal, normal) < 0.5) // sky
     {
-        vec3 point_light_position = point_light_positions_radii[i].xyz;
-        float point_light_radius = point_light_positions_radii[i].w;
-
-        float distance_from_light_center = distance(point_light_position, position);
-        if (distance_from_light_center <= point_light_radius)
-        {
-            vec3 light_direction = normalize(point_light_position - position);
-            float t = max(0.0, (point_light_radius - distance_from_light_center)) / point_light_radius;
-            float diffuse_strength = max(dot(normal, light_direction), 0.0) * t;
-            diffuse += diffuse_strength * point_light_colors[i];
-        }
+        out_color = vec4(0.8, 0.8, 100.0, 1.0);
     }
+    else // geometry
+    {
+        normal = normalize(normal);
+        vec4 albedo = texture(albedos, v_uv);
 
-    // final color assembly
-    out_color = vec4((ambient + diffuse), 1.0) * albedo;
+        // ambient
+        float ambient_strength = 0.16;
+        vec3 ambient = ambient_strength * vec3(1.0);
+
+        // diffuse
+        vec3 diffuse = vec3(0.0);
+        for (uint i = 0; i < point_light_count; i++)
+        {
+            vec3 point_light_position = point_light_positions_radii[i].xyz;
+            float point_light_radius = point_light_positions_radii[i].w;
+
+            float distance_from_light_center = distance(point_light_position, position);
+            if (distance_from_light_center <= point_light_radius)
+            {
+                vec3 light_direction = normalize(point_light_position - position);
+                float t = max(0.0, (point_light_radius - distance_from_light_center)) / point_light_radius;
+                float diffuse_strength = max(dot(normal, light_direction), 0.0) * t;
+                diffuse += diffuse_strength * point_light_colors[i];
+            }
+        }
+
+        // final color assembly
+        out_color = vec4((ambient + diffuse), 1.0) * albedo;
+    }
 }

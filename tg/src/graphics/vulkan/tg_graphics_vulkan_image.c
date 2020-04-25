@@ -3,7 +3,7 @@
 #ifdef TG_VULKAN
 
 #include "graphics/tg_graphics_image_loader.h"
-#include "memory/tg_memory_allocator.h"
+#include "memory/tg_memory.h"
 
 
 
@@ -11,7 +11,7 @@ tg_image_h tgg_image_create(const char* p_filename)
 {
     TG_ASSERT(p_filename);
 
-    tg_image_h image_h = TG_MEMORY_ALLOCATOR_ALLOCATE(sizeof(*image_h));
+    tg_image_h image_h = TG_MEMORY_ALLOC(sizeof(*image_h));
 
     u32* p_data = TG_NULL;
     tg_image_load(p_filename, &image_h->width, &image_h->height, &image_h->format, &p_data);
@@ -59,7 +59,7 @@ void tgg_image_destroy(tg_image_h image_h)
     TG_ASSERT(image_h);
 
     tgg_vulkan_image_destroy(image_h);
-    TG_MEMORY_ALLOCATOR_FREE(image_h);
+    TG_MEMORY_FREE(image_h);
 }
 
 #endif

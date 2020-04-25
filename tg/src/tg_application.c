@@ -3,12 +3,14 @@
 
 
 #include "graphics/tg_graphics.h"
-#include "memory/tg_memory_allocator.h"
+#include "memory/tg_memory.h"
 #include "platform/tg_platform.h"
 #include "tg_entity.h"
 #include "tg_input.h"
 #include "tg_marching_cubes.h"
 #include "util/tg_list.h"
+#include "util/tg_qsort.h"
+#include "util/tg_rectangle_packer.h"
 #include "util/tg_string.h"
 #include "util/tg_timer.h"
 
@@ -94,6 +96,26 @@ void tg_application_start()
         p_point_lights[i].radius = tgm_random_next_f32(&random) * 50.0f;
     }
     tg_renderer_3d_h renderer_3d_h = tgg_renderer_3d_create(camera_info.camera_h, TG_POINT_LIGHT_COUNT, p_point_lights);
+
+
+
+
+    tg_rect p_rects[100] = { 0 };
+    u32 p_nums[100] = { 0 };
+    tg_random rect_random = { 123 };
+    for (u32 i = 0; i < 100; i++)
+    {
+        p_rects[i].width = tgm_random_next_ui32(&rect_random);
+        p_rects[i].height = tgm_random_next_ui32(&rect_random);
+        p_nums[i] = tgm_random_next_ui32(&rect_random);
+    }
+    tg_rectangle_packer_pack(100, p_rects);
+    TG_QSORT(u32, 100, p_nums);
+
+
+
+
+
 
     const v3 p_quad_positions[4] = {
         { -1.5f, -1.5f, 0.0f },
@@ -218,10 +240,10 @@ void tg_application_start()
     tg_handle pp_handles[2] = { isolevel_buffer_h, chunk_uniform_buffer_h };
     tgg_compute_shader_bind_input(isolevel_compute_shader_h, pp_handles);
 
-    tg_marching_cubes_triangle* p_chunk_triangles = TG_MEMORY_ALLOCATOR_ALLOCATE((u64)chunk_vertex_count * (u64)chunk_vertex_count * (u64)chunk_vertex_count * 12 * sizeof(*p_chunk_triangles));
-    tg_mesh_h* p_chunk_meshes = TG_MEMORY_ALLOCATOR_ALLOCATE((u64)chunk_count_x * (u64)chunk_count_z * sizeof(*p_chunk_meshes));
-    tg_model_h* p_chunk_models = TG_MEMORY_ALLOCATOR_ALLOCATE((u64)chunk_count_x * (u64)chunk_count_z * sizeof(*p_chunk_models));
-    tg_entity_h* p_chunk_entities = TG_MEMORY_ALLOCATOR_ALLOCATE((u64)chunk_count_x * (u64)chunk_count_z * sizeof(*p_chunk_entities));
+    tg_marching_cubes_triangle* p_chunk_triangles = TG_MEMORY_ALLOC((u64)chunk_vertex_count * (u64)chunk_vertex_count * (u64)chunk_vertex_count * 12 * sizeof(*p_chunk_triangles));
+    tg_mesh_h* p_chunk_meshes = TG_MEMORY_ALLOC((u64)chunk_count_x * (u64)chunk_count_z * sizeof(*p_chunk_meshes));
+    tg_model_h* p_chunk_models = TG_MEMORY_ALLOC((u64)chunk_count_x * (u64)chunk_count_z * sizeof(*p_chunk_models));
+    tg_entity_h* p_chunk_entities = TG_MEMORY_ALLOC((u64)chunk_count_x * (u64)chunk_count_z * sizeof(*p_chunk_entities));
     for (u32 chunk_x = 0; chunk_x < chunk_count_x; chunk_x++)
     {
         for (u32 chunk_z = 0; chunk_z < chunk_count_z; chunk_z++)
@@ -285,7 +307,7 @@ void tg_application_start()
     tgg_compute_buffer_destroy(isolevel_buffer_h);
     tgg_uniform_buffer_destroy(chunk_uniform_buffer_h);
 
-    TG_MEMORY_ALLOCATOR_FREE(p_chunk_triangles);
+    TG_MEMORY_FREE(p_chunk_triangles);
 
 
 
@@ -465,9 +487,9 @@ void tg_application_start()
             tgg_mesh_destroy(p_chunk_meshes[i]);
         }
     }
-    TG_MEMORY_ALLOCATOR_FREE(p_chunk_entities);
-    TG_MEMORY_ALLOCATOR_FREE(p_chunk_models);
-    TG_MEMORY_ALLOCATOR_FREE(p_chunk_meshes);
+    TG_MEMORY_FREE(p_chunk_entities);
+    TG_MEMORY_FREE(p_chunk_models);
+    TG_MEMORY_FREE(p_chunk_meshes);
 
     tg_timer_destroy(timer_h);
 

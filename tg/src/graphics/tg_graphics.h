@@ -18,6 +18,7 @@ TG_DECLARE_HANDLE(tg_mesh);
 TG_DECLARE_HANDLE(tg_model);
 TG_DECLARE_HANDLE(tg_index_buffer);
 TG_DECLARE_HANDLE(tg_renderer_3d);
+TG_DECLARE_HANDLE(tg_texture_atlas);
 TG_DECLARE_HANDLE(tg_uniform_buffer);
 TG_DECLARE_HANDLE(tg_vertex_buffer);
 TG_DECLARE_HANDLE(tg_vertex_shader);
@@ -163,6 +164,10 @@ void                    tgg_mesh_destroy(tg_mesh_h mesh_h);
 
 tg_model_h              tgg_model_create(tg_mesh_h mesh_h, tg_material_h material_h);
 void                    tgg_model_destroy(tg_model_h model_h);
+
+tg_texture_atlas_h      tg_texture_atlas_create_from_images(u32 image_count, tg_image_h* p_images_h);
+tg_texture_atlas_h      tg_texture_atlas_create(tg_image_h texture_atlas, void* layout_stuff); // TODO: this
+void                    tg_texture_atlas_destroy(tg_texture_atlas_h texture_atlas_h);
 
 tg_uniform_buffer_h     tgg_uniform_buffer_create(u64 size);
 void*                   tgg_uniform_buffer_data(tg_uniform_buffer_h uniform_buffer_h);

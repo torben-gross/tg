@@ -2,7 +2,7 @@
 
 #ifdef TG_VULKAN
 
-#include "memory/tg_memory_allocator.h"
+#include "memory/tg_memory.h"
 #include "util/tg_list.h"
 #include "tg_entity_internal.h"
 
@@ -1001,7 +1001,7 @@ tg_renderer_3d_h tgg_renderer_3d_create(const tg_camera_h camera_h, u32 point_li
 {
     TG_ASSERT(camera_h);
 
-    tg_renderer_3d_h renderer_3d_h = TG_MEMORY_ALLOCATOR_ALLOCATE(sizeof(*renderer_3d_h));
+    tg_renderer_3d_h renderer_3d_h = TG_MEMORY_ALLOC(sizeof(*renderer_3d_h));
 
     renderer_3d_h->main_camera_h = camera_h;
     tgg_renderer_3d_internal_init_geometry_pass(renderer_3d_h);
@@ -1278,7 +1278,7 @@ void tgg_renderer_3d_shutdown(tg_renderer_3d_h renderer_3d_h)
 {
     TG_ASSERT(renderer_3d_h);
 
-    TG_MEMORY_ALLOCATOR_FREE(renderer_3d_h);
+    TG_MEMORY_FREE(renderer_3d_h);
 }
 
 #endif

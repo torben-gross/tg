@@ -1,6 +1,6 @@
 #include "tg_entity_internal.h"
 
-#include "memory/tg_memory_allocator.h"
+#include "memory/tg_memory.h"
 
 
 
@@ -12,7 +12,7 @@ tg_entity_h tg_entity_create(tg_renderer_3d_h renderer_3d_h, tg_model_h model_h)
 {
 	TG_ASSERT(renderer_3d_h && model_h);
 
-	tg_entity_h entity_h = TG_MEMORY_ALLOCATOR_ALLOCATE(sizeof(*entity_h));
+	tg_entity_h entity_h = TG_MEMORY_ALLOC(sizeof(*entity_h));
 
 	entity_h->id = entity_next_id++;
 	entity_h->model_h = model_h; // TODO: this call wil probably go?
@@ -34,7 +34,7 @@ void tg_entity_destroy(tg_entity_h entity_h)
 	TG_ASSERT(entity_h);
 
 	tgg_uniform_buffer_destroy(entity_h->transform.uniform_buffer_h);
-	TG_MEMORY_ALLOCATOR_FREE(entity_h);
+	TG_MEMORY_FREE(entity_h);
 }
 
 v3 tg_entity_get_position(tg_entity_h entity_h)

@@ -1,6 +1,6 @@
 #include "util/tg_list.h"
 
-#include "memory/tg_memory_allocator.h"
+#include "memory/tg_memory.h"
 #include <string.h> // TODO: memcpy
 
 
@@ -22,12 +22,12 @@ tg_list_h tg_list_create_impl(u32 element_size, u32 capacity)
 {
 	TG_ASSERT(element_size && capacity);
 
-	tg_list_h list_h = TG_MEMORY_ALLOCATOR_ALLOCATE(sizeof(*list_h));
+	tg_list_h list_h = TG_MEMORY_ALLOC(sizeof(*list_h));
 
 	list_h->element_size = element_size;
 	list_h->capacity = capacity;
 	list_h->count = 0;
-	list_h->elements = TG_MEMORY_ALLOCATOR_ALLOCATE((u64)capacity * (u64)element_size);
+	list_h->elements = TG_MEMORY_ALLOC((u64)capacity * (u64)element_size);
 
 	return list_h;
 }
@@ -36,8 +36,8 @@ void tg_list_destroy(tg_list_h list_h)
 {
 	TG_ASSERT(list_h);
 
-	TG_MEMORY_ALLOCATOR_FREE(list_h->elements);
-	TG_MEMORY_ALLOCATOR_FREE(list_h);
+	TG_MEMORY_FREE(list_h->elements);
+	TG_MEMORY_FREE(list_h);
 }
 
 u32 tg_list_capacity(const tg_list_h list_h)
@@ -171,5 +171,5 @@ void tg_list_reserve(tg_list_h list_h, u32 capacity)
 	TG_ASSERT(list_h && capacity > list_h->capacity);
 
 	list_h->capacity = capacity;
-	list_h->elements = TG_MEMORY_ALLOCATOR_REALLOCATE(list_h->elements, (u64)capacity * (u64)list_h->element_size);
+	list_h->elements = TG_MEMORY_REALLOC(list_h->elements, (u64)capacity * (u64)list_h->element_size);
 }

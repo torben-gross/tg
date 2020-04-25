@@ -2,20 +2,20 @@
 
 #ifdef TG_VULKAN
 
-#include "memory/tg_memory_allocator.h"
+#include "memory/tg_memory.h"
 
 tg_material_h tgg_material_create(tg_vertex_shader_h vertex_shader_h, tg_fragment_shader_h fragment_shader_h, u32 input_element_count, tg_shader_input_element* p_shader_input_elements, tg_handle* p_shader_input_element_handles)
 {
 	TG_ASSERT(vertex_shader_h && fragment_shader_h);
 
-	tg_material_h material_h = TG_MEMORY_ALLOCATOR_ALLOCATE(sizeof(*material_h));
+	tg_material_h material_h = TG_MEMORY_ALLOC(sizeof(*material_h));
 
     material_h->vertex_shader_h = vertex_shader_h;
     material_h->fragment_shader_h = fragment_shader_h;
 
     if (input_element_count != 0)
     {
-        VkDescriptorSetLayoutBinding* p_descriptor_set_layout_bindings = TG_MEMORY_ALLOCATOR_ALLOCATE(input_element_count * sizeof(*p_descriptor_set_layout_bindings));
+        VkDescriptorSetLayoutBinding* p_descriptor_set_layout_bindings = TG_MEMORY_ALLOC(input_element_count * sizeof(*p_descriptor_set_layout_bindings));
         for (u32 i = 0; i < input_element_count; i++)
         {
             p_descriptor_set_layout_bindings[i].binding = i;
@@ -25,7 +25,7 @@ tg_material_h tgg_material_create(tg_vertex_shader_h vertex_shader_h, tg_fragmen
             p_descriptor_set_layout_bindings[i].pImmutableSamplers = TG_NULL;
         }
         material_h->descriptor = tgg_vulkan_descriptor_create(input_element_count, p_descriptor_set_layout_bindings);
-        TG_MEMORY_ALLOCATOR_FREE(p_descriptor_set_layout_bindings);
+        TG_MEMORY_FREE(p_descriptor_set_layout_bindings);
 
         for (u32 i = 0; i < input_element_count; i++)
         {
@@ -47,7 +47,7 @@ void tgg_material_destroy(tg_material_h material_h)
     TG_ASSERT(material_h);
 
     tgg_vulkan_descriptor_destroy(&material_h->descriptor);
-	TG_MEMORY_ALLOCATOR_FREE(material_h);
+	TG_MEMORY_FREE(material_h);
 }
 
 #endif

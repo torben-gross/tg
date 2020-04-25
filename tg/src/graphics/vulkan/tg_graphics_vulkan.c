@@ -3,7 +3,7 @@
 #ifdef TG_VULKAN
 
 #include "math/tg_math.h"
-#include "memory/tg_memory_allocator.h"
+#include "memory/tg_memory.h"
 #include "platform/tg_platform.h"
 #include "tg_application.h"
 #include "util/tg_file_io.h"
@@ -169,15 +169,6 @@ void tgg_vulkan_buffer_copy(VkDeviceSize size, VkBuffer source, VkBuffer destina
     }
     vkCmdCopyBuffer(command_buffer, source, destination, 1, &buffer_copy);
 
-    tgg_vulkan_command_buffer_end_and_submit(command_buffer, &graphics_queue);
-    tgg_vulkan_command_buffer_free(graphics_command_pool, command_buffer);
-}
-
-void tgg_vulkan_buffer_copy_to_image(VkBuffer source, tg_image* p_destination)
-{
-    VkCommandBuffer command_buffer = tgg_vulkan_command_buffer_allocate(graphics_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
-    tgg_vulkan_command_buffer_begin(command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
-    tgg_vulkan_command_buffer_cmd_copy_buffer_to_image(command_buffer, source, p_destination);
     tgg_vulkan_command_buffer_end_and_submit(command_buffer, &graphics_queue);
     tgg_vulkan_command_buffer_free(graphics_command_pool, command_buffer);
 }
@@ -484,14 +475,14 @@ tg_vulkan_descriptor tgg_vulkan_descriptor_create(u32 binding_count, VkDescripto
 {
     tg_vulkan_descriptor vulkan_descriptor = { 0 };
 
-    VkDescriptorPoolSize* p_descriptor_pool_sizes = TG_MEMORY_ALLOCATOR_ALLOCATE(binding_count * sizeof(*p_descriptor_pool_sizes));
+    VkDescriptorPoolSize* p_descriptor_pool_sizes = TG_MEMORY_ALLOC(binding_count * sizeof(*p_descriptor_pool_sizes));
     for (u32 i = 0; i < binding_count; i++)
     {
         p_descriptor_pool_sizes[i].type = p_bindings[i].descriptorType;
         p_descriptor_pool_sizes[i].descriptorCount = p_bindings[i].descriptorCount;
     }
     vulkan_descriptor.descriptor_pool = tgg_vulkan_descriptor_pool_create(0, 1, 1, p_descriptor_pool_sizes);
-    TG_MEMORY_ALLOCATOR_FREE(p_descriptor_pool_sizes);
+    TG_MEMORY_FREE(p_descriptor_pool_sizes);
 
     vulkan_descriptor.descriptor_set_layout = tgg_vulkan_descriptor_set_layout_create(0, binding_count, p_bindings);
     vulkan_descriptor.descriptor_set = tgg_vulkan_descriptor_set_allocate(vulkan_descriptor.descriptor_pool, vulkan_descriptor.descriptor_set_layout);
@@ -850,7 +841,7 @@ VkPipeline tgg_vulkan_graphics_pipeline_create(const tg_vulkan_graphics_pipeline
         pipeline_depth_stencil_state_create_info.minDepthBounds = 0.0f;
         pipeline_depth_stencil_state_create_info.maxDepthBounds = 0.0f;
     }
-    VkPipelineColorBlendAttachmentState* p_pipeline_color_blend_attachment_states = TG_MEMORY_ALLOCATOR_ALLOCATE(p_vulkan_graphics_pipeline_create_info->attachment_count * sizeof(*p_pipeline_color_blend_attachment_states));
+    VkPipelineColorBlendAttachmentState* p_pipeline_color_blend_attachment_states = TG_MEMORY_ALLOC(p_vulkan_graphics_pipeline_create_info->attachment_count * sizeof(*p_pipeline_color_blend_attachment_states));
     for (u32 i = 0; i < p_vulkan_graphics_pipeline_create_info->attachment_count; i++)
     {
         p_pipeline_color_blend_attachment_states[i].blendEnable = p_vulkan_graphics_pipeline_create_info->blend_enable;
@@ -899,7 +890,7 @@ VkPipeline tgg_vulkan_graphics_pipeline_create(const tg_vulkan_graphics_pipeline
         graphics_pipeline_create_info.basePipelineIndex = -1;
     }
     VK_CALL(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &graphics_pipeline_create_info, TG_NULL, &pipeline));
-    TG_MEMORY_ALLOCATOR_FREE(p_pipeline_color_blend_attachment_states);
+    TG_MEMORY_FREE(p_pipeline_color_blend_attachment_states);
 
     return pipeline;
 }
@@ -907,25 +898,6 @@ VkPipeline tgg_vulkan_graphics_pipeline_create(const tg_vulkan_graphics_pipeline
 void tgg_vulkan_graphics_pipeline_destroy(VkPipeline graphics_pipeline)
 {
     vkDestroyPipeline(device, graphics_pipeline, TG_NULL);
-}
-
-void tgg_vulkan_graphics_pipeline_initialize_pipeline_shader_stage_create_infos(VkShaderModule vertex_shader, VkShaderModule fragment_shader, VkPipelineShaderStageCreateInfo* p_pipeline_shader_stage_create_infos)
-{
-    p_pipeline_shader_stage_create_infos[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    p_pipeline_shader_stage_create_infos[0].pNext = TG_NULL;
-    p_pipeline_shader_stage_create_infos[0].flags = 0;
-    p_pipeline_shader_stage_create_infos[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
-    p_pipeline_shader_stage_create_infos[0].module = vertex_shader;
-    p_pipeline_shader_stage_create_infos[0].pName = "main";
-    p_pipeline_shader_stage_create_infos[0].pSpecializationInfo = TG_NULL;
-
-    p_pipeline_shader_stage_create_infos[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    p_pipeline_shader_stage_create_infos[1].pNext = TG_NULL;
-    p_pipeline_shader_stage_create_infos[1].flags = 0;
-    p_pipeline_shader_stage_create_infos[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-    p_pipeline_shader_stage_create_infos[1].module = fragment_shader;
-    p_pipeline_shader_stage_create_infos[1].pName = "main";
-    p_pipeline_shader_stage_create_infos[1].pSpecializationInfo = TG_NULL;
 }
 
 
@@ -1143,7 +1115,7 @@ void tgg_vulkan_image_destroy(tg_image* p_image)
     vkDestroyImageView(device, p_image->image_view, TG_NULL);
     if (p_image->p_mapped_device_memory)
     {
-        TG_MEMORY_ALLOCATOR_FREE(p_image->p_mapped_device_memory);
+        TG_MEMORY_FREE(p_image->p_mapped_device_memory);
     }
     vkFreeMemory(device, p_image->device_memory, TG_NULL);
     vkDestroyImage(device, p_image->image, TG_NULL);
@@ -1358,7 +1330,7 @@ b32 tgg_vulkan_physical_device_check_extension_support(VkPhysicalDevice physical
 {
     u32 device_extension_property_count;
     VK_CALL(vkEnumerateDeviceExtensionProperties(physical_device, TG_NULL, &device_extension_property_count, TG_NULL));
-    VkExtensionProperties* device_extension_properties = TG_MEMORY_ALLOCATOR_ALLOCATE(device_extension_property_count * sizeof(*device_extension_properties));
+    VkExtensionProperties* device_extension_properties = TG_MEMORY_ALLOC(device_extension_property_count * sizeof(*device_extension_properties));
     VK_CALL(vkEnumerateDeviceExtensionProperties(physical_device, TG_NULL, &device_extension_property_count, device_extension_properties));
 
     b32 supports_extensions = TG_TRUE;
@@ -1376,7 +1348,7 @@ b32 tgg_vulkan_physical_device_check_extension_support(VkPhysicalDevice physical
         supports_extensions &= supports_extension;
     }
 
-    TG_MEMORY_ALLOCATOR_FREE(device_extension_properties);
+    TG_MEMORY_FREE(device_extension_properties);
     return supports_extensions;
 }
 
@@ -1385,7 +1357,7 @@ b32 tgg_vulkan_physical_device_find_queue_families(VkPhysicalDevice physical_dev
     u32 queue_family_count;
     vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, TG_NULL);
     TG_ASSERT(queue_family_count);
-    VkQueueFamilyProperties* queue_family_properties = TG_MEMORY_ALLOCATOR_ALLOCATE(queue_family_count * sizeof(*queue_family_properties));
+    VkQueueFamilyProperties* queue_family_properties = TG_MEMORY_ALLOC(queue_family_count * sizeof(*queue_family_properties));
     vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, queue_family_properties);
 
     b32 supports_graphics_family = TG_FALSE;
@@ -1425,7 +1397,7 @@ b32 tgg_vulkan_physical_device_find_queue_families(VkPhysicalDevice physical_dev
     }
 
     const b32 complete = supports_graphics_family && supports_present_family && supports_compute_family;
-    TG_MEMORY_ALLOCATOR_FREE(queue_family_properties);
+    TG_MEMORY_FREE(queue_family_properties);
     return complete;
 }
 
@@ -1494,14 +1466,14 @@ b32 tgg_vulkan_physical_device_is_suitable(VkPhysicalDevice physical_device)
 
 
 
-void tgg_vulkan_instance_create(VkInstance* p_instance)
+VkInstance tgg_vulkan_instance_create()
 {
-    TG_ASSERT(p_instance);
+    VkInstance instance = VK_NULL_HANDLE;
 
 #ifdef TG_DEBUG
     u32 layer_property_count;
     vkEnumerateInstanceLayerProperties(&layer_property_count, TG_NULL);
-    VkLayerProperties* layer_properties = TG_MEMORY_ALLOCATOR_ALLOCATE(layer_property_count * sizeof(*layer_properties));
+    VkLayerProperties* layer_properties = TG_MEMORY_ALLOC(layer_property_count * sizeof(*layer_properties));
     vkEnumerateInstanceLayerProperties(&layer_property_count, layer_properties);
 
     for (u32 i = 0; i < tgg_VULKAN_VALIDATION_LAYER_COUNT; i++)
@@ -1517,75 +1489,85 @@ void tgg_vulkan_instance_create(VkInstance* p_instance)
         }
         TG_ASSERT(layer_found);
     }
-    TG_MEMORY_ALLOCATOR_FREE(layer_properties);
+    TG_MEMORY_FREE(layer_properties);
 #endif
 
     VkApplicationInfo application_info = { 0 };
-    application_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    application_info.pNext = TG_NULL;
-    application_info.pApplicationName = TG_NULL;
-    application_info.applicationVersion = VK_MAKE_VERSION(0, 0, 0);
-    application_info.pEngineName = TG_NULL;
-    application_info.engineVersion = VK_MAKE_VERSION(0, 0, 0);
-    application_info.apiVersion = VK_API_VERSION_1_2;
-
+    {
+        application_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+        application_info.pNext = TG_NULL;
+        application_info.pApplicationName = TG_NULL;
+        application_info.applicationVersion = VK_MAKE_VERSION(0, 0, 0);
+        application_info.pEngineName = TG_NULL;
+        application_info.engineVersion = VK_MAKE_VERSION(0, 0, 0);
+        application_info.apiVersion = VK_API_VERSION_1_2;
+    }
     VkInstanceCreateInfo instance_create_info = { 0 };
-    instance_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    instance_create_info.pNext = TG_NULL;
-    instance_create_info.flags = 0;
-    instance_create_info.pApplicationInfo = &application_info;
-    instance_create_info.enabledLayerCount = tgg_VULKAN_VALIDATION_LAYER_COUNT;
-    instance_create_info.ppEnabledLayerNames = tgg_VULKAN_VALIDATION_LAYER_NAMES;
-    instance_create_info.enabledExtensionCount = tgg_VULKAN_INSTANCE_EXTENSION_COUNT;
-    instance_create_info.ppEnabledExtensionNames = tgg_VULKAN_INSTANCE_EXTENSION_NAMES;
+    {
+        instance_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+        instance_create_info.pNext = TG_NULL;
+        instance_create_info.flags = 0;
+        instance_create_info.pApplicationInfo = &application_info;
+        instance_create_info.enabledLayerCount = tgg_VULKAN_VALIDATION_LAYER_COUNT;
+        instance_create_info.ppEnabledLayerNames = tgg_VULKAN_VALIDATION_LAYER_NAMES;
+        instance_create_info.enabledExtensionCount = tgg_VULKAN_INSTANCE_EXTENSION_COUNT;
+        instance_create_info.ppEnabledExtensionNames = tgg_VULKAN_INSTANCE_EXTENSION_NAMES;
+    }
+    VK_CALL(vkCreateInstance(&instance_create_info, TG_NULL, &instance));
 
-    VK_CALL(vkCreateInstance(&instance_create_info, TG_NULL, p_instance));
+    return instance;
 }
 
 #ifdef TG_DEBUG
-void tgg_vulkan_debug_utils_manager_create(VkDebugUtilsMessengerEXT* p_debug_utils_messenger)
+VkDebugUtilsMessengerEXT tgg_vulkan_debug_utils_manager_create()
 {
-    TG_ASSERT(p_debug_utils_messenger);
+    VkDebugUtilsMessengerEXT debug_utils_messenger = VK_NULL_HANDLE;
 
     VkDebugUtilsMessengerCreateInfoEXT debug_utils_messenger_create_info = { 0 };
-    debug_utils_messenger_create_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-    debug_utils_messenger_create_info.pNext = TG_NULL;
-    debug_utils_messenger_create_info.flags = 0;
-    debug_utils_messenger_create_info.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-    debug_utils_messenger_create_info.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-    debug_utils_messenger_create_info.pfnUserCallback = tgvk_debug_callback;
-    debug_utils_messenger_create_info.pUserData = TG_NULL;
-
+    {
+        debug_utils_messenger_create_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+        debug_utils_messenger_create_info.pNext = TG_NULL;
+        debug_utils_messenger_create_info.flags = 0;
+        debug_utils_messenger_create_info.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+        debug_utils_messenger_create_info.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+        debug_utils_messenger_create_info.pfnUserCallback = tgvk_debug_callback;
+        debug_utils_messenger_create_info.pUserData = TG_NULL;
+    }
     PFN_vkCreateDebugUtilsMessengerEXT vkCreateDebugUtilsMessengerEXT = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
     TG_ASSERT(vkCreateDebugUtilsMessengerEXT);
-    VK_CALL(vkCreateDebugUtilsMessengerEXT(instance, &debug_utils_messenger_create_info, TG_NULL, p_debug_utils_messenger));
+    VK_CALL(vkCreateDebugUtilsMessengerEXT(instance, &debug_utils_messenger_create_info, TG_NULL, &debug_utils_messenger));
+
+    return debug_utils_messenger;
 }
 #endif
 
 #ifdef TG_WIN32
-void tgg_vulkan_surface_create(tg_vulkan_surface* p_surface)
+tg_vulkan_surface tgg_vulkan_surface_create()
 {
-    TG_ASSERT(p_surface);
+    tg_vulkan_surface vulkan_surface = { 0 };
 
     VkWin32SurfaceCreateInfoKHR win32_surface_create_info = { 0 };
-    win32_surface_create_info.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-    win32_surface_create_info.pNext = TG_NULL;
-    win32_surface_create_info.flags = 0;
-    win32_surface_create_info.hinstance = GetModuleHandle(TG_NULL);
-    tg_platform_get_window_handle(&win32_surface_create_info.hwnd);
+    {
+        win32_surface_create_info.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+        win32_surface_create_info.pNext = TG_NULL;
+        win32_surface_create_info.flags = 0;
+        win32_surface_create_info.hinstance = GetModuleHandle(TG_NULL);
+        win32_surface_create_info.hwnd = tg_platform_get_window_handle();
+    }
+    VK_CALL(vkCreateWin32SurfaceKHR(instance, &win32_surface_create_info, TG_NULL, &vulkan_surface.surface));
 
-    VK_CALL(vkCreateWin32SurfaceKHR(instance, &win32_surface_create_info, TG_NULL, &p_surface->surface));
+    return vulkan_surface;
 }
 #endif
 
-void tgg_vulkan_physical_device_create(VkPhysicalDevice* p_physical_device)
+VkPhysicalDevice tgg_vulkan_physical_device_create()
 {
-    TG_ASSERT(p_physical_device);
+    VkPhysicalDevice physical_device = VK_NULL_HANDLE;
 
     u32 physical_device_count;
     VK_CALL(vkEnumeratePhysicalDevices(instance, &physical_device_count, TG_NULL));
     TG_ASSERT(physical_device_count);
-    VkPhysicalDevice* physical_devices = TG_MEMORY_ALLOCATOR_ALLOCATE(physical_device_count * sizeof(*physical_devices));
+    VkPhysicalDevice* physical_devices = TG_MEMORY_ALLOC(physical_device_count * sizeof(*physical_devices));
     VK_CALL(vkEnumeratePhysicalDevices(instance, &physical_device_count, physical_devices));
 
     for (u32 i = 0; i < physical_device_count; i++)
@@ -1593,18 +1575,20 @@ void tgg_vulkan_physical_device_create(VkPhysicalDevice* p_physical_device)
         const b32 is_suitable = tgg_vulkan_physical_device_is_suitable(physical_devices[i]);
         if (is_suitable)
         {
-            *p_physical_device = physical_devices[i];
+            physical_device = physical_devices[i];
             break;
         }
     }
-    TG_ASSERT(*p_physical_device != VK_NULL_HANDLE);
 
-    TG_MEMORY_ALLOCATOR_FREE(physical_devices);
+    TG_MEMORY_FREE(physical_devices);
+    TG_ASSERT(physical_device != VK_NULL_HANDLE);
+
+    return physical_device;
 }
 
-void tgg_vulkan_device_create(VkDevice* p_device)
+VkDevice tgg_vulkan_device_create()
 {
-    TG_ASSERT(p_device);
+    VkDevice device = VK_NULL_HANDLE;
 
     const f32 queue_priority = 1.0f;
 
@@ -1633,74 +1617,78 @@ void tgg_vulkan_device_create(VkDevice* p_device)
     }
 
     VkPhysicalDeviceFeatures physical_device_features = { 0 };
-    physical_device_features.robustBufferAccess = VK_FALSE;
-    physical_device_features.fullDrawIndexUint32 = VK_FALSE;
-    physical_device_features.imageCubeArray = VK_FALSE;
-    physical_device_features.independentBlend = VK_FALSE;
-    physical_device_features.geometryShader = VK_FALSE;
-    physical_device_features.tessellationShader = VK_FALSE;
-    physical_device_features.sampleRateShading = VK_TRUE;
-    physical_device_features.dualSrcBlend = VK_FALSE;
-    physical_device_features.logicOp = VK_FALSE;
-    physical_device_features.multiDrawIndirect = VK_FALSE;
-    physical_device_features.drawIndirectFirstInstance = VK_FALSE;
-    physical_device_features.depthClamp = VK_FALSE;
-    physical_device_features.depthBiasClamp = VK_FALSE;
-    physical_device_features.fillModeNonSolid = VK_TRUE;
-    physical_device_features.depthBounds = VK_FALSE;
-    physical_device_features.wideLines = VK_TRUE;
-    physical_device_features.largePoints = VK_FALSE;
-    physical_device_features.alphaToOne = VK_FALSE;
-    physical_device_features.multiViewport = VK_FALSE;
-    physical_device_features.samplerAnisotropy = VK_TRUE;
-    physical_device_features.textureCompressionETC2 = VK_FALSE;
-    physical_device_features.textureCompressionASTC_LDR = VK_FALSE;
-    physical_device_features.textureCompressionBC = VK_FALSE;
-    physical_device_features.occlusionQueryPrecise = VK_FALSE;
-    physical_device_features.pipelineStatisticsQuery = VK_FALSE;
-    physical_device_features.vertexPipelineStoresAndAtomics = VK_FALSE;
-    physical_device_features.fragmentStoresAndAtomics = VK_FALSE;
-    physical_device_features.shaderTessellationAndGeometryPointSize = VK_FALSE;
-    physical_device_features.shaderImageGatherExtended = VK_FALSE;
-    physical_device_features.shaderStorageImageExtendedFormats = VK_FALSE;
-    physical_device_features.shaderStorageImageMultisample = VK_FALSE;
-    physical_device_features.shaderStorageImageReadWithoutFormat = VK_FALSE;
-    physical_device_features.shaderStorageImageWriteWithoutFormat = VK_FALSE;
-    physical_device_features.shaderUniformBufferArrayDynamicIndexing = VK_FALSE;
-    physical_device_features.shaderSampledImageArrayDynamicIndexing = VK_FALSE;
-    physical_device_features.shaderStorageBufferArrayDynamicIndexing = VK_FALSE;
-    physical_device_features.shaderStorageImageArrayDynamicIndexing = VK_FALSE;
-    physical_device_features.shaderClipDistance = VK_FALSE;
-    physical_device_features.shaderCullDistance = VK_FALSE;
-    physical_device_features.shaderFloat64 = VK_FALSE;
-    physical_device_features.shaderInt64 = VK_FALSE;
-    physical_device_features.shaderInt16 = VK_FALSE;
-    physical_device_features.shaderResourceResidency = VK_FALSE;
-    physical_device_features.shaderResourceMinLod = VK_FALSE;
-    physical_device_features.sparseBinding = VK_FALSE;
-    physical_device_features.sparseResidencyBuffer = VK_FALSE;
-    physical_device_features.sparseResidencyImage2D = VK_FALSE;
-    physical_device_features.sparseResidencyImage3D = VK_FALSE;
-    physical_device_features.sparseResidency2Samples = VK_FALSE;
-    physical_device_features.sparseResidency4Samples = VK_FALSE;
-    physical_device_features.sparseResidency8Samples = VK_FALSE;
-    physical_device_features.sparseResidency16Samples = VK_FALSE;
-    physical_device_features.sparseResidencyAliased = VK_FALSE;
-    physical_device_features.variableMultisampleRate = VK_FALSE;
-
+    {
+        physical_device_features.robustBufferAccess = VK_FALSE;
+        physical_device_features.fullDrawIndexUint32 = VK_FALSE;
+        physical_device_features.imageCubeArray = VK_FALSE;
+        physical_device_features.independentBlend = VK_FALSE;
+        physical_device_features.geometryShader = VK_FALSE;
+        physical_device_features.tessellationShader = VK_FALSE;
+        physical_device_features.sampleRateShading = VK_TRUE;
+        physical_device_features.dualSrcBlend = VK_FALSE;
+        physical_device_features.logicOp = VK_FALSE;
+        physical_device_features.multiDrawIndirect = VK_FALSE;
+        physical_device_features.drawIndirectFirstInstance = VK_FALSE;
+        physical_device_features.depthClamp = VK_FALSE;
+        physical_device_features.depthBiasClamp = VK_FALSE;
+        physical_device_features.fillModeNonSolid = VK_TRUE;
+        physical_device_features.depthBounds = VK_FALSE;
+        physical_device_features.wideLines = VK_TRUE;
+        physical_device_features.largePoints = VK_FALSE;
+        physical_device_features.alphaToOne = VK_FALSE;
+        physical_device_features.multiViewport = VK_FALSE;
+        physical_device_features.samplerAnisotropy = VK_TRUE;
+        physical_device_features.textureCompressionETC2 = VK_FALSE;
+        physical_device_features.textureCompressionASTC_LDR = VK_FALSE;
+        physical_device_features.textureCompressionBC = VK_FALSE;
+        physical_device_features.occlusionQueryPrecise = VK_FALSE;
+        physical_device_features.pipelineStatisticsQuery = VK_FALSE;
+        physical_device_features.vertexPipelineStoresAndAtomics = VK_FALSE;
+        physical_device_features.fragmentStoresAndAtomics = VK_FALSE;
+        physical_device_features.shaderTessellationAndGeometryPointSize = VK_FALSE;
+        physical_device_features.shaderImageGatherExtended = VK_FALSE;
+        physical_device_features.shaderStorageImageExtendedFormats = VK_FALSE;
+        physical_device_features.shaderStorageImageMultisample = VK_FALSE;
+        physical_device_features.shaderStorageImageReadWithoutFormat = VK_FALSE;
+        physical_device_features.shaderStorageImageWriteWithoutFormat = VK_FALSE;
+        physical_device_features.shaderUniformBufferArrayDynamicIndexing = VK_FALSE;
+        physical_device_features.shaderSampledImageArrayDynamicIndexing = VK_FALSE;
+        physical_device_features.shaderStorageBufferArrayDynamicIndexing = VK_FALSE;
+        physical_device_features.shaderStorageImageArrayDynamicIndexing = VK_FALSE;
+        physical_device_features.shaderClipDistance = VK_FALSE;
+        physical_device_features.shaderCullDistance = VK_FALSE;
+        physical_device_features.shaderFloat64 = VK_FALSE;
+        physical_device_features.shaderInt64 = VK_FALSE;
+        physical_device_features.shaderInt16 = VK_FALSE;
+        physical_device_features.shaderResourceResidency = VK_FALSE;
+        physical_device_features.shaderResourceMinLod = VK_FALSE;
+        physical_device_features.sparseBinding = VK_FALSE;
+        physical_device_features.sparseResidencyBuffer = VK_FALSE;
+        physical_device_features.sparseResidencyImage2D = VK_FALSE;
+        physical_device_features.sparseResidencyImage3D = VK_FALSE;
+        physical_device_features.sparseResidency2Samples = VK_FALSE;
+        physical_device_features.sparseResidency4Samples = VK_FALSE;
+        physical_device_features.sparseResidency8Samples = VK_FALSE;
+        physical_device_features.sparseResidency16Samples = VK_FALSE;
+        physical_device_features.sparseResidencyAliased = VK_FALSE;
+        physical_device_features.variableMultisampleRate = VK_FALSE;
+    }
     VkDeviceCreateInfo device_create_info = { 0 };
-    device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    device_create_info.pNext = TG_NULL;
-    device_create_info.flags = 0;
-    device_create_info.queueCreateInfoCount = 2;
-    device_create_info.pQueueCreateInfos = device_queue_create_infos;
-    device_create_info.enabledLayerCount = tgg_VULKAN_VALIDATION_LAYER_COUNT;
-    device_create_info.ppEnabledLayerNames = tgg_VULKAN_VALIDATION_LAYER_NAMES;
-    device_create_info.enabledExtensionCount = tgg_VULKAN_DEVICE_EXTENSION_COUNT;
-    device_create_info.ppEnabledExtensionNames = tgg_VULKAN_DEVICE_EXTENSION_NAMES;
-    device_create_info.pEnabledFeatures = &physical_device_features;
+    {
+        device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+        device_create_info.pNext = TG_NULL;
+        device_create_info.flags = 0;
+        device_create_info.queueCreateInfoCount = 2;
+        device_create_info.pQueueCreateInfos = device_queue_create_infos;
+        device_create_info.enabledLayerCount = tgg_VULKAN_VALIDATION_LAYER_COUNT;
+        device_create_info.ppEnabledLayerNames = tgg_VULKAN_VALIDATION_LAYER_NAMES;
+        device_create_info.enabledExtensionCount = tgg_VULKAN_DEVICE_EXTENSION_COUNT;
+        device_create_info.ppEnabledExtensionNames = tgg_VULKAN_DEVICE_EXTENSION_NAMES;
+        device_create_info.pEnabledFeatures = &physical_device_features;
+    }
+    VK_CALL(vkCreateDevice(physical_device, &device_create_info, TG_NULL, &device));
 
-    VK_CALL(vkCreateDevice(physical_device, &device_create_info, TG_NULL, p_device));
+    return device;
 }
 
 void tgg_vulkan_queues_create(tg_vulkan_queue* p_graphics_queue, tg_vulkan_queue* p_present_queue, tg_vulkan_queue* p_compute_queue)
@@ -1719,7 +1707,7 @@ void tgg_vulkan_swapchain_create()
 
     u32 surface_format_count;
     VK_CALL(vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface.surface, &surface_format_count, TG_NULL));
-    VkSurfaceFormatKHR* surface_formats = TG_MEMORY_ALLOCATOR_ALLOCATE(surface_format_count * sizeof(*surface_formats));
+    VkSurfaceFormatKHR* surface_formats = TG_MEMORY_ALLOC(surface_format_count * sizeof(*surface_formats));
     VK_CALL(vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface.surface, &surface_format_count, surface_formats));
     surface.format = surface_formats[0];
     for (u32 i = 0; i < surface_format_count; i++)
@@ -1730,7 +1718,7 @@ void tgg_vulkan_swapchain_create()
             break;
         }
     }
-    TG_MEMORY_ALLOCATOR_FREE(surface_formats);
+    TG_MEMORY_FREE(surface_formats);
 
     VkPresentModeKHR p_present_modes[9] = { 0 };
     u32 present_mode_count = 0;
@@ -1832,13 +1820,13 @@ void tg_graphics_init()
     TG_ASSERT(system(p_system_buffer) != -1);
 #endif
 
-    tgg_vulkan_instance_create(&instance);
+    instance = tgg_vulkan_instance_create();
 #ifdef TG_DEBUG
-    tgg_vulkan_debug_utils_manager_create(&debug_utils_messenger);
+    debug_utils_messenger = tgg_vulkan_debug_utils_manager_create();
 #endif
-    tgg_vulkan_surface_create(&surface);
-    tgg_vulkan_physical_device_create(&physical_device);
-    tgg_vulkan_device_create(&device);
+    surface = tgg_vulkan_surface_create();
+    physical_device = tgg_vulkan_physical_device_create();
+    device = tgg_vulkan_device_create();
     tgg_vulkan_queues_create(&graphics_queue, &present_queue, &compute_queue);
     graphics_command_pool = tgg_vulkan_command_pool_create(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, graphics_queue.index);
     compute_command_pool = tgg_vulkan_command_pool_create(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, compute_queue.index);

@@ -7,7 +7,6 @@
     <ClCompile Include="src\tg_input.c" />
     <ClCompile Include="src\util\tg_string.c" />
     <ClCompile Include="src\platform\tg_platform_win32.c" />
-    <ClCompile Include="src\memory\tg_memory_allocator.c" />
     <ClCompile Include="src\util\tg_hashmap.c" />
     <ClCompile Include="src\util\tg_list.c" />
     <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan.c" />
@@ -23,6 +22,10 @@
     <ClCompile Include="src\tg_marching_cubes.c" />
     <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan_compute_buffer.c" />
     <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan_uniform_buffer.c" />
+    <ClCompile Include="src\memory\tg_memory.c" />
+    <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan_texture_atlas.c" />
+    <ClCompile Include="src\util\tg_rectangle_packer.c" />
+    <ClCompile Include="src\util\tg_qsort.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\tg_common.h" />
@@ -34,7 +37,6 @@
     <ClInclude Include="src\tg_input.h" />
     <ClInclude Include="src\util\tg_timer.h" />
     <ClInclude Include="src\util\tg_string.h" />
-    <ClInclude Include="src\memory\tg_memory_allocator.h" />
     <ClInclude Include="src\util\tg_hashmap.h" />
     <ClInclude Include="src\util\tg_list.h" />
     <ClInclude Include="src\tg_entity.h" />
@@ -43,6 +45,9 @@
     <ClInclude Include="src\graphics\tg_graphics_image_loader.h" />
     <ClInclude Include="src\tg_entity_internal.h" />
     <ClInclude Include="src\tg_marching_cubes.h" />
+    <ClInclude Include="src\memory\tg_memory.h" />
+    <ClInclude Include="src\util\tg_rectangle_packer.h" />
+    <ClInclude Include="src\util\tg_qsort.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="tg.ruleset" />

@@ -2,7 +2,7 @@
 
 #ifdef TG_VULKAN
 
-#include "memory/tg_memory_allocator.h"
+#include "memory/tg_memory.h"
 #include "platform/tg_platform.h"
 
 
@@ -11,7 +11,7 @@ tg_camera_h tgg_camera_create(const v3* p_position, f32 pitch, f32 yaw, f32 roll
 {
 	TG_ASSERT(near < 0 && far < 0 && near > far);
 
-	tg_camera_h camera_h = TG_MEMORY_ALLOCATOR_ALLOCATE(sizeof(*camera_h));
+	tg_camera_h camera_h = TG_MEMORY_ALLOC(sizeof(*camera_h));
 
 	tgg_camera_set_projection(fov_y, near, far, camera_h);
 	tgg_camera_set_view(p_position, pitch, yaw, roll, camera_h);
@@ -65,7 +65,7 @@ void tgg_camera_destroy(tg_camera_h camera_h)
 {
 	TG_ASSERT(camera_h);
 
-	TG_MEMORY_ALLOCATOR_FREE(camera_h);
+	TG_MEMORY_FREE(camera_h);
 }
 
 #endif

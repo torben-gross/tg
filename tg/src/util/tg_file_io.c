@@ -1,6 +1,6 @@
 #include "util/tg_file_io.h"
 
-#include "memory/tg_memory_allocator.h"
+#include "memory/tg_memory.h"
 #include "tg_application.h"
 #include "tg_common.h"
 #include "util/tg_string.h"
@@ -30,7 +30,7 @@ void tg_file_io_read(const char* p_filename, u64* p_size, char** pp_data)
     *p_size = (u64)ftell(file);
     rewind(file);
 
-    *pp_data = TG_MEMORY_ALLOCATOR_ALLOCATE(*p_size);
+    *pp_data = TG_MEMORY_ALLOC(*p_size);
     fread(*pp_data, 1, *p_size, file);
     fclose(file);
 }
@@ -39,7 +39,7 @@ void tg_file_io_free(char* p_data)
 {
     TG_ASSERT(p_data);
 
-    TG_MEMORY_ALLOCATOR_FREE(p_data);
+    TG_MEMORY_FREE(p_data);
 }
 
 b32 tg_file_io_exists(const char* p_filename)

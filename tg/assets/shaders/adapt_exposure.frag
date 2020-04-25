@@ -15,5 +15,5 @@ layout(location = 0) out vec4 out_color;
 void main()
 {
 	vec4 hdr = texture(present_texture, v_uv);
-    out_color = hdr / u_exposure;
+    out_color = hdr / vec4(vec3(u_exposure), 1.0);
 }

@@ -2,7 +2,7 @@
 
 #ifdef TG_VULKAN
 
-#include "memory/tg_memory_allocator.h"
+#include "memory/tg_memory.h"
 
 
 
@@ -172,7 +172,7 @@ tg_mesh_h tgg_mesh_create(u32 vertex_count, const v3* p_positions, const v3* p_n
 {
 	TG_ASSERT(vertex_count && p_positions && ((index_count && index_count % 3 == 0) || (vertex_count && vertex_count % 3 == 0)));
 
-	tg_mesh_h mesh_h = TG_MEMORY_ALLOCATOR_ALLOCATE(sizeof(*mesh_h));
+	tg_mesh_h mesh_h = TG_MEMORY_ALLOC(sizeof(*mesh_h));
 
     tg_vulkan_buffer staging_buffer = { 0 };
 
@@ -271,7 +271,7 @@ void tgg_mesh_destroy(tg_mesh_h mesh_h)
         tgg_vulkan_buffer_destroy(&mesh_h->ibo);
     }
     tgg_vulkan_buffer_destroy(&mesh_h->vbo);
-	TG_MEMORY_ALLOCATOR_FREE(mesh_h);
+	TG_MEMORY_FREE(mesh_h);
 }
 
 #endif

@@ -181,6 +181,11 @@ typedef struct tg_model
 
 } tg_model;
 
+typedef struct tg_texture_atlas
+{
+    tg_image    texture_atlas;
+} tg_texture_atlas;
+
 typedef struct tg_uniform_buffer
 {
     tg_vulkan_buffer    buffer;
@@ -213,7 +218,6 @@ VkImageView          swapchain_image_views[TG_SURFACE_IMAGE_COUNT];
 
 
 void                        tgg_vulkan_buffer_copy(VkDeviceSize size, VkBuffer source, VkBuffer destination);
-void                        tgg_vulkan_buffer_copy_to_image(VkBuffer source, tg_image* p_destination);
 tg_vulkan_buffer            tgg_vulkan_buffer_create(VkDeviceSize size, VkBufferUsageFlags buffer_usage_flags, VkMemoryPropertyFlags memory_property_flags);
 void                        tgg_vulkan_buffer_destroy(tg_vulkan_buffer* p_vulkan_buffer);
 
@@ -257,7 +261,6 @@ void                        tgg_vulkan_framebuffer_destroy(VkFramebuffer framebu
 
 VkPipeline                  tgg_vulkan_graphics_pipeline_create(const tg_vulkan_graphics_pipeline_create_info* p_vulkan_graphics_pipeline_create_info);
 void                        tgg_vulkan_graphics_pipeline_destroy(VkPipeline graphics_pipeline);
-void                        tgg_vulkan_graphics_pipeline_initialize_pipeline_shader_stage_create_infos(VkShaderModule vertex_shader, VkShaderModule fragment_shader, VkPipelineShaderStageCreateInfo* p_pipeline_shader_stage_create_infos);
 
 tg_image                    tgg_vulkan_image_create(const tg_vulkan_image_create_info* p_vulkan_image_create_info);
 void                        tgg_vulkan_image_destroy(tg_image* p_image);

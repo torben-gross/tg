@@ -3,7 +3,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 
 #include "graphics/tg_graphics.h"
-#include "memory/tg_memory_allocator.h"
+#include "memory/tg_memory.h"
 #include "tg_application.h"
 #include "tg_input.h"
 #include "util/tg_list.h"
@@ -20,6 +20,7 @@
 HWND    window_h = TG_NULL;
 
 
+
 /*------------------------------------------------------------+
 | Timer                                                       |
 +------------------------------------------------------------*/
@@ -33,9 +34,11 @@ typedef struct tg_timer
     LARGE_INTEGER    end_performance_counter;
 } tg_timer;
 
+
+
 tg_timer_h tg_timer_create()
 {
-    tg_timer_h timer_h = TG_MEMORY_ALLOCATOR_ALLOCATE(sizeof(*timer_h));
+    tg_timer_h timer_h = TG_MEMORY_ALLOC(sizeof(*timer_h));
 
     timer_h->running = TG_FALSE;
     QueryPerformanceFrequency(&timer_h->performance_frequency);
@@ -44,6 +47,7 @@ tg_timer_h tg_timer_create()
 
     return timer_h;
 }
+
 void tg_timer_start(tg_timer_h timer_h)
 {
     TG_ASSERT(timer_h);
@@ -54,6 +58,7 @@ void tg_timer_start(tg_timer_h timer_h)
         QueryPerformanceCounter(&timer_h->start_performance_counter);
     }
 }
+
 void tg_timer_stop(tg_timer_h timer_h)
 {
     TG_ASSERT(timer_h);
@@ -65,6 +70,7 @@ void tg_timer_stop(tg_timer_h timer_h)
         timer_h->counter_elapsed += timer_h->end_performance_counter.QuadPart - timer_h->start_performance_counter.QuadPart;
     }
 }
+
 void tg_timer_reset(tg_timer_h timer_h)
 {
     TG_ASSERT(timer_h);
@@ -74,17 +80,19 @@ void tg_timer_reset(tg_timer_h timer_h)
     QueryPerformanceCounter(&timer_h->start_performance_counter);
     QueryPerformanceCounter(&timer_h->end_performance_counter);
 }
+
 f32  tg_timer_elapsed_milliseconds(tg_timer_h timer_h)
 {
     TG_ASSERT(timer_h);
 
     return (f32)((1000000000LL * timer_h->counter_elapsed) / timer_h->performance_frequency.QuadPart) / 1000000.0f;
 }
+
 void tg_timer_destroy(tg_timer_h timer_h)
 {
     TG_ASSERT(timer_h);
 
-    TG_MEMORY_ALLOCATOR_FREE(timer_h);
+    TG_MEMORY_FREE(timer_h);
 }
 
 
@@ -100,6 +108,7 @@ void tg_platform_debug_print(const char* p_message)
     OutputDebugStringA("\n");
 }
 #endif
+
 void tg_platform_get_mouse_position(u32* p_x, u32* p_y)
 {
     POINT point = { 0 };
@@ -111,6 +120,7 @@ void tg_platform_get_mouse_position(u32* p_x, u32* p_y)
     *p_x = (u32)tgm_i32_clamp(point.x, 0, width - 1);
     *p_y = (u32)tgm_i32_clamp(point.y, 0, height - 1);
 }
+
 void tg_platform_get_screen_size(u32* p_width, u32* p_height)
 {
     RECT rect;
@@ -118,6 +128,7 @@ void tg_platform_get_screen_size(u32* p_width, u32* p_height)
     *p_width = rect.right - rect.left;
     *p_height = rect.bottom - rect.top;
 }
+
 f32  tg_platform_get_window_aspect_ratio()
 {
     u32 width;
@@ -125,10 +136,12 @@ f32  tg_platform_get_window_aspect_ratio()
     tg_platform_get_window_size(&width, &height);
     return (f32)width / (f32)height;
 }
-void tg_platform_get_window_handle(tg_window_h* p_window_h)
+
+tg_window_h tg_platform_get_window_handle()
 {
-    *p_window_h = window_h;
+    return window_h;
 }
+
 void tg_platform_get_window_size(u32* p_width, u32* p_height)
 {
     RECT rect;
@@ -136,6 +149,7 @@ void tg_platform_get_window_size(u32* p_width, u32* p_height)
     *p_width = rect.right - rect.left;
     *p_height = rect.bottom - rect.top;
 }
+
 void tg_platform_handle_events()
 {
     MSG msg = { 0 };
@@ -200,6 +214,7 @@ LRESULT CALLBACK tg_platform_win32_window_proc(HWND window_h, UINT message, WPAR
     }
     return 0;
 }
+
 int CALLBACK WinMain(_In_ HINSTANCE instance_h, _In_opt_ HINSTANCE prev_instance_h, _In_ LPSTR cmd_line, _In_ int show_cmd)
 {
     tg_memory_init();
@@ -238,10 +253,10 @@ int CALLBACK WinMain(_In_ HINSTANCE instance_h, _In_opt_ HINSTANCE prev_instance
     tg_application_start();
 
 #ifdef TG_DEBUG
-    const u32 alloc_count = tg_allocator_unfreed_allocation_count();
+    const u32 alloc_count = tg_memory_unfreed_allocation_count();
     if (alloc_count != 0)
     {
-        tg_list_h unfreed_allocations_list = tg_allocator_create_unfreed_allocations_list();
+        tg_list_h unfreed_allocations_list = tg_memory_create_unfreed_allocations_list();
         const u32 unfreed_allocations_count = tg_list_count(unfreed_allocations_list);
         char buffer[512] = { 0 };
         TG_DEBUG_PRINT("");

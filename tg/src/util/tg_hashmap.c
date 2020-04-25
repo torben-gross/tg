@@ -1,6 +1,6 @@
 #include "util/tg_hashmap.h"
 
-#include "memory/tg_memory_allocator.h"
+#include "memory/tg_memory.h"
 #include "util/tg_list.h"
 
 
@@ -193,7 +193,7 @@ tg_hashmap_h tg_hashmap_create_impl(u32 key_size, u32 value_size, const tg_hash_
 {
 	TG_ASSERT(key_size && value_size && key_hash_fn && key_equals_fn && bucket_count && bucket_capacity);
 
-	tg_hashmap_h hashmap_h = TG_MEMORY_ALLOCATOR_ALLOCATE(sizeof(*hashmap_h) + bucket_count * sizeof(*hashmap_h->buckets));
+	tg_hashmap_h hashmap_h = TG_MEMORY_ALLOC(sizeof(*hashmap_h) + bucket_count * sizeof(*hashmap_h->buckets));
 	
 	hashmap_h->bucket_count = bucket_count;
 	hashmap_h->element_count = 0;
@@ -256,7 +256,7 @@ void tg_hashmap_destroy(tg_hashmap_h hashmap_h)
 		tg_list_destroy(hashmap_h->buckets[i].keys);
 		tg_list_destroy(hashmap_h->buckets[i].values);
 	}
-	TG_MEMORY_ALLOCATOR_FREE(hashmap_h);
+	TG_MEMORY_FREE(hashmap_h);
 }
 
 

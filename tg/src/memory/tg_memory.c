@@ -1,4 +1,4 @@
-#include "memory/tg_memory_allocator.h"
+#include "memory/tg_memory.h"
 
 #ifndef TG_DEBUG
 
@@ -36,7 +36,7 @@ void tg_memory_shutdown()
 
 
 
-void* tg_allocator_allocate_impl(u64 size, const char* p_filename, u32 line)
+void* tg_memory_alloc_impl(u64 size, const char* p_filename, u32 line)
 {
 	void* p_memory = malloc((size_t)size);
 	TG_ASSERT(p_memory);
@@ -55,7 +55,7 @@ void* tg_allocator_allocate_impl(u64 size, const char* p_filename, u32 line)
 	return p_memory;
 }
 
-void* tg_allocator_reallocate_impl(void* p_memory, u64 size, const char* p_filename, u32 line)
+void* tg_memory_realloc_impl(void* p_memory, u64 size, const char* p_filename, u32 line)
 {
 	void* p_reallocated_memory = realloc(p_memory, size);
 	TG_ASSERT(p_reallocated_memory);
@@ -74,7 +74,7 @@ void* tg_allocator_reallocate_impl(void* p_memory, u64 size, const char* p_filen
 	return p_reallocated_memory;
 }
 
-void tg_allocator_free_impl(void* p_memory, const char* p_filename, u32 line)
+void tg_memory_free_impl(void* p_memory, const char* p_filename, u32 line)
 {
 	if (recording_allocations)
 	{
@@ -86,12 +86,12 @@ void tg_allocator_free_impl(void* p_memory, const char* p_filename, u32 line)
 	free(p_memory);
 }
 
-u32 tg_allocator_unfreed_allocation_count()
+u32 tg_memory_unfreed_allocation_count()
 {
 	return tg_hashmap_element_count(memory_allocations);
 }
 
-tg_list_h tg_allocator_create_unfreed_allocations_list()
+tg_list_h tg_memory_create_unfreed_allocations_list()
 {
 	recording_allocations = TG_FALSE;
 	const tg_list_h list_h = tg_hashmap_value_list_create(memory_allocations);
