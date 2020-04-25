@@ -5,7 +5,7 @@
 
 
 
-#define TG_HASHMAP_DEFAULT_BUCKET_COUNT              32
+#define TG_HASHMAP_DEFAULT_BUCKET_COUNT              31
 #define TG_HASHMAP_DEFAULT_BUCKET_CAPACITY           4
 
 

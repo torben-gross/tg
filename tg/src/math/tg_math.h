@@ -225,6 +225,7 @@ f32    tgm_f32_arcsin(f32 v);
 f32    tgm_f32_arcsinh(f32 v);
 f32    tgm_f32_arctan(f32 v);
 f32    tgm_f32_arctanh(f32 v);
+f32    tgm_f32_ceil(f32 v);
 f32    tgm_f32_cos(f32 v);
 f32    tgm_f32_cosh(f32 v);
 f32    tgm_f32_floor(f32 v);

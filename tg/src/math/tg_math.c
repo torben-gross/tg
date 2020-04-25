@@ -265,6 +265,14 @@ f32 tgm_f32_arctanh(f32 v)
 	return result;
 }
 
+f32 tgm_f32_ceil(f32 v)
+{
+	const __m128 simd_v = _mm_set_ss(v);
+	const __m128 simd_result = _mm_ceil_ps(simd_v);
+	const f32 result = simd_result.m128_f32[0];
+	return result;
+}
+
 f32 tgm_f32_cos(f32 v)
 {
 	const __m128 simd_v = _mm_set_ss(v);
@@ -429,6 +437,12 @@ f32 tgm_f32_arctan(f32 v)
 f32 tgm_f32_arctanh(f32 v)
 {
 	const f32 result = atanhf(v);
+	return result;
+}
+
+f32 tgm_f32_ceil(f32 v)
+{
+	const f32 result = ceilf(v);
 	return result;
 }
 

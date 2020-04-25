@@ -101,16 +101,15 @@ void tg_application_start()
 
 
     tg_rect p_rects[100] = { 0 };
-    u32 p_nums[100] = { 0 };
     tg_random rect_random = { 123 };
     for (u32 i = 0; i < 100; i++)
     {
-        p_rects[i].width = tgm_random_next_ui32(&rect_random);
-        p_rects[i].height = tgm_random_next_ui32(&rect_random);
-        p_nums[i] = tgm_random_next_ui32(&rect_random);
+        p_rects[i].id = i;
+        p_rects[i].width =  (u16)(tgm_f32_max(0.1f, tgm_random_next_f32(&rect_random)) * 256.0f);
+        p_rects[i].height = (u16)(tgm_f32_max(0.1f, tgm_random_next_f32(&rect_random)) * 256.0f);
     }
-    tg_rectangle_packer_pack(100, p_rects);
-    TG_QSORT(u32, 100, p_nums);
+    u32 total_width, total_height;
+    tg_rectangle_packer_pack(100, p_rects, &total_width, &total_height);
 
 
 

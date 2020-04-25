@@ -12,6 +12,6 @@ typedef struct tg_rect
 	u16 height;
 } tg_rect;
 
-void tg_rectangle_packer_pack(u32 rect_count, tg_rect* p_rects);
+void tg_rectangle_packer_pack(u32 rect_count, tg_rect* p_rects, u32* p_total_width, u32* p_total_height);
 
 #endif
