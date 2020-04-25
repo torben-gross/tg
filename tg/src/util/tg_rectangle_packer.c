@@ -6,7 +6,7 @@
 
 b32 tg_rectangle_packer_internal_rect_compare(const tg_rect* p_r0, const tg_rect* p_r1)
 {
-    b32 result = p_r0->height < p_r1->height;
+    const b32 result = p_r0->height > p_r1->height;
     return result;
 }
 
@@ -33,7 +33,7 @@ void tg_rectangle_packer_pack(u32 rect_count, tg_rect* p_rects, u32* p_total_wid
     tg_rect start_rect = { 0 };
     {
         start_rect.left = 0;
-        start_rect.top = 0;
+        start_rect.bottom = 0;
         start_rect.width = start_width;
         start_rect.height = TG_U16_MAX;
     }
@@ -54,10 +54,10 @@ void tg_rectangle_packer_pack(u32 rect_count, tg_rect* p_rects, u32* p_total_wid
             }
             
             p_rect->left = p_space->left;
-            p_rect->top = p_space->top;
+            p_rect->bottom = p_space->bottom;
 
             *p_total_width = tgm_u32_max(*p_total_width, p_rect->left + p_rect->width);
-            *p_total_height = tgm_u32_max(*p_total_height, p_rect->top + p_rect->height);
+            *p_total_height = tgm_u32_max(*p_total_height, p_rect->bottom + p_rect->height);
 
             if (p_rect->width == p_space->width && p_rect->height == p_space->height)
             {
@@ -78,14 +78,14 @@ void tg_rectangle_packer_pack(u32 rect_count, tg_rect* p_rects, u32* p_total_wid
                 /*
                  ______________________
                 |                      |
-                | rect                 |
+                | updated space        |
                 |______________________|
                 |                      |
-                | updated space        |
+                | rect                 |
                 |______________________|
 
                 */
-                p_space->top += p_rect->height;
+                p_space->bottom += p_rect->height;
                 p_space->height -= p_rect->height;
             }
             else if (p_rect->height == p_space->height)
@@ -107,23 +107,23 @@ void tg_rectangle_packer_pack(u32 rect_count, tg_rect* p_rects, u32* p_total_wid
             {
                 /*
                  ______________________
-                |      |               |
-                | rect | new space     |
-                |______|_______________|
                 |                      |
                 | updated space        |
                 |______________________|
+                |      |               |
+                | rect | new space     |
+                |______|_______________|
 
                 */
                 tg_rect new_space = { 0 };
                 {
                     new_space.left = p_space->left + p_rect->width;
-                    new_space.top = p_space->top;
+                    new_space.bottom = p_space->bottom;
                     new_space.width = p_space->width - p_rect->width;
                     new_space.height = p_rect->height;
                 }
                 tg_list_insert(spaces, &new_space);
-                p_space->top += p_rect->height;
+                p_space->bottom += p_rect->height;
                 p_space->height -= p_rect->height;
             }
             break;

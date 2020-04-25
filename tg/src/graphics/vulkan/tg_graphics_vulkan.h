@@ -16,6 +16,7 @@
 #endif
 
 #define TG_SURFACE_IMAGE_COUNT 3
+#define TG_VULKAN_IMAGE_FORMAT VK_FORMAT_R8G8B8A8_SRGB
 
 
 
@@ -66,6 +67,14 @@ typedef struct tg_vulkan_image_create_info
     VkSamplerAddressMode     address_mode_v;
     VkSamplerAddressMode     address_mode_w;
 } tg_vulkan_image_create_info;
+
+typedef struct tg_vulkan_image_extent
+{
+    f32    left;
+    f32    bottom;
+    f32    right;
+    f32    top;
+} tg_vulkan_image_extent;
 
 typedef struct tg_vulkan_graphics_pipeline_create_info
 {
@@ -183,7 +192,8 @@ typedef struct tg_model
 
 typedef struct tg_texture_atlas
 {
-    tg_image    texture_atlas;
+    tg_image                   texture_atlas;
+    tg_vulkan_image_extent*    p_extents;
 } tg_texture_atlas;
 
 typedef struct tg_uniform_buffer

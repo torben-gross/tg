@@ -100,18 +100,19 @@ void tg_application_start()
 
 
 
-    tg_rect p_rects[100] = { 0 };
-    tg_random rect_random = { 123 };
-    for (u32 i = 0; i < 100; i++)
+
+    tg_image_h textures_h[13] = { 0 };
+    for (u32 i = 0; i < 9; i++)
     {
-        p_rects[i].id = i;
-        p_rects[i].width =  (u16)(tgm_f32_max(0.1f, tgm_random_next_f32(&rect_random)) * 256.0f);
-        p_rects[i].height = (u16)(tgm_f32_max(0.1f, tgm_random_next_f32(&rect_random)) * 256.0f);
+        char image_buffer[256] = { 0 };
+        tg_string_format(sizeof(image_buffer), image_buffer, "textures/%i.bmp", i + 1);
+        textures_h[i] = tgg_image_create(image_buffer);
     }
-    u32 total_width, total_height;
-    tg_rectangle_packer_pack(100, p_rects, &total_width, &total_height);
-
-
+    textures_h[9] = tgg_image_create("textures/cabin_final.bmp");
+    textures_h[10] = tgg_image_create("textures/test_icon.bmp");
+    textures_h[11] = tgg_image_create("textures/pbb_birch.bmp");
+    textures_h[12] = tgg_image_create("textures/squirrel.bmp");
+    tg_texture_atlas_h texture_atlas_h = tgg_texture_atlas_create_from_images(13, textures_h);
 
 
 
@@ -154,7 +155,7 @@ void tg_application_start()
         p_shader_input_elements[1].type = TG_SHADER_INPUT_ELEMENT_TYPE_IMAGE;
         p_shader_input_elements[1].array_element_count = 1;
     }
-    tg_handle p_custom_handles[2] = { custom_uniform_buffer_h, image_h };
+    tg_handle p_custom_handles[2] = { custom_uniform_buffer_h, texture_atlas_h };
     tg_vertex_shader_h custom_vertex_shader_h = tgg_vertex_shader_create("shaders/custom_geometry.vert");
     tg_fragment_shader_h custom_fragment_shader_h = tgg_fragment_shader_create("shaders/custom_geometry.frag");
     tg_material_h custom_material_h = tgg_material_create(custom_vertex_shader_h, custom_fragment_shader_h, 2, p_shader_input_elements, p_custom_handles);
@@ -476,6 +477,12 @@ void tg_application_start()
     /*--------------------------------------------------------+
     | End main loop                                           |
     +--------------------------------------------------------*/
+
+    tgg_texture_atlas_destroy(texture_atlas_h);
+    for (u32 i = 0; i < 13; i++)
+    {
+        tgg_image_destroy(textures_h[i]);
+    }
 
     for (u32 i = 0; i < chunk_count_x * chunk_count_z; i++)
     {

@@ -7,7 +7,7 @@ typedef struct tg_rect
 {
 	u32 id;
 	u16 left;
-	u16 top;
+	u16 bottom;
 	u16 width;
 	u16 height;
 } tg_rect;

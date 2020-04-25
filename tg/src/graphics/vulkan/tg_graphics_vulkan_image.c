@@ -28,7 +28,7 @@ tg_image_h tgg_image_create(const char* p_filename)
         vulkan_image_create_info.width = image_h->width;
         vulkan_image_create_info.height = image_h->height;
         vulkan_image_create_info.mip_levels = image_h->mip_levels;
-        vulkan_image_create_info.format = VK_FORMAT_R8G8B8A8_SRGB;
+        vulkan_image_create_info.format = TG_VULKAN_IMAGE_FORMAT;
         vulkan_image_create_info.aspect_mask = VK_IMAGE_ASPECT_COLOR_BIT;
         vulkan_image_create_info.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
         vulkan_image_create_info.sample_count = VK_SAMPLE_COUNT_1_BIT;

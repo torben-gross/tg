@@ -1,2 +1,3 @@
 .vs
 build
+/tg/assets/shaders/*.spv
