@@ -48,9 +48,7 @@ void tgg_mesh_recalculate_normals(u32 vertex_count, u32 index_count, const u16* 
 #if 1
         // TODO: most of this can be created only once instead of per mesh
         VkShaderModule shader_module = VK_NULL_HANDLE;
-        VkDescriptorPool descriptor_pool = VK_NULL_HANDLE;
-        VkDescriptorSetLayout descriptor_set_layout = VK_NULL_HANDLE;
-        VkDescriptorSet descriptor_set = VK_NULL_HANDLE;
+        tg_vulkan_descriptor descriptor = { 0 };
         VkPipelineLayout pipeline_layout = VK_NULL_HANDLE;
         VkPipeline pipeline = VK_NULL_HANDLE;
         VkCommandBuffer command_buffer = VK_NULL_HANDLE;
@@ -59,13 +57,6 @@ void tgg_mesh_recalculate_normals(u32 vertex_count, u32 index_count, const u16* 
 
 
         shader_module = tgg_vulkan_shader_module_create("shaders/normals_vbo.comp");
-
-        VkDescriptorPoolSize descriptor_pool_size = { 0 };
-        {
-            descriptor_pool_size.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-            descriptor_pool_size.descriptorCount = 1;
-        }
-        descriptor_pool = tgg_vulkan_descriptor_pool_create(VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT, 1, 1, &descriptor_pool_size);
 
         VkDescriptorSetLayoutBinding p_descriptor_set_layout_bindings[2] = { 0 };
         {
@@ -81,10 +72,9 @@ void tgg_mesh_recalculate_normals(u32 vertex_count, u32 index_count, const u16* 
             p_descriptor_set_layout_bindings[1].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
             p_descriptor_set_layout_bindings[1].pImmutableSamplers = TG_NULL;
         }
-        descriptor_set_layout = tgg_vulkan_descriptor_set_layout_create(0, 2, p_descriptor_set_layout_bindings);
-        descriptor_set = tgg_vulkan_descriptor_set_allocate(descriptor_pool, descriptor_set_layout);
+        descriptor = tgg_vulkan_descriptor_create(2, p_descriptor_set_layout_bindings);
 
-        pipeline_layout = tgg_vulkan_pipeline_layout_create(1, &descriptor_set_layout, 0, TG_NULL);
+        pipeline_layout = tgg_vulkan_pipeline_layout_create(1, &descriptor.descriptor_set_layout, 0, TG_NULL);
         pipeline = tgg_vulkan_compute_pipeline_create(shader_module, pipeline_layout);
 
         command_buffer = tgg_vulkan_command_buffer_allocate(compute_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
@@ -97,12 +87,12 @@ void tgg_mesh_recalculate_normals(u32 vertex_count, u32 index_count, const u16* 
         ((tg_normals_compute_shader_uniform_buffer*)uniform_buffer.p_mapped_device_memory)->offset_floats_tangent = offsetof(tg_vertex_3d, tangent) / sizeof(f32);
         ((tg_normals_compute_shader_uniform_buffer*)uniform_buffer.p_mapped_device_memory)->offset_floats_bitangent = offsetof(tg_vertex_3d, bitangent) / sizeof(f32);
 
-        tgg_vulkan_descriptor_set_update_storage_buffer(descriptor_set, p_staging_buffer->buffer, 0);
-        tgg_vulkan_descriptor_set_update_uniform_buffer(descriptor_set, uniform_buffer.buffer, 1);
+        tgg_vulkan_descriptor_set_update_storage_buffer(descriptor.descriptor_set, p_staging_buffer->buffer, 0);
+        tgg_vulkan_descriptor_set_update_uniform_buffer(descriptor.descriptor_set, uniform_buffer.buffer, 1);
         
         tgg_vulkan_command_buffer_begin(command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
         vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
-        vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_layout, 0, 1, &descriptor_set, 0, TG_NULL);
+        vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_layout, 0, 1, &descriptor.descriptor_set, 0, TG_NULL);
         vkCmdDispatch(command_buffer, vertex_count, 1, 1);
         tgg_vulkan_command_buffer_end_and_submit(command_buffer, &compute_queue);
 
@@ -112,9 +102,7 @@ void tgg_mesh_recalculate_normals(u32 vertex_count, u32 index_count, const u16* 
         tgg_vulkan_command_buffer_free(compute_command_pool, command_buffer);
         tgg_vulkan_graphics_pipeline_destroy(pipeline);
         tgg_vulkan_pipeline_layout_destroy(pipeline_layout);
-        tgg_vulkan_descriptor_set_free(descriptor_pool, descriptor_set);
-        tgg_vulkan_descriptor_set_layout_destroy(descriptor_set_layout);
-        tgg_vulkan_descriptor_pool_destroy(descriptor_pool);
+        tgg_vulkan_descriptor_destroy(&descriptor);
         tgg_vulkan_shader_module_destroy(shader_module);
 #else
         for (u32 i = 0; i < vertex_count; i += 3)

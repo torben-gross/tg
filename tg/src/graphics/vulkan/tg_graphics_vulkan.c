@@ -81,9 +81,82 @@ u32 tgg_vulkan_memory_type_find(u32 memory_type_bits, VkMemoryPropertyFlags memo
 
 
 
+VkDescriptorPool tgg_vulkan_descriptor_pool_create(VkDescriptorPoolCreateFlags flags, u32 max_sets, u32 pool_size_count, const VkDescriptorPoolSize* pool_sizes)
+{
+    VkDescriptorPool descriptor_pool = VK_NULL_HANDLE;
+
+    VkDescriptorPoolCreateInfo descriptor_pool_create_info = { 0 };
+    {
+        descriptor_pool_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        descriptor_pool_create_info.pNext = TG_NULL;
+        descriptor_pool_create_info.flags = flags;
+        descriptor_pool_create_info.maxSets = max_sets;
+        descriptor_pool_create_info.poolSizeCount = pool_size_count;
+        descriptor_pool_create_info.pPoolSizes = pool_sizes;
+    }
+    VK_CALL(vkCreateDescriptorPool(device, &descriptor_pool_create_info, TG_NULL, &descriptor_pool));
+
+    return descriptor_pool;
+}
+
+void tgg_vulkan_descriptor_pool_destroy(VkDescriptorPool descriptor_pool)
+{
+    vkDestroyDescriptorPool(device, descriptor_pool, TG_NULL);
+}
 
 
-void tgg_vulkan_buffer_copy(VkDeviceSize size, VkBuffer source, VkBuffer target)
+
+VkDescriptorSetLayout tgg_vulkan_descriptor_set_layout_create(VkDescriptorSetLayoutCreateFlags flags, u32 binding_count, const VkDescriptorSetLayoutBinding* p_bindings)
+{
+    VkDescriptorSetLayout descriptor_set_layout = VK_NULL_HANDLE;
+
+    VkDescriptorSetLayoutCreateInfo descriptor_set_layout_create_info = { 0 };
+    {
+        descriptor_set_layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        descriptor_set_layout_create_info.pNext = TG_NULL;
+        descriptor_set_layout_create_info.flags = flags;
+        descriptor_set_layout_create_info.bindingCount = binding_count;
+        descriptor_set_layout_create_info.pBindings = p_bindings;
+    }
+    VK_CALL(vkCreateDescriptorSetLayout(device, &descriptor_set_layout_create_info, TG_NULL, &descriptor_set_layout));
+
+    return descriptor_set_layout;
+}
+
+void tgg_vulkan_descriptor_set_layout_destroy(VkDescriptorSetLayout descriptor_set_layout)
+{
+    vkDestroyDescriptorSetLayout(device, descriptor_set_layout, TG_NULL);
+}
+
+
+
+VkDescriptorSet tgg_vulkan_descriptor_set_allocate(VkDescriptorPool descriptor_pool, VkDescriptorSetLayout descriptor_set_layout)
+{
+    VkDescriptorSet descriptor_set = VK_NULL_HANDLE;
+
+    VkDescriptorSetAllocateInfo descriptor_set_allocate_info = { 0 };
+    {
+        descriptor_set_allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        descriptor_set_allocate_info.pNext = TG_NULL;
+        descriptor_set_allocate_info.descriptorPool = descriptor_pool;
+        descriptor_set_allocate_info.descriptorSetCount = 1;
+        descriptor_set_allocate_info.pSetLayouts = &descriptor_set_layout;
+    }
+    VK_CALL(vkAllocateDescriptorSets(device, &descriptor_set_allocate_info, &descriptor_set));
+
+    return descriptor_set;
+}
+
+void tgg_vulkan_descriptor_set_free(VkDescriptorPool descriptor_pool, VkDescriptorSet descriptor_set)
+{
+    VK_CALL(vkFreeDescriptorSets(device, descriptor_pool, 1, &descriptor_set));
+}
+
+
+
+
+
+void tgg_vulkan_buffer_copy(VkDeviceSize size, VkBuffer source, VkBuffer destination)
 {
     VkCommandBuffer command_buffer = tgg_vulkan_command_buffer_allocate(graphics_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     tgg_vulkan_command_buffer_begin(command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
@@ -94,17 +167,17 @@ void tgg_vulkan_buffer_copy(VkDeviceSize size, VkBuffer source, VkBuffer target)
         buffer_copy.dstOffset = 0;
         buffer_copy.size = size;
     }
-    vkCmdCopyBuffer(command_buffer, source, target, 1, &buffer_copy);
+    vkCmdCopyBuffer(command_buffer, source, destination, 1, &buffer_copy);
 
     tgg_vulkan_command_buffer_end_and_submit(command_buffer, &graphics_queue);
     tgg_vulkan_command_buffer_free(graphics_command_pool, command_buffer);
 }
 
-void tgg_vulkan_buffer_copy_to_image(VkBuffer source, tg_image* p_target)
+void tgg_vulkan_buffer_copy_to_image(VkBuffer source, tg_image* p_destination)
 {
     VkCommandBuffer command_buffer = tgg_vulkan_command_buffer_allocate(graphics_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     tgg_vulkan_command_buffer_begin(command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
-    tgg_vulkan_command_buffer_cmd_copy_buffer_to_image(command_buffer, source, p_target);
+    tgg_vulkan_command_buffer_cmd_copy_buffer_to_image(command_buffer, source, p_destination);
     tgg_vulkan_command_buffer_end_and_submit(command_buffer, &graphics_queue);
     tgg_vulkan_command_buffer_free(graphics_command_pool, command_buffer);
 }
@@ -237,25 +310,46 @@ void tgg_vulkan_command_buffer_cmd_clear_image(VkCommandBuffer command_buffer, t
     }
 }
 
-void tgg_vulkan_command_buffer_cmd_copy_buffer_to_image(VkCommandBuffer command_buffer, VkBuffer source, tg_image* p_target)
+void tgg_vulkan_command_buffer_cmd_copy_buffer_to_image(VkCommandBuffer command_buffer, VkBuffer source, tg_image* p_destination)
 {
     VkBufferImageCopy buffer_image_copy = { 0 };
     {
         buffer_image_copy.bufferOffset = 0;
         buffer_image_copy.bufferRowLength = 0;
         buffer_image_copy.bufferImageHeight = 0;
-        buffer_image_copy.imageSubresource.aspectMask = p_target->aspect_mask;
+        buffer_image_copy.imageSubresource.aspectMask = p_destination->aspect_mask;
         buffer_image_copy.imageSubresource.mipLevel = 0;
         buffer_image_copy.imageSubresource.baseArrayLayer = 0;
         buffer_image_copy.imageSubresource.layerCount = 1;
         buffer_image_copy.imageOffset.x = 0;
         buffer_image_copy.imageOffset.y = 0;
         buffer_image_copy.imageOffset.z = 0;
-        buffer_image_copy.imageExtent.width = p_target->width;
-        buffer_image_copy.imageExtent.height = p_target->height;
+        buffer_image_copy.imageExtent.width = p_destination->width;
+        buffer_image_copy.imageExtent.height = p_destination->height;
         buffer_image_copy.imageExtent.depth = 1;
     }
-    vkCmdCopyBufferToImage(command_buffer, source, p_target->image, p_target->layout, 1, &buffer_image_copy);
+    vkCmdCopyBufferToImage(command_buffer, source, p_destination->image, p_destination->layout, 1, &buffer_image_copy);
+}
+
+void tgg_vulkan_command_buffer_cmd_copy_image_to_buffer(VkCommandBuffer command_buffer, tg_image* p_source, VkImageLayout source_image_layout_on_access, VkBuffer destination)
+{
+    VkBufferImageCopy buffer_image_copy = { 0 };
+    {
+        buffer_image_copy.bufferOffset = 0;
+        buffer_image_copy.bufferRowLength = 0;
+        buffer_image_copy.bufferImageHeight = 0;
+        buffer_image_copy.imageSubresource.aspectMask = p_source->aspect_mask;
+        buffer_image_copy.imageSubresource.mipLevel = 0;
+        buffer_image_copy.imageSubresource.baseArrayLayer = 0;
+        buffer_image_copy.imageSubresource.layerCount = 1;
+        buffer_image_copy.imageOffset.x = 0;
+        buffer_image_copy.imageOffset.y = 0;
+        buffer_image_copy.imageOffset.z = 0;
+        buffer_image_copy.imageExtent.width = p_source->width;
+        buffer_image_copy.imageExtent.height = p_source->height;
+        buffer_image_copy.imageExtent.depth = 1;
+    }
+    vkCmdCopyImageToBuffer(command_buffer, p_source->image, source_image_layout_on_access, destination, 1, &buffer_image_copy);
 }
 
 void tgg_vulkan_command_buffer_cmd_transition_image_layout(VkCommandBuffer command_buffer, tg_image* p_image, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits)
@@ -364,15 +458,13 @@ void tgg_vulkan_compute_pipeline_destroy(VkPipeline compute_pipeline)
 
 
 
-tg_vulkan_compute_shader tgg_vulkan_compute_shader_create(const char* filename, u32 input_element_count, VkDescriptorPoolSize* p_descriptor_pool_sizes, VkDescriptorSetLayoutBinding* p_descriptor_set_layout_bindings)
+tg_vulkan_compute_shader tgg_vulkan_compute_shader_create(const char* filename, u32 binding_count, VkDescriptorSetLayoutBinding* p_bindings)
 {
     tg_vulkan_compute_shader vulkan_compute_shader = { 0 };
 
     vulkan_compute_shader.shader_module = tgg_vulkan_shader_module_create(filename);
-    vulkan_compute_shader.descriptor_pool = tgg_vulkan_descriptor_pool_create(0, 1, input_element_count, p_descriptor_pool_sizes);
-    vulkan_compute_shader.descriptor_set_layout = tgg_vulkan_descriptor_set_layout_create(0, input_element_count, p_descriptor_set_layout_bindings);
-    vulkan_compute_shader.descriptor_set = tgg_vulkan_descriptor_set_allocate(vulkan_compute_shader.descriptor_pool, vulkan_compute_shader.descriptor_set_layout);
-    vulkan_compute_shader.pipeline_layout = tgg_vulkan_pipeline_layout_create(1, &vulkan_compute_shader.descriptor_set_layout, 0, TG_NULL);
+    vulkan_compute_shader.descriptor = tgg_vulkan_descriptor_create(binding_count, p_bindings);
+    vulkan_compute_shader.pipeline_layout = tgg_vulkan_pipeline_layout_create(1, &vulkan_compute_shader.descriptor.descriptor_set_layout, 0, TG_NULL);
     vulkan_compute_shader.pipeline = tgg_vulkan_compute_pipeline_create(vulkan_compute_shader.shader_module, vulkan_compute_shader.pipeline_layout);
 
     return vulkan_compute_shader;
@@ -381,86 +473,39 @@ tg_vulkan_compute_shader tgg_vulkan_compute_shader_create(const char* filename, 
 void tgg_vulkan_compute_shader_destroy(tg_vulkan_compute_shader* p_vulkan_compute_shader)
 {
     tgg_vulkan_shader_module_destroy(p_vulkan_compute_shader->shader_module);
-    tgg_vulkan_descriptor_pool_destroy(p_vulkan_compute_shader->descriptor_pool);
-    tgg_vulkan_descriptor_set_layout_destroy(p_vulkan_compute_shader->descriptor_set_layout);
-    tgg_vulkan_descriptor_set_free(p_vulkan_compute_shader->descriptor_pool, p_vulkan_compute_shader->descriptor_set);
+    tgg_vulkan_descriptor_destroy(&p_vulkan_compute_shader->descriptor);
     tgg_vulkan_pipeline_layout_destroy(p_vulkan_compute_shader->pipeline_layout);
     tgg_vulkan_compute_pipeline_destroy(p_vulkan_compute_shader->pipeline);
 }
 
 
 
-
-VkDescriptorPool tgg_vulkan_descriptor_pool_create(VkDescriptorPoolCreateFlags flags, u32 max_sets, u32 pool_size_count, const VkDescriptorPoolSize* pool_sizes)
+tg_vulkan_descriptor tgg_vulkan_descriptor_create(u32 binding_count, VkDescriptorSetLayoutBinding* p_bindings)
 {
-    VkDescriptorPool descriptor_pool = VK_NULL_HANDLE;
+    tg_vulkan_descriptor vulkan_descriptor = { 0 };
 
-    VkDescriptorPoolCreateInfo descriptor_pool_create_info = { 0 };
+    VkDescriptorPoolSize* p_descriptor_pool_sizes = TG_MEMORY_ALLOCATOR_ALLOCATE(binding_count * sizeof(*p_descriptor_pool_sizes));
+    for (u32 i = 0; i < binding_count; i++)
     {
-        descriptor_pool_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-        descriptor_pool_create_info.pNext = TG_NULL;
-        descriptor_pool_create_info.flags = flags;
-        descriptor_pool_create_info.maxSets = max_sets;
-        descriptor_pool_create_info.poolSizeCount = pool_size_count;
-        descriptor_pool_create_info.pPoolSizes = pool_sizes;
+        p_descriptor_pool_sizes[i].type = p_bindings[i].descriptorType;
+        p_descriptor_pool_sizes[i].descriptorCount = p_bindings[i].descriptorCount;
     }
-    VK_CALL(vkCreateDescriptorPool(device, &descriptor_pool_create_info, TG_NULL, &descriptor_pool));
+    vulkan_descriptor.descriptor_pool = tgg_vulkan_descriptor_pool_create(0, 1, 1, p_descriptor_pool_sizes);
+    TG_MEMORY_ALLOCATOR_FREE(p_descriptor_pool_sizes);
 
-    return descriptor_pool;
+    vulkan_descriptor.descriptor_set_layout = tgg_vulkan_descriptor_set_layout_create(0, binding_count, p_bindings);
+    vulkan_descriptor.descriptor_set = tgg_vulkan_descriptor_set_allocate(vulkan_descriptor.descriptor_pool, vulkan_descriptor.descriptor_set_layout);
+
+    return vulkan_descriptor;
 }
 
-void tgg_vulkan_descriptor_pool_destroy(VkDescriptorPool descriptor_pool)
+void tgg_vulkan_descriptor_destroy(tg_vulkan_descriptor* p_vulkan_descriptor)
 {
-    vkDestroyDescriptorPool(device, descriptor_pool, TG_NULL);
+    tgg_vulkan_descriptor_set_layout_destroy(p_vulkan_descriptor->descriptor_set_layout);
+    tgg_vulkan_descriptor_pool_destroy(p_vulkan_descriptor->descriptor_pool);
 }
 
 
-
-VkDescriptorSetLayout tgg_vulkan_descriptor_set_layout_create(VkDescriptorSetLayoutCreateFlags flags, u32 binding_count, const VkDescriptorSetLayoutBinding* p_bindings)
-{
-    VkDescriptorSetLayout descriptor_set_layout = VK_NULL_HANDLE;
-
-    VkDescriptorSetLayoutCreateInfo descriptor_set_layout_create_info = { 0 };
-    {
-        descriptor_set_layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        descriptor_set_layout_create_info.pNext = TG_NULL;
-        descriptor_set_layout_create_info.flags = flags;
-        descriptor_set_layout_create_info.bindingCount = binding_count;
-        descriptor_set_layout_create_info.pBindings = p_bindings;
-    }
-    VK_CALL(vkCreateDescriptorSetLayout(device, &descriptor_set_layout_create_info, TG_NULL, &descriptor_set_layout));
-
-    return descriptor_set_layout;
-}
-
-void tgg_vulkan_descriptor_set_layout_destroy(VkDescriptorSetLayout descriptor_set_layout)
-{
-    vkDestroyDescriptorSetLayout(device, descriptor_set_layout, TG_NULL);
-}
-
-
-
-VkDescriptorSet tgg_vulkan_descriptor_set_allocate(VkDescriptorPool descriptor_pool, VkDescriptorSetLayout descriptor_set_layout)
-{
-    VkDescriptorSet descriptor_set = VK_NULL_HANDLE;
-
-    VkDescriptorSetAllocateInfo descriptor_set_allocate_info = { 0 };
-    {
-        descriptor_set_allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-        descriptor_set_allocate_info.pNext = TG_NULL;
-        descriptor_set_allocate_info.descriptorPool = descriptor_pool;
-        descriptor_set_allocate_info.descriptorSetCount = 1;
-        descriptor_set_allocate_info.pSetLayouts = &descriptor_set_layout;
-    }
-    VK_CALL(vkAllocateDescriptorSets(device, &descriptor_set_allocate_info, &descriptor_set));
-
-    return descriptor_set;
-}
-
-void tgg_vulkan_descriptor_set_free(VkDescriptorPool descriptor_pool, VkDescriptorSet descriptor_set)
-{
-    VK_CALL(vkFreeDescriptorSets(device, descriptor_pool, 1, &descriptor_set));
-}
 
 void tgg_vulkan_descriptor_set_update(VkDescriptorSet descriptor_set, tg_shader_input_element* p_shader_input_element, tg_handle shader_input_element_handle, u32 dst_binding)
 {

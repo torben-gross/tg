@@ -21,6 +21,15 @@
 
 
 
+typedef struct tg_vulkan_descriptor
+{
+    VkDescriptorPool         descriptor_pool;
+    VkDescriptorSetLayout    descriptor_set_layout;
+    VkDescriptorSet          descriptor_set;
+} tg_vulkan_descriptor;
+
+
+
 typedef struct tg_vulkan_buffer
 {
     u64               size;
@@ -32,9 +41,7 @@ typedef struct tg_vulkan_buffer
 typedef struct tg_vulkan_compute_shader
 {
     VkShaderModule           shader_module;
-    VkDescriptorPool         descriptor_pool;
-    VkDescriptorSetLayout    descriptor_set_layout;
-    VkDescriptorSet          descriptor_set;
+    tg_vulkan_descriptor     descriptor;
     VkPipelineLayout         pipeline_layout;
     VkPipeline               pipeline;
 } tg_vulkan_compute_shader;
@@ -150,10 +157,7 @@ typedef struct tg_material
 {
     tg_vertex_shader_h       vertex_shader_h;
     tg_fragment_shader_h     fragment_shader_h;
-
-    VkDescriptorPool         descriptor_pool;
-    VkDescriptorSetLayout    descriptor_set_layout;
-    VkDescriptorSet          descriptor_set;
+    tg_vulkan_descriptor     descriptor;
 } tg_material;
 
 typedef struct tg_mesh
@@ -169,9 +173,7 @@ typedef struct tg_model
 
     struct
     {
-        VkDescriptorPool         descriptor_pool;
-        VkDescriptorSetLayout    descriptor_set_layout;
-        VkDescriptorSet          descriptor_set;
+        tg_vulkan_descriptor     descriptor;
         VkPipelineLayout         pipeline_layout;
         VkPipeline               pipeline;
         VkCommandBuffer          command_buffer;
@@ -210,8 +212,8 @@ VkImageView          swapchain_image_views[TG_SURFACE_IMAGE_COUNT];
 
 
 
-void                        tgg_vulkan_buffer_copy(VkDeviceSize size, VkBuffer source, VkBuffer target);
-void                        tgg_vulkan_buffer_copy_to_image(VkBuffer source, tg_image* p_target);
+void                        tgg_vulkan_buffer_copy(VkDeviceSize size, VkBuffer source, VkBuffer destination);
+void                        tgg_vulkan_buffer_copy_to_image(VkBuffer source, tg_image* p_destination);
 tg_vulkan_buffer            tgg_vulkan_buffer_create(VkDeviceSize size, VkBufferUsageFlags buffer_usage_flags, VkMemoryPropertyFlags memory_property_flags);
 void                        tgg_vulkan_buffer_destroy(tg_vulkan_buffer* p_vulkan_buffer);
 
@@ -219,7 +221,8 @@ VkCommandBuffer             tgg_vulkan_command_buffer_allocate(VkCommandPool com
 void                        tgg_vulkan_command_buffer_begin(VkCommandBuffer command_buffer, VkCommandBufferUsageFlags usage_flags, const VkCommandBufferInheritanceInfo* p_inheritance_info);
 void                        tgg_vulkan_command_buffer_cmd_begin_render_pass(VkCommandBuffer command_buffer, VkRenderPass render_pass, VkFramebuffer framebuffer, VkSubpassContents subpass_contents);
 void                        tgg_vulkan_command_buffer_cmd_clear_image(VkCommandBuffer command_buffer, tg_image* p_image);
-void                        tgg_vulkan_command_buffer_cmd_copy_buffer_to_image(VkCommandBuffer command_buffer, VkBuffer source, tg_image* p_target);
+void                        tgg_vulkan_command_buffer_cmd_copy_buffer_to_image(VkCommandBuffer command_buffer, VkBuffer source, tg_image* p_destination);
+void                        tgg_vulkan_command_buffer_cmd_copy_image_to_buffer(VkCommandBuffer command_buffer, tg_image* p_source, VkImageLayout source_image_layout_on_access, VkBuffer destination);
 void                        tgg_vulkan_command_buffer_cmd_transition_image_layout(VkCommandBuffer command_buffer, tg_image* p_image, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits);
 void                        tgg_vulkan_command_buffer_end_and_submit(VkCommandBuffer command_buffer, tg_vulkan_queue* p_vulkan_queue);
 void                        tgg_vulkan_command_buffer_free(VkCommandPool command_pool, VkCommandBuffer command_buffer);
@@ -229,17 +232,12 @@ void                        tgg_vulkan_command_buffers_free(VkCommandPool comman
 VkPipeline                  tgg_vulkan_compute_pipeline_create(VkShaderModule shader_module, VkPipelineLayout pipeline_layout);
 void                        tgg_vulkan_compute_pipeline_destroy(VkPipeline compute_pipeline);
 
-tg_vulkan_compute_shader    tgg_vulkan_compute_shader_create(const char* filename, u32 input_element_count, VkDescriptorPoolSize* p_descriptor_pool_sizes, VkDescriptorSetLayoutBinding* p_descriptor_set_layout_bindings);
+tg_vulkan_compute_shader    tgg_vulkan_compute_shader_create(const char* filename, u32 binding_count, VkDescriptorSetLayoutBinding* p_bindings);
 void                        tgg_vulkan_compute_shader_destroy(tg_vulkan_compute_shader* p_vulkan_compute_shader);
 
-VkDescriptorPool            tgg_vulkan_descriptor_pool_create(VkDescriptorPoolCreateFlags flags, u32 max_sets, u32 pool_size_count, const VkDescriptorPoolSize* pool_sizes);
-void                        tgg_vulkan_descriptor_pool_destroy(VkDescriptorPool descriptor_pool);
+tg_vulkan_descriptor        tgg_vulkan_descriptor_create(u32 binding_count, VkDescriptorSetLayoutBinding* p_bindings);
+void                        tgg_vulkan_descriptor_destroy(tg_vulkan_descriptor* p_vulkan_descriptor);
 
-VkDescriptorSetLayout       tgg_vulkan_descriptor_set_layout_create(VkDescriptorSetLayoutCreateFlags flags, u32 binding_count, const VkDescriptorSetLayoutBinding* p_bindings);
-void                        tgg_vulkan_descriptor_set_layout_destroy(VkDescriptorSetLayout descriptor_set_layout);
-
-VkDescriptorSet             tgg_vulkan_descriptor_set_allocate(VkDescriptorPool descriptor_pool, VkDescriptorSetLayout descriptor_set_layout);
-void                        tgg_vulkan_descriptor_set_free(VkDescriptorPool descriptor_pool, VkDescriptorSet descriptor_set);
 void                        tgg_vulkan_descriptor_set_update(VkDescriptorSet descriptor_set, tg_shader_input_element* p_shader_input_element, tg_handle shader_input_element_handle, u32 dst_binding);
 void                        tgg_vulkan_descriptor_set_update_storage_buffer(VkDescriptorSet descriptor_set, VkBuffer buffer, u32 dst_binding);
 void                        tgg_vulkan_descriptor_set_update_storage_buffer_array(VkDescriptorSet descriptor_set, VkBuffer buffer, u32 dst_binding, u32 array_index);

@@ -12,5 +12,15 @@ layout(set = 0, binding = 1) buffer exposure
 
 void main()
 {
-	u_exposure = u_exposure * 0.99 + 0.01 * max(length(texture(u_shaded_image, vec2(0.5, 0.5)).xyz), 0.5); // TODO: this is awefully framerate dependent
+	float exp = 0.0;
+	for (int i = 1; i < 5; i++)
+	{
+		for (int j = 1; j < 5; j++)
+		{
+			vec2 uv = vec2(float(i) / 5.0, float(j) / 5.0);
+			exp += length(texture(u_shaded_image, uv).xyz);
+		}
+	}
+	exp /= 16;
+	u_exposure = u_exposure * 0.99 + 0.01 * max(exp, 0.5); // TODO: this is awfully framerate dependent
 }
