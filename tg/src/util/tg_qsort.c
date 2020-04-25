@@ -42,6 +42,8 @@ void tg_qsort_internal(u32 element_size, u8* p_elements, i32 low, i32 high, tg_q
 
 b32 tg_u32_compare_fn(const u32* p_v0, const u32* p_v1)
 {
+    TG_ASSERT(p_v0 && p_v1);
+
     const b32 result = *p_v0 < *p_v1;
     return result;
 }
@@ -50,5 +52,7 @@ b32 tg_u32_compare_fn(const u32* p_v0, const u32* p_v1)
 
 void tg_qsort_impl(u32 element_size, u32 element_count, void* p_elements, tg_qsort_compare_fn compare_fn)
 {
+    TG_ASSERT(element_size && element_count && p_elements && compare_fn);
+
     tg_qsort_internal(element_size, (u8*)p_elements, 0, element_count - 1, compare_fn);
 }

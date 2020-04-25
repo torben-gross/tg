@@ -70,7 +70,7 @@ void tg_application_start()
 {
     tg_graphics_init();
 
-    tg_list_h entities = tg_list_create(tg_entity_h);
+    tg_list_h entities = TG_LIST_CREATE(tg_entity_h);
 
     tg_camera_info camera_info = { 0 };
     {

@@ -21,9 +21,9 @@ tg_hashmap_h    memory_allocations = TG_NULL;
 
 void tg_memory_init()
 {
-	memory_allocations = tg_hashmap_create__bucket_count__bucket_capacity(
-		u64, tg_memory_allocator_allocation,
-		1024, 4
+	memory_allocations = TG_HASHMAP_CREATE__BUCKET_COUNT__BUCKET_CAPACITY(
+		void*, tg_memory_allocator_allocation,
+		997, 4
 	);
 	recording_allocations = TG_TRUE;
 }
@@ -48,7 +48,7 @@ void* tg_memory_alloc_impl(u64 size, const char* p_filename, u32 line)
 		tg_memory_allocator_allocation allocation = { 0 };
 		allocation.line = line;
 		memcpy(allocation.p_filename, p_filename, tg_string_length(p_filename) * sizeof(*p_filename));
-		tg_hashmap_insert(memory_allocations, (u64*)&p_memory, &allocation);
+		tg_hashmap_insert(memory_allocations, &p_memory, &allocation);
 		recording_allocations = TG_TRUE;
 	}
 
@@ -67,7 +67,7 @@ void* tg_memory_realloc_impl(void* p_memory, u64 size, const char* p_filename, u
 		tg_memory_allocator_allocation allocation = { 0 };
 		allocation.line = line;
 		memcpy(allocation.p_filename, p_filename, tg_string_length(p_filename) * sizeof(*p_filename));
-		tg_hashmap_insert(memory_allocations, (u64*)&p_reallocated_memory, &allocation);
+		tg_hashmap_insert(memory_allocations, &p_reallocated_memory, &allocation);
 		recording_allocations = TG_TRUE;
 	}
 
@@ -79,7 +79,7 @@ void tg_memory_free_impl(void* p_memory, const char* p_filename, u32 line)
 	if (recording_allocations)
 	{
 		recording_allocations = TG_FALSE;
-		tg_hashmap_try_remove(memory_allocations, (u64*)&p_memory);
+		tg_hashmap_try_remove(memory_allocations, &p_memory);
 		recording_allocations = TG_TRUE;
 	}
 

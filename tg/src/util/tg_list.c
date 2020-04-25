@@ -40,6 +40,8 @@ void tg_list_destroy(tg_list_h list_h)
 	TG_MEMORY_FREE(list_h);
 }
 
+
+
 u32 tg_list_capacity(const tg_list_h list_h)
 {
 	TG_ASSERT(list_h);
