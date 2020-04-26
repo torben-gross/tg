@@ -8,11 +8,12 @@
 
 
 TG_DECLARE_HANDLE(tg_camera);
+TG_DECLARE_HANDLE(tg_color_image);
 TG_DECLARE_HANDLE(tg_compute_buffer);
 TG_DECLARE_HANDLE(tg_compute_shader);
+TG_DECLARE_HANDLE(tg_depth_image);
 TG_DECLARE_HANDLE(tg_entity);
 TG_DECLARE_HANDLE(tg_fragment_shader);
-TG_DECLARE_HANDLE(tg_image);
 TG_DECLARE_HANDLE(tg_material);
 TG_DECLARE_HANDLE(tg_mesh);
 TG_DECLARE_HANDLE(tg_model);
@@ -27,82 +28,73 @@ typedef void* tg_handle;
 
 
 
+typedef enum tg_color_image_format
+{
+	TG_COLOR_IMAGE_FORMAT_A8B8G8R8,
+	TG_COLOR_IMAGE_FORMAT_A8R8G8B8,
+	TG_COLOR_IMAGE_FORMAT_B8G8R8A8,
+	TG_COLOR_IMAGE_FORMAT_R16G16B16A16_SFLOAT,
+	TG_COLOR_IMAGE_FORMAT_R32G32B32A32_SFLOAT,
+	TG_COLOR_IMAGE_FORMAT_R8,
+	TG_COLOR_IMAGE_FORMAT_R8G8,
+	TG_COLOR_IMAGE_FORMAT_R8G8B8,
+	TG_COLOR_IMAGE_FORMAT_R8G8B8A8
+} tg_color_image_format;
+
+typedef enum tg_depth_image_format
+{
+	TG_DEPTH_IMAGE_FORMAT_D16_UNORM,
+	TG_DEPTH_IMAGE_FORMAT_D32_SFLOAT
+} tg_depth_image_format;
+
+typedef enum tg_image_address_mode
+{
+	TG_IMAGE_ADDRESS_MODE_CLAMP_TO_BORDER,
+	TG_IMAGE_ADDRESS_MODE_CLAMP_TO_EDGE,
+	TG_IMAGE_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE,
+	TG_IMAGE_ADDRESS_MODE_MIRRORED_REPEAT,
+	TG_IMAGE_ADDRESS_MODE_REPEAT
+} tg_image_address_mode;
+
+typedef enum tg_image_filter
+{
+	TG_IMAGE_FILTER_LINEAR,
+	TG_IMAGE_FILTER_NEAREST
+} tg_image_filter;
+
 typedef enum tg_shader_input_element_type
 {
-	TG_SHADER_INPUT_ELEMENT_TYPE_COMPUTE_BUFFER    = 0,
-	TG_SHADER_INPUT_ELEMENT_TYPE_UNIFORM_BUFFER    = 1,
-	TG_SHADER_INPUT_ELEMENT_TYPE_IMAGE             = 2
+	TG_SHADER_INPUT_ELEMENT_TYPE_COLOR_IMAGE,
+	TG_SHADER_INPUT_ELEMENT_TYPE_COMPUTE_BUFFER,
+	TG_SHADER_INPUT_ELEMENT_TYPE_UNIFORM_BUFFER
 } tg_shader_input_element_type;
 
-typedef enum tg_filter
-{
-	TG_FILTER_NEAREST    = 0,
-	TG_FILTER_LINEAR     = 1
-} tg_filter;
 
-typedef enum tg_image_aspect
-{
-	TG_IMAGE_ASPECT_COLOR_BIT    = 0x00000001,
-	TG_IMAGE_ASPECT_DEPTH_BIT    = 0x00000002
-} tg_image_aspect;
 
-typedef enum tg_image_format
+typedef struct tg_color_image_create_info
 {
-	TG_IMAGE_FORMAT_A8B8G8R8,
-	TG_IMAGE_FORMAT_A8R8G8B8,
-	TG_IMAGE_FORMAT_B8G8R8A8,
-	TG_IMAGE_FORMAT_R8,
-	TG_IMAGE_FORMAT_R8G8,
-	TG_IMAGE_FORMAT_R8G8B8,
-	TG_IMAGE_FORMAT_R8G8B8A8
-} tg_image_format;
+	u32                      width;
+	u32                      height;
+	u32                      mip_levels;
+	tg_color_image_format    format;
+	tg_image_filter          min_filter;
+	tg_image_filter          mag_filter;
+	tg_image_address_mode    address_mode_u;
+	tg_image_address_mode    address_mode_v;
+	tg_image_address_mode    address_mode_w;
+} tg_color_image_create_info;
 
-typedef enum tg_image_type
+typedef struct tg_depth_image_create_info
 {
-	TG_IMAGE_TYPE_1D,
-	TG_IMAGE_TYPE_2D,
-	TG_IMAGE_TYPE_3D
-} tg_image_type;
-
-typedef enum tg_image_usage
-{
-	TG_IMAGE_USAGE_TRANSFER_SRC_BIT                = 0x00000001,
-	TG_IMAGE_USAGE_TRANSFER_DST_BIT                = 0x00000002,
-	TG_IMAGE_USAGE_SAMPLED_BIT                     = 0x00000004,
-	TG_IMAGE_USAGE_STORAGE_BIT                     = 0x00000008,
-	TG_IMAGE_USAGE_COLOR_ATTACHMENT_BIT            = 0x00000010,
-	TG_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT    = 0x00000020,
-	TG_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT        = 0x00000040,
-	TG_IMAGE_USAGE_INPUT_ATTACHMENT_BIT            = 0x00000080,
-	TG_IMAGE_USAGE_SHADING_RATE_IMAGE_BIT_NV       = 0x00000100,
-	TG_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT    = 0x00000200
-} tg_image_usage;
-
-typedef enum tg_image_view_type
-{
-	TG_IMAGE_VIEW_TYPE_1D            = 0,
-	TG_IMAGE_VIEW_TYPE_2D            = 1,
-	TG_IMAGE_VIEW_TYPE_3D            = 2,
-	TG_IMAGE_VIEW_TYPE_CUBE          = 3,
-	TG_IMAGE_VIEW_TYPE_1D_ARRAY      = 4,
-	TG_IMAGE_VIEW_TYPE_2D_ARRAY      = 5,
-	TG_IMAGE_VIEW_TYPE_CUBE_ARRAY    = 6
-} tg_image_view_type;
-
-typedef enum tg_sampler_address_mode
-{
-	TG_SAMPLER_ADDRESS_MODE_REPEAT                  = 0,
-	TG_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT         = 1,
-	TG_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE           = 2,
-	TG_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER         = 3,
-	TG_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE    = 4
-} tg_sampler_address_mode;
-
-typedef enum tg_sampler_mipmap_mode
-{
-	TG_SAMPLER_MIPMAP_MODE_NEAREST    = 0,
-	TG_SAMPLER_MIPMAP_MODE_LINEAR     = 1
-} tg_sampler_mipmap_mode;
+	u32                      width;
+	u32                      height;
+	tg_depth_image_format    format;
+	tg_image_filter          min_filter;
+	tg_image_filter          mag_filter;
+	tg_image_address_mode    address_mode_u;
+	tg_image_address_mode    address_mode_v;
+	tg_image_address_mode    address_mode_w;
+} tg_depth_image_create_info;
 
 typedef struct tg_shader_input_element
 {
@@ -128,9 +120,10 @@ typedef struct tg_point_light
 
 
 
-void                    tg_graphics_init();
+void                    tgg_init();
 void                    tgg_on_window_resize(u32 width, u32 height);
-void                    tg_graphics_shutdown();
+//void                    tgg_present(tg_image_h image_h); // TODO: this
+void                    tgg_shutdown();
 
 
 
@@ -140,6 +133,13 @@ m4                      tgg_camera_get_view(tg_camera_h camera_h);
 void                    tgg_camera_set_projection(f32 fov_y, f32 near, f32 far, tg_camera_h camera_h);
 void                    tgg_camera_set_view(const v3* p_position, f32 pitch, f32 yaw, f32 roll, tg_camera_h camera_h);
 void                    tgg_camera_destroy(tg_camera_h camera_h);
+
+tg_color_image_h        tgg_color_image_load(const char* p_filename);
+tg_color_image_h        tgg_color_image_create(const tg_color_image_create_info* p_color_image_create_info);
+void                    tgg_color_image_destroy(tg_color_image_h color_image_h);
+
+tg_depth_image_h        tgg_depth_image_create(const tg_depth_image_create_info* p_depth_image_create_info);
+void                    tgg_depth_image_destroy(tg_depth_image_h depth_image_h);
 
 tg_compute_buffer_h     tgg_compute_buffer_create(u64 size);
 void*                   tgg_compute_buffer_data(tg_compute_buffer_h compute_buffer_h);
@@ -153,9 +153,6 @@ void                    tgg_compute_shader_destroy(tg_compute_shader_h compute_s
 tg_fragment_shader_h    tgg_fragment_shader_create(const char* p_filename);
 void                    tgg_fragment_shader_destroy(tg_fragment_shader_h fragment_shader_h);
 
-tg_image_h              tgg_image_create(const char* p_filename);
-void                    tgg_image_destroy(tg_image_h image_h);
-
 tg_material_h           tgg_material_create(tg_vertex_shader_h vertex_shader_h, tg_fragment_shader_h fragment_shader_h, u32 input_element_count, tg_shader_input_element* p_input_elements, tg_handle* p_input_element_handles);
 void                    tgg_material_destroy(tg_material_h material_h);
 
@@ -165,8 +162,7 @@ void                    tgg_mesh_destroy(tg_mesh_h mesh_h);
 tg_model_h              tgg_model_create(tg_mesh_h mesh_h, tg_material_h material_h);
 void                    tgg_model_destroy(tg_model_h model_h);
 
-tg_texture_atlas_h      tgg_texture_atlas_create_from_images(u32 image_count, tg_image_h* p_images_h);
-tg_texture_atlas_h      tgg_texture_atlas_create(tg_image_h texture_atlas, void* layout_stuff); // TODO: this
+tg_texture_atlas_h      tgg_texture_atlas_create_from_images(u32 image_count, tg_color_image_h* p_color_images_h);
 void                    tgg_texture_atlas_destroy(tg_texture_atlas_h texture_atlas_h);
 
 tg_uniform_buffer_h     tgg_uniform_buffer_create(u64 size);
@@ -182,7 +178,7 @@ void                    tgg_vertex_shader_destroy(tg_vertex_shader_h p_vertex_sh
 | 3D Renderer                                                 |
 +------------------------------------------------------------*/
 
-tg_renderer_3d_h        tgg_renderer_3d_create(const tg_camera_h camera_h, u32 point_light_count, const tg_point_light* p_point_lights);
+tg_renderer_3d_h        tgg_renderer_3d_create(const tg_camera_h camera_h, tg_color_image_h render_target, u32 point_light_count, const tg_point_light* p_point_lights);
 void                    tgg_renderer_3d_register(tg_renderer_3d_h renderer_3d_h, tg_entity_h entity_h);
 void                    tgg_renderer_3d_begin(tg_renderer_3d_h renderer_3d_h);
 void                    tgg_renderer_3d_draw_entity(tg_renderer_3d_h renderer_3d_h, tg_entity_h entity_h);

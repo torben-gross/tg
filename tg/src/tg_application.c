@@ -68,7 +68,7 @@ const char* asset_path = "assets"; // TODO: determine this some other way
 
 void tg_application_start()
 {
-    tg_graphics_init();
+    tgg_init();
 
     tg_list_h entities = TG_LIST_CREATE(tg_entity_h);
 
@@ -95,23 +95,35 @@ void tg_application_start()
         p_point_lights[i].color = (v3){ tgm_random_next_f32(&random), tgm_random_next_f32(&random), tgm_random_next_f32(&random) };
         p_point_lights[i].radius = tgm_random_next_f32(&random) * 50.0f;
     }
-    tg_renderer_3d_h renderer_3d_h = tgg_renderer_3d_create(camera_info.camera_h, TG_POINT_LIGHT_COUNT, p_point_lights);
+    tg_color_image_create_info image_create_info = { 0 };
+    {
+        tg_platform_get_window_size(&image_create_info.width, &image_create_info.height);
+        image_create_info.mip_levels = 1;
+        image_create_info.format = TG_COLOR_IMAGE_FORMAT_B8G8R8A8;
+        image_create_info.min_filter = TG_IMAGE_FILTER_LINEAR;
+        image_create_info.mag_filter = TG_IMAGE_FILTER_LINEAR;
+        image_create_info.address_mode_u = TG_IMAGE_ADDRESS_MODE_REPEAT;
+        image_create_info.address_mode_v = TG_IMAGE_ADDRESS_MODE_REPEAT;
+        image_create_info.address_mode_w = TG_IMAGE_ADDRESS_MODE_REPEAT;
+    }
+    tg_color_image_h render_target = tgg_color_image_create(&image_create_info);
+    tg_renderer_3d_h renderer_3d_h = tgg_renderer_3d_create(camera_info.camera_h, render_target, TG_POINT_LIGHT_COUNT, p_point_lights);
 
 
 
 
 
-    tg_image_h textures_h[13] = { 0 };
+    tg_color_image_h textures_h[13] = { 0 };
     for (u32 i = 0; i < 9; i++)
     {
         char image_buffer[256] = { 0 };
         tg_string_format(sizeof(image_buffer), image_buffer, "textures/%i.bmp", i + 1);
-        textures_h[i] = tgg_image_create(image_buffer);
+        textures_h[i] = tgg_color_image_load(image_buffer);
     }
-    textures_h[9] = tgg_image_create("textures/cabin_final.bmp");
-    textures_h[10] = tgg_image_create("textures/test_icon.bmp");
-    textures_h[11] = tgg_image_create("textures/pbb_birch.bmp");
-    textures_h[12] = tgg_image_create("textures/squirrel.bmp");
+    textures_h[9] = tgg_color_image_load("textures/cabin_final.bmp");
+    textures_h[10] = tgg_color_image_load("textures/test_icon.bmp");
+    textures_h[11] = tgg_color_image_load("textures/pbb_birch.bmp");
+    textures_h[12] = tgg_color_image_load("textures/squirrel.bmp");
     tg_texture_atlas_h texture_atlas_h = tgg_texture_atlas_create_from_images(13, textures_h);
 
 
@@ -147,12 +159,12 @@ void tg_application_start()
     tg_uniform_buffer_h custom_uniform_buffer_h = tgg_uniform_buffer_create(sizeof(v3));
     v3* p_custom_uniform_buffer_data = tgg_uniform_buffer_data(custom_uniform_buffer_h);
     *p_custom_uniform_buffer_data = (v3){ 1.0f, 0.0f, 0.0f };
-    tg_image_h image_h = tgg_image_create("textures/test_icon.bmp");
+    tg_color_image_h image_h = tgg_color_image_load("textures/test_icon.bmp");
     tg_shader_input_element p_shader_input_elements[2] = { 0 };
     {
         p_shader_input_elements[0].type = TG_SHADER_INPUT_ELEMENT_TYPE_UNIFORM_BUFFER;
         p_shader_input_elements[0].array_element_count = 1;
-        p_shader_input_elements[1].type = TG_SHADER_INPUT_ELEMENT_TYPE_IMAGE;
+        p_shader_input_elements[1].type = TG_SHADER_INPUT_ELEMENT_TYPE_COLOR_IMAGE;
         p_shader_input_elements[1].array_element_count = 1;
     }
     tg_handle p_custom_handles[2] = { custom_uniform_buffer_h, texture_atlas_h };
@@ -481,7 +493,7 @@ void tg_application_start()
     tgg_texture_atlas_destroy(texture_atlas_h);
     for (u32 i = 0; i < 13; i++)
     {
-        tgg_image_destroy(textures_h[i]);
+        tgg_color_image_destroy(textures_h[i]);
     }
 
     for (u32 i = 0; i < chunk_count_x * chunk_count_z; i++)
@@ -506,7 +518,7 @@ void tg_application_start()
     tgg_model_destroy(quad_model_h);
     tgg_mesh_destroy(quad_mesh_h);
 
-    tgg_image_destroy(image_h);
+    tgg_color_image_destroy(image_h);
     tgg_uniform_buffer_destroy(custom_uniform_buffer_h);
     tgg_material_destroy(custom_material_h);
     tgg_fragment_shader_destroy(custom_fragment_shader_h);
@@ -519,7 +531,7 @@ void tg_application_start()
     tgg_camera_destroy(camera_info.camera_h);
     tg_list_destroy(entities);
     tgg_renderer_3d_shutdown(renderer_3d_h);
-    tg_graphics_shutdown();
+    tgg_shutdown();
 }
 
 void tg_application_quit()

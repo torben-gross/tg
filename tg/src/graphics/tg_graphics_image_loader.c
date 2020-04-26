@@ -127,13 +127,13 @@ typedef struct tg_bitmapv5header
 
 
 
-void tg_image_convert_format_to_masks(tg_image_format format, u32* r_mask, u32* g_mask, u32* b_mask, u32* a_mask);
-void tg_image_convert_masks_to_format(u32 r_mask, u32 g_mask, u32 b_mask, u32 a_mask, tg_image_format* format);
-void tg_image_load_bmp_from_memory(u64 file_size, const char* file_memory, u32* p_width, u32* p_height, tg_image_format* p_format, u32** p_data);
+void tg_image_convert_format_to_masks(tg_color_image_format format, u32* r_mask, u32* g_mask, u32* b_mask, u32* a_mask);
+void tg_image_convert_masks_to_format(u32 r_mask, u32 g_mask, u32 b_mask, u32 a_mask, tg_color_image_format* format);
+void tg_image_load_bmp_from_memory(u64 file_size, const char* file_memory, u32* p_width, u32* p_height, tg_color_image_format* p_format, u32** p_data);
 
 
 
-void tg_image_load(const char* p_filename, u32* p_width, u32* p_height, tg_image_format* p_format, u32** pp_data)
+void tg_image_load(const char* p_filename, u32* p_width, u32* p_height, tg_color_image_format* p_format, u32** pp_data)
 {
 	TG_ASSERT(p_filename && p_width && p_height && p_format && pp_data);
 
@@ -153,7 +153,7 @@ void tg_image_free(u32* p_data)
 	TG_MEMORY_FREE(p_data);
 }
 
-void tg_image_convert_format(u32* p_data, u32 width, u32 height, tg_image_format old_format, tg_image_format new_format)
+void tg_image_convert_format(u32* p_data, u32 width, u32 height, tg_color_image_format old_format, tg_color_image_format new_format)
 {
 	u32 old_r_mask = 0;
 	u32 old_g_mask = 0;
@@ -236,7 +236,7 @@ void tg_image_convert_format(u32* p_data, u32 width, u32 height, tg_image_format
 	}
 }
 
-void tg_image_convert_masks_to_format(u32 r_mask, u32 g_mask, u32 b_mask, u32 a_mask, tg_image_format* format)
+void tg_image_convert_masks_to_format(u32 r_mask, u32 g_mask, u32 b_mask, u32 a_mask, tg_color_image_format* format)
 {
 	TG_ASSERT(r_mask | g_mask | b_mask | a_mask);
 
@@ -267,84 +267,84 @@ void tg_image_convert_masks_to_format(u32 r_mask, u32 g_mask, u32 b_mask, u32 a_
 
 	if (a_0x000000ff && r_0x0000ff00 && g_0x00ff0000 && b_0xff000000)
 	{
-		*format = TG_IMAGE_FORMAT_A8R8G8B8;
+		*format = TG_COLOR_IMAGE_FORMAT_A8R8G8B8;
 	}
 	else if (a_0x000000ff && b_0x0000ff00 && g_0x00ff0000 && r_0xff000000)
 	{
-		*format = TG_IMAGE_FORMAT_A8B8G8R8;
+		*format = TG_COLOR_IMAGE_FORMAT_A8B8G8R8;
 	}
 	else if (b_0x000000ff && g_0x0000ff00 && r_0x00ff0000 && a_0xff000000)
 	{
-		*format = TG_IMAGE_FORMAT_B8G8R8A8;
+		*format = TG_COLOR_IMAGE_FORMAT_B8G8R8A8;
 	}
 	else if (r_0x000000ff && !g_0x0000ff00 && !b_0x00ff0000 && !a_0xff000000)
 	{
-		*format = TG_IMAGE_FORMAT_R8;
+		*format = TG_COLOR_IMAGE_FORMAT_R8;
 	}
 	else if (r_0x000000ff && g_0x0000ff00 && !b_0x00ff0000 && !a_0xff000000)
 	{
-		*format = TG_IMAGE_FORMAT_R8G8;
+		*format = TG_COLOR_IMAGE_FORMAT_R8G8;
 	}
 	else if (r_0x000000ff && g_0x0000ff00 && b_0x00ff0000 && !a_0xff000000)
 	{
-		*format = TG_IMAGE_FORMAT_R8G8B8;
+		*format = TG_COLOR_IMAGE_FORMAT_R8G8B8;
 	}
 	else if (r_0x000000ff && g_0x0000ff00 && b_0x00ff0000 && a_0xff000000)
 	{
-		*format = TG_IMAGE_FORMAT_R8G8B8A8;
+		*format = TG_COLOR_IMAGE_FORMAT_R8G8B8A8;
 	}
 	else
 	{
 		TG_ASSERT(TG_FALSE);
 	}
 }
-void tg_image_convert_format_to_masks(tg_image_format format, u32* r_mask, u32* g_mask, u32* b_mask, u32* a_mask)
+void tg_image_convert_format_to_masks(tg_color_image_format format, u32* r_mask, u32* g_mask, u32* b_mask, u32* a_mask)
 {
 	switch (format)
 	{
-	case TG_IMAGE_FORMAT_A8R8G8B8:
+	case TG_COLOR_IMAGE_FORMAT_A8R8G8B8:
 	{
 		*r_mask = 0x0000ff00;
 		*g_mask = 0x00ff0000;
 		*b_mask = 0xff000000;
 		*a_mask = 0x000000ff;
 	} break;
-	case TG_IMAGE_FORMAT_A8B8G8R8:
+	case TG_COLOR_IMAGE_FORMAT_A8B8G8R8:
 	{
 		*r_mask = 0xff000000;
 		*g_mask = 0x00ff0000;
 		*b_mask = 0x0000ff00;
 		*a_mask = 0x000000ff;
 	} break;
-	case TG_IMAGE_FORMAT_B8G8R8A8:
+	case TG_COLOR_IMAGE_FORMAT_B8G8R8A8:
 	{
 		*r_mask = 0x00ff0000;
 		*g_mask = 0x0000ff00;
 		*b_mask = 0x000000ff;
 		*a_mask = 0xff000000;
 	} break;
-	case TG_IMAGE_FORMAT_R8:
+	case TG_COLOR_IMAGE_FORMAT_R8:
 	{
 		*r_mask = 0x000000ff;
 		*g_mask = 0x00000000;
 		*b_mask = 0x00000000;
 		*a_mask = 0x00000000;
 	} break;
-	case TG_IMAGE_FORMAT_R8G8:
+	case TG_COLOR_IMAGE_FORMAT_R8G8:
 	{
 		*r_mask = 0x000000ff;
 		*g_mask = 0x0000ff00;
 		*b_mask = 0x00000000;
 		*a_mask = 0x00000000;
 	} break;
-	case TG_IMAGE_FORMAT_R8G8B8:
+	case TG_COLOR_IMAGE_FORMAT_R8G8B8:
 	{
 		*r_mask = 0x000000ff;
 		*g_mask = 0x0000ff00;
 		*b_mask = 0x00ff0000;
 		*a_mask = 0x00000000;
 	} break;
-	case TG_IMAGE_FORMAT_R8G8B8A8:
+	case TG_COLOR_IMAGE_FORMAT_R8G8B8A8:
 	{
 		*r_mask = 0x000000ff;
 		*g_mask = 0x0000ff00;
@@ -357,7 +357,7 @@ void tg_image_convert_format_to_masks(tg_image_format format, u32* r_mask, u32* 
 	} break;
 	}
 }
-void tg_image_load_bmp_from_memory(u64 file_size, const char* file_memory, u32* p_width, u32* p_height, tg_image_format* p_format, u32** p_data)
+void tg_image_load_bmp_from_memory(u64 file_size, const char* file_memory, u32* p_width, u32* p_height, tg_color_image_format* p_format, u32** p_data)
 {
 	TG_ASSERT(file_memory && p_width && p_height && p_format && p_data);
 	TG_ASSERT(file_size >= TG_BMP_MIN_SIZE && *(u16*)file_memory == TG_BMP_IDENTIFIER);
