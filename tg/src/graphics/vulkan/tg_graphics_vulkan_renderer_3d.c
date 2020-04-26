@@ -1029,7 +1029,7 @@ void tgg_renderer_3d_internal_init_present_pass(tg_renderer_3d_h renderer_3d_h)
 }
 
 // TODO: move clean into draw+shading+clean
-tg_renderer_3d_h tgg_renderer_3d_create(const tg_camera_h camera_h, tg_color_image_h render_target, u32 point_light_count, const tg_point_light* p_point_lights)
+tg_renderer_3d_h tgg_renderer_3d_create(const tg_camera_h camera_h, u32 point_light_count, const tg_point_light* p_point_lights)
 {
     TG_ASSERT(camera_h);
 

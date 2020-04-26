@@ -183,8 +183,7 @@ LRESULT CALLBACK tg_platform_win32_window_proc(HWND window_h, UINT message, WPAR
     case WM_SIZE:
     {
         tgg_on_window_resize((u32)LOWORD(l_param), (u32)HIWORD(l_param));
-        //tg_graphics_renderer_2d_on_window_resize((u32)LOWORD(l_param), (u32)HIWORD(l_param)); TODO
-        //tg_graphics_renderer_3d_on_window_resize((u32)LOWORD(l_param), (u32)HIWORD(l_param)); TODO
+        tg_application_on_window_resize((u32)LOWORD(l_param), (u32)HIWORD(l_param));
     } break;
 
     case WM_LBUTTONDOWN: tg_input_on_mouse_button_pressed(TG_BUTTON_LEFT);              break;

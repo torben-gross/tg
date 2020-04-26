@@ -18,6 +18,7 @@ TG_DECLARE_HANDLE(tg_material);
 TG_DECLARE_HANDLE(tg_mesh);
 TG_DECLARE_HANDLE(tg_model);
 TG_DECLARE_HANDLE(tg_index_buffer);
+TG_DECLARE_HANDLE(tg_renderer_2d);
 TG_DECLARE_HANDLE(tg_renderer_3d);
 TG_DECLARE_HANDLE(tg_texture_atlas);
 TG_DECLARE_HANDLE(tg_uniform_buffer);
@@ -178,7 +179,7 @@ void                    tgg_vertex_shader_destroy(tg_vertex_shader_h p_vertex_sh
 | 3D Renderer                                                 |
 +------------------------------------------------------------*/
 
-tg_renderer_3d_h        tgg_renderer_3d_create(const tg_camera_h camera_h, tg_color_image_h render_target, u32 point_light_count, const tg_point_light* p_point_lights);
+tg_renderer_3d_h        tgg_renderer_3d_create(const tg_camera_h camera_h, u32 point_light_count, const tg_point_light* p_point_lights);
 void                    tgg_renderer_3d_register(tg_renderer_3d_h renderer_3d_h, tg_entity_h entity_h);
 void                    tgg_renderer_3d_begin(tg_renderer_3d_h renderer_3d_h);
 void                    tgg_renderer_3d_draw_entity(tg_renderer_3d_h renderer_3d_h, tg_entity_h entity_h);
