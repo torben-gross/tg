@@ -51,7 +51,7 @@ void tgg_compute_shader_dispatch(tg_compute_shader_h compute_shader_h, u32 group
 	TG_ASSERT(compute_shader_h && group_count_x && group_count_y && group_count_z);
 
 	tgg_vulkan_command_buffer_begin(compute_shader_h->command_buffer, 0, TG_NULL);
-	vkCmdBindPipeline(compute_shader_h->command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute_shader_h->compute_shader.pipeline);
+	vkCmdBindPipeline(compute_shader_h->command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute_shader_h->compute_shader.compute_pipeline);
 	vkCmdBindDescriptorSets(compute_shader_h->command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute_shader_h->compute_shader.pipeline_layout, 0, 1, &compute_shader_h->compute_shader.descriptor.descriptor_set, 0, TG_NULL);
 	vkCmdDispatch(compute_shader_h->command_buffer, group_count_x, group_count_y, group_count_z);
 	VK_CALL(vkEndCommandBuffer(compute_shader_h->command_buffer));

@@ -119,6 +119,7 @@
   <ItemGroup>
     <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan_compute_buffer.c" />
     <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan_camera.c" />
+    <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan_entity.c" />
     <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan_material.c" />
     <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan_model.c" />
     <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan_texture_atlas.c" />
@@ -163,7 +164,6 @@
     <ClInclude Include="src\util\tg_string.h" />
     <ClInclude Include="src\util\tg_file_io.h" />
     <ClInclude Include="src\util\tg_timer.h" />
-    <ClInclude Include="src\tg_entity_internal.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="assets\shaders\frag.spv" />

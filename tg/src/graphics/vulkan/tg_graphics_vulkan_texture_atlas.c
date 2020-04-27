@@ -43,12 +43,12 @@ tg_texture_atlas_h tgg_texture_atlas_create_from_images(u32 image_count, tg_colo
 		vulkan_color_image_create_info.address_mode_v = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 		vulkan_color_image_create_info.address_mode_w = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 	}
-	texture_atlas_h->texture_atlas = tgg_vulkan_color_image_create(&vulkan_color_image_create_info);
+	texture_atlas_h->color_image = tgg_vulkan_color_image_create(&vulkan_color_image_create_info);
 
 	VkCommandBuffer command_buffer = tgg_vulkan_command_buffer_allocate(graphics_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 	tgg_vulkan_command_buffer_begin(command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
 	{
-		tgg_vulkan_command_buffer_cmd_transition_color_image_layout(command_buffer, &texture_atlas_h->texture_atlas, 0, 0, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+		tgg_vulkan_command_buffer_cmd_transition_color_image_layout(command_buffer, &texture_atlas_h->color_image, 0, 0, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
 		for (u32 i = 0; i < image_count; i++)
 		{
 			VkImageCopy image_copy = { 0 };
@@ -73,10 +73,10 @@ tg_texture_atlas_h tgg_texture_atlas_create_from_images(u32 image_count, tg_colo
 			}
 
 			tgg_vulkan_command_buffer_cmd_transition_color_image_layout(command_buffer, p_color_images_h[p_rects[i].id], 0, 0, TG_VULKAN_COLOR_IMAGE_LAYOUT, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
-			vkCmdCopyImage(command_buffer, p_color_images_h[p_rects[i].id]->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, texture_atlas_h->texture_atlas.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &image_copy);
+			vkCmdCopyImage(command_buffer, p_color_images_h[p_rects[i].id]->color_image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, texture_atlas_h->color_image.color_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &image_copy);
 			tgg_vulkan_command_buffer_cmd_transition_color_image_layout(command_buffer, p_color_images_h[p_rects[i].id], 0, 0, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, TG_VULKAN_COLOR_IMAGE_LAYOUT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
 		}
-		tgg_vulkan_command_buffer_cmd_transition_color_image_layout(command_buffer, &texture_atlas_h->texture_atlas, 0, 0, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, TG_VULKAN_COLOR_IMAGE_LAYOUT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+		tgg_vulkan_command_buffer_cmd_transition_color_image_layout(command_buffer, &texture_atlas_h->color_image, 0, 0, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, TG_VULKAN_COLOR_IMAGE_LAYOUT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
 	}
 	tgg_vulkan_command_buffer_end_and_submit(command_buffer, &graphics_queue);
 
@@ -97,7 +97,7 @@ void tgg_texture_atlas_destroy(tg_texture_atlas_h texture_atlas_h)
 {
 	TG_ASSERT(texture_atlas_h);
 
-	tgg_vulkan_color_image_destroy(&texture_atlas_h->texture_atlas);
+	tgg_vulkan_color_image_destroy(&texture_atlas_h->color_image);
 	TG_MEMORY_FREE(texture_atlas_h->p_extents);
 	TG_MEMORY_FREE(texture_atlas_h);
 }

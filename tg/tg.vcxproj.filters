@@ -26,6 +26,7 @@
     <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan_texture_atlas.c" />
     <ClCompile Include="src\util\tg_rectangle_packer.c" />
     <ClCompile Include="src\util\tg_qsort.c" />
+    <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan_entity.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\tg_common.h" />
@@ -43,7 +44,6 @@
     <ClInclude Include="src\graphics\vulkan\tg_graphics_vulkan.h" />
     <ClInclude Include="src\assets\tg_assets.h" />
     <ClInclude Include="src\graphics\tg_graphics_image_loader.h" />
-    <ClInclude Include="src\tg_entity_internal.h" />
     <ClInclude Include="src\tg_marching_cubes.h" />
     <ClInclude Include="src\memory\tg_memory.h" />
     <ClInclude Include="src\util\tg_rectangle_packer.h" />

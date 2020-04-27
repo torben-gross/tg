@@ -122,16 +122,16 @@ void tg_application_internal_test_3d_create()
         p_point_lights[i].color = (v3){ tgm_random_next_f32(&random), tgm_random_next_f32(&random), tgm_random_next_f32(&random) };
         p_point_lights[i].radius = tgm_random_next_f32(&random) * 50.0f;
     }
-    tg_color_image_create_info image_create_info = { 0 };
+    tg_color_image_create_info color_image_create_info = { 0 };
     {
-        tg_platform_get_window_size(&image_create_info.width, &image_create_info.height);
-        image_create_info.mip_levels = 1;
-        image_create_info.format = TG_COLOR_IMAGE_FORMAT_B8G8R8A8;
-        image_create_info.min_filter = TG_IMAGE_FILTER_LINEAR;
-        image_create_info.mag_filter = TG_IMAGE_FILTER_LINEAR;
-        image_create_info.address_mode_u = TG_IMAGE_ADDRESS_MODE_REPEAT;
-        image_create_info.address_mode_v = TG_IMAGE_ADDRESS_MODE_REPEAT;
-        image_create_info.address_mode_w = TG_IMAGE_ADDRESS_MODE_REPEAT;
+        tg_platform_get_window_size(&color_image_create_info.width, &color_image_create_info.height);
+        color_image_create_info.mip_levels = 1;
+        color_image_create_info.format = TG_COLOR_IMAGE_FORMAT_B8G8R8A8;
+        color_image_create_info.min_filter = TG_IMAGE_FILTER_LINEAR;
+        color_image_create_info.mag_filter = TG_IMAGE_FILTER_LINEAR;
+        color_image_create_info.address_mode_u = TG_IMAGE_ADDRESS_MODE_REPEAT;
+        color_image_create_info.address_mode_v = TG_IMAGE_ADDRESS_MODE_REPEAT;
+        color_image_create_info.address_mode_w = TG_IMAGE_ADDRESS_MODE_REPEAT;
     }
     test_3d.renderer_3d_h = tgg_renderer_3d_create(test_3d.camera_info.camera_h, TG_POINT_LIGHT_COUNT, p_point_lights);
 
@@ -461,7 +461,7 @@ void tg_application_internal_test_3d_destroy()
 
     tgg_camera_destroy(test_3d.camera_info.camera_h);
     tg_list_destroy(test_3d.entities);
-    tgg_renderer_3d_shutdown(test_3d.renderer_3d_h);
+    tgg_renderer_3d_destroy(test_3d.renderer_3d_h);
 }
 
 
@@ -525,7 +525,10 @@ void tg_application_start()
 
 void tg_application_on_window_resize(u32 width, u32 height)
 {
-
+    if (test_3d.renderer_3d_h)
+    {
+        tgg_renderer_3d_on_window_resize(test_3d.renderer_3d_h, width, height);
+    }
 }
 
 void tg_application_quit()

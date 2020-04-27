@@ -22,6 +22,30 @@
 
 
 
+#define TG_RENDERER_3D_GEOMETRY_PASS_COLOR_ATTACHMENT_COUNT    3
+#define TG_RENDERER_3D_GEOMETRY_PASS_DEPTH_ATTACHMENT_COUNT    1
+#define TG_RENDERER_3D_GEOMETRY_PASS_ATTACHMENT_COUNT          TG_RENDERER_3D_GEOMETRY_PASS_COLOR_ATTACHMENT_COUNT + TG_RENDERER_3D_GEOMETRY_PASS_DEPTH_ATTACHMENT_COUNT
+
+#define TG_RENDERER_3D_GEOMETRY_PASS_POSITION_FORMAT           VK_FORMAT_R16G16B16A16_SFLOAT
+#define TG_RENDERER_3D_GEOMETRY_PASS_POSITION_ATTACHMENT       0
+#define TG_RENDERER_3D_GEOMETRY_PASS_NORMAL_FORMAT             VK_FORMAT_R16G16B16A16_SFLOAT
+#define TG_RENDERER_3D_GEOMETRY_PASS_NORMAL_ATTACHMENT         1
+#define TG_RENDERER_3D_GEOMETRY_PASS_ALBEDO_FORMAT             VK_FORMAT_R16G16B16A16_SFLOAT
+#define TG_RENDERER_3D_GEOMETRY_PASS_ALBEDO_ATTACHMENT         2
+#define TG_RENDERER_3D_GEOMETRY_PASS_DEPTH_FORMAT              VK_FORMAT_D32_SFLOAT
+#define TG_RENDERER_3D_GEOMETRY_PASS_DEPTH_ATTACHMENT          3
+
+
+#define TG_RENDERER_3D_SHADING_PASS_COLOR_ATTACHMENT_COUNT     1
+#define TG_RENDERER_3D_SHADING_PASS_DEPTH_ATTACHMENT_COUNT     0
+#define TG_RENDERER_3D_SHADING_PASS_ATTACHMENT_COUNT           TG_RENDERER_3D_SHADING_PASS_COLOR_ATTACHMENT_COUNT + TG_RENDERER_3D_SHADING_PASS_DEPTH_ATTACHMENT_COUNT
+
+#define TG_RENDERER_3D_SHADING_PASS_COLOR_ATTACHMENT_FORMAT    VK_FORMAT_B8G8R8A8_UNORM
+#define TG_RENDERER_3D_SHADING_PASS_MAX_DIRECTIONAL_LIGHTS     512
+#define TG_RENDERER_3D_SHADING_PASS_MAX_POINT_LIGHTS           512
+
+
+
 
 
 typedef struct tg_vulkan_descriptor
@@ -30,7 +54,6 @@ typedef struct tg_vulkan_descriptor
     VkDescriptorSetLayout    descriptor_set_layout;
     VkDescriptorSet          descriptor_set;
 } tg_vulkan_descriptor;
-
 
 typedef struct tg_vulkan_color_image_create_info
 {
@@ -58,7 +81,7 @@ typedef struct tg_vulkan_compute_shader
     VkShaderModule           shader_module;
     tg_vulkan_descriptor     descriptor;
     VkPipelineLayout         pipeline_layout;
-    VkPipeline               pipeline;
+    VkPipeline               compute_pipeline;
 } tg_vulkan_compute_shader;
 
 typedef struct tg_vulkan_depth_image_create_info
@@ -96,40 +119,53 @@ typedef struct tg_vulkan_graphics_pipeline_create_info
     VkRenderPass                             render_pass;
 } tg_vulkan_graphics_pipeline_create_info;
 
-typedef struct tg_vulkan_surface
-{
-    VkSurfaceKHR          surface;
-    VkSurfaceFormatKHR    format;
-} tg_vulkan_surface;
-
 typedef struct tg_vulkan_queue
 {
     u8         index;
     VkQueue    queue;
 } tg_vulkan_queue;
 
+typedef struct tg_vulkan_screen_vertex
+{
+    v2    position;
+    v2    uv;
+} tg_vulkan_screen_vertex;
 
+typedef struct tg_vulkan_surface
+{
+    VkSurfaceKHR          surface;
+    VkSurfaceFormatKHR    format;
+} tg_vulkan_surface;
+
+
+
+typedef struct tg_renderer_3d_light_setup_uniform_buffer
+{
+    u32    directional_light_count;
+    u32    point_light_count;
+    u32    padding[2];
+
+    v4     directional_light_positions_radii[TG_RENDERER_3D_SHADING_PASS_MAX_DIRECTIONAL_LIGHTS];
+    v4     directional_light_colors[TG_RENDERER_3D_SHADING_PASS_MAX_DIRECTIONAL_LIGHTS];
+
+    v4     point_light_positions_radii[TG_RENDERER_3D_SHADING_PASS_MAX_POINT_LIGHTS];
+    v4     point_light_colors[TG_RENDERER_3D_SHADING_PASS_MAX_POINT_LIGHTS];
+} tg_renderer_3d_light_setup_uniform_buffer;
+
+typedef struct tg_renderer_3d_copy_image_compute_buffer
+{
+    u32    width;
+    u32    height;
+    u32    padding[2];
+    v4     data[0];
+} tg_renderer_3d_copy_image_compute_buffer;
 
 
 
 typedef struct tg_camera
 {
-    struct
-    {
-        f32             fov_y;
-        f32             near;
-        f32             far;
-        m4              projection;
-    } projection;
-
-    struct
-    {
-        v3              position;
-        f32             pitch;
-        f32             yaw;
-        f32             roll;
-        m4              view;
-    } view;
+    m4    view;
+    m4    projection;
 } tg_camera;
 
 typedef struct tg_color_image
@@ -138,7 +174,7 @@ typedef struct tg_color_image
     u32                   height;
     u32                   mip_levels;
     VkFormat              format;
-    VkImage               image;
+    VkImage               color_image;
     VkDeviceMemory        device_memory;
     VkImageView           image_view;
     VkSampler             sampler;
@@ -169,6 +205,16 @@ typedef struct tg_depth_image
     VkSampler             sampler;
 } tg_depth_image;
 
+typedef struct tg_entity_graphics_data_ptr
+{
+    tg_renderer_3d_h         renderer_3d_h;
+    tg_vulkan_buffer         uniform_buffer;
+    tg_vulkan_descriptor     descriptor;
+    VkPipelineLayout         pipeline_layout;
+    VkPipeline               graphics_pipeline;
+    VkCommandBuffer          command_buffer;
+} tg_entity_graphics_data_ptr;
+
 typedef struct tg_fragment_shader
 {
     VkShaderModule    shader_module;
@@ -191,20 +237,11 @@ typedef struct tg_model
 {
     tg_mesh_h          mesh_h;
     tg_material_h      material_h;
-
-    struct // TODO: put this into entity
-    {
-        tg_vulkan_descriptor     descriptor;
-        VkPipelineLayout         pipeline_layout;
-        VkPipeline               pipeline;
-        VkCommandBuffer          command_buffer;
-    } render_data;
-
 } tg_model;
 
 typedef struct tg_texture_atlas
 {
-    tg_color_image             texture_atlas;
+    tg_color_image             color_image;
     tg_vulkan_image_extent*    p_extents;
 } tg_texture_atlas;
 
@@ -217,6 +254,99 @@ typedef struct tg_vertex_shader
 {
     VkShaderModule    shader_module;
 } tg_vertex_shader;
+
+
+
+typedef struct tg_renderer_3d_geometry_pass
+{
+    tg_color_image               position_attachment;
+    tg_color_image               normal_attachment;
+    tg_color_image               albedo_attachment;
+    tg_depth_image               depth_attachment;
+
+    VkFence                      rendering_finished_fence;
+    VkSemaphore                  rendering_finished_semaphore;
+
+    tg_vulkan_buffer             view_projection_ubo;
+
+    VkRenderPass                 render_pass;
+    VkFramebuffer                framebuffer;
+
+    VkCommandBuffer              command_buffer;
+} tg_renderer_3d_geometry_pass;
+
+typedef struct tg_renderer_3d_shading_pass
+{
+    tg_color_image               color_attachment;
+
+    tg_vulkan_buffer             vbo;
+    tg_vulkan_buffer             ibo;
+
+    VkFence                      rendering_finished_fence;
+    VkSemaphore                  rendering_finished_semaphore;
+    VkFence                      geometry_pass_attachments_cleared_fence;
+
+    VkRenderPass                 render_pass;
+    VkFramebuffer                framebuffer;
+
+    tg_vulkan_descriptor         descriptor;
+
+    VkShaderModule               vertex_shader_h;
+    VkShaderModule               fragment_shader_h;
+    VkPipelineLayout             pipeline_layout;
+    VkPipeline                   graphics_pipeline;
+
+    VkCommandBuffer              command_buffer;
+
+    tg_vulkan_buffer             point_lights_ubo;
+
+    struct
+    {
+        tg_vulkan_compute_shader     find_exposure_compute_shader;
+        tg_vulkan_buffer             exposure_compute_buffer;
+
+        tg_color_image               color_attachment;
+        VkRenderPass                 render_pass;
+        VkFramebuffer                framebuffer;
+
+        tg_vulkan_descriptor         descriptor;
+
+        VkShaderModule               vertex_shader_h;
+        VkShaderModule               fragment_shader_h;
+        VkPipelineLayout             pipeline_layout;
+        VkPipeline                   graphics_pipeline;
+    } exposure;
+} tg_renderer_3d_shading_pass;
+
+typedef struct tg_renderer_3d_present_pass
+{
+    tg_vulkan_buffer         vbo;
+    tg_vulkan_buffer         ibo;
+
+    VkSemaphore              image_acquired_semaphore;
+    VkFence                  rendering_finished_fence;
+    VkSemaphore              rendering_finished_semaphore;
+
+    VkRenderPass             render_pass;
+    VkFramebuffer            framebuffers[TG_VULKAN_SURFACE_IMAGE_COUNT];
+
+    tg_vulkan_descriptor     descriptor;
+
+    VkShaderModule           vertex_shader_h;
+    VkShaderModule           fragment_shader_h;
+    VkPipelineLayout         pipeline_layout;
+    VkPipeline               graphics_pipeline;
+
+    VkCommandBuffer          command_buffers[TG_VULKAN_SURFACE_IMAGE_COUNT];
+} tg_renderer_3d_present_pass;
+
+typedef struct tg_renderer_3d
+{
+    tg_camera_h                     camera_h;
+    tg_renderer_3d_geometry_pass    geometry_pass;
+    tg_renderer_3d_shading_pass     shading_pass;
+    tg_renderer_3d_present_pass     present_pass;
+} tg_renderer_3d;
 
 
 

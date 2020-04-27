@@ -253,10 +253,10 @@ tg_color_image tgg_vulkan_color_image_create(const tg_vulkan_color_image_create_
         image_create_info.pQueueFamilyIndices = 0;
         image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     }
-    VK_CALL(vkCreateImage(device, &image_create_info, TG_NULL, &color_image.image));
+    VK_CALL(vkCreateImage(device, &image_create_info, TG_NULL, &color_image.color_image));
 
     VkMemoryRequirements memory_requirements;
-    vkGetImageMemoryRequirements(device, color_image.image, &memory_requirements);
+    vkGetImageMemoryRequirements(device, color_image.color_image, &memory_requirements);
     VkMemoryAllocateInfo memory_allocate_info = { 0 };
     {
         memory_allocate_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -265,7 +265,7 @@ tg_color_image tgg_vulkan_color_image_create(const tg_vulkan_color_image_create_
         memory_allocate_info.memoryTypeIndex = tgg_vulkan_memory_type_find(memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     }
     VK_CALL(vkAllocateMemory(device, &memory_allocate_info, TG_NULL, &color_image.device_memory));
-    VK_CALL(vkBindImageMemory(device, color_image.image, color_image.device_memory, 0));
+    VK_CALL(vkBindImageMemory(device, color_image.color_image, color_image.device_memory, 0));
 
     // TODO: mipmapping
     //VkCommandBuffer command_buffer = tgg_vulkan_command_buffer_allocate(graphics_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
@@ -350,7 +350,7 @@ tg_color_image tgg_vulkan_color_image_create(const tg_vulkan_color_image_create_
         image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         image_view_create_info.pNext = TG_NULL;
         image_view_create_info.flags = 0;
-        image_view_create_info.image = color_image.image;
+        image_view_create_info.image = color_image.color_image;
         image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
         image_view_create_info.format = color_image.format;
         image_view_create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -415,7 +415,7 @@ void tgg_vulkan_color_image_destroy(tg_color_image* p_color_image)
     vkDestroySampler(device, p_color_image->sampler, TG_NULL);
     vkDestroyImageView(device, p_color_image->image_view, TG_NULL);
     vkFreeMemory(device, p_color_image->device_memory, TG_NULL);
-    vkDestroyImage(device, p_color_image->image, TG_NULL);
+    vkDestroyImage(device, p_color_image->color_image, TG_NULL);
 }
 
 
@@ -482,7 +482,7 @@ void tgg_vulkan_command_buffer_cmd_clear_color_image(VkCommandBuffer command_buf
         clear_color_value.float32[2] = 0.0f;
         clear_color_value.float32[3] = 0.0f;
     }
-    vkCmdClearColorImage(command_buffer, p_color_image->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color_value, 1, &image_subresource_range);
+    vkCmdClearColorImage(command_buffer, p_color_image->color_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color_value, 1, &image_subresource_range);
 }
 
 void tgg_vulkan_command_buffer_cmd_clear_depth_image(VkCommandBuffer command_buffer, tg_depth_image* p_depth_image)
@@ -522,7 +522,7 @@ void tgg_vulkan_command_buffer_cmd_copy_buffer_to_color_image(VkCommandBuffer co
         buffer_image_copy.imageExtent.height = p_destination->height;
         buffer_image_copy.imageExtent.depth = 1;
     }
-    vkCmdCopyBufferToImage(command_buffer, source, p_destination->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &buffer_image_copy);
+    vkCmdCopyBufferToImage(command_buffer, source, p_destination->color_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &buffer_image_copy);
 }
 
 void tgg_vulkan_command_buffer_cmd_copy_buffer_to_depth_image(VkCommandBuffer command_buffer, VkBuffer source, tg_depth_image* p_destination)
@@ -564,7 +564,7 @@ void tgg_vulkan_command_buffer_cmd_copy_color_image_to_buffer(VkCommandBuffer co
         buffer_image_copy.imageExtent.height = p_source->height;
         buffer_image_copy.imageExtent.depth = 1;
     }
-    vkCmdCopyImageToBuffer(command_buffer, p_source->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, destination, 1, &buffer_image_copy);
+    vkCmdCopyImageToBuffer(command_buffer, p_source->color_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, destination, 1, &buffer_image_copy);
 }
 
 void tgg_vulkan_command_buffer_cmd_transition_color_image_layout(VkCommandBuffer command_buffer, tg_color_image* p_color_image, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits)
@@ -579,7 +579,7 @@ void tgg_vulkan_command_buffer_cmd_transition_color_image_layout(VkCommandBuffer
         image_memory_barrier.newLayout = new_layout;
         image_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         image_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        image_memory_barrier.image = p_color_image->image;
+        image_memory_barrier.image = p_color_image->color_image;
         image_memory_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         image_memory_barrier.subresourceRange.baseMipLevel = 0;
         image_memory_barrier.subresourceRange.levelCount = p_color_image->mip_levels;
@@ -659,7 +659,7 @@ void tgg_vulkan_command_buffers_free(VkCommandPool command_pool, u32 command_buf
 
 VkPipeline tgg_vulkan_compute_pipeline_create(VkShaderModule shader_module, VkPipelineLayout pipeline_layout)
 {
-    VkPipeline pipeline = VK_NULL_HANDLE;
+    VkPipeline compute_pipeline = VK_NULL_HANDLE;
 
     VkPipelineShaderStageCreateInfo pipeline_shader_stage_create_info = { 0 };
     {
@@ -681,9 +681,9 @@ VkPipeline tgg_vulkan_compute_pipeline_create(VkShaderModule shader_module, VkPi
         compute_pipeline_create_info.basePipelineHandle = VK_NULL_HANDLE;
         compute_pipeline_create_info.basePipelineIndex = -1;
     }
-    VK_CALL(vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &compute_pipeline_create_info, TG_NULL, &pipeline));
+    VK_CALL(vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &compute_pipeline_create_info, TG_NULL, &compute_pipeline));
 
-    return pipeline;
+    return compute_pipeline;
 }
 
 void tgg_vulkan_compute_pipeline_destroy(VkPipeline compute_pipeline)
@@ -700,7 +700,7 @@ tg_vulkan_compute_shader tgg_vulkan_compute_shader_create(const char* filename, 
     vulkan_compute_shader.shader_module = tgg_vulkan_shader_module_create(filename);
     vulkan_compute_shader.descriptor = tgg_vulkan_descriptor_create(binding_count, p_bindings);
     vulkan_compute_shader.pipeline_layout = tgg_vulkan_pipeline_layout_create(1, &vulkan_compute_shader.descriptor.descriptor_set_layout, 0, TG_NULL);
-    vulkan_compute_shader.pipeline = tgg_vulkan_compute_pipeline_create(vulkan_compute_shader.shader_module, vulkan_compute_shader.pipeline_layout);
+    vulkan_compute_shader.compute_pipeline = tgg_vulkan_compute_pipeline_create(vulkan_compute_shader.shader_module, vulkan_compute_shader.pipeline_layout);
 
     return vulkan_compute_shader;
 }
@@ -710,7 +710,7 @@ void tgg_vulkan_compute_shader_destroy(tg_vulkan_compute_shader* p_vulkan_comput
     tgg_vulkan_shader_module_destroy(p_vulkan_compute_shader->shader_module);
     tgg_vulkan_descriptor_destroy(&p_vulkan_compute_shader->descriptor);
     tgg_vulkan_pipeline_layout_destroy(p_vulkan_compute_shader->pipeline_layout);
-    tgg_vulkan_compute_pipeline_destroy(p_vulkan_compute_shader->pipeline);
+    tgg_vulkan_compute_pipeline_destroy(p_vulkan_compute_shader->compute_pipeline);
 }
 
 
@@ -1136,7 +1136,7 @@ void tgg_vulkan_framebuffer_destroy(VkFramebuffer framebuffer)
 
 VkPipeline tgg_vulkan_graphics_pipeline_create(const tg_vulkan_graphics_pipeline_create_info* p_vulkan_graphics_pipeline_create_info)
 {
-    VkPipeline pipeline = VK_NULL_HANDLE;
+    VkPipeline graphics_pipeline = VK_NULL_HANDLE;
 
     VkPipelineShaderStageCreateInfo p_pipeline_shader_stage_create_infos[2] = { 0 };
     {
@@ -1291,10 +1291,10 @@ VkPipeline tgg_vulkan_graphics_pipeline_create(const tg_vulkan_graphics_pipeline
         graphics_pipeline_create_info.basePipelineHandle = VK_NULL_HANDLE;
         graphics_pipeline_create_info.basePipelineIndex = -1;
     }
-    VK_CALL(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &graphics_pipeline_create_info, TG_NULL, &pipeline));
+    VK_CALL(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &graphics_pipeline_create_info, TG_NULL, &graphics_pipeline));
     TG_MEMORY_FREE(p_pipeline_color_blend_attachment_states);
 
-    return pipeline;
+    return graphics_pipeline;
 }
 
 void tgg_vulkan_graphics_pipeline_destroy(VkPipeline graphics_pipeline)
