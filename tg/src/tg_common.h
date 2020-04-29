@@ -34,6 +34,7 @@
 #endif
 
 #define TG_DECLARE_HANDLE(structure)    typedef struct structure* structure##_h
+#define TG_DECLARE_TYPE(structure)      typedef struct structure structure
 
 
 

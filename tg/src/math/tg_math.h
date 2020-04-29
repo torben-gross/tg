@@ -211,7 +211,7 @@ f32    tgm_noise(f32 x, f32 y, f32 z);
 // TODO: Unity uses Marsaglia's Xorshift 128, this is the basic variation.
 void    tgm_random_init(tg_random* p_random, u32 seed);
 f32     tgm_random_next_f32(tg_random* p_random);
-u32     tgm_random_next_ui32(tg_random* p_random);
+u32     tgm_random_next_u32(tg_random* p_random);
 
 
 
@@ -239,11 +239,12 @@ f32    tgm_f32_tanh(f32 v);
 f64    tgm_f64_pow(f64 base, f64 exponent);
 
 f32    tgm_i32_log10(i32 v);
+f32    tgm_i32_log2(i32 v);
 i32    tgm_i32_pow(i32 base, i32 exponent);
 
-u32    tgm_ui32_floor(u32 v);
-f32    tgm_ui32_log10(u32 v);
-u32    tgm_ui32_pow(u32 base, u32 exponent);
+f32    tgm_u32_log10(u32 v);
+f32    tgm_u32_log2(u32 v);
+u32    tgm_u32_pow(u32 base, u32 exponent);
 
 
 
@@ -262,11 +263,13 @@ f32    tgm_f32_tlerp(f32 v000, f32 v001, f32 v010, f32 v011, f32 v100, f32 v101,
 i32    tgm_i32_abs(i32 v);
 i32    tgm_i32_clamp(i32 v, i32 low, i32 high);
 u32    tgm_i32_digits(i32 v);
+b32    tgm_i32_is_power_of_two(i32 v);
 i32    tgm_i32_max(i32 v0, i32 v1);
 i32    tgm_i32_min(i32 v0, i32 v1);
 
 u32    tgm_u32_clamp(u32 v, u32 low, u32 high);
 u32    tgm_u32_digits(u32 v);
+b32    tgm_u32_is_power_of_two(u32 v);
 u32    tgm_u32_max(u32 v0, u32 v1);
 u32    tgm_u32_min(u32 v0, u32 v1);
 

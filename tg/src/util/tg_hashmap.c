@@ -1,5 +1,6 @@
 #include "util/tg_hashmap.h"
 
+#include "math/tg_math.h"
 #include "memory/tg_memory.h"
 #include "util/tg_list.h"
 
@@ -50,7 +51,7 @@ b32 tg_hashmap_internal_keys_equal(const tg_hashmap_h hashmap_h, const void* p_k
 
 tg_hashmap_h tg_hashmap_create_impl(u32 key_size, u32 value_size, u32 bucket_count, u32 bucket_capacity)
 {
-	TG_ASSERT(key_size && value_size && bucket_count && bucket_capacity);
+	TG_ASSERT(key_size && value_size && bucket_count && !tgm_u32_is_power_of_two(bucket_count) && bucket_capacity);
 
 	tg_hashmap_h hashmap_h = TG_MEMORY_ALLOC(sizeof(*hashmap_h) + bucket_count * sizeof(*hashmap_h->buckets));
 	

@@ -193,11 +193,11 @@ f32 tgm_random_next_f32(tg_random* p_random)
 {
 	TG_ASSERT(p_random);
 
-	const f32 result = (f32)tgm_random_next_ui32(p_random) / (f32)TG_U32_MAX;
+	const f32 result = (f32)tgm_random_next_u32(p_random) / (f32)TG_U32_MAX;
 	return result;
 }
 
-u32 tgm_random_next_ui32(tg_random* p_random)
+u32 tgm_random_next_u32(tg_random* p_random)
 {
 	TG_ASSERT(p_random);
 
@@ -366,6 +366,14 @@ f32 tgm_i32_log10(i32 v)
 	return result;
 }
 
+f32 tgm_i32_log2(i32 v)
+{
+	const __m128 simd_v = _mm_set_ss((f32)v);
+	const __m128 simd_result = _mm_log2_ps(simd_v);
+	const f32 result = simd_result.m128_f32[0];
+	return result;
+}
+
 i32 tgm_i32_pow(i32 base, i32 exponent)
 {
 	const __m128 simd_base = _mm_set_ss((f32)base);
@@ -377,15 +385,7 @@ i32 tgm_i32_pow(i32 base, i32 exponent)
 
 
 
-u32 tgm_ui32_floor(u32 v)
-{
-	const __m128 simd_v = _mm_set_ss((f32)v);
-	const __m128 simd_result = _mm_floor_ps(simd_v);
-	const u32 result = (u32)simd_result.m128_f32[0];
-	return result;
-}
-
-f32 tgm_ui32_log10(u32 v)
+f32 tgm_u32_log10(u32 v)
 {
 	const __m128 simd_v = _mm_set_ss((f32)v);
 	const __m128 simd_result = _mm_log10_ps(simd_v);
@@ -393,7 +393,15 @@ f32 tgm_ui32_log10(u32 v)
 	return result;
 }
 
-u32 tgm_ui32_pow(u32 base, u32 exponent)
+f32 tgm_u32_log2(u32 v)
+{
+	const __m128 simd_v = _mm_set_ss((f32)v);
+	const __m128 simd_result = _mm_log2_ps(simd_v);
+	const f32 result = simd_result.m128_f32[0];
+	return result;
+}
+
+u32 tgm_u32_pow(u32 base, u32 exponent)
 {
 	const __m128 simd_base = _mm_set_ss((f32)base);
 	const __m128 simd_exponent = _mm_set_ss((f32)exponent);
@@ -516,6 +524,12 @@ f32 tgm_i32_log10(i32 v)
 	return result;
 }
 
+f32 tgm_i32_log2(i32 v)
+{
+	const f32 result = log2f((f32)v);
+	return result;
+}
+
 i32 tgm_i32_pow(i32 base, i32 exponent)
 {
 	const i32 result = (i32)pow((f64)base, (f64)exponent);
@@ -524,19 +538,19 @@ i32 tgm_i32_pow(i32 base, i32 exponent)
 
 
 
-u32 tgm_ui32_floor(u32 v)
-{
-	const u32 result = (u32)floor((f64)v);
-	return result;
-}
-
-f32 tgm_ui32_log10(u32 v)
+f32 tgm_u32_log10(u32 v)
 {
 	const f32 result = log10f((f32)v);
 	return result;
 }
 
-u32 tgm_ui32_pow(u32 base, u32 exponent)
+f32 tgm_u32_log2(u32 v)
+{
+	const f32 result = log2f((f32)v);
+	return result;
+}
+
+u32 tgm_u32_pow(u32 base, u32 exponent)
 {
 	const u32 result = (u32)pow((f64)base, (f64)exponent);
 	return result;
@@ -614,7 +628,13 @@ u32 tgm_i32_digits(i32 v)
 	{
 		v += 1;
 	}
-	const u32 result = v == 0 ? 1 : (u32)tgm_f32_floor(tgm_ui32_log10((u32)tgm_i32_abs(v))) + 1;
+	const u32 result = v == 0 ? 1 : (u32)tgm_f32_floor(tgm_i32_log10(tgm_i32_abs(v))) + 1;
+	return result;
+}
+
+b32 tgm_i32_is_power_of_two(i32 v)
+{
+	const b32 result = tgm_f32_ceil(tgm_i32_log2(v)) == tgm_f32_floor(tgm_i32_log2(v));
 	return result;
 }
 
@@ -638,7 +658,13 @@ u32 tgm_u32_clamp(u32 v, u32 low, u32 high)
 
 u32 tgm_u32_digits(u32 v)
 {
-	const u32 result = v == 0 ? 1 : (u32)tgm_f32_floor(tgm_ui32_log10(v)) + 1;
+	const u32 result = v == 0 ? 1 : (u32)tgm_f32_floor(tgm_u32_log10(v)) + 1;
+	return result;
+}
+
+b32 tgm_u32_is_power_of_two(u32 v)
+{
+	const b32 result = tgm_f32_ceil(tgm_u32_log2(v)) == tgm_f32_floor(tgm_u32_log2(v));
 	return result;
 }
 

@@ -21,10 +21,7 @@ tg_hashmap_h    memory_allocations = TG_NULL;
 
 void tg_memory_init()
 {
-	memory_allocations = TG_HASHMAP_CREATE__BUCKET_COUNT__BUCKET_CAPACITY(
-		void*, tg_memory_allocator_allocation,
-		997, 4
-	);
+	memory_allocations = TG_HASHMAP_CREATE__BUCKET_COUNT__BUCKET_CAPACITY(void*, tg_memory_allocator_allocation, 997, 4);
 	recording_allocations = TG_TRUE;
 }
 
