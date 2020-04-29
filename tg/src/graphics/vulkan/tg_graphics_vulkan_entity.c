@@ -5,9 +5,9 @@
 #include "memory/tg_memory.h"
 #include "tg_entity.h"
 
-tg_entity_graphics_data_ptr_h tg_entity_graphics_data_ptr_create(tg_entity_h entity_h, tg_deferred_renderer_h deferred_renderer_h)
+tg_entity_graphics_data_ptr_h tg_entity_graphics_data_ptr_create(tg_entity* p_entity, tg_deferred_renderer_h deferred_renderer_h)
 {
-	TG_ASSERT(entity_h);
+	TG_ASSERT(p_entity);
 
 	tg_entity_graphics_data_ptr_h entity_graphics_data_ptr_h = TG_MEMORY_ALLOC(sizeof(*entity_graphics_data_ptr_h));
 
@@ -16,7 +16,7 @@ tg_entity_graphics_data_ptr_h tg_entity_graphics_data_ptr_create(tg_entity_h ent
 	entity_graphics_data_ptr_h->uniform_buffer = tg_vulkan_buffer_create(sizeof(m4), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 	*((m4*)entity_graphics_data_ptr_h->uniform_buffer.p_mapped_device_memory) = tgm_m4_identity();
 
-    const b32 has_custom_descriptor_set = entity_h->material_h->descriptor.descriptor_pool != VK_NULL_HANDLE;
+    const b32 has_custom_descriptor_set = p_entity->material_h->descriptor.descriptor_pool != VK_NULL_HANDLE;
 
     VkDescriptorSetLayoutBinding p_descriptor_set_layout_bindings[2] = { 0 };
     {
@@ -36,7 +36,7 @@ tg_entity_graphics_data_ptr_h tg_entity_graphics_data_ptr_create(tg_entity_h ent
 
     if (has_custom_descriptor_set)
     {
-        const VkDescriptorSetLayout p_descriptor_set_layouts[2] = { entity_graphics_data_ptr_h->descriptor.descriptor_set_layout, entity_h->material_h->descriptor.descriptor_set_layout };
+        const VkDescriptorSetLayout p_descriptor_set_layouts[2] = { entity_graphics_data_ptr_h->descriptor.descriptor_set_layout, p_entity->material_h->descriptor.descriptor_set_layout };
         entity_graphics_data_ptr_h->pipeline_layout = tg_vulkan_pipeline_layout_create(2, p_descriptor_set_layouts, 0, TG_NULL);
     }
     else
@@ -89,8 +89,8 @@ tg_entity_graphics_data_ptr_h tg_entity_graphics_data_ptr_create(tg_entity_h ent
     }
     tg_vulkan_graphics_pipeline_create_info vulkan_graphics_pipeline_create_info = { 0 };
     {
-        vulkan_graphics_pipeline_create_info.vertex_shader = entity_h->material_h->vertex_shader_h->shader_module;
-        vulkan_graphics_pipeline_create_info.fragment_shader = entity_h->material_h->fragment_shader_h->shader_module;
+        vulkan_graphics_pipeline_create_info.vertex_shader = p_entity->material_h->vertex_shader_h->shader_module;
+        vulkan_graphics_pipeline_create_info.fragment_shader = p_entity->material_h->fragment_shader_h->shader_module;
         vulkan_graphics_pipeline_create_info.cull_mode = VK_CULL_MODE_BACK_BIT;
         vulkan_graphics_pipeline_create_info.sample_count = VK_SAMPLE_COUNT_1_BIT;
         vulkan_graphics_pipeline_create_info.depth_test_enable = VK_TRUE;
@@ -159,10 +159,10 @@ tg_entity_graphics_data_ptr_h tg_entity_graphics_data_ptr_create(tg_entity_h ent
         vkCmdBindPipeline(entity_graphics_data_ptr_h->command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, entity_graphics_data_ptr_h->graphics_pipeline);
 
         const VkDeviceSize vertex_buffer_offset = 0;
-        vkCmdBindVertexBuffers(entity_graphics_data_ptr_h->command_buffer, 0, 1, &entity_h->mesh_h->vbo.buffer, &vertex_buffer_offset);
-        if (entity_h->mesh_h->ibo.size != 0)
+        vkCmdBindVertexBuffers(entity_graphics_data_ptr_h->command_buffer, 0, 1, &p_entity->mesh_h->vbo.buffer, &vertex_buffer_offset);
+        if (p_entity->mesh_h->ibo.size != 0)
         {
-            vkCmdBindIndexBuffer(entity_graphics_data_ptr_h->command_buffer, entity_h->mesh_h->ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
+            vkCmdBindIndexBuffer(entity_graphics_data_ptr_h->command_buffer, p_entity->mesh_h->ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
         }
 
         const u32 descriptor_set_count = has_custom_descriptor_set ? 2 : 1;
@@ -171,18 +171,18 @@ tg_entity_graphics_data_ptr_h tg_entity_graphics_data_ptr_create(tg_entity_h ent
             p_descriptor_sets[0] = entity_graphics_data_ptr_h->descriptor.descriptor_set;
             if (has_custom_descriptor_set)
             {
-                p_descriptor_sets[1] = entity_h->material_h->descriptor.descriptor_set;
+                p_descriptor_sets[1] = p_entity->material_h->descriptor.descriptor_set;
             }
         }
         vkCmdBindDescriptorSets(entity_graphics_data_ptr_h->command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, entity_graphics_data_ptr_h->pipeline_layout, 0, descriptor_set_count, p_descriptor_sets, 0, TG_NULL);
 
-        if (entity_h->mesh_h->ibo.size != 0)
+        if (p_entity->mesh_h->ibo.size != 0)
         {
-            vkCmdDrawIndexed(entity_graphics_data_ptr_h->command_buffer, (u32)(entity_h->mesh_h->ibo.size / sizeof(u16)), 1, 0, 0, 0); // TODO: u16
+            vkCmdDrawIndexed(entity_graphics_data_ptr_h->command_buffer, (u32)(p_entity->mesh_h->ibo.size / sizeof(u16)), 1, 0, 0, 0); // TODO: u16
         }
         else
         {
-            vkCmdDraw(entity_graphics_data_ptr_h->command_buffer, (u32)(entity_h->mesh_h->vbo.size / sizeof(tg_vertex_3d)), 1, 0, 0);
+            vkCmdDraw(entity_graphics_data_ptr_h->command_buffer, (u32)(p_entity->mesh_h->vbo.size / sizeof(tg_vertex_3d)), 1, 0, 0);
         }
     }
     VK_CALL(vkEndCommandBuffer(entity_graphics_data_ptr_h->command_buffer));

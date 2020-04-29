@@ -3,6 +3,7 @@
 #ifdef TG_VULKAN
 
 #include "memory/tg_memory.h"
+#include "tg_entity.h"
 
 
 
@@ -112,9 +113,9 @@ void tg_forward_renderer_destroy(tg_forward_renderer_h forward_renderer_h)
     TG_MEMORY_FREE(forward_renderer_h);
 }
 
-void tg_forward_renderer_draw(tg_forward_renderer_h forward_renderer_h, tg_entity_h entity_h)
+void tg_forward_renderer_draw(tg_forward_renderer_h forward_renderer_h, tg_entity* p_entity)
 {
-	TG_ASSERT(forward_renderer_h && entity_h);
+	TG_ASSERT(forward_renderer_h && p_entity);
 }
 
 void tg_forward_renderer_end(tg_forward_renderer_h forward_renderer_h)

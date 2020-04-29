@@ -20,7 +20,7 @@
 
 
 #ifdef TG_DEBUG
-TG_DECLARE_HANDLE(tg_list);
+TG_DECLARE_TYPE(tg_list);
 
 typedef struct tg_memory_allocation
 {
@@ -31,15 +31,15 @@ typedef struct tg_memory_allocation
 
 
 
-void         tg_memory_init();
-void         tg_memory_shutdown();
+void       tg_memory_init();
+void       tg_memory_shutdown();
 
 #ifdef TG_DEBUG
-void*        tg_memory_alloc_impl(u64 size, const char* p_filename, u32 line);
-void*        tg_memory_realloc_impl(void* p_memory, u64 size, const char* p_filename, u32 line);
-void         tg_memory_free_impl(void* p_memory, const char* p_filename, u32 line);
-u32          tg_memory_unfreed_allocation_count();
-tg_list_h    tg_memory_create_unfreed_allocations_list();
+void*      tg_memory_alloc_impl(u64 size, const char* p_filename, u32 line);
+void*      tg_memory_realloc_impl(void* p_memory, u64 size, const char* p_filename, u32 line);
+void       tg_memory_free_impl(void* p_memory, const char* p_filename, u32 line);
+u32        tg_memory_unfreed_allocation_count();
+tg_list    tg_memory_create_unfreed_allocations_list();
 #endif
 
 #endif

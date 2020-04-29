@@ -912,11 +912,11 @@ void tg_deferred_renderer_destroy(tg_deferred_renderer_h deferred_renderer_h)
     TG_MEMORY_FREE(deferred_renderer_h);
 }
 
-void tg_deferred_renderer_draw(tg_deferred_renderer_h deferred_renderer_h, tg_entity_h entity_h)
+void tg_deferred_renderer_draw(tg_deferred_renderer_h deferred_renderer_h, tg_entity* p_entity)
 {
-    TG_ASSERT(deferred_renderer_h && entity_h && entity_h->graphics_data_ptr_h->deferred_renderer_h == deferred_renderer_h);
+    TG_ASSERT(deferred_renderer_h && p_entity && p_entity->graphics_data_ptr_h->deferred_renderer_h == deferred_renderer_h);
 
-    vkCmdExecuteCommands(deferred_renderer_h->geometry_pass.command_buffer, 1, &entity_h->graphics_data_ptr_h->command_buffer);
+    vkCmdExecuteCommands(deferred_renderer_h->geometry_pass.command_buffer, 1, &p_entity->graphics_data_ptr_h->command_buffer);
 }
 
 void tg_deferred_renderer_end(tg_deferred_renderer_h deferred_renderer_h)

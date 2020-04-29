@@ -27,7 +27,7 @@ void tg_rectangle_packer_pack(u32 rect_count, tg_rect* p_rects, u32* p_total_wid
 
     TG_QSORT_CUSTOM(tg_rect, rect_count, p_rects, tg_rectangle_packer_internal_rect_compare);
 
-    tg_list_h spaces = TG_LIST_CREATE__CAPACITY(tg_rect, rect_count * rect_count);
+    tg_list spaces = TG_LIST_CREATE__CAPACITY(tg_rect, rect_count * rect_count);
 
     const u32 start_width = tgm_u32_max((u32)tgm_f32_ceil(tgm_f32_sqrt((f32)area / 0.95f)), max_width);
     tg_rect start_rect = { 0 };
@@ -37,16 +37,16 @@ void tg_rectangle_packer_pack(u32 rect_count, tg_rect* p_rects, u32* p_total_wid
         start_rect.width = start_width;
         start_rect.height = TG_U16_MAX;
     }
-    tg_list_insert(spaces, &start_rect);
+    tg_list_insert(&spaces, &start_rect);
 
     for (u32 i = 0; i < rect_count; i++)
     {
         tg_rect* p_rect = &p_rects[i];
-        const u32 space_count = tg_list_count(spaces);
+        const u32 space_count = tg_list_count(&spaces);
 
         for (u32 j = 0; j < space_count; j++)
         {
-            tg_rect* p_space = tg_list_pointer_to(spaces, space_count - 1 - j);
+            tg_rect* p_space = tg_list_pointer_to(&spaces, space_count - 1 - j);
 
             if (p_rect->width > p_space->width || p_rect->height > p_space->height)
             {
@@ -71,7 +71,7 @@ void tg_rectangle_packer_pack(u32 rect_count, tg_rect* p_rects, u32* p_total_wid
                 |______________________|
 
                 */
-                tg_list_remove_at(spaces, j);
+                tg_list_remove_at(&spaces, j);
             }
             else if (p_rect->width == p_space->width)
             {
@@ -122,7 +122,7 @@ void tg_rectangle_packer_pack(u32 rect_count, tg_rect* p_rects, u32* p_total_wid
                     new_space.width = p_space->width - p_rect->width;
                     new_space.height = p_rect->height;
                 }
-                tg_list_insert(spaces, &new_space);
+                tg_list_insert(&spaces, &new_space);
                 p_space->bottom += p_rect->height;
                 p_space->height -= p_rect->height;
             }
@@ -130,5 +130,5 @@ void tg_rectangle_packer_pack(u32 rect_count, tg_rect* p_rects, u32* p_total_wid
         }
     }
 
-    tg_list_destroy(spaces);
+    tg_list_destroy(&spaces);
 }

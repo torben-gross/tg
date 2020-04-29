@@ -6,11 +6,11 @@
 
 
 
-TG_DECLARE_HANDLE(tg_entity);
+TG_DECLARE_TYPE(tg_scene);
+
 TG_DECLARE_HANDLE(tg_entity_graphics_data_ptr);
 TG_DECLARE_HANDLE(tg_material);
 TG_DECLARE_HANDLE(tg_mesh);
-TG_DECLARE_HANDLE(tg_scene);
 
 
 
@@ -31,8 +31,8 @@ typedef struct tg_entity
 
 
 
-tg_entity_h    tg_entity_create(tg_scene_h scene_h, tg_mesh_h mesh_h, tg_material_h material_h);
-void           tg_entity_destroy(tg_entity_h entity_h);
-void           tg_entity_set_position(tg_entity_h entity_h, const v3* p_position);
+tg_entity    tg_entity_create(tg_scene* p_scene, tg_mesh_h mesh_h, tg_material_h material_h);
+void         tg_entity_destroy(tg_entity *p_entity);
+void         tg_entity_set_position(tg_entity* p_entity, const v3* p_position);
 
 #endif

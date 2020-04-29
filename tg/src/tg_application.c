@@ -71,8 +71,8 @@ typedef struct tg_test_2d
 
 typedef struct tg_test_3d
 {
-    tg_scene_h                     scene_h;
-    tg_list_h                      entities;
+    tg_scene                       scene;
+    tg_list                        entities;
     tg_camera_info                 camera_info;
     tg_color_image_h               textures_h[13];
     tg_texture_atlas_h             texture_atlas_h;
@@ -86,11 +86,11 @@ typedef struct tg_test_3d
     tg_vertex_shader_h             custom_vertex_shader_h;
     tg_fragment_shader_h           custom_fragment_shader_h;
     tg_material_h                  custom_material_h;
-    tg_entity_h                    quad_entity_h;
+    tg_entity                      quad_entity;
     tg_mesh_h                      ground_mesh_h;
-    tg_entity_h                    ground_entity_h;
+    tg_entity                      ground_entity;
     tg_mesh_h*                     p_chunk_meshes;
-    tg_entity_h*                   p_chunk_entities;
+    tg_entity*                     p_chunk_entities;
     f32                            quad_offset;
     f32                            dtsum;
 } tg_test_3d;
@@ -119,7 +119,7 @@ void tg_application_internal_test_2d_destroy()
 
 void tg_application_internal_test_3d_create()
 {
-    test_3d.entities = TG_LIST_CREATE(tg_entity_h);
+    test_3d.entities = TG_LIST_CREATE(tg_entity);
     test_3d.camera_info.position = (v3){ 0.0f, 0.0f, 0.0f };
     test_3d.camera_info.pitch = 0.0f;
     test_3d.camera_info.yaw = 0.0f;
@@ -151,7 +151,7 @@ void tg_application_internal_test_3d_create()
         color_image_create_info.address_mode_v = TG_IMAGE_ADDRESS_MODE_REPEAT;
         color_image_create_info.address_mode_w = TG_IMAGE_ADDRESS_MODE_REPEAT;
     }
-    test_3d.scene_h = tg_scene_create(test_3d.camera_info.camera_h, TG_POINT_LIGHT_COUNT, p_point_lights);
+    test_3d.scene = tg_scene_create(test_3d.camera_info.camera_h, TG_POINT_LIGHT_COUNT, p_point_lights);
 
 
 
@@ -215,13 +215,13 @@ void tg_application_internal_test_3d_create()
     test_3d.custom_fragment_shader_h = tg_fragment_shader_create("shaders/custom_geometry.frag");
     test_3d.custom_material_h = tg_material_create_deferred(test_3d.custom_vertex_shader_h, test_3d.custom_fragment_shader_h, 2, p_shader_input_elements, p_custom_handles);
 
-    test_3d.quad_entity_h = tg_entity_create(test_3d.scene_h, test_3d.quad_mesh_h, test_3d.custom_material_h);
+    test_3d.quad_entity = tg_entity_create(&test_3d.scene, test_3d.quad_mesh_h, test_3d.custom_material_h);
     test_3d.quad_offset = -65.0f;
-    tg_list_insert(test_3d.entities, &test_3d.quad_entity_h);
+    tg_list_insert(&test_3d.entities, &test_3d.quad_entity);
 
     test_3d.ground_mesh_h = tg_mesh_create(4, p_ground_positions, TG_NULL, p_uvs, TG_NULL, 6, p_indices);
-    test_3d.ground_entity_h = tg_entity_create(test_3d.scene_h, test_3d.ground_mesh_h, test_3d.default_material_h);
-    tg_list_insert(test_3d.entities, &test_3d.ground_entity_h);
+    test_3d.ground_entity = tg_entity_create(&test_3d.scene, test_3d.ground_mesh_h, test_3d.default_material_h);
+    tg_list_insert(&test_3d.entities, &test_3d.ground_entity);
 
 
 
@@ -311,12 +311,12 @@ void tg_application_internal_test_3d_create()
                 const u32 chunk_total_vertex_count = 3 * triangle_count;
 
                 tg_mesh_h chunk_mesh_h = tg_mesh_create(chunk_total_vertex_count, p_chunk_positions, TG_NULL, TG_NULL, TG_NULL, 0, TG_NULL);
-                tg_entity_h chunk_entity_h = tg_entity_create(test_3d.scene_h, chunk_mesh_h, test_3d.default_material_h);
-                tg_list_insert(test_3d.entities, &chunk_entity_h);
+                tg_entity chunk_entity = tg_entity_create(&test_3d.scene, chunk_mesh_h, test_3d.default_material_h);
+                tg_list_insert(&test_3d.entities, &chunk_entity);
                 v3 chunk_translation = { (f32)(chunk_vertex_count - 1) * cell_stride * (f32)chunk_x, 0.0f, -(f32)(chunk_vertex_count - 1) * cell_stride * (f32)chunk_z }; // TODO: could be baked in
-                tg_entity_set_position(chunk_entity_h, &chunk_translation);
+                tg_entity_set_position(&chunk_entity, &chunk_translation);
 
-                test_3d.p_chunk_entities[chunk_z * TG_CHUNKS_X + chunk_x] = chunk_entity_h;
+                test_3d.p_chunk_entities[chunk_z * TG_CHUNKS_X + chunk_x] = chunk_entity;
                 test_3d.p_chunk_meshes[chunk_z * TG_CHUNKS_X + chunk_x] = chunk_mesh_h;
             }
         }
@@ -339,7 +339,7 @@ void tg_application_internal_test_3d_update_and_render(f32 delta_ms)
         test_3d.quad_offset -= 0.01f * delta_ms;
     }
     v3 quad_offset_translation_z = { 0.0f, 0.0f, test_3d.quad_offset };
-    tg_entity_set_position(test_3d.quad_entity_h, &quad_offset_translation_z);
+    tg_entity_set_position(&test_3d.quad_entity, &quad_offset_translation_z);
 
     test_3d.dtsum += delta_ms;
     if (test_3d.dtsum >= 10000.0f)
@@ -423,15 +423,15 @@ void tg_application_internal_test_3d_update_and_render(f32 delta_ms)
         tg_perspective_camera_set_projection(test_3d.camera_info.camera_h, test_3d.camera_info.fov_y_in_radians, test_3d.camera_info.near, test_3d.camera_info.far);
     }
 
-    tg_scene_begin(test_3d.scene_h);
-    const u32 entity_count = tg_list_count(test_3d.entities);
-    tg_entity_h* p_entities = tg_list_pointer_to(test_3d.entities, 0);
+    tg_scene_begin(&test_3d.scene);
+    const u32 entity_count = tg_list_count(&test_3d.entities);
+    tg_entity* p_entities = tg_list_pointer_to(&test_3d.entities, 0);
     for (u32 i = 0; i < entity_count; i++)
     {
-        tg_scene_draw(test_3d.scene_h, p_entities[i]);
+        tg_scene_draw(&test_3d.scene, &p_entities[i]);
     }
-    tg_scene_end(test_3d.scene_h);
-    tg_scene_present(test_3d.scene_h);
+    tg_scene_end(&test_3d.scene);
+    tg_scene_present(&test_3d.scene);
 }
 
 void tg_application_internal_test_3d_destroy()
@@ -444,17 +444,14 @@ void tg_application_internal_test_3d_destroy()
 
     for (u32 i = 0; i < TG_CHUNKS_X * TG_CHUNKS_Z; i++)
     {
-        if (test_3d.p_chunk_entities[i])
-        {
-            tg_entity_destroy(test_3d.p_chunk_entities[i]);
-            tg_mesh_destroy(test_3d.p_chunk_meshes[i]);
-        }
+        tg_entity_destroy(&test_3d.p_chunk_entities[i]);
+        tg_mesh_destroy(test_3d.p_chunk_meshes[i]);
     }
     TG_MEMORY_FREE(test_3d.p_chunk_entities);
     TG_MEMORY_FREE(test_3d.p_chunk_meshes);
 
-    tg_entity_destroy(test_3d.quad_entity_h);
-    tg_entity_destroy(test_3d.ground_entity_h);
+    tg_entity_destroy(&test_3d.quad_entity);
+    tg_entity_destroy(&test_3d.ground_entity);
     tg_mesh_destroy(test_3d.ground_mesh_h);
     tg_mesh_destroy(test_3d.quad_mesh_h);
 
@@ -469,8 +466,8 @@ void tg_application_internal_test_3d_destroy()
     tg_vertex_shader_destroy(test_3d.default_vertex_shader_h);
 
     tg_perspective_camera_destroy(test_3d.camera_info.camera_h);
-    tg_list_destroy(test_3d.entities);
-    tg_scene_destroy(test_3d.scene_h);
+    tg_list_destroy(&test_3d.entities);
+    tg_scene_destroy(&test_3d.scene);
 }
 
 
