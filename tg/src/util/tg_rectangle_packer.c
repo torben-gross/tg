@@ -42,11 +42,9 @@ void tg_rectangle_packer_pack(u32 rect_count, tg_rect* p_rects, u32* p_total_wid
     for (u32 i = 0; i < rect_count; i++)
     {
         tg_rect* p_rect = &p_rects[i];
-        const u32 space_count = tg_list_count(&spaces);
-
-        for (u32 j = 0; j < space_count; j++)
+        for (u32 j = 0; j < spaces.count; j++)
         {
-            tg_rect* p_space = tg_list_pointer_to(&spaces, space_count - 1 - j);
+            tg_rect* p_space = TG_LIST_POINTER_TO(spaces, spaces.count - 1 - j);
 
             if (p_rect->width > p_space->width || p_rect->height > p_space->height)
             {

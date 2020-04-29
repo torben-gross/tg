@@ -1326,7 +1326,6 @@ m4 tgm_m4_euler(f32 pitch_in_radians, f32 yaw_in_radians, f32 roll_in_radians)
 	const m4 y = tgm_m4_rotate_y(yaw_in_radians);
 	const m4 z = tgm_m4_rotate_z(roll_in_radians);
 	const m4 yx = tgm_m4_multiply_m4(&y, &x);
-	return yx;
 	const m4 zyx = tgm_m4_multiply_m4(&z, &yx);
 
 	return zyx;

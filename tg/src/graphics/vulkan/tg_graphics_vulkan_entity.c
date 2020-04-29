@@ -1,17 +1,30 @@
 #include "graphics/vulkan/tg_graphics_vulkan.h"
+#include "graphics/vulkan/tg_graphics_vulkan_deferred_renderer.h"
+#include "graphics/vulkan/tg_graphics_vulkan_forward_renderer.h"
 
 #ifdef TG_VULKAN
 
 #include "memory/tg_memory.h"
 #include "tg_entity.h"
+#include "tg_scene.h"
 
-tg_entity_graphics_data_ptr_h tg_entity_graphics_data_ptr_create(tg_entity* p_entity, tg_deferred_renderer_h deferred_renderer_h)
+tg_entity_graphics_data_ptr_h tg_entity_graphics_data_ptr_create(tg_entity* p_entity, tg_scene* p_scene)
 {
 	TG_ASSERT(p_entity);
 
 	tg_entity_graphics_data_ptr_h entity_graphics_data_ptr_h = TG_MEMORY_ALLOC(sizeof(*entity_graphics_data_ptr_h));
 
-    entity_graphics_data_ptr_h->deferred_renderer_h = deferred_renderer_h;
+    switch (p_entity->material_h->material_type)
+    {
+    case TG_VULKAN_MATERIAL_TYPE_DEFERRED:
+    {
+        entity_graphics_data_ptr_h->renderer_h = p_scene->deferred_renderer_h;
+    } break;
+    case TG_VULKAN_MATERIAL_TYPE_FORWARD:
+    {
+        entity_graphics_data_ptr_h->renderer_h = p_scene->forward_renderer_h;
+    } break;
+    }
 
 	entity_graphics_data_ptr_h->uniform_buffer = tg_vulkan_buffer_create(sizeof(m4), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 	*((m4*)entity_graphics_data_ptr_h->uniform_buffer.p_mapped_device_memory) = tgm_m4_identity();
@@ -95,11 +108,48 @@ tg_entity_graphics_data_ptr_h tg_entity_graphics_data_ptr_create(tg_entity* p_en
         vulkan_graphics_pipeline_create_info.sample_count = VK_SAMPLE_COUNT_1_BIT;
         vulkan_graphics_pipeline_create_info.depth_test_enable = VK_TRUE;
         vulkan_graphics_pipeline_create_info.depth_write_enable = VK_TRUE;
-        vulkan_graphics_pipeline_create_info.attachment_count = TG_RENDERER_3D_GEOMETRY_PASS_COLOR_ATTACHMENT_COUNT;
-        vulkan_graphics_pipeline_create_info.blend_enable = VK_FALSE;
+
+        switch (p_entity->material_h->material_type)
+        {
+        case TG_VULKAN_MATERIAL_TYPE_DEFERRED:
+        {
+            vulkan_graphics_pipeline_create_info.attachment_count = TG_DEFERRED_RENDERER_GEOMETRY_PASS_COLOR_ATTACHMENT_COUNT;
+        } break;
+        case TG_VULKAN_MATERIAL_TYPE_FORWARD:
+        {
+            vulkan_graphics_pipeline_create_info.attachment_count = TG_FORWARD_RENDERER_COLOR_ATTACHMENT_COUNT;
+        } break;
+        default: TG_ASSERT(TG_FALSE);
+        }
+
+        switch (p_entity->material_h->material_type)
+        {
+        case TG_VULKAN_MATERIAL_TYPE_DEFERRED:
+        {
+            vulkan_graphics_pipeline_create_info.blend_enable = VK_FALSE;
+        } break;
+        case TG_VULKAN_MATERIAL_TYPE_FORWARD:
+        {
+            vulkan_graphics_pipeline_create_info.blend_enable = VK_TRUE;
+        } break;
+        default: TG_ASSERT(TG_FALSE);
+        }
+
         vulkan_graphics_pipeline_create_info.p_pipeline_vertex_input_state_create_info = &pipeline_vertex_input_state_create_info;
         vulkan_graphics_pipeline_create_info.pipeline_layout = entity_graphics_data_ptr_h->pipeline_layout;
-        vulkan_graphics_pipeline_create_info.render_pass = deferred_renderer_h->geometry_pass.render_pass;
+
+        switch (p_entity->material_h->material_type)
+        {
+        case TG_VULKAN_MATERIAL_TYPE_DEFERRED:
+        {
+            vulkan_graphics_pipeline_create_info.render_pass = p_scene->deferred_renderer_h->geometry_pass.render_pass;
+        } break;
+        case TG_VULKAN_MATERIAL_TYPE_FORWARD:
+        {
+            vulkan_graphics_pipeline_create_info.render_pass = p_scene->forward_renderer_h->shading_pass.render_pass;
+        } break;
+        default: TG_ASSERT(TG_FALSE);
+        }
     }
     entity_graphics_data_ptr_h->graphics_pipeline = tg_vulkan_graphics_pipeline_create(&vulkan_graphics_pipeline_create_info);
 
@@ -111,7 +161,19 @@ tg_entity_graphics_data_ptr_h tg_entity_graphics_data_ptr_create(tg_entity* p_en
     }
     VkDescriptorBufferInfo view_projection_descriptor_buffer_info = { 0 };
     {
-        view_projection_descriptor_buffer_info.buffer = deferred_renderer_h->geometry_pass.view_projection_ubo.buffer;
+        switch (p_entity->material_h->material_type)
+        {
+        case TG_VULKAN_MATERIAL_TYPE_DEFERRED:
+        {
+            view_projection_descriptor_buffer_info.buffer = p_scene->deferred_renderer_h->geometry_pass.view_projection_ubo.buffer;
+        } break;
+        case TG_VULKAN_MATERIAL_TYPE_FORWARD:
+        {
+            view_projection_descriptor_buffer_info.buffer = p_scene->forward_renderer_h->shading_pass.view_projection_ubo.buffer;
+        } break;
+        default: TG_ASSERT(TG_FALSE);
+        }
+
         view_projection_descriptor_buffer_info.offset = 0;
         view_projection_descriptor_buffer_info.range = VK_WHOLE_SIZE;
     }
@@ -147,9 +209,35 @@ tg_entity_graphics_data_ptr_h tg_entity_graphics_data_ptr_create(tg_entity* p_en
     {
         command_buffer_inheritance_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
         command_buffer_inheritance_info.pNext = TG_NULL;
-        command_buffer_inheritance_info.renderPass = deferred_renderer_h->geometry_pass.render_pass;
+
+        switch (p_entity->material_h->material_type)
+        {
+        case TG_VULKAN_MATERIAL_TYPE_DEFERRED:
+        {
+            command_buffer_inheritance_info.renderPass = p_scene->deferred_renderer_h->geometry_pass.render_pass;
+        } break;
+        case TG_VULKAN_MATERIAL_TYPE_FORWARD:
+        {
+            command_buffer_inheritance_info.renderPass = p_scene->forward_renderer_h->shading_pass.render_pass;
+        } break;
+        default: TG_ASSERT(TG_FALSE);
+        }
+
         command_buffer_inheritance_info.subpass = 0;
-        command_buffer_inheritance_info.framebuffer = deferred_renderer_h->geometry_pass.framebuffer;
+
+        switch (p_entity->material_h->material_type)
+        {
+        case TG_VULKAN_MATERIAL_TYPE_DEFERRED:
+        {
+            command_buffer_inheritance_info.framebuffer = p_scene->deferred_renderer_h->geometry_pass.framebuffer;
+        } break;
+        case TG_VULKAN_MATERIAL_TYPE_FORWARD:
+        {
+            command_buffer_inheritance_info.framebuffer = p_scene->forward_renderer_h->shading_pass.framebuffer;
+        } break;
+        default: TG_ASSERT(TG_FALSE);
+        }
+
         command_buffer_inheritance_info.occlusionQueryEnable = VK_FALSE;
         command_buffer_inheritance_info.queryFlags = 0;
         command_buffer_inheritance_info.pipelineStatistics = 0;

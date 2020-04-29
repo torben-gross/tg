@@ -256,13 +256,12 @@ int CALLBACK WinMain(_In_ HINSTANCE instance_h, _In_opt_ HINSTANCE prev_instance
     if (alloc_count != 0)
     {
         tg_list unfreed_allocations_list = tg_memory_create_unfreed_allocations_list();
-        const u32 unfreed_allocations_count = tg_list_count(&unfreed_allocations_list);
         char buffer[512] = { 0 };
         TG_DEBUG_PRINT("");
         TG_DEBUG_PRINT("MEMORY LEAKS:");
-        for (u32 i = 0; i < unfreed_allocations_count; i++)
+        for (u32 i = 0; i < unfreed_allocations_list.count; i++)
         {
-            const tg_memory_allocator_allocation* p_allocation = tg_list_pointer_to(&unfreed_allocations_list, i);
+            const tg_memory_allocator_allocation* p_allocation = TG_LIST_POINTER_TO(unfreed_allocations_list, i);
             tg_string_format(sizeof(buffer), buffer, "\tFilename: %s, Line: %u", p_allocation->p_filename, p_allocation->line);
             TG_DEBUG_PRINT(buffer);
             memset(buffer, 0, sizeof(buffer));

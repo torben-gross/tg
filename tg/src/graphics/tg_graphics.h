@@ -7,9 +7,10 @@
 
 
 
+TG_DECLARE_TYPE(tg_camera);
 TG_DECLARE_TYPE(tg_entity);
+TG_DECLARE_TYPE(tg_scene);
 
-TG_DECLARE_HANDLE(tg_camera);
 TG_DECLARE_HANDLE(tg_color_image);
 TG_DECLARE_HANDLE(tg_compute_buffer);
 TG_DECLARE_HANDLE(tg_compute_shader);
@@ -141,7 +142,7 @@ void                             tg_compute_shader_bind_input(tg_compute_shader_
 void                             tg_compute_shader_dispatch(tg_compute_shader_h compute_shader_h, u32 group_count_x, u32 group_count_y, u32 group_count_z);
 void                             tg_compute_shader_destroy(tg_compute_shader_h compute_shader_h);
 
-tg_entity_graphics_data_ptr_h    tg_entity_graphics_data_ptr_create(tg_entity* p_entity, tg_deferred_renderer_h deferred_renderer_h);
+tg_entity_graphics_data_ptr_h    tg_entity_graphics_data_ptr_create(tg_entity* p_entity, tg_scene* p_scene);
 void                             tg_entity_graphics_data_ptr_destroy(tg_entity_graphics_data_ptr_h entity_graphics_data_ptr_h);
 void                             tg_entity_graphics_data_ptr_set_model_matrix(tg_entity_graphics_data_ptr_h entity_graphics_data_ptr_h, const m4* p_model_matrix);
 
@@ -157,16 +158,6 @@ void                             tg_material_destroy(tg_material_h material_h);
 
 tg_mesh_h                        tg_mesh_create(u32 vertex_count, const v3* p_positions, const v3* p_normals, const v2* p_uvs, const v3* p_tangents, u32 index_count, const u16* p_indices);
 void                             tg_mesh_destroy(tg_mesh_h mesh_h);
-
-tg_camera_h                      tg_orthographic_camera_create(const v2* p_position, f32 left, f32 right, f32 bottom, f32 top, f32 far, f32 near);
-void                             tg_orthographic_camera_set_projection(tg_camera_h camera_h, f32 left, f32 right, f32 bottom, f32 top, f32 far, f32 near);
-void                             tg_orthographic_camera_set_view(tg_camera_h camera_h, const v2* p_position);
-void                             tg_orthographic_camera_destroy(tg_camera_h camera_h);
-
-tg_camera_h                      tg_perspective_camera_create(const v3* p_position, f32 pitch, f32 yaw, f32 roll, f32 fov_y, f32 near, f32 far);
-void                             tg_perspective_camera_set_projection(tg_camera_h camera_h, f32 fov_y, f32 near, f32 far);
-void                             tg_perspective_camera_set_view(tg_camera_h camera_h, const v3* p_position, f32 pitch, f32 yaw, f32 roll);
-void                             tg_perspective_camera_destroy(tg_camera_h camera_h);
 
 tg_texture_atlas_h               tg_texture_atlas_create_from_images(u32 image_count, tg_color_image_h* p_color_images_h);
 void                             tg_texture_atlas_destroy(tg_texture_atlas_h texture_atlas_h);
@@ -185,7 +176,7 @@ void                             tg_vertex_shader_destroy(tg_vertex_shader_h p_v
 +------------------------------------------------------------*/
 
 void                             tg_deferred_renderer_begin(tg_deferred_renderer_h deferred_renderer_h);
-tg_deferred_renderer_h           tg_deferred_renderer_create(const tg_camera_h camera_h, u32 point_light_count, const tg_point_light* p_point_lights);
+tg_deferred_renderer_h           tg_deferred_renderer_create(const tg_camera* p_camera, u32 point_light_count, const tg_point_light* p_point_lights);
 void                             tg_deferred_renderer_destroy(tg_deferred_renderer_h deferred_renderer_h);
 void                             tg_deferred_renderer_draw(tg_deferred_renderer_h deferred_renderer_h, tg_entity* p_entity);
 void                             tg_deferred_renderer_end(tg_deferred_renderer_h deferred_renderer_h);
@@ -199,7 +190,7 @@ void                             tg_deferred_renderer_present(tg_deferred_render
 +------------------------------------------------------------*/
 
 void                             tg_forward_renderer_begin(tg_forward_renderer_h forward_renderer_h);
-tg_forward_renderer_h            tg_forward_renderer_create(const tg_camera_h camera_h);
+tg_forward_renderer_h            tg_forward_renderer_create(const tg_camera* p_camera);
 void                             tg_forward_renderer_destroy(tg_forward_renderer_h forward_renderer_h);
 void                             tg_forward_renderer_draw(tg_forward_renderer_h forward_renderer_h, tg_entity* p_entity);
 void                             tg_forward_renderer_end(tg_forward_renderer_h forward_renderer_h);

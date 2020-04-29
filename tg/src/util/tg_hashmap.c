@@ -117,11 +117,9 @@ b32 tg_hashmap_contains(tg_hashmap* p_hashmap, const void* p_key)
 	const u32 index = hash % p_hashmap->bucket_count;
 
 	tg_hashmap_bucket* p_bucket = &p_hashmap->buckets[index];
-
-	const u32 bucket_element_count = tg_list_count(&p_bucket->keys);
-	for (u32 i = 0; i < bucket_element_count; i++)
+	for (u32 i = 0; i < p_bucket->keys.count; i++)
 	{
-		const void* p_bucket_entry_key = tg_list_pointer_to(&p_bucket->keys, i);
+		const void* p_bucket_entry_key = TG_LIST_POINTER_TO(p_bucket->keys, i);
 		const b32 equal = tg_hashmap_internal_keys_equal(p_hashmap, p_key, p_bucket_entry_key);
 		if (equal)
 		{
@@ -150,10 +148,10 @@ void tg_hashmap_insert(tg_hashmap* p_hashmap, const void* p_key, const void* p_v
 
 	tg_hashmap_bucket* p_bucket = &p_hashmap->buckets[index];
 
-	const u32 bucket_element_count = tg_list_count(&p_bucket->keys);
+	const u32 bucket_element_count = p_bucket->keys.count;
 	for (u32 i = 0; i < bucket_element_count; i++)
 	{
-		const void* p_bucket_entry_key = tg_list_pointer_to(&p_bucket->keys, i);
+		const void* p_bucket_entry_key = TG_LIST_POINTER_TO(p_bucket->keys, i);
 		const b32 equal = tg_hashmap_internal_keys_equal(p_hashmap, p_key, p_bucket_entry_key);
 		if (equal)
 		{
@@ -177,14 +175,14 @@ void* tg_hashmap_pointer_to(tg_hashmap* p_hashmap, const void* p_key)
 	tg_hashmap_bucket* p_bucket = &p_hashmap->buckets[index];
 
 	void* p_found_bucket_entry_value = TG_NULL;
-	const u32 bucket_element_count = tg_list_count(&p_bucket->keys);
+	const u32 bucket_element_count = p_bucket->keys.count;
 	for (u32 i = 0; i < bucket_element_count; i++)
 	{
-		const void* p_bucket_entry_key = tg_list_pointer_to(&p_bucket->keys, i);
+		const void* p_bucket_entry_key = TG_LIST_POINTER_TO(p_bucket->keys, i);
 		const b32 equal = tg_hashmap_internal_keys_equal(p_hashmap, p_key, p_bucket_entry_key);
 		if (equal)
 		{
-			p_found_bucket_entry_value = tg_list_pointer_to(&p_bucket->values, i);
+			p_found_bucket_entry_value = TG_LIST_POINTER_TO(p_bucket->values, i);
 			break;
 		}
 	}
@@ -211,10 +209,10 @@ b32 tg_hashmap_try_remove(tg_hashmap* p_hashmap, const void* p_key)
 
 	tg_hashmap_bucket* p_bucket = &p_hashmap->buckets[index];
 
-	const u32 bucket_element_count = tg_list_count(&p_bucket->keys);
+	const u32 bucket_element_count = p_bucket->keys.count;
 	for (u32 i = 0; i < bucket_element_count; i++)
 	{
-		const void* p_bucket_entry_key = tg_list_pointer_to(&p_bucket->keys, i);
+		const void* p_bucket_entry_key = TG_LIST_POINTER_TO(p_bucket->keys, i);
 		const b32 equal = tg_hashmap_internal_keys_equal(p_hashmap, p_key, p_bucket_entry_key);
 		if (equal)
 		{

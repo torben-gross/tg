@@ -27,6 +27,7 @@
     <ClCompile Include="src\tg_scene.c" />
     <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan_deferred_renderer.c" />
     <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan_forward_renderer.c" />
+    <ClCompile Include="src\tg_camera.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\tg_common.h" />
@@ -49,6 +50,9 @@
     <ClInclude Include="src\util\tg_rectangle_packer.h" />
     <ClInclude Include="src\util\tg_qsort.h" />
     <ClInclude Include="src\tg_scene.h" />
+    <ClInclude Include="src\tg_camera.h" />
+    <ClInclude Include="src\graphics\vulkan\tg_graphics_vulkan_deferred_renderer.h" />
+    <ClInclude Include="src\graphics\vulkan\tg_graphics_vulkan_forward_renderer.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="tg.ruleset" />

@@ -22,27 +22,40 @@
 
 
 
-#define TG_RENDERER_3D_GEOMETRY_PASS_COLOR_ATTACHMENT_COUNT    3
-#define TG_RENDERER_3D_GEOMETRY_PASS_DEPTH_ATTACHMENT_COUNT    1
-#define TG_RENDERER_3D_GEOMETRY_PASS_ATTACHMENT_COUNT          TG_RENDERER_3D_GEOMETRY_PASS_COLOR_ATTACHMENT_COUNT + TG_RENDERER_3D_GEOMETRY_PASS_DEPTH_ATTACHMENT_COUNT
-
-#define TG_RENDERER_3D_GEOMETRY_PASS_POSITION_FORMAT           VK_FORMAT_R16G16B16A16_SFLOAT
-#define TG_RENDERER_3D_GEOMETRY_PASS_POSITION_ATTACHMENT       0
-#define TG_RENDERER_3D_GEOMETRY_PASS_NORMAL_FORMAT             VK_FORMAT_R16G16B16A16_SFLOAT
-#define TG_RENDERER_3D_GEOMETRY_PASS_NORMAL_ATTACHMENT         1
-#define TG_RENDERER_3D_GEOMETRY_PASS_ALBEDO_FORMAT             VK_FORMAT_R16G16B16A16_SFLOAT
-#define TG_RENDERER_3D_GEOMETRY_PASS_ALBEDO_ATTACHMENT         2
-#define TG_RENDERER_3D_GEOMETRY_PASS_DEPTH_FORMAT              VK_FORMAT_D32_SFLOAT
-#define TG_RENDERER_3D_GEOMETRY_PASS_DEPTH_ATTACHMENT          3
 
 
-#define TG_RENDERER_3D_SHADING_PASS_COLOR_ATTACHMENT_COUNT     1
-#define TG_RENDERER_3D_SHADING_PASS_DEPTH_ATTACHMENT_COUNT     0
-#define TG_RENDERER_3D_SHADING_PASS_ATTACHMENT_COUNT           TG_RENDERER_3D_SHADING_PASS_COLOR_ATTACHMENT_COUNT + TG_RENDERER_3D_SHADING_PASS_DEPTH_ATTACHMENT_COUNT
+#define TG_DEFERRED_RENDERER_GEOMETRY_PASS_COLOR_ATTACHMENT_COUNT    3
+#define TG_DEFERRED_RENDERER_GEOMETRY_PASS_DEPTH_ATTACHMENT_COUNT    1
+#define TG_DEFERRED_RENDERER_GEOMETRY_PASS_ATTACHMENT_COUNT          (TG_DEFERRED_RENDERER_GEOMETRY_PASS_COLOR_ATTACHMENT_COUNT + TG_DEFERRED_RENDERER_GEOMETRY_PASS_DEPTH_ATTACHMENT_COUNT)
 
-#define TG_RENDERER_3D_SHADING_PASS_COLOR_ATTACHMENT_FORMAT    VK_FORMAT_B8G8R8A8_UNORM
-#define TG_RENDERER_3D_SHADING_PASS_MAX_DIRECTIONAL_LIGHTS     512
-#define TG_RENDERER_3D_SHADING_PASS_MAX_POINT_LIGHTS           512
+#define TG_DEFERRED_RENDERER_GEOMETRY_PASS_POSITION_FORMAT           VK_FORMAT_R16G16B16A16_SFLOAT
+#define TG_DEFERRED_RENDERER_GEOMETRY_PASS_POSITION_ATTACHMENT       0
+#define TG_DEFERRED_RENDERER_GEOMETRY_PASS_NORMAL_FORMAT             VK_FORMAT_R16G16B16A16_SFLOAT
+#define TG_DEFERRED_RENDERER_GEOMETRY_PASS_NORMAL_ATTACHMENT         1
+#define TG_DEFERRED_RENDERER_GEOMETRY_PASS_ALBEDO_FORMAT             VK_FORMAT_R16G16B16A16_SFLOAT
+#define TG_DEFERRED_RENDERER_GEOMETRY_PASS_ALBEDO_ATTACHMENT         2
+#define TG_DEFERRED_RENDERER_GEOMETRY_PASS_DEPTH_FORMAT              VK_FORMAT_D32_SFLOAT
+#define TG_DEFERRED_RENDERER_GEOMETRY_PASS_DEPTH_ATTACHMENT          3
+
+
+#define TG_DEFERRED_RENDERER_SHADING_PASS_COLOR_ATTACHMENT_COUNT     1
+#define TG_DEFERRED_RENDERER_SHADING_PASS_DEPTH_ATTACHMENT_COUNT     0
+#define TG_DEFERRED_RENDERER_SHADING_PASS_ATTACHMENT_COUNT           (TG_DEFERRED_RENDERER_SHADING_PASS_COLOR_ATTACHMENT_COUNT + TG_DEFERRED_RENDERER_SHADING_PASS_DEPTH_ATTACHMENT_COUNT)
+
+#define TG_DEFERRED_RENDERER_SHADING_PASS_COLOR_ATTACHMENT_FORMAT    VK_FORMAT_B8G8R8A8_UNORM
+#define TG_DEFERRED_RENDERER_SHADING_PASS_MAX_DIRECTIONAL_LIGHTS     512
+#define TG_DEFERRED_RENDERER_SHADING_PASS_MAX_POINT_LIGHTS           512
+
+
+
+
+#define TG_FORWARD_RENDERER_COLOR_ATTACHMENT_COUNT                   1
+#define TG_FORWARD_RENDERER_DEPTH_ATTACHMENT_COUNT                   1
+#define TG_FORWARD_RENDERER_ATTACHMENT_COUNT                         (TG_FORWARD_RENDERER_COLOR_ATTACHMENT_COUNT + TG_FORWARD_RENDERER_DEPTH_ATTACHMENT_COUNT)
+
+#define TG_FORWARD_RENDERER_COLOR_ATTACHMENT_FORMAT                  VK_FORMAT_R16G16B16A16_SFLOAT
+#define TG_FORWARD_RENDERER_DEPTH_ATTACHMENT_FORMAT                  VK_FORMAT_D32_SFLOAT
+#define TG_FORWARD_RENDERER_OUTPUT_COLOR_ATTACHMENT_FORMAT           VK_FORMAT_B8G8R8A8_UNORM
 
 
 
@@ -153,11 +166,11 @@ typedef struct tg_deferred_renderer_light_setup_uniform_buffer
     u32    point_light_count;
     u32    padding[2];
 
-    v4     directional_light_positions_radii[TG_RENDERER_3D_SHADING_PASS_MAX_DIRECTIONAL_LIGHTS];
-    v4     directional_light_colors[TG_RENDERER_3D_SHADING_PASS_MAX_DIRECTIONAL_LIGHTS];
+    v4     directional_light_positions_radii[TG_DEFERRED_RENDERER_SHADING_PASS_MAX_DIRECTIONAL_LIGHTS];
+    v4     directional_light_colors[TG_DEFERRED_RENDERER_SHADING_PASS_MAX_DIRECTIONAL_LIGHTS];
 
-    v4     point_light_positions_radii[TG_RENDERER_3D_SHADING_PASS_MAX_POINT_LIGHTS];
-    v4     point_light_colors[TG_RENDERER_3D_SHADING_PASS_MAX_POINT_LIGHTS];
+    v4     point_light_positions_radii[TG_DEFERRED_RENDERER_SHADING_PASS_MAX_POINT_LIGHTS];
+    v4     point_light_colors[TG_DEFERRED_RENDERER_SHADING_PASS_MAX_POINT_LIGHTS];
 } tg_deferred_renderer_light_setup_uniform_buffer;
 
 typedef struct tg_deferred_renderer_copy_image_compute_buffer
@@ -169,12 +182,6 @@ typedef struct tg_deferred_renderer_copy_image_compute_buffer
 } tg_deferred_renderer_copy_image_compute_buffer;
 
 
-
-typedef struct tg_camera
-{
-    m4    view;
-    m4    projection;
-} tg_camera;
 
 typedef struct tg_color_image
 {
@@ -215,7 +222,7 @@ typedef struct tg_depth_image
 
 typedef struct tg_entity_graphics_data_ptr
 {
-    tg_deferred_renderer_h    deferred_renderer_h;
+    void*                     renderer_h;
 
     tg_vulkan_buffer          uniform_buffer;
     tg_vulkan_descriptor      descriptor;
@@ -258,99 +265,6 @@ typedef struct tg_vertex_shader
 {
     VkShaderModule    shader_module;
 } tg_vertex_shader;
-
-
-
-typedef struct tg_deferred_renderer_geometry_pass
-{
-    tg_color_image               position_attachment;
-    tg_color_image               normal_attachment;
-    tg_color_image               albedo_attachment;
-    tg_depth_image               depth_attachment;
-
-    VkFence                      rendering_finished_fence;
-    VkSemaphore                  rendering_finished_semaphore;
-
-    tg_vulkan_buffer             view_projection_ubo;
-
-    VkRenderPass                 render_pass;
-    VkFramebuffer                framebuffer;
-
-    VkCommandBuffer              command_buffer;
-} tg_deferred_renderer_geometry_pass;
-
-typedef struct tg_deferred_renderer_shading_pass
-{
-    tg_color_image               color_attachment;
-
-    tg_vulkan_buffer             vbo;
-    tg_vulkan_buffer             ibo;
-
-    VkFence                      rendering_finished_fence;
-    VkSemaphore                  rendering_finished_semaphore;
-    VkFence                      geometry_pass_attachments_cleared_fence;
-
-    VkRenderPass                 render_pass;
-    VkFramebuffer                framebuffer;
-
-    tg_vulkan_descriptor         descriptor;
-
-    VkShaderModule               vertex_shader_h;
-    VkShaderModule               fragment_shader_h;
-    VkPipelineLayout             pipeline_layout;
-    VkPipeline                   graphics_pipeline;
-
-    VkCommandBuffer              command_buffer;
-
-    tg_vulkan_buffer             point_lights_ubo;
-
-    struct
-    {
-        tg_vulkan_compute_shader     find_exposure_compute_shader;
-        tg_vulkan_buffer             exposure_compute_buffer;
-
-        tg_color_image               color_attachment;
-        VkRenderPass                 render_pass;
-        VkFramebuffer                framebuffer;
-
-        tg_vulkan_descriptor         descriptor;
-
-        VkShaderModule               vertex_shader_h;
-        VkShaderModule               fragment_shader_h;
-        VkPipelineLayout             pipeline_layout;
-        VkPipeline                   graphics_pipeline;
-    } exposure;
-} tg_deferred_renderer_shading_pass;
-
-typedef struct tg_deferred_renderer_present_pass
-{
-    tg_vulkan_buffer         vbo;
-    tg_vulkan_buffer         ibo;
-
-    VkSemaphore              image_acquired_semaphore;
-    VkFence                  rendering_finished_fence;
-    VkSemaphore              rendering_finished_semaphore;
-
-    VkRenderPass             render_pass;
-    VkFramebuffer            framebuffers[TG_VULKAN_SURFACE_IMAGE_COUNT];
-
-    tg_vulkan_descriptor     descriptor;
-
-    VkShaderModule           vertex_shader_h;
-    VkShaderModule           fragment_shader_h;
-    VkPipelineLayout         pipeline_layout;
-    VkPipeline               graphics_pipeline;
-
-    VkCommandBuffer          command_buffers[TG_VULKAN_SURFACE_IMAGE_COUNT];
-} tg_deferred_renderer_present_pass;
-
-typedef struct tg_deferred_renderer
-{
-    tg_camera_h                     camera_h;
-    tg_deferred_renderer_geometry_pass    geometry_pass;
-    tg_deferred_renderer_shading_pass     shading_pass;
-    tg_deferred_renderer_present_pass     present_pass;
-} tg_deferred_renderer;
 
 
 

@@ -123,6 +123,7 @@
     <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan_material.c" />
     <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan_forward_renderer.c" />
     <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan_texture_atlas.c" />
+    <ClCompile Include="src\tg_camera.c" />
     <ClCompile Include="src\tg_entity.c" />
     <ClCompile Include="src\tg_input.c" />
     <ClCompile Include="src\tg_application.c" />
@@ -146,6 +147,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\assets\tg_assets.h" />
+    <ClInclude Include="src\graphics\vulkan\tg_graphics_vulkan_deferred_renderer.h" />
+    <ClInclude Include="src\graphics\vulkan\tg_graphics_vulkan_forward_renderer.h" />
+    <ClInclude Include="src\tg_camera.h" />
     <ClInclude Include="src\tg_input.h" />
     <ClInclude Include="src\tg_application.h" />
     <ClInclude Include="src\graphics\tg_graphics.h" />

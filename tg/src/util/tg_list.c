@@ -4,8 +4,7 @@
 #include <string.h> // TODO: memcpy
 
 
-#define TG_LIST_GET_POINTER_AT(p_list, index)     ((void*)&p_list->elements[(index) * p_list->element_size])
-#define TG_LIST_SET_AT(p_list, index, p_value)    memcpy(TG_LIST_GET_POINTER_AT(p_list, index), p_value, p_list->element_size)
+#define TG_LIST_SET_AT(list, index, p_value)    memcpy(TG_LIST_POINTER_TO(list, index), p_value, (list).element_size)
 
 
 
@@ -31,13 +30,6 @@ void tg_list_destroy(tg_list* p_list)
 
 
 
-u32 tg_list_capacity(const tg_list* p_list)
-{
-	TG_ASSERT(p_list);
-
-	return p_list->capacity;
-}
-
 b32 tg_list_contains(const tg_list* p_list, const void* p_value)
 {
 	TG_ASSERT(p_list && p_value);
@@ -53,13 +45,6 @@ b32 tg_list_contains(const tg_list* p_list, const void* p_value)
 		contains &= equal;
 	}
 	return contains;
-}
-
-u32 tg_list_count(const tg_list* p_list)
-{
-	TG_ASSERT(p_list);
-
-	return p_list->count;
 }
 
 void tg_list_insert(tg_list* p_list, const void* p_value)
@@ -94,9 +79,9 @@ void tg_list_insert_at_unchecked(tg_list* p_list, u32 index, const void* p_value
 
 	for (u32 i = p_list->count - 1; i >= index; i--)
 	{
-		TG_LIST_SET_AT(p_list, i + 1, TG_LIST_GET_POINTER_AT(p_list, i));
+		TG_LIST_SET_AT(*p_list, i + 1, TG_LIST_POINTER_TO(*p_list, i));
 	}
-	TG_LIST_SET_AT(p_list, index, p_value);
+	TG_LIST_SET_AT(*p_list, index, p_value);
 	p_list->count++;
 }
 
@@ -106,7 +91,7 @@ void tg_list_insert_list(tg_list* p_list0, tg_list* p_list1)
 
 	for (u32 i = 0; i < p_list1->count; i++)
 	{
-		tg_list_insert(p_list0, TG_LIST_GET_POINTER_AT(p_list1, i));
+		tg_list_insert(p_list0, TG_LIST_POINTER_TO(*p_list1, i));
 	}
 }
 
@@ -114,15 +99,8 @@ void tg_list_insert_unchecked(tg_list* p_list, const void* p_value)
 {
 	TG_ASSERT(p_list && p_value && p_list->capacity != p_list->count);
 
-	TG_LIST_SET_AT(p_list, p_list->count, p_value);
+	TG_LIST_SET_AT(*p_list, p_list->count, p_value);
 	p_list->count++;
-}
-
-void* tg_list_pointer_to(tg_list* p_list, u32 index)
-{
-	TG_ASSERT(p_list && index < p_list->count);
-
-	return TG_LIST_GET_POINTER_AT(p_list, index);
 }
 
 void tg_list_remove(tg_list* p_list, const void* p_value)
@@ -131,7 +109,7 @@ void tg_list_remove(tg_list* p_list, const void* p_value)
 
 	for (u32 i = 0; i < p_list->count; i++)
 	{
-		if (TG_LIST_GET_POINTER_AT(p_list, i) == p_value)
+		if (TG_LIST_POINTER_TO(*p_list, i) == p_value)
 		{
 			tg_list_remove_at(p_list, i);
 			return;
@@ -145,7 +123,7 @@ void tg_list_remove_at(tg_list* p_list, u32 index)
 
 	for (u32 i = index + 1; i < p_list->count; i++)
 	{
-		TG_LIST_SET_AT(p_list, i - 1, TG_LIST_GET_POINTER_AT(p_list, i));
+		TG_LIST_SET_AT(*p_list, i - 1, TG_LIST_POINTER_TO(*p_list, i));
 	}
 	p_list->count--;
 }
@@ -154,7 +132,7 @@ void tg_list_replace_at(tg_list* p_list, u32 index, const void* p_value)
 {
 	TG_ASSERT(p_list && index < p_list->count && p_value);
 
-	TG_LIST_SET_AT(p_list, index, p_value);
+	TG_LIST_SET_AT(*p_list, index, p_value);
 }
 
 void tg_list_reserve(tg_list* p_list, u32 capacity)
