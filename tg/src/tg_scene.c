@@ -67,6 +67,7 @@ void tg_scene_present(tg_scene* p_scene)
 	TG_ASSERT(p_scene);
 
 	tg_forward_renderer_present(p_scene->forward_renderer_h);
+	tg_forward_renderer_clear(p_scene->forward_renderer_h);
 }
 
 void tg_scene_submit(tg_scene* p_scene, tg_entity* p_entity)

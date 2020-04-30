@@ -209,9 +209,9 @@ void tg_application_internal_test_deferred_create()
         p_shader_input_elements[1].array_element_count = 1;
     }
     tg_handle p_custom_handles[2] = { test_deferred.custom_uniform_buffer_h, test_deferred.texture_atlas_h };
-    test_deferred.custom_vertex_shader_h = tg_vertex_shader_create("shaders/custom_geometry.vert");
-    test_deferred.custom_fragment_shader_h = tg_fragment_shader_create("shaders/custom_geometry.frag");
-    test_deferred.custom_material_h = tg_material_create_deferred(test_deferred.custom_vertex_shader_h, test_deferred.custom_fragment_shader_h, 2, p_shader_input_elements, p_custom_handles);
+    test_deferred.custom_vertex_shader_h = tg_vertex_shader_create("shaders/custom_forward.vert");
+    test_deferred.custom_fragment_shader_h = tg_fragment_shader_create("shaders/custom_forward.frag");
+    test_deferred.custom_material_h = tg_material_create_forward(test_deferred.custom_vertex_shader_h, test_deferred.custom_fragment_shader_h, 2, p_shader_input_elements, p_custom_handles);
 
     test_deferred.quad_entity = tg_entity_create(&test_deferred.scene, test_deferred.quad_mesh_h, test_deferred.custom_material_h);
     test_deferred.quad_offset = -65.0f;
@@ -519,10 +519,15 @@ void tg_application_internal_test_forward_update_and_render(f32 delta_ms)
 
 void tg_application_internal_test_forward_destroy()
 {
+    tg_entity_destroy(&test_forward.entity2);
     tg_entity_destroy(&test_forward.entity);
+    tg_material_destroy(test_forward.material2_h);
     tg_material_destroy(test_forward.material_h);
+    tg_fragment_shader_destroy(test_forward.fragment_shader2_h);
     tg_fragment_shader_destroy(test_forward.fragment_shader_h);
+    tg_vertex_shader_destroy(test_forward.vertex_shader2_h);
     tg_vertex_shader_destroy(test_forward.vertex_shader_h);
+    tg_mesh_destroy(test_forward.mesh2_h);
     tg_mesh_destroy(test_forward.mesh_h);
     tg_scene_destroy(&test_forward.scene);
 }
@@ -532,8 +537,8 @@ void tg_application_internal_test_forward_destroy()
 void tg_application_start()
 {
     tg_init();
-    //tg_application_internal_test_deferred_create();
-    tg_application_internal_test_forward_create();
+    tg_application_internal_test_deferred_create();
+    //tg_application_internal_test_forward_create();
 
     //tg_camera_h camera_h = tg_camera_create(...);
     //tg_camera_h camera_2d_h = tg_camera_create(...);
@@ -597,16 +602,16 @@ void tg_application_start()
 
         tg_input_clear();
         tg_platform_handle_events();
-        //tg_application_internal_test_deferred_update_and_render(delta_ms);
-        tg_application_internal_test_forward_update_and_render(delta_ms);
+        tg_application_internal_test_deferred_update_and_render(delta_ms);
+        //tg_application_internal_test_forward_update_and_render(delta_ms);
     }
 
     /*--------------------------------------------------------+
     | End main loop                                           |
     +--------------------------------------------------------*/
     tg_timer_destroy(timer_h);
-    tg_application_internal_test_forward_destroy();
-    //tg_application_internal_test_deferred_destroy();
+    //tg_application_internal_test_forward_destroy();
+    tg_application_internal_test_deferred_destroy();
     tg_shutdown();
 }
 

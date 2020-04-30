@@ -179,6 +179,7 @@ void                             tg_vertex_shader_destroy(tg_vertex_shader_h p_v
 +------------------------------------------------------------*/
 
 void                             tg_deferred_renderer_begin(tg_deferred_renderer_h deferred_renderer_h);
+void                             tg_deferred_renderer_clear(tg_deferred_renderer_h deferred_renderer_h);
 tg_deferred_renderer_h           tg_deferred_renderer_create(const tg_camera* p_camera, u32 point_light_count, const tg_point_light* p_point_lights);
 void                             tg_deferred_renderer_destroy(tg_deferred_renderer_h deferred_renderer_h);
 void                             tg_deferred_renderer_draw(tg_deferred_renderer_h deferred_renderer_h, tg_entity* p_entity);
@@ -194,6 +195,7 @@ void                             tg_deferred_renderer_present(tg_deferred_render
 +------------------------------------------------------------*/
 
 void                             tg_forward_renderer_begin(tg_forward_renderer_h forward_renderer_h);
+void                             tg_forward_renderer_clear(tg_forward_renderer_h forward_renderer_h);
 tg_forward_renderer_h            tg_forward_renderer_create(const tg_camera* p_camera, tg_render_target_h render_target_h);
 void                             tg_forward_renderer_destroy(tg_forward_renderer_h forward_renderer_h);
 void                             tg_forward_renderer_draw(tg_forward_renderer_h forward_renderer_h, tg_entity* p_entity);

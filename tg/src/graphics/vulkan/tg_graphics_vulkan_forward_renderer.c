@@ -8,6 +8,46 @@
 
 
 
+void tg_forward_renderer_internal_init_clear_pass(tg_forward_renderer_h forward_renderer_h)
+{
+    forward_renderer_h->clear_pass.command_buffer = tg_vulkan_command_buffer_allocate(graphics_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+    tg_vulkan_command_buffer_begin(forward_renderer_h->clear_pass.command_buffer, 0, TG_NULL);
+
+    tg_vulkan_command_buffer_cmd_transition_color_image_layout(
+        forward_renderer_h->clear_pass.command_buffer,
+        &forward_renderer_h->render_target.color_image,
+        VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
+        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT
+    );
+    tg_vulkan_command_buffer_cmd_clear_color_image(forward_renderer_h->clear_pass.command_buffer, &forward_renderer_h->render_target.color_image);
+    tg_vulkan_command_buffer_cmd_transition_color_image_layout(
+        forward_renderer_h->clear_pass.command_buffer,
+        &forward_renderer_h->render_target.color_image,
+        VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
+    );
+
+    tg_vulkan_command_buffer_cmd_transition_depth_image_layout(
+        forward_renderer_h->clear_pass.command_buffer,
+        &forward_renderer_h->render_target.depth_image,
+        VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
+        VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT
+    );
+    tg_vulkan_command_buffer_cmd_clear_depth_image(forward_renderer_h->clear_pass.command_buffer, &forward_renderer_h->render_target.depth_image);
+    tg_vulkan_command_buffer_cmd_transition_depth_image_layout(
+        forward_renderer_h->clear_pass.command_buffer,
+        &forward_renderer_h->render_target.depth_image,
+        VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+        VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT
+    );
+
+    vkEndCommandBuffer(forward_renderer_h->clear_pass.command_buffer);
+}
+
 void tg_forward_renderer_internal_init_shading_pass(tg_forward_renderer_h forward_renderer_h, const tg_camera* p_camera, tg_render_target_h render_target_h)
 {
     forward_renderer_h->shading_pass.p_camera = p_camera;
@@ -26,35 +66,33 @@ void tg_forward_renderer_internal_init_shading_pass(tg_forward_renderer_h forwar
             vulkan_color_image_create_info.address_mode_v = VK_SAMPLER_ADDRESS_MODE_REPEAT;
             vulkan_color_image_create_info.address_mode_w = VK_SAMPLER_ADDRESS_MODE_REPEAT;
         }
-        forward_renderer_h->shading_pass.color_attachment.color_image = tg_vulkan_color_image_create(&vulkan_color_image_create_info);
-        forward_renderer_h->shading_pass.color_attachment.fence = tg_vulkan_fence_create(VK_FENCE_CREATE_SIGNALED_BIT);
+        forward_renderer_h->render_target.color_image = tg_vulkan_color_image_create(&vulkan_color_image_create_info);
+
+        tg_vulkan_depth_image_create_info vulkan_depth_image_create_info = { 0 };
+        {
+            vulkan_depth_image_create_info.width = swapchain_extent.width;
+            vulkan_depth_image_create_info.height = swapchain_extent.height;
+            vulkan_depth_image_create_info.format = TG_FORWARD_RENDERER_DEPTH_ATTACHMENT_FORMAT;
+            vulkan_depth_image_create_info.min_filter = VK_FILTER_LINEAR;
+            vulkan_depth_image_create_info.mag_filter = VK_FILTER_LINEAR;
+            vulkan_depth_image_create_info.address_mode_u = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+            vulkan_depth_image_create_info.address_mode_v = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+            vulkan_depth_image_create_info.address_mode_w = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        }
+        forward_renderer_h->render_target.depth_image = tg_vulkan_depth_image_create(&vulkan_depth_image_create_info);
+
+        VkCommandBuffer command_buffer = tg_vulkan_command_buffer_allocate(graphics_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+        tg_vulkan_command_buffer_begin(command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
+        tg_vulkan_command_buffer_cmd_transition_color_image_layout(command_buffer, &forward_renderer_h->render_target.color_image, 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+        tg_vulkan_command_buffer_cmd_transition_depth_image_layout(command_buffer, &forward_renderer_h->render_target.depth_image, 0, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT);
+        tg_vulkan_command_buffer_end_and_submit(command_buffer, &graphics_queue);
+
+        forward_renderer_h->render_target.fence = tg_vulkan_fence_create(VK_FENCE_CREATE_SIGNALED_BIT);
     }
     else
     {
-        forward_renderer_h->shading_pass.color_attachment = *render_target_h;
+        forward_renderer_h->render_target = *render_target_h;
     }
-
-    tg_vulkan_depth_image_create_info vulkan_depth_image_create_info = { 0 };
-    {
-        vulkan_depth_image_create_info.width = swapchain_extent.width;
-        vulkan_depth_image_create_info.height = swapchain_extent.height;
-        vulkan_depth_image_create_info.format = TG_FORWARD_RENDERER_DEPTH_ATTACHMENT_FORMAT;
-        vulkan_depth_image_create_info.min_filter = VK_FILTER_LINEAR;
-        vulkan_depth_image_create_info.mag_filter = VK_FILTER_LINEAR;
-        vulkan_depth_image_create_info.address_mode_u = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        vulkan_depth_image_create_info.address_mode_v = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        vulkan_depth_image_create_info.address_mode_w = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    }
-    forward_renderer_h->shading_pass.depth_attachment = tg_vulkan_depth_image_create(&vulkan_depth_image_create_info);
-
-    VkCommandBuffer command_buffer = tg_vulkan_command_buffer_allocate(graphics_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
-    tg_vulkan_command_buffer_begin(command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
-    if (!render_target_h)
-    {
-        tg_vulkan_command_buffer_cmd_transition_color_image_layout(command_buffer, &forward_renderer_h->shading_pass.color_attachment.color_image, 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
-    }
-    tg_vulkan_command_buffer_cmd_transition_depth_image_layout(command_buffer, &forward_renderer_h->shading_pass.depth_attachment, 0, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT);
-    tg_vulkan_command_buffer_end_and_submit(command_buffer, &graphics_queue);
 
     forward_renderer_h->shading_pass.view_projection_ubo = tg_vulkan_buffer_create(sizeof(tg_camera), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
@@ -122,7 +160,7 @@ void tg_forward_renderer_internal_init_shading_pass(tg_forward_renderer_h forwar
     }
     forward_renderer_h->shading_pass.render_pass = tg_vulkan_render_pass_create(2, p_attachment_descriptions, 1, &subpass_description, 1, &subpass_dependency);
 
-    VkImageView p_image_views[2] = { forward_renderer_h->shading_pass.color_attachment.color_image.image_view, forward_renderer_h->shading_pass.depth_attachment.image_view };
+    VkImageView p_image_views[2] = { forward_renderer_h->render_target.color_image.image_view, forward_renderer_h->render_target.depth_image.image_view };
     forward_renderer_h->shading_pass.framebuffer = tg_vulkan_framebuffer_create(forward_renderer_h->shading_pass.render_pass, 2, p_image_views, swapchain_extent.width, swapchain_extent.height);
     forward_renderer_h->shading_pass.command_buffer = tg_vulkan_command_buffer_allocate(graphics_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 }
@@ -280,8 +318,8 @@ void tg_forward_renderer_internal_init_present_pass(tg_forward_renderer_h forwar
     const VkDeviceSize vertex_buffer_offset = 0;
     VkDescriptorImageInfo descriptor_image_info = { 0 };
     {
-        descriptor_image_info.sampler = forward_renderer_h->shading_pass.color_attachment.color_image.sampler;
-        descriptor_image_info.imageView = forward_renderer_h->shading_pass.color_attachment.color_image.image_view;
+        descriptor_image_info.sampler = forward_renderer_h->render_target.color_image.sampler;
+        descriptor_image_info.imageView = forward_renderer_h->render_target.color_image.image_view;
         descriptor_image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     }
     VkWriteDescriptorSet write_descriptor_set = { 0 };
@@ -305,7 +343,7 @@ void tg_forward_renderer_internal_init_present_pass(tg_forward_renderer_h forwar
 
         tg_vulkan_command_buffer_cmd_transition_color_image_layout(
             forward_renderer_h->present_pass.command_buffers[i],
-            &forward_renderer_h->shading_pass.color_attachment.color_image,
+            &forward_renderer_h->render_target.color_image,
             VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
             VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
@@ -333,7 +371,7 @@ void tg_forward_renderer_internal_init_present_pass(tg_forward_renderer_h forwar
 
         tg_vulkan_command_buffer_cmd_transition_color_image_layout(
             forward_renderer_h->present_pass.command_buffers[i],
-            &forward_renderer_h->shading_pass.color_attachment.color_image,
+            &forward_renderer_h->render_target.color_image,
             VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
@@ -341,19 +379,19 @@ void tg_forward_renderer_internal_init_present_pass(tg_forward_renderer_h forwar
         );
         tg_vulkan_command_buffer_cmd_transition_depth_image_layout(
             forward_renderer_h->present_pass.command_buffers[i],
-            &forward_renderer_h->shading_pass.depth_attachment,
+            &forward_renderer_h->render_target.depth_image,
             VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
             VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT
         );
 
-        tg_vulkan_command_buffer_cmd_clear_color_image(forward_renderer_h->present_pass.command_buffers[i], &forward_renderer_h->shading_pass.color_attachment.color_image);
-        tg_vulkan_command_buffer_cmd_clear_depth_image(forward_renderer_h->present_pass.command_buffers[i], &forward_renderer_h->shading_pass.depth_attachment);
+        tg_vulkan_command_buffer_cmd_clear_color_image(forward_renderer_h->present_pass.command_buffers[i], &forward_renderer_h->render_target.color_image);
+        tg_vulkan_command_buffer_cmd_clear_depth_image(forward_renderer_h->present_pass.command_buffers[i], &forward_renderer_h->render_target.depth_image);
 
         tg_vulkan_command_buffer_cmd_transition_color_image_layout(
             forward_renderer_h->present_pass.command_buffers[i],
-            &forward_renderer_h->shading_pass.color_attachment.color_image,
+            &forward_renderer_h->render_target.color_image,
             VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
@@ -361,7 +399,7 @@ void tg_forward_renderer_internal_init_present_pass(tg_forward_renderer_h forwar
         );
         tg_vulkan_command_buffer_cmd_transition_depth_image_layout(
             forward_renderer_h->present_pass.command_buffers[i],
-            &forward_renderer_h->shading_pass.depth_attachment,
+            &forward_renderer_h->render_target.depth_image,
             VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
@@ -378,8 +416,8 @@ void tg_forward_renderer_begin(tg_forward_renderer_h forward_renderer_h)
 {
 	TG_ASSERT(forward_renderer_h);
 
-    tg_vulkan_fence_wait(forward_renderer_h->shading_pass.color_attachment.fence);
-    tg_vulkan_fence_reset(forward_renderer_h->shading_pass.color_attachment.fence);
+    tg_vulkan_fence_wait(forward_renderer_h->render_target.fence);
+    tg_vulkan_fence_reset(forward_renderer_h->render_target.fence);
 
     ((tg_camera*)forward_renderer_h->shading_pass.view_projection_ubo.p_mapped_device_memory)->view = forward_renderer_h->shading_pass.p_camera->view;
     ((tg_camera*)forward_renderer_h->shading_pass.view_projection_ubo.p_mapped_device_memory)->projection = forward_renderer_h->shading_pass.p_camera->projection;
@@ -400,6 +438,28 @@ void tg_forward_renderer_begin(tg_forward_renderer_h forward_renderer_h)
     vkCmdBeginRenderPass(forward_renderer_h->shading_pass.command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 }
 
+void tg_forward_renderer_clear(tg_forward_renderer_h forward_renderer_h)
+{
+    TG_ASSERT(forward_renderer_h);
+
+    tg_vulkan_fence_wait(forward_renderer_h->render_target.fence);
+    tg_vulkan_fence_reset(forward_renderer_h->render_target.fence);
+
+    VkSubmitInfo submit_info = { 0 };
+    {
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.pNext = TG_NULL;
+        submit_info.waitSemaphoreCount = 0;
+        submit_info.pWaitSemaphores = TG_NULL;
+        submit_info.pWaitDstStageMask = TG_NULL;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &forward_renderer_h->clear_pass.command_buffer;
+        submit_info.signalSemaphoreCount = 0;
+        submit_info.pSignalSemaphores = TG_NULL;
+    }
+    VK_CALL(vkQueueSubmit(graphics_queue.queue, 1, &submit_info, forward_renderer_h->render_target.fence));
+}
+
 tg_forward_renderer_h tg_forward_renderer_create(const tg_camera* p_camera, tg_render_target_h render_target_h)
 {
 	TG_ASSERT(p_camera);
@@ -408,6 +468,7 @@ tg_forward_renderer_h tg_forward_renderer_create(const tg_camera* p_camera, tg_r
 
     tg_forward_renderer_internal_init_shading_pass(forward_renderer_h, p_camera, render_target_h);
     tg_forward_renderer_internal_init_present_pass(forward_renderer_h);
+    tg_forward_renderer_internal_init_clear_pass(forward_renderer_h);
 
     return forward_renderer_h;
 }
@@ -445,7 +506,7 @@ void tg_forward_renderer_end(tg_forward_renderer_h forward_renderer_h)
         submit_info.signalSemaphoreCount = 0;
         submit_info.pSignalSemaphores = TG_NULL;
     }
-    VK_CALL(vkQueueSubmit(graphics_queue.queue, 1, &submit_info, forward_renderer_h->shading_pass.color_attachment.fence));
+    VK_CALL(vkQueueSubmit(graphics_queue.queue, 1, &submit_info, forward_renderer_h->render_target.fence));
 }
 
 tg_render_target_h tg_forward_renderer_get_render_target(tg_forward_renderer_h forward_renderer_h)
@@ -469,8 +530,8 @@ void tg_forward_renderer_present(tg_forward_renderer_h forward_renderer_h)
     u32 current_image;
     VK_CALL(vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, forward_renderer_h->present_pass.image_acquired_semaphore, VK_NULL_HANDLE, &current_image));
 
-    tg_vulkan_fence_wait(forward_renderer_h->shading_pass.color_attachment.fence);
-    tg_vulkan_fence_reset(forward_renderer_h->shading_pass.color_attachment.fence);
+    tg_vulkan_fence_wait(forward_renderer_h->render_target.fence);
+    tg_vulkan_fence_reset(forward_renderer_h->render_target.fence);
 
     const VkSemaphore p_wait_semaphores[1] = { forward_renderer_h->present_pass.image_acquired_semaphore };
     const VkPipelineStageFlags p_pipeline_stage_masks[1] = { VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT };
@@ -486,7 +547,7 @@ void tg_forward_renderer_present(tg_forward_renderer_h forward_renderer_h)
         draw_submit_info.signalSemaphoreCount = 1;
         draw_submit_info.pSignalSemaphores = &forward_renderer_h->present_pass.semaphore;
     }
-    VK_CALL(vkQueueSubmit(graphics_queue.queue, 1, &draw_submit_info, forward_renderer_h->shading_pass.color_attachment.fence));
+    VK_CALL(vkQueueSubmit(graphics_queue.queue, 1, &draw_submit_info, forward_renderer_h->render_target.fence));
 
     VkPresentInfoKHR present_info = { 0 };
     {
@@ -500,6 +561,8 @@ void tg_forward_renderer_present(tg_forward_renderer_h forward_renderer_h)
         present_info.pResults = TG_NULL;
     }
     VK_CALL(vkQueuePresentKHR(present_queue.queue, &present_info));
+
+    vkQueueWaitIdle(graphics_queue.queue);
 }
 
 

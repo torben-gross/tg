@@ -10,7 +10,6 @@ typedef struct tg_deferred_renderer_geometry_pass
     tg_color_image               position_attachment;
     tg_color_image               normal_attachment;
     tg_color_image               albedo_attachment;
-    tg_depth_image               depth_attachment;
 
     tg_vulkan_buffer             view_projection_ubo;
 
@@ -48,7 +47,6 @@ typedef struct tg_deferred_renderer_shading_pass
         tg_vulkan_compute_shader     find_exposure_compute_shader;
         tg_vulkan_buffer             exposure_compute_buffer;
 
-        tg_render_target             color_attachment;
         VkRenderPass                 render_pass;
         VkFramebuffer                framebuffer;
 
@@ -82,12 +80,19 @@ typedef struct tg_deferred_renderer_present_pass
     VkCommandBuffer          command_buffers[TG_VULKAN_SURFACE_IMAGE_COUNT];
 } tg_deferred_renderer_present_pass;
 
+typedef struct tg_deferred_renderer_clear_pass
+{
+    VkCommandBuffer    command_buffer;
+} tg_deferred_renderer_clear_pass;
+
 typedef struct tg_deferred_renderer
 {
-    const tg_camera* p_camera;
+    const tg_camera*                      p_camera;
+    tg_render_target                      render_target;
     tg_deferred_renderer_geometry_pass    geometry_pass;
     tg_deferred_renderer_shading_pass     shading_pass;
     tg_deferred_renderer_present_pass     present_pass;
+    tg_deferred_renderer_clear_pass       clear_pass;
 } tg_deferred_renderer;
 
 #endif
