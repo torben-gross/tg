@@ -95,10 +95,15 @@ typedef struct tg_test_forward
     tg_camera                camera;
     tg_scene                 scene;
     tg_mesh_h                mesh_h;
+    tg_mesh_h                mesh2_h;
     tg_vertex_shader_h       vertex_shader_h;
+    tg_vertex_shader_h       vertex_shader2_h;
     tg_fragment_shader_h     fragment_shader_h;
+    tg_fragment_shader_h     fragment_shader2_h;
     tg_material_h            material_h;
+    tg_material_h            material2_h;
     tg_entity                entity;
+    tg_entity                entity2;
 } tg_test_forward;
 
 
@@ -420,7 +425,7 @@ void tg_application_internal_test_deferred_update_and_render(f32 delta_ms)
     tg_entity* p_entities = TG_LIST_POINTER_TO(test_deferred.entities, 0);
     for (u32 i = 0; i < test_deferred.entities.count; i++)
     {
-        tg_scene_draw(&test_deferred.scene, &p_entities[i]);
+        tg_scene_submit(&test_deferred.scene, &p_entities[i]);
     }
     tg_scene_end(&test_deferred.scene);
     tg_scene_present(&test_deferred.scene);
@@ -464,8 +469,17 @@ void tg_application_internal_test_deferred_destroy()
 void tg_application_internal_test_forward_create()
 {
     const v2 camera_position = { 0.0f, 0.0f };
-    tg_orthographic_camera_init(&test_forward.camera, &camera_position, -320, 320, -180, 180, -1, 1);
-    test_forward.scene = tg_scene_create(&test_forward.camera, 0, TG_NULL);
+    tg_orthographic_camera_init(&test_forward.camera, &camera_position, -320, 320, -180, 180, -100, 100);
+    tg_point_light p_point_lights[TG_POINT_LIGHT_COUNT] = { 0 };
+    tg_random random = { 0 };
+    tgm_random_init(&random, 13031995);
+    for (u32 i = 0; i < TG_POINT_LIGHT_COUNT; i++)
+    {
+        p_point_lights[i].position = (v3){ tgm_random_next_f32(&random) * 100.0f, tgm_random_next_f32(&random) * 50.0f, -tgm_random_next_f32(&random) * 100.0f };
+        p_point_lights[i].color = (v3){ tgm_random_next_f32(&random), tgm_random_next_f32(&random), tgm_random_next_f32(&random) };
+        p_point_lights[i].radius = tgm_random_next_f32(&random) * 50.0f;
+    }
+    test_forward.scene = tg_scene_create(&test_forward.camera, TG_POINT_LIGHT_COUNT, p_point_lights);
     const v3 p_quad_positions[6] = {
         { -150.0f, -15.0f, 0.0f },
         {   15.0f, -15.0f, 0.0f },
@@ -474,17 +488,31 @@ void tg_application_internal_test_forward_create()
         {  -15.0f,  15.0f, 0.0f },
         { -150.0f, -15.0f, 0.0f }
     };
+    const v3 p_quad_positions2[6] = {
+        {  -15.0f, -15.0f, -50.0f },
+        {  150.0f, -15.0f, -50.0f },
+        {   15.0f,  15.0f, -50.0f },
+        {   15.0f,  15.0f, -50.0f },
+        { -150.0f,  15.0f, -50.0f },
+        {  -15.0f, -15.0f, -50.0f }
+    };
     test_forward.mesh_h = tg_mesh_create(6, p_quad_positions, TG_NULL, TG_NULL, TG_NULL, 0, TG_NULL);
+    test_forward.mesh2_h = tg_mesh_create(6, p_quad_positions2, TG_NULL, TG_NULL, TG_NULL, 0, TG_NULL);
     test_forward.vertex_shader_h = tg_vertex_shader_create("shaders/forward.vert");
+    test_forward.vertex_shader2_h = tg_vertex_shader_create("shaders/geometry.vert");
     test_forward.fragment_shader_h = tg_fragment_shader_create("shaders/forward.frag");
+    test_forward.fragment_shader2_h = tg_fragment_shader_create("shaders/geometry.frag");
     test_forward.material_h = tg_material_create_forward(test_forward.vertex_shader_h, test_forward.fragment_shader_h, 0, TG_NULL, TG_NULL);
+    test_forward.material2_h = tg_material_create_deferred(test_forward.vertex_shader2_h, test_forward.fragment_shader2_h, 0, TG_NULL, TG_NULL);
     test_forward.entity = tg_entity_create(&test_forward.scene, test_forward.mesh_h, test_forward.material_h);
+    test_forward.entity2 = tg_entity_create(&test_forward.scene, test_forward.mesh2_h, test_forward.material2_h);
 }
 
 void tg_application_internal_test_forward_update_and_render(f32 delta_ms)
 {
     tg_scene_begin(&test_forward.scene);
-    tg_scene_draw(&test_forward.scene, &test_forward.entity);
+    tg_scene_submit(&test_forward.scene, &test_forward.entity);
+    tg_scene_submit(&test_forward.scene, &test_forward.entity2);
     tg_scene_end(&test_forward.scene);
     tg_scene_present(&test_forward.scene);
 }

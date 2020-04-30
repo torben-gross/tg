@@ -195,6 +195,12 @@ typedef struct tg_color_image
     VkSampler             sampler;
 } tg_color_image;
 
+typedef struct tg_render_target
+{
+    tg_color_image    color_image;
+    VkFence           fence;
+} tg_render_target;
+
 typedef struct tg_compute_buffer
 {
     tg_vulkan_buffer    buffer;

@@ -11,10 +11,8 @@ typedef struct tg_forward_renderer
     {
         const tg_camera*             p_camera;
 
-        tg_color_image               color_attachment;
+        tg_render_target             color_attachment;
         tg_depth_image               depth_attachment;
-
-        VkFence                      fence;
 
         tg_vulkan_buffer             view_projection_ubo;
 
@@ -30,7 +28,6 @@ typedef struct tg_forward_renderer
         tg_vulkan_buffer         ibo;
 
         VkSemaphore              image_acquired_semaphore;
-        VkFence                  fence;
         VkSemaphore              semaphore;
 
         VkRenderPass             render_pass;

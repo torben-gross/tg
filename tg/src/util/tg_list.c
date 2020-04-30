@@ -30,6 +30,13 @@ void tg_list_destroy(tg_list* p_list)
 
 
 
+void tg_list_clear(tg_list* p_list)
+{
+	TG_ASSERT(p_list);
+
+	p_list->count = 0;
+}
+
 b32 tg_list_contains(const tg_list* p_list, const void* p_value)
 {
 	TG_ASSERT(p_list && p_value);

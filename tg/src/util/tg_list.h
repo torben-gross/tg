@@ -29,6 +29,7 @@ typedef struct tg_list
 tg_list    tg_list_create_impl(u32 element_size, u32 capacity);
 void       tg_list_destroy(tg_list* p_list);
 
+void       tg_list_clear(tg_list* p_list);
 b32        tg_list_contains(const tg_list* p_list, const void* p_value);
 void       tg_list_insert(tg_list* p_list, const void* p_value);
 void       tg_list_insert_at(tg_list* p_list, u32 index, const void* p_value);

@@ -106,30 +106,21 @@ tg_entity_graphics_data_ptr_h tg_entity_graphics_data_ptr_create(tg_entity* p_en
         vulkan_graphics_pipeline_create_info.fragment_shader = p_entity->material_h->fragment_shader_h->shader_module;
         vulkan_graphics_pipeline_create_info.cull_mode = VK_CULL_MODE_BACK_BIT;
         vulkan_graphics_pipeline_create_info.sample_count = VK_SAMPLE_COUNT_1_BIT;
-        vulkan_graphics_pipeline_create_info.depth_test_enable = VK_TRUE;
-        vulkan_graphics_pipeline_create_info.depth_write_enable = VK_TRUE;
 
         switch (p_entity->material_h->material_type)
         {
         case TG_VULKAN_MATERIAL_TYPE_DEFERRED:
         {
+            vulkan_graphics_pipeline_create_info.depth_test_enable = VK_TRUE;
+            vulkan_graphics_pipeline_create_info.depth_write_enable = VK_TRUE;
             vulkan_graphics_pipeline_create_info.attachment_count = TG_DEFERRED_RENDERER_GEOMETRY_PASS_COLOR_ATTACHMENT_COUNT;
-        } break;
-        case TG_VULKAN_MATERIAL_TYPE_FORWARD:
-        {
-            vulkan_graphics_pipeline_create_info.attachment_count = TG_FORWARD_RENDERER_COLOR_ATTACHMENT_COUNT;
-        } break;
-        default: TG_ASSERT(TG_FALSE);
-        }
-
-        switch (p_entity->material_h->material_type)
-        {
-        case TG_VULKAN_MATERIAL_TYPE_DEFERRED:
-        {
             vulkan_graphics_pipeline_create_info.blend_enable = VK_FALSE;
         } break;
         case TG_VULKAN_MATERIAL_TYPE_FORWARD:
         {
+            vulkan_graphics_pipeline_create_info.depth_test_enable = VK_FALSE;
+            vulkan_graphics_pipeline_create_info.depth_write_enable = VK_FALSE;
+            vulkan_graphics_pipeline_create_info.attachment_count = TG_FORWARD_RENDERER_COLOR_ATTACHMENT_COUNT;
             vulkan_graphics_pipeline_create_info.blend_enable = VK_TRUE;
         } break;
         default: TG_ASSERT(TG_FALSE);

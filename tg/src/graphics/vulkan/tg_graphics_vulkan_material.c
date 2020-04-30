@@ -69,4 +69,20 @@ void tg_material_destroy(tg_material_h material_h)
 	TG_MEMORY_FREE(material_h);
 }
 
+b32 tg_material_is_deferred(tg_material_h material_h)
+{
+    TG_ASSERT(material_h);
+
+    const b32 result = material_h->material_type == TG_VULKAN_MATERIAL_TYPE_DEFERRED;
+    return result;
+}
+
+b32 tg_material_is_forward(tg_material_h material_h)
+{
+    TG_ASSERT(material_h);
+
+    const b32 result = material_h->material_type == TG_VULKAN_MATERIAL_TYPE_FORWARD;
+    return result;
+}
+
 #endif

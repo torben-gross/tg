@@ -22,6 +22,7 @@ TG_DECLARE_HANDLE(tg_mesh);
 TG_DECLARE_HANDLE(tg_index_buffer);
 TG_DECLARE_HANDLE(tg_forward_renderer);
 TG_DECLARE_HANDLE(tg_deferred_renderer);
+TG_DECLARE_HANDLE(tg_render_target);
 TG_DECLARE_HANDLE(tg_texture_atlas);
 TG_DECLARE_HANDLE(tg_uniform_buffer);
 TG_DECLARE_HANDLE(tg_vertex_buffer);
@@ -155,6 +156,8 @@ void                             tg_fragment_shader_destroy(tg_fragment_shader_h
 tg_material_h                    tg_material_create_deferred(tg_vertex_shader_h vertex_shader_h, tg_fragment_shader_h fragment_shader_h, u32 input_element_count, tg_shader_input_element* p_input_elements, tg_handle* p_input_element_handles);
 tg_material_h                    tg_material_create_forward(tg_vertex_shader_h vertex_shader_h, tg_fragment_shader_h fragment_shader_h, u32 input_element_count, tg_shader_input_element* p_input_elements, tg_handle* p_input_element_handles);
 void                             tg_material_destroy(tg_material_h material_h);
+b32                              tg_material_is_deferred(tg_material_h material_h);
+b32                              tg_material_is_forward(tg_material_h material_h);
 
 tg_mesh_h                        tg_mesh_create(u32 vertex_count, const v3* p_positions, const v3* p_normals, const v2* p_uvs, const v3* p_tangents, u32 index_count, const u16* p_indices);
 void                             tg_mesh_destroy(tg_mesh_h mesh_h);
@@ -180,6 +183,7 @@ tg_deferred_renderer_h           tg_deferred_renderer_create(const tg_camera* p_
 void                             tg_deferred_renderer_destroy(tg_deferred_renderer_h deferred_renderer_h);
 void                             tg_deferred_renderer_draw(tg_deferred_renderer_h deferred_renderer_h, tg_entity* p_entity);
 void                             tg_deferred_renderer_end(tg_deferred_renderer_h deferred_renderer_h);
+tg_render_target_h               tg_deferred_renderer_get_render_target(tg_deferred_renderer_h deferred_renderer_h);
 void                             tg_deferred_renderer_on_window_resize(tg_deferred_renderer_h deferred_renderer_h, u32 width, u32 height);
 void                             tg_deferred_renderer_present(tg_deferred_renderer_h deferred_renderer_h);
 
@@ -190,10 +194,11 @@ void                             tg_deferred_renderer_present(tg_deferred_render
 +------------------------------------------------------------*/
 
 void                             tg_forward_renderer_begin(tg_forward_renderer_h forward_renderer_h);
-tg_forward_renderer_h            tg_forward_renderer_create(const tg_camera* p_camera);
+tg_forward_renderer_h            tg_forward_renderer_create(const tg_camera* p_camera, tg_render_target_h render_target_h);
 void                             tg_forward_renderer_destroy(tg_forward_renderer_h forward_renderer_h);
 void                             tg_forward_renderer_draw(tg_forward_renderer_h forward_renderer_h, tg_entity* p_entity);
 void                             tg_forward_renderer_end(tg_forward_renderer_h forward_renderer_h);
+tg_render_target_h               tg_forward_renderer_get_render_target(tg_forward_renderer_h forward_renderer_h);
 void                             tg_forward_renderer_on_window_resize(tg_forward_renderer_h forward_renderer_h, u32 width, u32 height);
 void                             tg_forward_renderer_present(tg_forward_renderer_h forward_renderer_h);
 
