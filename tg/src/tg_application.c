@@ -171,10 +171,10 @@ void tg_application_internal_test_deferred_create()
 
 
     const v3 p_quad_positions[4] = {
-        { -1.5f, -1.5f, 0.0f },
-        {  1.5f, -1.5f, 0.0f },
-        {  1.5f,  1.5f, 0.0f },
-        { -1.5f,  1.5f, 0.0f }
+        { -3.2f, -1.8f, 0.0f },
+        {  3.2f, -1.8f, 0.0f },
+        {  3.2f,  1.8f, 0.0f },
+        { -3.2f,  1.8f, 0.0f }
     };
     const v3 p_ground_positions[4] = {
         { -1000.0f, -2.0f,  1000.0f },
@@ -205,10 +205,10 @@ void tg_application_internal_test_deferred_create()
     {
         p_shader_input_elements[0].type = TG_SHADER_INPUT_ELEMENT_TYPE_UNIFORM_BUFFER;
         p_shader_input_elements[0].array_element_count = 1;
-        p_shader_input_elements[1].type = TG_SHADER_INPUT_ELEMENT_TYPE_COLOR_IMAGE;
+        p_shader_input_elements[1].type = TG_SHADER_INPUT_ELEMENT_TYPE_RENDER_TARGET;
         p_shader_input_elements[1].array_element_count = 1;
     }
-    tg_handle p_custom_handles[2] = { test_deferred.custom_uniform_buffer_h, test_deferred.texture_atlas_h };
+    tg_handle p_custom_handles[2] = { test_deferred.custom_uniform_buffer_h, tg_scene_get_render_target(&test_deferred.scene) };
     test_deferred.custom_vertex_shader_h = tg_vertex_shader_create("shaders/custom_forward.vert");
     test_deferred.custom_fragment_shader_h = tg_fragment_shader_create("shaders/custom_forward.frag");
     test_deferred.custom_material_h = tg_material_create_forward(test_deferred.custom_vertex_shader_h, test_deferred.custom_fragment_shader_h, 2, p_shader_input_elements, p_custom_handles);

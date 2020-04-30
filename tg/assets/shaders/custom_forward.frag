@@ -17,5 +17,5 @@ layout(set = 1, binding = 1) uniform sampler2D test_icon;
 
 void main()
 {
-    out_color = vec4(u_color, 1.0) * texture(test_icon, v_uv);
+    out_color = vec4(u_color, 1.0) * 0.1 + 0.9 * texture(test_icon, v_uv);
 }

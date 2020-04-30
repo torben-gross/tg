@@ -59,7 +59,7 @@ tg_render_target_h tg_scene_get_render_target(tg_scene* p_scene)
 {
 	TG_ASSERT(p_scene);
 
-	return TG_NULL;
+	return tg_forward_renderer_get_render_target(p_scene->forward_renderer_h);
 }
 
 void tg_scene_present(tg_scene* p_scene)
