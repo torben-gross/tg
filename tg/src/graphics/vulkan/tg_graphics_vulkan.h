@@ -67,11 +67,6 @@ typedef enum tg_vulkan_material_type
     TG_VULKAN_MATERIAL_TYPE_FORWARD
 } tg_vulkan_material_type;
 
-typedef enum tg_vulkan_structure_type
-{
-    TG_VULKAN_STRUCTURE_TYPE_COLOR_IMAGE // TODO: add all and use
-} tg_vulkan_structure_type;
-
 
 
 typedef struct tg_vulkan_descriptor
@@ -190,43 +185,46 @@ typedef struct tg_deferred_renderer_copy_image_compute_buffer // TODO: this stil
 
 typedef struct tg_color_image
 {
-    u32                   width;
-    u32                   height;
-    u32                   mip_levels;
-    VkFormat              format;
-    VkImage               color_image;
-    VkDeviceMemory        device_memory;
-    VkImageView           image_view;
-    VkSampler             sampler;
+    tg_handle_type    type;
+    u32               width;
+    u32               height;
+    u32               mip_levels;
+    VkFormat          format;
+    VkImage           color_image;
+    VkDeviceMemory    device_memory;
+    VkImageView       image_view;
+    VkSampler         sampler;
 } tg_color_image;
 
 typedef struct tg_compute_buffer
 {
+    tg_handle_type      type;
     tg_vulkan_buffer    buffer;
 } tg_compute_buffer;
 
 typedef struct tg_compute_shader
 {
-    u32                         input_element_count;
-    tg_shader_input_element*    p_input_elements;
+    tg_handle_type              type;
     tg_vulkan_compute_shader    compute_shader;
     VkCommandBuffer             command_buffer;
 } tg_compute_shader;
 
 typedef struct tg_depth_image
 {
-    u32                   width;
-    u32                   height;
-    VkFormat              format;
-    VkImage               depth_image;
-    VkDeviceMemory        device_memory;
-    void*                 p_mapped_device_memory;
-    VkImageView           image_view;
-    VkSampler             sampler;
+    tg_handle_type    type;
+    u32               width;
+    u32               height;
+    VkFormat          format;
+    VkImage           depth_image;
+    VkDeviceMemory    device_memory;
+    void*             p_mapped_device_memory;
+    VkImageView       image_view;
+    VkSampler         sampler;
 } tg_depth_image;
 
 typedef struct tg_render_target
 {
+    tg_handle_type    type;
     tg_color_image    color_attachment;
     tg_depth_image    depth_attachment;
     tg_color_image    color_attachment_copy;
@@ -236,6 +234,7 @@ typedef struct tg_render_target
 
 typedef struct tg_camera
 {
+    tg_handle_type              type;
     tg_vulkan_buffer            ubo;
     tg_render_target            render_target;
     struct
@@ -272,6 +271,7 @@ typedef struct tg_vulkan_entity_scene_info
 
 typedef struct tg_entity_graphics_data_ptr
 {
+    tg_handle_type            type;
     tg_vulkan_buffer          uniform_buffer;
     u32                       scene_info_count;
     tg_entity_scene_info*     p_entity_scene_infos;
@@ -279,11 +279,13 @@ typedef struct tg_entity_graphics_data_ptr
 
 typedef struct tg_fragment_shader
 {
+    tg_handle_type    type;
     VkShaderModule    shader_module;
 } tg_fragment_shader;
 
 typedef struct tg_material
 {
+    tg_handle_type             type;
     tg_vulkan_material_type    material_type;
     tg_vertex_shader_h         vertex_shader_h;
     tg_fragment_shader_h       fragment_shader_h;
@@ -292,23 +294,27 @@ typedef struct tg_material
 
 typedef struct tg_mesh
 {
+    tg_handle_type      type;
     tg_vulkan_buffer    vbo;
     tg_vulkan_buffer    ibo;
 } tg_mesh;
 
 typedef struct tg_texture_atlas
 {
+    tg_handle_type             type;
     tg_color_image             color_image;
     tg_vulkan_image_extent*    p_extents;
 } tg_texture_atlas;
 
 typedef struct tg_uniform_buffer
 {
+    tg_handle_type      type;
     tg_vulkan_buffer    buffer;
 } tg_uniform_buffer;
 
 typedef struct tg_vertex_shader
 {
+    tg_handle_type    type;
     VkShaderModule    shader_module;
 } tg_vertex_shader;
 
@@ -372,7 +378,7 @@ void                          tg_vulkan_depth_image_destroy(tg_depth_image* p_de
 tg_vulkan_descriptor          tg_vulkan_descriptor_create(u32 binding_count, VkDescriptorSetLayoutBinding* p_bindings);
 void                          tg_vulkan_descriptor_destroy(tg_vulkan_descriptor* p_vulkan_descriptor);
 
-void                          tg_vulkan_descriptor_set_update(VkDescriptorSet descriptor_set, tg_shader_input_element* p_shader_input_element, tg_handle shader_input_element_handle, u32 dst_binding);
+void                          tg_vulkan_descriptor_set_update(VkDescriptorSet descriptor_set, tg_handle shader_input_element_handle, u32 dst_binding);
 void                          tg_vulkan_descriptor_set_update_color_image(VkDescriptorSet descriptor_set, tg_color_image* p_color_image, u32 dst_binding);
 void                          tg_vulkan_descriptor_set_update_color_image_array(VkDescriptorSet descriptor_set, tg_color_image* p_color_image, u32 dst_binding, u32 array_index);
 void                          tg_vulkan_descriptor_set_update_depth_image(VkDescriptorSet descriptor_set, tg_depth_image* p_depth_image, u32 dst_binding);
@@ -380,6 +386,7 @@ void                          tg_vulkan_descriptor_set_update_depth_image_array(
 void                          tg_vulkan_descriptor_set_update_render_target(VkDescriptorSet descriptor_set, tg_render_target* p_render_target, u32 dst_binding);
 void                          tg_vulkan_descriptor_set_update_storage_buffer(VkDescriptorSet descriptor_set, VkBuffer buffer, u32 dst_binding);
 void                          tg_vulkan_descriptor_set_update_storage_buffer_array(VkDescriptorSet descriptor_set, VkBuffer buffer, u32 dst_binding, u32 array_index);
+void                          tg_vulkan_descriptor_set_update_texture_atlas(VkDescriptorSet descriptor_set, tg_texture_atlas* p_texture_atlas, u32 dst_binding);
 void                          tg_vulkan_descriptor_set_update_uniform_buffer(VkDescriptorSet descriptor_set, VkBuffer buffer, u32 dst_binding);
 void                          tg_vulkan_descriptor_set_update_uniform_buffer_array(VkDescriptorSet descriptor_set, VkBuffer buffer, u32 dst_binding, u32 array_index);
 void                          tg_vulkan_descriptor_sets_update(u32 write_descriptor_set_count, const VkWriteDescriptorSet* p_write_descriptor_sets);
@@ -395,6 +402,8 @@ void                          tg_vulkan_framebuffers_destroy(u32 count, VkFrameb
 
 VkPipeline                    tg_vulkan_graphics_pipeline_create(const tg_vulkan_graphics_pipeline_create_info* p_vulkan_graphics_pipeline_create_info);
 void                          tg_vulkan_graphics_pipeline_destroy(VkPipeline graphics_pipeline);
+
+VkDescriptorType              tg_vulkan_handle_type_convert_to_descriptor_type(tg_handle_type type);
 
 VkFilter                      tg_vulkan_image_convert_filter(tg_image_filter filter);
 VkSamplerAddressMode          tg_vulkan_image_convert_address_mode(tg_image_address_mode address_mode);
@@ -415,8 +424,6 @@ void                          tg_vulkan_sampler_destroy(VkSampler sampler);
 
 VkSemaphore                   tg_vulkan_semaphore_create();
 void                          tg_vulkan_semaphore_destroy(VkSemaphore semaphore);
-
-VkDescriptorType              tg_vulkan_shader_input_element_type_convert(tg_shader_input_element_type type);
 
 VkShaderModule                tg_vulkan_shader_module_create(const char* p_filename);
 void                          tg_vulkan_shader_module_destroy(VkShaderModule shader_module);

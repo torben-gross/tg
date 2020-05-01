@@ -6,31 +6,24 @@
 
 
 
-tg_compute_shader_h tg_compute_shader_create(const char* filename, u32 input_element_count, tg_shader_input_element* p_shader_input_elements)
+tg_compute_shader_h tg_compute_shader_create(const char* filename, u32 handle_type_count, tg_handle_type* p_handle_types)
 {
-	TG_ASSERT(filename && input_element_count && p_shader_input_elements);
+	TG_ASSERT(filename && handle_type_count && p_handle_types);
 
 	tg_compute_shader_h compute_shader_h = TG_MEMORY_ALLOC(sizeof(*compute_shader_h));
+	compute_shader_h->type = TG_HANDLE_TYPE_COMPUTE_SHADER;
 
-	compute_shader_h->input_element_count = input_element_count;
-
-	compute_shader_h->p_input_elements = TG_MEMORY_ALLOC(input_element_count * sizeof(*compute_shader_h->p_input_elements));
-	for (u32 i = 0; i < input_element_count; i++)
-	{
-		compute_shader_h->p_input_elements[i] = p_shader_input_elements[i];
-	}
-
-	VkDescriptorSetLayoutBinding* p_descriptor_set_layout_bindings = TG_MEMORY_ALLOC(input_element_count * sizeof(*p_descriptor_set_layout_bindings));
-	for (u32 i = 0; i < input_element_count; i++)
+	VkDescriptorSetLayoutBinding* p_descriptor_set_layout_bindings = TG_MEMORY_ALLOC(handle_type_count * sizeof(*p_descriptor_set_layout_bindings));
+	for (u32 i = 0; i < handle_type_count; i++)
 	{
 		p_descriptor_set_layout_bindings[i].binding = i;
-		p_descriptor_set_layout_bindings[i].descriptorType = tg_vulkan_shader_input_element_type_convert(p_shader_input_elements[i].type);
-		p_descriptor_set_layout_bindings[i].descriptorCount = p_shader_input_elements[i].array_element_count;
+		p_descriptor_set_layout_bindings[i].descriptorType = tg_vulkan_handle_type_convert_to_descriptor_type(p_handle_types[i]);
+		p_descriptor_set_layout_bindings[i].descriptorCount = 1; // TODO: arrays
 		p_descriptor_set_layout_bindings[i].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 		p_descriptor_set_layout_bindings[i].pImmutableSamplers = TG_NULL;
 	}
 
-	compute_shader_h->compute_shader = tg_vulkan_compute_shader_create(filename, input_element_count, p_descriptor_set_layout_bindings);
+	compute_shader_h->compute_shader = tg_vulkan_compute_shader_create(filename, handle_type_count, p_descriptor_set_layout_bindings);
 	compute_shader_h->command_buffer = tg_vulkan_command_buffer_allocate(compute_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
 	TG_MEMORY_FREE(p_descriptor_set_layout_bindings);
@@ -38,11 +31,11 @@ tg_compute_shader_h tg_compute_shader_create(const char* filename, u32 input_ele
 	return compute_shader_h;
 }
 
-void tg_compute_shader_bind_input(tg_compute_shader_h compute_shader_h, tg_handle* p_shader_input_element_handles)
+void tg_compute_shader_bind_input(tg_compute_shader_h compute_shader_h, u32 first_handle_index, u32 handle_count, tg_handle* p_handles)
 {
-	for (u32 i = 0; i < compute_shader_h->input_element_count; i++)
+	for (u32 i = first_handle_index; i < first_handle_index + handle_count; i++)
 	{
-		tg_vulkan_descriptor_set_update(compute_shader_h->compute_shader.descriptor.descriptor_set, &compute_shader_h->p_input_elements[i], p_shader_input_element_handles[i], i);
+		tg_vulkan_descriptor_set_update(compute_shader_h->compute_shader.descriptor.descriptor_set, p_handles[i], i);
 	}
 }
 
@@ -78,7 +71,6 @@ void tg_compute_shader_destroy(tg_compute_shader_h compute_shader_h)
 
 	tg_vulkan_command_buffer_free(compute_command_pool, compute_shader_h->command_buffer);
 	tg_vulkan_shader_module_destroy(compute_shader_h->compute_shader.shader_module);
-	TG_MEMORY_FREE(compute_shader_h->p_input_elements);
 	TG_MEMORY_FREE(compute_shader_h);
 }
 
@@ -89,6 +81,7 @@ tg_vertex_shader_h tg_vertex_shader_create(const char* p_filename)
     TG_ASSERT(p_filename);
 
     tg_vertex_shader_h vertex_shader_h = TG_MEMORY_ALLOC(sizeof(*vertex_shader_h));
+	vertex_shader_h->type = TG_HANDLE_TYPE_VERTEX_SHADER;
     vertex_shader_h->shader_module = tg_vulkan_shader_module_create(p_filename);
     return vertex_shader_h;
 }
@@ -108,6 +101,7 @@ tg_fragment_shader_h tg_fragment_shader_create(const char* p_filename)
     TG_ASSERT(p_filename);
 
     tg_fragment_shader_h fragment_shader_h = TG_MEMORY_ALLOC(sizeof(*fragment_shader_h));
+	fragment_shader_h->type = TG_HANDLE_TYPE_FRAGMENT_SHADER,
     fragment_shader_h->shader_module = tg_vulkan_shader_module_create(p_filename);
     return fragment_shader_h;
 }

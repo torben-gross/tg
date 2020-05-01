@@ -18,7 +18,7 @@ tg_entity tg_entity_create(tg_scene* p_scene, tg_mesh_h mesh_h, tg_material_h ma
     entity.transform.position = (v3){ 0.0f, 0.0f, 0.0f };
     entity.transform.position_matrix = tgm_m4_identity();
 	
-	entity.graphics_data_ptr_h = tg_entity_graphics_data_ptrs_create(&entity, p_scene);
+	entity.graphics_data_ptr_h = tg_entity_graphics_data_ptr_create(&entity, p_scene);
 
 	return entity;
 }

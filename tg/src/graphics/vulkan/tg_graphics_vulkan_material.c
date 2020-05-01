@@ -6,31 +6,32 @@
 
 
 
-tg_material_h tg_material_internal_create(tg_vulkan_material_type vulkan_material_type, tg_vertex_shader_h vertex_shader_h, tg_fragment_shader_h fragment_shader_h, u32 input_element_count, tg_shader_input_element* p_shader_input_elements, tg_handle* p_shader_input_element_handles)
+tg_material_h tg_material_internal_create(tg_vulkan_material_type vulkan_material_type, tg_vertex_shader_h vertex_shader_h, tg_fragment_shader_h fragment_shader_h, u32 handle_count, tg_handle* p_handles)
 {
     tg_material_h material_h = TG_MEMORY_ALLOC(sizeof(*material_h));
 
+    material_h->type = TG_HANDLE_TYPE_MATERIAL;
     material_h->material_type = vulkan_material_type;
     material_h->vertex_shader_h = vertex_shader_h;
     material_h->fragment_shader_h = fragment_shader_h;
 
-    if (input_element_count != 0)
+    if (handle_count != 0)
     {
-        VkDescriptorSetLayoutBinding* p_descriptor_set_layout_bindings = TG_MEMORY_ALLOC(input_element_count * sizeof(*p_descriptor_set_layout_bindings));
-        for (u32 i = 0; i < input_element_count; i++)
+        VkDescriptorSetLayoutBinding* p_descriptor_set_layout_bindings = TG_MEMORY_ALLOC(handle_count * sizeof(*p_descriptor_set_layout_bindings));
+        for (u32 i = 0; i < handle_count; i++)
         {
             p_descriptor_set_layout_bindings[i].binding = i;
-            p_descriptor_set_layout_bindings[i].descriptorType = tg_vulkan_shader_input_element_type_convert(p_shader_input_elements[i].type);
-            p_descriptor_set_layout_bindings[i].descriptorCount = p_shader_input_elements[i].array_element_count;
+            p_descriptor_set_layout_bindings[i].descriptorType = tg_vulkan_handle_type_convert_to_descriptor_type(*(tg_handle_type*)p_handles[i]);
+            p_descriptor_set_layout_bindings[i].descriptorCount = 1;// TODO: arrays
             p_descriptor_set_layout_bindings[i].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
             p_descriptor_set_layout_bindings[i].pImmutableSamplers = TG_NULL;
         }
-        material_h->descriptor = tg_vulkan_descriptor_create(input_element_count, p_descriptor_set_layout_bindings);
+        material_h->descriptor = tg_vulkan_descriptor_create(handle_count, p_descriptor_set_layout_bindings);
         TG_MEMORY_FREE(p_descriptor_set_layout_bindings);
 
-        for (u32 i = 0; i < input_element_count; i++)
+        for (u32 i = 0; i < handle_count; i++)
         {
-            tg_vulkan_descriptor_set_update(material_h->descriptor.descriptor_set, &p_shader_input_elements[i], p_shader_input_element_handles[i], i);
+            tg_vulkan_descriptor_set_update(material_h->descriptor.descriptor_set, p_handles[i], i);
         }
     }
     else
@@ -45,19 +46,19 @@ tg_material_h tg_material_internal_create(tg_vulkan_material_type vulkan_materia
 
 
 
-tg_material_h tg_material_create_deferred(tg_vertex_shader_h vertex_shader_h, tg_fragment_shader_h fragment_shader_h, u32 input_element_count, tg_shader_input_element* p_shader_input_elements, tg_handle* p_shader_input_element_handles)
+tg_material_h tg_material_create_deferred(tg_vertex_shader_h vertex_shader_h, tg_fragment_shader_h fragment_shader_h, u32 handle_count, tg_handle* p_handles)
 {
     TG_ASSERT(vertex_shader_h && fragment_shader_h);
 
-    tg_material_h material_h = tg_material_internal_create(TG_VULKAN_MATERIAL_TYPE_DEFERRED, vertex_shader_h, fragment_shader_h, input_element_count, p_shader_input_elements, p_shader_input_element_handles);
+    tg_material_h material_h = tg_material_internal_create(TG_VULKAN_MATERIAL_TYPE_DEFERRED, vertex_shader_h, fragment_shader_h, handle_count, p_handles);
     return material_h;
 }
 
-tg_material_h tg_material_create_forward(tg_vertex_shader_h vertex_shader_h, tg_fragment_shader_h fragment_shader_h, u32 input_element_count, tg_shader_input_element* p_shader_input_elements, tg_handle* p_shader_input_element_handles)
+tg_material_h tg_material_create_forward(tg_vertex_shader_h vertex_shader_h, tg_fragment_shader_h fragment_shader_h, u32 handle_count, tg_handle* p_handles)
 {
     TG_ASSERT(vertex_shader_h && fragment_shader_h);
 
-    tg_material_h material_h = tg_material_internal_create(TG_VULKAN_MATERIAL_TYPE_FORWARD, vertex_shader_h, fragment_shader_h, input_element_count, p_shader_input_elements, p_shader_input_element_handles);
+    tg_material_h material_h = tg_material_internal_create(TG_VULKAN_MATERIAL_TYPE_FORWARD, vertex_shader_h, fragment_shader_h, handle_count, p_handles);
     return material_h;
 }
 

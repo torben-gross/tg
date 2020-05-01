@@ -115,7 +115,7 @@ tg_test_forward test_forward = { 0 };
 
 
 
-void tg_application_internal_test_deferred_create()
+void tg_application_internal_game_3d_create()
 {
     test_deferred.entities = TG_LIST_CREATE(tg_entity);
     test_deferred.camera_info.position = (v3){ 0.0f, 0.0f, 0.0f };
@@ -150,7 +150,7 @@ void tg_application_internal_test_deferred_create()
         color_image_create_info.address_mode_v = TG_IMAGE_ADDRESS_MODE_REPEAT;
         color_image_create_info.address_mode_w = TG_IMAGE_ADDRESS_MODE_REPEAT;
     }
-    const tg_camera_h p_cameras_h[2] = { test_deferred.camera_info.camera_h, test_deferred.secondary_camera_h };
+    tg_camera_h p_cameras_h[2] = { test_deferred.camera_info.camera_h, test_deferred.secondary_camera_h };
     test_deferred.scene = tg_scene_create(2, p_cameras_h, TG_POINT_LIGHT_COUNT, p_point_lights);
 
 
@@ -197,23 +197,16 @@ void tg_application_internal_test_deferred_create()
     test_deferred.quad_mesh_h = tg_mesh_create(4, p_quad_positions, TG_NULL, p_uvs, TG_NULL, 6, p_indices);
     test_deferred.default_vertex_shader_h = tg_vertex_shader_create("shaders/geometry.vert");
     test_deferred.default_fragment_shader_h = tg_fragment_shader_create("shaders/geometry.frag");
-    test_deferred.default_material_h = tg_material_create_deferred(test_deferred.default_vertex_shader_h, test_deferred.default_fragment_shader_h, 0, TG_NULL, TG_NULL);
+    test_deferred.default_material_h = tg_material_create_deferred(test_deferred.default_vertex_shader_h, test_deferred.default_fragment_shader_h, 0, TG_NULL);
 
     test_deferred.custom_uniform_buffer_h = tg_uniform_buffer_create(sizeof(v3));
     test_deferred.p_custom_uniform_buffer_data = tg_uniform_buffer_data(test_deferred.custom_uniform_buffer_h);
     *test_deferred.p_custom_uniform_buffer_data = (v3){ 1.0f, 0.0f, 0.0f };
     test_deferred.image_h = tg_color_image_load("textures/test_icon.bmp");
-    tg_shader_input_element p_shader_input_elements[2] = { 0 };
-    {
-        p_shader_input_elements[0].type = TG_SHADER_INPUT_ELEMENT_TYPE_UNIFORM_BUFFER;
-        p_shader_input_elements[0].array_element_count = 1;
-        p_shader_input_elements[1].type = TG_SHADER_INPUT_ELEMENT_TYPE_RENDER_TARGET;
-        p_shader_input_elements[1].array_element_count = 1;
-    }
-    tg_handle p_custom_handles[2] = { test_deferred.custom_uniform_buffer_h, tg_camera_get_render_target(test_deferred.secondary_camera_h) };
     test_deferred.custom_vertex_shader_h = tg_vertex_shader_create("shaders/custom_forward.vert");
     test_deferred.custom_fragment_shader_h = tg_fragment_shader_create("shaders/custom_forward.frag");
-    test_deferred.custom_material_h = tg_material_create_forward(test_deferred.custom_vertex_shader_h, test_deferred.custom_fragment_shader_h, 2, p_shader_input_elements, p_custom_handles);
+    tg_handle p_custom_handles[2] = { test_deferred.custom_uniform_buffer_h, tg_camera_get_render_target(test_deferred.secondary_camera_h) };
+    test_deferred.custom_material_h = tg_material_create_forward(test_deferred.custom_vertex_shader_h, test_deferred.custom_fragment_shader_h, 2, p_custom_handles);
 
     test_deferred.quad_entity = tg_entity_create(&test_deferred.scene, test_deferred.quad_mesh_h, test_deferred.custom_material_h);
     test_deferred.quad_offset = -65.0f;
@@ -249,17 +242,14 @@ void tg_application_internal_test_deferred_create()
     }
     tg_compute_buffer_h isolevel_buffer_h = tg_compute_buffer_create((u64)p_chunk_uniform_buffer_data->chunk_vertex_count_x * (u64)p_chunk_uniform_buffer_data->chunk_vertex_count_y * (u64)p_chunk_uniform_buffer_data->chunk_vertex_count_z * sizeof(f32));
     f32* p_isolevel_buffer_data = tg_compute_buffer_data(isolevel_buffer_h);
-    tg_shader_input_element p_isolevel_compute_shader_input_elements[2] = { 0 };
+    tg_handle_type p_isolevel_compute_shader_handle_types[2] = { 0 };
     {
-        p_isolevel_compute_shader_input_elements[0].type = TG_SHADER_INPUT_ELEMENT_TYPE_COMPUTE_BUFFER;
-        p_isolevel_compute_shader_input_elements[0].array_element_count = 1;
-
-        p_isolevel_compute_shader_input_elements[1].type = TG_SHADER_INPUT_ELEMENT_TYPE_UNIFORM_BUFFER;
-        p_isolevel_compute_shader_input_elements[1].array_element_count = 1;
+        p_isolevel_compute_shader_handle_types[0] = TG_HANDLE_TYPE_COMPUTE_BUFFER;
+        p_isolevel_compute_shader_handle_types[1] = TG_HANDLE_TYPE_UNIFORM_BUFFER;
     }
-    tg_compute_shader_h isolevel_compute_shader_h = tg_compute_shader_create("shaders/isolevel.comp", 2, p_isolevel_compute_shader_input_elements);
+    tg_compute_shader_h isolevel_compute_shader_h = tg_compute_shader_create("shaders/isolevel.comp", 2, p_isolevel_compute_shader_handle_types);
     tg_handle pp_handles[2] = { isolevel_buffer_h, chunk_uniform_buffer_h };
-    tg_compute_shader_bind_input(isolevel_compute_shader_h, pp_handles);
+    tg_compute_shader_bind_input(isolevel_compute_shader_h, 0, 2, pp_handles);
 
     tg_marching_cubes_triangle* p_chunk_triangles = TG_MEMORY_ALLOC((u64)chunk_vertex_count * (u64)chunk_vertex_count * (u64)chunk_vertex_count * 12 * sizeof(*p_chunk_triangles));
     test_deferred.p_chunk_meshes = TG_MEMORY_ALLOC((u64)TG_CHUNKS_X * (u64)TG_CHUNKS_X * sizeof(*test_deferred.p_chunk_meshes));
@@ -328,7 +318,7 @@ void tg_application_internal_test_deferred_create()
     TG_MEMORY_FREE(p_chunk_triangles);
 }
 
-void tg_application_internal_test_deferred_update_and_render(f32 delta_ms)
+void tg_application_internal_game_3d_update_and_render(f32 delta_ms)
 {
     if (tg_input_is_key_down(TG_KEY_K))
     {
@@ -436,7 +426,7 @@ void tg_application_internal_test_deferred_update_and_render(f32 delta_ms)
     //tg_camera_present(test_deferred.secondary_camera_h);
 }
 
-void tg_application_internal_test_deferred_destroy()
+void tg_application_internal_game_3d_destroy()
 {
     tg_texture_atlas_destroy(test_deferred.texture_atlas_h);
     for (u32 i = 0; i < 13; i++)
@@ -473,9 +463,9 @@ void tg_application_internal_test_deferred_destroy()
     tg_list_destroy(&test_deferred.entities);
 }
 
-void tg_application_internal_test_forward_create()
+void tg_application_internal_game_2d_create()
 {
-    const v2 camera_position = { 0.0f, 0.0f };
+    const v3 camera_position = { 0.0f, 0.0f, 0.0f };
     test_deferred.camera_info.camera_h = tg_camera_create_orthographic(&camera_position, 0.0f, 0.0f, 0.0f, -320, 320, -180, 180, -100, 100);
     tg_point_light p_point_lights[TG_POINT_LIGHT_COUNT] = { 0 };
     tg_random random = { 0 };
@@ -509,13 +499,13 @@ void tg_application_internal_test_forward_create()
     test_forward.vertex_shader2_h = tg_vertex_shader_create("shaders/geometry.vert");
     test_forward.fragment_shader_h = tg_fragment_shader_create("shaders/forward.frag");
     test_forward.fragment_shader2_h = tg_fragment_shader_create("shaders/geometry.frag");
-    test_forward.material_h = tg_material_create_forward(test_forward.vertex_shader_h, test_forward.fragment_shader_h, 0, TG_NULL, TG_NULL);
-    test_forward.material2_h = tg_material_create_deferred(test_forward.vertex_shader2_h, test_forward.fragment_shader2_h, 0, TG_NULL, TG_NULL);
+    test_forward.material_h = tg_material_create_forward(test_forward.vertex_shader_h, test_forward.fragment_shader_h, 0, TG_NULL);
+    test_forward.material2_h = tg_material_create_deferred(test_forward.vertex_shader2_h, test_forward.fragment_shader2_h, 0, TG_NULL);
     test_forward.entity = tg_entity_create(&test_forward.scene, test_forward.mesh_h, test_forward.material_h);
     test_forward.entity2 = tg_entity_create(&test_forward.scene, test_forward.mesh2_h, test_forward.material2_h);
 }
 
-void tg_application_internal_test_forward_update_and_render(f32 delta_ms)
+void tg_application_internal_game_2d_update_and_render(f32 delta_ms)
 {
     tg_scene_begin(&test_forward.scene);
     tg_scene_submit(&test_forward.scene, &test_forward.entity);
@@ -524,7 +514,7 @@ void tg_application_internal_test_forward_update_and_render(f32 delta_ms)
     tg_camera_present(test_forward.camera_h);
 }
 
-void tg_application_internal_test_forward_destroy()
+void tg_application_internal_game_2d_destroy()
 {
     tg_entity_destroy(&test_forward.entity2);
     tg_entity_destroy(&test_forward.entity);
@@ -545,7 +535,8 @@ void tg_application_internal_test_forward_destroy()
 void tg_application_start()
 {
     tg_graphics_init();
-    tg_application_internal_test_deferred_create();
+    tg_application_internal_game_3d_create();
+    //tg_application_internal_game_2d_create();
 
 #ifdef TG_DEBUG
     tg_debug_info debug_info = { 0 };
@@ -588,16 +579,16 @@ void tg_application_start()
 
         tg_input_clear();
         tg_platform_handle_events();
-        tg_application_internal_test_deferred_update_and_render(delta_ms);
-        //tg_application_internal_test_forward_update_and_render(delta_ms);
+        tg_application_internal_game_3d_update_and_render(delta_ms);
+        //tg_application_internal_game_2d_update_and_render(delta_ms);
     }
 
     /*--------------------------------------------------------+
     | End main loop                                           |
     +--------------------------------------------------------*/
     tg_timer_destroy(timer_h);
-    //tg_application_internal_test_forward_destroy();
-    tg_application_internal_test_deferred_destroy();
+    //tg_application_internal_game_2d_destroy();
+    tg_application_internal_game_3d_destroy();
     tg_graphics_shutdown();
 }
 

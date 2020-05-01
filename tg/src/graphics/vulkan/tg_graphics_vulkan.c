@@ -887,28 +887,38 @@ void tg_vulkan_descriptor_destroy(tg_vulkan_descriptor* p_vulkan_descriptor)
 
 
 
-void tg_vulkan_descriptor_set_update(VkDescriptorSet descriptor_set, tg_shader_input_element* p_shader_input_element, tg_handle shader_input_element_handle, u32 dst_binding)
+void tg_vulkan_descriptor_set_update(VkDescriptorSet descriptor_set, tg_handle handle, u32 dst_binding)
 {
-    switch (p_shader_input_element->type) // TODO: arrays not supported: see e.g. tg_vulkan_descriptor_set_update_storage_buffer_array
+    switch (*(tg_handle_type*)handle) // TODO: arrays not supported: see e.g. tg_vulkan_descriptor_set_update_storage_buffer_array
     {
-    case TG_SHADER_INPUT_ELEMENT_TYPE_COLOR_IMAGE:
+    case TG_HANDLE_TYPE_COLOR_IMAGE:
     {
-        tg_color_image_h color_image_h = (tg_color_image_h)shader_input_element_handle;
+        tg_color_image_h color_image_h = (tg_color_image_h)handle;
         tg_vulkan_descriptor_set_update_color_image(descriptor_set, color_image_h, dst_binding);
     } break;
-    case TG_SHADER_INPUT_ELEMENT_TYPE_COMPUTE_BUFFER:
+    case TG_HANDLE_TYPE_COMPUTE_BUFFER:
     {
-        tg_compute_buffer_h compute_buffer_h = (tg_compute_buffer_h)shader_input_element_handle;
+        tg_compute_buffer_h compute_buffer_h = (tg_compute_buffer_h)handle;
         tg_vulkan_descriptor_set_update_storage_buffer(descriptor_set, compute_buffer_h->buffer.buffer, dst_binding);
     } break;
-    case TG_SHADER_INPUT_ELEMENT_TYPE_RENDER_TARGET:
+    case TG_HANDLE_TYPE_DEPTH_IMAGE:
     {
-        tg_render_target_h render_target_h = (tg_render_target_h)shader_input_element_handle;
+        tg_depth_image_h depth_image_h = (tg_depth_image_h)handle;
+        tg_vulkan_descriptor_set_update_depth_image(descriptor_set, depth_image_h, dst_binding);
+    } break;
+    case TG_HANDLE_TYPE_RENDER_TARGET:
+    {
+        tg_render_target_h render_target_h = (tg_render_target_h)handle;
         tg_vulkan_descriptor_set_update_render_target(descriptor_set, render_target_h, dst_binding);
     } break;
-    case TG_SHADER_INPUT_ELEMENT_TYPE_UNIFORM_BUFFER:
+    case TG_HANDLE_TYPE_TEXTURE_ATLAS:
     {
-        tg_uniform_buffer_h uniform_buffer_h = (tg_uniform_buffer_h)shader_input_element_handle;
+        tg_texture_atlas_h texture_atlas_h = (tg_texture_atlas_h)handle;
+        tg_vulkan_descriptor_set_update_texture_atlas(descriptor_set, texture_atlas_h, dst_binding);
+    } break;
+    case TG_HANDLE_TYPE_UNIFORM_BUFFER:
+    {
+        tg_uniform_buffer_h uniform_buffer_h = (tg_uniform_buffer_h)handle;
         tg_vulkan_descriptor_set_update_uniform_buffer(descriptor_set, uniform_buffer_h->buffer.buffer, dst_binding);
     } break;
     default: TG_ASSERT(TG_FALSE);
@@ -1014,7 +1024,7 @@ void tg_vulkan_descriptor_set_update_depth_image_array(VkDescriptorSet descripto
 void tg_vulkan_descriptor_set_update_render_target(VkDescriptorSet descriptor_set, tg_render_target* p_render_target, u32 dst_binding)
 {
     tg_vulkan_descriptor_set_update_color_image(descriptor_set, &p_render_target->color_attachment_copy, dst_binding);
-    // TODO: update depth attachment copy
+    // TODO: select color or depth somewhere
 }
 
 void tg_vulkan_descriptor_set_update_storage_buffer(VkDescriptorSet descriptor_set, VkBuffer buffer, u32 dst_binding)
@@ -1063,6 +1073,11 @@ void tg_vulkan_descriptor_set_update_storage_buffer_array(VkDescriptorSet descri
         write_descriptor_set.pTexelBufferView = TG_NULL;
     }
     vkUpdateDescriptorSets(device, 1, &write_descriptor_set, 0, TG_NULL);
+}
+
+void tg_vulkan_descriptor_set_update_texture_atlas(VkDescriptorSet descriptor_set, tg_texture_atlas* p_texture_atlas, u32 dst_binding)
+{
+    tg_vulkan_descriptor_set_update_color_image(descriptor_set, &p_texture_atlas->color_image, dst_binding);
 }
 
 void tg_vulkan_descriptor_set_update_uniform_buffer(VkDescriptorSet descriptor_set, VkBuffer buffer, u32 dst_binding)
@@ -1358,6 +1373,35 @@ void tg_vulkan_graphics_pipeline_destroy(VkPipeline graphics_pipeline)
 
 
 
+VkDescriptorType tg_vulkan_handle_type_convert_to_descriptor_type(tg_handle_type type)
+{
+    switch (type)
+    {
+    case TG_HANDLE_TYPE_CAMERA:                   break;
+    case TG_HANDLE_TYPE_COLOR_IMAGE:              return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    case TG_HANDLE_TYPE_COMPUTE_BUFFER:           return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    case TG_HANDLE_TYPE_COMPUTE_SHADER:           break;
+    case TG_HANDLE_TYPE_DEPTH_IMAGE:              return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    case TG_HANDLE_TYPE_ENTITY_GRAPHICS_DATA_PTR: break;
+    case TG_HANDLE_TYPE_FRAGMENT_SHADER:          break;
+    case TG_HANDLE_TYPE_MATERIAL:                 break;
+    case TG_HANDLE_TYPE_MESH:                     break;
+    case TG_HANDLE_TYPE_INDEX_BUFFER:             break;
+    case TG_HANDLE_TYPE_DEFERRED_RENDERER:        break;
+    case TG_HANDLE_TYPE_FORWARD_RENDERER:         break;
+    case TG_HANDLE_TYPE_RENDER_TARGET:            return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    case TG_HANDLE_TYPE_TEXTURE_ATLAS:            return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    case TG_HANDLE_TYPE_UNIFORM_BUFFER:           return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    case TG_HANDLE_TYPE_VERTEX_BUFFER:            break;
+    case TG_HANDLE_TYPE_VERTEX_SHADER:            break;
+    }
+
+    TG_ASSERT(TG_FALSE);
+    return -1;
+}
+
+
+
 VkFilter tg_vulkan_image_convert_filter(tg_image_filter filter)
 {
     switch (filter)
@@ -1452,6 +1496,7 @@ void tg_vulkan_render_pass_destroy(VkRenderPass render_pass)
 tg_render_target tg_vulkan_render_target_create(const tg_vulkan_color_image_create_info* p_vulkan_color_image_create_info, const tg_vulkan_depth_image_create_info* p_vulkan_depth_image_create_info, VkFenceCreateFlags fence_create_flags)
 {
     tg_render_target render_target = { 0 };
+    render_target.type = TG_HANDLE_TYPE_RENDER_TARGET;
 
     render_target.color_attachment = tg_vulkan_color_image_create(p_vulkan_color_image_create_info);
     render_target.color_attachment_copy = tg_vulkan_color_image_create(p_vulkan_color_image_create_info);
@@ -1531,22 +1576,6 @@ VkSemaphore tg_vulkan_semaphore_create()
 void tg_vulkan_semaphore_destroy(VkSemaphore semaphore)
 {
     vkDestroySemaphore(device, semaphore, TG_NULL);
-}
-
-
-
-VkDescriptorType tg_vulkan_shader_input_element_type_convert(tg_shader_input_element_type type)
-{
-    switch (type)
-    {
-    case TG_SHADER_INPUT_ELEMENT_TYPE_COLOR_IMAGE:    return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    case TG_SHADER_INPUT_ELEMENT_TYPE_COMPUTE_BUFFER: return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    case TG_SHADER_INPUT_ELEMENT_TYPE_RENDER_TARGET:  return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    case TG_SHADER_INPUT_ELEMENT_TYPE_UNIFORM_BUFFER: return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    }
-
-    TG_ASSERT(TG_FALSE);
-    return -1;
 }
 
 

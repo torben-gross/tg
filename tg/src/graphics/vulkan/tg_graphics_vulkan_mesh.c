@@ -173,6 +173,7 @@ tg_mesh_h tg_mesh_create(u32 vertex_count, const v3* p_positions, const v3* p_no
 	TG_ASSERT(vertex_count && p_positions && ((index_count && index_count % 3 == 0) || (vertex_count && vertex_count % 3 == 0)));
 
 	tg_mesh_h mesh_h = TG_MEMORY_ALLOC(sizeof(*mesh_h));
+    mesh_h->type = TG_HANDLE_TYPE_MESH;
 
     tg_vulkan_buffer staging_buffer = { 0 };
 

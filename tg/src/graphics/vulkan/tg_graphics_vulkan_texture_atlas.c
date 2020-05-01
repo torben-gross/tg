@@ -10,6 +10,7 @@ tg_texture_atlas_h tg_texture_atlas_create_from_images(u32 image_count, tg_color
 	TG_ASSERT(image_count && p_color_images_h);
 
 	tg_texture_atlas_h texture_atlas_h = TG_MEMORY_ALLOC(sizeof(*texture_atlas_h));
+	texture_atlas_h->type = TG_HANDLE_TYPE_TEXTURE_ATLAS;
 	texture_atlas_h->p_extents = TG_MEMORY_ALLOC(image_count * sizeof(*texture_atlas_h->p_extents));
 
 	tg_rect* p_rects = TG_MEMORY_ALLOC(image_count * sizeof(*p_rects));

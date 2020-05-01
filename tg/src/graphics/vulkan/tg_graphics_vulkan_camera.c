@@ -313,6 +313,7 @@ void tg_camera_internal_init_present_pass(tg_camera_h camera_h)
 
 void tg_camera_internal_init(tg_camera_h camera_h)
 {
+    camera_h->type = TG_HANDLE_TYPE_CAMERA;
     camera_h->ubo = tg_vulkan_buffer_create(2 * sizeof(m4), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
     tg_vulkan_color_image_create_info vulkan_color_image_create_info = { 0 };
     {
@@ -366,7 +367,7 @@ void tg_camera_clear(tg_camera_h camera_h)
     VK_CALL(vkQueueSubmit(graphics_queue.queue, 1, &submit_info, camera_h->render_target.fence));
 }
 
-tg_camera_h tg_camera_create_orthographic(const v2* p_position, f32 pitch, f32 yaw, f32 roll, f32 left, f32 right, f32 bottom, f32 top, f32 far, f32 near)
+tg_camera_h tg_camera_create_orthographic(const v3* p_position, f32 pitch, f32 yaw, f32 roll, f32 left, f32 right, f32 bottom, f32 top, f32 far, f32 near)
 {
 	TG_ASSERT(p_position && left != right && bottom != top && far != near);
 
@@ -377,7 +378,7 @@ tg_camera_h tg_camera_create_orthographic(const v2* p_position, f32 pitch, f32 y
 	return camera_h;
 }
 
-tg_camera_h tg_camera_create_perspective(const v2* p_position, f32 pitch, f32 yaw, f32 roll, f32 fov_y, f32 near, f32 far)
+tg_camera_h tg_camera_create_perspective(const v3* p_position, f32 pitch, f32 yaw, f32 roll, f32 fov_y, f32 near, f32 far)
 {
 	TG_ASSERT(p_position && near < 0 && far < 0 && near > far);
 
@@ -459,7 +460,7 @@ void tg_camera_set_perspective_projection(tg_camera_h camera_h, f32 fov_y, f32 n
 	((m4*)camera_h->ubo.p_mapped_device_memory)[1] = tgm_m4_perspective(fov_y, tg_platform_get_window_aspect_ratio(), near, far);
 }
 
-void tg_camera_set_view(tg_camera_h camera_h, const v2* p_position, f32 pitch, f32 yaw, f32 roll)
+void tg_camera_set_view(tg_camera_h camera_h, const v3* p_position, f32 pitch, f32 yaw, f32 roll)
 {
 	TG_ASSERT(camera_h && p_position);
 

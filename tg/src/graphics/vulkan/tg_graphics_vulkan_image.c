@@ -10,6 +10,7 @@ tg_color_image_h tg_color_image_load(const char* p_filename)
     TG_ASSERT(p_filename);
 
     tg_color_image_h color_image_h = TG_MEMORY_ALLOC(sizeof(*color_image_h));
+    color_image_h->type = TG_HANDLE_TYPE_COLOR_IMAGE;
 
     u32* p_data = TG_NULL;
     tg_image_load(p_filename, &color_image_h->width, &color_image_h->height, &color_image_h->format, &p_data);
@@ -53,6 +54,7 @@ tg_color_image_h tg_color_image_create(const tg_color_image_create_info* p_color
     TG_ASSERT(p_color_image_create_info);
 
     tg_color_image_h color_image_h = TG_MEMORY_ALLOC(sizeof(*color_image_h));
+    color_image_h->type = TG_HANDLE_TYPE_COLOR_IMAGE;
 
     tg_vulkan_color_image_create_info vulkan_color_image_create_info = { 0 };
     {
@@ -92,6 +94,7 @@ tg_depth_image_h tg_depth_image_create(const tg_depth_image_create_info* p_depth
     TG_ASSERT(p_depth_image_create_info);
 
     tg_depth_image_h depth_image_h = TG_MEMORY_ALLOC(sizeof(*depth_image_h));
+    depth_image_h->type = TG_HANDLE_TYPE_DEPTH_IMAGE;
 
     tg_vulkan_depth_image_create_info vulkan_depth_image_create_info = { 0 };
     {

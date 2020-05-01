@@ -8,11 +8,12 @@
 #include "tg_entity.h"
 #include "tg_scene.h"
 
-tg_entity_graphics_data_ptr_h tg_entity_graphics_data_ptrs_create(tg_entity* p_entity, tg_scene* p_scene)
+tg_entity_graphics_data_ptr_h tg_entity_graphics_data_ptr_create(tg_entity* p_entity, tg_scene* p_scene)
 {
 	TG_ASSERT(p_entity);
 
 	tg_entity_graphics_data_ptr_h entity_graphics_data_ptr_h = TG_MEMORY_ALLOC(sizeof(*entity_graphics_data_ptr_h));
+    entity_graphics_data_ptr_h->type = TG_HANDLE_TYPE_ENTITY_GRAPHICS_DATA_PTR;
     
     entity_graphics_data_ptr_h->uniform_buffer = tg_vulkan_buffer_create(sizeof(m4), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
     *((m4*)entity_graphics_data_ptr_h->uniform_buffer.p_mapped_device_memory) = tgm_m4_identity();
