@@ -14,13 +14,14 @@ void tg_scene_begin(tg_scene* p_scene)
 	tg_list_clear(&p_scene->forward_entities);
 }
 
-tg_scene tg_scene_create(tg_camera* p_camera, u32 point_light_count, const tg_point_light* p_point_lights)
+tg_scene tg_scene_create(tg_camera_h camera_h, u32 point_light_count, const tg_point_light* p_point_lights)
 {
-	TG_ASSERT(p_camera && (point_light_count == 0 || p_point_lights));
+	TG_ASSERT(camera_h && (point_light_count == 0 || p_point_lights));
 
 	tg_scene scene = { 0 };
-	scene.deferred_renderer_h = tg_deferred_renderer_create(p_camera, point_light_count, p_point_lights);
-	scene.forward_renderer_h = tg_forward_renderer_create(p_camera, tg_deferred_renderer_get_render_target(scene.deferred_renderer_h));
+	scene.camera_h = camera_h;
+	scene.deferred_renderer_h = tg_deferred_renderer_create(camera_h, point_light_count, p_point_lights);
+	scene.forward_renderer_h = tg_forward_renderer_create(camera_h);
 	scene.deferred_entities = TG_LIST_CREATE(tg_entity*);
 	scene.forward_entities = TG_LIST_CREATE(tg_entity*);
 
@@ -55,19 +56,11 @@ void tg_scene_end(tg_scene* p_scene)
 	tg_forward_renderer_end(p_scene->forward_renderer_h);
 }
 
-tg_render_target_h tg_scene_get_render_target(tg_scene* p_scene)
-{
-	TG_ASSERT(p_scene);
-
-	return tg_forward_renderer_get_render_target(p_scene->forward_renderer_h);
-}
-
 void tg_scene_present(tg_scene* p_scene)
 {
 	TG_ASSERT(p_scene);
 
-	tg_forward_renderer_present(p_scene->forward_renderer_h);
-	tg_forward_renderer_clear(p_scene->forward_renderer_h);
+	tg_camera_present(p_scene->camera_h);
 }
 
 void tg_scene_submit(tg_scene* p_scene, tg_entity* p_entity)

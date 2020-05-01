@@ -7,10 +7,10 @@
 
 
 
-TG_DECLARE_TYPE(tg_camera);
 TG_DECLARE_TYPE(tg_entity);
 TG_DECLARE_TYPE(tg_scene);
 
+TG_DECLARE_HANDLE(tg_camera);
 TG_DECLARE_HANDLE(tg_color_image);
 TG_DECLARE_HANDLE(tg_compute_buffer);
 TG_DECLARE_HANDLE(tg_compute_shader);
@@ -125,11 +125,20 @@ typedef struct tg_point_light
 
 
 
-void                             tg_init();
-void                             tg_on_window_resize(u32 width, u32 height);
-void                             tg_shutdown();
+void                             tg_graphics_init();
+void                             tg_graphics_on_window_resize(u32 width, u32 height);
+void                             tg_graphics_shutdown();
 
 
+
+tg_camera_h                      tg_camera_create_orthographic(const v2* p_position, f32 pitch, f32 yaw, f32 roll, f32 left, f32 right, f32 bottom, f32 top, f32 far, f32 near);
+tg_camera_h                      tg_camera_create_perspective(const v2* p_position, f32 pitch, f32 yaw, f32 roll, f32 fov_y, f32 near, f32 far);
+void                             tg_camera_destroy(tg_camera_h camera_h);
+tg_render_target_h               tg_camera_get_render_target(tg_camera_h camera_h);
+void                             tg_camera_present(tg_camera_h camera_h);
+void                             tg_camera_set_orthographic_projection(tg_camera_h camera_h, f32 left, f32 right, f32 bottom, f32 top, f32 far, f32 near);
+void                             tg_camera_set_perspective_projection(tg_camera_h camera_h, f32 fov_y, f32 near, f32 far);
+void                             tg_camera_set_view(tg_camera_h camera_h, const v2* p_position, f32 pitch, f32 yaw, f32 roll);
 
 tg_color_image_h                 tg_color_image_load(const char* p_filename);
 tg_color_image_h                 tg_color_image_create(const tg_color_image_create_info* p_color_image_create_info);
@@ -180,29 +189,23 @@ void                             tg_vertex_shader_destroy(tg_vertex_shader_h p_v
 +------------------------------------------------------------*/
 
 void                             tg_deferred_renderer_begin(tg_deferred_renderer_h deferred_renderer_h);
-void                             tg_deferred_renderer_clear(tg_deferred_renderer_h deferred_renderer_h);
-tg_deferred_renderer_h           tg_deferred_renderer_create(const tg_camera* p_camera, u32 point_light_count, const tg_point_light* p_point_lights);
+tg_deferred_renderer_h           tg_deferred_renderer_create(tg_camera_h camera_h, u32 point_light_count, const tg_point_light* p_point_lights);
 void                             tg_deferred_renderer_destroy(tg_deferred_renderer_h deferred_renderer_h);
 void                             tg_deferred_renderer_draw(tg_deferred_renderer_h deferred_renderer_h, tg_entity* p_entity);
 void                             tg_deferred_renderer_end(tg_deferred_renderer_h deferred_renderer_h);
-tg_render_target_h               tg_deferred_renderer_get_render_target(tg_deferred_renderer_h deferred_renderer_h);
 void                             tg_deferred_renderer_on_window_resize(tg_deferred_renderer_h deferred_renderer_h, u32 width, u32 height);
-void                             tg_deferred_renderer_present(tg_deferred_renderer_h deferred_renderer_h);
 
 
 
 /*------------------------------------------------------------+
-| 2D Renderer                                                 |
+| Forward Renderer                                            |
 +------------------------------------------------------------*/
 
 void                             tg_forward_renderer_begin(tg_forward_renderer_h forward_renderer_h);
-void                             tg_forward_renderer_clear(tg_forward_renderer_h forward_renderer_h);
-tg_forward_renderer_h            tg_forward_renderer_create(const tg_camera* p_camera, tg_render_target_h render_target_h);
+tg_forward_renderer_h            tg_forward_renderer_create(tg_camera_h camera_h);
 void                             tg_forward_renderer_destroy(tg_forward_renderer_h forward_renderer_h);
 void                             tg_forward_renderer_draw(tg_forward_renderer_h forward_renderer_h, tg_entity* p_entity);
 void                             tg_forward_renderer_end(tg_forward_renderer_h forward_renderer_h);
-tg_render_target_h               tg_forward_renderer_get_render_target(tg_forward_renderer_h forward_renderer_h);
 void                             tg_forward_renderer_on_window_resize(tg_forward_renderer_h forward_renderer_h, u32 width, u32 height);
-void                             tg_forward_renderer_present(tg_forward_renderer_h forward_renderer_h);
 
 #endif

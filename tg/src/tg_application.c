@@ -5,7 +5,6 @@
 #include "graphics/tg_graphics.h"
 #include "memory/tg_memory.h"
 #include "platform/tg_platform.h"
-#include "tg_camera.h"
 #include "tg_entity.h"
 #include "tg_input.h"
 #include "tg_marching_cubes.h"
@@ -26,17 +25,17 @@
 
 typedef struct tg_camera_info
 {
-    tg_camera    camera;
-    v3           position;
-    f32          pitch;
-    f32          yaw;
-    f32          roll;
-    f32          fov_y_in_radians;
-    f32          aspect;
-    f32          near;
-    f32          far;
-    u32          last_mouse_x;
-    u32          last_mouse_y;
+    tg_camera_h    camera_h;
+    v3             position;
+    f32            pitch;
+    f32            yaw;
+    f32            roll;
+    f32            fov_y_in_radians;
+    f32            aspect;
+    f32            near;
+    f32            far;
+    u32            last_mouse_x;
+    u32            last_mouse_y;
 } tg_camera_info;
 
 #ifdef TG_DEBUG
@@ -76,7 +75,7 @@ typedef struct tg_test_deferred
     tg_fragment_shader_h           default_fragment_shader_h;
     tg_material_h                  default_material_h;
     tg_uniform_buffer_h            custom_uniform_buffer_h;
-    v3* p_custom_uniform_buffer_data;
+    v3*                            p_custom_uniform_buffer_data;
     tg_color_image_h               image_h;
     tg_vertex_shader_h             custom_vertex_shader_h;
     tg_fragment_shader_h           custom_fragment_shader_h;
@@ -84,15 +83,15 @@ typedef struct tg_test_deferred
     tg_entity                      quad_entity;
     tg_mesh_h                      ground_mesh_h;
     tg_entity                      ground_entity;
-    tg_mesh_h* p_chunk_meshes;
-    tg_entity* p_chunk_entities;
+    tg_mesh_h*                     p_chunk_meshes;
+    tg_entity*                     p_chunk_entities;
     f32                            quad_offset;
     f32                            dtsum;
 } tg_test_deferred;
 
 typedef struct tg_test_forward
 {
-    tg_camera                camera;
+    tg_camera_h              camera_h;
     tg_scene                 scene;
     tg_mesh_h                mesh_h;
     tg_mesh_h                mesh2_h;
@@ -127,7 +126,7 @@ void tg_application_internal_test_deferred_create()
     test_deferred.camera_info.near = -0.1f;
     test_deferred.camera_info.far = -1000.0f;
     tg_input_get_mouse_position(&test_deferred.camera_info.last_mouse_x, &test_deferred.camera_info.last_mouse_y);
-    tg_perspective_camera_init(&test_deferred.camera_info.camera, &test_deferred.camera_info.position, test_deferred.camera_info.pitch, test_deferred.camera_info.yaw, test_deferred.camera_info.roll, test_deferred.camera_info.fov_y_in_radians, test_deferred.camera_info.near, test_deferred.camera_info.far);
+    test_deferred.camera_info.camera_h = tg_camera_create_perspective(&test_deferred.camera_info.position, test_deferred.camera_info.pitch, test_deferred.camera_info.yaw, test_deferred.camera_info.roll, test_deferred.camera_info.fov_y_in_radians, test_deferred.camera_info.near, test_deferred.camera_info.far);
 
     tg_point_light p_point_lights[TG_POINT_LIGHT_COUNT] = { 0 };
     tg_random random = { 0 };
@@ -149,7 +148,7 @@ void tg_application_internal_test_deferred_create()
         color_image_create_info.address_mode_v = TG_IMAGE_ADDRESS_MODE_REPEAT;
         color_image_create_info.address_mode_w = TG_IMAGE_ADDRESS_MODE_REPEAT;
     }
-    test_deferred.scene = tg_scene_create(&test_deferred.camera_info.camera, TG_POINT_LIGHT_COUNT, p_point_lights);
+    test_deferred.scene = tg_scene_create(test_deferred.camera_info.camera_h, TG_POINT_LIGHT_COUNT, p_point_lights);
 
 
 
@@ -208,7 +207,7 @@ void tg_application_internal_test_deferred_create()
         p_shader_input_elements[1].type = TG_SHADER_INPUT_ELEMENT_TYPE_RENDER_TARGET;
         p_shader_input_elements[1].array_element_count = 1;
     }
-    tg_handle p_custom_handles[2] = { test_deferred.custom_uniform_buffer_h, tg_scene_get_render_target(&test_deferred.scene) };
+    tg_handle p_custom_handles[2] = { test_deferred.custom_uniform_buffer_h, tg_camera_get_render_target(test_deferred.camera_info.camera_h) };
     test_deferred.custom_vertex_shader_h = tg_vertex_shader_create("shaders/custom_forward.vert");
     test_deferred.custom_fragment_shader_h = tg_fragment_shader_create("shaders/custom_forward.frag");
     test_deferred.custom_material_h = tg_material_create_forward(test_deferred.custom_vertex_shader_h, test_deferred.custom_fragment_shader_h, 2, p_shader_input_elements, p_custom_handles);
@@ -411,14 +410,14 @@ void tg_application_internal_test_deferred_update_and_render(f32 delta_ms)
         test_deferred.camera_info.position = tgm_v3_add_v3(&test_deferred.camera_info.position, &velocity);
     }
 
-    tg_perspective_camera_set_view(&test_deferred.camera_info.camera, &test_deferred.camera_info.position, TGM_TO_RADIANS(test_deferred.camera_info.pitch), TGM_TO_RADIANS(test_deferred.camera_info.yaw), TGM_TO_RADIANS(test_deferred.camera_info.roll));
+    tg_camera_set_view(test_deferred.camera_info.camera_h, &test_deferred.camera_info.position, TGM_TO_RADIANS(test_deferred.camera_info.pitch), TGM_TO_RADIANS(test_deferred.camera_info.yaw), TGM_TO_RADIANS(test_deferred.camera_info.roll));
     test_deferred.camera_info.last_mouse_x = mouse_x;
     test_deferred.camera_info.last_mouse_y = mouse_y;
 
     if (tg_input_get_mouse_wheel_detents(TG_FALSE))
     {
         test_deferred.camera_info.fov_y_in_radians -= 0.1f * tg_input_get_mouse_wheel_detents(TG_TRUE);
-        tg_perspective_camera_set_projection(&test_deferred.camera_info.camera, test_deferred.camera_info.fov_y_in_radians, test_deferred.camera_info.near, test_deferred.camera_info.far);
+        tg_camera_set_perspective_projection(test_deferred.camera_info.camera_h, test_deferred.camera_info.fov_y_in_radians, test_deferred.camera_info.near, test_deferred.camera_info.far);
     }
 
     tg_scene_begin(&test_deferred.scene);
@@ -462,14 +461,15 @@ void tg_application_internal_test_deferred_destroy()
     tg_fragment_shader_destroy(test_deferred.default_fragment_shader_h);
     tg_vertex_shader_destroy(test_deferred.default_vertex_shader_h);
 
-    tg_list_destroy(&test_deferred.entities);
     tg_scene_destroy(&test_deferred.scene);
+    tg_camera_destroy(test_deferred.camera_info.camera_h);
+    tg_list_destroy(&test_deferred.entities);
 }
 
 void tg_application_internal_test_forward_create()
 {
     const v2 camera_position = { 0.0f, 0.0f };
-    tg_orthographic_camera_init(&test_forward.camera, &camera_position, -320, 320, -180, 180, -100, 100);
+    test_deferred.camera_info.camera_h = tg_camera_create_orthographic(&camera_position, 0.0f, 0.0f, 0.0f, -320, 320, -180, 180, -100, 100);
     tg_point_light p_point_lights[TG_POINT_LIGHT_COUNT] = { 0 };
     tg_random random = { 0 };
     tgm_random_init(&random, 13031995);
@@ -479,7 +479,7 @@ void tg_application_internal_test_forward_create()
         p_point_lights[i].color = (v3){ tgm_random_next_f32(&random), tgm_random_next_f32(&random), tgm_random_next_f32(&random) };
         p_point_lights[i].radius = tgm_random_next_f32(&random) * 50.0f;
     }
-    test_forward.scene = tg_scene_create(&test_forward.camera, TG_POINT_LIGHT_COUNT, p_point_lights);
+    test_forward.scene = tg_scene_create(test_forward.camera_h, TG_POINT_LIGHT_COUNT, p_point_lights);
     const v3 p_quad_positions[6] = {
         { -150.0f, -15.0f, 0.0f },
         {   15.0f, -15.0f, 0.0f },
@@ -530,13 +530,14 @@ void tg_application_internal_test_forward_destroy()
     tg_mesh_destroy(test_forward.mesh2_h);
     tg_mesh_destroy(test_forward.mesh_h);
     tg_scene_destroy(&test_forward.scene);
+    tg_camera_destroy(test_forward.camera_h);
 }
 
 
 
 void tg_application_start()
 {
-    tg_init();
+    tg_graphics_init();
     tg_application_internal_test_deferred_create();
     //tg_application_internal_test_forward_create();
 
@@ -612,7 +613,7 @@ void tg_application_start()
     tg_timer_destroy(timer_h);
     //tg_application_internal_test_forward_destroy();
     tg_application_internal_test_deferred_destroy();
-    tg_shutdown();
+    tg_graphics_shutdown();
 }
 
 void tg_application_on_window_resize(u32 width, u32 height)

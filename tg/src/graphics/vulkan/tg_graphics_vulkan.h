@@ -67,6 +67,11 @@ typedef enum tg_vulkan_material_type
     TG_VULKAN_MATERIAL_TYPE_FORWARD
 } tg_vulkan_material_type;
 
+typedef enum tg_vulkan_structure_type
+{
+    TG_VULKAN_STRUCTURE_TYPE_COLOR_IMAGE // TODO: add all and use
+} tg_vulkan_structure_type;
+
 
 
 typedef struct tg_vulkan_descriptor
@@ -173,7 +178,7 @@ typedef struct tg_deferred_renderer_light_setup_uniform_buffer
     v4     point_light_colors[TG_DEFERRED_RENDERER_SHADING_PASS_MAX_POINT_LIGHTS];
 } tg_deferred_renderer_light_setup_uniform_buffer;
 
-typedef struct tg_deferred_renderer_copy_image_compute_buffer
+typedef struct tg_deferred_renderer_copy_image_compute_buffer // TODO: this still used?
 {
     u32    width;
     u32    height;
@@ -228,6 +233,31 @@ typedef struct tg_render_target
     tg_depth_image    depth_attachment_copy;
     VkFence           fence;
 } tg_render_target;
+
+typedef struct tg_camera
+{
+    tg_vulkan_buffer            ubo;
+    tg_render_target            render_target;
+    struct
+    {
+        tg_vulkan_buffer        vbo;
+        tg_vulkan_buffer        ibo;
+        VkSemaphore             image_acquired_semaphore;
+        VkSemaphore             semaphore;
+        VkRenderPass            render_pass;
+        VkFramebuffer           p_framebuffers[TG_VULKAN_SURFACE_IMAGE_COUNT];
+        tg_vulkan_descriptor    descriptor;
+        VkShaderModule          vertex_shader;
+        VkShaderModule          fragment_shader;
+        VkPipelineLayout        pipeline_layout;
+        VkPipeline              graphics_pipeline;
+        VkCommandBuffer         p_command_buffers[TG_VULKAN_SURFACE_IMAGE_COUNT];
+    } present_pass;
+    struct
+    {
+        VkCommandBuffer         command_buffer;
+    } clear_pass;
+} tg_camera;
 
 typedef struct tg_entity_graphics_data_ptr
 {
@@ -354,6 +384,7 @@ void                          tg_vulkan_fence_wait(VkFence fence);
 
 VkFramebuffer                 tg_vulkan_framebuffer_create(VkRenderPass render_pass, u32 attachment_count, const VkImageView* p_attachments, u32 width, u32 height);
 void                          tg_vulkan_framebuffer_destroy(VkFramebuffer framebuffer);
+void                          tg_vulkan_framebuffers_destroy(u32 count, VkFramebuffer* p_framebuffers);
 
 VkPipeline                    tg_vulkan_graphics_pipeline_create(const tg_vulkan_graphics_pipeline_create_info* p_vulkan_graphics_pipeline_create_info);
 void                          tg_vulkan_graphics_pipeline_destroy(VkPipeline graphics_pipeline);
@@ -369,7 +400,7 @@ void                          tg_vulkan_pipeline_layout_destroy(VkPipelineLayout
 VkRenderPass                  tg_vulkan_render_pass_create(u32 attachment_count, const VkAttachmentDescription* p_attachments, u32 subpass_count, const VkSubpassDescription* p_subpasses, u32 dependency_count, const VkSubpassDependency* p_dependencies);
 void                          tg_vulkan_render_pass_destroy(VkRenderPass render_pass);
 
-tg_render_target              tg_vulkan_render_target_create(const tg_vulkan_color_image_create_info* p_vulkan_color_image_create_info, const tg_vulkan_depth_image_create_info* p_vulkan_depth_image_create_info);
+tg_render_target              tg_vulkan_render_target_create(const tg_vulkan_color_image_create_info* p_vulkan_color_image_create_info, const tg_vulkan_depth_image_create_info* p_vulkan_depth_image_create_info, VkFenceCreateFlags fence_create_flags);
 void                          tg_vulkan_render_target_destroy(tg_render_target* p_render_target);
 
 VkSampler                     tg_vulkan_sampler_create(u32 mip_levels, VkFilter min_filter, VkFilter mag_filter, VkSamplerAddressMode address_mode_u, VkSamplerAddressMode address_mode_v, VkSamplerAddressMode address_mode_w);

@@ -154,11 +154,11 @@ tg_entity_graphics_data_ptr_h tg_entity_graphics_data_ptr_create(tg_entity* p_en
         {
         case TG_VULKAN_MATERIAL_TYPE_DEFERRED:
         {
-            view_projection_descriptor_buffer_info.buffer = p_scene->deferred_renderer_h->geometry_pass.view_projection_ubo.buffer;
+            view_projection_descriptor_buffer_info.buffer = p_scene->deferred_renderer_h->camera_h->ubo.buffer;
         } break;
         case TG_VULKAN_MATERIAL_TYPE_FORWARD:
         {
-            view_projection_descriptor_buffer_info.buffer = p_scene->forward_renderer_h->shading_pass.view_projection_ubo.buffer;
+            view_projection_descriptor_buffer_info.buffer = p_scene->forward_renderer_h->camera_h->ubo.buffer;
         } break;
         default: TG_ASSERT(TG_FALSE);
         }

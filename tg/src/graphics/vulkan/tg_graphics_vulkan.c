@@ -467,7 +467,7 @@ void tg_vulkan_command_buffer_cmd_begin_render_pass(VkCommandBuffer command_buff
 
 void tg_vulkan_command_buffer_cmd_blit_color_image(VkCommandBuffer command_buffer, tg_color_image* p_source, tg_color_image* p_destination, const VkImageBlit* p_region)
 {
-    vkCmdBlitImage(command_buffer, p_source->color_image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, p_destination->color_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, p_region, VK_FILTER_LINEAR);// TODO: filter!
+    vkCmdBlitImage(command_buffer, p_source->color_image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, p_destination->color_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, p_region, VK_FILTER_NEAREST);// TODO: filter!
 }
 
 void tg_vulkan_command_buffer_cmd_blit_depth_image(VkCommandBuffer command_buffer, tg_depth_image* p_source, tg_depth_image* p_destination, const VkImageBlit* p_region)
@@ -1178,6 +1178,14 @@ void tg_vulkan_framebuffer_destroy(VkFramebuffer framebuffer)
     vkDestroyFramebuffer(device, framebuffer, TG_NULL);
 }
 
+void tg_vulkan_framebuffers_destroy(u32 count, VkFramebuffer* p_framebuffers)
+{
+    for (u32 i = 0; i < count; i++)
+    {
+        vkDestroyFramebuffer(device, p_framebuffers[i], TG_NULL);
+    }
+}
+
 
 
 VkPipeline tg_vulkan_graphics_pipeline_create(const tg_vulkan_graphics_pipeline_create_info* p_vulkan_graphics_pipeline_create_info)
@@ -1441,7 +1449,7 @@ void tg_vulkan_render_pass_destroy(VkRenderPass render_pass)
 
 
 
-tg_render_target tg_vulkan_render_target_create(const tg_vulkan_color_image_create_info* p_vulkan_color_image_create_info, const tg_vulkan_depth_image_create_info* p_vulkan_depth_image_create_info)
+tg_render_target tg_vulkan_render_target_create(const tg_vulkan_color_image_create_info* p_vulkan_color_image_create_info, const tg_vulkan_depth_image_create_info* p_vulkan_depth_image_create_info, VkFenceCreateFlags fence_create_flags)
 {
     tg_render_target render_target = { 0 };
 
@@ -1457,6 +1465,8 @@ tg_render_target tg_vulkan_render_target_create(const tg_vulkan_color_image_crea
     tg_vulkan_command_buffer_cmd_transition_depth_image_layout(command_buffer, &render_target.depth_attachment, 0, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT);
     tg_vulkan_command_buffer_cmd_transition_depth_image_layout(command_buffer, &render_target.depth_attachment_copy, 0, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
     tg_vulkan_command_buffer_end_and_submit(command_buffer, &graphics_queue);
+
+    render_target.fence = tg_vulkan_fence_create(fence_create_flags);
 
     return render_target;
 }
@@ -2093,7 +2103,7 @@ void tg_vulkan_swapchain_create()
 | Initialization, shutdown and other main functionality       |
 +------------------------------------------------------------*/
 
-void tg_init()
+void tg_graphics_init()
 {
 #ifdef TG_DEBUG
     // TODO: relative asset path?
@@ -2114,7 +2124,7 @@ void tg_init()
     tg_vulkan_swapchain_create();
 }
 
-void tg_shutdown()
+void tg_graphics_shutdown()
 {
     vkDeviceWaitIdle(device);
 
@@ -2134,7 +2144,7 @@ void tg_shutdown()
     vkDestroyInstance(instance, TG_NULL);
 }
 
-void tg_on_window_resize(u32 width, u32 height)
+void tg_graphics_on_window_resize(u32 width, u32 height)
 {
     vkDeviceWaitIdle(device);
     
