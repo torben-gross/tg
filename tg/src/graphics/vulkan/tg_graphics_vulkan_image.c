@@ -10,7 +10,6 @@ tg_color_image_h tg_color_image_load(const char* p_filename)
     TG_ASSERT(p_filename);
 
     tg_color_image_h color_image_h = TG_MEMORY_ALLOC(sizeof(*color_image_h));
-    color_image_h->type = TG_HANDLE_TYPE_COLOR_IMAGE;
 
     u32* p_data = TG_NULL;
     tg_image_load(p_filename, &color_image_h->width, &color_image_h->height, &color_image_h->format, &p_data);
@@ -36,13 +35,14 @@ tg_color_image_h tg_color_image_load(const char* p_filename)
     }
     *color_image_h = tg_vulkan_color_image_create(&vulkan_color_image_create_info);
 
-    VkCommandBuffer command_buffer = tg_vulkan_command_buffer_allocate(graphics_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+    VkCommandBuffer command_buffer = tg_vulkan_command_buffer_allocate(graphics_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY); // TODO: create once and reuse for every image
     tg_vulkan_command_buffer_begin(command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
     tg_vulkan_command_buffer_cmd_transition_color_image_layout(command_buffer, color_image_h, 0, 0, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
     tg_vulkan_command_buffer_cmd_copy_buffer_to_color_image(command_buffer, staging_buffer.buffer, color_image_h);
     tg_vulkan_command_buffer_cmd_transition_color_image_layout(command_buffer, color_image_h, 0, 0, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, TG_VULKAN_COLOR_IMAGE_LAYOUT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
     tg_vulkan_command_buffer_end_and_submit(command_buffer, &graphics_queue);
     tg_vulkan_command_buffer_free(graphics_command_pool, command_buffer);
+    tg_vulkan_buffer_destroy(&staging_buffer);
 
     tg_image_free(p_data);
 

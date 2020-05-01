@@ -228,6 +228,7 @@ tg_color_image tg_vulkan_color_image_create(const tg_vulkan_color_image_create_i
 {
     tg_color_image color_image = { 0 };
 
+    color_image.type = TG_HANDLE_TYPE_COLOR_IMAGE;
     color_image.width = p_vulkan_color_image_create_info->width;
     color_image.height = p_vulkan_color_image_create_info->height;
     color_image.mip_levels = p_vulkan_color_image_create_info->mip_levels;
@@ -742,10 +743,10 @@ tg_vulkan_compute_shader tg_vulkan_compute_shader_create(const char* filename, u
 
 void tg_vulkan_compute_shader_destroy(tg_vulkan_compute_shader* p_vulkan_compute_shader)
 {
-    tg_vulkan_shader_module_destroy(p_vulkan_compute_shader->shader_module);
-    tg_vulkan_descriptor_destroy(&p_vulkan_compute_shader->descriptor);
-    tg_vulkan_pipeline_layout_destroy(p_vulkan_compute_shader->pipeline_layout);
     tg_vulkan_compute_pipeline_destroy(p_vulkan_compute_shader->compute_pipeline);
+    tg_vulkan_pipeline_layout_destroy(p_vulkan_compute_shader->pipeline_layout);
+    tg_vulkan_descriptor_destroy(&p_vulkan_compute_shader->descriptor);
+    tg_vulkan_shader_module_destroy(p_vulkan_compute_shader->shader_module);
 }
 
 
@@ -1518,7 +1519,11 @@ tg_render_target tg_vulkan_render_target_create(const tg_vulkan_color_image_crea
 
 void tg_vulkan_render_target_destroy(tg_render_target* p_render_target)
 {
-
+    tg_vulkan_fence_destroy(p_render_target->fence);
+    tg_vulkan_depth_image_destroy(&p_render_target->depth_attachment_copy);
+    tg_vulkan_color_image_destroy(&p_render_target->color_attachment_copy);
+    tg_vulkan_depth_image_destroy(&p_render_target->depth_attachment);
+    tg_vulkan_color_image_destroy(&p_render_target->color_attachment);
 }
 
 
@@ -2014,7 +2019,7 @@ VkDevice tg_vulkan_device_create()
 void tg_vulkan_queues_create(tg_vulkan_queue* p_graphics_queue, tg_vulkan_queue* p_present_queue, tg_vulkan_queue* p_compute_queue)
 {
     TG_ASSERT(p_graphics_queue && p_present_queue);
-
+    
     vkGetDeviceQueue(device, p_graphics_queue->index, 0, &p_graphics_queue->queue);
     vkGetDeviceQueue(device, p_present_queue->index, 0, &p_present_queue->queue);
     vkGetDeviceQueue(device, p_compute_queue->index, 0, &p_compute_queue->queue);
@@ -2153,16 +2158,20 @@ void tg_graphics_init()
     tg_vulkan_swapchain_create();
 }
 
+void tg_graphics_wait_idle()
+{
+    VK_CALL(vkDeviceWaitIdle(device));
+}
+
 void tg_graphics_shutdown()
 {
-    vkDeviceWaitIdle(device);
-
+    tg_vulkan_command_pool_destroy(compute_command_pool);
+    tg_vulkan_command_pool_destroy(graphics_command_pool);
     for (u32 i = 0; i < TG_VULKAN_SURFACE_IMAGE_COUNT; i++)
     {
         vkDestroyImageView(device, swapchain_image_views[i], TG_NULL);
     }
     vkDestroySwapchainKHR(device, swapchain, TG_NULL);
-    vkDestroyCommandPool(device, graphics_command_pool, TG_NULL);
     vkDestroyDevice(device, TG_NULL);
 #ifdef TG_DEBUG
     PFN_vkDestroyDebugUtilsMessengerEXT vkDestroyDebugUtilsMessengerEXT = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");

@@ -14,14 +14,14 @@ TG_DECLARE_HANDLE(tg_camera);
 TG_DECLARE_HANDLE(tg_color_image);
 TG_DECLARE_HANDLE(tg_compute_buffer);
 TG_DECLARE_HANDLE(tg_compute_shader);
+TG_DECLARE_HANDLE(tg_deferred_renderer);
 TG_DECLARE_HANDLE(tg_depth_image);
 TG_DECLARE_HANDLE(tg_entity_graphics_data_ptr);
+TG_DECLARE_HANDLE(tg_forward_renderer);
 TG_DECLARE_HANDLE(tg_fragment_shader);
 TG_DECLARE_HANDLE(tg_material);
 TG_DECLARE_HANDLE(tg_mesh);
 TG_DECLARE_HANDLE(tg_index_buffer);
-TG_DECLARE_HANDLE(tg_deferred_renderer);
-TG_DECLARE_HANDLE(tg_forward_renderer);
 TG_DECLARE_HANDLE(tg_render_target);
 TG_DECLARE_HANDLE(tg_texture_atlas);
 TG_DECLARE_HANDLE(tg_uniform_buffer);
@@ -134,6 +134,7 @@ typedef struct tg_point_light
 
 void                             tg_graphics_init();
 void                             tg_graphics_on_window_resize(u32 width, u32 height);
+void                             tg_graphics_wait_idle();
 void                             tg_graphics_shutdown();
 
 

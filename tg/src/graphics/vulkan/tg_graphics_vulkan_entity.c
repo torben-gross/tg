@@ -18,6 +18,7 @@ tg_entity_graphics_data_ptr_h tg_entity_graphics_data_ptr_create(tg_entity* p_en
     entity_graphics_data_ptr_h->uniform_buffer = tg_vulkan_buffer_create(sizeof(m4), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
     *((m4*)entity_graphics_data_ptr_h->uniform_buffer.p_mapped_device_memory) = tgm_m4_identity();
 
+    entity_graphics_data_ptr_h->scene_info_count = p_scene->camera_count;
     entity_graphics_data_ptr_h->p_entity_scene_infos = TG_MEMORY_ALLOC(p_scene->camera_count * sizeof(*entity_graphics_data_ptr_h->p_entity_scene_infos));
 
     for (u32 i = 0; i < p_scene->camera_count; i++)

@@ -70,7 +70,7 @@ void tg_compute_shader_destroy(tg_compute_shader_h compute_shader_h)
 	TG_ASSERT(compute_shader_h);
 
 	tg_vulkan_command_buffer_free(compute_command_pool, compute_shader_h->command_buffer);
-	tg_vulkan_shader_module_destroy(compute_shader_h->compute_shader.shader_module);
+	tg_vulkan_compute_shader_destroy(&compute_shader_h->compute_shader);
 	TG_MEMORY_FREE(compute_shader_h);
 }
 

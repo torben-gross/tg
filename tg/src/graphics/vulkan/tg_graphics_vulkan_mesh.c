@@ -107,7 +107,11 @@ void tg_mesh_recalculate_normals(u32 vertex_count, u32 index_count, const u16* p
 #else
         for (u32 i = 0; i < vertex_count; i += 3)
         {
-            tg_mesh_recalculate_normal(&p_vertices[i + 0], &p_vertices[i + 1], &p_vertices[i + 2]);
+            tg_mesh_recalculate_normal(
+                &((tg_vertex_3d*)p_staging_buffer->p_mapped_device_memory)[i + 0],
+                &((tg_vertex_3d*)p_staging_buffer->p_mapped_device_memory)[i + 1],
+                &((tg_vertex_3d*)p_staging_buffer->p_mapped_device_memory)[i + 2]
+            );
         }
 #endif
     }

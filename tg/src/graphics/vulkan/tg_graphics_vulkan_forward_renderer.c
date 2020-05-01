@@ -7,6 +7,13 @@
 
 
 
+void tg_forward_renderer_internal_destroy_shading_pass(tg_forward_renderer_h forward_renderer_h)
+{
+    tg_vulkan_render_pass_destroy(forward_renderer_h->shading_pass.render_pass);
+    tg_vulkan_framebuffer_destroy(forward_renderer_h->shading_pass.framebuffer);
+    tg_vulkan_command_buffer_free(graphics_command_pool, forward_renderer_h->shading_pass.command_buffer);
+}
+
 void tg_forward_renderer_internal_init_shading_pass(tg_forward_renderer_h forward_renderer_h)
 {
 
@@ -109,6 +116,7 @@ void tg_forward_renderer_destroy(tg_forward_renderer_h forward_renderer_h)
 {
 	TG_ASSERT(forward_renderer_h);
 
+    tg_forward_renderer_internal_destroy_shading_pass(forward_renderer_h);
     TG_MEMORY_FREE(forward_renderer_h);
 }
 

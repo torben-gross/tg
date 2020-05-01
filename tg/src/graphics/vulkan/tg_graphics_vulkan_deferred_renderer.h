@@ -32,19 +32,20 @@ typedef struct tg_deferred_renderer
         VkPipeline                      graphics_pipeline;
         VkCommandBuffer                 command_buffer;
         tg_vulkan_buffer                point_lights_ubo;
-        struct
-        {
-            tg_vulkan_compute_shader    find_exposure_compute_shader;
-            tg_vulkan_buffer            exposure_compute_buffer;
-            VkRenderPass                render_pass;
-            VkFramebuffer               framebuffer;
-            tg_vulkan_descriptor        descriptor;
-            VkShaderModule              vertex_shader;
-            VkShaderModule              fragment_shader;
-            VkPipelineLayout            pipeline_layout;
-            VkPipeline                  graphics_pipeline;
-        } exposure;
     } shading_pass;
+    struct
+    {
+        tg_vulkan_compute_shader        acquire_exposure_compute_shader;
+        tg_vulkan_buffer                exposure_compute_buffer;
+        VkRenderPass                    render_pass;
+        VkFramebuffer                   framebuffer;
+        tg_vulkan_descriptor            descriptor;
+        VkShaderModule                  vertex_shader;
+        VkShaderModule                  fragment_shader;
+        VkPipelineLayout                pipeline_layout;
+        VkPipeline                      graphics_pipeline;
+        VkCommandBuffer                 command_buffer;
+    } tone_mapping_pass;
 } tg_deferred_renderer;
 
 #endif

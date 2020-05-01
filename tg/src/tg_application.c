@@ -587,6 +587,7 @@ void tg_application_start()
     | End main loop                                           |
     +--------------------------------------------------------*/
     tg_timer_destroy(timer_h);
+    tg_graphics_wait_idle();
     //tg_application_internal_game_2d_destroy();
     tg_application_internal_game_3d_destroy();
     tg_graphics_shutdown();
