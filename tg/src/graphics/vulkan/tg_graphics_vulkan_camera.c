@@ -344,6 +344,28 @@ void tg_camera_internal_init(tg_camera_h camera_h)
 
 
 
+void tg_camera_clear(tg_camera_h camera_h)
+{
+    TG_ASSERT(camera_h);
+    
+    tg_vulkan_fence_wait(camera_h->render_target.fence);
+    tg_vulkan_fence_reset(camera_h->render_target.fence);
+
+    VkSubmitInfo submit_info = { 0 };
+    {
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.pNext = TG_NULL;
+        submit_info.waitSemaphoreCount = 0;
+        submit_info.pWaitSemaphores = TG_NULL;
+        submit_info.pWaitDstStageMask = TG_NULL;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &camera_h->clear_pass.command_buffer;
+        submit_info.signalSemaphoreCount = 0;
+        submit_info.pSignalSemaphores = TG_NULL;
+    }
+    VK_CALL(vkQueueSubmit(graphics_queue.queue, 1, &submit_info, camera_h->render_target.fence));
+}
+
 tg_camera_h tg_camera_create_orthographic(const v2* p_position, f32 pitch, f32 yaw, f32 roll, f32 left, f32 right, f32 bottom, f32 top, f32 far, f32 near)
 {
 	TG_ASSERT(p_position && left != right && bottom != top && far != near);
@@ -408,7 +430,7 @@ void tg_camera_present(tg_camera_h camera_h)
         draw_submit_info.signalSemaphoreCount = 1;
         draw_submit_info.pSignalSemaphores = &camera_h->present_pass.semaphore;
     }
-    VK_CALL(vkQueueSubmit(graphics_queue.queue, 1, &draw_submit_info, TG_NULL));
+    VK_CALL(vkQueueSubmit(graphics_queue.queue, 1, &draw_submit_info, camera_h->render_target.fence));
 
     VkPresentInfoKHR present_info = { 0 };
     {
@@ -422,22 +444,6 @@ void tg_camera_present(tg_camera_h camera_h)
         present_info.pResults = TG_NULL;
     }
     VK_CALL(vkQueuePresentKHR(present_queue.queue, &present_info));
-
-    VkSubmitInfo submit_info = { 0 };
-    {
-        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submit_info.pNext = TG_NULL;
-        submit_info.waitSemaphoreCount = 0;
-        submit_info.pWaitSemaphores = TG_NULL;
-        submit_info.pWaitDstStageMask = TG_NULL;
-        submit_info.commandBufferCount = 1;
-        submit_info.pCommandBuffers = &camera_h->clear_pass.command_buffer;
-        submit_info.signalSemaphoreCount = 0;
-        submit_info.pSignalSemaphores = TG_NULL;
-    }
-    VK_CALL(vkQueueSubmit(graphics_queue.queue, 1, &submit_info, camera_h->render_target.fence));
-
-    vkQueueWaitIdle(graphics_queue.queue); // TODO: remove!
 }
 
 void tg_camera_set_orthographic_projection(tg_camera_h camera_h, f32 left, f32 right, f32 bottom, f32 top, f32 far, f32 near)

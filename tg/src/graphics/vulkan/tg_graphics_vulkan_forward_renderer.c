@@ -112,11 +112,11 @@ void tg_forward_renderer_destroy(tg_forward_renderer_h forward_renderer_h)
     TG_MEMORY_FREE(forward_renderer_h);
 }
 
-void tg_forward_renderer_draw(tg_forward_renderer_h forward_renderer_h, tg_entity* p_entity)
+void tg_forward_renderer_draw(tg_forward_renderer_h forward_renderer_h, tg_entity* p_entity, u32 entity_graphics_data_ptr_index)
 {
-	TG_ASSERT(forward_renderer_h && p_entity && p_entity->graphics_data_ptr_h->renderer_h == forward_renderer_h);
+    TG_ASSERT(forward_renderer_h && p_entity && p_entity->graphics_data_ptr_h->p_entity_scene_infos[entity_graphics_data_ptr_index].renderer_h == forward_renderer_h);
 
-    vkCmdExecuteCommands(forward_renderer_h->shading_pass.command_buffer, 1, &p_entity->graphics_data_ptr_h->command_buffer);
+    vkCmdExecuteCommands(forward_renderer_h->shading_pass.command_buffer, 1, &p_entity->graphics_data_ptr_h->p_entity_scene_infos[entity_graphics_data_ptr_index].command_buffer);
 }
 
 void tg_forward_renderer_end(tg_forward_renderer_h forward_renderer_h)

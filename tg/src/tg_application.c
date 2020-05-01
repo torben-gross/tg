@@ -68,6 +68,7 @@ typedef struct tg_test_deferred
     tg_scene                       scene;
     tg_list                        entities;
     tg_camera_info                 camera_info;
+    tg_camera_h                    secondary_camera_h;
     tg_color_image_h               textures_h[13];
     tg_texture_atlas_h             texture_atlas_h;
     tg_mesh_h                      quad_mesh_h;
@@ -127,6 +128,7 @@ void tg_application_internal_test_deferred_create()
     test_deferred.camera_info.far = -1000.0f;
     tg_input_get_mouse_position(&test_deferred.camera_info.last_mouse_x, &test_deferred.camera_info.last_mouse_y);
     test_deferred.camera_info.camera_h = tg_camera_create_perspective(&test_deferred.camera_info.position, test_deferred.camera_info.pitch, test_deferred.camera_info.yaw, test_deferred.camera_info.roll, test_deferred.camera_info.fov_y_in_radians, test_deferred.camera_info.near, test_deferred.camera_info.far);
+    test_deferred.secondary_camera_h = tg_camera_create_perspective(&test_deferred.camera_info.position, test_deferred.camera_info.pitch, test_deferred.camera_info.yaw, test_deferred.camera_info.roll, test_deferred.camera_info.fov_y_in_radians, test_deferred.camera_info.near, test_deferred.camera_info.far);
 
     tg_point_light p_point_lights[TG_POINT_LIGHT_COUNT] = { 0 };
     tg_random random = { 0 };
@@ -148,7 +150,8 @@ void tg_application_internal_test_deferred_create()
         color_image_create_info.address_mode_v = TG_IMAGE_ADDRESS_MODE_REPEAT;
         color_image_create_info.address_mode_w = TG_IMAGE_ADDRESS_MODE_REPEAT;
     }
-    test_deferred.scene = tg_scene_create(test_deferred.camera_info.camera_h, TG_POINT_LIGHT_COUNT, p_point_lights);
+    const tg_camera_h p_cameras_h[2] = { test_deferred.camera_info.camera_h, test_deferred.secondary_camera_h };
+    test_deferred.scene = tg_scene_create(2, p_cameras_h, TG_POINT_LIGHT_COUNT, p_point_lights);
 
 
 
@@ -207,7 +210,7 @@ void tg_application_internal_test_deferred_create()
         p_shader_input_elements[1].type = TG_SHADER_INPUT_ELEMENT_TYPE_RENDER_TARGET;
         p_shader_input_elements[1].array_element_count = 1;
     }
-    tg_handle p_custom_handles[2] = { test_deferred.custom_uniform_buffer_h, tg_camera_get_render_target(test_deferred.camera_info.camera_h) };
+    tg_handle p_custom_handles[2] = { test_deferred.custom_uniform_buffer_h, tg_camera_get_render_target(test_deferred.secondary_camera_h) };
     test_deferred.custom_vertex_shader_h = tg_vertex_shader_create("shaders/custom_forward.vert");
     test_deferred.custom_fragment_shader_h = tg_fragment_shader_create("shaders/custom_forward.frag");
     test_deferred.custom_material_h = tg_material_create_forward(test_deferred.custom_vertex_shader_h, test_deferred.custom_fragment_shader_h, 2, p_shader_input_elements, p_custom_handles);
@@ -411,6 +414,7 @@ void tg_application_internal_test_deferred_update_and_render(f32 delta_ms)
     }
 
     tg_camera_set_view(test_deferred.camera_info.camera_h, &test_deferred.camera_info.position, TGM_TO_RADIANS(test_deferred.camera_info.pitch), TGM_TO_RADIANS(test_deferred.camera_info.yaw), TGM_TO_RADIANS(test_deferred.camera_info.roll));
+    //tg_camera_set_view(test_deferred.secondary_camera_h, &test_deferred.camera_info.position, TGM_TO_RADIANS(test_deferred.camera_info.pitch), TGM_TO_RADIANS(test_deferred.camera_info.yaw), TGM_TO_RADIANS(test_deferred.camera_info.roll));
     test_deferred.camera_info.last_mouse_x = mouse_x;
     test_deferred.camera_info.last_mouse_y = mouse_y;
 
@@ -418,6 +422,7 @@ void tg_application_internal_test_deferred_update_and_render(f32 delta_ms)
     {
         test_deferred.camera_info.fov_y_in_radians -= 0.1f * tg_input_get_mouse_wheel_detents(TG_TRUE);
         tg_camera_set_perspective_projection(test_deferred.camera_info.camera_h, test_deferred.camera_info.fov_y_in_radians, test_deferred.camera_info.near, test_deferred.camera_info.far);
+        //tg_camera_set_perspective_projection(test_deferred.secondary_camera_h, test_deferred.camera_info.fov_y_in_radians, test_deferred.camera_info.near, test_deferred.camera_info.far);
     }
 
     tg_scene_begin(&test_deferred.scene);
@@ -427,7 +432,8 @@ void tg_application_internal_test_deferred_update_and_render(f32 delta_ms)
         tg_scene_submit(&test_deferred.scene, &p_entities[i]);
     }
     tg_scene_end(&test_deferred.scene);
-    tg_scene_present(&test_deferred.scene);
+    tg_camera_present(test_deferred.camera_info.camera_h);
+    //tg_camera_present(test_deferred.secondary_camera_h);
 }
 
 void tg_application_internal_test_deferred_destroy()
@@ -462,6 +468,7 @@ void tg_application_internal_test_deferred_destroy()
     tg_vertex_shader_destroy(test_deferred.default_vertex_shader_h);
 
     tg_scene_destroy(&test_deferred.scene);
+    tg_camera_destroy(test_deferred.secondary_camera_h);
     tg_camera_destroy(test_deferred.camera_info.camera_h);
     tg_list_destroy(&test_deferred.entities);
 }
@@ -479,7 +486,7 @@ void tg_application_internal_test_forward_create()
         p_point_lights[i].color = (v3){ tgm_random_next_f32(&random), tgm_random_next_f32(&random), tgm_random_next_f32(&random) };
         p_point_lights[i].radius = tgm_random_next_f32(&random) * 50.0f;
     }
-    test_forward.scene = tg_scene_create(test_forward.camera_h, TG_POINT_LIGHT_COUNT, p_point_lights);
+    test_forward.scene = tg_scene_create(1, &test_forward.camera_h, TG_POINT_LIGHT_COUNT, p_point_lights);
     const v3 p_quad_positions[6] = {
         { -150.0f, -15.0f, 0.0f },
         {   15.0f, -15.0f, 0.0f },
@@ -514,7 +521,7 @@ void tg_application_internal_test_forward_update_and_render(f32 delta_ms)
     tg_scene_submit(&test_forward.scene, &test_forward.entity);
     tg_scene_submit(&test_forward.scene, &test_forward.entity2);
     tg_scene_end(&test_forward.scene);
-    tg_scene_present(&test_forward.scene);
+    tg_camera_present(test_forward.camera_h);
 }
 
 void tg_application_internal_test_forward_destroy()
@@ -539,28 +546,6 @@ void tg_application_start()
 {
     tg_graphics_init();
     tg_application_internal_test_deferred_create();
-    //tg_application_internal_test_forward_create();
-
-    //tg_camera_h camera_h = tg_camera_create(...);
-    //tg_camera_h camera_2d_h = tg_camera_create(...);
-    //tg_scene_h scene_h = tg_scene_create(camera_h);
-    //tg_scene_h scene_2d_h = tg_scene_create(camera_2d_h);
-    //
-    //tg_handle p_hs[1] = { tg_scene_get_render_target(scene_h) };
-    //tg_mesh_h arcade_mesh_h = tg_mesh_create(...);
-    //tg_material_h arcade_material_h = tg_forward_material_create(vs, fs, 1, ..., p_hs);
-    //tg_entity_h arcade_entity_h = tg_entity_create(scene_2d_h, arcade_mesh_h, arcade_material_h);
-    //
-    //tg_scene_begin(scene_h);
-    //tg_scene_draw(entity_h);
-    //tg_scene_draw(transparent_entity_h);
-    //tg_scene_end(scene_h);
-    //
-    //tg_render_target_h render_target = tg_scene_get_render_target(scene_h);
-    //tg_scene_begin(scene_2d_h);
-    //tg_scene_draw(arcade_entity_h);
-    //tg_scene_end(scene_2d_h);
-    //tg_present();
 
 #ifdef TG_DEBUG
     tg_debug_info debug_info = { 0 };

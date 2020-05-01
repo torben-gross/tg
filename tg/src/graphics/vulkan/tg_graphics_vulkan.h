@@ -259,15 +259,22 @@ typedef struct tg_camera
     } clear_pass;
 } tg_camera;
 
-typedef struct tg_entity_graphics_data_ptr
+typedef struct tg_vulkan_entity_scene_info
 {
+#ifdef TG_DEBUG
     void*                     renderer_h;
-
-    tg_vulkan_buffer          uniform_buffer;
+#endif
     tg_vulkan_descriptor      descriptor;
     VkPipelineLayout          pipeline_layout;
     VkPipeline                graphics_pipeline;
     VkCommandBuffer           command_buffer;
+} tg_entity_scene_info;
+
+typedef struct tg_entity_graphics_data_ptr
+{
+    tg_vulkan_buffer          uniform_buffer;
+    u32                       scene_info_count;
+    tg_entity_scene_info*     p_entity_scene_infos;
 } tg_entity_graphics_data_ptr;
 
 typedef struct tg_fragment_shader
