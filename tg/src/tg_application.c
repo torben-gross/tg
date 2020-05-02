@@ -17,9 +17,12 @@
 
 
 
-#define TG_POINT_LIGHT_COUNT    64
-#define TG_CHUNKS_X             4
-#define TG_CHUNKS_Z             4
+#define TG_POINT_LIGHT_COUNT       64
+#define TG_CHUNKS_X                8
+#define TG_CHUNKS_Z                8
+#define TG_CHUNK_VERTEX_COUNT_X    32
+#define TG_CHUNK_VERTEX_COUNT_Y    32
+#define TG_CHUNK_VERTEX_COUNT_Z    32
 
 
 
@@ -62,6 +65,20 @@ typedef struct tg_chunk_uniform_buffer
     f32    noise_scale_y;
     f32    noise_scale_z;
 } tg_chunk_uniform_buffer;
+
+typedef struct tg_marching_cubes_uniform_buffer
+{
+    u32    chunk_vertex_count_x;
+    u32    chunk_vertex_count_y;
+    u32    chunk_vertex_count_z;
+    u32    chunk_coordinate_x;
+    u32    chunk_coordinate_y;
+    u32    chunk_coordinate_z;
+    f32    cell_stride_x;
+    f32    cell_stride_y;
+    f32    cell_stride_z;
+    f32    isolevel;
+} tg_marching_cubes_uniform_buffer;
 
 typedef struct tg_test_deferred
 {
@@ -222,100 +239,113 @@ void tg_application_internal_game_3d_create()
 
 
 
-    const u32 chunk_vertex_count = 32;
     const f32 cell_stride = 1.1f;
     const f32 noise_scale = 0.1f;
 
-
-    tg_uniform_buffer_h chunk_uniform_buffer_h = tg_uniform_buffer_create(sizeof(tg_chunk_uniform_buffer));
-    tg_chunk_uniform_buffer* p_chunk_uniform_buffer_data = tg_uniform_buffer_data(chunk_uniform_buffer_h);
+    tg_uniform_buffer_h isolevel_uniform_buffer_h = tg_uniform_buffer_create(sizeof(tg_chunk_uniform_buffer));
+    tg_chunk_uniform_buffer* p_isolevel_uniform_buffer_data = tg_uniform_buffer_data(isolevel_uniform_buffer_h);
     {
-        p_chunk_uniform_buffer_data->chunk_vertex_count_x = chunk_vertex_count;
-        p_chunk_uniform_buffer_data->chunk_vertex_count_y = chunk_vertex_count;
-        p_chunk_uniform_buffer_data->chunk_vertex_count_z = chunk_vertex_count;
-        p_chunk_uniform_buffer_data->cell_stride_x = cell_stride;
-        p_chunk_uniform_buffer_data->cell_stride_y = cell_stride;
-        p_chunk_uniform_buffer_data->cell_stride_z = cell_stride;
-        p_chunk_uniform_buffer_data->noise_scale_x = noise_scale;
-        p_chunk_uniform_buffer_data->noise_scale_y = noise_scale;
-        p_chunk_uniform_buffer_data->noise_scale_z = noise_scale;
+        p_isolevel_uniform_buffer_data->chunk_vertex_count_x = TG_CHUNK_VERTEX_COUNT_X;
+        p_isolevel_uniform_buffer_data->chunk_vertex_count_y = TG_CHUNK_VERTEX_COUNT_Y;
+        p_isolevel_uniform_buffer_data->chunk_vertex_count_z = TG_CHUNK_VERTEX_COUNT_Z;
+        p_isolevel_uniform_buffer_data->cell_stride_x = cell_stride;
+        p_isolevel_uniform_buffer_data->cell_stride_y = cell_stride;
+        p_isolevel_uniform_buffer_data->cell_stride_z = cell_stride;
+        p_isolevel_uniform_buffer_data->noise_scale_x = noise_scale;
+        p_isolevel_uniform_buffer_data->noise_scale_y = noise_scale;
+        p_isolevel_uniform_buffer_data->noise_scale_z = noise_scale;
     }
-    tg_compute_buffer_h isolevel_buffer_h = tg_compute_buffer_create((u64)p_chunk_uniform_buffer_data->chunk_vertex_count_x * (u64)p_chunk_uniform_buffer_data->chunk_vertex_count_y * (u64)p_chunk_uniform_buffer_data->chunk_vertex_count_z * sizeof(f32));
-    f32* p_isolevel_buffer_data = tg_compute_buffer_data(isolevel_buffer_h);
+    tg_storage_image_3d_h isolevel_storage_image_3d_h = tg_storage_image_3d_create(TG_CHUNK_VERTEX_COUNT_X, TG_CHUNK_VERTEX_COUNT_Y, TG_CHUNK_VERTEX_COUNT_Z, TG_STORAGE_IMAGE_FORMAT_R32_SFLOAT);
     tg_handle_type p_isolevel_compute_shader_handle_types[2] = { 0 };
     {
-        p_isolevel_compute_shader_handle_types[0] = TG_HANDLE_TYPE_COMPUTE_BUFFER;
-        p_isolevel_compute_shader_handle_types[1] = TG_HANDLE_TYPE_UNIFORM_BUFFER;
-    }
+        p_isolevel_compute_shader_handle_types[0] = TG_HANDLE_TYPE_UNIFORM_BUFFER;
+        p_isolevel_compute_shader_handle_types[1] = TG_HANDLE_TYPE_STORAGE_IMAGE_3D;
+    };
     tg_compute_shader_h isolevel_compute_shader_h = tg_compute_shader_create("shaders/isolevel.comp", 2, p_isolevel_compute_shader_handle_types);
-    tg_handle pp_handles[2] = { isolevel_buffer_h, chunk_uniform_buffer_h };
-    tg_compute_shader_bind_input(isolevel_compute_shader_h, 0, 2, pp_handles);
+    tg_handle p_isolevel_handles[2] = { isolevel_uniform_buffer_h, isolevel_storage_image_3d_h };
+    tg_compute_shader_bind_input(isolevel_compute_shader_h, 0, 2, p_isolevel_handles);
 
-    tg_marching_cubes_triangle* p_chunk_triangles = TG_MEMORY_ALLOC((u64)chunk_vertex_count * (u64)chunk_vertex_count * (u64)chunk_vertex_count * 12 * sizeof(*p_chunk_triangles));
-    test_deferred.p_chunk_meshes = TG_MEMORY_ALLOC((u64)TG_CHUNKS_X * (u64)TG_CHUNKS_X * sizeof(*test_deferred.p_chunk_meshes));
-    test_deferred.p_chunk_entities = TG_MEMORY_ALLOC((u64)TG_CHUNKS_X * (u64)TG_CHUNKS_Z * sizeof(*test_deferred.p_chunk_entities));
+
+
+    tg_uniform_buffer_h marching_cubes_uniform_buffer_h = tg_uniform_buffer_create(sizeof(tg_marching_cubes_uniform_buffer));
+    tg_marching_cubes_uniform_buffer* p_marching_cubes_uniform_buffer_data = tg_uniform_buffer_data(marching_cubes_uniform_buffer_h);
+    {
+        p_marching_cubes_uniform_buffer_data->chunk_vertex_count_x = TG_CHUNK_VERTEX_COUNT_X;
+        p_marching_cubes_uniform_buffer_data->chunk_vertex_count_y = TG_CHUNK_VERTEX_COUNT_Y;
+        p_marching_cubes_uniform_buffer_data->chunk_vertex_count_z = TG_CHUNK_VERTEX_COUNT_Z;
+        p_marching_cubes_uniform_buffer_data->chunk_coordinate_x = 0;
+        p_marching_cubes_uniform_buffer_data->chunk_coordinate_y = 0;
+        p_marching_cubes_uniform_buffer_data->chunk_coordinate_z = 0;
+        p_marching_cubes_uniform_buffer_data->cell_stride_x = cell_stride;
+        p_marching_cubes_uniform_buffer_data->cell_stride_y = cell_stride;
+        p_marching_cubes_uniform_buffer_data->cell_stride_z = cell_stride;
+        p_marching_cubes_uniform_buffer_data->isolevel = -0.2f;
+    }
+    tg_storage_image_3d_h marching_cubes_storage_image_3d_h = tg_storage_image_3d_create((TG_CHUNK_VERTEX_COUNT_X - 1) * 45, (TG_CHUNK_VERTEX_COUNT_Y - 1), (TG_CHUNK_VERTEX_COUNT_Z - 1), TG_STORAGE_IMAGE_FORMAT_R32_SFLOAT);
+    tg_handle_type p_marching_cubes_compute_shader_handle_types[3] = { 0 };
+    {
+        p_marching_cubes_compute_shader_handle_types[0] = TG_HANDLE_TYPE_UNIFORM_BUFFER;
+        p_marching_cubes_compute_shader_handle_types[1] = TG_HANDLE_TYPE_STORAGE_IMAGE_3D;
+        p_marching_cubes_compute_shader_handle_types[2] = TG_HANDLE_TYPE_STORAGE_IMAGE_3D;
+    }
+    tg_compute_shader_h marching_cubes_compute_shader_h = tg_compute_shader_create("shaders/marching_cubes.comp", 3, p_marching_cubes_compute_shader_handle_types);
+    tg_handle p_compute_shader_handles[3] = { marching_cubes_uniform_buffer_h, isolevel_storage_image_3d_h, marching_cubes_storage_image_3d_h };
+    tg_compute_shader_bind_input(marching_cubes_compute_shader_h, 0, 3, p_compute_shader_handles);
+
+
+
+    tg_handle_type p_acquire_triangles_handle_types[2] = { 0 };
+    {
+        p_acquire_triangles_handle_types[0] = TG_HANDLE_TYPE_STORAGE_IMAGE_3D;
+        p_acquire_triangles_handle_types[1] = TG_HANDLE_TYPE_COMPUTE_BUFFER;
+    }
+    tg_compute_shader_h acquire_triangles_compute_shader_h = tg_compute_shader_create("shaders/acquire_triangles.comp", 2, p_acquire_triangles_handle_types);
+    tg_compute_buffer_h acquire_triangles_compute_buffer_h = tg_compute_buffer_create(sizeof(u32) + (TG_CHUNK_VERTEX_COUNT_X - 1) * 45 * (TG_CHUNK_VERTEX_COUNT_Y - 1) * (TG_CHUNK_VERTEX_COUNT_Z - 1) * sizeof(f32), TG_TRUE);
+    tg_handle p_acquire_triangles_handles[2] = { marching_cubes_storage_image_3d_h, acquire_triangles_compute_buffer_h };
+    tg_compute_shader_bind_input(acquire_triangles_compute_shader_h, 0, 2, p_acquire_triangles_handles);
+
+    u32* p_tri_count = (u32*)tg_compute_buffer_data(acquire_triangles_compute_buffer_h);
+    v3* p_tris = (v3*)&((u32*)tg_compute_buffer_data(acquire_triangles_compute_buffer_h))[1];
+
+
+
+    test_deferred.p_chunk_meshes = TG_MEMORY_ALLOC(TG_CHUNKS_X * TG_CHUNKS_X * sizeof(*test_deferred.p_chunk_meshes));
+    test_deferred.p_chunk_entities = TG_MEMORY_ALLOC(TG_CHUNKS_X * TG_CHUNKS_Z * sizeof(*test_deferred.p_chunk_entities));
+
+
+
     for (u32 chunk_x = 0; chunk_x < TG_CHUNKS_X; chunk_x++)
     {
         for (u32 chunk_z = 0; chunk_z < TG_CHUNKS_Z; chunk_z++)
         {
-            p_chunk_uniform_buffer_data->chunk_coordinate_x = chunk_x;
-            p_chunk_uniform_buffer_data->chunk_coordinate_y = 0;
-            p_chunk_uniform_buffer_data->chunk_coordinate_z = chunk_z;
-            tg_compute_shader_dispatch(isolevel_compute_shader_h, p_chunk_uniform_buffer_data->chunk_vertex_count_x, p_chunk_uniform_buffer_data->chunk_vertex_count_y, p_chunk_uniform_buffer_data->chunk_vertex_count_z);
+            p_isolevel_uniform_buffer_data->chunk_coordinate_x = chunk_x;
+            p_isolevel_uniform_buffer_data->chunk_coordinate_y = 0;
+            p_isolevel_uniform_buffer_data->chunk_coordinate_z = chunk_z;
+            tg_compute_shader_dispatch(isolevel_compute_shader_h, TG_CHUNK_VERTEX_COUNT_X, TG_CHUNK_VERTEX_COUNT_Y, TG_CHUNK_VERTEX_COUNT_Z);
+            p_marching_cubes_uniform_buffer_data->chunk_coordinate_x = chunk_x;
+            p_marching_cubes_uniform_buffer_data->chunk_coordinate_y = 0;
+            p_marching_cubes_uniform_buffer_data->chunk_coordinate_z = chunk_z;
+            tg_compute_shader_dispatch(marching_cubes_compute_shader_h, TG_CHUNK_VERTEX_COUNT_X - 1, TG_CHUNK_VERTEX_COUNT_Y - 1, TG_CHUNK_VERTEX_COUNT_Z - 1);
+            tg_compute_shader_dispatch(acquire_triangles_compute_shader_h, 1, 1, 1);
 
-            u32 triangle_count = 0;
-            for (u32 z = 0; z < chunk_vertex_count - 1; z++)
+            if (*p_tri_count != 0)
             {
-                for (u32 y = 0; y < chunk_vertex_count - 1; y++)
-                {
-                    for (u32 x = 0; x < chunk_vertex_count - 1; x++)
-                    {
-                        tg_marching_cubes_grid_cell grid_cell = { 0 };
-                        {
-                            grid_cell.positions[0] = (v3){ (f32)x * cell_stride, (f32)y * cell_stride, -(f32)(z + 1) * cell_stride };
-                            grid_cell.positions[1] = (v3){ (f32)(x + 1) * cell_stride, (f32)y * cell_stride, -(f32)(z + 1) * cell_stride };
-                            grid_cell.positions[2] = (v3){ (f32)(x + 1) * cell_stride, (f32)y * cell_stride, -(f32)z * cell_stride };
-                            grid_cell.positions[3] = (v3){ (f32)x * cell_stride, (f32)y * cell_stride, -(f32)z * cell_stride };
-                            grid_cell.positions[4] = (v3){ (f32)x * cell_stride, (f32)(y + 1) * cell_stride, -(f32)(z + 1) * cell_stride };
-                            grid_cell.positions[5] = (v3){ (f32)(x + 1) * cell_stride, (f32)(y + 1) * cell_stride, -(f32)(z + 1) * cell_stride };
-                            grid_cell.positions[6] = (v3){ (f32)(x + 1) * cell_stride, (f32)(y + 1) * cell_stride, -(f32)z * cell_stride };
-                            grid_cell.positions[7] = (v3){ (f32)x * cell_stride, (f32)(y + 1) * cell_stride, -(f32)z * cell_stride };
-
-                            grid_cell.values[0] = p_isolevel_buffer_data[chunk_vertex_count * chunk_vertex_count * ((chunk_vertex_count - 1) - z - 1) + chunk_vertex_count * y + x];
-                            grid_cell.values[1] = p_isolevel_buffer_data[chunk_vertex_count * chunk_vertex_count * ((chunk_vertex_count - 1) - z - 1) + chunk_vertex_count * y + (x + 1)];
-                            grid_cell.values[2] = p_isolevel_buffer_data[chunk_vertex_count * chunk_vertex_count * ((chunk_vertex_count - 1) - z) + chunk_vertex_count * y + (x + 1)];
-                            grid_cell.values[3] = p_isolevel_buffer_data[chunk_vertex_count * chunk_vertex_count * ((chunk_vertex_count - 1) - z) + chunk_vertex_count * y + x];
-                            grid_cell.values[4] = p_isolevel_buffer_data[chunk_vertex_count * chunk_vertex_count * ((chunk_vertex_count - 1) - z - 1) + chunk_vertex_count * (y + 1) + x];
-                            grid_cell.values[5] = p_isolevel_buffer_data[chunk_vertex_count * chunk_vertex_count * ((chunk_vertex_count - 1) - z - 1) + chunk_vertex_count * (y + 1) + (x + 1)];
-                            grid_cell.values[6] = p_isolevel_buffer_data[chunk_vertex_count * chunk_vertex_count * ((chunk_vertex_count - 1) - z) + chunk_vertex_count * (y + 1) + (x + 1)];
-                            grid_cell.values[7] = p_isolevel_buffer_data[chunk_vertex_count * chunk_vertex_count * ((chunk_vertex_count - 1) - z) + chunk_vertex_count * (y + 1) + x];
-                        }
-                        triangle_count += tg_marching_cubes_polygonise(&grid_cell, -0.2f, &p_chunk_triangles[triangle_count]);
-                    }
-                }
-            }
-
-            if (triangle_count != 0)
-            {
-                const v3* p_chunk_positions = (v3*)p_chunk_triangles;
-                const u32 chunk_total_vertex_count = 3 * triangle_count;
-
+                const v3* p_chunk_positions = p_tris;
+                const u32 chunk_total_vertex_count = 3 * *p_tri_count;
+            
                 tg_mesh_h chunk_mesh_h = tg_mesh_create(chunk_total_vertex_count, p_chunk_positions, TG_NULL, TG_NULL, TG_NULL, 0, TG_NULL);
                 tg_entity chunk_entity = tg_entity_create(&test_deferred.scene, chunk_mesh_h, test_deferred.default_material_h);
                 tg_list_insert(&test_deferred.entities, &chunk_entity);
-                v3 chunk_translation = { (f32)(chunk_vertex_count - 1) * cell_stride * (f32)chunk_x, 0.0f, -(f32)(chunk_vertex_count - 1) * cell_stride * (f32)chunk_z }; // TODO: could be baked in
-                tg_entity_set_position(&chunk_entity, &chunk_translation);
-
+            
                 test_deferred.p_chunk_entities[chunk_z * TG_CHUNKS_X + chunk_x] = chunk_entity;
                 test_deferred.p_chunk_meshes[chunk_z * TG_CHUNKS_X + chunk_x] = chunk_mesh_h;
             }
+            tg_storage_image_3d_clear(isolevel_storage_image_3d_h);
+            tg_storage_image_3d_clear(marching_cubes_storage_image_3d_h);
         }
     }
     tg_compute_shader_destroy(isolevel_compute_shader_h);
-    tg_compute_buffer_destroy(isolevel_buffer_h);
-    tg_uniform_buffer_destroy(chunk_uniform_buffer_h);
-
-    TG_MEMORY_FREE(p_chunk_triangles);
+    tg_uniform_buffer_destroy(isolevel_uniform_buffer_h);
 }
 
 void tg_application_internal_game_3d_update_and_render(f32 delta_ms)

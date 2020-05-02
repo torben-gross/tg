@@ -294,6 +294,7 @@ void tg_entity_graphics_data_ptr_destroy(tg_entity_graphics_data_ptr_h entity_gr
 void tg_entity_graphics_data_ptr_set_model_matrix(tg_entity_graphics_data_ptr_h entity_graphics_data_ptr_h, const m4* p_model_matrix)
 {
     *((m4*)entity_graphics_data_ptr_h->uniform_buffer.p_mapped_device_memory) = *p_model_matrix;
+    tg_vulkan_buffer_flush_mapped_memory(&entity_graphics_data_ptr_h->uniform_buffer); // TODO: use HOST_CACHED and flush... currently, this flush doesnt do anything
 }
 
 #endif

@@ -6,7 +6,7 @@
 
 
 
-tg_compute_shader_h tg_compute_shader_create(const char* filename, u32 handle_type_count, tg_handle_type* p_handle_types)
+tg_compute_shader_h tg_compute_shader_create(const char* filename, u32 handle_type_count, const tg_handle_type* p_handle_types)
 {
 	TG_ASSERT(filename && handle_type_count && p_handle_types);
 

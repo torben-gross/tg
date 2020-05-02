@@ -6,13 +6,13 @@
 
 
 
-tg_compute_buffer_h tg_compute_buffer_create(u64 size)
+tg_compute_buffer_h tg_compute_buffer_create(u64 size, b32 visible)
 {
 	TG_ASSERT(size > 0);
-
+	
 	tg_compute_buffer_h compute_buffer_h = TG_MEMORY_ALLOC(sizeof(*compute_buffer_h));
 	compute_buffer_h->type = TG_HANDLE_TYPE_COMPUTE_BUFFER;
-	compute_buffer_h->buffer = tg_vulkan_buffer_create(size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+	compute_buffer_h->buffer = tg_vulkan_buffer_create(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, visible ? VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT : VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 	return compute_buffer_h;
 }

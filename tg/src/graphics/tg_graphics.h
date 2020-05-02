@@ -23,6 +23,7 @@ TG_DECLARE_HANDLE(tg_material);
 TG_DECLARE_HANDLE(tg_mesh);
 TG_DECLARE_HANDLE(tg_index_buffer);
 TG_DECLARE_HANDLE(tg_render_target);
+TG_DECLARE_HANDLE(tg_storage_image_3d);
 TG_DECLARE_HANDLE(tg_texture_atlas);
 TG_DECLARE_HANDLE(tg_uniform_buffer);
 TG_DECLARE_HANDLE(tg_vertex_buffer);
@@ -66,6 +67,7 @@ typedef enum tg_handle_type
 	TG_HANDLE_TYPE_DEFERRED_RENDERER,
 	TG_HANDLE_TYPE_FORWARD_RENDERER,
 	TG_HANDLE_TYPE_RENDER_TARGET,
+	TG_HANDLE_TYPE_STORAGE_IMAGE_3D,
 	TG_HANDLE_TYPE_TEXTURE_ATLAS,
 	TG_HANDLE_TYPE_UNIFORM_BUFFER,
 	TG_HANDLE_TYPE_VERTEX_BUFFER,
@@ -86,6 +88,14 @@ typedef enum tg_image_filter
 	TG_IMAGE_FILTER_LINEAR,
 	TG_IMAGE_FILTER_NEAREST
 } tg_image_filter;
+
+typedef enum tg_storage_image_format
+{
+	TG_STORAGE_IMAGE_FORMAT_R32_SFLOAT,
+	TG_STORAGE_IMAGE_FORMAT_R32G32_SFLOAT,
+	TG_STORAGE_IMAGE_FORMAT_R32G32B32_SFLOAT,
+	TG_STORAGE_IMAGE_FORMAT_R32G32B32A32_SFLOAT
+} tg_storage_image_format;
 
 
 
@@ -153,11 +163,12 @@ tg_color_image_h                 tg_color_image_load(const char* p_filename);
 tg_color_image_h                 tg_color_image_create(const tg_color_image_create_info* p_color_image_create_info);
 void                             tg_color_image_destroy(tg_color_image_h color_image_h);
 
-tg_compute_buffer_h              tg_compute_buffer_create(u64 size);
+tg_compute_buffer_h              tg_compute_buffer_create(u64 size, b32 visible);
+u64                              tg_compute_buffer_size(tg_compute_buffer_h compute_buffer_h);
 void*                            tg_compute_buffer_data(tg_compute_buffer_h compute_buffer_h);
 void                             tg_compute_buffer_destroy(tg_compute_buffer_h compute_buffer_h);
 
-tg_compute_shader_h              tg_compute_shader_create(const char* filename, u32 handle_type_count, tg_handle_type* p_handle_types);
+tg_compute_shader_h              tg_compute_shader_create(const char* filename, u32 handle_type_count, const tg_handle_type* p_handle_types);
 void                             tg_compute_shader_bind_input(tg_compute_shader_h compute_shader_h, u32 first_handle_index, u32 handle_count, tg_handle* p_handles);
 void                             tg_compute_shader_dispatch(tg_compute_shader_h compute_shader_h, u32 group_count_x, u32 group_count_y, u32 group_count_z);
 void                             tg_compute_shader_destroy(tg_compute_shader_h compute_shader_h);
@@ -180,6 +191,11 @@ b32                              tg_material_is_forward(tg_material_h material_h
 
 tg_mesh_h                        tg_mesh_create(u32 vertex_count, const v3* p_positions, const v3* p_normals, const v2* p_uvs, const v3* p_tangents, u32 index_count, const u16* p_indices);
 void                             tg_mesh_destroy(tg_mesh_h mesh_h);
+
+void                             tg_storage_image_3d_copy_to_storage_buffer(tg_storage_image_3d_h storage_image_3d_h, tg_compute_buffer_h compute_buffer_h);
+void                             tg_storage_image_3d_clear(tg_storage_image_3d_h storage_image_3d_h);
+tg_storage_image_3d_h            tg_storage_image_3d_create(u32 width, u32 height, u32 depth, tg_storage_image_format format);
+void                             tg_storage_image_3d_destroy(tg_storage_image_3d_h storage_image_3d_h);
 
 tg_texture_atlas_h               tg_texture_atlas_create_from_images(u32 image_count, tg_color_image_h* p_color_images_h);
 void                             tg_texture_atlas_destroy(tg_texture_atlas_h texture_atlas_h);

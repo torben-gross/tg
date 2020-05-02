@@ -3,41 +3,38 @@
 
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 
-layout(set = 0, binding = 0) buffer isolevels_block
+layout(set = 0, binding = 0) uniform chunk_block
 {
-	precise float    isolevels[];
+    uint     chunk_vertex_count_x;
+    uint     chunk_vertex_count_y;
+    uint     chunk_vertex_count_z;
+    uint     chunk_coordinate_x;
+    uint     chunk_coordinate_y;
+    uint     chunk_coordinate_z;
+    float    cell_stride_x;
+    float    cell_stride_y;
+    float    cell_stride_z;
+    float    noise_scale_x;
+    float    noise_scale_y;
+    float    noise_scale_z;
 };
 
-layout(set = 0, binding = 1) uniform chunk_block
-{
-    precise uint     chunk_vertex_count_x;
-    precise uint     chunk_vertex_count_y;
-    precise uint     chunk_vertex_count_z;
-    precise uint     chunk_coordinate_x;
-    precise uint     chunk_coordinate_y;
-    precise uint     chunk_coordinate_z;
-    precise float    cell_stride_x;
-    precise float    cell_stride_y;
-    precise float    cell_stride_z;
-    precise float    noise_scale_x;
-    precise float    noise_scale_y;
-    precise float    noise_scale_z;
-};
+layout(set = 0, binding = 1, r32f) uniform image3D isolevels;
 
-precise int fast_floor(float v)
+int fast_floor(float v)
 {
 	return v > 0.0 ? int(v) : (int(v) - 1);
 }
 
-precise float simplex_noise(float x, float y, float z)
+float simplex_noise(float x, float y, float z)
 {
-	precise int gradient_table[36] = int[36](
+	int gradient_table[36] = int[36](
 		1,  1,  0, -1,  1,  0,  1, -1,  0, -1, -1,  0,
 		1,  0,  1, -1,  0,  1,  1,  0, -1, -1,  0, -1,
 		0,  1,  1,  0, -1,  1,  0,  1, -1,  0, -1, -1
 	);
 
-	precise int permutation_table[256] = int[256](
+	int permutation_table[256] = int[256](
 		151, 160, 137,  91,  90,  15, 131,  13,
 		201,  95,  96,  53, 194, 233,   7, 225,
 		140,  36, 103,  30,  69, 142,   8,  99,
@@ -72,16 +69,16 @@ precise float simplex_noise(float x, float y, float z)
 		128, 195,  78,  66, 215,  61, 156, 180
 	);
 
-	const precise float s = (x + y + z) * 0.333333333;
-	const precise int i = fast_floor(x + s);
-	const precise int j = fast_floor(y + s);
-	const precise int k = fast_floor(z + s);
+	const float s = (x + y + z) * 0.333333333;
+	const int i = fast_floor(x + s);
+	const int j = fast_floor(y + s);
+	const int k = fast_floor(z + s);
 
-	const precise float g3 = 0.166666667;
-	const precise float t = (i + j + k) * g3;
-	const precise float x0 = x - (float(i) - t);
-	const precise float y0 = y - (float(j) - t);
-	const precise float z0 = z - (float(k) - t);
+	const float g3 = 0.166666667;
+	const float t = (i + j + k) * g3;
+	const float x0 = x - (float(i) - t);
+	const float y0 = y - (float(j) - t);
+	const float z0 = z - (float(k) - t);
 
 	int i1, j1, k1;
 	int i2, j2, k2;
@@ -116,27 +113,27 @@ precise float simplex_noise(float x, float y, float z)
 		}
 	}
 
-	const precise float x1 = x0 - i1 + g3;
-	const precise float y1 = y0 - j1 + g3;
-	const precise float z1 = z0 - k1 + g3;
-	const precise float x2 = x0 - i2 + 2.0 * g3;
-	const precise float y2 = y0 - j2 + 2.0 * g3;
-	const precise float z2 = z0 - k2 + 2.0 * g3;
-	const precise float x3 = x0 - 1.0 + 3.0 * g3;
-	const precise float y3 = y0 - 1.0 + 3.0 * g3;
-	const precise float z3 = z0 - 1.0 + 3.0 * g3;
+	const float x1 = x0 - i1 + g3;
+	const float y1 = y0 - j1 + g3;
+	const float z1 = z0 - k1 + g3;
+	const float x2 = x0 - i2 + 2.0 * g3;
+	const float y2 = y0 - j2 + 2.0 * g3;
+	const float z2 = z0 - k2 + 2.0 * g3;
+	const float x3 = x0 - 1.0 + 3.0 * g3;
+	const float y3 = y0 - 1.0 + 3.0 * g3;
+	const float z3 = z0 - 1.0 + 3.0 * g3;
 
-	const precise int ii = i & 255;
-	const precise int jj = j & 255;
-	const precise int kk = k & 255;
-	const precise int gi0 = permutation_table[ii      + permutation_table[jj      + permutation_table[kk     ]]] % 12;
-	const precise int gi1 = permutation_table[ii + i1 + permutation_table[jj + j1 + permutation_table[kk + k1]]] % 12;
-	const precise int gi2 = permutation_table[ii + i2 + permutation_table[jj + j2 + permutation_table[kk + k2]]] % 12;
-	const precise int gi3 = permutation_table[ii +  1 + permutation_table[jj +  1 + permutation_table[kk +  1]]] % 12;
+	const int ii = i & 255;
+	const int jj = j & 255;
+	const int kk = k & 255;
+	const int gi0 = permutation_table[ii      + permutation_table[jj      + permutation_table[kk     ]]] % 12;
+	const int gi1 = permutation_table[ii + i1 + permutation_table[jj + j1 + permutation_table[kk + k1]]] % 12;
+	const int gi2 = permutation_table[ii + i2 + permutation_table[jj + j2 + permutation_table[kk + k2]]] % 12;
+	const int gi3 = permutation_table[ii +  1 + permutation_table[jj +  1 + permutation_table[kk +  1]]] % 12;
 
-	precise float n0, n1, n2, n3;
+	float n0, n1, n2, n3;
 
-	precise float t0 = 0.5 - x0 * x0 - y0 * y0 - z0 * z0;
+	float t0 = 0.5 - x0 * x0 - y0 * y0 - z0 * z0;
 	if (t0 < 0.0f)
 	{
 		n0 = 0.0;
@@ -144,11 +141,11 @@ precise float simplex_noise(float x, float y, float z)
 	else
 	{
 		t0 *= t0;
-		const precise float dot = float(gradient_table[gi0 * 3 + 0]) * x0 + float(gradient_table[gi0 * 3 + 1]) * y0 + float(gradient_table[gi0 * 3 + 2]) * z0;
+		const float dot = float(gradient_table[gi0 * 3 + 0]) * x0 + float(gradient_table[gi0 * 3 + 1]) * y0 + float(gradient_table[gi0 * 3 + 2]) * z0;
 		n0 = t0 * t0 * dot;
 	}
 
-	precise float t1 = 0.5 - x1 * x1 - y1 * y1 - z1 * z1;
+	float t1 = 0.5 - x1 * x1 - y1 * y1 - z1 * z1;
 	if (t1 < 0.0)
 	{
 		n1 = 0.0;
@@ -156,11 +153,11 @@ precise float simplex_noise(float x, float y, float z)
 	else
 	{
 		t1 *= t1;
-		const precise float dot = float(gradient_table[gi1 * 3 + 0]) * x1 + float(gradient_table[gi1 * 3 + 1]) * y1 + float(gradient_table[gi1 * 3 + 2]) * z1;
+		const float dot = float(gradient_table[gi1 * 3 + 0]) * x1 + float(gradient_table[gi1 * 3 + 1]) * y1 + float(gradient_table[gi1 * 3 + 2]) * z1;
 		n1 = t1 * t1 * dot;
 	}
 
-	precise float t2 = 0.5 - x2 * x2 - y2 * y2 - z2 * z2;
+	float t2 = 0.5 - x2 * x2 - y2 * y2 - z2 * z2;
 	if (t2 < 0.0)
 	{
 		n2 = 0.0;
@@ -168,11 +165,11 @@ precise float simplex_noise(float x, float y, float z)
 	else
 	{
 		t2 *= t2;
-		const precise float dot = float(gradient_table[gi2 * 3 + 0]) * x2 + float(gradient_table[gi2 * 3 + 1]) * y2 + float(gradient_table[gi2 * 3 + 2]) * z2;
+		const float dot = float(gradient_table[gi2 * 3 + 0]) * x2 + float(gradient_table[gi2 * 3 + 1]) * y2 + float(gradient_table[gi2 * 3 + 2]) * z2;
 		n2 = t2 * t2 * dot;
 	}
 
-	precise float t3 = 0.5 - x3 * x3 - y3 * y3 - z3 * z3;
+	float t3 = 0.5 - x3 * x3 - y3 * y3 - z3 * z3;
 	if (t3 < 0.0)
 	{
 		n3 = 0.0;
@@ -180,24 +177,23 @@ precise float simplex_noise(float x, float y, float z)
 	else
 	{
 		t3 *= t3;
-		const precise float dot = float(gradient_table[gi3 * 3 + 0]) * x3 + float(gradient_table[gi3 * 3 + 1]) * y3 + float(gradient_table[gi3 * 3 + 2]) * z3;
+		const float dot = float(gradient_table[gi3 * 3 + 0]) * x3 + float(gradient_table[gi3 * 3 + 1]) * y3 + float(gradient_table[gi3 * 3 + 2]) * z3;
 		n3 = t3 * t3 * dot;
 	}
 
-	const precise float result = 32.0 * (n0 + n1 + n2 + n3);
-	return result;
+	return 32.0 * (n0 + n1 + n2 + n3);
 }
 
 void main()
 {
-	const precise uint x = gl_GlobalInvocationID.x;
-	const precise uint y = gl_GlobalInvocationID.y;
-	const precise uint z = gl_GlobalInvocationID.z;
+	const uint x = gl_GlobalInvocationID.x;
+	const uint y = gl_GlobalInvocationID.y;
+	const uint z = gl_GlobalInvocationID.z;
 
-    const precise float noise_x = (float(chunk_vertex_count_x - 1) * float(chunk_coordinate_x) + float(x)) * noise_scale_x;
-    const precise float noise_y = (float(chunk_vertex_count_y - 1) * float(chunk_coordinate_y) + float(y)) * noise_scale_y;
-    const precise float noise_z = (float(chunk_vertex_count_z - 1) * float(chunk_coordinate_z) + float(z)) * noise_scale_z;
-	const precise float noise = simplex_noise(noise_x, noise_y, noise_z);
+    const float noise_x = (float(chunk_vertex_count_x - 1) * float(chunk_coordinate_x) + float(x)) * noise_scale_x;
+    const float noise_y = (float(chunk_vertex_count_y - 1) * float(chunk_coordinate_y) + float(y)) * noise_scale_y;
+    const float noise_z = (float(chunk_vertex_count_z - 1) * float(chunk_coordinate_z) + float(z)) * noise_scale_z;
+	const float noise = simplex_noise(noise_x, noise_y, noise_z);
 
-	isolevels[chunk_vertex_count_x * chunk_vertex_count_y * ((chunk_vertex_count_z - 1) - z) + chunk_vertex_count_x * y + x] = noise;
+	imageStore(isolevels, ivec3(x, y, chunk_vertex_count_z - 1 - z), vec4(noise));
 }

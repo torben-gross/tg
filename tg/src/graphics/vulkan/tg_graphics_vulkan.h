@@ -190,7 +190,7 @@ typedef struct tg_color_image
     u32               height;
     u32               mip_levels;
     VkFormat          format;
-    VkImage           color_image;
+    VkImage           image;
     VkDeviceMemory    device_memory;
     VkImageView       image_view;
     VkSampler         sampler;
@@ -215,7 +215,7 @@ typedef struct tg_depth_image
     u32               width;
     u32               height;
     VkFormat          format;
-    VkImage           depth_image;
+    VkImage           image;
     VkDeviceMemory    device_memory;
     void*             p_mapped_device_memory;
     VkImageView       image_view;
@@ -299,6 +299,18 @@ typedef struct tg_mesh
     tg_vulkan_buffer    ibo;
 } tg_mesh;
 
+typedef struct tg_storage_image_3d
+{
+    tg_handle_type    type;
+    u32               width;
+    u32               height;
+    u32               depth;
+    VkFormat          format;
+    VkImage           image;
+    VkDeviceMemory    device_memory;
+    VkImageView       image_view;
+} tg_storage_image_3d;
+
 typedef struct tg_texture_atlas
 {
     tg_handle_type             type;
@@ -342,6 +354,7 @@ VkImageView          swapchain_image_views[TG_VULKAN_SURFACE_IMAGE_COUNT];
 void                          tg_vulkan_buffer_copy(VkDeviceSize size, VkBuffer source, VkBuffer destination);
 tg_vulkan_buffer              tg_vulkan_buffer_create(VkDeviceSize size, VkBufferUsageFlags buffer_usage_flags, VkMemoryPropertyFlags memory_property_flags);
 void                          tg_vulkan_buffer_destroy(tg_vulkan_buffer* p_vulkan_buffer);
+void                          tg_vulkan_buffer_flush_mapped_memory(tg_vulkan_buffer* p_vulkan_buffer);
 
 tg_color_image                tg_vulkan_color_image_create(const tg_vulkan_color_image_create_info* p_vulkan_color_image_create_info);
 VkFormat                      tg_vulkan_color_image_convert_format(tg_color_image_format format);
@@ -354,12 +367,15 @@ void                          tg_vulkan_command_buffer_cmd_blit_color_image(VkCo
 void                          tg_vulkan_command_buffer_cmd_blit_depth_image(VkCommandBuffer command_buffer, tg_depth_image* p_source, tg_depth_image* p_destination, const VkImageBlit* p_region);
 void                          tg_vulkan_command_buffer_cmd_clear_color_image(VkCommandBuffer command_buffer, tg_color_image* p_color_image);
 void                          tg_vulkan_command_buffer_cmd_clear_depth_image(VkCommandBuffer command_buffer, tg_depth_image* p_depth_image);
+void                          tg_vulkan_command_buffer_cmd_clear_storage_image_3d(VkCommandBuffer command_buffer, tg_storage_image_3d* p_storage_image_3d);
 void                          tg_vulkan_command_buffer_cmd_copy_buffer_to_color_image(VkCommandBuffer command_buffer, VkBuffer source, tg_color_image* p_destination);
 void                          tg_vulkan_command_buffer_cmd_copy_buffer_to_depth_image(VkCommandBuffer command_buffer, VkBuffer source, tg_depth_image* p_destination);
 void                          tg_vulkan_command_buffer_cmd_copy_color_image(VkCommandBuffer command_buffer, tg_color_image* p_source, tg_color_image* p_destination);
 void                          tg_vulkan_command_buffer_cmd_copy_color_image_to_buffer(VkCommandBuffer command_buffer, tg_color_image* p_source, VkBuffer destination);
+void                          tg_vulkan_command_buffer_cmd_copy_storage_image_3d_to_buffer(VkCommandBuffer command_buffer, tg_storage_image_3d* p_source, VkBuffer destination);
 void                          tg_vulkan_command_buffer_cmd_transition_color_image_layout(VkCommandBuffer command_buffer, tg_color_image* p_color_image, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits);
 void                          tg_vulkan_command_buffer_cmd_transition_depth_image_layout(VkCommandBuffer command_buffer, tg_depth_image* p_depth_image, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits);
+void                          tg_vulkan_command_buffer_cmd_transition_storage_image_3d_layout(VkCommandBuffer command_buffer, tg_storage_image_3d* p_storage_image_3d, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits);
 void                          tg_vulkan_command_buffer_end_and_submit(VkCommandBuffer command_buffer, tg_vulkan_queue* p_vulkan_queue);
 void                          tg_vulkan_command_buffer_free(VkCommandPool command_pool, VkCommandBuffer command_buffer);
 void                          tg_vulkan_command_buffers_allocate(VkCommandPool command_pool, VkCommandBufferLevel level, u32 command_buffer_count, VkCommandBuffer* p_command_buffers);
@@ -386,6 +402,7 @@ void                          tg_vulkan_descriptor_set_update_depth_image_array(
 void                          tg_vulkan_descriptor_set_update_render_target(VkDescriptorSet descriptor_set, tg_render_target* p_render_target, u32 dst_binding);
 void                          tg_vulkan_descriptor_set_update_storage_buffer(VkDescriptorSet descriptor_set, VkBuffer buffer, u32 dst_binding);
 void                          tg_vulkan_descriptor_set_update_storage_buffer_array(VkDescriptorSet descriptor_set, VkBuffer buffer, u32 dst_binding, u32 array_index);
+void                          tg_vulkan_descriptor_set_update_storage_image_3d(VkDescriptorSet descriptor_set, tg_storage_image_3d* p_storage_image_3d, u32 dst_binding);
 void                          tg_vulkan_descriptor_set_update_texture_atlas(VkDescriptorSet descriptor_set, tg_texture_atlas* p_texture_atlas, u32 dst_binding);
 void                          tg_vulkan_descriptor_set_update_uniform_buffer(VkDescriptorSet descriptor_set, VkBuffer buffer, u32 dst_binding);
 void                          tg_vulkan_descriptor_set_update_uniform_buffer_array(VkDescriptorSet descriptor_set, VkBuffer buffer, u32 dst_binding, u32 array_index);
@@ -427,6 +444,11 @@ void                          tg_vulkan_semaphore_destroy(VkSemaphore semaphore)
 
 VkShaderModule                tg_vulkan_shader_module_create(const char* p_filename);
 void                          tg_vulkan_shader_module_destroy(VkShaderModule shader_module);
+
+tg_storage_image_3d           tg_vulkan_storage_image_3d_create(u32 width, u32 height, u32 depth, VkFormat format);
+void                          tg_vulkan_storage_image_3d_destroy(tg_storage_image_3d* p_storage_image_3d);
+
+VkFormat                      tg_vulkan_storage_image_convert_format(tg_storage_image_format format);
 
 #endif
 
