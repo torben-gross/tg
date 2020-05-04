@@ -3,22 +3,27 @@
 
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 
+const uint     vertices_per_chunk_x = 16;
+const uint     vertices_per_chunk_y = 16;
+const uint     vertices_per_chunk_z = 16;
+const float    cell_stride_x = 1.1;
+const float    cell_stride_y = 1.1;
+const float    cell_stride_z = 1.1;
+const float    isolevel = -0.2;
+
 layout(set = 0, binding = 0) uniform chunk_properties_block
 {
-    uint     chunk_vertex_count_x;
-    uint     chunk_vertex_count_y;
-    uint     chunk_vertex_count_z;
-    uint     chunk_coordinate_x;
-    uint     chunk_coordinate_y;
-    uint     chunk_coordinate_z;
-    float    cell_stride_x;
-    float    cell_stride_y;
-    float    cell_stride_z;
-    float    isolevel;
+    uint     chunk_index_x;
+    uint     chunk_index_y;
+    uint     chunk_index_z;
 };
 
 layout(set = 0, binding = 1, r32f) uniform image3D isolevels;
-layout(set = 0, binding = 2, r32f) uniform image3D triangles;
+
+layout(set = 0, binding = 2) buffer out_vertices_block
+{
+    float[]    out_vertices;
+};
 
 struct tg_grid_cell
 {
@@ -350,81 +355,95 @@ void tg_marching_cubes_polygonize(tg_grid_cell grid_cell)
         }
     }
 
-	if (marching_cubes_edge_table[cube_index] == 0)
-	{
-		return;
-	}
-
 	vec3 vertices[12];
-	if ((marching_cubes_edge_table[cube_index] & 1) != 0)
-	{
-		vertices[0] = tg_marching_cubes_vertex_interpolate(grid_cell.positions[0], grid_cell.positions[1], grid_cell.values[0], grid_cell.values[1]);
-	}
-	if ((marching_cubes_edge_table[cube_index] & 2) != 0)
-	{
-		vertices[1] = tg_marching_cubes_vertex_interpolate(grid_cell.positions[1], grid_cell.positions[2], grid_cell.values[1], grid_cell.values[2]);
-	}
-	if ((marching_cubes_edge_table[cube_index] & 4) != 0)
-	{
-		vertices[2] = tg_marching_cubes_vertex_interpolate(grid_cell.positions[2], grid_cell.positions[3], grid_cell.values[2], grid_cell.values[3]);
-	}
-	if ((marching_cubes_edge_table[cube_index] & 8) != 0)
-	{
-		vertices[3] = tg_marching_cubes_vertex_interpolate(grid_cell.positions[3], grid_cell.positions[0], grid_cell.values[3], grid_cell.values[0]);
-	}
-	if ((marching_cubes_edge_table[cube_index] & 16) != 0)
-	{
-		vertices[4] = tg_marching_cubes_vertex_interpolate(grid_cell.positions[4], grid_cell.positions[5], grid_cell.values[4], grid_cell.values[5]);
-	}
-	if ((marching_cubes_edge_table[cube_index] & 32) != 0)
-	{
-		vertices[5] = tg_marching_cubes_vertex_interpolate(grid_cell.positions[5], grid_cell.positions[6], grid_cell.values[5], grid_cell.values[6]);
-	}
-	if ((marching_cubes_edge_table[cube_index] & 64) != 0)
-	{
-		vertices[6] = tg_marching_cubes_vertex_interpolate(grid_cell.positions[6], grid_cell.positions[7], grid_cell.values[6], grid_cell.values[7]);
-	}
-	if ((marching_cubes_edge_table[cube_index] & 128) != 0)
-	{
-		vertices[7] = tg_marching_cubes_vertex_interpolate(grid_cell.positions[7], grid_cell.positions[4], grid_cell.values[7], grid_cell.values[4]);
-	}
-	if ((marching_cubes_edge_table[cube_index] & 256) != 0)
-	{
-		vertices[8] = tg_marching_cubes_vertex_interpolate(grid_cell.positions[0], grid_cell.positions[4], grid_cell.values[0], grid_cell.values[4]);
-	}
-	if ((marching_cubes_edge_table[cube_index] & 512) != 0)
-	{
-		vertices[9] = tg_marching_cubes_vertex_interpolate(grid_cell.positions[1], grid_cell.positions[5], grid_cell.values[1], grid_cell.values[5]);
-	}
-	if ((marching_cubes_edge_table[cube_index] & 1024) != 0)
-	{
-		vertices[10] = tg_marching_cubes_vertex_interpolate(grid_cell.positions[2], grid_cell.positions[6], grid_cell.values[2], grid_cell.values[6]);
-	}
-	if ((marching_cubes_edge_table[cube_index] & 2048) != 0)
-	{
-		vertices[11] = tg_marching_cubes_vertex_interpolate(grid_cell.positions[3], grid_cell.positions[7], grid_cell.values[3], grid_cell.values[7]);
-	}
+	vertices[ 0] = tg_marching_cubes_vertex_interpolate(grid_cell.positions[0], grid_cell.positions[1], grid_cell.values[0], grid_cell.values[1]);
+	vertices[ 1] = tg_marching_cubes_vertex_interpolate(grid_cell.positions[1], grid_cell.positions[2], grid_cell.values[1], grid_cell.values[2]);
+	vertices[ 2] = tg_marching_cubes_vertex_interpolate(grid_cell.positions[2], grid_cell.positions[3], grid_cell.values[2], grid_cell.values[3]);
+	vertices[ 3] = tg_marching_cubes_vertex_interpolate(grid_cell.positions[3], grid_cell.positions[0], grid_cell.values[3], grid_cell.values[0]);
+	vertices[ 4] = tg_marching_cubes_vertex_interpolate(grid_cell.positions[4], grid_cell.positions[5], grid_cell.values[4], grid_cell.values[5]);
+	vertices[ 5] = tg_marching_cubes_vertex_interpolate(grid_cell.positions[5], grid_cell.positions[6], grid_cell.values[5], grid_cell.values[6]);
+	vertices[ 6] = tg_marching_cubes_vertex_interpolate(grid_cell.positions[6], grid_cell.positions[7], grid_cell.values[6], grid_cell.values[7]);
+	vertices[ 7] = tg_marching_cubes_vertex_interpolate(grid_cell.positions[7], grid_cell.positions[4], grid_cell.values[7], grid_cell.values[4]);
+	vertices[ 8] = tg_marching_cubes_vertex_interpolate(grid_cell.positions[0], grid_cell.positions[4], grid_cell.values[0], grid_cell.values[4]);
+	vertices[ 9] = tg_marching_cubes_vertex_interpolate(grid_cell.positions[1], grid_cell.positions[5], grid_cell.values[1], grid_cell.values[5]);
+	vertices[10] = tg_marching_cubes_vertex_interpolate(grid_cell.positions[2], grid_cell.positions[6], grid_cell.values[2], grid_cell.values[6]);
+	vertices[11] = tg_marching_cubes_vertex_interpolate(grid_cell.positions[3], grid_cell.positions[7], grid_cell.values[3], grid_cell.values[7]);
     
-    const uint base_x = 45 * gl_GlobalInvocationID.x;
+	const uint vertex_stride = (3 + 3 + 2 + 3 + 3);
+	const uint triangle_stride = 3 * vertex_stride;
+
+    const uint buffer_stride_x = 5 * triangle_stride * (vertices_per_chunk_x - 1);
+    const uint buffer_stride_y = vertices_per_chunk_y - 1;
+    const uint buffer_stride_z = vertices_per_chunk_z - 1;
+
+    const uint base_x = 5 * triangle_stride * gl_GlobalInvocationID.x;
     const uint base_y = gl_GlobalInvocationID.y;
     const uint base_z = gl_GlobalInvocationID.z;
     
-	for (uint i = 0; marching_cubes_triangle_table[16 * cube_index + i] != -1; i += 3)
+	for (uint i = 0; i < 15; i += 3)
 	{
-        const vec3 v0 = vertices[marching_cubes_triangle_table[16 * cube_index + i    ]];
-        const vec3 v1 = vertices[marching_cubes_triangle_table[16 * cube_index + i + 1]];
-        const vec3 v2 = vertices[marching_cubes_triangle_table[16 * cube_index + i + 2]];
-        if (v0 != v1 && v0 != v2)
+        const uint triangle_index = i / 3;
+
+        const uint p0x = base_x + triangle_index * triangle_stride + 0 * vertex_stride + 0;
+        const uint p0y = base_x + triangle_index * triangle_stride + 0 * vertex_stride + 1;
+        const uint p0z = base_x + triangle_index * triangle_stride + 0 * vertex_stride + 2;
+        
+        const uint p1x = base_x + triangle_index * triangle_stride + 1 * vertex_stride + 0;
+        const uint p1y = base_x + triangle_index * triangle_stride + 1 * vertex_stride + 1;
+        const uint p1z = base_x + triangle_index * triangle_stride + 1 * vertex_stride + 2;
+        
+        const uint p2x = base_x + triangle_index * triangle_stride + 2 * vertex_stride + 0;
+        const uint p2y = base_x + triangle_index * triangle_stride + 2 * vertex_stride + 1;
+        const uint p2z = base_x + triangle_index * triangle_stride + 2 * vertex_stride + 2;
+        
+        if (marching_cubes_triangle_table[16 * cube_index + i] != -1)
         {
-            imageStore(triangles, ivec3(base_x + 3 * i    , base_y, base_z), vec4(vertices[marching_cubes_triangle_table[16 * cube_index + i + 0]].x));
-            imageStore(triangles, ivec3(base_x + 3 * i + 1, base_y, base_z), vec4(vertices[marching_cubes_triangle_table[16 * cube_index + i + 0]].y));
-            imageStore(triangles, ivec3(base_x + 3 * i + 2, base_y, base_z), vec4(vertices[marching_cubes_triangle_table[16 * cube_index + i + 0]].z));
-            imageStore(triangles, ivec3(base_x + 3 * i + 3, base_y, base_z), vec4(vertices[marching_cubes_triangle_table[16 * cube_index + i + 1]].x));
-            imageStore(triangles, ivec3(base_x + 3 * i + 4, base_y, base_z), vec4(vertices[marching_cubes_triangle_table[16 * cube_index + i + 1]].y));
-            imageStore(triangles, ivec3(base_x + 3 * i + 5, base_y, base_z), vec4(vertices[marching_cubes_triangle_table[16 * cube_index + i + 1]].z));
-            imageStore(triangles, ivec3(base_x + 3 * i + 6, base_y, base_z), vec4(vertices[marching_cubes_triangle_table[16 * cube_index + i + 2]].x));
-            imageStore(triangles, ivec3(base_x + 3 * i + 7, base_y, base_z), vec4(vertices[marching_cubes_triangle_table[16 * cube_index + i + 2]].y));
-            imageStore(triangles, ivec3(base_x + 3 * i + 8, base_y, base_z), vec4(vertices[marching_cubes_triangle_table[16 * cube_index + i + 2]].z));
+            const vec3 v0 = vertices[marching_cubes_triangle_table[16 * cube_index + i    ]];
+            const vec3 v1 = vertices[marching_cubes_triangle_table[16 * cube_index + i + 1]];
+            const vec3 v2 = vertices[marching_cubes_triangle_table[16 * cube_index + i + 2]];
+        
+            if (v0 != v1 && v0 != v2)
+            {
+                out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 0 * vertex_stride + 0)] = vertices[marching_cubes_triangle_table[16 * cube_index + i + 0]].x;
+                out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 0 * vertex_stride + 1)] = vertices[marching_cubes_triangle_table[16 * cube_index + i + 0]].y;
+                out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 0 * vertex_stride + 2)] = vertices[marching_cubes_triangle_table[16 * cube_index + i + 0]].z;
+                
+                out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 1 * vertex_stride + 0)] = vertices[marching_cubes_triangle_table[16 * cube_index + i + 1]].x;
+                out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 1 * vertex_stride + 1)] = vertices[marching_cubes_triangle_table[16 * cube_index + i + 1]].y;
+                out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 1 * vertex_stride + 2)] = vertices[marching_cubes_triangle_table[16 * cube_index + i + 1]].z;
+                
+                out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 2 * vertex_stride + 0)] = vertices[marching_cubes_triangle_table[16 * cube_index + i + 2]].x;
+                out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 2 * vertex_stride + 1)] = vertices[marching_cubes_triangle_table[16 * cube_index + i + 2]].y;
+                out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 2 * vertex_stride + 2)] = vertices[marching_cubes_triangle_table[16 * cube_index + i + 2]].z;
+            }
+            else
+            {
+                out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 0 * vertex_stride + 0)] = 0.0;
+                out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 0 * vertex_stride + 1)] = 0.0;
+                out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 0 * vertex_stride + 2)] = 0.0;
+                
+                out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 1 * vertex_stride + 0)] = 0.0;
+                out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 1 * vertex_stride + 1)] = 0.0;
+                out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 1 * vertex_stride + 2)] = 0.0;
+                
+                out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 2 * vertex_stride + 0)] = 0.0;
+                out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 2 * vertex_stride + 1)] = 0.0;
+                out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 2 * vertex_stride + 2)] = 0.0;
+            }
+        }
+        else
+        {
+            out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 0 * vertex_stride + 0)] = 0.0;
+            out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 0 * vertex_stride + 1)] = 0.0;
+            out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 0 * vertex_stride + 2)] = 0.0;
+            
+            out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 1 * vertex_stride + 0)] = 0.0;
+            out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 1 * vertex_stride + 1)] = 0.0;
+            out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 1 * vertex_stride + 2)] = 0.0;
+            
+            out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 2 * vertex_stride + 0)] = 0.0;
+            out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 2 * vertex_stride + 1)] = 0.0;
+            out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 2 * vertex_stride + 2)] = 0.0;
         }
 	}
 }
@@ -435,9 +454,9 @@ void main()
 	const uint y = gl_GlobalInvocationID.y;
 	const uint z = gl_GlobalInvocationID.z;
     
-    const float offset_x = float(chunk_vertex_count_x - 1) * cell_stride_x * float(chunk_coordinate_x);
-    const float offset_y = float(chunk_vertex_count_y - 1) * cell_stride_y * float(chunk_coordinate_y);
-    const float offset_z = float(chunk_vertex_count_z - 1) * cell_stride_z * float(chunk_coordinate_z);
+    const float offset_x = float(vertices_per_chunk_x - 1) * cell_stride_x * float(chunk_index_x);
+    const float offset_y = float(vertices_per_chunk_y - 1) * cell_stride_y * float(chunk_index_y);
+    const float offset_z = float(vertices_per_chunk_z - 1) * cell_stride_z * float(chunk_index_z);
     
     tg_grid_cell grid_cell;
 
@@ -450,14 +469,14 @@ void main()
     grid_cell.positions[6] = vec3(offset_x + float(x + 1) * cell_stride_x, offset_y + float(y + 1) * cell_stride_y, -offset_z - float(z)     * cell_stride_z);
     grid_cell.positions[7] = vec3(offset_x + float(x)     * cell_stride_x, offset_y + float(y + 1) * cell_stride_y, -offset_z - float(z)     * cell_stride_z);
 
-    grid_cell.values[0] = imageLoad(isolevels, ivec3(x    , y    , chunk_vertex_count_z - 1 - z - 1)).x;
-    grid_cell.values[1] = imageLoad(isolevels, ivec3(x + 1, y    , chunk_vertex_count_z - 1 - z - 1)).x;
-    grid_cell.values[2] = imageLoad(isolevels, ivec3(x + 1, y    , chunk_vertex_count_z - 1 - z    )).x;
-    grid_cell.values[3] = imageLoad(isolevels, ivec3(x    , y    , chunk_vertex_count_z - 1 - z    )).x;
-    grid_cell.values[4] = imageLoad(isolevels, ivec3(x    , y + 1, chunk_vertex_count_z - 1 - z - 1)).x;
-    grid_cell.values[5] = imageLoad(isolevels, ivec3(x + 1, y + 1, chunk_vertex_count_z - 1 - z - 1)).x;
-    grid_cell.values[6] = imageLoad(isolevels, ivec3(x + 1, y + 1, chunk_vertex_count_z - 1 - z    )).x;
-    grid_cell.values[7] = imageLoad(isolevels, ivec3(x    , y + 1, chunk_vertex_count_z - 1 - z    )).x;
+    grid_cell.values[0] = imageLoad(isolevels, ivec3(x    , y    , vertices_per_chunk_z - 1 - z - 1)).x;
+    grid_cell.values[1] = imageLoad(isolevels, ivec3(x + 1, y    , vertices_per_chunk_z - 1 - z - 1)).x;
+    grid_cell.values[2] = imageLoad(isolevels, ivec3(x + 1, y    , vertices_per_chunk_z - 1 - z    )).x;
+    grid_cell.values[3] = imageLoad(isolevels, ivec3(x    , y    , vertices_per_chunk_z - 1 - z    )).x;
+    grid_cell.values[4] = imageLoad(isolevels, ivec3(x    , y + 1, vertices_per_chunk_z - 1 - z - 1)).x;
+    grid_cell.values[5] = imageLoad(isolevels, ivec3(x + 1, y + 1, vertices_per_chunk_z - 1 - z - 1)).x;
+    grid_cell.values[6] = imageLoad(isolevels, ivec3(x + 1, y + 1, vertices_per_chunk_z - 1 - z    )).x;
+    grid_cell.values[7] = imageLoad(isolevels, ivec3(x    , y + 1, vertices_per_chunk_z - 1 - z    )).x;
 
     tg_marching_cubes_polygonize(grid_cell);
 }

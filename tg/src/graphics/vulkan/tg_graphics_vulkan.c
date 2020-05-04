@@ -14,29 +14,29 @@
 #ifdef TG_WIN32
 
 #ifdef TG_DEBUG
-#define tg_VULKAN_INSTANCE_EXTENSION_COUNT 3
-#define tg_VULKAN_INSTANCE_EXTENSION_NAMES (char*[]){ VK_EXT_DEBUG_UTILS_EXTENSION_NAME, VK_KHR_SURFACE_EXTENSION_NAME, VK_KHR_WIN32_SURFACE_EXTENSION_NAME }
+#define TG_VULKAN_INSTANCE_EXTENSION_COUNT 3
+#define TG_VULKAN_INSTANCE_EXTENSION_NAMES { VK_EXT_DEBUG_UTILS_EXTENSION_NAME, VK_KHR_SURFACE_EXTENSION_NAME, VK_KHR_WIN32_SURFACE_EXTENSION_NAME }
 #else
-#define tg_VULKAN_INSTANCE_EXTENSION_COUNT 2
-#define tg_VULKAN_INSTANCE_EXTENSION_NAMES (char*[]){ VK_KHR_SURFACE_EXTENSION_NAME, VK_KHR_WIN32_SURFACE_EXTENSION_NAME }
+#define TG_VULKAN_INSTANCE_EXTENSION_COUNT 2
+#define TG_VULKAN_INSTANCE_EXTENSION_NAMES { VK_KHR_SURFACE_EXTENSION_NAME, VK_KHR_WIN32_SURFACE_EXTENSION_NAME }
 #endif
 
 #else
 
-#define tg_VULKAN_INSTANCE_EXTENSION_COUNT 0
-#define tg_VULKAN_INSTANCE_EXTENSION_NAMES TG_NULL
+#define TG_VULKAN_INSTANCE_EXTENSION_COUNT 0
+#define TG_VULKAN_INSTANCE_EXTENSION_NAMES TG_NULL
 
 #endif
 
-#define tg_VULKAN_DEVICE_EXTENSION_COUNT 1
-#define tg_VULKAN_DEVICE_EXTENSION_NAMES (char*[]){ VK_KHR_SWAPCHAIN_EXTENSION_NAME }
+#define TG_VULKAN_DEVICE_EXTENSION_COUNT 1
+#define TG_VULKAN_DEVICE_EXTENSION_NAMES { VK_KHR_SWAPCHAIN_EXTENSION_NAME }
 
 #ifdef TG_DEBUG
-#define tg_VULKAN_VALIDATION_LAYER_COUNT 1
-#define tg_VULKAN_VALIDATION_LAYER_NAMES (char*[]){ "VK_LAYER_KHRONOS_validation" }
+#define TG_VULKAN_VALIDATION_LAYER_COUNT 1
+#define TG_VULKAN_VALIDATION_LAYER_NAMES { "VK_LAYER_KHRONOS_validation" }
 #else
-#define tg_VULKAN_VALIDATION_LAYER_COUNT 0
-#define tg_VULKAN_VALIDATION_LAYER_NAMES TG_NULL
+#define TG_VULKAN_VALIDATION_LAYER_COUNT 0
+#define TG_VULKAN_VALIDATION_LAYER_NAMES TG_NULL
 #endif
 
 
@@ -1861,12 +1861,12 @@ b32 tg_vulkan_physical_device_check_extension_support(VkPhysicalDevice physical_
     VK_CALL(vkEnumerateDeviceExtensionProperties(physical_device, TG_NULL, &device_extension_property_count, device_extension_properties));
 
     b32 supports_extensions = TG_TRUE;
-    for (u32 i = 0; i < tg_VULKAN_DEVICE_EXTENSION_COUNT; i++)
+    for (u32 i = 0; i < TG_VULKAN_DEVICE_EXTENSION_COUNT; i++)
     {
         b32 supports_extension = TG_FALSE;
         for (u32 j = 0; j < device_extension_property_count; j++)
         {
-            if (strcmp(tg_VULKAN_DEVICE_EXTENSION_NAMES[i], device_extension_properties[j].extensionName) == 0)
+            if (strcmp(((char*[TG_VULKAN_DEVICE_EXTENSION_COUNT])TG_VULKAN_DEVICE_EXTENSION_NAMES)[i], device_extension_properties[j].extensionName) == 0)
             {
                 supports_extension = TG_TRUE;
                 break;
@@ -2003,12 +2003,12 @@ VkInstance tg_vulkan_instance_create()
     VkLayerProperties* layer_properties = TG_MEMORY_ALLOC(layer_property_count * sizeof(*layer_properties));
     vkEnumerateInstanceLayerProperties(&layer_property_count, layer_properties);
 
-    for (u32 i = 0; i < tg_VULKAN_VALIDATION_LAYER_COUNT; i++)
+    for (u32 i = 0; i < TG_VULKAN_VALIDATION_LAYER_COUNT; i++)
     {
         b32 layer_found = TG_FALSE;
         for (u32 j = 0; j < layer_property_count; j++)
         {
-            if (strcmp(tg_VULKAN_VALIDATION_LAYER_NAMES[i], layer_properties[j].layerName) == 0)
+            if (strcmp(((char*[TG_VULKAN_VALIDATION_LAYER_COUNT])TG_VULKAN_VALIDATION_LAYER_NAMES)[i], layer_properties[j].layerName) == 0)
             {
                 layer_found = TG_TRUE;
                 break;
@@ -2029,16 +2029,26 @@ VkInstance tg_vulkan_instance_create()
         application_info.engineVersion = VK_MAKE_VERSION(0, 0, 0);
         application_info.apiVersion = VK_API_VERSION_1_2;
     }
+#if TG_VULKAN_VALIDATION_LAYER_COUNT
+    const char* pp_enabled_layer_names[TG_VULKAN_VALIDATION_LAYER_COUNT] = TG_VULKAN_VALIDATION_LAYER_NAMES;
+#else
+    const char** pp_enabled_layer_names = TG_NULL;
+#endif
+#if TG_VULKAN_INSTANCE_EXTENSION_COUNT
+    const char* pp_enabled_extension_names[TG_VULKAN_INSTANCE_EXTENSION_COUNT] = TG_VULKAN_INSTANCE_EXTENSION_NAMES;
+#else
+    const char** pp_enabled_extension_names = TG_NULL;
+#endif
     VkInstanceCreateInfo instance_create_info = { 0 };
     {
         instance_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
         instance_create_info.pNext = TG_NULL;
         instance_create_info.flags = 0;
         instance_create_info.pApplicationInfo = &application_info;
-        instance_create_info.enabledLayerCount = tg_VULKAN_VALIDATION_LAYER_COUNT;
-        instance_create_info.ppEnabledLayerNames = tg_VULKAN_VALIDATION_LAYER_NAMES;
-        instance_create_info.enabledExtensionCount = tg_VULKAN_INSTANCE_EXTENSION_COUNT;
-        instance_create_info.ppEnabledExtensionNames = tg_VULKAN_INSTANCE_EXTENSION_NAMES;
+        instance_create_info.enabledLayerCount = TG_VULKAN_VALIDATION_LAYER_COUNT;
+        instance_create_info.ppEnabledLayerNames = pp_enabled_layer_names;
+        instance_create_info.enabledExtensionCount = TG_VULKAN_INSTANCE_EXTENSION_COUNT;
+        instance_create_info.ppEnabledExtensionNames = pp_enabled_extension_names;
     }
     VK_CALL(vkCreateInstance(&instance_create_info, TG_NULL, &instance));
 
@@ -2119,28 +2129,28 @@ VkDevice tg_vulkan_device_create()
 
     const f32 queue_priority = 1.0f;
 
-    VkDeviceQueueCreateInfo device_queue_create_infos[3] = { 0 };
+    VkDeviceQueueCreateInfo p_device_queue_create_infos[3] = { 0 };
     {
-        device_queue_create_infos[0].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-        device_queue_create_infos[0].pNext = TG_NULL;
-        device_queue_create_infos[0].flags = 0;
-        device_queue_create_infos[0].queueFamilyIndex = graphics_queue.index;
-        device_queue_create_infos[0].queueCount = 1;
-        device_queue_create_infos[0].pQueuePriorities = &queue_priority;
+        p_device_queue_create_infos[0].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+        p_device_queue_create_infos[0].pNext = TG_NULL;
+        p_device_queue_create_infos[0].flags = 0;
+        p_device_queue_create_infos[0].queueFamilyIndex = graphics_queue.index;
+        p_device_queue_create_infos[0].queueCount = 1;
+        p_device_queue_create_infos[0].pQueuePriorities = &queue_priority;
 
-        device_queue_create_infos[1].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-        device_queue_create_infos[1].pNext = TG_NULL;
-        device_queue_create_infos[1].flags = 0;
-        device_queue_create_infos[1].queueFamilyIndex = present_queue.index;
-        device_queue_create_infos[1].queueCount = 1;
-        device_queue_create_infos[1].pQueuePriorities = &queue_priority;
+        p_device_queue_create_infos[1].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+        p_device_queue_create_infos[1].pNext = TG_NULL;
+        p_device_queue_create_infos[1].flags = 0;
+        p_device_queue_create_infos[1].queueFamilyIndex = present_queue.index;
+        p_device_queue_create_infos[1].queueCount = 1;
+        p_device_queue_create_infos[1].pQueuePriorities = &queue_priority;
 
-        device_queue_create_infos[2].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-        device_queue_create_infos[2].pNext = TG_NULL;
-        device_queue_create_infos[2].flags = 0;
-        device_queue_create_infos[2].queueFamilyIndex = compute_queue.index;
-        device_queue_create_infos[2].queueCount = 1;
-        device_queue_create_infos[2].pQueuePriorities = &queue_priority;
+        p_device_queue_create_infos[2].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+        p_device_queue_create_infos[2].pNext = TG_NULL;
+        p_device_queue_create_infos[2].flags = 0;
+        p_device_queue_create_infos[2].queueFamilyIndex = compute_queue.index;
+        p_device_queue_create_infos[2].queueCount = 1;
+        p_device_queue_create_infos[2].pQueuePriorities = &queue_priority;
     }
 
     VkPhysicalDeviceFeatures physical_device_features = { 0 };
@@ -2151,16 +2161,16 @@ VkDevice tg_vulkan_device_create()
         physical_device_features.independentBlend = VK_FALSE;
         physical_device_features.geometryShader = VK_FALSE;
         physical_device_features.tessellationShader = VK_FALSE;
-        physical_device_features.sampleRateShading = VK_TRUE;
+        physical_device_features.sampleRateShading = VK_FALSE;
         physical_device_features.dualSrcBlend = VK_FALSE;
         physical_device_features.logicOp = VK_FALSE;
         physical_device_features.multiDrawIndirect = VK_FALSE;
         physical_device_features.drawIndirectFirstInstance = VK_FALSE;
         physical_device_features.depthClamp = VK_FALSE;
         physical_device_features.depthBiasClamp = VK_FALSE;
-        physical_device_features.fillModeNonSolid = VK_TRUE;
+        physical_device_features.fillModeNonSolid = VK_FALSE;
         physical_device_features.depthBounds = VK_FALSE;
-        physical_device_features.wideLines = VK_TRUE;
+        physical_device_features.wideLines = VK_FALSE;
         physical_device_features.largePoints = VK_FALSE;
         physical_device_features.alphaToOne = VK_FALSE;
         physical_device_features.multiViewport = VK_FALSE;
@@ -2200,17 +2210,27 @@ VkDevice tg_vulkan_device_create()
         physical_device_features.sparseResidencyAliased = VK_FALSE;
         physical_device_features.variableMultisampleRate = VK_FALSE;
     }
+#if TG_VULKAN_VALIDATION_LAYER_COUNT
+    const char* pp_enabled_layer_names[TG_VULKAN_VALIDATION_LAYER_COUNT] = TG_VULKAN_VALIDATION_LAYER_NAMES;
+#else
+    const char** pp_enabled_layer_names = TG_NULL;
+#endif
+#if TG_VULKAN_DEVICE_EXTENSION_COUNT
+    const char* pp_enabled_extension_names[TG_VULKAN_DEVICE_EXTENSION_COUNT] = TG_VULKAN_DEVICE_EXTENSION_NAMES;
+#else
+    const char** pp_enabled_extension_names = TG_NULL;
+#endif
     VkDeviceCreateInfo device_create_info = { 0 };
     {
         device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
         device_create_info.pNext = TG_NULL;
         device_create_info.flags = 0;
         device_create_info.queueCreateInfoCount = 2;
-        device_create_info.pQueueCreateInfos = device_queue_create_infos;
-        device_create_info.enabledLayerCount = tg_VULKAN_VALIDATION_LAYER_COUNT;
-        device_create_info.ppEnabledLayerNames = tg_VULKAN_VALIDATION_LAYER_NAMES;
-        device_create_info.enabledExtensionCount = tg_VULKAN_DEVICE_EXTENSION_COUNT;
-        device_create_info.ppEnabledExtensionNames = tg_VULKAN_DEVICE_EXTENSION_NAMES;
+        device_create_info.pQueueCreateInfos = p_device_queue_create_infos;
+        device_create_info.enabledLayerCount = TG_VULKAN_VALIDATION_LAYER_COUNT;
+        device_create_info.ppEnabledLayerNames = pp_enabled_layer_names;
+        device_create_info.enabledExtensionCount = TG_VULKAN_DEVICE_EXTENSION_COUNT;
+        device_create_info.ppEnabledExtensionNames = pp_enabled_extension_names;
         device_create_info.pEnabledFeatures = &physical_device_features;
     }
     VK_CALL(vkCreateDevice(physical_device, &device_create_info, TG_NULL, &device));
@@ -2336,7 +2356,7 @@ void tg_vulkan_swapchain_create()
 
 
 /*------------------------------------------------------------+
-| Initialization, shutdown and other main functionality       |
+| Initialization, shutdown and other main functionalities     |
 +------------------------------------------------------------*/
 
 void tg_graphics_init()

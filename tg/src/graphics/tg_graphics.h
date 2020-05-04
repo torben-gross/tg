@@ -190,6 +190,7 @@ b32                              tg_material_is_deferred(tg_material_h material_
 b32                              tg_material_is_forward(tg_material_h material_h);
 
 tg_mesh_h                        tg_mesh_create(u32 vertex_count, const v3* p_positions, const v3* p_normals, const v2* p_uvs, const v3* p_tangents, u32 index_count, const u16* p_indices);
+tg_mesh_h                        tg_mesh_create_from_storage_buffer(tg_compute_buffer_h storage_buffer_h);
 void                             tg_mesh_destroy(tg_mesh_h mesh_h);
 
 void                             tg_storage_image_3d_copy_to_storage_buffer(tg_storage_image_3d_h storage_image_3d_h, tg_compute_buffer_h compute_buffer_h);

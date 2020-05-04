@@ -23,6 +23,7 @@ tg_entity_graphics_data_ptr_h tg_entity_graphics_data_ptr_create(tg_entity* p_en
 
     for (u32 i = 0; i < p_scene->camera_count; i++)
     {
+#ifdef TG_DEBUG
         switch (p_entity->material_h->material_type)
         {
         case TG_VULKAN_MATERIAL_TYPE_DEFERRED:
@@ -34,6 +35,7 @@ tg_entity_graphics_data_ptr_h tg_entity_graphics_data_ptr_create(tg_entity* p_en
             entity_graphics_data_ptr_h->p_entity_scene_infos[i].renderer_h = p_scene->p_forward_renderers_h[i];
         } break;
         }
+#endif
 
         VkDescriptorSetLayoutBinding p_descriptor_set_layout_bindings[2] = { 0 };
         {

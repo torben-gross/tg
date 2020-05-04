@@ -267,6 +267,22 @@ tg_mesh_h tg_mesh_create(u32 vertex_count, const v3* p_positions, const v3* p_no
 
     return mesh_h;
 }
+
+tg_mesh_h tg_mesh_create_from_storage_buffer(tg_compute_buffer_h storage_buffer_h)
+{
+    TG_ASSERT(storage_buffer_h);
+
+    tg_mesh_h mesh_h = TG_MEMORY_ALLOC(sizeof(*mesh_h));
+
+    mesh_h->vbo = tg_vulkan_buffer_create(storage_buffer_h->buffer.size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    tg_vulkan_buffer_copy(storage_buffer_h->buffer.size, storage_buffer_h->buffer.buffer, mesh_h->vbo.buffer);
+    mesh_h->ibo.size = 0;
+    mesh_h->ibo.buffer = VK_NULL_HANDLE;
+    mesh_h->ibo.device_memory = VK_NULL_HANDLE;
+
+    return mesh_h;
+}
+
 void tg_mesh_destroy(tg_mesh_h mesh_h)
 {
     TG_ASSERT(mesh_h);

@@ -3,20 +3,21 @@
 
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 
+const uint     vertices_per_chunk_x = 16;
+const uint     vertices_per_chunk_y = 16;
+const uint     vertices_per_chunk_z = 16;
+const float    cell_stride_x = 1.1;
+const float    cell_stride_y = 1.1;
+const float    cell_stride_z = 1.1;
+const float    noise_scale_x = 0.1;
+const float    noise_scale_y = 0.1;
+const float    noise_scale_z = 0.1;
+
 layout(set = 0, binding = 0) uniform chunk_block
 {
-    uint     chunk_vertex_count_x;
-    uint     chunk_vertex_count_y;
-    uint     chunk_vertex_count_z;
-    uint     chunk_coordinate_x;
-    uint     chunk_coordinate_y;
-    uint     chunk_coordinate_z;
-    float    cell_stride_x;
-    float    cell_stride_y;
-    float    cell_stride_z;
-    float    noise_scale_x;
-    float    noise_scale_y;
-    float    noise_scale_z;
+    uint    chunk_index_x;
+    uint    chunk_index_y;
+    uint    chunk_index_z;
 };
 
 layout(set = 0, binding = 1, r32f) uniform image3D isolevels;
@@ -190,10 +191,10 @@ void main()
 	const uint y = gl_GlobalInvocationID.y;
 	const uint z = gl_GlobalInvocationID.z;
 
-    const float noise_x = (float(chunk_vertex_count_x - 1) * float(chunk_coordinate_x) + float(x)) * noise_scale_x;
-    const float noise_y = (float(chunk_vertex_count_y - 1) * float(chunk_coordinate_y) + float(y)) * noise_scale_y;
-    const float noise_z = (float(chunk_vertex_count_z - 1) * float(chunk_coordinate_z) + float(z)) * noise_scale_z;
+    const float noise_x = (float(vertices_per_chunk_x - 1) * float(chunk_index_x) + float(x)) * noise_scale_x;
+    const float noise_y = (float(vertices_per_chunk_y - 1) * float(chunk_index_y) + float(y)) * noise_scale_y;
+    const float noise_z = (float(vertices_per_chunk_z - 1) * float(chunk_index_z) + float(z)) * noise_scale_z;
 	const float noise = simplex_noise(noise_x, noise_y, noise_z);
 
-	imageStore(isolevels, ivec3(x, y, chunk_vertex_count_z - 1 - z), vec4(noise));
+	imageStore(isolevels, ivec3(x, y, vertices_per_chunk_z - 1 - z), vec4(noise));
 }
