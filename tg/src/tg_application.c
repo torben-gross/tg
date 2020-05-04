@@ -140,17 +140,17 @@ void tg_application_internal_game_3d_create()
         p_point_lights[i].color = (v3){ tgm_random_next_f32(&random), tgm_random_next_f32(&random), tgm_random_next_f32(&random) };
         p_point_lights[i].radius = tgm_random_next_f32(&random) * 50.0f;
     }
+
     tg_color_image_create_info color_image_create_info = { 0 };
-    {
-        tg_platform_get_window_size(&color_image_create_info.width, &color_image_create_info.height);
-        color_image_create_info.mip_levels = 1;
-        color_image_create_info.format = TG_COLOR_IMAGE_FORMAT_B8G8R8A8;
-        color_image_create_info.min_filter = TG_IMAGE_FILTER_LINEAR;
-        color_image_create_info.mag_filter = TG_IMAGE_FILTER_LINEAR;
-        color_image_create_info.address_mode_u = TG_IMAGE_ADDRESS_MODE_REPEAT;
-        color_image_create_info.address_mode_v = TG_IMAGE_ADDRESS_MODE_REPEAT;
-        color_image_create_info.address_mode_w = TG_IMAGE_ADDRESS_MODE_REPEAT;
-    }
+    tg_platform_get_window_size(&color_image_create_info.width, &color_image_create_info.height);
+    color_image_create_info.mip_levels = 1;
+    color_image_create_info.format = TG_COLOR_IMAGE_FORMAT_B8G8R8A8;
+    color_image_create_info.min_filter = TG_IMAGE_FILTER_LINEAR;
+    color_image_create_info.mag_filter = TG_IMAGE_FILTER_LINEAR;
+    color_image_create_info.address_mode_u = TG_IMAGE_ADDRESS_MODE_REPEAT;
+    color_image_create_info.address_mode_v = TG_IMAGE_ADDRESS_MODE_REPEAT;
+    color_image_create_info.address_mode_w = TG_IMAGE_ADDRESS_MODE_REPEAT;
+
     tg_camera_h p_cameras_h[2] = { test_deferred.camera_info.camera_h, test_deferred.secondary_camera_h };
     test_deferred.scene = tg_scene_create(2, p_cameras_h, TG_POINT_LIGHT_COUNT, p_point_lights);
 
@@ -229,11 +229,12 @@ void tg_application_internal_game_3d_create()
     tg_uniform_buffer_h isolevel_uniform_buffer_h = tg_uniform_buffer_create(sizeof(tg_isolevel_uniform_buffer));
     tg_isolevel_uniform_buffer* p_isolevel_uniform_buffer_data = tg_uniform_buffer_data(isolevel_uniform_buffer_h);
     tg_storage_image_3d_h isolevel_storage_image_3d_h = tg_storage_image_3d_create(TG_CHUNK_VERTEX_COUNT_X, TG_CHUNK_VERTEX_COUNT_Y, TG_CHUNK_VERTEX_COUNT_Z, TG_STORAGE_IMAGE_FORMAT_R32_SFLOAT);
-    tg_handle_type p_isolevel_compute_shader_handle_types[2] = { 0 };
-    {
-        p_isolevel_compute_shader_handle_types[0] = TG_HANDLE_TYPE_UNIFORM_BUFFER;
-        p_isolevel_compute_shader_handle_types[1] = TG_HANDLE_TYPE_STORAGE_IMAGE_3D;
+
+    const tg_handle_type p_isolevel_compute_shader_handle_types[2] = {
+        TG_HANDLE_TYPE_UNIFORM_BUFFER,
+        TG_HANDLE_TYPE_STORAGE_IMAGE_3D
     };
+
     tg_compute_shader_h isolevel_compute_shader_h = tg_compute_shader_create("shaders/isolevel.comp", 2, p_isolevel_compute_shader_handle_types);
     tg_handle p_isolevel_handles[2] = { isolevel_uniform_buffer_h, isolevel_storage_image_3d_h };
     tg_compute_shader_bind_input(isolevel_compute_shader_h, 0, 2, p_isolevel_handles);
@@ -244,22 +245,20 @@ void tg_application_internal_game_3d_create()
     tg_marching_cubes_uniform_buffer* p_marching_cubes_uniform_buffer_data = tg_uniform_buffer_data(marching_cubes_uniform_buffer_h);
     tg_compute_buffer_h marching_cubes_compute_buffer_h = tg_compute_buffer_create((TG_CHUNK_VERTEX_COUNT_X - 1) * (TG_CHUNK_VERTEX_COUNT_Y - 1) * (TG_CHUNK_VERTEX_COUNT_Z - 1) * 15 * sizeof(tg_vertex_3d), TG_TRUE);
     tg_vertex_3d* p_verts = tg_compute_buffer_data(marching_cubes_compute_buffer_h);
-    tg_handle_type p_marching_cubes_compute_shader_handle_types[3] = { 0 };
-    {
-        p_marching_cubes_compute_shader_handle_types[0] = TG_HANDLE_TYPE_UNIFORM_BUFFER;
-        p_marching_cubes_compute_shader_handle_types[1] = TG_HANDLE_TYPE_STORAGE_IMAGE_3D;
-        p_marching_cubes_compute_shader_handle_types[2] = TG_HANDLE_TYPE_COMPUTE_BUFFER;
-    }
+
+    const tg_handle_type p_marching_cubes_compute_shader_handle_types[3] = {
+        TG_HANDLE_TYPE_UNIFORM_BUFFER,
+        TG_HANDLE_TYPE_STORAGE_IMAGE_3D,
+        TG_HANDLE_TYPE_COMPUTE_BUFFER
+    };
+
     tg_compute_shader_h marching_cubes_compute_shader_h = tg_compute_shader_create("shaders/marching_cubes.comp", 3, p_marching_cubes_compute_shader_handle_types);
     tg_handle p_compute_shader_handles[3] = { marching_cubes_uniform_buffer_h, isolevel_storage_image_3d_h, marching_cubes_compute_buffer_h };
     tg_compute_shader_bind_input(marching_cubes_compute_shader_h, 0, 3, p_compute_shader_handles);
 
 
 
-    tg_handle_type p_triangles_to_vbo_handle_types[1] = { 0 };
-    {
-        p_triangles_to_vbo_handle_types[0] = TG_HANDLE_TYPE_COMPUTE_BUFFER;
-    }
+    const tg_handle_type p_triangles_to_vbo_handle_types[1] = { TG_HANDLE_TYPE_COMPUTE_BUFFER };
     tg_compute_shader_h triangles_to_vbo_compute_shader_h = tg_compute_shader_create("shaders/triangle_fill_vertices.comp", 1, p_triangles_to_vbo_handle_types);
     tg_handle p_triangles_to_vbo_handles[1] = { marching_cubes_compute_buffer_h };
     tg_compute_shader_bind_input(triangles_to_vbo_compute_shader_h, 0, 1, p_triangles_to_vbo_handles);

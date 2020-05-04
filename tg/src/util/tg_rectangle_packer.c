@@ -29,14 +29,12 @@ void tg_rectangle_packer_pack(u32 rect_count, tg_rect* p_rects, u32* p_total_wid
 
     tg_list spaces = TG_LIST_CREATE__CAPACITY(tg_rect, rect_count * rect_count);
 
-    const u32 start_width = tgm_u32_max((u32)tgm_f32_ceil(tgm_f32_sqrt((f32)area / 0.95f)), max_width);
     tg_rect start_rect = { 0 };
-    {
-        start_rect.left = 0;
-        start_rect.bottom = 0;
-        start_rect.width = start_width;
-        start_rect.height = TG_U16_MAX;
-    }
+    start_rect.left = 0;
+    start_rect.bottom = 0;
+    start_rect.width = tgm_u32_max((u32)tgm_f32_ceil(tgm_f32_sqrt((f32)area / 0.95f)), max_width);;
+    start_rect.height = TG_U16_MAX;
+
     tg_list_insert(&spaces, &start_rect);
 
     for (u32 i = 0; i < rect_count; i++)
@@ -50,7 +48,7 @@ void tg_rectangle_packer_pack(u32 rect_count, tg_rect* p_rects, u32* p_total_wid
             {
                 continue;
             }
-            
+
             p_rect->left = p_space->left;
             p_rect->bottom = p_space->bottom;
 
@@ -114,12 +112,11 @@ void tg_rectangle_packer_pack(u32 rect_count, tg_rect* p_rects, u32* p_total_wid
 
                 */
                 tg_rect new_space = { 0 };
-                {
-                    new_space.left = p_space->left + p_rect->width;
-                    new_space.bottom = p_space->bottom;
-                    new_space.width = p_space->width - p_rect->width;
-                    new_space.height = p_rect->height;
-                }
+                new_space.left = p_space->left + p_rect->width;
+                new_space.bottom = p_space->bottom;
+                new_space.width = p_space->width - p_rect->width;
+                new_space.height = p_rect->height;
+
                 tg_list_insert(&spaces, &new_space);
                 p_space->bottom += p_rect->height;
                 p_space->height -= p_rect->height;

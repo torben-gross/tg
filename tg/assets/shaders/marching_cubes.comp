@@ -368,7 +368,7 @@ void tg_marching_cubes_polygonize(tg_grid_cell grid_cell)
 	vertices[ 9] = tg_marching_cubes_vertex_interpolate(grid_cell.positions[1], grid_cell.positions[5], grid_cell.values[1], grid_cell.values[5]);
 	vertices[10] = tg_marching_cubes_vertex_interpolate(grid_cell.positions[2], grid_cell.positions[6], grid_cell.values[2], grid_cell.values[6]);
 	vertices[11] = tg_marching_cubes_vertex_interpolate(grid_cell.positions[3], grid_cell.positions[7], grid_cell.values[3], grid_cell.values[7]);
-    
+
 	const uint vertex_stride = (3 + 3 + 2 + 3 + 3);
 	const uint triangle_stride = 3 * vertex_stride;
 
@@ -379,7 +379,7 @@ void tg_marching_cubes_polygonize(tg_grid_cell grid_cell)
     const uint base_x = 5 * triangle_stride * gl_GlobalInvocationID.x;
     const uint base_y = gl_GlobalInvocationID.y;
     const uint base_z = gl_GlobalInvocationID.z;
-    
+
 	for (uint i = 0; i < 15; i += 3)
 	{
         const uint triangle_index = i / 3;
@@ -387,31 +387,31 @@ void tg_marching_cubes_polygonize(tg_grid_cell grid_cell)
         const uint p0x = base_x + triangle_index * triangle_stride + 0 * vertex_stride + 0;
         const uint p0y = base_x + triangle_index * triangle_stride + 0 * vertex_stride + 1;
         const uint p0z = base_x + triangle_index * triangle_stride + 0 * vertex_stride + 2;
-        
+
         const uint p1x = base_x + triangle_index * triangle_stride + 1 * vertex_stride + 0;
         const uint p1y = base_x + triangle_index * triangle_stride + 1 * vertex_stride + 1;
         const uint p1z = base_x + triangle_index * triangle_stride + 1 * vertex_stride + 2;
-        
+
         const uint p2x = base_x + triangle_index * triangle_stride + 2 * vertex_stride + 0;
         const uint p2y = base_x + triangle_index * triangle_stride + 2 * vertex_stride + 1;
         const uint p2z = base_x + triangle_index * triangle_stride + 2 * vertex_stride + 2;
-        
+
         if (marching_cubes_triangle_table[16 * cube_index + i] != -1)
         {
             const vec3 v0 = vertices[marching_cubes_triangle_table[16 * cube_index + i    ]];
             const vec3 v1 = vertices[marching_cubes_triangle_table[16 * cube_index + i + 1]];
             const vec3 v2 = vertices[marching_cubes_triangle_table[16 * cube_index + i + 2]];
-        
+
             if (v0 != v1 && v0 != v2)
             {
                 out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 0 * vertex_stride + 0)] = vertices[marching_cubes_triangle_table[16 * cube_index + i + 0]].x;
                 out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 0 * vertex_stride + 1)] = vertices[marching_cubes_triangle_table[16 * cube_index + i + 0]].y;
                 out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 0 * vertex_stride + 2)] = vertices[marching_cubes_triangle_table[16 * cube_index + i + 0]].z;
-                
+
                 out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 1 * vertex_stride + 0)] = vertices[marching_cubes_triangle_table[16 * cube_index + i + 1]].x;
                 out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 1 * vertex_stride + 1)] = vertices[marching_cubes_triangle_table[16 * cube_index + i + 1]].y;
                 out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 1 * vertex_stride + 2)] = vertices[marching_cubes_triangle_table[16 * cube_index + i + 1]].z;
-                
+
                 out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 2 * vertex_stride + 0)] = vertices[marching_cubes_triangle_table[16 * cube_index + i + 2]].x;
                 out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 2 * vertex_stride + 1)] = vertices[marching_cubes_triangle_table[16 * cube_index + i + 2]].y;
                 out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 2 * vertex_stride + 2)] = vertices[marching_cubes_triangle_table[16 * cube_index + i + 2]].z;
@@ -421,11 +421,11 @@ void tg_marching_cubes_polygonize(tg_grid_cell grid_cell)
                 out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 0 * vertex_stride + 0)] = 0.0;
                 out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 0 * vertex_stride + 1)] = 0.0;
                 out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 0 * vertex_stride + 2)] = 0.0;
-                
+
                 out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 1 * vertex_stride + 0)] = 0.0;
                 out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 1 * vertex_stride + 1)] = 0.0;
                 out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 1 * vertex_stride + 2)] = 0.0;
-                
+
                 out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 2 * vertex_stride + 0)] = 0.0;
                 out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 2 * vertex_stride + 1)] = 0.0;
                 out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 2 * vertex_stride + 2)] = 0.0;
@@ -436,11 +436,11 @@ void tg_marching_cubes_polygonize(tg_grid_cell grid_cell)
             out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 0 * vertex_stride + 0)] = 0.0;
             out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 0 * vertex_stride + 1)] = 0.0;
             out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 0 * vertex_stride + 2)] = 0.0;
-            
+
             out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 1 * vertex_stride + 0)] = 0.0;
             out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 1 * vertex_stride + 1)] = 0.0;
             out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 1 * vertex_stride + 2)] = 0.0;
-            
+
             out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 2 * vertex_stride + 0)] = 0.0;
             out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 2 * vertex_stride + 1)] = 0.0;
             out_vertices[buffer_stride_x * buffer_stride_y * base_z + buffer_stride_x * base_y + (base_x + triangle_index * triangle_stride + 2 * vertex_stride + 2)] = 0.0;
@@ -453,11 +453,11 @@ void main()
 	const uint x = gl_GlobalInvocationID.x;
 	const uint y = gl_GlobalInvocationID.y;
 	const uint z = gl_GlobalInvocationID.z;
-    
+
     const float offset_x = float(vertices_per_chunk_x - 1) * cell_stride_x * float(chunk_index_x);
     const float offset_y = float(vertices_per_chunk_y - 1) * cell_stride_y * float(chunk_index_y);
     const float offset_z = float(vertices_per_chunk_z - 1) * cell_stride_z * float(chunk_index_z);
-    
+
     tg_grid_cell grid_cell;
 
     grid_cell.positions[0] = vec3(offset_x + float(x)     * cell_stride_x, offset_y + float(y)     * cell_stride_y, -offset_z - float(z + 1) * cell_stride_z);

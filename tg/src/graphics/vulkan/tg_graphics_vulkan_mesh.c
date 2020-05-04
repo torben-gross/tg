@@ -59,27 +59,25 @@ void tg_mesh_recalculate_normals(u32 vertex_count, u32 index_count, const u16* p
         shader_module = tg_vulkan_shader_module_create("shaders/normals_vbo.comp");
 
         VkDescriptorSetLayoutBinding p_descriptor_set_layout_bindings[2] = { 0 };
-        {
-            p_descriptor_set_layout_bindings[0].binding = 0;
-            p_descriptor_set_layout_bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-            p_descriptor_set_layout_bindings[0].descriptorCount = 1;
-            p_descriptor_set_layout_bindings[0].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-            p_descriptor_set_layout_bindings[0].pImmutableSamplers = TG_NULL;
 
-            p_descriptor_set_layout_bindings[1].binding = 1;
-            p_descriptor_set_layout_bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            p_descriptor_set_layout_bindings[1].descriptorCount = 1;
-            p_descriptor_set_layout_bindings[1].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-            p_descriptor_set_layout_bindings[1].pImmutableSamplers = TG_NULL;
-        }
+        p_descriptor_set_layout_bindings[0].binding = 0;
+        p_descriptor_set_layout_bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        p_descriptor_set_layout_bindings[0].descriptorCount = 1;
+        p_descriptor_set_layout_bindings[0].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+        p_descriptor_set_layout_bindings[0].pImmutableSamplers = TG_NULL;
+
+        p_descriptor_set_layout_bindings[1].binding = 1;
+        p_descriptor_set_layout_bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        p_descriptor_set_layout_bindings[1].descriptorCount = 1;
+        p_descriptor_set_layout_bindings[1].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+        p_descriptor_set_layout_bindings[1].pImmutableSamplers = TG_NULL;
+
         descriptor = tg_vulkan_descriptor_create(2, p_descriptor_set_layout_bindings);
-
         pipeline_layout = tg_vulkan_pipeline_layout_create(1, &descriptor.descriptor_set_layout, 0, TG_NULL);
         pipeline = tg_vulkan_compute_pipeline_create(shader_module, pipeline_layout);
-
         command_buffer = tg_vulkan_command_buffer_allocate(compute_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
-
         uniform_buffer = tg_vulkan_buffer_create(sizeof(tg_normals_compute_shader_uniform_buffer), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
         ((tg_normals_compute_shader_uniform_buffer*)uniform_buffer.p_mapped_device_memory)->vertex_float_count = sizeof(tg_vertex_3d) / sizeof(f32);
         ((tg_normals_compute_shader_uniform_buffer*)uniform_buffer.p_mapped_device_memory)->offset_floats_position = offsetof(tg_vertex_3d, position) / sizeof(f32);
         ((tg_normals_compute_shader_uniform_buffer*)uniform_buffer.p_mapped_device_memory)->offset_floats_normal = offsetof(tg_vertex_3d, normal) / sizeof(f32);
@@ -89,11 +87,13 @@ void tg_mesh_recalculate_normals(u32 vertex_count, u32 index_count, const u16* p
 
         tg_vulkan_descriptor_set_update_storage_buffer(descriptor.descriptor_set, p_staging_buffer->buffer, 0);
         tg_vulkan_descriptor_set_update_uniform_buffer(descriptor.descriptor_set, uniform_buffer.buffer, 1);
-        
+
         tg_vulkan_command_buffer_begin(command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
-        vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
-        vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_layout, 0, 1, &descriptor.descriptor_set, 0, TG_NULL);
-        vkCmdDispatch(command_buffer, vertex_count, 1, 1);
+        {
+            vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
+            vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_layout, 0, 1, &descriptor.descriptor_set, 0, TG_NULL);
+            vkCmdDispatch(command_buffer, vertex_count, 1, 1);
+        }
         tg_vulkan_command_buffer_end_and_submit(command_buffer, &compute_queue);
 
 
@@ -185,67 +185,64 @@ tg_mesh_h tg_mesh_create(u32 vertex_count, const v3* p_positions, const v3* p_no
     const u32 ibo_size = index_count * sizeof(u16);// TODO: u16
 
     staging_buffer = tg_vulkan_buffer_create(vbo_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+    // positions
+    for (u32 i = 0; i < vertex_count; i++)
     {
-        // positions
+        ((tg_vertex_3d*)staging_buffer.p_mapped_device_memory)[i].position = p_positions[i];
+    }
+    // uvs
+    if (p_uvs)
+    {
         for (u32 i = 0; i < vertex_count; i++)
         {
-            ((tg_vertex_3d*)staging_buffer.p_mapped_device_memory)[i].position = p_positions[i];
-        }
-
-        // uvs
-        if (p_uvs)
-        {
-            for (u32 i = 0; i < vertex_count; i++)
-            {
-                ((tg_vertex_3d*)staging_buffer.p_mapped_device_memory)[i].uv = p_uvs[i];
-            }
-        }
-        else
-        {
-            for (u32 i = 0; i < vertex_count; i++)
-            {
-                ((tg_vertex_3d*)staging_buffer.p_mapped_device_memory)[i].uv = (v2){ 0.0f, 0.0f };
-            }
-        }
-
-        // normals
-        if (p_normals)
-        {
-            for (u32 i = 0; i < vertex_count; i++)
-            {
-                ((tg_vertex_3d*)staging_buffer.p_mapped_device_memory)[i].normal = p_normals[i];
-            }
-        }
-        else
-        {
-            tg_mesh_recalculate_normals(vertex_count, index_count, p_indices, &staging_buffer);
-        }
-
-        // tangents, bitangents
-        if (p_uvs)
-        {
-            if (p_tangents)
-            {
-                for (u32 i = 0; i < vertex_count; i++)
-                {
-                    ((tg_vertex_3d*)staging_buffer.p_mapped_device_memory)[i].tangent = p_tangents[i];
-                }
-                tg_mesh_recalculate_bitangents(vertex_count, (tg_vertex_3d*)staging_buffer.p_mapped_device_memory);
-            }
-            else
-            {
-                tg_mesh_recalculate_tangents_bitangents(vertex_count, index_count, p_indices, (tg_vertex_3d*)staging_buffer.p_mapped_device_memory);
-            }
-        }
-        else
-        {
-            for (u32 i = 0; i < vertex_count; i++)
-            {
-                ((tg_vertex_3d*)staging_buffer.p_mapped_device_memory)[i].tangent = (v3){ 0.0f, 0.0f, 0.0f };
-                ((tg_vertex_3d*)staging_buffer.p_mapped_device_memory)[i].bitangent = (v3){ 0.0f, 0.0f, 0.0f };
-            }
+            ((tg_vertex_3d*)staging_buffer.p_mapped_device_memory)[i].uv = p_uvs[i];
         }
     }
+    else
+    {
+        for (u32 i = 0; i < vertex_count; i++)
+        {
+            ((tg_vertex_3d*)staging_buffer.p_mapped_device_memory)[i].uv = (v2){ 0.0f, 0.0f };
+        }
+    }
+    // normals
+    if (p_normals)
+    {
+        for (u32 i = 0; i < vertex_count; i++)
+        {
+            ((tg_vertex_3d*)staging_buffer.p_mapped_device_memory)[i].normal = p_normals[i];
+        }
+    }
+    else
+    {
+        tg_mesh_recalculate_normals(vertex_count, index_count, p_indices, &staging_buffer);
+    }
+    // tangents, bitangents
+    if (p_uvs)
+    {
+        if (p_tangents)
+        {
+            for (u32 i = 0; i < vertex_count; i++)
+            {
+                ((tg_vertex_3d*)staging_buffer.p_mapped_device_memory)[i].tangent = p_tangents[i];
+            }
+            tg_mesh_recalculate_bitangents(vertex_count, (tg_vertex_3d*)staging_buffer.p_mapped_device_memory);
+        }
+        else
+        {
+            tg_mesh_recalculate_tangents_bitangents(vertex_count, index_count, p_indices, (tg_vertex_3d*)staging_buffer.p_mapped_device_memory);
+        }
+    }
+    else
+    {
+        for (u32 i = 0; i < vertex_count; i++)
+        {
+            ((tg_vertex_3d*)staging_buffer.p_mapped_device_memory)[i].tangent = (v3){ 0.0f, 0.0f, 0.0f };
+            ((tg_vertex_3d*)staging_buffer.p_mapped_device_memory)[i].bitangent = (v3){ 0.0f, 0.0f, 0.0f };
+        }
+    }
+
     mesh_h->vbo = tg_vulkan_buffer_create(vbo_size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     tg_vulkan_buffer_copy(vbo_size, staging_buffer.buffer, mesh_h->vbo.buffer);
     tg_vulkan_buffer_destroy(&staging_buffer);

@@ -223,20 +223,19 @@ int CALLBACK WinMain(_In_ HINSTANCE instance_h, _In_opt_ HINSTANCE prev_instance
 
     WNDCLASSEXA window_class_info   = { 0 };
     window_class_info.lpszClassName = window_class_id;
-    {
-        window_class_info.cbSize = sizeof(window_class_info);
-        window_class_info.style = 0;
-        window_class_info.lpfnWndProc = DefWindowProcA;
-        window_class_info.cbClsExtra = 0;
-        window_class_info.cbWndExtra = 0;
-        window_class_info.hInstance = instance_h;
-        window_class_info.hIcon = TG_NULL;
-        window_class_info.hCursor = LoadCursor(TG_NULL, IDC_ARROW);
-        window_class_info.hbrBackground = TG_NULL;
-        window_class_info.lpszMenuName = TG_NULL;
-        window_class_info.lpszClassName = window_class_id;
-        window_class_info.hIconSm = TG_NULL;
-    }
+    window_class_info.cbSize = sizeof(window_class_info);
+    window_class_info.style = 0;
+    window_class_info.lpfnWndProc = DefWindowProcA;
+    window_class_info.cbClsExtra = 0;
+    window_class_info.cbWndExtra = 0;
+    window_class_info.hInstance = instance_h;
+    window_class_info.hIcon = TG_NULL;
+    window_class_info.hCursor = LoadCursor(TG_NULL, IDC_ARROW);
+    window_class_info.hbrBackground = TG_NULL;
+    window_class_info.lpszMenuName = TG_NULL;
+    window_class_info.lpszClassName = window_class_id;
+    window_class_info.hIconSm = TG_NULL;
+
     const ATOM atom = RegisterClassExA(&window_class_info);
     TG_ASSERT(atom);
 
