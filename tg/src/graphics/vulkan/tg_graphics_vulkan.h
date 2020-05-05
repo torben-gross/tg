@@ -427,7 +427,7 @@ VkSamplerAddressMode          tg_vulkan_image_convert_address_mode(tg_image_addr
 
 VkPhysicalDeviceProperties    tg_vulkan_physical_device_get_properties();
 
-VkPipelineLayout              tg_vulkan_pipeline_layout_create(u32 descriptor_set_layout_count, const VkDescriptorSetLayout* descriptor_set_layouts, u32 push_constant_range_count, const VkPushConstantRange* push_constant_ranges);
+VkPipelineLayout              tg_vulkan_pipeline_layout_create(u32 descriptor_set_layout_count, const VkDescriptorSetLayout* p_descriptor_set_layouts, u32 push_constant_range_count, const VkPushConstantRange* p_push_constant_ranges);
 void                          tg_vulkan_pipeline_layout_destroy(VkPipelineLayout pipeline_layout);
 
 VkRenderPass                  tg_vulkan_render_pass_create(u32 attachment_count, const VkAttachmentDescription* p_attachments, u32 subpass_count, const VkSubpassDescription* p_subpasses, u32 dependency_count, const VkSubpassDependency* p_dependencies);

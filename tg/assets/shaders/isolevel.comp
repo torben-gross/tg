@@ -3,21 +3,11 @@
 
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 
-const uint     vertices_per_chunk_x = 16;
-const uint     vertices_per_chunk_y = 16;
-const uint     vertices_per_chunk_z = 16;
-const float    cell_stride_x = 1.1;
-const float    cell_stride_y = 1.1;
-const float    cell_stride_z = 1.1;
-const float    noise_scale_x = 0.1;
-const float    noise_scale_y = 0.1;
-const float    noise_scale_z = 0.1;
-
 layout(set = 0, binding = 0) uniform chunk_block
 {
-    uint    chunk_index_x;
-    uint    chunk_index_y;
-    uint    chunk_index_z;
+    int    chunk_index_x;
+    int    chunk_index_y;
+    int    chunk_index_z;
 };
 
 layout(set = 0, binding = 1, r32f) uniform image3D isolevels;
@@ -25,6 +15,14 @@ layout(set = 0, binding = 1, r32f) uniform image3D isolevels;
 int fast_floor(float v)
 {
 	return v > 0.0 ? int(v) : (int(v) - 1);
+}
+
+float grad(int hash, float x, float y, float z)
+{
+	int h = hash & 15;
+	float u = h < 8 ? x : y;
+	float v = h < 4 ? y : h == 12 || h == 14 ? x : z;
+	return ((h & 1) != 0 ? -u : u) + ((h & 2) != 0 ? -v : v);
 }
 
 float simplex_noise(float x, float y, float z)
@@ -127,10 +125,6 @@ float simplex_noise(float x, float y, float z)
 	const int ii = i & 255;
 	const int jj = j & 255;
 	const int kk = k & 255;
-	const int gi0 = permutation_table[ii      + permutation_table[jj      + permutation_table[kk     ]]] % 12;
-	const int gi1 = permutation_table[ii + i1 + permutation_table[jj + j1 + permutation_table[kk + k1]]] % 12;
-	const int gi2 = permutation_table[ii + i2 + permutation_table[jj + j2 + permutation_table[kk + k2]]] % 12;
-	const int gi3 = permutation_table[ii +  1 + permutation_table[jj +  1 + permutation_table[kk +  1]]] % 12;
 
 	float n0, n1, n2, n3;
 
@@ -142,8 +136,7 @@ float simplex_noise(float x, float y, float z)
 	else
 	{
 		t0 *= t0;
-		const float dot = float(gradient_table[gi0 * 3 + 0]) * x0 + float(gradient_table[gi0 * 3 + 1]) * y0 + float(gradient_table[gi0 * 3 + 2]) * z0;
-		n0 = t0 * t0 * dot;
+		n0 = t0 * t0 * grad(permutation_table[ii + permutation_table[jj + permutation_table[kk]]], x0, y0, z0);
 	}
 
 	float t1 = 0.5 - x1 * x1 - y1 * y1 - z1 * z1;
@@ -154,8 +147,7 @@ float simplex_noise(float x, float y, float z)
 	else
 	{
 		t1 *= t1;
-		const float dot = float(gradient_table[gi1 * 3 + 0]) * x1 + float(gradient_table[gi1 * 3 + 1]) * y1 + float(gradient_table[gi1 * 3 + 2]) * z1;
-		n1 = t1 * t1 * dot;
+		n1 = t1 * t1 * grad(permutation_table[ii + i1 + permutation_table[jj + j1 + permutation_table[kk + k1]]], x1, y1, z1);
 	}
 
 	float t2 = 0.5 - x2 * x2 - y2 * y2 - z2 * z2;
@@ -166,8 +158,7 @@ float simplex_noise(float x, float y, float z)
 	else
 	{
 		t2 *= t2;
-		const float dot = float(gradient_table[gi2 * 3 + 0]) * x2 + float(gradient_table[gi2 * 3 + 1]) * y2 + float(gradient_table[gi2 * 3 + 2]) * z2;
-		n2 = t2 * t2 * dot;
+		n2 = t2 * t2 * grad(permutation_table[ii + i2 + permutation_table[jj + j2 + permutation_table[kk + k2]]], x2, y2, z2);
 	}
 
 	float t3 = 0.5 - x3 * x3 - y3 * y3 - z3 * z3;
@@ -178,8 +169,7 @@ float simplex_noise(float x, float y, float z)
 	else
 	{
 		t3 *= t3;
-		const float dot = float(gradient_table[gi3 * 3 + 0]) * x3 + float(gradient_table[gi3 * 3 + 1]) * y3 + float(gradient_table[gi3 * 3 + 2]) * z3;
-		n3 = t3 * t3 * dot;
+		n3 = t3 * t3 * grad(permutation_table[ii + 1 + permutation_table[jj + 1 + permutation_table[kk + 1]]], x3, y3, z3);
 	}
 
 	return 32.0 * (n0 + n1 + n2 + n3);
@@ -191,10 +181,25 @@ void main()
 	const uint y = gl_GlobalInvocationID.y;
 	const uint z = gl_GlobalInvocationID.z;
 
-    const float noise_x = (float(vertices_per_chunk_x - 1) * float(chunk_index_x) + float(x)) * noise_scale_x;
-    const float noise_y = (float(vertices_per_chunk_y - 1) * float(chunk_index_y) + float(y)) * noise_scale_y;
-    const float noise_z = (float(vertices_per_chunk_z - 1) * float(chunk_index_z) + float(z)) * noise_scale_z;
-	const float noise = simplex_noise(noise_x, noise_y, noise_z);
+	const uint vertices_per_chunk_x = 17;
+	const uint vertices_per_chunk_y = 17;
+	const uint vertices_per_chunk_z = 17;
 
-	imageStore(isolevels, ivec3(x, y, vertices_per_chunk_z - 1 - z), vec4(noise));
+	const int bias = 1024; // TODO: why do it need bias? or rather, why do negative values for noise_x or noise_y result in cliffs?
+    const float base_x = (16.0 * float(chunk_index_x + bias) + float(x));
+    const float base_y = (16.0 * float(chunk_index_y + bias) + float(y));
+    const float base_z = (16.0 * float(chunk_index_z + bias) + float(z));
+
+	const float n_hills0 = simplex_noise(base_x * 0.02, 0.0, base_z * 0.02);
+	const float n_hills1 = simplex_noise(base_x * 0.2, 0.0, base_z * 0.2);
+	const float n_hills = mix(n_hills0, n_hills1, 0.1);
+
+	const float s_caves = 0.06;
+	const float n_caves = simplex_noise(s_caves * base_x, s_caves * base_y, s_caves * base_z);
+
+	const float n = n_hills + (n_hills < n_caves ? 0.0 : 0.3 * n_caves);
+
+	float noise = (n * 64.0) - (float(y) + float(chunk_index_y) * (float(vertices_per_chunk_y) - 1.0));
+
+	imageStore(isolevels, ivec3(x, y, z), vec4(noise));
 }

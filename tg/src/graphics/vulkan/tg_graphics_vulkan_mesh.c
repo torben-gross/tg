@@ -270,6 +270,7 @@ tg_mesh_h tg_mesh_create_from_storage_buffer(tg_compute_buffer_h storage_buffer_
     TG_ASSERT(storage_buffer_h);
 
     tg_mesh_h mesh_h = TG_MEMORY_ALLOC(sizeof(*mesh_h));
+    mesh_h->type = TG_HANDLE_TYPE_MESH;
 
     mesh_h->vbo = tg_vulkan_buffer_create(storage_buffer_h->buffer.size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     tg_vulkan_buffer_copy(storage_buffer_h->buffer.size, storage_buffer_h->buffer.buffer, mesh_h->vbo.buffer);

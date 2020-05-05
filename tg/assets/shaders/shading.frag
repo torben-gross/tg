@@ -54,6 +54,9 @@ void main()
                 diffuse += diffuse_strength * point_light_colors[i];
             }
         }
+        vec3 light_direction = normalize(vec3(-0.2, 1.0, 0.2));
+        float diffuse_strength = max(dot(normal, light_direction), 0.0) * 0.1;
+        diffuse += diffuse_strength * vec3(1.0);
 
         // final color assembly
         out_color = vec4((ambient + diffuse), 1.0) * albedo;

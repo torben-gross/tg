@@ -1484,7 +1484,7 @@ VkPhysicalDeviceProperties tg_vulkan_physical_device_get_properties()
 }
 
 
-VkPipelineLayout tg_vulkan_pipeline_layout_create(u32 descriptor_set_layout_count, const VkDescriptorSetLayout* descriptor_set_layouts, u32 push_constant_range_count, const VkPushConstantRange* push_constant_ranges)
+VkPipelineLayout tg_vulkan_pipeline_layout_create(u32 descriptor_set_layout_count, const VkDescriptorSetLayout* p_descriptor_set_layouts, u32 push_constant_range_count, const VkPushConstantRange* p_push_constant_ranges)
 {
     VkPipelineLayout pipeline_layout = VK_NULL_HANDLE;
 
@@ -1493,9 +1493,9 @@ VkPipelineLayout tg_vulkan_pipeline_layout_create(u32 descriptor_set_layout_coun
     pipeline_layout_create_info.pNext = TG_NULL;
     pipeline_layout_create_info.flags = 0;
     pipeline_layout_create_info.setLayoutCount = descriptor_set_layout_count;
-    pipeline_layout_create_info.pSetLayouts = descriptor_set_layouts;
+    pipeline_layout_create_info.pSetLayouts = p_descriptor_set_layouts;
     pipeline_layout_create_info.pushConstantRangeCount = push_constant_range_count;
-    pipeline_layout_create_info.pPushConstantRanges = push_constant_ranges;
+    pipeline_layout_create_info.pPushConstantRanges = p_push_constant_ranges;
 
     VK_CALL(vkCreatePipelineLayout(device, &pipeline_layout_create_info, TG_NULL, &pipeline_layout));
 

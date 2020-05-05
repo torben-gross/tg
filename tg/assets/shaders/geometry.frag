@@ -14,5 +14,6 @@ void main()
 {
     out_position    = v_position;
     out_normal      = vec4(normalize(v_normal), 1.0);
-    out_albedo      = vec4(normalize(v_normal), 1.0) * vec4(0.5) + vec4(1.0);
+    float t         = v_position.y / 64.0;
+    out_albedo      = mix(vec4(1.0, 0.2, 0.4, 1.0), vec4(0.2, 0.0, 1.0, 1.0), t);
 }

@@ -54,6 +54,7 @@ typedef enum tg_depth_image_format
 
 typedef enum tg_handle_type
 {
+	TG_HANDLE_TYPE_INVALID = 0,
 	TG_HANDLE_TYPE_CAMERA,
 	TG_HANDLE_TYPE_COLOR_IMAGE,
 	TG_HANDLE_TYPE_COMPUTE_BUFFER,
@@ -168,8 +169,8 @@ u64                              tg_compute_buffer_size(tg_compute_buffer_h comp
 void*                            tg_compute_buffer_data(tg_compute_buffer_h compute_buffer_h);
 void                             tg_compute_buffer_destroy(tg_compute_buffer_h compute_buffer_h);
 
-tg_compute_shader_h              tg_compute_shader_create(const char* filename, u32 handle_type_count, const tg_handle_type* p_handle_types);
 void                             tg_compute_shader_bind_input(tg_compute_shader_h compute_shader_h, u32 first_handle_index, u32 handle_count, tg_handle* p_handles);
+tg_compute_shader_h              tg_compute_shader_create(const char* filename, u32 handle_type_count, const tg_handle_type* p_handle_types);
 void                             tg_compute_shader_dispatch(tg_compute_shader_h compute_shader_h, u32 group_count_x, u32 group_count_y, u32 group_count_z);
 void                             tg_compute_shader_destroy(tg_compute_shader_h compute_shader_h);
 

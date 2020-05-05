@@ -19,10 +19,11 @@
 
 #define TG_POINT_LIGHT_COUNT       64
 #define TG_CHUNKS_X                8
+#define TG_CHUNKS_Y                4
 #define TG_CHUNKS_Z                8
-#define TG_CHUNK_VERTEX_COUNT_X    16
-#define TG_CHUNK_VERTEX_COUNT_Y    16
-#define TG_CHUNK_VERTEX_COUNT_Z    16
+#define TG_CHUNK_VERTEX_COUNT_X    17
+#define TG_CHUNK_VERTEX_COUNT_Y    17
+#define TG_CHUNK_VERTEX_COUNT_Z    17
 
 
 
@@ -52,16 +53,16 @@ typedef struct tg_debug_info
 
 typedef struct tg_isolevel_uniform_buffer
 {
-    u32    chunk_index_x;
-    u32    chunk_index_y;
-    u32    chunk_index_z;
+    i32    chunk_index_x;
+    i32    chunk_index_y;
+    i32    chunk_index_z;
 } tg_isolevel_uniform_buffer;
 
 typedef struct tg_marching_cubes_uniform_buffer
 {
-    u32    chunk_index_x;
-    u32    chunk_index_y;
-    u32    chunk_index_z;
+    i32    chunk_index_x;
+    i32    chunk_index_y;
+    i32    chunk_index_z;
 } tg_marching_cubes_uniform_buffer;
 
 typedef struct tg_test_deferred
@@ -85,8 +86,6 @@ typedef struct tg_test_deferred
     tg_entity                      quad_entity;
     tg_mesh_h                      ground_mesh_h;
     tg_entity                      ground_entity;
-    tg_mesh_h*                     p_chunk_meshes;
-    tg_entity*                     p_chunk_entities;
     f32                            quad_offset;
     f32                            dtsum;
 } tg_test_deferred;
@@ -215,16 +214,13 @@ void tg_application_internal_game_3d_create()
 
     test_deferred.ground_mesh_h = tg_mesh_create(4, p_ground_positions, TG_NULL, p_uvs, TG_NULL, 6, p_indices);
     test_deferred.ground_entity = tg_entity_create(&test_deferred.scene, test_deferred.ground_mesh_h, test_deferred.default_material_h);
-    tg_list_insert(&test_deferred.entities, &test_deferred.ground_entity);
+    //tg_list_insert(&test_deferred.entities, &test_deferred.ground_entity);
 
 
 
 
 
 
-
-    const f32 cell_stride = 1.1f;
-    const f32 noise_scale = 0.1f;
 
     tg_uniform_buffer_h isolevel_uniform_buffer_h = tg_uniform_buffer_create(sizeof(tg_isolevel_uniform_buffer));
     tg_isolevel_uniform_buffer* p_isolevel_uniform_buffer_data = tg_uniform_buffer_data(isolevel_uniform_buffer_h);
@@ -263,34 +259,28 @@ void tg_application_internal_game_3d_create()
     tg_handle p_triangles_to_vbo_handles[1] = { marching_cubes_compute_buffer_h };
     tg_compute_shader_bind_input(triangles_to_vbo_compute_shader_h, 0, 1, p_triangles_to_vbo_handles);
 
-
-
-    test_deferred.p_chunk_meshes = TG_MEMORY_ALLOC(TG_CHUNKS_X * TG_CHUNKS_X * sizeof(*test_deferred.p_chunk_meshes));
-    test_deferred.p_chunk_entities = TG_MEMORY_ALLOC(TG_CHUNKS_X * TG_CHUNKS_Z * sizeof(*test_deferred.p_chunk_entities));
-
-
-
-    for (u32 chunk_x = 0; chunk_x < TG_CHUNKS_X; chunk_x++)
+    for (i32 chunk_x = -6; chunk_x < 6; chunk_x++)
     {
-        for (u32 chunk_z = 0; chunk_z < TG_CHUNKS_Z; chunk_z++)
+        for (i32 chunk_y = -2; chunk_y < 2; chunk_y++)
         {
-            p_isolevel_uniform_buffer_data->chunk_index_x = chunk_x;
-            p_isolevel_uniform_buffer_data->chunk_index_y = 0;
-            p_isolevel_uniform_buffer_data->chunk_index_z = chunk_z;
-            tg_compute_shader_dispatch(isolevel_compute_shader_h, TG_CHUNK_VERTEX_COUNT_X, TG_CHUNK_VERTEX_COUNT_Y, TG_CHUNK_VERTEX_COUNT_Z);
-            p_marching_cubes_uniform_buffer_data->chunk_index_x = chunk_x;
-            p_marching_cubes_uniform_buffer_data->chunk_index_y = 0;
-            p_marching_cubes_uniform_buffer_data->chunk_index_z = chunk_z;
-            tg_compute_shader_dispatch(marching_cubes_compute_shader_h, TG_CHUNK_VERTEX_COUNT_X - 1, TG_CHUNK_VERTEX_COUNT_X - 1, TG_CHUNK_VERTEX_COUNT_X - 1);
-            tg_compute_shader_dispatch(triangles_to_vbo_compute_shader_h, 16875 * (TG_CHUNK_VERTEX_COUNT_X - 1), 1, 1);
+            for (i32 chunk_z = -6; chunk_z < 6; chunk_z++)
+            {
+                p_isolevel_uniform_buffer_data->chunk_index_x = chunk_x;
+                p_isolevel_uniform_buffer_data->chunk_index_y = chunk_y;
+                p_isolevel_uniform_buffer_data->chunk_index_z = chunk_z;
+                tg_compute_shader_dispatch(isolevel_compute_shader_h, TG_CHUNK_VERTEX_COUNT_X, TG_CHUNK_VERTEX_COUNT_Y, TG_CHUNK_VERTEX_COUNT_Z);
+                p_marching_cubes_uniform_buffer_data->chunk_index_x = chunk_x;
+                p_marching_cubes_uniform_buffer_data->chunk_index_y = chunk_y;
+                p_marching_cubes_uniform_buffer_data->chunk_index_z = chunk_z;
+                tg_compute_shader_dispatch(marching_cubes_compute_shader_h, TG_CHUNK_VERTEX_COUNT_X - 1, TG_CHUNK_VERTEX_COUNT_X - 1, TG_CHUNK_VERTEX_COUNT_X - 1);
+                tg_compute_shader_dispatch(triangles_to_vbo_compute_shader_h, 5 * (TG_CHUNK_VERTEX_COUNT_X - 1) * (TG_CHUNK_VERTEX_COUNT_X - 1) * (TG_CHUNK_VERTEX_COUNT_X - 1), 1, 1);
 
-            tg_mesh_h chunk_mesh_h = tg_mesh_create_from_storage_buffer(marching_cubes_compute_buffer_h);
-            tg_entity chunk_entity = tg_entity_create(&test_deferred.scene, chunk_mesh_h, test_deferred.default_material_h);
-            tg_list_insert(&test_deferred.entities, &chunk_entity);
-
-            test_deferred.p_chunk_entities[chunk_z * TG_CHUNKS_X + chunk_x] = chunk_entity;
-            test_deferred.p_chunk_meshes[chunk_z * TG_CHUNKS_X + chunk_x] = chunk_mesh_h;
-            tg_storage_image_3d_clear(isolevel_storage_image_3d_h);
+                tg_mesh_h chunk_mesh_h = tg_mesh_create_from_storage_buffer(marching_cubes_compute_buffer_h);
+                tg_entity chunk_entity = tg_entity_create(&test_deferred.scene, chunk_mesh_h, test_deferred.default_material_h);
+                tg_list_insert(&test_deferred.entities, &chunk_entity);
+                
+                tg_storage_image_3d_clear(isolevel_storage_image_3d_h);
+            }
         }
     }
     tg_compute_shader_destroy(isolevel_compute_shader_h);
@@ -412,14 +402,6 @@ void tg_application_internal_game_3d_destroy()
     {
         tg_color_image_destroy(test_deferred.textures_h[i]);
     }
-
-    for (u32 i = 0; i < TG_CHUNKS_X * TG_CHUNKS_Z; i++)
-    {
-        tg_entity_destroy(&test_deferred.p_chunk_entities[i]);
-        tg_mesh_destroy(test_deferred.p_chunk_meshes[i]);
-    }
-    TG_MEMORY_FREE(test_deferred.p_chunk_entities);
-    TG_MEMORY_FREE(test_deferred.p_chunk_meshes);
 
     tg_entity_destroy(&test_deferred.quad_entity);
     tg_entity_destroy(&test_deferred.ground_entity);

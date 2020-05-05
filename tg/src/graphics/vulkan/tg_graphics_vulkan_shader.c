@@ -6,6 +6,14 @@
 
 
 
+void tg_compute_shader_bind_input(tg_compute_shader_h compute_shader_h, u32 first_handle_index, u32 handle_count, tg_handle* p_handles)
+{
+	for (u32 i = first_handle_index; i < first_handle_index + handle_count; i++)
+	{
+		tg_vulkan_descriptor_set_update(compute_shader_h->compute_shader.descriptor.descriptor_set, p_handles[i], i);
+	}
+}
+
 tg_compute_shader_h tg_compute_shader_create(const char* filename, u32 handle_type_count, const tg_handle_type* p_handle_types)
 {
 	TG_ASSERT(filename && handle_type_count && p_handle_types);
@@ -29,14 +37,6 @@ tg_compute_shader_h tg_compute_shader_create(const char* filename, u32 handle_ty
 	TG_MEMORY_FREE(p_descriptor_set_layout_bindings);
 
 	return compute_shader_h;
-}
-
-void tg_compute_shader_bind_input(tg_compute_shader_h compute_shader_h, u32 first_handle_index, u32 handle_count, tg_handle* p_handles)
-{
-	for (u32 i = first_handle_index; i < first_handle_index + handle_count; i++)
-	{
-		tg_vulkan_descriptor_set_update(compute_shader_h->compute_shader.descriptor.descriptor_set, p_handles[i], i);
-	}
 }
 
 void tg_compute_shader_dispatch(tg_compute_shader_h compute_shader_h, u32 group_count_x, u32 group_count_y, u32 group_count_z)
