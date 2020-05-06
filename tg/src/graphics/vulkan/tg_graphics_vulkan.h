@@ -173,14 +173,6 @@ typedef struct tg_deferred_renderer_light_setup_uniform_buffer
     v4     point_light_colors[TG_DEFERRED_RENDERER_SHADING_PASS_MAX_POINT_LIGHTS];
 } tg_deferred_renderer_light_setup_uniform_buffer;
 
-typedef struct tg_deferred_renderer_copy_image_compute_buffer // TODO: this still used?
-{
-    u32    width;
-    u32    height;
-    u32    padding[2];
-    v4     data[0];
-} tg_deferred_renderer_copy_image_compute_buffer;
-
 
 
 typedef struct tg_color_image
@@ -195,12 +187,6 @@ typedef struct tg_color_image
     VkImageView       image_view;
     VkSampler         sampler;
 } tg_color_image;
-
-typedef struct tg_compute_buffer
-{
-    tg_handle_type      type;
-    tg_vulkan_buffer    buffer;
-} tg_compute_buffer;
 
 typedef struct tg_compute_shader
 {
@@ -298,6 +284,12 @@ typedef struct tg_mesh
     tg_vulkan_buffer    vbo;
     tg_vulkan_buffer    ibo;
 } tg_mesh;
+
+typedef struct tg_storage_buffer
+{
+    tg_handle_type      type;
+    tg_vulkan_buffer    buffer;
+} tg_storage_buffer;
 
 typedef struct tg_storage_image_3d
 {

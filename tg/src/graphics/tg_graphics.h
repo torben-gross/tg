@@ -12,7 +12,6 @@ TG_DECLARE_TYPE(tg_scene);
 
 TG_DECLARE_HANDLE(tg_camera);
 TG_DECLARE_HANDLE(tg_color_image);
-TG_DECLARE_HANDLE(tg_compute_buffer);
 TG_DECLARE_HANDLE(tg_compute_shader);
 TG_DECLARE_HANDLE(tg_deferred_renderer);
 TG_DECLARE_HANDLE(tg_depth_image);
@@ -23,6 +22,7 @@ TG_DECLARE_HANDLE(tg_material);
 TG_DECLARE_HANDLE(tg_mesh);
 TG_DECLARE_HANDLE(tg_index_buffer);
 TG_DECLARE_HANDLE(tg_render_target);
+TG_DECLARE_HANDLE(tg_storage_buffer);
 TG_DECLARE_HANDLE(tg_storage_image_3d);
 TG_DECLARE_HANDLE(tg_texture_atlas);
 TG_DECLARE_HANDLE(tg_uniform_buffer);
@@ -56,8 +56,8 @@ typedef enum tg_handle_type
 {
 	TG_HANDLE_TYPE_INVALID = 0,
 	TG_HANDLE_TYPE_CAMERA,
+	TG_HANDLE_TYPE_STORAGE_BUFFER,
 	TG_HANDLE_TYPE_COLOR_IMAGE,
-	TG_HANDLE_TYPE_COMPUTE_BUFFER,
 	TG_HANDLE_TYPE_COMPUTE_SHADER,
 	TG_HANDLE_TYPE_DEPTH_IMAGE,
 	TG_HANDLE_TYPE_ENTITY_GRAPHICS_DATA_PTR,
@@ -164,10 +164,10 @@ tg_color_image_h                 tg_color_image_load(const char* p_filename);
 tg_color_image_h                 tg_color_image_create(const tg_color_image_create_info* p_color_image_create_info);
 void                             tg_color_image_destroy(tg_color_image_h color_image_h);
 
-tg_compute_buffer_h              tg_compute_buffer_create(u64 size, b32 visible);
-u64                              tg_compute_buffer_size(tg_compute_buffer_h compute_buffer_h);
-void*                            tg_compute_buffer_data(tg_compute_buffer_h compute_buffer_h);
-void                             tg_compute_buffer_destroy(tg_compute_buffer_h compute_buffer_h);
+tg_storage_buffer_h              tg_storage_buffer_create(u64 size, b32 visible);
+u64                              tg_storage_buffer_size(tg_storage_buffer_h storage_buffer_h);
+void*                            tg_storage_buffer_data(tg_storage_buffer_h storage_buffer_h);
+void                             tg_storage_buffer_destroy(tg_storage_buffer_h storage_buffer_h);
 
 void                             tg_compute_shader_bind_input(tg_compute_shader_h compute_shader_h, u32 first_handle_index, u32 handle_count, tg_handle* p_handles);
 tg_compute_shader_h              tg_compute_shader_create(const char* filename, u32 handle_type_count, const tg_handle_type* p_handle_types);
@@ -191,10 +191,10 @@ b32                              tg_material_is_deferred(tg_material_h material_
 b32                              tg_material_is_forward(tg_material_h material_h);
 
 tg_mesh_h                        tg_mesh_create(u32 vertex_count, const v3* p_positions, const v3* p_normals, const v2* p_uvs, const v3* p_tangents, u32 index_count, const u16* p_indices);
-tg_mesh_h                        tg_mesh_create_from_storage_buffer(tg_compute_buffer_h storage_buffer_h);
+tg_mesh_h                        tg_mesh_create_from_storage_buffer(tg_storage_buffer_h storage_buffer_h);
 void                             tg_mesh_destroy(tg_mesh_h mesh_h);
 
-void                             tg_storage_image_3d_copy_to_storage_buffer(tg_storage_image_3d_h storage_image_3d_h, tg_compute_buffer_h compute_buffer_h);
+void                             tg_storage_image_3d_copy_to_storage_buffer(tg_storage_image_3d_h storage_image_3d_h, tg_storage_buffer_h storage_buffer_h);
 void                             tg_storage_image_3d_clear(tg_storage_image_3d_h storage_image_3d_h);
 tg_storage_image_3d_h            tg_storage_image_3d_create(u32 width, u32 height, u32 depth, tg_storage_image_format format);
 void                             tg_storage_image_3d_destroy(tg_storage_image_3d_h storage_image_3d_h);

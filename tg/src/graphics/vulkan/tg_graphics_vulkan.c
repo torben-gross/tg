@@ -938,11 +938,6 @@ void tg_vulkan_descriptor_set_update(VkDescriptorSet descriptor_set, tg_handle h
         tg_color_image_h color_image_h = (tg_color_image_h)handle;
         tg_vulkan_descriptor_set_update_color_image(descriptor_set, color_image_h, dst_binding);
     } break;
-    case TG_HANDLE_TYPE_COMPUTE_BUFFER:
-    {
-        tg_compute_buffer_h compute_buffer_h = (tg_compute_buffer_h)handle;
-        tg_vulkan_descriptor_set_update_storage_buffer(descriptor_set, compute_buffer_h->buffer.buffer, dst_binding);
-    } break;
     case TG_HANDLE_TYPE_DEPTH_IMAGE:
     {
         tg_depth_image_h depth_image_h = (tg_depth_image_h)handle;
@@ -952,6 +947,11 @@ void tg_vulkan_descriptor_set_update(VkDescriptorSet descriptor_set, tg_handle h
     {
         tg_render_target_h render_target_h = (tg_render_target_h)handle;
         tg_vulkan_descriptor_set_update_render_target(descriptor_set, render_target_h, dst_binding);
+    } break;
+    case TG_HANDLE_TYPE_STORAGE_BUFFER:
+    {
+        tg_storage_buffer_h storage_buffer_h = (tg_storage_buffer_h)handle;
+        tg_vulkan_descriptor_set_update_storage_buffer(descriptor_set, storage_buffer_h->buffer.buffer, dst_binding);
     } break;
     case TG_HANDLE_TYPE_STORAGE_IMAGE_3D:
     {
@@ -1423,7 +1423,6 @@ VkDescriptorType tg_vulkan_handle_type_convert_to_descriptor_type(tg_handle_type
     {
     case TG_HANDLE_TYPE_CAMERA:                   break;
     case TG_HANDLE_TYPE_COLOR_IMAGE:              return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    case TG_HANDLE_TYPE_COMPUTE_BUFFER:           return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     case TG_HANDLE_TYPE_COMPUTE_SHADER:           break;
     case TG_HANDLE_TYPE_DEPTH_IMAGE:              return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     case TG_HANDLE_TYPE_ENTITY_GRAPHICS_DATA_PTR: break;
@@ -1434,6 +1433,7 @@ VkDescriptorType tg_vulkan_handle_type_convert_to_descriptor_type(tg_handle_type
     case TG_HANDLE_TYPE_DEFERRED_RENDERER:        break;
     case TG_HANDLE_TYPE_FORWARD_RENDERER:         break;
     case TG_HANDLE_TYPE_RENDER_TARGET:            return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    case TG_HANDLE_TYPE_STORAGE_BUFFER:           return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     case TG_HANDLE_TYPE_STORAGE_IMAGE_3D:         return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
     case TG_HANDLE_TYPE_TEXTURE_ATLAS:            return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     case TG_HANDLE_TYPE_UNIFORM_BUFFER:           return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -2288,7 +2288,7 @@ void tg_graphics_init()
 {
 #ifdef TG_DEBUG
     // TODO: relative asset path?
-    char* p_system_buffer = "del \"assets\\shaders\\*.spv\"";
+    char* p_system_buffer = "cd assets && del /s /q *.spv";
     TG_ASSERT(system(p_system_buffer) != -1);
 #endif
 

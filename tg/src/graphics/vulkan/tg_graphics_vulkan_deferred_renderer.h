@@ -36,7 +36,7 @@ typedef struct tg_deferred_renderer
     struct
     {
         tg_vulkan_compute_shader        acquire_exposure_compute_shader;
-        tg_vulkan_buffer                exposure_compute_buffer;
+        tg_vulkan_buffer                exposure_storage_buffer;
         VkRenderPass                    render_pass;
         VkFramebuffer                   framebuffer;
         tg_vulkan_descriptor            descriptor;

@@ -125,14 +125,14 @@ void tg_depth_image_destroy(tg_depth_image_h depth_image_h)
 
 
 
-void tg_storage_image_3d_copy_to_storage_buffer(tg_storage_image_3d_h storage_image_3d_h, tg_compute_buffer_h compute_buffer_h)
+void tg_storage_image_3d_copy_to_storage_buffer(tg_storage_image_3d_h storage_image_3d_h, tg_storage_buffer_h storage_buffer_h)
 {
-    TG_ASSERT(storage_image_3d_h && compute_buffer_h);
+    TG_ASSERT(storage_image_3d_h && storage_buffer_h);
 
     VkCommandBuffer command_buffer = tg_vulkan_command_buffer_allocate(graphics_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     tg_vulkan_command_buffer_begin(command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
     tg_vulkan_command_buffer_cmd_transition_storage_image_3d_layout(command_buffer, storage_image_3d_h, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
-    tg_vulkan_command_buffer_cmd_copy_storage_image_3d_to_buffer(command_buffer, storage_image_3d_h, compute_buffer_h->buffer.buffer);
+    tg_vulkan_command_buffer_cmd_copy_storage_image_3d_to_buffer(command_buffer, storage_image_3d_h, storage_buffer_h->buffer.buffer);
     tg_vulkan_command_buffer_cmd_transition_storage_image_3d_layout(command_buffer, storage_image_3d_h, VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
     tg_vulkan_command_buffer_end_and_submit(command_buffer, &graphics_queue);
     tg_vulkan_command_buffer_free(graphics_command_pool, command_buffer);

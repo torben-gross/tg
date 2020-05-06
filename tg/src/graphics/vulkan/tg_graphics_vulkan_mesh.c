@@ -265,7 +265,7 @@ tg_mesh_h tg_mesh_create(u32 vertex_count, const v3* p_positions, const v3* p_no
     return mesh_h;
 }
 
-tg_mesh_h tg_mesh_create_from_storage_buffer(tg_compute_buffer_h storage_buffer_h)
+tg_mesh_h tg_mesh_create_from_storage_buffer(tg_storage_buffer_h storage_buffer_h)
 {
     TG_ASSERT(storage_buffer_h);
 

@@ -231,7 +231,7 @@ void tg_application_internal_game_3d_create()
         TG_HANDLE_TYPE_STORAGE_IMAGE_3D
     };
 
-    tg_compute_shader_h isolevel_compute_shader_h = tg_compute_shader_create("shaders/isolevel.comp", 2, p_isolevel_compute_shader_handle_types);
+    tg_compute_shader_h isolevel_compute_shader_h = tg_compute_shader_create("shaders/terrain/isolevel.comp", 2, p_isolevel_compute_shader_handle_types);
     tg_handle p_isolevel_handles[2] = { isolevel_uniform_buffer_h, isolevel_storage_image_3d_h };
     tg_compute_shader_bind_input(isolevel_compute_shader_h, 0, 2, p_isolevel_handles);
 
@@ -239,31 +239,47 @@ void tg_application_internal_game_3d_create()
 
     tg_uniform_buffer_h marching_cubes_uniform_buffer_h = tg_uniform_buffer_create(sizeof(tg_marching_cubes_uniform_buffer));
     tg_marching_cubes_uniform_buffer* p_marching_cubes_uniform_buffer_data = tg_uniform_buffer_data(marching_cubes_uniform_buffer_h);
-    tg_compute_buffer_h marching_cubes_compute_buffer_h = tg_compute_buffer_create((TG_CHUNK_VERTEX_COUNT_X - 1) * (TG_CHUNK_VERTEX_COUNT_Y - 1) * (TG_CHUNK_VERTEX_COUNT_Z - 1) * 15 * sizeof(tg_vertex_3d), TG_TRUE);
-    tg_vertex_3d* p_verts = tg_compute_buffer_data(marching_cubes_compute_buffer_h);
+    tg_storage_buffer_h marching_cubes_storage_buffer_h = tg_storage_buffer_create((TG_CHUNK_VERTEX_COUNT_X - 1) * (TG_CHUNK_VERTEX_COUNT_Y - 1) * (TG_CHUNK_VERTEX_COUNT_Z - 1) * 15 * sizeof(tg_vertex_3d), TG_TRUE);
+    tg_vertex_3d* p_verts = tg_storage_buffer_data(marching_cubes_storage_buffer_h);
 
     const tg_handle_type p_marching_cubes_compute_shader_handle_types[3] = {
         TG_HANDLE_TYPE_UNIFORM_BUFFER,
         TG_HANDLE_TYPE_STORAGE_IMAGE_3D,
-        TG_HANDLE_TYPE_COMPUTE_BUFFER
+        TG_HANDLE_TYPE_STORAGE_BUFFER
     };
 
-    tg_compute_shader_h marching_cubes_compute_shader_h = tg_compute_shader_create("shaders/marching_cubes.comp", 3, p_marching_cubes_compute_shader_handle_types);
-    tg_handle p_compute_shader_handles[3] = { marching_cubes_uniform_buffer_h, isolevel_storage_image_3d_h, marching_cubes_compute_buffer_h };
+    tg_compute_shader_h marching_cubes_compute_shader_h = tg_compute_shader_create("shaders/terrain/marching_cubes.comp", 3, p_marching_cubes_compute_shader_handle_types);
+    tg_handle p_compute_shader_handles[3] = { marching_cubes_uniform_buffer_h, isolevel_storage_image_3d_h, marching_cubes_storage_buffer_h };
     tg_compute_shader_bind_input(marching_cubes_compute_shader_h, 0, 3, p_compute_shader_handles);
 
 
 
-    const tg_handle_type p_triangles_to_vbo_handle_types[1] = { TG_HANDLE_TYPE_COMPUTE_BUFFER };
-    tg_compute_shader_h triangles_to_vbo_compute_shader_h = tg_compute_shader_create("shaders/triangle_fill_vertices.comp", 1, p_triangles_to_vbo_handle_types);
-    tg_handle p_triangles_to_vbo_handles[1] = { marching_cubes_compute_buffer_h };
+    const tg_handle_type p_triangles_to_vbo_handle_types[1] = { TG_HANDLE_TYPE_STORAGE_BUFFER };
+    tg_compute_shader_h triangles_to_vbo_compute_shader_h = tg_compute_shader_create("shaders/terrain/normals.comp", 1, p_triangles_to_vbo_handle_types);
+    tg_handle p_triangles_to_vbo_handles[1] = { marching_cubes_storage_buffer_h };
     tg_compute_shader_bind_input(triangles_to_vbo_compute_shader_h, 0, 1, p_triangles_to_vbo_handles);
 
-    for (i32 chunk_x = -6; chunk_x < 6; chunk_x++)
+
+
+    const tg_handle_type p_compress_handle_types[2] = {
+        TG_HANDLE_TYPE_STORAGE_BUFFER,
+        TG_HANDLE_TYPE_STORAGE_BUFFER
+    };
+    tg_compute_shader_h compress_compute_shader_h = tg_compute_shader_create("shaders/terrain/remove_degenerate_triangles.comp", 2, p_compress_handle_types);
+    tg_storage_buffer_h compress_storage_buffer_h = tg_storage_buffer_create(sizeof(u32) + (TG_CHUNK_VERTEX_COUNT_X - 1) * (TG_CHUNK_VERTEX_COUNT_Y - 1) * (TG_CHUNK_VERTEX_COUNT_Z - 1) * 15 * sizeof(tg_vertex_3d), TG_TRUE);
+    u32* p_t = tg_storage_buffer_data(compress_storage_buffer_h);
+    tg_vertex_3d* p_v = (tg_vertex_3d*)(p_t + 1);
+    tg_handle p_compress_handles[2] = {
+        marching_cubes_storage_buffer_h,
+        compress_storage_buffer_h
+    };
+    tg_compute_shader_bind_input(compress_compute_shader_h, 0, 2, p_compress_handles);
+
+    for (i32 chunk_x = -8; chunk_x < 8; chunk_x++)
     {
         for (i32 chunk_y = -2; chunk_y < 2; chunk_y++)
         {
-            for (i32 chunk_z = -6; chunk_z < 6; chunk_z++)
+            for (i32 chunk_z = -8; chunk_z < 8; chunk_z++)
             {
                 p_isolevel_uniform_buffer_data->chunk_index_x = chunk_x;
                 p_isolevel_uniform_buffer_data->chunk_index_y = chunk_y;
@@ -275,7 +291,10 @@ void tg_application_internal_game_3d_create()
                 tg_compute_shader_dispatch(marching_cubes_compute_shader_h, TG_CHUNK_VERTEX_COUNT_X - 1, TG_CHUNK_VERTEX_COUNT_X - 1, TG_CHUNK_VERTEX_COUNT_X - 1);
                 tg_compute_shader_dispatch(triangles_to_vbo_compute_shader_h, 5 * (TG_CHUNK_VERTEX_COUNT_X - 1) * (TG_CHUNK_VERTEX_COUNT_X - 1) * (TG_CHUNK_VERTEX_COUNT_X - 1), 1, 1);
 
-                tg_mesh_h chunk_mesh_h = tg_mesh_create_from_storage_buffer(marching_cubes_compute_buffer_h);
+                //tg_compute_shader_dispatch(compress_compute_shader_h, 1, 1, 1);
+                //tg_mesh_h chunk_mesh_h = tg_mesh_create(*p_t * 3*3, (v3*)p_v, TG_NULL, TG_NULL, TG_NULL, 0, TG_NULL);
+
+                tg_mesh_h chunk_mesh_h = tg_mesh_create_from_storage_buffer(marching_cubes_storage_buffer_h);
                 tg_entity chunk_entity = tg_entity_create(&test_deferred.scene, chunk_mesh_h, test_deferred.default_material_h);
                 tg_list_insert(&test_deferred.entities, &chunk_entity);
                 
@@ -285,6 +304,43 @@ void tg_application_internal_game_3d_create()
     }
     tg_compute_shader_destroy(isolevel_compute_shader_h);
     tg_uniform_buffer_destroy(isolevel_uniform_buffer_h);
+    
+    /*
+    
+
+
+
+    On create:
+        Generate isolevels
+        for each LOD (each LOD can be created simultaneously, as they use different buffers/buffer-offsets):
+            Generate marching-cubes triangles into VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT
+            That buffer could possibly be a large buffer, that contains all LODs. Rendering will then use offsets for binding the vbo.
+            Generate normals
+            Create mesh
+        Create entity with LOD-meshes and use vkCmdDraw
+
+    On edit:
+        for each LOD (each LOD can be updated simultaneously, as they use different buffers/buffer-offsets):
+            Partially update isolevels
+            Partially regenerate marching-cubes triangles
+            Partially regenerate normals
+            Mesh still doens't need an update...
+
+    Before render:
+        For each mesh:
+            Generate center
+            Generate AABB
+
+    On render:
+        For each entity:
+            Project each point of AABB (8) of LOD0-mesh onto screen
+            Take min/max and generate screen-rectangle
+            if point is outside of screen-aera
+                continue without rendering any LOD
+            Calculate area if screen-rectangle and compare to full screen-area
+            Select mesh LOD accordingly
+    */
+
 }
 
 void tg_application_internal_game_3d_update_and_render(f32 delta_ms)
@@ -392,7 +448,6 @@ void tg_application_internal_game_3d_update_and_render(f32 delta_ms)
     }
     tg_scene_end(&test_deferred.scene);
     tg_camera_present(test_deferred.camera_info.camera_h);
-    //tg_camera_present(test_deferred.secondary_camera_h);
 }
 
 void tg_application_internal_game_3d_destroy()

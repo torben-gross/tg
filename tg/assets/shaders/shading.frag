@@ -55,7 +55,7 @@ void main()
             }
         }
         vec3 light_direction = normalize(vec3(-0.2, 1.0, 0.2));
-        float diffuse_strength = max(dot(normal, light_direction), 0.0) * 0.1;
+        float diffuse_strength = max(dot(normal, light_direction), 0.0) * 0.16;
         diffuse += diffuse_strength * vec3(1.0);
 
         // final color assembly

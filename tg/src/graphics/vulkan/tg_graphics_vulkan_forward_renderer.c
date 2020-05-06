@@ -82,9 +82,6 @@ void tg_forward_renderer_begin(tg_forward_renderer_h forward_renderer_h)
 {
 	TG_ASSERT(forward_renderer_h);
 
-    tg_vulkan_fence_wait(forward_renderer_h->camera_h->render_target.fence);
-    tg_vulkan_fence_reset(forward_renderer_h->camera_h->render_target.fence);
-
     tg_vulkan_command_buffer_begin(forward_renderer_h->shading_pass.command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, TG_NULL);
 
     VkRenderPassBeginInfo render_pass_begin_info = { 0 };
@@ -236,6 +233,9 @@ void tg_forward_renderer_end(tg_forward_renderer_h forward_renderer_h)
         VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
     );
     VK_CALL(vkEndCommandBuffer(forward_renderer_h->shading_pass.command_buffer));
+
+    tg_vulkan_fence_wait(forward_renderer_h->camera_h->render_target.fence);
+    tg_vulkan_fence_reset(forward_renderer_h->camera_h->render_target.fence);
 
     VkSubmitInfo submit_info = { 0 };
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
