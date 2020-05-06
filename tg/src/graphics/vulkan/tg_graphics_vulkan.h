@@ -10,15 +10,15 @@
 #undef far
 
 #ifdef TG_DEBUG
-#define VK_CALL(x) TG_ASSERT(x == VK_SUCCESS)
+#define VK_CALL(x)                                                   TG_ASSERT(x == VK_SUCCESS)
 #else
-#define VK_CALL(x) x
+#define VK_CALL(x)                                                   x
 #endif
 
-#define TG_VULKAN_SURFACE_IMAGE_COUNT    3
-#define TG_VULKAN_COLOR_IMAGE_FORMAT     VK_FORMAT_R8G8B8A8_SRGB // TODO: i dont really need this
-#define TG_VULKAN_COLOR_IMAGE_LAYOUT     VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-#define TG_VULKAN_DEPTH_IMAGE_LAYOUT     VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+#define TG_VULKAN_SURFACE_IMAGE_COUNT                                3
+#define TG_VULKAN_COLOR_IMAGE_FORMAT                                 VK_FORMAT_R8G8B8A8_SRGB // TODO: i dont really need this
+#define TG_VULKAN_COLOR_IMAGE_LAYOUT                                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+#define TG_VULKAN_DEPTH_IMAGE_LAYOUT                                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
 
 
 
@@ -58,6 +58,9 @@
 #define TG_FORWARD_RENDERER_OUTPUT_COLOR_ATTACHMENT_FORMAT           VK_FORMAT_B8G8R8A8_UNORM
 
 
+
+#define TG_VULKAN_MAX_CAMERAS_PER_ENTITY                             4
+#define TG_VULKAN_MAX_ENTITIES_PER_CAMERA                            512
 
 
 
@@ -220,47 +223,54 @@ typedef struct tg_render_target
 
 typedef struct tg_camera
 {
-    tg_handle_type              type;
-    tg_vulkan_buffer            ubo;
-    tg_render_target            render_target;
+    tg_handle_type                   type;
+    tg_vulkan_buffer                 view_projection_ubo;
+    tg_render_target                 render_target;
+    u32                              captured_entity_count;
+    tg_entity_graphics_data_ptr_h    captured_entities[TG_VULKAN_MAX_ENTITIES_PER_CAMERA];
     struct
     {
-        tg_vulkan_buffer        vbo;
-        tg_vulkan_buffer        ibo;
-        VkSemaphore             image_acquired_semaphore;
-        VkSemaphore             semaphore;
-        VkRenderPass            render_pass;
-        VkFramebuffer           p_framebuffers[TG_VULKAN_SURFACE_IMAGE_COUNT];
-        tg_vulkan_descriptor    descriptor;
-        VkShaderModule          vertex_shader;
-        VkShaderModule          fragment_shader;
-        VkPipelineLayout        pipeline_layout;
-        VkPipeline              graphics_pipeline;
-        VkCommandBuffer         p_command_buffers[TG_VULKAN_SURFACE_IMAGE_COUNT];
+        tg_deferred_renderer_h       deferred_renderer_h;
+        tg_forward_renderer_h        forward_renderer_h;
+    } capture_pass;
+    struct
+    {
+        tg_vulkan_buffer             vbo;
+        tg_vulkan_buffer             ibo;
+        VkSemaphore                  image_acquired_semaphore;
+        VkSemaphore                  semaphore;
+        VkRenderPass                 render_pass;
+        VkFramebuffer                p_framebuffers[TG_VULKAN_SURFACE_IMAGE_COUNT];
+        tg_vulkan_descriptor         descriptor;
+        VkShaderModule               vertex_shader;
+        VkShaderModule               fragment_shader;
+        VkPipelineLayout             pipeline_layout;
+        VkPipeline                   graphics_pipeline;
+        VkCommandBuffer              p_command_buffers[TG_VULKAN_SURFACE_IMAGE_COUNT];
     } present_pass;
     struct
     {
-        VkCommandBuffer         command_buffer;
+        VkCommandBuffer              command_buffer;
     } clear_pass;
 } tg_camera;
 
-typedef struct tg_vulkan_entity_scene_info
+typedef struct tg_vulkan_camera_info
 {
-#ifdef TG_DEBUG
-    void*                     renderer_h;
-#endif
+    tg_camera_h               camera_h;
     tg_vulkan_descriptor      descriptor;
     VkPipelineLayout          pipeline_layout;
     VkPipeline                graphics_pipeline;
     VkCommandBuffer           command_buffer;
-} tg_entity_scene_info;
+} tg_vulkan_camera_info;
 
 typedef struct tg_entity_graphics_data_ptr
 {
-    tg_handle_type            type;
-    tg_vulkan_buffer          uniform_buffer;
-    u32                       scene_info_count;
-    tg_entity_scene_info*     p_entity_scene_infos;
+    tg_handle_type           type;
+    tg_mesh_h                mesh_h;
+    tg_material_h            material_h;
+    tg_vulkan_buffer         model_ubo;
+    u32                      camera_info_count;
+    tg_vulkan_camera_info    p_camera_infos[TG_VULKAN_MAX_CAMERAS_PER_ENTITY];
 } tg_entity_graphics_data_ptr;
 
 typedef struct tg_fragment_shader

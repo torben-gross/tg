@@ -2,23 +2,19 @@
 
 #include "graphics/tg_graphics.h"
 #include "memory/tg_memory.h"
-#include "tg_scene.h"
 
 u32 entity_next_id = 0;
 
-tg_entity tg_entity_create(tg_scene* p_scene, tg_mesh_h mesh_h, tg_material_h material_h)
+tg_entity tg_entity_create(tg_mesh_h mesh_h, tg_material_h material_h)
 {
 	TG_ASSERT(mesh_h && material_h);
 
 	tg_entity entity = { 0 };
 	entity.id = entity_next_id++;
 	entity.flags = 0;
-	entity.mesh_h = mesh_h;
-	entity.material_h = material_h;
     entity.transform.position = (v3){ 0.0f, 0.0f, 0.0f };
     entity.transform.position_matrix = tgm_m4_identity();
-	
-	entity.graphics_data_ptr_h = tg_entity_graphics_data_ptr_create(&entity, p_scene);
+	entity.graphics_data_ptr_h = tg_entity_graphics_data_ptr_create(mesh_h, material_h);
 
 	return entity;
 }

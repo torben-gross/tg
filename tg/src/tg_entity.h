@@ -18,8 +18,6 @@ typedef struct tg_entity
 {
 	u32                              id;
 	u32                              flags;
-	tg_mesh_h                        mesh_h;
-	tg_material_h                    material_h;
 	struct
 	{
 		v3                           position;
@@ -31,7 +29,7 @@ typedef struct tg_entity
 
 
 
-tg_entity    tg_entity_create(tg_scene* p_scene, tg_mesh_h mesh_h, tg_material_h material_h);
+tg_entity    tg_entity_create(tg_mesh_h mesh_h, tg_material_h material_h);
 void         tg_entity_destroy(tg_entity *p_entity);
 void         tg_entity_set_position(tg_entity* p_entity, const v3* p_position);
 

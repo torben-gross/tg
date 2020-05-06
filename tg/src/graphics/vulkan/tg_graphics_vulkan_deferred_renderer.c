@@ -166,23 +166,13 @@ void tg_deferred_renderer_internal_init_geometry_pass(tg_deferred_renderer_h def
     deferred_renderer_h->geometry_pass.command_buffer = tg_vulkan_command_buffer_allocate(graphics_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 }
 
-void tg_deferred_renderer_internal_init_shading_pass(tg_deferred_renderer_h deferred_renderer_h, u32 point_light_count, const tg_point_light* p_point_lights)
+void tg_deferred_renderer_internal_init_shading_pass(tg_deferred_renderer_h deferred_renderer_h)
 {
-    TG_ASSERT(deferred_renderer_h && point_light_count <= TG_DEFERRED_RENDERER_SHADING_PASS_MAX_POINT_LIGHTS && (point_light_count == 0 || p_point_lights));
+    TG_ASSERT(deferred_renderer_h);
 
     deferred_renderer_h->shading_pass.point_lights_ubo = tg_vulkan_buffer_create(sizeof(tg_deferred_renderer_light_setup_uniform_buffer), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
     tg_deferred_renderer_light_setup_uniform_buffer* p_light_setup_uniform_buffer = deferred_renderer_h->shading_pass.point_lights_ubo.p_mapped_device_memory;
-    p_light_setup_uniform_buffer->point_light_count = point_light_count;
-    for (u32 i = 0; i < point_light_count; i++)
-    {
-        p_light_setup_uniform_buffer->point_light_positions_radii[i].x = p_point_lights[i].position.x;
-        p_light_setup_uniform_buffer->point_light_positions_radii[i].y = p_point_lights[i].position.y;
-        p_light_setup_uniform_buffer->point_light_positions_radii[i].z = p_point_lights[i].position.z;
-        p_light_setup_uniform_buffer->point_light_positions_radii[i].w = p_point_lights[i].radius;
-        p_light_setup_uniform_buffer->point_light_colors[i].x = p_point_lights[i].color.x;
-        p_light_setup_uniform_buffer->point_light_colors[i].y = p_point_lights[i].color.y;
-        p_light_setup_uniform_buffer->point_light_colors[i].z = p_point_lights[i].color.z;
-    }
+    p_light_setup_uniform_buffer->point_light_count = 0;
 
     tg_vulkan_color_image_create_info vulkan_color_image_create_info = { 0 };
     vulkan_color_image_create_info.width = swapchain_extent.width;
@@ -662,14 +652,14 @@ void tg_deferred_renderer_begin(tg_deferred_renderer_h deferred_renderer_h)
     tg_vulkan_command_buffer_cmd_begin_render_pass(deferred_renderer_h->geometry_pass.command_buffer, deferred_renderer_h->geometry_pass.render_pass, deferred_renderer_h->geometry_pass.framebuffer, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 }
 
-tg_deferred_renderer_h tg_deferred_renderer_create(tg_camera_h camera_h, u32 point_light_count, const tg_point_light* p_point_lights)
+tg_deferred_renderer_h tg_deferred_renderer_create(tg_camera_h camera_h)
 {
     TG_ASSERT(camera_h);
 
     tg_deferred_renderer_h deferred_renderer_h = TG_MEMORY_ALLOC(sizeof(*deferred_renderer_h));
     deferred_renderer_h->camera_h = camera_h;
     tg_deferred_renderer_internal_init_geometry_pass(deferred_renderer_h);
-    tg_deferred_renderer_internal_init_shading_pass(deferred_renderer_h, point_light_count, p_point_lights);
+    tg_deferred_renderer_internal_init_shading_pass(deferred_renderer_h);
     tg_deferred_renderer_internal_init_tone_mapping_pass(deferred_renderer_h);
     return deferred_renderer_h;
 }
@@ -684,11 +674,20 @@ void tg_deferred_renderer_destroy(tg_deferred_renderer_h deferred_renderer_h)
     TG_MEMORY_FREE(deferred_renderer_h);
 }
 
-void tg_deferred_renderer_draw(tg_deferred_renderer_h deferred_renderer_h, tg_entity* p_entity, u32 entity_graphics_data_ptr_index)
+void tg_deferred_renderer_draw(tg_deferred_renderer_h deferred_renderer_h, tg_entity_graphics_data_ptr_h entity_graphics_data_ptr_h)
 {
-    TG_ASSERT(deferred_renderer_h && p_entity && p_entity->graphics_data_ptr_h->p_entity_scene_infos[entity_graphics_data_ptr_index].renderer_h == deferred_renderer_h);
+    TG_ASSERT(deferred_renderer_h && entity_graphics_data_ptr_h);
 
-    vkCmdExecuteCommands(deferred_renderer_h->geometry_pass.command_buffer, 1, &p_entity->graphics_data_ptr_h->p_entity_scene_infos[entity_graphics_data_ptr_index].command_buffer);
+    // TODO: DO NOT SEARCH FOR CAMEREA! move renderer somewhere private and use vulkan directly
+    for (u32 i = 0; i < entity_graphics_data_ptr_h->camera_info_count; i++)
+    {
+        if (entity_graphics_data_ptr_h->p_camera_infos[i].camera_h == deferred_renderer_h->camera_h)
+        {
+            vkCmdExecuteCommands(deferred_renderer_h->geometry_pass.command_buffer, 1, &entity_graphics_data_ptr_h->p_camera_infos[i].command_buffer);
+            return;
+        }
+    }
+    TG_ASSERT(TG_FALSE);
 }
 
 void tg_deferred_renderer_end(tg_deferred_renderer_h deferred_renderer_h)
