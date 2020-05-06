@@ -16,7 +16,7 @@
 #endif
 
 #define TG_VULKAN_SURFACE_IMAGE_COUNT                                3
-#define TG_VULKAN_COLOR_IMAGE_FORMAT                                 VK_FORMAT_R8G8B8A8_SRGB // TODO: i dont really need this
+#define TG_VULKAN_COLOR_IMAGE_FORMAT                                 VK_FORMAT_R8G8B8A8_SRGB
 #define TG_VULKAN_COLOR_IMAGE_LAYOUT                                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
 #define TG_VULKAN_DEPTH_IMAGE_LAYOUT                                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
 
@@ -48,19 +48,8 @@
 
 
 
-
-#define TG_FORWARD_RENDERER_COLOR_ATTACHMENT_COUNT                   1
-#define TG_FORWARD_RENDERER_DEPTH_ATTACHMENT_COUNT                   1
-#define TG_FORWARD_RENDERER_ATTACHMENT_COUNT                         (TG_FORWARD_RENDERER_COLOR_ATTACHMENT_COUNT + TG_FORWARD_RENDERER_DEPTH_ATTACHMENT_COUNT)
-
-#define TG_FORWARD_RENDERER_COLOR_ATTACHMENT_FORMAT                  VK_FORMAT_R16G16B16A16_SFLOAT
-#define TG_FORWARD_RENDERER_DEPTH_ATTACHMENT_FORMAT                  VK_FORMAT_D32_SFLOAT
-#define TG_FORWARD_RENDERER_OUTPUT_COLOR_ATTACHMENT_FORMAT           VK_FORMAT_B8G8R8A8_UNORM
-
-
-
 #define TG_VULKAN_MAX_CAMERAS_PER_ENTITY                             4
-#define TG_VULKAN_MAX_ENTITIES_PER_CAMERA                            512
+#define TG_VULKAN_MAX_ENTITIES_PER_CAMERA                            1024
 
 
 
@@ -79,19 +68,6 @@ typedef struct tg_vulkan_descriptor
     VkDescriptorSet          descriptor_set;
 } tg_vulkan_descriptor;
 
-typedef struct tg_vulkan_color_image_create_info
-{
-    u32                     width;
-    u32                     height;
-    u32                     mip_levels;
-    VkFormat                format;
-    VkFilter                min_filter;
-    VkFilter                mag_filter;
-    VkSamplerAddressMode    address_mode_u;
-    VkSamplerAddressMode    address_mode_v;
-    VkSamplerAddressMode    address_mode_w;
-} tg_vulkan_color_image_create_info;
-
 typedef struct tg_vulkan_buffer
 {
     u64               size;
@@ -107,18 +83,6 @@ typedef struct tg_vulkan_compute_shader
     VkPipelineLayout         pipeline_layout;
     VkPipeline               compute_pipeline;
 } tg_vulkan_compute_shader;
-
-typedef struct tg_vulkan_depth_image_create_info
-{
-    u32                     width;
-    u32                     height;
-    VkFormat                format;
-    VkFilter                min_filter;
-    VkFilter                mag_filter;
-    VkSamplerAddressMode    address_mode_u;
-    VkSamplerAddressMode    address_mode_v;
-    VkSamplerAddressMode    address_mode_w;
-} tg_vulkan_depth_image_create_info;
 
 typedef struct tg_vulkan_graphics_pipeline_create_info
 {
@@ -148,6 +112,32 @@ typedef struct tg_vulkan_queue
     u8         index;
     VkQueue    queue;
 } tg_vulkan_queue;
+
+typedef struct tg_vulkan_sampler_create_info
+{
+    VkFilter                min_filter;
+    VkFilter                mag_filter;
+    VkSamplerAddressMode    address_mode_u;
+    VkSamplerAddressMode    address_mode_v;
+    VkSamplerAddressMode    address_mode_w;
+} tg_vulkan_sampler_create_info;
+
+typedef struct tg_vulkan_color_image_create_info
+{
+    u32                               width;
+    u32                               height;
+    u32                               mip_levels;
+    VkFormat                          format;
+    tg_vulkan_sampler_create_info*    p_vulkan_sampler_create_info;
+} tg_vulkan_color_image_create_info;
+
+typedef struct tg_vulkan_depth_image_create_info
+{
+    u32                               width;
+    u32                               height;
+    VkFormat                          format;
+    tg_vulkan_sampler_create_info*    p_vulkan_sampler_create_info;
+} tg_vulkan_depth_image_create_info;
 
 typedef struct tg_vulkan_screen_vertex
 {
@@ -437,9 +427,6 @@ void                          tg_vulkan_render_pass_destroy(VkRenderPass render_
 
 tg_render_target              tg_vulkan_render_target_create(const tg_vulkan_color_image_create_info* p_vulkan_color_image_create_info, const tg_vulkan_depth_image_create_info* p_vulkan_depth_image_create_info, VkFenceCreateFlags fence_create_flags);
 void                          tg_vulkan_render_target_destroy(tg_render_target* p_render_target);
-
-VkSampler                     tg_vulkan_sampler_create(u32 mip_levels, VkFilter min_filter, VkFilter mag_filter, VkSamplerAddressMode address_mode_u, VkSamplerAddressMode address_mode_v, VkSamplerAddressMode address_mode_w);
-void                          tg_vulkan_sampler_destroy(VkSampler sampler);
 
 VkSemaphore                   tg_vulkan_semaphore_create();
 void                          tg_vulkan_semaphore_destroy(VkSemaphore semaphore);

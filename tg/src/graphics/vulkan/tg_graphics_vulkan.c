@@ -61,6 +61,34 @@ VKAPI_ATTR VkBool32 VKAPI_CALL tgvk_debug_callback(VkDebugUtilsMessageSeverityFl
 | General utilities                                           |
 +------------------------------------------------------------*/
 
+VkImageView tg_vulkan_image_view_create(VkImage image, VkImageViewType view_type, VkFormat format, VkImageAspectFlagBits aspect_mask, u32 mip_levels)
+{
+    VkImageView image_view = VK_NULL_HANDLE;
+
+    VkImageViewCreateInfo image_view_create_info = { 0 };
+    image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    image_view_create_info.pNext = TG_NULL;
+    image_view_create_info.flags = 0;
+    image_view_create_info.image = image;
+    image_view_create_info.viewType = view_type;
+    image_view_create_info.format = format;
+    image_view_create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+    image_view_create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+    image_view_create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+    image_view_create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+    image_view_create_info.subresourceRange.aspectMask = aspect_mask;
+    image_view_create_info.subresourceRange.baseMipLevel = 0;
+    image_view_create_info.subresourceRange.levelCount = mip_levels;
+    image_view_create_info.subresourceRange.baseArrayLayer = 0;
+    image_view_create_info.subresourceRange.layerCount = 1;
+
+    VK_CALL(vkCreateImageView(device, &image_view_create_info, TG_NULL, &image_view));
+
+    return image_view;
+}
+
+
+
 u32 tg_vulkan_memory_type_find(u32 memory_type_bits, VkMemoryPropertyFlags memory_property_flags)
 {
     VkPhysicalDeviceMemoryProperties physical_device_memory_properties;
@@ -147,6 +175,47 @@ VkDescriptorSet tg_vulkan_descriptor_set_allocate(VkDescriptorPool descriptor_po
 void tg_vulkan_descriptor_set_free(VkDescriptorPool descriptor_pool, VkDescriptorSet descriptor_set)
 {
     VK_CALL(vkFreeDescriptorSets(device, descriptor_pool, 1, &descriptor_set));
+}
+
+
+
+VkSampler tg_vulkan_sampler_create_custom(u32 mip_levels, VkFilter min_filter, VkFilter mag_filter, VkSamplerAddressMode address_mode_u, VkSamplerAddressMode address_mode_v, VkSamplerAddressMode address_mode_w)
+{
+    VkSampler sampler = VK_NULL_HANDLE;
+
+    VkSamplerCreateInfo sampler_create_info = { 0 };
+    sampler_create_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    sampler_create_info.pNext = TG_NULL;
+    sampler_create_info.flags = 0;
+    sampler_create_info.magFilter = mag_filter;
+    sampler_create_info.minFilter = min_filter;
+    sampler_create_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    sampler_create_info.addressModeU = address_mode_u;
+    sampler_create_info.addressModeV = address_mode_v;
+    sampler_create_info.addressModeW = address_mode_w;
+    sampler_create_info.mipLodBias = 0.0f;
+    sampler_create_info.anisotropyEnable = VK_TRUE;
+    sampler_create_info.maxAnisotropy = 16;
+    sampler_create_info.compareEnable = VK_FALSE;
+    sampler_create_info.compareOp = VK_COMPARE_OP_ALWAYS;
+    sampler_create_info.minLod = 0.0f;
+    sampler_create_info.maxLod = (f32)mip_levels;
+    sampler_create_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    sampler_create_info.unnormalizedCoordinates = VK_FALSE;
+
+    VK_CALL(vkCreateSampler(device, &sampler_create_info, TG_NULL, &sampler));
+
+    return sampler;
+}
+
+VkSampler tg_vulkan_sampler_create(u32 mip_levels)
+{
+    return tg_vulkan_sampler_create_custom(mip_levels, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT);
+}
+
+void tg_vulkan_sampler_destroy(VkSampler sampler)
+{
+    vkDestroySampler(device, sampler, TG_NULL);
 }
 
 
@@ -351,47 +420,24 @@ tg_color_image tg_vulkan_color_image_create(const tg_vulkan_color_image_create_i
     //vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, TG_NULL, 0, TG_NULL, 1, &image_memory_barrier);
     //tg_vulkan_command_buffer_end_and_submit(command_buffer, &graphics_queue);
     //tg_vulkan_command_buffer_free(graphics_command_pool, command_buffer);
+    
+    color_image.image_view = tg_vulkan_image_view_create(color_image.image, VK_IMAGE_VIEW_TYPE_2D, color_image.format, VK_IMAGE_ASPECT_COLOR_BIT, color_image.mip_levels);
 
-    VkImageViewCreateInfo image_view_create_info = { 0 };
-    image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    image_view_create_info.pNext = TG_NULL;
-    image_view_create_info.flags = 0;
-    image_view_create_info.image = color_image.image;
-    image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    image_view_create_info.format = color_image.format;
-    image_view_create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-    image_view_create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-    image_view_create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-    image_view_create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-    image_view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    image_view_create_info.subresourceRange.baseMipLevel = 0;
-    image_view_create_info.subresourceRange.levelCount = color_image.mip_levels;
-    image_view_create_info.subresourceRange.baseArrayLayer = 0;
-    image_view_create_info.subresourceRange.layerCount = 1;
-
-    VK_CALL(vkCreateImageView(device, &image_view_create_info, TG_NULL, &color_image.image_view));
-
-    VkSamplerCreateInfo sampler_create_info = { 0 };
-    sampler_create_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    sampler_create_info.pNext = TG_NULL;
-    sampler_create_info.flags = 0;
-    sampler_create_info.magFilter = p_vulkan_color_image_create_info->mag_filter;
-    sampler_create_info.minFilter = p_vulkan_color_image_create_info->min_filter;
-    sampler_create_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-    sampler_create_info.addressModeU = p_vulkan_color_image_create_info->address_mode_u;
-    sampler_create_info.addressModeV = p_vulkan_color_image_create_info->address_mode_v;
-    sampler_create_info.addressModeW = p_vulkan_color_image_create_info->address_mode_w;
-    sampler_create_info.mipLodBias = 0.0f;
-    sampler_create_info.anisotropyEnable = VK_TRUE;
-    sampler_create_info.maxAnisotropy = 16.0f;
-    sampler_create_info.compareEnable = VK_FALSE;
-    sampler_create_info.compareOp = VK_COMPARE_OP_ALWAYS;
-    sampler_create_info.minLod = 0.0f;
-    sampler_create_info.maxLod = (f32)color_image.mip_levels;
-    sampler_create_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-    sampler_create_info.unnormalizedCoordinates = VK_FALSE;
-
-    VK_CALL(vkCreateSampler(device, &sampler_create_info, TG_NULL, &color_image.sampler));
+    if (p_vulkan_color_image_create_info->p_vulkan_sampler_create_info)
+    {
+        color_image.sampler = tg_vulkan_sampler_create_custom(
+            color_image.mip_levels,
+            p_vulkan_color_image_create_info->p_vulkan_sampler_create_info->min_filter,
+            p_vulkan_color_image_create_info->p_vulkan_sampler_create_info->mag_filter,
+            p_vulkan_color_image_create_info->p_vulkan_sampler_create_info->address_mode_u,
+            p_vulkan_color_image_create_info->p_vulkan_sampler_create_info->address_mode_v,
+            p_vulkan_color_image_create_info->p_vulkan_sampler_create_info->address_mode_w
+        );
+    }
+    else
+    {
+        color_image.sampler = tg_vulkan_sampler_create(color_image.mip_levels);
+    }
 
     return color_image;
 }
@@ -836,46 +882,23 @@ tg_depth_image tg_vulkan_depth_image_create(const tg_vulkan_depth_image_create_i
     VK_CALL(vkAllocateMemory(device, &memory_allocate_info, TG_NULL, &depth_image.device_memory));
     VK_CALL(vkBindImageMemory(device, depth_image.image, depth_image.device_memory, 0));
 
-    VkImageViewCreateInfo image_view_create_info = { 0 };
-    image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    image_view_create_info.pNext = TG_NULL;
-    image_view_create_info.flags = 0;
-    image_view_create_info.image = depth_image.image;
-    image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    image_view_create_info.format = depth_image.format;
-    image_view_create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-    image_view_create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-    image_view_create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-    image_view_create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-    image_view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-    image_view_create_info.subresourceRange.baseMipLevel = 0;
-    image_view_create_info.subresourceRange.levelCount = 1;
-    image_view_create_info.subresourceRange.baseArrayLayer = 0;
-    image_view_create_info.subresourceRange.layerCount = 1;
+    depth_image.image_view = tg_vulkan_image_view_create(depth_image.image, VK_IMAGE_VIEW_TYPE_2D, depth_image.format, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
 
-    VK_CALL(vkCreateImageView(device, &image_view_create_info, TG_NULL, &depth_image.image_view));
-
-    VkSamplerCreateInfo sampler_create_info = { 0 };
-    sampler_create_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    sampler_create_info.pNext = TG_NULL;
-    sampler_create_info.flags = 0;
-    sampler_create_info.magFilter = p_vulkan_depth_image_create_info->mag_filter;
-    sampler_create_info.minFilter = p_vulkan_depth_image_create_info->min_filter;
-    sampler_create_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-    sampler_create_info.addressModeU = p_vulkan_depth_image_create_info->address_mode_u;
-    sampler_create_info.addressModeV = p_vulkan_depth_image_create_info->address_mode_v;
-    sampler_create_info.addressModeW = p_vulkan_depth_image_create_info->address_mode_w;
-    sampler_create_info.mipLodBias = 0.0f;
-    sampler_create_info.anisotropyEnable = VK_TRUE;
-    sampler_create_info.maxAnisotropy = 16.0f;
-    sampler_create_info.compareEnable = VK_FALSE;
-    sampler_create_info.compareOp = VK_COMPARE_OP_ALWAYS;
-    sampler_create_info.minLod = 0.0f;
-    sampler_create_info.maxLod = 1.0f;
-    sampler_create_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-    sampler_create_info.unnormalizedCoordinates = VK_FALSE;
-
-    VK_CALL(vkCreateSampler(device, &sampler_create_info, TG_NULL, &depth_image.sampler));
+    if (p_vulkan_depth_image_create_info->p_vulkan_sampler_create_info)
+    {
+        depth_image.sampler = tg_vulkan_sampler_create_custom(
+            1,
+            p_vulkan_depth_image_create_info->p_vulkan_sampler_create_info->min_filter,
+            p_vulkan_depth_image_create_info->p_vulkan_sampler_create_info->mag_filter,
+            p_vulkan_depth_image_create_info->p_vulkan_sampler_create_info->address_mode_u,
+            p_vulkan_depth_image_create_info->p_vulkan_sampler_create_info->address_mode_v,
+            p_vulkan_depth_image_create_info->p_vulkan_sampler_create_info->address_mode_w
+        );
+    }
+    else
+    {
+        depth_image.sampler = tg_vulkan_sampler_create(1);
+    }
 
     return depth_image;
 }
@@ -1570,40 +1593,6 @@ void tg_vulkan_render_target_destroy(tg_render_target* p_render_target)
 
 
 
-VkSampler tg_vulkan_sampler_create(u32 mip_levels, VkFilter min_filter, VkFilter mag_filter, VkSamplerAddressMode address_mode_u, VkSamplerAddressMode address_mode_v, VkSamplerAddressMode address_mode_w)
-{
-    VkSampler sampler = VK_NULL_HANDLE;
-
-    VkSamplerCreateInfo sampler_create_info = { 0 };
-    sampler_create_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    sampler_create_info.pNext = TG_NULL;
-    sampler_create_info.flags = 0;
-    sampler_create_info.magFilter = mag_filter;
-    sampler_create_info.minFilter = min_filter;
-    sampler_create_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-    sampler_create_info.addressModeU = address_mode_u;
-    sampler_create_info.addressModeV = address_mode_v;
-    sampler_create_info.addressModeW = address_mode_w;
-    sampler_create_info.mipLodBias = 0.0f;
-    sampler_create_info.anisotropyEnable = VK_TRUE;
-    sampler_create_info.maxAnisotropy = 16;
-    sampler_create_info.compareEnable = VK_FALSE;
-    sampler_create_info.compareOp = VK_COMPARE_OP_ALWAYS;
-    sampler_create_info.minLod = 0.0f;
-    sampler_create_info.maxLod = (f32)mip_levels;
-    sampler_create_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-    sampler_create_info.unnormalizedCoordinates = VK_FALSE;
-
-    VK_CALL(vkCreateSampler(device, &sampler_create_info, TG_NULL, &sampler));
-
-    return sampler;
-}
-
-void tg_vulkan_sampler_destroy(VkSampler sampler)
-{
-    vkDestroySampler(device, sampler, TG_NULL);
-}
-
 VkSemaphore tg_vulkan_semaphore_create()
 {
     VkSemaphore semaphore = VK_NULL_HANDLE;
@@ -1708,24 +1697,7 @@ tg_storage_image_3d tg_vulkan_storage_image_3d_create(u32 width, u32 height, u32
     VK_CALL(vkAllocateMemory(device, &memory_allocate_info, TG_NULL, &storage_image_3d.device_memory));
     VK_CALL(vkBindImageMemory(device, storage_image_3d.image, storage_image_3d.device_memory, 0));
 
-    VkImageViewCreateInfo image_view_create_info = { 0 };
-    image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    image_view_create_info.pNext = TG_NULL;
-    image_view_create_info.flags = 0;
-    image_view_create_info.image = storage_image_3d.image;
-    image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_3D;
-    image_view_create_info.format = storage_image_3d.format;
-    image_view_create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-    image_view_create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-    image_view_create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-    image_view_create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-    image_view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    image_view_create_info.subresourceRange.baseMipLevel = 0;
-    image_view_create_info.subresourceRange.levelCount = 1;
-    image_view_create_info.subresourceRange.baseArrayLayer = 0;
-    image_view_create_info.subresourceRange.layerCount = 1;
-
-    VK_CALL(vkCreateImageView(device, &image_view_create_info, TG_NULL, &storage_image_3d.image_view));
+    storage_image_3d.image_view = tg_vulkan_image_view_create(storage_image_3d.image, VK_IMAGE_VIEW_TYPE_3D, storage_image_3d.format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
 
     VkCommandBuffer command_buffer = tg_vulkan_command_buffer_allocate(graphics_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     tg_vulkan_command_buffer_begin(command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
@@ -2257,24 +2229,7 @@ void tg_vulkan_swapchain_create()
 
     for (u32 i = 0; i < TG_VULKAN_SURFACE_IMAGE_COUNT; i++)
     {
-        VkImageViewCreateInfo image_view_create_info = { 0 };
-        image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        image_view_create_info.pNext = TG_NULL;
-        image_view_create_info.flags = 0;
-        image_view_create_info.image = swapchain_images[i];
-        image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        image_view_create_info.format = surface.format.format;
-        image_view_create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-        image_view_create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-        image_view_create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-        image_view_create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-        image_view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        image_view_create_info.subresourceRange.baseMipLevel = 0;
-        image_view_create_info.subresourceRange.levelCount = 1;
-        image_view_create_info.subresourceRange.baseArrayLayer = 0;
-        image_view_create_info.subresourceRange.layerCount = 1;
-
-        VK_CALL(vkCreateImageView(device, &image_view_create_info, TG_NULL, &swapchain_image_views[i]));
+        swapchain_image_views[i] = tg_vulkan_image_view_create(swapchain_images[i], VK_IMAGE_VIEW_TYPE_2D, surface.format.format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
     }
 }
 

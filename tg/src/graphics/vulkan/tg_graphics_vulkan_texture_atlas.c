@@ -37,11 +37,7 @@ tg_texture_atlas_h tg_texture_atlas_create_from_images(u32 image_count, tg_color
 	vulkan_color_image_create_info.height = total_height;
 	vulkan_color_image_create_info.mip_levels = 1;
 	vulkan_color_image_create_info.format = TG_VULKAN_COLOR_IMAGE_FORMAT;
-	vulkan_color_image_create_info.min_filter = VK_FILTER_NEAREST;
-	vulkan_color_image_create_info.mag_filter = VK_FILTER_NEAREST;
-	vulkan_color_image_create_info.address_mode_u = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-	vulkan_color_image_create_info.address_mode_v = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-	vulkan_color_image_create_info.address_mode_w = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	vulkan_color_image_create_info.p_vulkan_sampler_create_info = TG_NULL;
 
 	texture_atlas_h->color_image = tg_vulkan_color_image_create(&vulkan_color_image_create_info);
 	VkCommandBuffer command_buffer = tg_vulkan_command_buffer_allocate(graphics_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);

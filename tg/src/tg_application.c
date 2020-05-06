@@ -253,11 +253,11 @@ void tg_application_internal_game_3d_create()
     };
     tg_compute_shader_bind_input(compress_compute_shader_h, 0, 2, p_compress_handles);
 
-    for (i32 chunk_x = -2; chunk_x < 2; chunk_x++)
+    for (i32 chunk_x = -6; chunk_x < 6; chunk_x++)
     {
         for (i32 chunk_y = -2; chunk_y < 2; chunk_y++)
         {
-            for (i32 chunk_z = -2; chunk_z < 2; chunk_z++)
+            for (i32 chunk_z = -6; chunk_z < 6; chunk_z++)
             {
                 p_isolevel_uniform_buffer_data->chunk_index_x = chunk_x;
                 p_isolevel_uniform_buffer_data->chunk_index_y = chunk_y;

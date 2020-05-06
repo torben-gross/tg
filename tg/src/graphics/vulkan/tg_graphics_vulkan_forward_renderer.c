@@ -30,7 +30,7 @@ void tg_forward_renderer_internal_init_shading_pass(tg_forward_renderer_h forwar
     p_attachment_descriptions[0].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
     p_attachment_descriptions[1].flags = 0;
-    p_attachment_descriptions[1].format = TG_FORWARD_RENDERER_DEPTH_ATTACHMENT_FORMAT;
+    p_attachment_descriptions[1].format = VK_FORMAT_D32_SFLOAT;
     p_attachment_descriptions[1].samples = VK_SAMPLE_COUNT_1_BIT;
     p_attachment_descriptions[1].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
     p_attachment_descriptions[1].storeOp = VK_ATTACHMENT_STORE_OP_STORE;

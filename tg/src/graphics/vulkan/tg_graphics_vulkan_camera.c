@@ -325,21 +325,13 @@ void tg_camera_internal_init(tg_camera_h camera_h)
     vulkan_color_image_create_info.height = swapchain_extent.height;
     vulkan_color_image_create_info.mip_levels = 1;
     vulkan_color_image_create_info.format = VK_FORMAT_B8G8R8A8_UNORM;
-    vulkan_color_image_create_info.min_filter = VK_FILTER_NEAREST;
-    vulkan_color_image_create_info.mag_filter = VK_FILTER_NEAREST;
-    vulkan_color_image_create_info.address_mode_u = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    vulkan_color_image_create_info.address_mode_v = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    vulkan_color_image_create_info.address_mode_w = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    vulkan_color_image_create_info.p_vulkan_sampler_create_info = TG_NULL;
 
     tg_vulkan_depth_image_create_info vulkan_depth_image_create_info = { 0 };
     vulkan_depth_image_create_info.width = swapchain_extent.width;
     vulkan_depth_image_create_info.height = swapchain_extent.height;
     vulkan_depth_image_create_info.format = VK_FORMAT_D32_SFLOAT;
-    vulkan_depth_image_create_info.min_filter = VK_FILTER_NEAREST;
-    vulkan_depth_image_create_info.mag_filter = VK_FILTER_NEAREST;
-    vulkan_depth_image_create_info.address_mode_u = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    vulkan_depth_image_create_info.address_mode_v = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    vulkan_depth_image_create_info.address_mode_w = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    vulkan_depth_image_create_info.p_vulkan_sampler_create_info = TG_NULL;
 
     camera_h->render_target = tg_vulkan_render_target_create(&vulkan_color_image_create_info, &vulkan_depth_image_create_info, VK_FENCE_CREATE_SIGNALED_BIT);
     camera_h->captured_entity_count = 0;
@@ -462,7 +454,7 @@ void tg_camera_capture(tg_camera_h camera_h, tg_entity_graphics_data_ptr_h entit
         } break;
         case TG_VULKAN_MATERIAL_TYPE_FORWARD:
         {
-            vulkan_graphics_pipeline_create_info.attachment_count = TG_FORWARD_RENDERER_COLOR_ATTACHMENT_COUNT;
+            vulkan_graphics_pipeline_create_info.attachment_count = 1;
             vulkan_graphics_pipeline_create_info.blend_enable = VK_TRUE;
         } break;
         default: TG_ASSERT(TG_FALSE);

@@ -26,11 +26,7 @@ tg_color_image_h tg_color_image_load(const char* p_filename)
     vulkan_color_image_create_info.height = color_image_h->height;
     vulkan_color_image_create_info.mip_levels = color_image_h->mip_levels;
     vulkan_color_image_create_info.format = TG_VULKAN_COLOR_IMAGE_FORMAT;
-    vulkan_color_image_create_info.min_filter = VK_FILTER_NEAREST; // TODO: optional struct for sampler stuff, otherwise default
-    vulkan_color_image_create_info.mag_filter = VK_FILTER_NEAREST;
-    vulkan_color_image_create_info.address_mode_u = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    vulkan_color_image_create_info.address_mode_v = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    vulkan_color_image_create_info.address_mode_w = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    vulkan_color_image_create_info.p_vulkan_sampler_create_info = TG_NULL;
 
     *color_image_h = tg_vulkan_color_image_create(&vulkan_color_image_create_info);
 
@@ -55,16 +51,19 @@ tg_color_image_h tg_color_image_create(const tg_color_image_create_info* p_color
     tg_color_image_h color_image_h = TG_MEMORY_ALLOC(sizeof(*color_image_h));
     color_image_h->type = TG_HANDLE_TYPE_COLOR_IMAGE;
 
+    tg_vulkan_sampler_create_info vulkan_sampler_create_info = { 0 };
+    vulkan_sampler_create_info.min_filter = tg_vulkan_image_convert_filter(p_color_image_create_info->min_filter);
+    vulkan_sampler_create_info.mag_filter = tg_vulkan_image_convert_filter(p_color_image_create_info->mag_filter);
+    vulkan_sampler_create_info.address_mode_u = tg_vulkan_image_convert_address_mode(p_color_image_create_info->address_mode_u);
+    vulkan_sampler_create_info.address_mode_v = tg_vulkan_image_convert_address_mode(p_color_image_create_info->address_mode_v);
+    vulkan_sampler_create_info.address_mode_w = tg_vulkan_image_convert_address_mode(p_color_image_create_info->address_mode_w);
+
     tg_vulkan_color_image_create_info vulkan_color_image_create_info = { 0 };
     vulkan_color_image_create_info.width = p_color_image_create_info->width;
     vulkan_color_image_create_info.height = p_color_image_create_info->height;
     vulkan_color_image_create_info.mip_levels = p_color_image_create_info->mip_levels;
     vulkan_color_image_create_info.format = tg_vulkan_color_image_convert_format(p_color_image_create_info->format);
-    vulkan_color_image_create_info.min_filter = tg_vulkan_image_convert_filter(p_color_image_create_info->min_filter);
-    vulkan_color_image_create_info.mag_filter = tg_vulkan_image_convert_filter(p_color_image_create_info->mag_filter);
-    vulkan_color_image_create_info.address_mode_u = tg_vulkan_image_convert_address_mode(p_color_image_create_info->address_mode_u);
-    vulkan_color_image_create_info.address_mode_v = tg_vulkan_image_convert_address_mode(p_color_image_create_info->address_mode_v);
-    vulkan_color_image_create_info.address_mode_w = tg_vulkan_image_convert_address_mode(p_color_image_create_info->address_mode_w);
+    vulkan_color_image_create_info.p_vulkan_sampler_create_info = &vulkan_sampler_create_info;
 
     *color_image_h = tg_vulkan_color_image_create(&vulkan_color_image_create_info);
 
@@ -94,21 +93,24 @@ tg_depth_image_h tg_depth_image_create(const tg_depth_image_create_info* p_depth
     tg_depth_image_h depth_image_h = TG_MEMORY_ALLOC(sizeof(*depth_image_h));
     depth_image_h->type = TG_HANDLE_TYPE_DEPTH_IMAGE;
 
+    tg_vulkan_sampler_create_info vulkan_sampler_create_info = { 0 };
+    vulkan_sampler_create_info.min_filter = tg_vulkan_image_convert_filter(p_depth_image_create_info->min_filter);
+    vulkan_sampler_create_info.mag_filter = tg_vulkan_image_convert_filter(p_depth_image_create_info->mag_filter);
+    vulkan_sampler_create_info.address_mode_u = tg_vulkan_image_convert_address_mode(p_depth_image_create_info->address_mode_u);
+    vulkan_sampler_create_info.address_mode_v = tg_vulkan_image_convert_address_mode(p_depth_image_create_info->address_mode_v);
+    vulkan_sampler_create_info.address_mode_w = tg_vulkan_image_convert_address_mode(p_depth_image_create_info->address_mode_w);
+
     tg_vulkan_depth_image_create_info vulkan_depth_image_create_info = { 0 };
     vulkan_depth_image_create_info.width = p_depth_image_create_info->width;
     vulkan_depth_image_create_info.height = p_depth_image_create_info->height;
     vulkan_depth_image_create_info.format = tg_vulkan_depth_image_convert_format(p_depth_image_create_info->format);
-    vulkan_depth_image_create_info.min_filter = tg_vulkan_image_convert_filter(p_depth_image_create_info->min_filter);
-    vulkan_depth_image_create_info.mag_filter = tg_vulkan_image_convert_filter(p_depth_image_create_info->mag_filter);
-    vulkan_depth_image_create_info.address_mode_u = tg_vulkan_image_convert_address_mode(p_depth_image_create_info->address_mode_u);
-    vulkan_depth_image_create_info.address_mode_v = tg_vulkan_image_convert_address_mode(p_depth_image_create_info->address_mode_v);
-    vulkan_depth_image_create_info.address_mode_w = tg_vulkan_image_convert_address_mode(p_depth_image_create_info->address_mode_w);
+    vulkan_depth_image_create_info.p_vulkan_sampler_create_info = &vulkan_sampler_create_info;
 
     *depth_image_h = tg_vulkan_depth_image_create(&vulkan_depth_image_create_info);
 
     VkCommandBuffer command_buffer = tg_vulkan_command_buffer_allocate(graphics_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     tg_vulkan_command_buffer_begin(command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
-    tg_vulkan_command_buffer_cmd_transition_depth_image_layout(command_buffer, depth_image_h, 0, 0, VK_IMAGE_LAYOUT_UNDEFINED, TG_VULKAN_COLOR_IMAGE_LAYOUT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+    tg_vulkan_command_buffer_cmd_transition_depth_image_layout(command_buffer, depth_image_h, 0, 0, VK_IMAGE_LAYOUT_UNDEFINED, TG_VULKAN_DEPTH_IMAGE_LAYOUT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
     tg_vulkan_command_buffer_end_and_submit(command_buffer, &graphics_queue);
     tg_vulkan_command_buffer_free(graphics_command_pool, command_buffer);
 

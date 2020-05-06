@@ -55,11 +55,7 @@ void tg_deferred_renderer_internal_init_geometry_pass(tg_deferred_renderer_h def
     vulkan_color_image_create_info.height = swapchain_extent.height;
     vulkan_color_image_create_info.mip_levels = 1;
     vulkan_color_image_create_info.format = TG_DEFERRED_RENDERER_GEOMETRY_PASS_POSITION_FORMAT;
-    vulkan_color_image_create_info.min_filter = VK_FILTER_LINEAR;
-    vulkan_color_image_create_info.mag_filter = VK_FILTER_LINEAR;
-    vulkan_color_image_create_info.address_mode_u = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    vulkan_color_image_create_info.address_mode_v = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    vulkan_color_image_create_info.address_mode_w = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    vulkan_color_image_create_info.p_vulkan_sampler_create_info = TG_NULL;
 
     deferred_renderer_h->geometry_pass.position_attachment = tg_vulkan_color_image_create(&vulkan_color_image_create_info);
 
@@ -179,11 +175,7 @@ void tg_deferred_renderer_internal_init_shading_pass(tg_deferred_renderer_h defe
     vulkan_color_image_create_info.height = swapchain_extent.height;
     vulkan_color_image_create_info.mip_levels = 1;
     vulkan_color_image_create_info.format = TG_DEFERRED_RENDERER_SHADING_PASS_COLOR_ATTACHMENT_FORMAT;
-    vulkan_color_image_create_info.min_filter = VK_FILTER_LINEAR;
-    vulkan_color_image_create_info.mag_filter = VK_FILTER_LINEAR;
-    vulkan_color_image_create_info.address_mode_u = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    vulkan_color_image_create_info.address_mode_v = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    vulkan_color_image_create_info.address_mode_w = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    vulkan_color_image_create_info.p_vulkan_sampler_create_info = TG_NULL;
 
     deferred_renderer_h->shading_pass.color_attachment = tg_vulkan_color_image_create(&vulkan_color_image_create_info);
 
