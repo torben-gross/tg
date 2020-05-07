@@ -1,13 +1,13 @@
 #include "tg_application.h"
 
 
-
 #include "graphics/tg_graphics.h"
 #include "memory/tg_memory.h"
 #include "platform/tg_platform.h"
 #include "tg_entity.h"
 #include "tg_input.h"
 #include "tg_marching_cubes.h"
+#include "tg_terrain.h"
 #include "util/tg_list.h"
 #include "util/tg_qsort.h"
 #include "util/tg_rectangle_packer.h"
@@ -50,20 +50,6 @@ typedef struct tg_debug_info
 } tg_debug_info;
 #endif
 
-typedef struct tg_isolevel_uniform_buffer
-{
-    i32    chunk_index_x;
-    i32    chunk_index_y;
-    i32    chunk_index_z;
-} tg_isolevel_uniform_buffer;
-
-typedef struct tg_marching_cubes_uniform_buffer
-{
-    i32    chunk_index_x;
-    i32    chunk_index_y;
-    i32    chunk_index_z;
-} tg_marching_cubes_uniform_buffer;
-
 typedef struct tg_test_deferred
 {
     tg_list                        entities;
@@ -98,7 +84,7 @@ tg_test_deferred test_deferred = { 0 };
 
 void tg_application_internal_game_3d_create()
 {
-    test_deferred.entities = TG_LIST_CREATE(tg_entity);
+    test_deferred.entities = TG_LIST_CREATE(tg_entity*);
     test_deferred.camera_info.position = (v3){ 0.0f, 0.0f, 0.0f };
     test_deferred.camera_info.pitch = 0.0f;
     test_deferred.camera_info.yaw = 0.0f;
@@ -186,102 +172,27 @@ void tg_application_internal_game_3d_create()
     tg_handle p_custom_handles[2] = { test_deferred.custom_uniform_buffer_h, tg_camera_get_render_target(test_deferred.secondary_camera_h) };
     test_deferred.custom_material_h = tg_material_create_forward(test_deferred.custom_vertex_shader_h, test_deferred.custom_fragment_shader_h, 2, p_custom_handles);
 
-    test_deferred.quad_entity = tg_entity_create(test_deferred.quad_mesh_h, test_deferred.custom_material_h);
-    test_deferred.quad_offset = -65.0f;
-    tg_list_insert(&test_deferred.entities, &test_deferred.quad_entity);
-
     test_deferred.ground_mesh_h = tg_mesh_create(4, p_ground_positions, TG_NULL, p_uvs, TG_NULL, 6, p_indices);
-    test_deferred.ground_entity = tg_entity_create(test_deferred.ground_mesh_h, test_deferred.default_material_h);
-    //tg_list_insert(&test_deferred.entities, &test_deferred.ground_entity);
+    test_deferred.ground_entity = tg_entity_create(test_deferred.ground_mesh_h, test_deferred.custom_material_h);
+    tg_entity* p_ground_entity = &test_deferred.ground_entity;
+    tg_list_insert(&test_deferred.entities, &p_ground_entity);
 
+    test_deferred.quad_entity = tg_entity_create(test_deferred.quad_mesh_h, test_deferred.custom_material_h);
+    tg_entity* p_quad_entity = &test_deferred.quad_entity;
+    test_deferred.quad_offset = -65.0f;
+    tg_list_insert(&test_deferred.entities, &p_quad_entity);
 
-
-
-
-
-
-    tg_uniform_buffer_h isolevel_uniform_buffer_h = tg_uniform_buffer_create(sizeof(tg_isolevel_uniform_buffer));
-    tg_isolevel_uniform_buffer* p_isolevel_uniform_buffer_data = tg_uniform_buffer_data(isolevel_uniform_buffer_h);
-    tg_storage_image_3d_h isolevel_storage_image_3d_h = tg_storage_image_3d_create(TG_CHUNK_VERTEX_COUNT_X, TG_CHUNK_VERTEX_COUNT_Y, TG_CHUNK_VERTEX_COUNT_Z, TG_STORAGE_IMAGE_FORMAT_R32_SFLOAT);
-
-    const tg_handle_type p_isolevel_compute_shader_handle_types[2] = {
-        TG_HANDLE_TYPE_UNIFORM_BUFFER,
-        TG_HANDLE_TYPE_STORAGE_IMAGE_3D
-    };
-
-    tg_compute_shader_h isolevel_compute_shader_h = tg_compute_shader_create("shaders/terrain/isolevel.comp", 2, p_isolevel_compute_shader_handle_types);
-    tg_handle p_isolevel_handles[2] = { isolevel_uniform_buffer_h, isolevel_storage_image_3d_h };
-    tg_compute_shader_bind_input(isolevel_compute_shader_h, 0, 2, p_isolevel_handles);
-
-
-
-    tg_uniform_buffer_h marching_cubes_uniform_buffer_h = tg_uniform_buffer_create(sizeof(tg_marching_cubes_uniform_buffer));
-    tg_marching_cubes_uniform_buffer* p_marching_cubes_uniform_buffer_data = tg_uniform_buffer_data(marching_cubes_uniform_buffer_h);
-    tg_storage_buffer_h marching_cubes_storage_buffer_h = tg_storage_buffer_create((TG_CHUNK_VERTEX_COUNT_X - 1) * (TG_CHUNK_VERTEX_COUNT_Y - 1) * (TG_CHUNK_VERTEX_COUNT_Z - 1) * 15 * sizeof(tg_vertex_3d), TG_TRUE);
-    tg_vertex_3d* p_verts = tg_storage_buffer_data(marching_cubes_storage_buffer_h);
-
-    const tg_handle_type p_marching_cubes_compute_shader_handle_types[3] = {
-        TG_HANDLE_TYPE_UNIFORM_BUFFER,
-        TG_HANDLE_TYPE_STORAGE_IMAGE_3D,
-        TG_HANDLE_TYPE_STORAGE_BUFFER
-    };
-
-    tg_compute_shader_h marching_cubes_compute_shader_h = tg_compute_shader_create("shaders/terrain/marching_cubes.comp", 3, p_marching_cubes_compute_shader_handle_types);
-    tg_handle p_compute_shader_handles[3] = { marching_cubes_uniform_buffer_h, isolevel_storage_image_3d_h, marching_cubes_storage_buffer_h };
-    tg_compute_shader_bind_input(marching_cubes_compute_shader_h, 0, 3, p_compute_shader_handles);
-
-
-
-    const tg_handle_type p_triangles_to_vbo_handle_types[1] = { TG_HANDLE_TYPE_STORAGE_BUFFER };
-    tg_compute_shader_h triangles_to_vbo_compute_shader_h = tg_compute_shader_create("shaders/terrain/normals.comp", 1, p_triangles_to_vbo_handle_types);
-    tg_handle p_triangles_to_vbo_handles[1] = { marching_cubes_storage_buffer_h };
-    tg_compute_shader_bind_input(triangles_to_vbo_compute_shader_h, 0, 1, p_triangles_to_vbo_handles);
-
-
-
-    const tg_handle_type p_compress_handle_types[2] = {
-        TG_HANDLE_TYPE_STORAGE_BUFFER,
-        TG_HANDLE_TYPE_STORAGE_BUFFER
-    };
-    tg_compute_shader_h compress_compute_shader_h = tg_compute_shader_create("shaders/terrain/remove_degenerate_triangles.comp", 2, p_compress_handle_types);
-    tg_storage_buffer_h compress_storage_buffer_h = tg_storage_buffer_create(sizeof(u32) + (TG_CHUNK_VERTEX_COUNT_X - 1) * (TG_CHUNK_VERTEX_COUNT_Y - 1) * (TG_CHUNK_VERTEX_COUNT_Z - 1) * 15 * sizeof(tg_vertex_3d), TG_TRUE);
-    u32* p_t = tg_storage_buffer_data(compress_storage_buffer_h);
-    tg_vertex_3d* p_v = (tg_vertex_3d*)(p_t + 1);
-    tg_handle p_compress_handles[2] = {
-        marching_cubes_storage_buffer_h,
-        compress_storage_buffer_h
-    };
-    tg_compute_shader_bind_input(compress_compute_shader_h, 0, 2, p_compress_handles);
-
-    for (i32 chunk_x = -6; chunk_x < 6; chunk_x++)
+    for (i32 chunk_x = -3; chunk_x < 3; chunk_x++)
     {
         for (i32 chunk_y = -2; chunk_y < 2; chunk_y++)
         {
-            for (i32 chunk_z = -6; chunk_z < 6; chunk_z++)
+            for (i32 chunk_z = -3; chunk_z < 3; chunk_z++)
             {
-                p_isolevel_uniform_buffer_data->chunk_index_x = chunk_x;
-                p_isolevel_uniform_buffer_data->chunk_index_y = chunk_y;
-                p_isolevel_uniform_buffer_data->chunk_index_z = chunk_z;
-                tg_compute_shader_dispatch(isolevel_compute_shader_h, TG_CHUNK_VERTEX_COUNT_X, TG_CHUNK_VERTEX_COUNT_Y, TG_CHUNK_VERTEX_COUNT_Z);
-                p_marching_cubes_uniform_buffer_data->chunk_index_x = chunk_x;
-                p_marching_cubes_uniform_buffer_data->chunk_index_y = chunk_y;
-                p_marching_cubes_uniform_buffer_data->chunk_index_z = chunk_z;
-                tg_compute_shader_dispatch(marching_cubes_compute_shader_h, TG_CHUNK_VERTEX_COUNT_X - 1, TG_CHUNK_VERTEX_COUNT_X - 1, TG_CHUNK_VERTEX_COUNT_X - 1);
-                tg_compute_shader_dispatch(triangles_to_vbo_compute_shader_h, 5 * (TG_CHUNK_VERTEX_COUNT_X - 1) * (TG_CHUNK_VERTEX_COUNT_X - 1) * (TG_CHUNK_VERTEX_COUNT_X - 1), 1, 1);
-
-                //tg_compute_shader_dispatch(compress_compute_shader_h, 1, 1, 1);
-                //tg_mesh_h chunk_mesh_h = tg_mesh_create(*p_t * 3*3, (v3*)p_v, TG_NULL, TG_NULL, TG_NULL, 0, TG_NULL);
-
-                tg_mesh_h chunk_mesh_h = tg_mesh_create_from_storage_buffer(marching_cubes_storage_buffer_h);
-                tg_entity chunk_entity = tg_entity_create(chunk_mesh_h, test_deferred.default_material_h);
-                tg_list_insert(&test_deferred.entities, &chunk_entity);
-                
-                tg_storage_image_3d_clear(isolevel_storage_image_3d_h);
+                tg_terrain_chunk_entity_h terrain_chunk_entity_h = tg_terrain_chunk_entity_create(chunk_x, chunk_y, chunk_z, test_deferred.default_material_h); // TODO: this can not be destructed properly atm
+                tg_list_insert(&test_deferred.entities, &terrain_chunk_entity_h);
             }
         }
     }
-    tg_compute_shader_destroy(isolevel_compute_shader_h);
-    tg_uniform_buffer_destroy(isolevel_uniform_buffer_h);
     
     /*
     
@@ -419,10 +330,10 @@ void tg_application_internal_game_3d_update_and_render(f32 delta_ms)
     }
 
     tg_camera_begin(test_deferred.secondary_camera_h);
-    tg_entity* p_entities = TG_LIST_POINTER_TO(test_deferred.entities, 0);
+    tg_entity** p_entities = TG_LIST_POINTER_TO(test_deferred.entities, 0);
     for (u32 i = 0; i < test_deferred.entities.count; i++)
     {
-        tg_camera_capture(test_deferred.secondary_camera_h, p_entities[i].graphics_data_ptr_h);
+        tg_camera_capture(test_deferred.secondary_camera_h, p_entities[i]->graphics_data_ptr_h);
     }
     tg_camera_end(test_deferred.secondary_camera_h);
 
@@ -430,7 +341,7 @@ void tg_application_internal_game_3d_update_and_render(f32 delta_ms)
     p_entities = TG_LIST_POINTER_TO(test_deferred.entities, 0);
     for (u32 i = 0; i < test_deferred.entities.count; i++)
     {
-        tg_camera_capture(test_deferred.camera_info.camera_h, p_entities[i].graphics_data_ptr_h);
+        tg_camera_capture(test_deferred.camera_info.camera_h, p_entities[i]->graphics_data_ptr_h);
     }
     tg_camera_end(test_deferred.camera_info.camera_h);
 

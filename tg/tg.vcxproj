@@ -122,6 +122,7 @@
     <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan_entity.c" />
     <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan_material.c" />
     <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan_forward_renderer.c" />
+    <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan_terrain.c" />
     <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan_texture_atlas.c" />
     <ClCompile Include="src\tg_entity.c" />
     <ClCompile Include="src\tg_input.c" />
@@ -147,6 +148,7 @@
     <ClInclude Include="src\assets\tg_assets.h" />
     <ClInclude Include="src\graphics\vulkan\tg_graphics_vulkan_deferred_renderer.h" />
     <ClInclude Include="src\graphics\vulkan\tg_graphics_vulkan_forward_renderer.h" />
+    <ClInclude Include="src\graphics\vulkan\tg_graphics_vulkan_terrain.h" />
     <ClInclude Include="src\tg_input.h" />
     <ClInclude Include="src\tg_application.h" />
     <ClInclude Include="src\graphics\tg_graphics.h" />
@@ -158,6 +160,7 @@
     <ClInclude Include="src\tg_common.h" />
     <ClInclude Include="src\tg_entity.h" />
     <ClInclude Include="src\tg_marching_cubes.h" />
+    <ClInclude Include="src\tg_terrain.h" />
     <ClInclude Include="src\util\tg_hashmap.h" />
     <ClInclude Include="src\util\tg_list.h" />
     <ClInclude Include="src\util\tg_rectangle_packer.h" />

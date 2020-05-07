@@ -9,12 +9,13 @@
 
 tg_entity_graphics_data_ptr_h tg_entity_graphics_data_ptr_create(tg_mesh_h mesh_h, tg_material_h material_h)
 {
-	TG_ASSERT(mesh_h && material_h);
+	TG_ASSERT(material_h);
 
 	tg_entity_graphics_data_ptr_h entity_graphics_data_ptr_h = TG_MEMORY_ALLOC(sizeof(*entity_graphics_data_ptr_h));
 
     entity_graphics_data_ptr_h->type = TG_HANDLE_TYPE_ENTITY_GRAPHICS_DATA_PTR;
-    entity_graphics_data_ptr_h->mesh_h = mesh_h;
+    entity_graphics_data_ptr_h->lod_count = 1;
+    entity_graphics_data_ptr_h->p_lod_meshes_h[0] = mesh_h;
     entity_graphics_data_ptr_h->material_h = material_h;
     entity_graphics_data_ptr_h->model_ubo = tg_vulkan_buffer_create(sizeof(m4), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
     *((m4*)entity_graphics_data_ptr_h->model_ubo.p_mapped_device_memory) = tgm_m4_identity();
@@ -30,12 +31,20 @@ void tg_entity_graphics_data_ptr_destroy(tg_entity_graphics_data_ptr_h entity_gr
     tg_vulkan_buffer_destroy(&entity_graphics_data_ptr_h->model_ubo);
     for (u32 i = 0; i < entity_graphics_data_ptr_h->camera_info_count; i++)
     {
-        tg_vulkan_command_buffer_free(graphics_command_pool, entity_graphics_data_ptr_h->p_camera_infos[i].command_buffer);
+        tg_vulkan_command_buffers_free(graphics_command_pool, entity_graphics_data_ptr_h->lod_count, entity_graphics_data_ptr_h->p_camera_infos[i].p_command_buffers);
         tg_vulkan_graphics_pipeline_destroy(entity_graphics_data_ptr_h->p_camera_infos[i].graphics_pipeline);
         tg_vulkan_pipeline_layout_destroy(entity_graphics_data_ptr_h->p_camera_infos[i].pipeline_layout);
         tg_vulkan_descriptor_destroy(&entity_graphics_data_ptr_h->p_camera_infos[i].descriptor);
     }
 	TG_MEMORY_FREE(entity_graphics_data_ptr_h);
+}
+
+void tg_entity_graphics_data_ptr_set_mesh(tg_entity_graphics_data_ptr_h entity_graphics_data_ptr_h, tg_mesh_h mesh_h, u32 lod)
+{
+    TG_ASSERT(lod < TG_VULKAN_MAX_LOD_COUNT);
+
+    // TODO: once the camera records a command buffer, this will kinda be ignored or break things! so reset parts of the ptr and let camera rebuild...
+    entity_graphics_data_ptr_h->p_lod_meshes_h[lod] = mesh_h;
 }
 
 void tg_entity_graphics_data_ptr_set_model_matrix(tg_entity_graphics_data_ptr_h entity_graphics_data_ptr_h, const m4* p_model_matrix)

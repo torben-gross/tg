@@ -522,7 +522,7 @@ void tg_camera_capture(tg_camera_h camera_h, tg_entity_graphics_data_ptr_h entit
         p_write_descriptor_sets[1].pTexelBufferView = TG_NULL;
 
         tg_vulkan_descriptor_sets_update(2, p_write_descriptor_sets);
-        p_vulkan_camera_info->command_buffer = tg_vulkan_command_buffer_allocate(graphics_command_pool, VK_COMMAND_BUFFER_LEVEL_SECONDARY);
+        tg_vulkan_command_buffers_allocate(graphics_command_pool, VK_COMMAND_BUFFER_LEVEL_SECONDARY, TG_VULKAN_MAX_LOD_COUNT, p_vulkan_camera_info->p_command_buffers);
 
         VkCommandBufferInheritanceInfo command_buffer_inheritance_info = { 0 };
         command_buffer_inheritance_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
@@ -556,38 +556,41 @@ void tg_camera_capture(tg_camera_h camera_h, tg_entity_graphics_data_ptr_h entit
         command_buffer_inheritance_info.queryFlags = 0;
         command_buffer_inheritance_info.pipelineStatistics = 0;
 
-        tg_vulkan_command_buffer_begin(p_vulkan_camera_info->command_buffer, VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, &command_buffer_inheritance_info);
+        for (u32 i = 0; i < entity_graphics_data_ptr_h->lod_count; i++)
         {
-            vkCmdBindPipeline(p_vulkan_camera_info->command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vulkan_camera_info->graphics_pipeline);
-
-            const VkDeviceSize vertex_buffer_offset = 0;
-            vkCmdBindVertexBuffers(p_vulkan_camera_info->command_buffer, 0, 1, &entity_graphics_data_ptr_h->mesh_h->vbo.buffer, &vertex_buffer_offset);
-            if (entity_graphics_data_ptr_h->mesh_h->ibo.size != 0)
+            tg_vulkan_command_buffer_begin(p_vulkan_camera_info->p_command_buffers[i], VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, &command_buffer_inheritance_info);
             {
-                vkCmdBindIndexBuffer(p_vulkan_camera_info->command_buffer, entity_graphics_data_ptr_h->mesh_h->ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
-            }
+                vkCmdBindPipeline(p_vulkan_camera_info->p_command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, p_vulkan_camera_info->graphics_pipeline);
 
-            const u32 descriptor_set_count = has_custom_descriptor_set ? 2 : 1;
-            VkDescriptorSet p_descriptor_sets[2] = { 0 };
-            {
-                p_descriptor_sets[0] = p_vulkan_camera_info->descriptor.descriptor_set;
-                if (has_custom_descriptor_set)
+                const VkDeviceSize vertex_buffer_offset = 0;
+                vkCmdBindVertexBuffers(p_vulkan_camera_info->p_command_buffers[i], 0, 1, &entity_graphics_data_ptr_h->p_lod_meshes_h[i]->vbo.buffer, &vertex_buffer_offset);
+                if (entity_graphics_data_ptr_h->p_lod_meshes_h[i]->ibo.size != 0)
                 {
-                    p_descriptor_sets[1] = entity_graphics_data_ptr_h->material_h->descriptor.descriptor_set;
+                    vkCmdBindIndexBuffer(p_vulkan_camera_info->p_command_buffers[i], entity_graphics_data_ptr_h->p_lod_meshes_h[i]->ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
+                }
+
+                const u32 descriptor_set_count = has_custom_descriptor_set ? 2 : 1;
+                VkDescriptorSet p_descriptor_sets[2] = { 0 };
+                {
+                    p_descriptor_sets[0] = p_vulkan_camera_info->descriptor.descriptor_set;
+                    if (has_custom_descriptor_set)
+                    {
+                        p_descriptor_sets[1] = entity_graphics_data_ptr_h->material_h->descriptor.descriptor_set;
+                    }
+                }
+                vkCmdBindDescriptorSets(p_vulkan_camera_info->p_command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, p_vulkan_camera_info->pipeline_layout, 0, descriptor_set_count, p_descriptor_sets, 0, TG_NULL);
+
+                if (entity_graphics_data_ptr_h->p_lod_meshes_h[i]->ibo.size != 0)
+                {
+                    vkCmdDrawIndexed(p_vulkan_camera_info->p_command_buffers[i], (u32)(entity_graphics_data_ptr_h->p_lod_meshes_h[i]->ibo.size / sizeof(u16)), 1, 0, 0, 0); // TODO: u16
+                }
+                else
+                {
+                    vkCmdDraw(p_vulkan_camera_info->p_command_buffers[i], (u32)(entity_graphics_data_ptr_h->p_lod_meshes_h[i]->vbo.size / sizeof(tg_vertex_3d)), 1, 0, 0);
                 }
             }
-            vkCmdBindDescriptorSets(p_vulkan_camera_info->command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vulkan_camera_info->pipeline_layout, 0, descriptor_set_count, p_descriptor_sets, 0, TG_NULL);
-
-            if (entity_graphics_data_ptr_h->mesh_h->ibo.size != 0)
-            {
-                vkCmdDrawIndexed(p_vulkan_camera_info->command_buffer, (u32)(entity_graphics_data_ptr_h->mesh_h->ibo.size / sizeof(u16)), 1, 0, 0, 0); // TODO: u16
-            }
-            else
-            {
-                vkCmdDraw(p_vulkan_camera_info->command_buffer, (u32)(entity_graphics_data_ptr_h->mesh_h->vbo.size / sizeof(tg_vertex_3d)), 1, 0, 0);
-            }
+            VK_CALL(vkEndCommandBuffer(p_vulkan_camera_info->p_command_buffers[i]));
         }
-        VK_CALL(vkEndCommandBuffer(p_vulkan_camera_info->command_buffer));
     }
 
     TG_ASSERT(camera_h->captured_entity_count < TG_VULKAN_MAX_ENTITIES_PER_CAMERA);
@@ -595,7 +598,7 @@ void tg_camera_capture(tg_camera_h camera_h, tg_entity_graphics_data_ptr_h entit
     camera_h->captured_entities[camera_h->captured_entity_count++] = entity_graphics_data_ptr_h;
 }
 
-void tg_camera_clear(tg_camera_h camera_h)
+void tg_camera_clear(tg_camera_h camera_h) // TODO: should this be combined with begin?
 {
     TG_ASSERT(camera_h);
 
@@ -614,8 +617,6 @@ void tg_camera_clear(tg_camera_h camera_h)
     submit_info.pSignalSemaphores = TG_NULL;
 
     VK_CALL(vkQueueSubmit(graphics_queue.queue, 1, &submit_info, camera_h->render_target.fence));
-
-    camera_h->captured_entity_count = 0;
 }
 
 tg_camera_h tg_camera_create_orthographic(const v3* p_position, f32 pitch, f32 yaw, f32 roll, f32 left, f32 right, f32 bottom, f32 top, f32 far, f32 near)

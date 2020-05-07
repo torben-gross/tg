@@ -18,6 +18,7 @@ layout(set = 1, binding = 1) uniform sampler2D test_icon;
 void main()
 {
     out_color = vec4(u_color, 1.0) * 0.1 + 0.9 * texture(test_icon, v_uv);
+	out_color.a = 0.6;
 	if ((1.0 - v_uv.x) * v_uv.y > 0.5)
 	{
 		out_color = vec4(0.0);

@@ -50,6 +50,7 @@
 
 #define TG_VULKAN_MAX_CAMERAS_PER_ENTITY                             4
 #define TG_VULKAN_MAX_ENTITIES_PER_CAMERA                            1024
+#define TG_VULKAN_MAX_LOD_COUNT                                      8
 
 
 
@@ -250,13 +251,14 @@ typedef struct tg_vulkan_camera_info
     tg_vulkan_descriptor      descriptor;
     VkPipelineLayout          pipeline_layout;
     VkPipeline                graphics_pipeline;
-    VkCommandBuffer           command_buffer;
+    VkCommandBuffer           p_command_buffers[TG_VULKAN_MAX_LOD_COUNT];
 } tg_vulkan_camera_info;
 
 typedef struct tg_entity_graphics_data_ptr
 {
     tg_handle_type           type;
-    tg_mesh_h                mesh_h;
+    u32                      lod_count;
+    tg_mesh_h                p_lod_meshes_h[TG_VULKAN_MAX_LOD_COUNT];
     tg_material_h            material_h;
     tg_vulkan_buffer         model_ubo;
     u32                      camera_info_count;

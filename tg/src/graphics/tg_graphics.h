@@ -7,6 +7,12 @@
 
 
 
+#define TG_CHUNK_VERTEX_COUNT_X    17
+#define TG_CHUNK_VERTEX_COUNT_Y    17
+#define TG_CHUNK_VERTEX_COUNT_Z    17
+
+
+
 TG_DECLARE_TYPE(tg_entity);
 TG_DECLARE_TYPE(tg_scene);
 
@@ -179,6 +185,7 @@ void                             tg_compute_shader_destroy(tg_compute_shader_h c
 
 tg_entity_graphics_data_ptr_h    tg_entity_graphics_data_ptr_create(tg_mesh_h mesh_h, tg_material_h material_h);
 void                             tg_entity_graphics_data_ptr_destroy(tg_entity_graphics_data_ptr_h entity_graphics_data_ptr_h);
+void                             tg_entity_graphics_data_ptr_set_mesh(tg_entity_graphics_data_ptr_h entity_graphics_data_ptr_h, tg_mesh_h mesh_h, u32 lod);
 void                             tg_entity_graphics_data_ptr_set_model_matrix(tg_entity_graphics_data_ptr_h entity_graphics_data_ptr_h, const m4* p_model_matrix);
 
 tg_depth_image_h                 tg_depth_image_create(const tg_depth_image_create_info* p_depth_image_create_info);

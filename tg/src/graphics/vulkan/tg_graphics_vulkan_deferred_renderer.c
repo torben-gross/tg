@@ -675,7 +675,14 @@ void tg_deferred_renderer_draw(tg_deferred_renderer_h deferred_renderer_h, tg_en
     {
         if (entity_graphics_data_ptr_h->p_camera_infos[i].camera_h == deferred_renderer_h->camera_h)
         {
-            vkCmdExecuteCommands(deferred_renderer_h->geometry_pass.command_buffer, 1, &entity_graphics_data_ptr_h->p_camera_infos[i].command_buffer);
+            if (entity_graphics_data_ptr_h->lod_count > 1)
+            {
+                vkCmdExecuteCommands(deferred_renderer_h->geometry_pass.command_buffer, 1, &entity_graphics_data_ptr_h->p_camera_infos[i].p_command_buffers[1]); // TODO: detect proper lod in camera already!
+            }
+            else
+            {
+                vkCmdExecuteCommands(deferred_renderer_h->geometry_pass.command_buffer, 1, &entity_graphics_data_ptr_h->p_camera_infos[i].p_command_buffers[0]);
+            }
             return;
         }
     }

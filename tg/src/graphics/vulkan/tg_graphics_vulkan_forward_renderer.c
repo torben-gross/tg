@@ -124,7 +124,7 @@ void tg_forward_renderer_draw(tg_forward_renderer_h forward_renderer_h, tg_entit
     {
         if (entity_graphics_data_ptr_h->p_camera_infos[i].camera_h == forward_renderer_h->camera_h)
         {
-            vkCmdExecuteCommands(forward_renderer_h->shading_pass.command_buffer, 1, &entity_graphics_data_ptr_h->p_camera_infos[i].command_buffer);
+            vkCmdExecuteCommands(forward_renderer_h->shading_pass.command_buffer, 1, &entity_graphics_data_ptr_h->p_camera_infos[i].p_command_buffers[0]);
             return;
         }
     }

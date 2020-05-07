@@ -7,8 +7,6 @@ u32 entity_next_id = 0;
 
 tg_entity tg_entity_create(tg_mesh_h mesh_h, tg_material_h material_h)
 {
-	TG_ASSERT(mesh_h && material_h);
-
 	tg_entity entity = { 0 };
 	entity.id = entity_next_id++;
 	entity.flags = 0;
@@ -24,6 +22,11 @@ void tg_entity_destroy(tg_entity* p_entity)
 	TG_ASSERT(p_entity);
 
 	tg_entity_graphics_data_ptr_destroy(p_entity->graphics_data_ptr_h);
+}
+
+void tg_entity_set_mesh(tg_entity* p_entity, tg_mesh_h mesh_h, u32 lod)
+{
+	tg_entity_graphics_data_ptr_set_mesh(p_entity->graphics_data_ptr_h, mesh_h, lod);
 }
 
 void tg_entity_set_position(tg_entity* p_entity, const v3* p_position)
