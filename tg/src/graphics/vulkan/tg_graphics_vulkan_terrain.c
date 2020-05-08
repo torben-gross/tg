@@ -12,7 +12,7 @@ tg_terrain_chunk_entity_h tg_terrain_chunk_entity_create(i32 x, i32 y, i32 z, tg
 
     tg_vulkan_buffer isolevel_ubo = { 0 };
     tg_vulkan_compute_shader isolevel_cs = { 0 };
-    tg_vulkan_buffer marching_cubes_ubo = { 0 };
+    tg_vulkan_buffer p_marching_cubes_ubos[TG_VULKAN_TERRAIN_LOD_COUNT] = { 0 };
     tg_vulkan_compute_shader p_marching_cubes_cs[TG_VULKAN_TERRAIN_LOD_COUNT] = { 0 };
     tg_vulkan_compute_shader p_normals_cs[TG_VULKAN_TERRAIN_LOD_COUNT] = { 0 };
     VkCommandBuffer command_buffer = VK_NULL_HANDLE;
@@ -45,15 +45,17 @@ tg_terrain_chunk_entity_h tg_terrain_chunk_entity_create(i32 x, i32 y, i32 z, tg
     tg_vulkan_descriptor_set_update_uniform_buffer(isolevel_cs.descriptor.descriptor_set, isolevel_ubo.buffer, 0);
     tg_vulkan_descriptor_set_update_storage_image_3d(isolevel_cs.descriptor.descriptor_set, &terrain_chunk_entity_h->isolevel_si3d, 1);
 
-    marching_cubes_ubo = tg_vulkan_buffer_create(sizeof(tg_terrain_chunk_entity_create_marching_cubes_ubo), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-    ((tg_terrain_chunk_entity_create_marching_cubes_ubo*)marching_cubes_ubo.p_mapped_device_memory)->chunk_index_x = x;
-    ((tg_terrain_chunk_entity_create_marching_cubes_ubo*)marching_cubes_ubo.p_mapped_device_memory)->chunk_index_y = y;
-    ((tg_terrain_chunk_entity_create_marching_cubes_ubo*)marching_cubes_ubo.p_mapped_device_memory)->chunk_index_z = z;
-    tg_vulkan_buffer_flush_mapped_memory(&marching_cubes_ubo);
+    for (u32 i = 0; i < TG_VULKAN_TERRAIN_LOD_COUNT; i++)
+    {
+        p_marching_cubes_ubos[i] = tg_vulkan_buffer_create(sizeof(tg_terrain_chunk_entity_create_marching_cubes_ubo), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+        ((tg_terrain_chunk_entity_create_marching_cubes_ubo*)p_marching_cubes_ubos[i].p_mapped_device_memory)->chunk_index_x = x;
+        ((tg_terrain_chunk_entity_create_marching_cubes_ubo*)p_marching_cubes_ubos[i].p_mapped_device_memory)->chunk_index_y = y;
+        ((tg_terrain_chunk_entity_create_marching_cubes_ubo*)p_marching_cubes_ubos[i].p_mapped_device_memory)->chunk_index_z = z;
+        ((tg_terrain_chunk_entity_create_marching_cubes_ubo*)p_marching_cubes_ubos[i].p_mapped_device_memory)->lod = i;
+        tg_vulkan_buffer_flush_mapped_memory(&p_marching_cubes_ubos[i]);
+    }
 
-    const u32 lod_count = 4;
-    TG_ASSERT(lod_count <= TG_VULKAN_MAX_LOD_COUNT);
-    for (u32 i = 0; i < lod_count; i++)
+    for (u32 i = 0; i < TG_VULKAN_TERRAIN_LOD_COUNT; i++)
     {
         const u32 denominator = (1 << i);
         const u32 mesh_size = ((TG_CHUNK_VERTEX_COUNT_X - 1) / denominator) * ((TG_CHUNK_VERTEX_COUNT_Y - 1) / denominator) * ((TG_CHUNK_VERTEX_COUNT_Z - 1) / denominator) * 15 * sizeof(tg_vertex_3d);
@@ -89,7 +91,7 @@ tg_terrain_chunk_entity_h tg_terrain_chunk_entity_create(i32 x, i32 y, i32 z, tg
     for (u32 i = 0; i < TG_VULKAN_TERRAIN_LOD_COUNT; i++)
     {
         p_marching_cubes_cs[i] = tg_vulkan_compute_shader_create("shaders/terrain/marching_cubes.comp", 3, p_marching_cubes_descriptor_set_layout_bindings);
-        tg_vulkan_descriptor_set_update_uniform_buffer(p_marching_cubes_cs[i].descriptor.descriptor_set, marching_cubes_ubo.buffer, 0);
+        tg_vulkan_descriptor_set_update_uniform_buffer(p_marching_cubes_cs[i].descriptor.descriptor_set, p_marching_cubes_ubos[i].buffer, 0);
         tg_vulkan_descriptor_set_update_storage_image_3d(p_marching_cubes_cs[i].descriptor.descriptor_set, &terrain_chunk_entity_h->isolevel_si3d, 1);
         tg_vulkan_descriptor_set_update_storage_buffer(p_marching_cubes_cs[i].descriptor.descriptor_set, terrain_chunk_entity_h->p_lod_meshes[i].vbo.buffer, 2);
     }
@@ -152,8 +154,8 @@ tg_terrain_chunk_entity_h tg_terrain_chunk_entity_create(i32 x, i32 y, i32 z, tg
     {
         tg_vulkan_compute_shader_destroy(&p_normals_cs[i]);
         tg_vulkan_compute_shader_destroy(&p_marching_cubes_cs[i]);
+        tg_vulkan_buffer_destroy(&p_marching_cubes_ubos[i]);
     }
-    tg_vulkan_buffer_destroy(&marching_cubes_ubo);
     tg_vulkan_compute_shader_destroy(&isolevel_cs);
     tg_vulkan_buffer_destroy(&isolevel_ubo);
 

@@ -182,11 +182,12 @@ void tg_application_internal_game_3d_create()
     test_deferred.quad_offset = -65.0f;
     tg_list_insert(&test_deferred.entities, &p_quad_entity);
 
-    for (i32 chunk_x = -3; chunk_x < 3; chunk_x++)
+    const i32 chunk_count = 3;
+    for (i32 chunk_x = -chunk_count; chunk_x < chunk_count; chunk_x++)
     {
         for (i32 chunk_y = -2; chunk_y < 2; chunk_y++)
         {
-            for (i32 chunk_z = -3; chunk_z < 3; chunk_z++)
+            for (i32 chunk_z = -chunk_count; chunk_z < chunk_count; chunk_z++)
             {
                 tg_terrain_chunk_entity_h terrain_chunk_entity_h = tg_terrain_chunk_entity_create(chunk_x, chunk_y, chunk_z, test_deferred.default_material_h); // TODO: this can not be destructed properly atm
                 tg_list_insert(&test_deferred.entities, &terrain_chunk_entity_h);

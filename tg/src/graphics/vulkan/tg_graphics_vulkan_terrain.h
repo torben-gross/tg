@@ -22,6 +22,7 @@ typedef struct tg_terrain_chunk_entity_create_marching_cubes_ubo
 	i32    chunk_index_x;
 	i32    chunk_index_y;
 	i32    chunk_index_z;
+	u32    lod;
 } tg_terrain_chunk_entity_create_marching_cubes_ubo;
 
 typedef struct tg_terrain_chunk_entity
