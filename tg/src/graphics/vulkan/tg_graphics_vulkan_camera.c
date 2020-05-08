@@ -25,8 +25,6 @@ void tg_camera_internal_destroy_present_pass(tg_camera_h camera_h)
     tg_vulkan_command_buffers_free(graphics_command_pool, TG_VULKAN_SURFACE_IMAGE_COUNT, camera_h->present_pass.p_command_buffers);
     tg_vulkan_graphics_pipeline_destroy(camera_h->present_pass.graphics_pipeline);
     tg_vulkan_pipeline_layout_destroy(camera_h->present_pass.pipeline_layout);
-    tg_vulkan_shader_module_destroy(camera_h->present_pass.fragment_shader);
-    tg_vulkan_shader_module_destroy(camera_h->present_pass.vertex_shader);
     tg_vulkan_descriptor_destroy(&camera_h->present_pass.descriptor);
     tg_vulkan_framebuffers_destroy(TG_VULKAN_SURFACE_IMAGE_COUNT, camera_h->present_pass.p_framebuffers);
     tg_vulkan_render_pass_destroy(camera_h->present_pass.render_pass);
@@ -684,7 +682,7 @@ void tg_camera_end(tg_camera_h camera_h)
                     {
                         p_homogenous_points_clip_space[i] = tgm_m4_multiply_v4(&TG_ENTITY_GRAPHICS_DATA_PTR_MODEL(entity_graphics_data_ptr_h), &p_points[i]);
                         p_homogenous_points_clip_space[i] = tgm_m4_multiply_v4(&TG_CAMERA_VIEW(camera_h), &p_homogenous_points_clip_space[i]);
-                        p_homogenous_points_clip_space[i] = tgm_m4_multiply_v4(&TG_CAMERA_PROJ(camera_h), &p_homogenous_points_clip_space[i]);
+                        p_homogenous_points_clip_space[i] = tgm_m4_multiply_v4(&TG_CAMERA_PROJ(camera_h), &p_homogenous_points_clip_space[i]);// TODO: SIMD
                         p_cartesian_points_clip_space[i] = tgm_v4_to_v3(&p_homogenous_points_clip_space[i]);
                     }
 

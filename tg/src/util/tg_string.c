@@ -3,6 +3,17 @@
 #include "math/tg_math.h"
 #include <stdarg.h>
 
+b32 tg_string_equal(const char* p_s0, const char* p_s1)
+{
+	b32 result = TG_TRUE;
+	while (*p_s0 && *p_s1)
+	{
+		result &= *p_s0++ == *p_s1++;
+	}
+	result &= !*p_s0 && !*p_s1;
+	return result;
+}
+
 void tg_string_format(u32 size, char* p_buffer, const char* p_format, ...)
 {
 	TG_ASSERT(size && p_buffer && p_format);

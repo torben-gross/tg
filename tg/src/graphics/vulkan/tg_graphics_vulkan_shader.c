@@ -88,10 +88,9 @@ tg_vertex_shader_h tg_vertex_shader_create(const char* p_filename)
 
 void tg_vertex_shader_destroy(tg_vertex_shader_h vertex_shader_h)
 {
-    TG_ASSERT(vertex_shader_h);
+	TG_ASSERT(vertex_shader_h);
 
-    tg_vulkan_shader_module_destroy(vertex_shader_h->shader_module);
-    TG_MEMORY_FREE(vertex_shader_h);
+	TG_MEMORY_FREE(vertex_shader_h);
 }
 
 
@@ -108,10 +107,9 @@ tg_fragment_shader_h tg_fragment_shader_create(const char* p_filename)
 
 void tg_fragment_shader_destroy(tg_fragment_shader_h fragment_shader_h)
 {
-    TG_ASSERT(fragment_shader_h);
+	TG_ASSERT(fragment_shader_h);
 
-    tg_vulkan_shader_module_destroy(fragment_shader_h->shader_module);
-    TG_MEMORY_FREE(fragment_shader_h);
+	TG_MEMORY_FREE(fragment_shader_h);
 }
 
 #endif

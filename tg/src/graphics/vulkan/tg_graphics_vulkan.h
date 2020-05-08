@@ -443,7 +443,6 @@ VkSemaphore                   tg_vulkan_semaphore_create();
 void                          tg_vulkan_semaphore_destroy(VkSemaphore semaphore);
 
 VkShaderModule                tg_vulkan_shader_module_create(const char* p_filename);
-void                          tg_vulkan_shader_module_destroy(VkShaderModule shader_module);
 
 tg_storage_image_3d           tg_vulkan_storage_image_3d_create(u32 width, u32 height, u32 depth, VkFormat format);
 void                          tg_vulkan_storage_image_3d_destroy(tg_storage_image_3d* p_storage_image_3d);

@@ -104,7 +104,6 @@ void tg_mesh_recalculate_normals(u32 vertex_count, u32 index_count, const u16* p
         tg_vulkan_graphics_pipeline_destroy(pipeline);
         tg_vulkan_pipeline_layout_destroy(pipeline_layout);
         tg_vulkan_descriptor_destroy(&descriptor);
-        tg_vulkan_shader_module_destroy(shader_module);
 #else
         for (u32 i = 0; i < vertex_count; i += 3)
         {

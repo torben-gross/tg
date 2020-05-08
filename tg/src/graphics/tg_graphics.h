@@ -222,7 +222,7 @@ void*                            tg_uniform_buffer_data(tg_uniform_buffer_h unif
 void                             tg_uniform_buffer_destroy(tg_uniform_buffer_h uniform_buffer_h);
 
 tg_vertex_shader_h               tg_vertex_shader_create(const char* p_filename);
-void                             tg_vertex_shader_destroy(tg_vertex_shader_h p_vertex_shader_h);
+void                             tg_vertex_shader_destroy(tg_vertex_shader_h vertex_shader_h);
 
 
 

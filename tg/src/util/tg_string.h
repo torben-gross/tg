@@ -3,6 +3,7 @@
 
 #include "tg_common.h"
 
+b32     tg_string_equal(const char* p_s0, const char* p_s1);
 /*
 %d - f64
 %i - i32

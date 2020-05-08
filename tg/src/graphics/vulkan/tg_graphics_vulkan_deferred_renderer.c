@@ -26,8 +26,6 @@ void tg_deferred_renderer_internal_destroy_shading_pass(tg_deferred_renderer_h d
     tg_vulkan_render_pass_destroy(deferred_renderer_h->shading_pass.render_pass);
     tg_vulkan_framebuffer_destroy(deferred_renderer_h->shading_pass.framebuffer);
     tg_vulkan_descriptor_destroy(&deferred_renderer_h->shading_pass.descriptor);
-    tg_vulkan_shader_module_destroy(deferred_renderer_h->shading_pass.vertex_shader);
-    tg_vulkan_shader_module_destroy(deferred_renderer_h->shading_pass.fragment_shader);
     tg_vulkan_pipeline_layout_destroy(deferred_renderer_h->shading_pass.pipeline_layout);
     tg_vulkan_graphics_pipeline_destroy(deferred_renderer_h->shading_pass.graphics_pipeline);
     tg_vulkan_command_buffer_free(graphics_command_pool, deferred_renderer_h->shading_pass.command_buffer);
@@ -41,8 +39,6 @@ void tg_deferred_renderer_internal_destroy_tone_mapping_pass(tg_deferred_rendere
     tg_vulkan_render_pass_destroy(deferred_renderer_h->tone_mapping_pass.render_pass);
     tg_vulkan_framebuffer_destroy(deferred_renderer_h->tone_mapping_pass.framebuffer);
     tg_vulkan_descriptor_destroy(&deferred_renderer_h->tone_mapping_pass.descriptor);
-    tg_vulkan_shader_module_destroy(deferred_renderer_h->tone_mapping_pass.vertex_shader);
-    tg_vulkan_shader_module_destroy(deferred_renderer_h->tone_mapping_pass.fragment_shader);
     tg_vulkan_pipeline_layout_destroy(deferred_renderer_h->tone_mapping_pass.pipeline_layout);
     tg_vulkan_graphics_pipeline_destroy(deferred_renderer_h->tone_mapping_pass.graphics_pipeline);
     tg_vulkan_command_buffer_free(graphics_command_pool, deferred_renderer_h->tone_mapping_pass.command_buffer);

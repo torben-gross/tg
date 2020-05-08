@@ -7,6 +7,7 @@
 #include "platform/tg_platform.h"
 #include "tg_application.h"
 #include "util/tg_file_io.h"
+#include "util/tg_hashmap.h"
 #include "util/tg_string.h"
 
 
@@ -44,6 +45,8 @@
 #ifdef TG_DEBUG
 VkDebugUtilsMessengerEXT    debug_utils_messenger;
 #endif
+
+tg_string_hashmap           shader_hashmap;
 
 
 
@@ -836,7 +839,6 @@ void tg_vulkan_compute_shader_destroy(tg_vulkan_compute_shader* p_vulkan_compute
     tg_vulkan_compute_pipeline_destroy(p_vulkan_compute_shader->compute_pipeline);
     tg_vulkan_pipeline_layout_destroy(p_vulkan_compute_shader->pipeline_layout);
     tg_vulkan_descriptor_destroy(&p_vulkan_compute_shader->descriptor);
-    tg_vulkan_shader_module_destroy(p_vulkan_compute_shader->shader_module);
 }
 
 
@@ -1618,39 +1620,44 @@ VkShaderModule tg_vulkan_shader_module_create(const char* p_filename)
 {
     VkShaderModule shader_module = VK_NULL_HANDLE;
 
-#ifdef TG_DEBUG
-    char p_debug_buffer[256] = { 0 };
-    tg_string_format(sizeof(p_debug_buffer), p_debug_buffer, "%s.spv", p_filename);
-    if (!tg_file_io_exists(p_debug_buffer))
+    VkShaderModule* p_shader_module = tg_string_hashmap_pointer_to(&shader_hashmap, p_filename);
+    if (p_shader_module != TG_NULL)
     {
-        tg_string_format(sizeof(p_debug_buffer), p_debug_buffer, "C:/VulkanSDK/1.2.131.2/Bin/glslc.exe %s/%s -o %s/%s.spv", tg_application_get_asset_path(), p_filename, tg_application_get_asset_path(), p_filename);
-        TG_ASSERT(system(p_debug_buffer) != -1);
+        shader_module = *p_shader_module;
     }
+    else
+    {
+#ifdef TG_DEBUG
+        char p_debug_buffer[256] = { 0 };
+        tg_string_format(sizeof(p_debug_buffer), p_debug_buffer, "%s.spv", p_filename);
+        if (!tg_file_io_exists(p_debug_buffer))
+        {
+            tg_string_format(sizeof(p_debug_buffer), p_debug_buffer, "C:/VulkanSDK/1.2.131.2/Bin/glslc.exe %s/%s -o %s/%s.spv", tg_application_get_asset_path(), p_filename, tg_application_get_asset_path(), p_filename);
+            TG_ASSERT(system(p_debug_buffer) != -1);
+        }
 #endif
 
-    char p_filename_buffer[256] = { 0 };
-    tg_string_format(sizeof(p_filename_buffer), p_filename_buffer, "%s.spv", p_filename);
+        char p_filename_buffer[256] = { 0 };
+        tg_string_format(sizeof(p_filename_buffer), p_filename_buffer, "%s.spv", p_filename);
 
-    u64 size = 0;
-    char* content = TG_NULL;
-    tg_file_io_read(p_filename_buffer, &size, &content);
+        u64 size = 0;
+        char* content = TG_NULL;
+        tg_file_io_read(p_filename_buffer, &size, &content);
 
-    VkShaderModuleCreateInfo shader_module_create_info = { 0 };
-    shader_module_create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    shader_module_create_info.pNext = TG_NULL;
-    shader_module_create_info.flags = 0;
-    shader_module_create_info.codeSize = size;
-    shader_module_create_info.pCode = (const u32*)content;
+        VkShaderModuleCreateInfo shader_module_create_info = { 0 };
+        shader_module_create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+        shader_module_create_info.pNext = TG_NULL;
+        shader_module_create_info.flags = 0;
+        shader_module_create_info.codeSize = size;
+        shader_module_create_info.pCode = (const u32*)content;
 
-    VK_CALL(vkCreateShaderModule(device, &shader_module_create_info, TG_NULL, &shader_module));
-    tg_file_io_free(content);
+        VK_CALL(vkCreateShaderModule(device, &shader_module_create_info, TG_NULL, &shader_module));
+        tg_file_io_free(content);
+
+        tg_string_hashmap_insert(&shader_hashmap, p_filename, &shader_module);
+    }
 
     return shader_module;
-}
-
-void tg_vulkan_shader_module_destroy(VkShaderModule shader_module)
-{
-    vkDestroyShaderModule(device, shader_module, TG_NULL);
 }
 
 
@@ -2258,6 +2265,8 @@ void tg_graphics_init()
     graphics_command_pool = tg_vulkan_command_pool_create(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, graphics_queue.index);
     compute_command_pool = tg_vulkan_command_pool_create(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, compute_queue.index);
     tg_vulkan_swapchain_create();
+
+    shader_hashmap = TG_STRING_HASHMAP_CREATE(VkShaderModule);
 }
 
 void tg_graphics_wait_idle()
@@ -2267,6 +2276,15 @@ void tg_graphics_wait_idle()
 
 void tg_graphics_shutdown()
 {
+    for (u32 i = 0; i < shader_hashmap.bucket_count; i++)
+    {
+        for (u32 j = 0; j < shader_hashmap.p_buckets[i].values.count; j++)
+        {
+            vkDestroyShaderModule(device, ((VkShaderModule*)shader_hashmap.p_buckets[i].values.elements)[j], TG_NULL);
+        }
+    }
+    tg_string_hashmap_destroy(&shader_hashmap);
+
     tg_vulkan_command_pool_destroy(compute_command_pool);
     tg_vulkan_command_pool_destroy(graphics_command_pool);
     for (u32 i = 0; i < TG_VULKAN_SURFACE_IMAGE_COUNT; i++)

@@ -28,7 +28,6 @@ typedef struct tg_terrain_chunk_entity_create_marching_cubes_ubo
 typedef struct tg_terrain_chunk_entity
 {
 	tg_entity              entity;
-
 	tg_storage_image_3d    isolevel_si3d;
 	tg_mesh                p_lod_meshes[TG_VULKAN_MAX_LOD_COUNT]; // TODO: remove, they are in the graphics data ptr
 } tg_terrain_chunk_entity;

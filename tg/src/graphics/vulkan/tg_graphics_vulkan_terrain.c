@@ -179,7 +179,13 @@ void tg_terrain_chunk_entity_destroy(tg_terrain_chunk_entity_h terrain_chunk_ent
 {
     TG_ASSERT(terrain_chunk_entity_h);
 
-    TG_ASSERT(TG_FALSE);
+    for (u32 i = 0; i < TG_VULKAN_TERRAIN_LOD_COUNT; i++)
+    {
+        tg_vulkan_buffer_destroy(&terrain_chunk_entity_h->p_lod_meshes[i].vbo);
+    }
+    tg_vulkan_storage_image_3d_destroy(&terrain_chunk_entity_h->isolevel_si3d);
+    tg_entity_destroy(&terrain_chunk_entity_h->entity);
+    TG_MEMORY_FREE(terrain_chunk_entity_h);
 }
 
 #endif

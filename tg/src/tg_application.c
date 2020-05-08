@@ -53,6 +53,7 @@ typedef struct tg_debug_info
 typedef struct tg_test_deferred
 {
     tg_list                        entities;
+    tg_list                        terrain_chunks;
     tg_camera_info                 camera_info;
     tg_camera_h                    secondary_camera_h;
     tg_color_image_h               textures_h[13];
@@ -182,7 +183,8 @@ void tg_application_internal_game_3d_create()
     test_deferred.quad_offset = -65.0f;
     tg_list_insert(&test_deferred.entities, &p_quad_entity);
 
-    const i32 chunk_count = 1;
+    test_deferred.terrain_chunks = TG_LIST_CREATE(tg_terrain_chunk_entity_h);
+    const i32 chunk_count = 6;
     for (i32 chunk_x = -chunk_count; chunk_x < chunk_count; chunk_x++)
     {
         for (i32 chunk_y = -2; chunk_y < 2; chunk_y++)
@@ -191,6 +193,7 @@ void tg_application_internal_game_3d_create()
             {
                 tg_terrain_chunk_entity_h terrain_chunk_entity_h = tg_terrain_chunk_entity_create(chunk_x, chunk_y, chunk_z, test_deferred.default_material_h); // TODO: this can not be destructed properly atm
                 tg_list_insert(&test_deferred.entities, &terrain_chunk_entity_h);
+                tg_list_insert(&test_deferred.terrain_chunks, &terrain_chunk_entity_h);
             }
         }
     }
@@ -358,6 +361,10 @@ void tg_application_internal_game_3d_destroy()
     {
         tg_color_image_destroy(test_deferred.textures_h[i]);
     }
+    for (u32 i = 0; i < test_deferred.terrain_chunks.count; i++)
+    {
+        tg_terrain_chunk_entity_destroy(((tg_terrain_chunk_entity_h*)test_deferred.terrain_chunks.elements)[i]);
+    }
 
     tg_entity_destroy(&test_deferred.quad_entity);
     tg_entity_destroy(&test_deferred.ground_entity);
@@ -367,16 +374,16 @@ void tg_application_internal_game_3d_destroy()
     tg_color_image_destroy(test_deferred.image_h);
     tg_uniform_buffer_destroy(test_deferred.custom_uniform_buffer_h);
     tg_material_destroy(test_deferred.custom_material_h);
-    tg_fragment_shader_destroy(test_deferred.custom_fragment_shader_h);
-    tg_vertex_shader_destroy(test_deferred.custom_vertex_shader_h);
-
     tg_material_destroy(test_deferred.default_material_h);
     tg_fragment_shader_destroy(test_deferred.default_fragment_shader_h);
+    tg_fragment_shader_destroy(test_deferred.custom_fragment_shader_h);
     tg_vertex_shader_destroy(test_deferred.default_vertex_shader_h);
+    tg_vertex_shader_destroy(test_deferred.custom_vertex_shader_h);
 
     tg_camera_destroy(test_deferred.secondary_camera_h);
     tg_camera_destroy(test_deferred.camera_info.camera_h);
     tg_list_destroy(&test_deferred.entities);
+    tg_list_destroy(&test_deferred.terrain_chunks);
 }
 
 
