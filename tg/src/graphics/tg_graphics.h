@@ -233,7 +233,6 @@ void                             tg_vertex_shader_destroy(tg_vertex_shader_h ver
 void                             tg_deferred_renderer_begin(tg_deferred_renderer_h deferred_renderer_h);
 tg_deferred_renderer_h           tg_deferred_renderer_create(tg_camera_h camera_h);
 void                             tg_deferred_renderer_destroy(tg_deferred_renderer_h deferred_renderer_h);
-void                             tg_deferred_renderer_draw(tg_deferred_renderer_h deferred_renderer_h, tg_entity_graphics_data_ptr_h entity_graphics_data_ptr_h); // TODO: there mustn't be called from user.
 void                             tg_deferred_renderer_end(tg_deferred_renderer_h deferred_renderer_h);
 void                             tg_deferred_renderer_on_window_resize(tg_deferred_renderer_h deferred_renderer_h, u32 width, u32 height);
 

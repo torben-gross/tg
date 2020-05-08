@@ -662,27 +662,11 @@ void tg_deferred_renderer_destroy(tg_deferred_renderer_h deferred_renderer_h)
     TG_MEMORY_FREE(deferred_renderer_h);
 }
 
-void tg_deferred_renderer_draw(tg_deferred_renderer_h deferred_renderer_h, tg_entity_graphics_data_ptr_h entity_graphics_data_ptr_h)
+void tg_deferred_renderer_execute(tg_deferred_renderer_h deferred_renderer_h, VkCommandBuffer command_buffer)
 {
-    TG_ASSERT(deferred_renderer_h && entity_graphics_data_ptr_h);
+    TG_ASSERT(deferred_renderer_h && command_buffer);
 
-    // TODO: DO NOT SEARCH FOR CAMEREA! move renderer somewhere private and use vulkan directly
-    for (u32 i = 0; i < entity_graphics_data_ptr_h->camera_info_count; i++)
-    {
-        if (entity_graphics_data_ptr_h->p_camera_infos[i].camera_h == deferred_renderer_h->camera_h)
-        {
-            if (entity_graphics_data_ptr_h->lod_count > 1)
-            {
-                vkCmdExecuteCommands(deferred_renderer_h->geometry_pass.command_buffer, 1, &entity_graphics_data_ptr_h->p_camera_infos[i].p_command_buffers[0]); // TODO: detect proper lod in camera already!
-            }
-            else
-            {
-                vkCmdExecuteCommands(deferred_renderer_h->geometry_pass.command_buffer, 1, &entity_graphics_data_ptr_h->p_camera_infos[i].p_command_buffers[0]);
-            }
-            return;
-        }
-    }
-    TG_ASSERT(TG_FALSE);
+    vkCmdExecuteCommands(deferred_renderer_h->geometry_pass.command_buffer, 1, &command_buffer);
 }
 
 void tg_deferred_renderer_end(tg_deferred_renderer_h deferred_renderer_h)

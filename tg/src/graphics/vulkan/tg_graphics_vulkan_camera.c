@@ -697,7 +697,20 @@ void tg_camera_end(tg_camera_h camera_h)
                     const b32 cull = min.x >= 1.0f || min.y >= 1.0f || max.x <= -1.0f || max.y <= -1.0f || min.z >= 1.0f || max.z <= 0.0f;
                     if (!cull)
                     {
-                        tg_deferred_renderer_draw(camera_h->capture_pass.deferred_renderer_h, camera_h->captured_entities[e]);
+                        const v3 clamp_min = { -1.0f, -1.0f, 0.0f };
+                        const v3 clamp_max = { 1.0f,  1.0f, 0.0f };
+                        const v3 clamped_min = tgm_v3_clamp(&min, &clamp_min, &clamp_max);
+                        const v3 clamped_max = tgm_v3_clamp(&max, &clamp_min, &clamp_max);
+                        const f32 area = (clamped_max.x - clamped_min.x) * (clamped_max.y - clamped_min.y);
+
+                        if (area >= 0.09f)
+                        {
+                            tg_deferred_renderer_execute(camera_h->capture_pass.deferred_renderer_h, p_vulkan_camera_info->p_command_buffers[0]);
+                        }
+                        else
+                        {
+                            tg_deferred_renderer_execute(camera_h->capture_pass.deferred_renderer_h, p_vulkan_camera_info->p_command_buffers[1]);
+                        }
                     }
                     break;
                 }

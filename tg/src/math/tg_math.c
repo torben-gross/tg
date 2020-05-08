@@ -762,6 +762,19 @@ v3 tgm_v3_add_f(const v3* p_v, f32 f)
 	return result;
 }
 
+v3 tgm_v3_clamp(const v3* p_v, const v3* p_min, const v3* p_max)
+{
+	TG_ASSERT(p_v && p_min && p_max);
+
+	v3 result = { 0 };
+
+	result.x = tgm_f32_clamp(p_v->x, p_min->x, p_max->x);
+	result.y = tgm_f32_clamp(p_v->y, p_min->y, p_max->y);
+	result.z = tgm_f32_clamp(p_v->z, p_min->z, p_max->z);
+
+	return result;
+}
+
 v3 tgm_v3_cross(const v3* p_v0, const v3* p_v1)
 {
 	TG_ASSERT(p_v0 && p_v1);
