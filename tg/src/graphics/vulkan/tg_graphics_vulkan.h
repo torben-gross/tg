@@ -8,6 +8,8 @@
 #include <vulkan/vulkan.h>
 #undef near
 #undef far
+#undef min
+#undef max
 
 #ifdef TG_DEBUG
 #define VK_CALL(x)                                                   TG_ASSERT(x == VK_SUCCESS)
@@ -51,6 +53,12 @@
 #define TG_VULKAN_MAX_CAMERAS_PER_ENTITY                             4
 #define TG_VULKAN_MAX_ENTITIES_PER_CAMERA                            1024
 #define TG_VULKAN_MAX_LOD_COUNT                                      8
+
+
+
+#define TG_CAMERA_VIEW(camera_h)                                     (((m4*)camera_h->view_projection_ubo.p_mapped_device_memory)[0])
+#define TG_CAMERA_PROJ(camera_h)                                     (((m4*)camera_h->view_projection_ubo.p_mapped_device_memory)[1])
+#define TG_ENTITY_GRAPHICS_DATA_PTR_MODEL(e_h)                       (*(m4*)e_h->model_ubo.p_mapped_device_memory)
 
 
 
@@ -258,7 +266,7 @@ typedef struct tg_entity_graphics_data_ptr
 {
     tg_handle_type           type;
     u32                      lod_count;
-    tg_mesh_h                p_lod_meshes_h[TG_VULKAN_MAX_LOD_COUNT];
+    tg_mesh_h                p_lod_meshes_h[TG_VULKAN_MAX_LOD_COUNT]; // TODO: does this need to be a pointer?
     tg_material_h            material_h;
     tg_vulkan_buffer         model_ubo;
     u32                      camera_info_count;
@@ -283,6 +291,7 @@ typedef struct tg_material
 typedef struct tg_mesh
 {
     tg_handle_type      type;
+    tg_rect             bounds;
     tg_vulkan_buffer    vbo;
     tg_vulkan_buffer    ibo;
 } tg_mesh;

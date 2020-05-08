@@ -29,6 +29,7 @@ void tg_mesh_recalculate_normal(tg_vertex_3d* p_v0, tg_vertex_3d* p_v1, tg_verte
     p_v1->normal = normal;
     p_v2->normal = normal;
 }
+
 void tg_mesh_recalculate_normals(u32 vertex_count, u32 index_count, const u16* p_indices, tg_vulkan_buffer* p_staging_buffer)
 {
     if (index_count != 0)
@@ -116,6 +117,7 @@ void tg_mesh_recalculate_normals(u32 vertex_count, u32 index_count, const u16* p
 #endif
     }
 }
+
 void tg_mesh_recalculate_tangent_bitangent(tg_vertex_3d* p_v0, tg_vertex_3d* p_v1, tg_vertex_3d* p_v2)
 {
     const v3 delta_p_01 = tgm_v3_subtract_v3(&p_v1->position, &p_v0->position);
@@ -146,6 +148,7 @@ void tg_mesh_recalculate_tangent_bitangent(tg_vertex_3d* p_v0, tg_vertex_3d* p_v
     p_v1->bitangent = normalized_bitangent;
     p_v2->bitangent = normalized_bitangent;
 }
+
 void tg_mesh_recalculate_tangents_bitangents(u32 vertex_count, u32 index_count, const u16* p_indices, tg_vertex_3d* p_vertices)
 {
     if (index_count != 0)
@@ -163,6 +166,7 @@ void tg_mesh_recalculate_tangents_bitangents(u32 vertex_count, u32 index_count, 
         }
     }
 }
+
 void tg_mesh_recalculate_bitangents(u32 vertex_count, tg_vertex_3d* p_vertices)
 {
     for (u32 i = 0; i < vertex_count; i++)
@@ -171,6 +175,8 @@ void tg_mesh_recalculate_bitangents(u32 vertex_count, tg_vertex_3d* p_vertices)
         p_vertices[i].bitangent = tgm_v3_normalized(&p_vertices[i].bitangent);
     }
 }
+
+
 
 tg_mesh_h tg_mesh_create(u32 vertex_count, const v3* p_positions, const v3* p_normals, const v2* p_uvs, const v3* p_tangents, u32 index_count, const u16* p_indices)
 {
@@ -186,6 +192,14 @@ tg_mesh_h tg_mesh_create(u32 vertex_count, const v3* p_positions, const v3* p_no
 
     staging_buffer = tg_vulkan_buffer_create(vbo_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
+    // bounds
+    mesh_h->bounds.min = (v3){ p_positions[0].x, p_positions[0].y, p_positions[0].z };
+    mesh_h->bounds.max = (v3){ p_positions[0].x, p_positions[0].y, p_positions[0].z };
+    for (u32 i = 1; i < vertex_count; i++)
+    {
+        mesh_h->bounds.min = tgm_v3_min(&mesh_h->bounds.min, &p_positions[i]);
+        mesh_h->bounds.max = tgm_v3_max(&mesh_h->bounds.max, &p_positions[i]);
+    }
     // positions
     for (u32 i = 0; i < vertex_count; i++)
     {
@@ -261,22 +275,6 @@ tg_mesh_h tg_mesh_create(u32 vertex_count, const v3* p_positions, const v3* p_no
         mesh_h->ibo.buffer = VK_NULL_HANDLE;
         mesh_h->ibo.device_memory = VK_NULL_HANDLE;
     }
-
-    return mesh_h;
-}
-
-tg_mesh_h tg_mesh_create_from_storage_buffer(tg_storage_buffer_h storage_buffer_h)
-{
-    TG_ASSERT(storage_buffer_h);
-
-    tg_mesh_h mesh_h = TG_MEMORY_ALLOC(sizeof(*mesh_h));
-    mesh_h->type = TG_HANDLE_TYPE_MESH;
-
-    mesh_h->vbo = tg_vulkan_buffer_create(storage_buffer_h->buffer.size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    tg_vulkan_buffer_copy(storage_buffer_h->buffer.size, storage_buffer_h->buffer.buffer, mesh_h->vbo.buffer);
-    mesh_h->ibo.size = 0;
-    mesh_h->ibo.buffer = VK_NULL_HANDLE;
-    mesh_h->ibo.device_memory = VK_NULL_HANDLE;
 
     return mesh_h;
 }

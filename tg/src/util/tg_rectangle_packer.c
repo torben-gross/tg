@@ -4,13 +4,13 @@
 #include "util/tg_list.h"
 #include "util/tg_qsort.h"
 
-b32 tg_rectangle_packer_internal_rect_compare(const tg_rect* p_r0, const tg_rect* p_r1)
+b32 tg_rectangle_packer_internal_rect_compare(const tg_rectangle_packer_rect* p_r0, const tg_rectangle_packer_rect* p_r1)
 {
     const b32 result = p_r0->height > p_r1->height;
     return result;
 }
 
-void tg_rectangle_packer_pack(u32 rect_count, tg_rect* p_rects, u32* p_total_width, u32* p_total_height)
+void tg_rectangle_packer_pack(u32 rect_count, tg_rectangle_packer_rect* p_rects, u32* p_total_width, u32* p_total_height)
 {
     *p_total_width = 0;
     *p_total_height = 0;
@@ -25,11 +25,11 @@ void tg_rectangle_packer_pack(u32 rect_count, tg_rect* p_rects, u32* p_total_wid
         max_width = tgm_u32_max(max_width, p_rects[i].width);
     }
 
-    TG_QSORT_CUSTOM(tg_rect, rect_count, p_rects, tg_rectangle_packer_internal_rect_compare);
+    TG_QSORT_CUSTOM(tg_rectangle_packer_rect, rect_count, p_rects, tg_rectangle_packer_internal_rect_compare);
 
-    tg_list spaces = TG_LIST_CREATE__CAPACITY(tg_rect, rect_count * rect_count);
+    tg_list spaces = TG_LIST_CREATE__CAPACITY(tg_rectangle_packer_rect, rect_count * rect_count);
 
-    tg_rect start_rect = { 0 };
+    tg_rectangle_packer_rect start_rect = { 0 };
     start_rect.left = 0;
     start_rect.bottom = 0;
     start_rect.width = tgm_u32_max((u32)tgm_f32_ceil(tgm_f32_sqrt((f32)area / 0.95f)), max_width);;
@@ -39,10 +39,10 @@ void tg_rectangle_packer_pack(u32 rect_count, tg_rect* p_rects, u32* p_total_wid
 
     for (u32 i = 0; i < rect_count; i++)
     {
-        tg_rect* p_rect = &p_rects[i];
+        tg_rectangle_packer_rect* p_rect = &p_rects[i];
         for (u32 j = 0; j < spaces.count; j++)
         {
-            tg_rect* p_space = TG_LIST_POINTER_TO(spaces, spaces.count - 1 - j);
+            tg_rectangle_packer_rect* p_space = TG_LIST_POINTER_TO(spaces, spaces.count - 1 - j);
 
             if (p_rect->width > p_space->width || p_rect->height > p_space->height)
             {
@@ -111,7 +111,7 @@ void tg_rectangle_packer_pack(u32 rect_count, tg_rect* p_rects, u32* p_total_wid
                 |______|_______________|
 
                 */
-                tg_rect new_space = { 0 };
+                tg_rectangle_packer_rect new_space = { 0 };
                 new_space.left = p_space->left + p_rect->width;
                 new_space.bottom = p_space->bottom;
                 new_space.width = p_space->width - p_rect->width;

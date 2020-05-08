@@ -282,6 +282,8 @@ u64    tgm_u64_min(u64 v0, u64 v1);
 | Vectors                                                     |
 +------------------------------------------------------------*/
 
+v2     tgm_v2_max(const v2* p_v0, const v2* p_v1);
+v2     tgm_v2_min(const v2* p_v0, const v2* p_v1);
 v2     tgm_v2_subtract_v2(const v2* p_v0, const v2* p_v1);
 
 v3     tgm_v3_add_v3(const v3* p_v0, const v3* p_v1);
@@ -293,6 +295,8 @@ f32    tgm_v3_dot(const v3* p_v0, const v3* p_v1);
 b32    tgm_v3_equal(const v3* p_v0, const v3* p_v1);
 f32    tgm_v3_magnitude(const v3* p_v);
 f32    tgm_v3_magnitude_squared(const v3* p_v);
+v3     tgm_v3_max(const v3* p_v0, const v3* p_v1);
+v3     tgm_v3_min(const v3* p_v0, const v3* p_v1);
 v3     tgm_v3_multiply_v3(const v3* p_v0, const v3* p_v1);
 v3     tgm_v3_multiply_f(const v3* p_v, f32 f);
 v3     tgm_v3_negated(const v3* p_v);
@@ -309,6 +313,8 @@ f32    tgm_v4_dot(const v4* p_v0, const v4* p_v1);
 b32    tgm_v4_equal(const v4* p_v0, const v4* p_v1);
 f32    tgm_v4_magnitude(const v4* p_v);
 f32    tgm_v4_magnitude_squared(const v4* p_v);
+v4     tgm_v4_max(const v4* p_v0, const v4* p_v1);
+v4     tgm_v4_min(const v4* p_v0, const v4* p_v1);
 v4     tgm_v4_multiply_v4(const v4* p_v0, const v4* p_v1);
 v4     tgm_v4_multiply_f(const v4* p_v, f32 f);
 v4     tgm_v4_negated(const v4* p_v);

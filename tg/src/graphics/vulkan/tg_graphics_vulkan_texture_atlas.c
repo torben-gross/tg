@@ -13,7 +13,7 @@ tg_texture_atlas_h tg_texture_atlas_create_from_images(u32 image_count, tg_color
 	texture_atlas_h->type = TG_HANDLE_TYPE_TEXTURE_ATLAS;
 	texture_atlas_h->p_extents = TG_MEMORY_ALLOC(image_count * sizeof(*texture_atlas_h->p_extents));
 
-	tg_rect* p_rects = TG_MEMORY_ALLOC(image_count * sizeof(*p_rects));
+	tg_rectangle_packer_rect* p_rects = TG_MEMORY_ALLOC(image_count * sizeof(*p_rects));
 	for (u32 i = 0; i < image_count; i++)
 	{
 		p_rects[i].id = i;

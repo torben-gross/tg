@@ -182,7 +182,7 @@ void tg_application_internal_game_3d_create()
     test_deferred.quad_offset = -65.0f;
     tg_list_insert(&test_deferred.entities, &p_quad_entity);
 
-    const i32 chunk_count = 3;
+    const i32 chunk_count = 1;
     for (i32 chunk_x = -chunk_count; chunk_x < chunk_count; chunk_x++)
     {
         for (i32 chunk_y = -2; chunk_y < 2; chunk_y++)
@@ -334,7 +334,7 @@ void tg_application_internal_game_3d_update_and_render(f32 delta_ms)
     tg_entity** p_entities = TG_LIST_POINTER_TO(test_deferred.entities, 0);
     for (u32 i = 0; i < test_deferred.entities.count; i++)
     {
-        tg_camera_capture(test_deferred.secondary_camera_h, p_entities[i]->graphics_data_ptr_h);
+        //tg_camera_capture(test_deferred.secondary_camera_h, p_entities[i]->graphics_data_ptr_h);
     }
     tg_camera_end(test_deferred.secondary_camera_h);
 

@@ -656,11 +656,54 @@ void tg_camera_destroy(tg_camera_h camera_h)
 void tg_camera_end(tg_camera_h camera_h)
 {
     tg_deferred_renderer_begin(camera_h->capture_pass.deferred_renderer_h);
-    for (u32 i = 0; i < camera_h->captured_entity_count; i++)
+    for (u32 e = 0; e < camera_h->captured_entity_count; e++)
     {
-        if (camera_h->captured_entities[i]->material_h->material_type == TG_VULKAN_MATERIAL_TYPE_DEFERRED)
+        tg_entity_graphics_data_ptr_h entity_graphics_data_ptr_h = camera_h->captured_entities[e];
+        if (entity_graphics_data_ptr_h->material_h->material_type == TG_VULKAN_MATERIAL_TYPE_DEFERRED)
         {
-            tg_deferred_renderer_draw(camera_h->capture_pass.deferred_renderer_h, camera_h->captured_entities[i]);
+            for (u32 c = 0; c < entity_graphics_data_ptr_h->camera_info_count; c++)
+            {
+                tg_vulkan_camera_info* p_vulkan_camera_info = &entity_graphics_data_ptr_h->p_camera_infos[c];
+                if (p_vulkan_camera_info->camera_h == camera_h)
+                {
+                    const tg_rect* p_bounds = &entity_graphics_data_ptr_h->p_lod_meshes_h[0]->bounds;
+
+                    v4 p_points[8] = { 0 };
+                    p_points[0] = (v4){ p_bounds->min.x, p_bounds->min.y, p_bounds->min.z, 1.0f };
+                    p_points[1] = (v4){ p_bounds->min.x, p_bounds->min.y, p_bounds->max.z, 1.0f };
+                    p_points[2] = (v4){ p_bounds->min.x, p_bounds->max.y, p_bounds->min.z, 1.0f };
+                    p_points[3] = (v4){ p_bounds->min.x, p_bounds->max.y, p_bounds->max.z, 1.0f };
+                    p_points[4] = (v4){ p_bounds->max.x, p_bounds->min.y, p_bounds->min.z, 1.0f };
+                    p_points[5] = (v4){ p_bounds->max.x, p_bounds->min.y, p_bounds->max.z, 1.0f };
+                    p_points[6] = (v4){ p_bounds->max.x, p_bounds->max.y, p_bounds->min.z, 1.0f };
+                    p_points[7] = (v4){ p_bounds->max.x, p_bounds->max.y, p_bounds->max.z, 1.0f };
+
+                    v4 p_homogenous_points_clip_space[8] = { 0 };
+                    v3 p_cartesian_points_clip_space[8] = { 0 };
+                    for (u8 i = 0; i < 8; i++)
+                    {
+                        p_homogenous_points_clip_space[i] = tgm_m4_multiply_v4(&TG_ENTITY_GRAPHICS_DATA_PTR_MODEL(entity_graphics_data_ptr_h), &p_points[i]);
+                        p_homogenous_points_clip_space[i] = tgm_m4_multiply_v4(&TG_CAMERA_VIEW(camera_h), &p_homogenous_points_clip_space[i]);
+                        p_homogenous_points_clip_space[i] = tgm_m4_multiply_v4(&TG_CAMERA_PROJ(camera_h), &p_homogenous_points_clip_space[i]);
+                        p_cartesian_points_clip_space[i] = tgm_v4_to_v3(&p_homogenous_points_clip_space[i]);
+                    }
+
+                    v3 min = p_cartesian_points_clip_space[0];
+                    v3 max = p_cartesian_points_clip_space[0];
+                    for (u8 i = 1; i < 8; i++)
+                    {
+                        min = tgm_v3_min(&min, &p_cartesian_points_clip_space[i]);
+                        max = tgm_v3_max(&max, &p_cartesian_points_clip_space[i]);
+                    }
+
+                    const b32 cull = min.x >= 1.0f || min.y >= 1.0f || max.x <= -1.0f || max.y <= -1.0f || min.z >= 1.0f || max.z <= 0.0f;
+                    if (!cull)
+                    {
+                        tg_deferred_renderer_draw(camera_h->capture_pass.deferred_renderer_h, camera_h->captured_entities[e]);
+                    }
+                    break;
+                }
+            }
         }
     }
     tg_deferred_renderer_end(camera_h->capture_pass.deferred_renderer_h);
@@ -726,13 +769,14 @@ void tg_camera_set_orthographic_projection(tg_camera_h camera_h, f32 left, f32 r
 {
 	TG_ASSERT(camera_h && left != right && bottom != top && far != near);
 
-	((m4*)camera_h->view_projection_ubo.p_mapped_device_memory)[1] = tgm_m4_orthographic(left, right, bottom, top, far, near); // TODO: flush
+	TG_CAMERA_PROJ(camera_h) = tgm_m4_orthographic(left, right, bottom, top, far, near); // TODO: flush
 }
 
 void tg_camera_set_perspective_projection(tg_camera_h camera_h, f32 fov_y, f32 near, f32 far)
 {
 	TG_ASSERT(camera_h && near < 0 && far < 0 && near > far);
-	((m4*)camera_h->view_projection_ubo.p_mapped_device_memory)[1] = tgm_m4_perspective(fov_y, tg_platform_get_window_aspect_ratio(), near, far);
+
+    TG_CAMERA_PROJ(camera_h) = tgm_m4_perspective(fov_y, tg_platform_get_window_aspect_ratio(), near, far);
 }
 
 void tg_camera_set_view(tg_camera_h camera_h, const v3* p_position, f32 pitch, f32 yaw, f32 roll)
@@ -743,7 +787,7 @@ void tg_camera_set_view(tg_camera_h camera_h, const v3* p_position, f32 pitch, f
 	const m4 inverse_rotation = tgm_m4_inverse(&rotation);
 	const v3 negated_position = tgm_v3_negated(p_position);
 	const m4 inverse_translation = tgm_m4_translate(&negated_position);
-	((m4*)camera_h->view_projection_ubo.p_mapped_device_memory)[0] = tgm_m4_multiply_m4(&inverse_rotation, &inverse_translation);
+    TG_CAMERA_VIEW(camera_h) = tgm_m4_multiply_m4(&inverse_rotation, &inverse_translation);
 }
 
 #endif

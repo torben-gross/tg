@@ -61,6 +61,8 @@ tg_terrain_chunk_entity_h tg_terrain_chunk_entity_create(i32 x, i32 y, i32 z, tg
         const u32 mesh_size = ((TG_CHUNK_VERTEX_COUNT_X - 1) / denominator) * ((TG_CHUNK_VERTEX_COUNT_Y - 1) / denominator) * ((TG_CHUNK_VERTEX_COUNT_Z - 1) / denominator) * 15 * sizeof(tg_vertex_3d);
 
         terrain_chunk_entity_h->p_lod_meshes[i].type = TG_HANDLE_TYPE_MESH;
+        terrain_chunk_entity_h->p_lod_meshes[i].bounds.min = (v3){ (f32)TG_CHUNK_VERTEX_COUNT_X * (f32)x, (f32)TG_CHUNK_VERTEX_COUNT_Y * (f32)y, (f32)TG_CHUNK_VERTEX_COUNT_Z * (f32)z };
+        terrain_chunk_entity_h->p_lod_meshes[i].bounds.max = (v3){ (f32)TG_CHUNK_VERTEX_COUNT_X * ((f32)x + 1.0f), (f32)TG_CHUNK_VERTEX_COUNT_Y * ((f32)y + 1.0f), (f32)TG_CHUNK_VERTEX_COUNT_Z * ((f32)z + 1.0f) };
         terrain_chunk_entity_h->p_lod_meshes[i].vbo = tg_vulkan_buffer_create(mesh_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
         terrain_chunk_entity_h->p_lod_meshes[i].ibo.size = 0;
         terrain_chunk_entity_h->p_lod_meshes[i].ibo.buffer = VK_NULL_HANDLE;
@@ -138,7 +140,7 @@ tg_terrain_chunk_entity_h tg_terrain_chunk_entity_create(i32 x, i32 y, i32 z, tg
             marching_cubes_memory_barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
             marching_cubes_memory_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
-            vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, &marching_cubes_memory_barrier, TG_NULL, 1, 0, TG_NULL);
+            vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1, &marching_cubes_memory_barrier, 0, TG_NULL, 0, TG_NULL);
 
             vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, p_normals_cs[i].compute_pipeline);
             vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, p_normals_cs[i].pipeline_layout, 0, 1, &p_normals_cs[i].descriptor.descriptor_set, 0, TG_NULL);

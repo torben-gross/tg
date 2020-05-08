@@ -698,6 +698,30 @@ u64 tgm_u64_min(u64 v0, u64 v1)
 | Vectors                                                     |
 +------------------------------------------------------------*/
 
+v2 tgm_v2_max(const v2* p_v0, const v2* p_v1)
+{
+	TG_ASSERT(p_v0 && p_v1);
+
+	v2 result = { 0 };
+
+	result.x = p_v0->x > p_v1->x ? p_v0->x : p_v1->x;
+	result.y = p_v0->y > p_v1->y ? p_v0->y : p_v1->y;
+
+	return result;
+}
+
+v2 tgm_v2_min(const v2* p_v0, const v2* p_v1)
+{
+	TG_ASSERT(p_v0 && p_v1);
+
+	v2 result = { 0 };
+
+	result.x = p_v0->x < p_v1->x ? p_v0->x : p_v1->x;
+	result.y = p_v0->y < p_v1->y ? p_v0->y : p_v1->y;
+
+	return result;
+}
+
 v2 tgm_v2_subtract_v2(const v2* p_v0, const v2* p_v1)
 {
 	TG_ASSERT(p_v0 && p_v1);
@@ -806,6 +830,32 @@ f32 tgm_v3_magnitude_squared(const v3* p_v)
 	TG_ASSERT(p_v);
 
 	const f32 result = p_v->x * p_v->x + p_v->y * p_v->y + p_v->z * p_v->z;
+	return result;
+}
+
+v3 tgm_v3_max(const v3* p_v0, const v3* p_v1)
+{
+	TG_ASSERT(p_v0 && p_v1);
+
+	v3 result = { 0 };
+
+	result.x = p_v0->x > p_v1->x ? p_v0->x : p_v1->x;
+	result.y = p_v0->y > p_v1->y ? p_v0->y : p_v1->y;
+	result.z = p_v0->z > p_v1->z ? p_v0->z : p_v1->z;
+
+	return result;
+}
+
+v3 tgm_v3_min(const v3* p_v0, const v3* p_v1)
+{
+	TG_ASSERT(p_v0 && p_v1);
+
+	v3 result = { 0 };
+
+	result.x = p_v0->x < p_v1->x ? p_v0->x : p_v1->x;
+	result.y = p_v0->y < p_v1->y ? p_v0->y : p_v1->y;
+	result.z = p_v0->z < p_v1->z ? p_v0->z : p_v1->z;
+
 	return result;
 }
 
@@ -991,6 +1041,34 @@ f32 tgm_v4_magnitude_squared(const v4* p_v)
 	TG_ASSERT(p_v);
 
 	const f32 result = p_v->x * p_v->x + p_v->y * p_v->y + p_v->z * p_v->z + p_v->w * p_v->w;
+	return result;
+}
+
+v4 tgm_v4_max(const v4* p_v0, const v4* p_v1)
+{
+	TG_ASSERT(p_v0 && p_v1);
+
+	v4 result = { 0 };
+
+	result.x = p_v0->x > p_v1->x ? p_v0->x : p_v1->x;
+	result.y = p_v0->y > p_v1->y ? p_v0->y : p_v1->y;
+	result.z = p_v0->z > p_v1->z ? p_v0->z : p_v1->z;
+	result.w = p_v0->w > p_v1->w ? p_v0->w : p_v1->w;
+
+	return result;
+}
+
+v4 tgm_v4_min(const v4* p_v0, const v4* p_v1)
+{
+	TG_ASSERT(p_v0 && p_v1);
+
+	v4 result = { 0 };
+
+	result.x = p_v0->x < p_v1->x ? p_v0->x : p_v1->x;
+	result.y = p_v0->y < p_v1->y ? p_v0->y : p_v1->y;
+	result.z = p_v0->z < p_v1->z ? p_v0->z : p_v1->z;
+	result.w = p_v0->w < p_v1->w ? p_v0->w : p_v1->w;
+
 	return result;
 }
 
