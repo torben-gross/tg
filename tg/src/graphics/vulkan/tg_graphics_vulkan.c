@@ -1884,6 +1884,8 @@ b32 tg_vulkan_physical_device_is_suitable(VkPhysicalDevice physical_device)
     VkPhysicalDeviceFeatures physical_device_features;
     vkGetPhysicalDeviceFeatures(physical_device, &physical_device_features);
 
+    // TODO: is_discrete_gpu does not work on me lappy
+    // TODO: tg_vulkan_physical_device_find_queue_families needs to work with only one queue available!
     const b32 is_discrete_gpu = physical_device_properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
     const b32 supports_geometry_shader = physical_device_features.geometryShader;
     const b32 supports_sampler_anisotropy = physical_device_features.samplerAnisotropy;

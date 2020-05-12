@@ -73,6 +73,8 @@ typedef struct tg_test_deferred
     tg_entity                      ground_entity;
     f32                            quad_offset;
     f32                            dtsum;
+
+    tg_entity                      transvoxel_entities[9];
 } tg_test_deferred;
 
 
@@ -83,6 +85,8 @@ tg_test_deferred test_deferred = { 0 };
 
 
 
+#include "tg_transvoxel.h"
+tg_entity* p_e;
 void tg_application_internal_game_3d_create()
 {
     test_deferred.entities = TG_LIST_CREATE(tg_entity*);
@@ -183,6 +187,19 @@ void tg_application_internal_game_3d_create()
     test_deferred.quad_offset = -65.0f;
     tg_list_insert(&test_deferred.entities, &p_quad_entity);
 
+
+
+    tg_transvoxel_isolevels isolevels = { 0 };
+    tg_transvoxel_fill_isolevels(&isolevels, 3, 0, 5);
+    tg_transvoxel_triangle* p_triangles = TG_MEMORY_ALLOC(5 * 16 * 16 * 16 * sizeof(*p_triangles));
+    const u32 triangle_count = tg_transvoxel_create_chunk(&isolevels, 0, 0, 0, p_triangles);
+    tg_mesh_h m = tg_mesh_create(3 * triangle_count, (v3*)p_triangles, TG_NULL, TG_NULL, TG_NULL, 0, TG_NULL);
+    test_deferred.transvoxel_entities[0] = tg_entity_create(m, test_deferred.default_material_h);
+    p_e = &test_deferred.transvoxel_entities[0];
+    tg_list_insert(&test_deferred.entities, &p_e);
+
+
+
     test_deferred.terrain_chunks = TG_LIST_CREATE(tg_terrain_chunk_entity_h);
     const i32 chunk_count = 6;
     for (i32 chunk_x = -chunk_count; chunk_x < chunk_count; chunk_x++)
@@ -191,9 +208,9 @@ void tg_application_internal_game_3d_create()
         {
             for (i32 chunk_z = -chunk_count; chunk_z < chunk_count; chunk_z++)
             {
-                tg_terrain_chunk_entity_h terrain_chunk_entity_h = tg_terrain_chunk_entity_create(chunk_x, chunk_y, chunk_z, test_deferred.default_material_h); // TODO: this can not be destructed properly atm
-                tg_list_insert(&test_deferred.entities, &terrain_chunk_entity_h);
-                tg_list_insert(&test_deferred.terrain_chunks, &terrain_chunk_entity_h);
+                //tg_terrain_chunk_entity_h terrain_chunk_entity_h = tg_terrain_chunk_entity_create(chunk_x, chunk_y, chunk_z, test_deferred.default_material_h); // TODO: this can not be destructed properly atm
+                //tg_list_insert(&test_deferred.entities, &terrain_chunk_entity_h);
+                //tg_list_insert(&test_deferred.terrain_chunks, &terrain_chunk_entity_h);
             }
         }
     }

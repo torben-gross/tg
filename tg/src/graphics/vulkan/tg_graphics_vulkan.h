@@ -291,7 +291,7 @@ typedef struct tg_material
 typedef struct tg_mesh
 {
     tg_handle_type      type;
-    tg_rect             bounds;
+    tg_bounds           bounds;
     tg_vulkan_buffer    vbo;
     tg_vulkan_buffer    ibo;
 } tg_mesh;

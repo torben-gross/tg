@@ -356,6 +356,7 @@ void tg_camera_capture(tg_camera_h camera_h, tg_entity_graphics_data_ptr_h entit
         if (entity_graphics_data_ptr_h->p_camera_infos[i].camera_h == camera_h)
         {
             p_vulkan_camera_info = &entity_graphics_data_ptr_h->p_camera_infos[i];
+            break;
         }
     }
     
@@ -664,52 +665,59 @@ void tg_camera_end(tg_camera_h camera_h)
                 tg_vulkan_camera_info* p_vulkan_camera_info = &entity_graphics_data_ptr_h->p_camera_infos[c];
                 if (p_vulkan_camera_info->camera_h == camera_h)
                 {
-                    const tg_rect* p_bounds = &entity_graphics_data_ptr_h->p_lod_meshes_h[0]->bounds;
-
-                    v4 p_points[8] = { 0 };
-                    p_points[0] = (v4){ p_bounds->min.x, p_bounds->min.y, p_bounds->min.z, 1.0f };
-                    p_points[1] = (v4){ p_bounds->min.x, p_bounds->min.y, p_bounds->max.z, 1.0f };
-                    p_points[2] = (v4){ p_bounds->min.x, p_bounds->max.y, p_bounds->min.z, 1.0f };
-                    p_points[3] = (v4){ p_bounds->min.x, p_bounds->max.y, p_bounds->max.z, 1.0f };
-                    p_points[4] = (v4){ p_bounds->max.x, p_bounds->min.y, p_bounds->min.z, 1.0f };
-                    p_points[5] = (v4){ p_bounds->max.x, p_bounds->min.y, p_bounds->max.z, 1.0f };
-                    p_points[6] = (v4){ p_bounds->max.x, p_bounds->max.y, p_bounds->min.z, 1.0f };
-                    p_points[7] = (v4){ p_bounds->max.x, p_bounds->max.y, p_bounds->max.z, 1.0f };
-
-                    v4 p_homogenous_points_clip_space[8] = { 0 };
-                    v3 p_cartesian_points_clip_space[8] = { 0 };
-                    for (u8 i = 0; i < 8; i++)
+                    if (entity_graphics_data_ptr_h->lod_count == 1)
                     {
-                        p_homogenous_points_clip_space[i] = tgm_m4_multiply_v4(&TG_ENTITY_GRAPHICS_DATA_PTR_MODEL(entity_graphics_data_ptr_h), &p_points[i]);
-                        p_homogenous_points_clip_space[i] = tgm_m4_multiply_v4(&TG_CAMERA_VIEW(camera_h), &p_homogenous_points_clip_space[i]);
-                        p_homogenous_points_clip_space[i] = tgm_m4_multiply_v4(&TG_CAMERA_PROJ(camera_h), &p_homogenous_points_clip_space[i]);// TODO: SIMD
-                        p_cartesian_points_clip_space[i] = tgm_v4_to_v3(&p_homogenous_points_clip_space[i]);
+                        tg_deferred_renderer_execute(camera_h->capture_pass.deferred_renderer_h, p_vulkan_camera_info->p_command_buffers[0]);
                     }
-
-                    v3 min = p_cartesian_points_clip_space[0];
-                    v3 max = p_cartesian_points_clip_space[0];
-                    for (u8 i = 1; i < 8; i++)
+                    else
                     {
-                        min = tgm_v3_min(&min, &p_cartesian_points_clip_space[i]);
-                        max = tgm_v3_max(&max, &p_cartesian_points_clip_space[i]);
-                    }
+                        const tg_bounds* p_bounds = &entity_graphics_data_ptr_h->p_lod_meshes_h[0]->bounds;
 
-                    const b32 cull = min.x >= 1.0f || min.y >= 1.0f || max.x <= -1.0f || max.y <= -1.0f || min.z >= 1.0f || max.z <= 0.0f;
-                    if (!cull)
-                    {
-                        const v3 clamp_min = { -1.0f, -1.0f, 0.0f };
-                        const v3 clamp_max = { 1.0f,  1.0f, 0.0f };
-                        const v3 clamped_min = tgm_v3_clamp(&min, &clamp_min, &clamp_max);
-                        const v3 clamped_max = tgm_v3_clamp(&max, &clamp_min, &clamp_max);
-                        const f32 area = (clamped_max.x - clamped_min.x) * (clamped_max.y - clamped_min.y);
+                        v4 p_points[8] = { 0 };
+                        p_points[0] = (v4){ p_bounds->min.x, p_bounds->min.y, p_bounds->min.z, 1.0f };
+                        p_points[1] = (v4){ p_bounds->min.x, p_bounds->min.y, p_bounds->max.z, 1.0f };
+                        p_points[2] = (v4){ p_bounds->min.x, p_bounds->max.y, p_bounds->min.z, 1.0f };
+                        p_points[3] = (v4){ p_bounds->min.x, p_bounds->max.y, p_bounds->max.z, 1.0f };
+                        p_points[4] = (v4){ p_bounds->max.x, p_bounds->min.y, p_bounds->min.z, 1.0f };
+                        p_points[5] = (v4){ p_bounds->max.x, p_bounds->min.y, p_bounds->max.z, 1.0f };
+                        p_points[6] = (v4){ p_bounds->max.x, p_bounds->max.y, p_bounds->min.z, 1.0f };
+                        p_points[7] = (v4){ p_bounds->max.x, p_bounds->max.y, p_bounds->max.z, 1.0f };
 
-                        if (area >= 0.09f)
+                        v4 p_homogenous_points_clip_space[8] = { 0 };
+                        v3 p_cartesian_points_clip_space[8] = { 0 };
+                        for (u8 i = 0; i < 8; i++)
                         {
-                            tg_deferred_renderer_execute(camera_h->capture_pass.deferred_renderer_h, p_vulkan_camera_info->p_command_buffers[0]);
+                            p_homogenous_points_clip_space[i] = tgm_m4_multiply_v4(&TG_ENTITY_GRAPHICS_DATA_PTR_MODEL(entity_graphics_data_ptr_h), &p_points[i]);
+                            p_homogenous_points_clip_space[i] = tgm_m4_multiply_v4(&TG_CAMERA_VIEW(camera_h), &p_homogenous_points_clip_space[i]);
+                            p_homogenous_points_clip_space[i] = tgm_m4_multiply_v4(&TG_CAMERA_PROJ(camera_h), &p_homogenous_points_clip_space[i]);// TODO: SIMD
+                            p_cartesian_points_clip_space[i] = tgm_v4_to_v3(&p_homogenous_points_clip_space[i]);
                         }
-                        else
+
+                        v3 min = p_cartesian_points_clip_space[0];
+                        v3 max = p_cartesian_points_clip_space[0];
+                        for (u8 i = 1; i < 8; i++)
                         {
-                            tg_deferred_renderer_execute(camera_h->capture_pass.deferred_renderer_h, p_vulkan_camera_info->p_command_buffers[1]);
+                            min = tgm_v3_min(&min, &p_cartesian_points_clip_space[i]);
+                            max = tgm_v3_max(&max, &p_cartesian_points_clip_space[i]);
+                        }
+
+                        const b32 cull = min.x >= 1.0f || min.y >= 1.0f || max.x <= -1.0f || max.y <= -1.0f || min.z >= 1.0f || max.z <= 0.0f;
+                        if (!cull)
+                        {
+                            const v3 clamp_min = { -1.0f, -1.0f, 0.0f };
+                            const v3 clamp_max = { 1.0f,  1.0f, 0.0f };
+                            const v3 clamped_min = tgm_v3_clamp(&min, &clamp_min, &clamp_max);
+                            const v3 clamped_max = tgm_v3_clamp(&max, &clamp_min, &clamp_max);
+                            const f32 area = (clamped_max.x - clamped_min.x) * (clamped_max.y - clamped_min.y);
+
+                            if (area >= 0.9f)
+                            {
+                                tg_deferred_renderer_execute(camera_h->capture_pass.deferred_renderer_h, p_vulkan_camera_info->p_command_buffers[2]);
+                            }
+                            else
+                            {
+                                tg_deferred_renderer_execute(camera_h->capture_pass.deferred_renderer_h, p_vulkan_camera_info->p_command_buffers[3]);
+                            }
                         }
                     }
                     break;

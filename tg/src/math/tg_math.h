@@ -294,6 +294,7 @@ v3     tgm_v3_divide_v3(const v3* p_v0, const v3* p_v1);
 v3     tgm_v3_divide_f(const v3* p_v, f32 f);
 f32    tgm_v3_dot(const v3* p_v0, const v3* p_v1);
 b32    tgm_v3_equal(const v3* p_v0, const v3* p_v1);
+v3     tgm_v3_lerp(const v3* p_v0, const v3* p_v1, f32 t);
 f32    tgm_v3_magnitude(const v3* p_v);
 f32    tgm_v3_magnitude_squared(const v3* p_v);
 v3     tgm_v3_max(const v3* p_v0, const v3* p_v1);

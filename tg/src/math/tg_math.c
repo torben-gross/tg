@@ -830,6 +830,19 @@ b32 tgm_v3_equal(const v3* p_v0, const v3* p_v1)
 	return result;
 }
 
+v3 tgm_v3_lerp(const v3* p_v0, const v3* p_v1, f32 t)
+{
+	TG_ASSERT(p_v0 && p_v1);
+
+	v3 result = { 0 };
+	
+	result.x = (1.0f - t) * p_v0->x + t * p_v1->x;
+	result.y = (1.0f - t) * p_v0->y + t * p_v1->y;
+	result.z = (1.0f - t) * p_v0->z + t * p_v1->z;
+	
+	return result;
+}
+
 f32 tgm_v3_magnitude(const v3* p_v)
 {
 	TG_ASSERT(p_v);
