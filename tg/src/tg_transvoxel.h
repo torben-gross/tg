@@ -26,7 +26,7 @@ typedef struct tg_transvoxel_triangle
 	v3    positions[3];
 } tg_transvoxel_triangle;
 
-u32     tg_transvoxel_create_chunk(const tg_transvoxel_isolevels* p_isolevels, i32 x, i32 y, i32 z, tg_transvoxel_triangle* p_triangles);
+u32     tg_transvoxel_create_chunk(const tg_transvoxel_isolevels* p_isolevels, i32 x, i32 y, i32 z, u8 lod, tg_transvoxel_triangle* p_triangles);
 u32     tg_transvoxel_create_transition_face(const tg_transvoxel_isolevels* p_isolevels, i32 x, i32 y, i32 z, tg_transvoxel_face face, tg_transvoxel_triangle* p_triangles);
 void    tg_transvoxel_fill_isolevels(tg_transvoxel_isolevels* p_isolevels, i32 x, i32 y, i32 z);
 

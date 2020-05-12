@@ -28,7 +28,7 @@ v3 tg_transvoxel_internal_interpolate(i32 d0, i32 d1, const v3* p_p0, const v3* 
 	return q;
 }
 
-u32 tg_transvoxel_create_chunk(const tg_transvoxel_isolevels* p_isolevels, i32 x, i32 y, i32 z, tg_transvoxel_triangle* p_triangles)
+u32 tg_transvoxel_create_chunk(const tg_transvoxel_isolevels* p_isolevels, i32 x, i32 y, i32 z, u8 lod, tg_transvoxel_triangle* p_triangles)
 {
 	TG_ASSERT(p_isolevels && p_triangles);
 
@@ -36,12 +36,13 @@ u32 tg_transvoxel_create_chunk(const tg_transvoxel_isolevels* p_isolevels, i32 x
 
 	i8 p_corners[8] = { 0 };
 	v3 p_positions[8] = { 0 };
-	
-	for (u32 cell_z = 0; cell_z < 16; cell_z++)
+	const u8 lod_factor = 1 << lod;
+
+	for (u8 cell_z = 0; cell_z < 16 / lod_factor; cell_z++)
 	{
-		for (u32 cell_y = 0; cell_y < 16; cell_y++)
+		for (u8 cell_y = 0; cell_y < 16 / lod_factor; cell_y++)
 		{
-			for (u32 cell_x = 0; cell_x < 16; cell_x++)
+			for (u8 cell_x = 0; cell_x < 16 / lod_factor; cell_x++)
 			{
 				// Figure 3.7. Voxels at the corners of a cell are numbered as shown.
 				//    2 _____________ 3
@@ -55,14 +56,14 @@ u32 tg_transvoxel_create_chunk(const tg_transvoxel_isolevels* p_isolevels, i32 x
 				//  |/___________|/
 				// 4              5
 
-				p_corners[0] = TG_ISOLEVEL_AT(*p_isolevels, cell_x    , cell_y    , cell_z    );
-				p_corners[1] = TG_ISOLEVEL_AT(*p_isolevels, cell_x + 1, cell_y    , cell_z    );
-				p_corners[2] = TG_ISOLEVEL_AT(*p_isolevels, cell_x    , cell_y + 1, cell_z    );
-				p_corners[3] = TG_ISOLEVEL_AT(*p_isolevels, cell_x + 1, cell_y + 1, cell_z    );
-				p_corners[4] = TG_ISOLEVEL_AT(*p_isolevels, cell_x    , cell_y    , cell_z + 1);
-				p_corners[5] = TG_ISOLEVEL_AT(*p_isolevels, cell_x + 1, cell_y    , cell_z + 1);
-				p_corners[6] = TG_ISOLEVEL_AT(*p_isolevels, cell_x    , cell_y + 1, cell_z + 1);
-				p_corners[7] = TG_ISOLEVEL_AT(*p_isolevels, cell_x + 1, cell_y + 1, cell_z + 1);
+				p_corners[0] = TG_ISOLEVEL_AT(*p_isolevels, (cell_x    ) * lod_factor, (cell_y    ) * lod_factor, (cell_z    ) * lod_factor);
+				p_corners[1] = TG_ISOLEVEL_AT(*p_isolevels, (cell_x + 1) * lod_factor, (cell_y    ) * lod_factor, (cell_z    ) * lod_factor);
+				p_corners[2] = TG_ISOLEVEL_AT(*p_isolevels, (cell_x    ) * lod_factor, (cell_y + 1) * lod_factor, (cell_z    ) * lod_factor);
+				p_corners[3] = TG_ISOLEVEL_AT(*p_isolevels, (cell_x + 1) * lod_factor, (cell_y + 1) * lod_factor, (cell_z    ) * lod_factor);
+				p_corners[4] = TG_ISOLEVEL_AT(*p_isolevels, (cell_x    ) * lod_factor, (cell_y    ) * lod_factor, (cell_z + 1) * lod_factor);
+				p_corners[5] = TG_ISOLEVEL_AT(*p_isolevels, (cell_x + 1) * lod_factor, (cell_y    ) * lod_factor, (cell_z + 1) * lod_factor);
+				p_corners[6] = TG_ISOLEVEL_AT(*p_isolevels, (cell_x    ) * lod_factor, (cell_y + 1) * lod_factor, (cell_z + 1) * lod_factor);
+				p_corners[7] = TG_ISOLEVEL_AT(*p_isolevels, (cell_x + 1) * lod_factor, (cell_y + 1) * lod_factor, (cell_z + 1) * lod_factor);
 
 				const u32 case_code =
 					((p_corners[0] >> 7) & 0x01) |
@@ -89,14 +90,14 @@ u32 tg_transvoxel_create_chunk(const tg_transvoxel_isolevels* p_isolevels, i32 x
 					const f32 offset_y = 16.0f * (f32)y;
 					const f32 offset_z = 16.0f * (f32)z;
 
-					p_positions[0] = (v3){ offset_x + (f32)cell_x       , offset_y + (f32)cell_y       , offset_z + (f32)cell_z        };
-					p_positions[1] = (v3){ offset_x + (f32)cell_x + 1.0f, offset_y + (f32)cell_y       , offset_z + (f32)cell_z        };
-					p_positions[2] = (v3){ offset_x + (f32)cell_x       , offset_y + (f32)cell_y + 1.0f, offset_z + (f32)cell_z        };
-					p_positions[3] = (v3){ offset_x + (f32)cell_x + 1.0f, offset_y + (f32)cell_y + 1.0f, offset_z + (f32)cell_z        };
-					p_positions[4] = (v3){ offset_x + (f32)cell_x       , offset_y + (f32)cell_y       , offset_z + (f32)cell_z + 1.0f };
-					p_positions[5] = (v3){ offset_x + (f32)cell_x + 1.0f, offset_y + (f32)cell_y       , offset_z + (f32)cell_z + 1.0f };
-					p_positions[6] = (v3){ offset_x + (f32)cell_x       , offset_y + (f32)cell_y + 1.0f, offset_z + (f32)cell_z + 1.0f };
-					p_positions[7] = (v3){ offset_x + (f32)cell_x + 1.0f, offset_y + (f32)cell_y + 1.0f, offset_z + (f32)cell_z + 1.0f };
+					p_positions[0] = (v3){ offset_x + (f32)( cell_x      * lod_factor), offset_y + (f32)( cell_y      * lod_factor), offset_z + (f32)( cell_z      * lod_factor) };
+					p_positions[1] = (v3){ offset_x + (f32)((cell_x + 1) * lod_factor), offset_y + (f32)( cell_y      * lod_factor), offset_z + (f32)( cell_z      * lod_factor) };
+					p_positions[2] = (v3){ offset_x + (f32)( cell_x      * lod_factor), offset_y + (f32)((cell_y + 1) * lod_factor), offset_z + (f32)( cell_z      * lod_factor) };
+					p_positions[3] = (v3){ offset_x + (f32)((cell_x + 1) * lod_factor), offset_y + (f32)((cell_y + 1) * lod_factor), offset_z + (f32)( cell_z      * lod_factor) };
+					p_positions[4] = (v3){ offset_x + (f32)( cell_x      * lod_factor), offset_y + (f32)( cell_y      * lod_factor), offset_z + (f32)((cell_z + 1) * lod_factor) };
+					p_positions[5] = (v3){ offset_x + (f32)((cell_x + 1) * lod_factor), offset_y + (f32)( cell_y      * lod_factor), offset_z + (f32)((cell_z + 1) * lod_factor) };
+					p_positions[6] = (v3){ offset_x + (f32)( cell_x      * lod_factor), offset_y + (f32)((cell_y + 1) * lod_factor), offset_z + (f32)((cell_z + 1) * lod_factor) };
+					p_positions[7] = (v3){ offset_x + (f32)((cell_x + 1) * lod_factor), offset_y + (f32)((cell_y + 1) * lod_factor), offset_z + (f32)((cell_z + 1) * lod_factor) };
 
 					for (u8 i = 0; i < cell_triangle_count; i++)
 					{
@@ -142,9 +143,9 @@ u32 tg_transvoxel_create_transition_face(const tg_transvoxel_isolevels* p_isolev
 	i8 p_corners[13] = { 0 };
 	v3 p_positions[13] = { 0 };
 
-	for (u32 cell_y = 0; cell_y < 8; cell_y++)
+	for (u8 cell_y = 0; cell_y < 8; cell_y++)
 	{
-		for (u32 cell_x = 0; cell_x < 8; cell_x++)
+		for (u8 cell_x = 0; cell_x < 8; cell_x++)
 		{
 			//                6       7       8     B               C
 			//                 +------+------+       +-------------+
