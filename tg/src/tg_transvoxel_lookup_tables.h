@@ -406,7 +406,7 @@ const u8 p_transition_cell_class[512] =
 
 
 
-// The p_transition_cell_data table holds the triangulation data for all 56 distinct classes to
+// The transitionCellData table holds the triangulation data for all 56 distinct classes to
 // which a case can be mapped by the transitionCellClass table. The class index should be ANDed
 // with 0x7F before using it to look up triangulation data in this table.
 
@@ -482,7 +482,7 @@ const u8 p_transition_corner_data[13] =
 
 
 
-// The p_transition_vertex_data table gives the vertex locations for every one of the 512 possible
+// The transitionVertexData table gives the vertex locations for every one of the 512 possible
 // cases in the Tranvoxel Algorithm. Each 16-bit value also provides information about whether
 // a vertex can be reused from a neighboring cell. See Section 4.5 for details. The low byte
 // contains the indexes for the two endpoints of the edge on which the vertex lies, as numbered

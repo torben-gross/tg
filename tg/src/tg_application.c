@@ -62,6 +62,8 @@ typedef struct tg_test_deferred
     tg_vertex_shader_h             default_vertex_shader_h;
     tg_fragment_shader_h           default_fragment_shader_h;
     tg_material_h                  default_material_h;
+    tg_fragment_shader_h           yellow_fragment_shader_h;
+    tg_material_h                  yellow_material_h;
     tg_uniform_buffer_h            custom_uniform_buffer_h;
     v3*                            p_custom_uniform_buffer_data;
     tg_color_image_h               image_h;
@@ -87,6 +89,7 @@ tg_test_deferred test_deferred = { 0 };
 
 #include "tg_transvoxel.h"
 tg_entity* p_e;
+tg_entity* p_et;
 void tg_application_internal_game_3d_create()
 {
     test_deferred.entities = TG_LIST_CREATE(tg_entity*);
@@ -189,14 +192,32 @@ void tg_application_internal_game_3d_create()
 
 
 
+    tg_transvoxel_triangle* p_triangles = TG_MEMORY_ALLOC(5 * 16 * 16 * 16 * sizeof(*p_triangles));
+    tg_transvoxel_triangle* p_transition_triangles = TG_MEMORY_ALLOC(5 * 16 * 16 * sizeof(*p_transition_triangles));
+
     tg_transvoxel_isolevels isolevels = { 0 };
     tg_transvoxel_fill_isolevels(&isolevels, 3, 0, 5);
-    tg_transvoxel_triangle* p_triangles = TG_MEMORY_ALLOC(5 * 16 * 16 * 16 * sizeof(*p_triangles));
+
     const u32 triangle_count = tg_transvoxel_create_chunk(&isolevels, 0, 0, 0, p_triangles);
+    const u32 transition_triangle_count = tg_transvoxel_create_transition_face(&isolevels, 0, 0, 0, TG_TRANSVOXEL_FACE_Z_POS, p_transition_triangles);
+
     tg_mesh_h m = tg_mesh_create(3 * triangle_count, (v3*)p_triangles, TG_NULL, TG_NULL, TG_NULL, 0, TG_NULL);
+    tg_mesh_h mt = tg_mesh_create(3 * transition_triangle_count, (v3*)p_transition_triangles, TG_NULL, TG_NULL, TG_NULL, 0, TG_NULL);
+
     test_deferred.transvoxel_entities[0] = tg_entity_create(m, test_deferred.default_material_h);
+
+    test_deferred.yellow_fragment_shader_h = tg_fragment_shader_create("shaders/deferred_yellow.frag");
+    test_deferred.yellow_material_h = tg_material_create_deferred(test_deferred.default_vertex_shader_h, test_deferred.yellow_fragment_shader_h, 0, TG_NULL);
+    test_deferred.transvoxel_entities[1] = tg_entity_create(mt, test_deferred.yellow_material_h);
+    
     p_e = &test_deferred.transvoxel_entities[0];
+    p_et = &test_deferred.transvoxel_entities[1];
+    
     tg_list_insert(&test_deferred.entities, &p_e);
+    tg_list_insert(&test_deferred.entities, &p_et);
+
+    TG_MEMORY_FREE(p_transition_triangles);
+    TG_MEMORY_FREE(p_triangles);
 
 
 
