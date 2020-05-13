@@ -738,6 +738,19 @@ void tg_camera_end(tg_camera_h camera_h)
     tg_forward_renderer_end(camera_h->capture_pass.forward_renderer_h);
 }
 
+v3 tg_camera_get_position(tg_camera_h camera_h)
+{
+    TG_ASSERT(camera_h);
+
+    v3 position = { 0 };
+    
+    position.x = TG_CAMERA_VIEW(camera_h).m03;
+    position.y = TG_CAMERA_VIEW(camera_h).m13;
+    position.z = TG_CAMERA_VIEW(camera_h).m23;
+
+    return position;
+}
+
 tg_render_target_h tg_camera_get_render_target(tg_camera_h camera_h)
 {
     TG_ASSERT(camera_h);

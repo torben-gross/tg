@@ -169,6 +169,7 @@ tg_camera_h                      tg_camera_create_orthographic(const v3* p_posit
 tg_camera_h                      tg_camera_create_perspective(const v3* p_position, f32 pitch, f32 yaw, f32 roll, f32 fov_y, f32 near, f32 far);
 void                             tg_camera_destroy(tg_camera_h camera_h);
 void                             tg_camera_end(tg_camera_h camera_h);
+v3                               tg_camera_get_position(tg_camera_h camera_h);
 tg_render_target_h               tg_camera_get_render_target(tg_camera_h camera_h);
 void                             tg_camera_present(tg_camera_h camera_h);
 void                             tg_camera_set_orthographic_projection(tg_camera_h camera_h, f32 left, f32 right, f32 bottom, f32 top, f32 far, f32 near);

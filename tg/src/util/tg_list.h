@@ -3,16 +3,16 @@
 
 #include "tg_common.h"
 
-#define    TG_LIST_DEFAULT_CAPACITY                                          32
+#define TG_LIST_DEFAULT_CAPACITY                                          32
 
-#define    TG_LIST_CREATE(type)                                              tg_list_create_impl(sizeof(type), TG_LIST_DEFAULT_CAPACITY);
-#define    TG_LIST_CREATE__CAPACITY(type, capacity)                          tg_list_create_impl(sizeof(type), capacity);
-#define    TG_LIST_CREATE__ELEMENT_SIZE(element_size)                        tg_list_create_impl(element_size, TG_LIST_DEFAULT_CAPACITY);
-#define    TG_LIST_CREATE__ELEMENT_SIZE__CAPACITY(element_size, capacity)    tg_list_create_impl(element_size, capacity);
+#define TG_LIST_CREATE(type)                                              tg_list_create_impl(sizeof(type), TG_LIST_DEFAULT_CAPACITY);
+#define TG_LIST_CREATE__CAPACITY(type, capacity)                          tg_list_create_impl(sizeof(type), capacity);
+#define TG_LIST_CREATE__ELEMENT_SIZE(element_size)                        tg_list_create_impl(element_size, TG_LIST_DEFAULT_CAPACITY);
+#define TG_LIST_CREATE__ELEMENT_SIZE__CAPACITY(element_size, capacity)    tg_list_create_impl(element_size, capacity);
 
 
 
-#define TG_LIST_POINTER_TO(list, index)    ((void*)&(list).elements[(index) * (list).element_size])
+#define TG_LIST_POINTER_TO(list, index)                                   ((void*)&(list).p_elements[(index) * (list).element_size])
 
 
 
@@ -21,7 +21,7 @@ typedef struct tg_list
 	u32    element_size;
 	u32    capacity;
 	u32    count;
-	u8*    elements;
+	u8*    p_elements;
 } tg_list;
 
 

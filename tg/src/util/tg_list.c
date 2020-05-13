@@ -16,7 +16,7 @@ tg_list tg_list_create_impl(u32 element_size, u32 capacity)
 	list.element_size = element_size;
 	list.capacity = capacity;
 	list.count = 0;
-	list.elements = TG_MEMORY_ALLOC((u64)capacity * (u64)element_size);
+	list.p_elements = TG_MEMORY_ALLOC((u64)capacity * (u64)element_size);
 
 	return list;
 }
@@ -25,7 +25,7 @@ void tg_list_destroy(tg_list* p_list)
 {
 	TG_ASSERT(p_list);
 
-	TG_MEMORY_FREE(p_list->elements);
+	TG_MEMORY_FREE(p_list->p_elements);
 }
 
 
@@ -47,7 +47,7 @@ b32 tg_list_contains(const tg_list* p_list, const void* p_value)
 		b32 equal = TG_TRUE;
 		for (u32 b = 0; b < p_list->element_size; b++)
 		{
-			equal |= p_list->elements[i * p_list->element_size + b] == ((u8*)p_value)[b];
+			equal |= p_list->p_elements[i * p_list->element_size + b] == ((u8*)p_value)[b];
 		}
 		contains &= equal;
 	}
@@ -147,5 +147,5 @@ void tg_list_reserve(tg_list* p_list, u32 capacity)
 	TG_ASSERT(p_list && capacity > p_list->capacity);
 
 	p_list->capacity = capacity;
-	p_list->elements = TG_MEMORY_REALLOC(p_list->elements, (u64)capacity * (u64)p_list->element_size);
+	p_list->p_elements = TG_MEMORY_REALLOC(p_list->p_elements, (u64)capacity * (u64)p_list->element_size);
 }

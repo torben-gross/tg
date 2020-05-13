@@ -201,7 +201,7 @@ void tg_application_internal_game_3d_create()
 
     tg_transvoxel_triangle* p_triangles = TG_MEMORY_ALLOC(5 * 16 * 16 * 16 * sizeof(*p_triangles));
     tg_transvoxel_triangle* p_transition_triangles = TG_MEMORY_ALLOC(5 * 16 * 16 * sizeof(*p_transition_triangles));
-
+    
     tg_transvoxel_isolevels isolevels = { 0 };
     tg_transvoxel_fill_isolevels(1, 0, 8, &isolevels);
 
@@ -226,6 +226,9 @@ void tg_application_internal_game_3d_create()
 
     TG_MEMORY_FREE(p_transition_triangles);
     TG_MEMORY_FREE(p_triangles);
+
+
+    tg_terrain_h terrain_h = tg_terrain_create(test_deferred.camera_info.camera_h);
 
 
 
@@ -409,7 +412,7 @@ void tg_application_internal_game_3d_destroy()
     }
     for (u32 i = 0; i < test_deferred.terrain_chunks.count; i++)
     {
-        tg_terrain_chunk_entity_destroy(((tg_terrain_chunk_entity_h*)test_deferred.terrain_chunks.elements)[i]);
+        tg_terrain_chunk_entity_destroy(((tg_terrain_chunk_entity_h*)test_deferred.terrain_chunks.p_elements)[i]);
     }
 
     tg_entity_destroy(&test_deferred.quad_entity);

@@ -2282,7 +2282,7 @@ void tg_graphics_shutdown()
     {
         for (u32 j = 0; j < shader_hashmap.p_buckets[i].values.count; j++)
         {
-            vkDestroyShaderModule(device, ((VkShaderModule*)shader_hashmap.p_buckets[i].values.elements)[j], TG_NULL);
+            vkDestroyShaderModule(device, ((VkShaderModule*)shader_hashmap.p_buckets[i].values.p_elements)[j], TG_NULL);
         }
     }
     tg_string_hashmap_destroy(&shader_hashmap);

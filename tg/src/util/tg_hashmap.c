@@ -271,7 +271,7 @@ void tg_string_hashmap_destroy(tg_string_hashmap* p_string_hashmap)
 	{
 		for (u32 j = 0; j < p_string_hashmap->p_buckets[i].keys.count; j++)
 		{
-			TG_MEMORY_FREE(((char**)p_string_hashmap->p_buckets[i].keys.elements)[j]);
+			TG_MEMORY_FREE(((char**)p_string_hashmap->p_buckets[i].keys.p_elements)[j]);
 		}
 		tg_list_destroy(&p_string_hashmap->p_buckets[i].keys);
 		tg_list_destroy(&p_string_hashmap->p_buckets[i].values);
