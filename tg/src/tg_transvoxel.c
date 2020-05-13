@@ -42,9 +42,11 @@ v3 tg_transvoxel_internal_interpolate(i32 d0, i32 d1, const v3* p_p0, const v3* 
 	return q;
 }
 
-u32 tg_transvoxel_internal_create_transition_face(i32 x, i32 y, i32 z, const tg_transvoxel_isolevels* p_isolevels, u8 lod, u8 transition_face, tg_transvoxel_triangle* p_triangles)
+u32 tg_transvoxel_internal_create_transition_face(i32 x, i32 y, i32 z, const tg_transvoxel_isolevels* p_isolevels, u8 lod, u8 transition_face, u8 transition_faces, tg_transvoxel_triangle* p_triangles)
 {
 	TG_ASSERT(p_isolevels && lod > 0 && p_triangles);
+
+	transition_faces &= ~transition_face;
 
 	u32 chunk_triangle_count = 0;
 	const u32 lodf = 1 << lod;
@@ -53,14 +55,19 @@ u32 tg_transvoxel_internal_create_transition_face(i32 x, i32 y, i32 z, const tg_
 	i8 p_corners[13] = { 0 };
 	v3 p_positions[13] = { 0 };
 
-	const u8 x_end = transition_face == TG_TRANSVOXEL_FACE_X_NEG || transition_face == TG_TRANSVOXEL_FACE_X_POS ? 1 : 16 / lodf;
-	const u8 y_end = transition_face == TG_TRANSVOXEL_FACE_Y_NEG || transition_face == TG_TRANSVOXEL_FACE_Y_POS ? 1 : 16 / lodf;
-	const u8 z_end = transition_face == TG_TRANSVOXEL_FACE_Z_NEG || transition_face == TG_TRANSVOXEL_FACE_Z_POS ? 1 : 16 / lodf;
-	for (u8 cell_z = 0; cell_z < z_end; cell_z++)
+	const u8 x_start = transition_face == TG_TRANSVOXEL_FACE_X_POS ? 16 / lodf - 1 : 0;
+	const u8 y_start = transition_face == TG_TRANSVOXEL_FACE_Y_POS ? 16 / lodf - 1 : 0;
+	const u8 z_start = transition_face == TG_TRANSVOXEL_FACE_Z_POS ? 16 / lodf - 1 : 0;
+
+	const u8 x_end = transition_face == TG_TRANSVOXEL_FACE_X_NEG ? 1 : 16 / lodf;
+	const u8 y_end = transition_face == TG_TRANSVOXEL_FACE_Y_NEG ? 1 : 16 / lodf;
+	const u8 z_end = transition_face == TG_TRANSVOXEL_FACE_Z_NEG ? 1 : 16 / lodf;
+
+	for (u8 cz = z_start; cz < z_end; cz++)
 	{
-		for (u8 cell_y = 0; cell_y < y_end; cell_y++)
+		for (u8 cy = y_start; cy < y_end; cy++)
 		{
-			for (u8 cell_x = 0; cell_x < x_end; cell_x++)
+			for (u8 cx = x_start; cx < x_end; cx++)
 			{
 				switch (transition_face)
 				{
@@ -75,15 +82,15 @@ u32 tg_transvoxel_internal_create_transition_face(i32 x, i32 y, i32 z, const tg_
 					//  |              |      |      |       |             |
 					//  +-----> z      +------+------+       +-------------+
 					//                0       1       2     9               A
-					p_corners[0x0] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 0, nlodf * cell_y            , nlodf * cell_z            );
-					p_corners[0x1] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 0, nlodf * cell_y            , nlodf * cell_z + 1 * nlodf);
-					p_corners[0x2] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 0, nlodf * cell_y            , nlodf * cell_z + 2 * nlodf);
-					p_corners[0x3] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 0, nlodf * cell_y + 1 * nlodf, nlodf * cell_z            );
-					p_corners[0x4] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 0, nlodf * cell_y + 1 * nlodf, nlodf * cell_z + 1 * nlodf);
-					p_corners[0x5] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 0, nlodf * cell_y + 1 * nlodf, nlodf * cell_z + 2 * nlodf);
-					p_corners[0x6] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 0, nlodf * cell_y + 2 * nlodf, nlodf * cell_z            );
-					p_corners[0x7] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 0, nlodf * cell_y + 2 * nlodf, nlodf * cell_z + 1 * nlodf);
-					p_corners[0x8] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 0, nlodf * cell_y + 2 * nlodf, nlodf * cell_z + 2 * nlodf);
+					p_corners[0x0] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 0, lodf * cy            , lodf * cz            );
+					p_corners[0x1] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 0, lodf * cy            , lodf * cz + nlodf * 1);
+					p_corners[0x2] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 0, lodf * cy            , lodf * cz + nlodf * 2);
+					p_corners[0x3] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 0, lodf * cy + nlodf * 1, lodf * cz            );
+					p_corners[0x4] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 0, lodf * cy + nlodf * 1, lodf * cz + nlodf * 1);
+					p_corners[0x5] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 0, lodf * cy + nlodf * 1, lodf * cz + nlodf * 2);
+					p_corners[0x6] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 0, lodf * cy + nlodf * 2, lodf * cz            );
+					p_corners[0x7] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 0, lodf * cy + nlodf * 2, lodf * cz + nlodf * 1);
+					p_corners[0x8] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 0, lodf * cy + nlodf * 2, lodf * cz + nlodf * 2);
 				} break;
 				case TG_TRANSVOXEL_FACE_X_POS:
 				{
@@ -96,15 +103,15 @@ u32 tg_transvoxel_internal_create_transition_face(i32 x, i32 y, i32 z, const tg_
 					//  |              |      |      |       |             |
 					//  o-----> y      +------+------+       +-------------+
 					//                0       1       2     9               A
-					p_corners[0x0] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 16, nlodf * cell_y            , nlodf * cell_z            );
-					p_corners[0x1] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 16, nlodf * cell_y + 1 * nlodf, nlodf * cell_z            );
-					p_corners[0x2] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 16, nlodf * cell_y + 2 * nlodf, nlodf * cell_z            );
-					p_corners[0x3] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 16, nlodf * cell_y            , nlodf * cell_z + 1 * nlodf);
-					p_corners[0x4] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 16, nlodf * cell_y + 1 * nlodf, nlodf * cell_z + 1 * nlodf);
-					p_corners[0x5] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 16, nlodf * cell_y + 2 * nlodf, nlodf * cell_z + 1 * nlodf);
-					p_corners[0x6] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 16, nlodf * cell_y            , nlodf * cell_z + 2 * nlodf);
-					p_corners[0x7] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 16, nlodf * cell_y + 1 * nlodf, nlodf * cell_z + 2 * nlodf);
-					p_corners[0x8] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 16, nlodf * cell_y + 2 * nlodf, nlodf * cell_z + 2 * nlodf);
+					p_corners[0x0] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 16, lodf * cy            , lodf * cz            );
+					p_corners[0x1] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 16, lodf * cy + nlodf * 1, lodf * cz            );
+					p_corners[0x2] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 16, lodf * cy + nlodf * 2, lodf * cz            );
+					p_corners[0x3] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 16, lodf * cy            , lodf * cz + nlodf * 1);
+					p_corners[0x4] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 16, lodf * cy + nlodf * 1, lodf * cz + nlodf * 1);
+					p_corners[0x5] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 16, lodf * cy + nlodf * 2, lodf * cz + nlodf * 1);
+					p_corners[0x6] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 16, lodf * cy            , lodf * cz + nlodf * 2);
+					p_corners[0x7] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 16, lodf * cy + nlodf * 1, lodf * cz + nlodf * 2);
+					p_corners[0x8] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 16, lodf * cy + nlodf * 2, lodf * cz + nlodf * 2);
 				} break;
 				case TG_TRANSVOXEL_FACE_Y_NEG:
 				{
@@ -117,15 +124,15 @@ u32 tg_transvoxel_internal_create_transition_face(i32 x, i32 y, i32 z, const tg_
 					//  |              |      |      |       |             |
 					//  +-----> x      +------+------+       +-------------+
 					//                0       1       2     9               A
-					p_corners[0x0] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, nlodf * cell_x            , 0, nlodf * cell_z            );
-					p_corners[0x1] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, nlodf * cell_x + 1 * nlodf, 0, nlodf * cell_z            );
-					p_corners[0x2] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, nlodf * cell_x + 2 * nlodf, 0, nlodf * cell_z            );
-					p_corners[0x3] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, nlodf * cell_x            , 0, nlodf * cell_z + 1 * nlodf);
-					p_corners[0x4] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, nlodf * cell_x + 1 * nlodf, 0, nlodf * cell_z + 1 * nlodf);
-					p_corners[0x5] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, nlodf * cell_x + 2 * nlodf, 0, nlodf * cell_z + 1 * nlodf);
-					p_corners[0x6] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, nlodf * cell_x            , 0, nlodf * cell_z + 2 * nlodf);
-					p_corners[0x7] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, nlodf * cell_x + 1 * nlodf, 0, nlodf * cell_z + 2 * nlodf);
-					p_corners[0x8] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, nlodf * cell_x + 2 * nlodf, 0, nlodf * cell_z + 2 * nlodf);
+					p_corners[0x0] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx            , 0, lodf * cz            );
+					p_corners[0x1] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx + nlodf * 1, 0, lodf * cz            );
+					p_corners[0x2] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx + nlodf * 2, 0, lodf * cz            );
+					p_corners[0x3] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx            , 0, lodf * cz + nlodf * 1);
+					p_corners[0x4] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx + nlodf * 1, 0, lodf * cz + nlodf * 1);
+					p_corners[0x5] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx + nlodf * 2, 0, lodf * cz + nlodf * 1);
+					p_corners[0x6] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx            , 0, lodf * cz + nlodf * 2);
+					p_corners[0x7] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx + nlodf * 1, 0, lodf * cz + nlodf * 2);
+					p_corners[0x8] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx + nlodf * 2, 0, lodf * cz + nlodf * 2);
 				} break;
 				case TG_TRANSVOXEL_FACE_Y_POS:
 				{
@@ -138,15 +145,15 @@ u32 tg_transvoxel_internal_create_transition_face(i32 x, i32 y, i32 z, const tg_
 					//  |              |      |      |       |             |
 					//  o-----> z      +------+------+       +-------------+
 					//                0       1       2     9               A
-					p_corners[0x0] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, nlodf * cell_x            , 16, nlodf * cell_z            );
-					p_corners[0x1] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, nlodf * cell_x            , 16, nlodf * cell_z + 1 * nlodf);
-					p_corners[0x2] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, nlodf * cell_x            , 16, nlodf * cell_z + 2 * nlodf);
-					p_corners[0x3] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, nlodf * cell_x + 1 * nlodf, 16, nlodf * cell_z            );
-					p_corners[0x4] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, nlodf * cell_x + 1 * nlodf, 16, nlodf * cell_z + 1 * nlodf);
-					p_corners[0x5] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, nlodf * cell_x + 1 * nlodf, 16, nlodf * cell_z + 2 * nlodf);
-					p_corners[0x6] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, nlodf * cell_x + 2 * nlodf, 16, nlodf * cell_z            );
-					p_corners[0x7] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, nlodf * cell_x + 2 * nlodf, 16, nlodf * cell_z + 1 * nlodf);
-					p_corners[0x8] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, nlodf * cell_x + 2 * nlodf, 16, nlodf * cell_z + 2 * nlodf);
+					p_corners[0x0] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx            , 16, lodf * cz            );
+					p_corners[0x1] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx            , 16, lodf * cz + nlodf * 1);
+					p_corners[0x2] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx            , 16, lodf * cz + nlodf * 2);
+					p_corners[0x3] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx + nlodf * 1, 16, lodf * cz            );
+					p_corners[0x4] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx + nlodf * 1, 16, lodf * cz + nlodf * 1);
+					p_corners[0x5] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx + nlodf * 1, 16, lodf * cz + nlodf * 2);
+					p_corners[0x6] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx + nlodf * 2, 16, lodf * cz            );
+					p_corners[0x7] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx + nlodf * 2, 16, lodf * cz + nlodf * 1);
+					p_corners[0x8] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx + nlodf * 2, 16, lodf * cz + nlodf * 2);
 				} break;
 				case TG_TRANSVOXEL_FACE_Z_NEG:
 				{
@@ -159,15 +166,15 @@ u32 tg_transvoxel_internal_create_transition_face(i32 x, i32 y, i32 z, const tg_
 					//  |              |      |      |       |             |
 					//  +-----> y      +------+------+       +-------------+
 					//                0       1       2     9               A
-					p_corners[0x0] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cell_x            , lodf * cell_y            , 0); // TODO: only this case is correct!
-					p_corners[0x1] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cell_x            , lodf * cell_y + nlodf * 1, 0);
-					p_corners[0x2] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cell_x            , lodf * cell_y + nlodf * 2, 0);
-					p_corners[0x3] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cell_x + nlodf * 1, lodf * cell_y            , 0);
-					p_corners[0x4] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cell_x + nlodf * 1, lodf * cell_y + nlodf * 1, 0);
-					p_corners[0x5] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cell_x + nlodf * 1, lodf * cell_y + nlodf * 2, 0);
-					p_corners[0x6] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cell_x + nlodf * 2, lodf * cell_y            , 0);
-					p_corners[0x7] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cell_x + nlodf * 2, lodf * cell_y + nlodf * 1, 0);
-					p_corners[0x8] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cell_x + nlodf * 2, lodf * cell_y + nlodf * 2, 0);
+					p_corners[0x0] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx            , lodf * cy            , 0);
+					p_corners[0x1] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx            , lodf * cy + nlodf * 1, 0);
+					p_corners[0x2] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx            , lodf * cy + nlodf * 2, 0);
+					p_corners[0x3] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx + nlodf * 1, lodf * cy            , 0);
+					p_corners[0x4] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx + nlodf * 1, lodf * cy + nlodf * 1, 0);
+					p_corners[0x5] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx + nlodf * 1, lodf * cy + nlodf * 2, 0);
+					p_corners[0x6] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx + nlodf * 2, lodf * cy            , 0);
+					p_corners[0x7] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx + nlodf * 2, lodf * cy + nlodf * 1, 0);
+					p_corners[0x8] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx + nlodf * 2, lodf * cy + nlodf * 2, 0);
 				} break;
 				case TG_TRANSVOXEL_FACE_Z_POS:
 				{
@@ -180,15 +187,15 @@ u32 tg_transvoxel_internal_create_transition_face(i32 x, i32 y, i32 z, const tg_
 					//  |              |      |      |       |             |
 					//  o-----> x      +------+------+       +-------------+
 					//                0       1       2     9               A
-					p_corners[0x0] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, nlodf * cell_x            , nlodf * cell_y            , 16);
-					p_corners[0x1] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, nlodf * cell_x + 1 * nlodf, nlodf * cell_y            , 16);
-					p_corners[0x2] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, nlodf * cell_x + 2 * nlodf, nlodf * cell_y            , 16);
-					p_corners[0x3] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, nlodf * cell_x            , nlodf * cell_y + 1 * nlodf, 16);
-					p_corners[0x4] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, nlodf * cell_x + 1 * nlodf, nlodf * cell_y + 1 * nlodf, 16);
-					p_corners[0x5] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, nlodf * cell_x + 2 * nlodf, nlodf * cell_y + 1 * nlodf, 16);
-					p_corners[0x6] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, nlodf * cell_x            , nlodf * cell_y + 2 * nlodf, 16);
-					p_corners[0x7] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, nlodf * cell_x + 1 * nlodf, nlodf * cell_y + 2 * nlodf, 16);
-					p_corners[0x8] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, nlodf * cell_x + 2 * nlodf, nlodf * cell_y + 2 * nlodf, 16);
+					p_corners[0x0] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx            , lodf * cy            , 16);
+					p_corners[0x1] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx + nlodf * 1, lodf * cy            , 16);
+					p_corners[0x2] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx + nlodf * 2, lodf * cy            , 16);
+					p_corners[0x3] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx            , lodf * cy + nlodf * 1, 16);
+					p_corners[0x4] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx + nlodf * 1, lodf * cy + nlodf * 1, 16);
+					p_corners[0x5] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx + nlodf * 2, lodf * cy + nlodf * 1, 16);
+					p_corners[0x6] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx            , lodf * cy + nlodf * 2, 16);
+					p_corners[0x7] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx + nlodf * 1, lodf * cy + nlodf * 2, 16);
+					p_corners[0x8] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx + nlodf * 2, lodf * cy + nlodf * 2, 16);
 				} break;
 				}
 
@@ -219,114 +226,159 @@ u32 tg_transvoxel_internal_create_transition_face(i32 x, i32 y, i32 z, const tg_
 					const u32 vertex_count = TG_CELL_GET_VERTEX_COUNT(*p_cell_data);
 					const u32 cell_triangle_count = TG_CELL_GET_TRIANGLE_COUNT(*p_cell_data);
 
-					const f32 offset_x = 16.0f * (f32)x;
-					const f32 offset_y = 16.0f * (f32)y;
-					const f32 offset_z = 16.0f * (f32)z;
+					const f32 offx0 = 16.0f * (f32)x;
+					const f32 offy0 = 16.0f * (f32)y;
+					const f32 offz0 = 16.0f * (f32)z;
 					
 					switch (transition_face)
 					{
 					case TG_TRANSVOXEL_FACE_X_NEG:
 					{
-						p_positions[0x0] = (v3){ offset_x, offset_y + (f32)(nlodf * cell_y            ), offset_z + (f32)(nlodf * cell_z            ) };
-						p_positions[0x1] = (v3){ offset_x, offset_y + (f32)(nlodf * cell_y            ), offset_z + (f32)(nlodf * cell_z + 1 * nlodf) };
-						p_positions[0x2] = (v3){ offset_x, offset_y + (f32)(nlodf * cell_y            ), offset_z + (f32)(nlodf * cell_z + 2 * nlodf) };
-						p_positions[0x3] = (v3){ offset_x, offset_y + (f32)(nlodf * cell_y + 1 * nlodf), offset_z + (f32)(nlodf * cell_z            ) };
-						p_positions[0x4] = (v3){ offset_x, offset_y + (f32)(nlodf * cell_y + 1 * nlodf), offset_z + (f32)(nlodf * cell_z + 1 * nlodf) };
-						p_positions[0x5] = (v3){ offset_x, offset_y + (f32)(nlodf * cell_y + 1 * nlodf), offset_z + (f32)(nlodf * cell_z + 2 * nlodf) };
-						p_positions[0x6] = (v3){ offset_x, offset_y + (f32)(nlodf * cell_y + 2 * nlodf), offset_z + (f32)(nlodf * cell_z            ) };
-						p_positions[0x7] = (v3){ offset_x, offset_y + (f32)(nlodf * cell_y + 2 * nlodf), offset_z + (f32)(nlodf * cell_z + 1 * nlodf) };
-						p_positions[0x8] = (v3){ offset_x, offset_y + (f32)(nlodf * cell_y + 2 * nlodf), offset_z + (f32)(nlodf * cell_z + 2 * nlodf) };
+						p_positions[0x0] = (v3){ offx0, offy0 + (f32)(lodf * cy            ), offz0 + (f32)(lodf * cz            ) };
+						p_positions[0x1] = (v3){ offx0, offy0 + (f32)(lodf * cy            ), offz0 + (f32)(lodf * cz + nlodf * 1) };
+						p_positions[0x2] = (v3){ offx0, offy0 + (f32)(lodf * cy            ), offz0 + (f32)(lodf * cz + nlodf * 2) };
+						p_positions[0x3] = (v3){ offx0, offy0 + (f32)(lodf * cy + nlodf * 1), offz0 + (f32)(lodf * cz            ) };
+						p_positions[0x4] = (v3){ offx0, offy0 + (f32)(lodf * cy + nlodf * 1), offz0 + (f32)(lodf * cz + nlodf * 1) };
+						p_positions[0x5] = (v3){ offx0, offy0 + (f32)(lodf * cy + nlodf * 1), offz0 + (f32)(lodf * cz + nlodf * 2) };
+						p_positions[0x6] = (v3){ offx0, offy0 + (f32)(lodf * cy + nlodf * 2), offz0 + (f32)(lodf * cz            ) };
+						p_positions[0x7] = (v3){ offx0, offy0 + (f32)(lodf * cy + nlodf * 2), offz0 + (f32)(lodf * cz + nlodf * 1) };
+						p_positions[0x8] = (v3){ offx0, offy0 + (f32)(lodf * cy + nlodf * 2), offz0 + (f32)(lodf * cz + nlodf * 2) };
 
-						p_positions[0x9] = (v3){ offset_x + 0.5f * (f32)lodf, offset_y + (f32)(nlodf * cell_y            ), offset_z + (f32)(nlodf * cell_z            ) };
-						p_positions[0xa] = (v3){ offset_x + 0.5f * (f32)lodf, offset_y + (f32)(nlodf * cell_y            ), offset_z + (f32)(nlodf * cell_z + 2 * nlodf) };
-						p_positions[0xb] = (v3){ offset_x + 0.5f * (f32)lodf, offset_y + (f32)(nlodf * cell_y + 2 * nlodf), offset_z + (f32)(nlodf * cell_z            ) };
-						p_positions[0xc] = (v3){ offset_x + 0.5f * (f32)lodf, offset_y + (f32)(nlodf * cell_y + 2 * nlodf), offset_z + (f32)(nlodf * cell_z + 2 * nlodf) };
+						p_positions[0x9] = (v3){ offx0 + (f32)lodf * 0.5f, offy0 + (f32)(lodf * cy       ), offz0 + (f32)(lodf * cz       ) };
+						p_positions[0xa] = (v3){ offx0 + (f32)lodf * 0.5f, offy0 + (f32)(lodf * cy       ), offz0 + (f32)(lodf * cz + lodf) };
+						p_positions[0xb] = (v3){ offx0 + (f32)lodf * 0.5f, offy0 + (f32)(lodf * cy + lodf), offz0 + (f32)(lodf * cz       ) };
+						p_positions[0xc] = (v3){ offx0 + (f32)lodf * 0.5f, offy0 + (f32)(lodf * cy + lodf), offz0 + (f32)(lodf * cz + lodf) };
 					} break;
 					case TG_TRANSVOXEL_FACE_X_POS:
 					{
-						p_positions[0x0] = (v3){ offset_x + 16.0f, offset_y + (f32)(nlodf * cell_y            ), offset_z + (f32)(nlodf * cell_z            ) };
-						p_positions[0x1] = (v3){ offset_x + 16.0f, offset_y + (f32)(nlodf * cell_y + 1 * nlodf), offset_z + (f32)(nlodf * cell_z            ) };
-						p_positions[0x2] = (v3){ offset_x + 16.0f, offset_y + (f32)(nlodf * cell_y + 2 * nlodf), offset_z + (f32)(nlodf * cell_z            ) };
-						p_positions[0x3] = (v3){ offset_x + 16.0f, offset_y + (f32)(nlodf * cell_y            ), offset_z + (f32)(nlodf * cell_z + 1 * nlodf) };
-						p_positions[0x4] = (v3){ offset_x + 16.0f, offset_y + (f32)(nlodf * cell_y + 1 * nlodf), offset_z + (f32)(nlodf * cell_z + 1 * nlodf) };
-						p_positions[0x5] = (v3){ offset_x + 16.0f, offset_y + (f32)(nlodf * cell_y + 2 * nlodf), offset_z + (f32)(nlodf * cell_z + 1 * nlodf) };
-						p_positions[0x6] = (v3){ offset_x + 16.0f, offset_y + (f32)(nlodf * cell_y            ), offset_z + (f32)(nlodf * cell_z + 2 * nlodf) };
-						p_positions[0x7] = (v3){ offset_x + 16.0f, offset_y + (f32)(nlodf * cell_y + 1 * nlodf), offset_z + (f32)(nlodf * cell_z + 2 * nlodf) };
-						p_positions[0x8] = (v3){ offset_x + 16.0f, offset_y + (f32)(nlodf * cell_y + 2 * nlodf), offset_z + (f32)(nlodf * cell_z + 2 * nlodf) };
+						p_positions[0x0] = (v3){ offx0 + 16.0f, offy0 + (f32)(lodf * cy            ), offz0 + (f32)(lodf * cz            ) };
+						p_positions[0x1] = (v3){ offx0 + 16.0f, offy0 + (f32)(lodf * cy + nlodf * 1), offz0 + (f32)(lodf * cz            ) };
+						p_positions[0x2] = (v3){ offx0 + 16.0f, offy0 + (f32)(lodf * cy + nlodf * 2), offz0 + (f32)(lodf * cz            ) };
+						p_positions[0x3] = (v3){ offx0 + 16.0f, offy0 + (f32)(lodf * cy            ), offz0 + (f32)(lodf * cz + nlodf * 1) };
+						p_positions[0x4] = (v3){ offx0 + 16.0f, offy0 + (f32)(lodf * cy + nlodf * 1), offz0 + (f32)(lodf * cz + nlodf * 1) };
+						p_positions[0x5] = (v3){ offx0 + 16.0f, offy0 + (f32)(lodf * cy + nlodf * 2), offz0 + (f32)(lodf * cz + nlodf * 1) };
+						p_positions[0x6] = (v3){ offx0 + 16.0f, offy0 + (f32)(lodf * cy            ), offz0 + (f32)(lodf * cz + nlodf * 2) };
+						p_positions[0x7] = (v3){ offx0 + 16.0f, offy0 + (f32)(lodf * cy + nlodf * 1), offz0 + (f32)(lodf * cz + nlodf * 2) };
+						p_positions[0x8] = (v3){ offx0 + 16.0f, offy0 + (f32)(lodf * cy + nlodf * 2), offz0 + (f32)(lodf * cz + nlodf * 2) };
 
-						p_positions[0x9] = (v3){ offset_x + 16.0f - 0.5f * (f32)lodf, offset_y + (f32)(nlodf * cell_y            ), offset_z + (f32)(nlodf * cell_z            ) };
-						p_positions[0xa] = (v3){ offset_x + 16.0f - 0.5f * (f32)lodf, offset_y + (f32)(nlodf * cell_y + 2 * nlodf), offset_z + (f32)(nlodf * cell_z            ) };
-						p_positions[0xb] = (v3){ offset_x + 16.0f - 0.5f * (f32)lodf, offset_y + (f32)(nlodf * cell_y            ), offset_z + (f32)(nlodf * cell_z + 2 * nlodf) };
-						p_positions[0xc] = (v3){ offset_x + 16.0f - 0.5f * (f32)lodf, offset_y + (f32)(nlodf * cell_y + 2 * nlodf), offset_z + (f32)(nlodf * cell_z + 2 * nlodf) };
+						p_positions[0x9] = (v3){ offx0 + 16.0f - (f32)lodf * 0.5f, offy0 + (f32)(lodf * cy       ), offz0 + (f32)(lodf * cz       ) };
+						p_positions[0xa] = (v3){ offx0 + 16.0f - (f32)lodf * 0.5f, offy0 + (f32)(lodf * cy + lodf), offz0 + (f32)(lodf * cz       ) };
+						p_positions[0xb] = (v3){ offx0 + 16.0f - (f32)lodf * 0.5f, offy0 + (f32)(lodf * cy       ), offz0 + (f32)(lodf * cz + lodf) };
+						p_positions[0xc] = (v3){ offx0 + 16.0f - (f32)lodf * 0.5f, offy0 + (f32)(lodf * cy + lodf), offz0 + (f32)(lodf * cz + lodf) };
 					} break;
 					case TG_TRANSVOXEL_FACE_Y_NEG:
 					{
-						p_positions[0x0] = (v3){ offset_x + (f32)(nlodf * cell_x            ), offset_y, offset_z + (f32)(nlodf * cell_z            ) };
-						p_positions[0x1] = (v3){ offset_x + (f32)(nlodf * cell_x + 1 * nlodf), offset_y, offset_z + (f32)(nlodf * cell_z            ) };
-						p_positions[0x2] = (v3){ offset_x + (f32)(nlodf * cell_x + 2 * nlodf), offset_y, offset_z + (f32)(nlodf * cell_z            ) };
-						p_positions[0x3] = (v3){ offset_x + (f32)(nlodf * cell_x            ), offset_y, offset_z + (f32)(nlodf * cell_z + 1 * nlodf) };
-						p_positions[0x4] = (v3){ offset_x + (f32)(nlodf * cell_x + 1 * nlodf), offset_y, offset_z + (f32)(nlodf * cell_z + 1 * nlodf) };
-						p_positions[0x5] = (v3){ offset_x + (f32)(nlodf * cell_x + 2 * nlodf), offset_y, offset_z + (f32)(nlodf * cell_z + 1 * nlodf) };
-						p_positions[0x6] = (v3){ offset_x + (f32)(nlodf * cell_x            ), offset_y, offset_z + (f32)(nlodf * cell_z + 2 * nlodf) };
-						p_positions[0x7] = (v3){ offset_x + (f32)(nlodf * cell_x + 1 * nlodf), offset_y, offset_z + (f32)(nlodf * cell_z + 2 * nlodf) };
-						p_positions[0x8] = (v3){ offset_x + (f32)(nlodf * cell_x + 2 * nlodf), offset_y, offset_z + (f32)(nlodf * cell_z + 2 * nlodf) };
+						p_positions[0x0] = (v3){ offx0 + (f32)(lodf * cx            ), offy0, offz0 + (f32)(lodf * cz            ) };
+						p_positions[0x1] = (v3){ offx0 + (f32)(lodf * cx + nlodf * 1), offy0, offz0 + (f32)(lodf * cz            ) };
+						p_positions[0x2] = (v3){ offx0 + (f32)(lodf * cx + nlodf * 2), offy0, offz0 + (f32)(lodf * cz            ) };
+						p_positions[0x3] = (v3){ offx0 + (f32)(lodf * cx            ), offy0, offz0 + (f32)(lodf * cz + nlodf * 1) };
+						p_positions[0x4] = (v3){ offx0 + (f32)(lodf * cx + nlodf * 1), offy0, offz0 + (f32)(lodf * cz + nlodf * 1) };
+						p_positions[0x5] = (v3){ offx0 + (f32)(lodf * cx + nlodf * 2), offy0, offz0 + (f32)(lodf * cz + nlodf * 1) };
+						p_positions[0x6] = (v3){ offx0 + (f32)(lodf * cx            ), offy0, offz0 + (f32)(lodf * cz + nlodf * 2) };
+						p_positions[0x7] = (v3){ offx0 + (f32)(lodf * cx + nlodf * 1), offy0, offz0 + (f32)(lodf * cz + nlodf * 2) };
+						p_positions[0x8] = (v3){ offx0 + (f32)(lodf * cx + nlodf * 2), offy0, offz0 + (f32)(lodf * cz + nlodf * 2) };
 
-						p_positions[0x9] = (v3){ offset_x + (f32)(nlodf * cell_x            ), offset_y + 0.5f * (f32)lodf, offset_z + (f32)(nlodf * cell_z            ) };
-						p_positions[0xa] = (v3){ offset_x + (f32)(nlodf * cell_x + 2 * nlodf), offset_y + 0.5f * (f32)lodf, offset_z + (f32)(nlodf * cell_z            ) };
-						p_positions[0xb] = (v3){ offset_x + (f32)(nlodf * cell_x            ), offset_y + 0.5f * (f32)lodf, offset_z + (f32)(nlodf * cell_z + 2 * nlodf) };
-						p_positions[0xc] = (v3){ offset_x + (f32)(nlodf * cell_x + 2 * nlodf), offset_y + 0.5f * (f32)lodf, offset_z + (f32)(nlodf * cell_z + 2 * nlodf) };
+						p_positions[0x9] = (v3){ offx0 + (f32)(lodf * cx       ), offy0 + (f32)lodf * 0.5f, offz0 + (f32)(lodf * cz       ) };
+						p_positions[0xa] = (v3){ offx0 + (f32)(lodf * cx + lodf), offy0 + (f32)lodf * 0.5f, offz0 + (f32)(lodf * cz       ) };
+						p_positions[0xb] = (v3){ offx0 + (f32)(lodf * cx       ), offy0 + (f32)lodf * 0.5f, offz0 + (f32)(lodf * cz + lodf) };
+						p_positions[0xc] = (v3){ offx0 + (f32)(lodf * cx + lodf), offy0 + (f32)lodf * 0.5f, offz0 + (f32)(lodf * cz + lodf) };
 					} break;
 					case TG_TRANSVOXEL_FACE_Y_POS:
 					{
-						p_positions[0x0] = (v3){ offset_x + (f32)(nlodf * cell_x            ), offset_y + 16.0f, offset_z + (f32)(nlodf * cell_z            ) };
-						p_positions[0x1] = (v3){ offset_x + (f32)(nlodf * cell_x            ), offset_y + 16.0f, offset_z + (f32)(nlodf * cell_z + 1 * nlodf) };
-						p_positions[0x2] = (v3){ offset_x + (f32)(nlodf * cell_x            ), offset_y + 16.0f, offset_z + (f32)(nlodf * cell_z + 2 * nlodf) };
-						p_positions[0x3] = (v3){ offset_x + (f32)(nlodf * cell_x + 1 * nlodf), offset_y + 16.0f, offset_z + (f32)(nlodf * cell_z            ) };
-						p_positions[0x4] = (v3){ offset_x + (f32)(nlodf * cell_x + 1 * nlodf), offset_y + 16.0f, offset_z + (f32)(nlodf * cell_z + 1 * nlodf) };
-						p_positions[0x5] = (v3){ offset_x + (f32)(nlodf * cell_x + 1 * nlodf), offset_y + 16.0f, offset_z + (f32)(nlodf * cell_z + 2 * nlodf) };
-						p_positions[0x6] = (v3){ offset_x + (f32)(nlodf * cell_x + 2 * nlodf), offset_y + 16.0f, offset_z + (f32)(nlodf * cell_z            ) };
-						p_positions[0x7] = (v3){ offset_x + (f32)(nlodf * cell_x + 2 * nlodf), offset_y + 16.0f, offset_z + (f32)(nlodf * cell_z + 1 * nlodf) };
-						p_positions[0x8] = (v3){ offset_x + (f32)(nlodf * cell_x + 2 * nlodf), offset_y + 16.0f, offset_z + (f32)(nlodf * cell_z + 2 * nlodf) };
+						p_positions[0x0] = (v3){ offx0 + (f32)(lodf * cx            ), offy0 + 16.0f, offz0 + (f32)(lodf * cz            ) };
+						p_positions[0x1] = (v3){ offx0 + (f32)(lodf * cx            ), offy0 + 16.0f, offz0 + (f32)(lodf * cz + nlodf * 1) };
+						p_positions[0x2] = (v3){ offx0 + (f32)(lodf * cx            ), offy0 + 16.0f, offz0 + (f32)(lodf * cz + nlodf * 2) };
+						p_positions[0x3] = (v3){ offx0 + (f32)(lodf * cx + nlodf * 1), offy0 + 16.0f, offz0 + (f32)(lodf * cz            ) };
+						p_positions[0x4] = (v3){ offx0 + (f32)(lodf * cx + nlodf * 1), offy0 + 16.0f, offz0 + (f32)(lodf * cz + nlodf * 1) };
+						p_positions[0x5] = (v3){ offx0 + (f32)(lodf * cx + nlodf * 1), offy0 + 16.0f, offz0 + (f32)(lodf * cz + nlodf * 2) };
+						p_positions[0x6] = (v3){ offx0 + (f32)(lodf * cx + nlodf * 2), offy0 + 16.0f, offz0 + (f32)(lodf * cz            ) };
+						p_positions[0x7] = (v3){ offx0 + (f32)(lodf * cx + nlodf * 2), offy0 + 16.0f, offz0 + (f32)(lodf * cz + nlodf * 1) };
+						p_positions[0x8] = (v3){ offx0 + (f32)(lodf * cx + nlodf * 2), offy0 + 16.0f, offz0 + (f32)(lodf * cz + nlodf * 2) };
 
-						p_positions[0x9] = (v3){ offset_x + (f32)(nlodf * cell_x            ), offset_y + 16.0f - 0.5f * (f32)lodf, offset_z + (f32)(nlodf * cell_z            ) };
-						p_positions[0xa] = (v3){ offset_x + (f32)(nlodf * cell_x            ), offset_y + 16.0f - 0.5f * (f32)lodf, offset_z + (f32)(nlodf * cell_z + 2 * nlodf) };
-						p_positions[0xb] = (v3){ offset_x + (f32)(nlodf * cell_x + 2 * nlodf), offset_y + 16.0f - 0.5f * (f32)lodf, offset_z + (f32)(nlodf * cell_z            ) };
-						p_positions[0xc] = (v3){ offset_x + (f32)(nlodf * cell_x + 2 * nlodf), offset_y + 16.0f - 0.5f * (f32)lodf, offset_z + (f32)(nlodf * cell_z + 2 * nlodf) };
+						p_positions[0x9] = (v3){ offx0 + (f32)(lodf * cx       ), offy0 + 16.0f - (f32)lodf * 0.5f, offz0 + (f32)(lodf * cz       ) };
+						p_positions[0xa] = (v3){ offx0 + (f32)(lodf * cx       ), offy0 + 16.0f - (f32)lodf * 0.5f, offz0 + (f32)(lodf * cz + lodf) };
+						p_positions[0xb] = (v3){ offx0 + (f32)(lodf * cx + lodf), offy0 + 16.0f - (f32)lodf * 0.5f, offz0 + (f32)(lodf * cz       ) };
+						p_positions[0xc] = (v3){ offx0 + (f32)(lodf * cx + lodf), offy0 + 16.0f - (f32)lodf * 0.5f, offz0 + (f32)(lodf * cz + lodf) };
 					} break;
 					case TG_TRANSVOXEL_FACE_Z_NEG:
 					{
-						p_positions[0x0] = (v3){ offset_x + (f32)(lodf * cell_x            ), offset_y + (f32)(lodf * cell_y            ), offset_z }; // TODO: only this case is correct!
-						p_positions[0x1] = (v3){ offset_x + (f32)(lodf * cell_x            ), offset_y + (f32)(lodf * cell_y + nlodf * 1), offset_z };
-						p_positions[0x2] = (v3){ offset_x + (f32)(lodf * cell_x            ), offset_y + (f32)(lodf * cell_y + nlodf * 2), offset_z };
-						p_positions[0x3] = (v3){ offset_x + (f32)(lodf * cell_x + nlodf * 1), offset_y + (f32)(lodf * cell_y            ), offset_z };
-						p_positions[0x4] = (v3){ offset_x + (f32)(lodf * cell_x + nlodf * 1), offset_y + (f32)(lodf * cell_y + nlodf * 1), offset_z };
-						p_positions[0x5] = (v3){ offset_x + (f32)(lodf * cell_x + nlodf * 1), offset_y + (f32)(lodf * cell_y + nlodf * 2), offset_z };
-						p_positions[0x6] = (v3){ offset_x + (f32)(lodf * cell_x + nlodf * 2), offset_y + (f32)(lodf * cell_y            ), offset_z };
-						p_positions[0x7] = (v3){ offset_x + (f32)(lodf * cell_x + nlodf * 2), offset_y + (f32)(lodf * cell_y + nlodf * 1), offset_z };
-						p_positions[0x8] = (v3){ offset_x + (f32)(lodf * cell_x + nlodf * 2), offset_y + (f32)(lodf * cell_y + nlodf * 2), offset_z };
+						p_positions[0x0] = (v3){ offx0 + (f32)(lodf * cx            ), offy0 + (f32)(lodf * cy            ), offz0 };
+						p_positions[0x1] = (v3){ offx0 + (f32)(lodf * cx            ), offy0 + (f32)(lodf * cy + nlodf * 1), offz0 };
+						p_positions[0x2] = (v3){ offx0 + (f32)(lodf * cx            ), offy0 + (f32)(lodf * cy + nlodf * 2), offz0 };
+						p_positions[0x3] = (v3){ offx0 + (f32)(lodf * cx + nlodf * 1), offy0 + (f32)(lodf * cy            ), offz0 };
+						p_positions[0x4] = (v3){ offx0 + (f32)(lodf * cx + nlodf * 1), offy0 + (f32)(lodf * cy + nlodf * 1), offz0 };
+						p_positions[0x5] = (v3){ offx0 + (f32)(lodf * cx + nlodf * 1), offy0 + (f32)(lodf * cy + nlodf * 2), offz0 };
+						p_positions[0x6] = (v3){ offx0 + (f32)(lodf * cx + nlodf * 2), offy0 + (f32)(lodf * cy            ), offz0 };
+						p_positions[0x7] = (v3){ offx0 + (f32)(lodf * cx + nlodf * 2), offy0 + (f32)(lodf * cy + nlodf * 1), offz0 };
+						p_positions[0x8] = (v3){ offx0 + (f32)(lodf * cx + nlodf * 2), offy0 + (f32)(lodf * cy + nlodf * 2), offz0 };
 
-						p_positions[0x9] = (v3){ offset_x + (f32)(lodf * cell_x       ), offset_y + (f32)(lodf * cell_y       ), offset_z + 0.5f * (f32)lodf };
-						p_positions[0xa] = (v3){ offset_x + (f32)(lodf * cell_x       ), offset_y + (f32)(lodf * cell_y + lodf), offset_z + 0.5f * (f32)lodf };
-						p_positions[0xb] = (v3){ offset_x + (f32)(lodf * cell_x + lodf), offset_y + (f32)(lodf * cell_y       ), offset_z + 0.5f * (f32)lodf };
-						p_positions[0xc] = (v3){ offset_x + (f32)(lodf * cell_x + lodf), offset_y + (f32)(lodf * cell_y + lodf), offset_z + 0.5f * (f32)lodf };
+						p_positions[0x9] = (v3){ offx0 + (f32)(lodf * cx       ), offy0 + (f32)(lodf * cy       ), offz0 + (f32)lodf * 0.5f };
+						p_positions[0xa] = (v3){ offx0 + (f32)(lodf * cx       ), offy0 + (f32)(lodf * cy + lodf), offz0 + (f32)lodf * 0.5f };
+						p_positions[0xb] = (v3){ offx0 + (f32)(lodf * cx + lodf), offy0 + (f32)(lodf * cy       ), offz0 + (f32)lodf * 0.5f };
+						p_positions[0xc] = (v3){ offx0 + (f32)(lodf * cx + lodf), offy0 + (f32)(lodf * cy + lodf), offz0 + (f32)lodf * 0.5f };
 					} break;
 					case TG_TRANSVOXEL_FACE_Z_POS:
 					{
-						p_positions[0x0] = (v3){ offset_x + (f32)(nlodf * cell_x            ), offset_y + (f32)(nlodf * cell_y            ), offset_z + 16.0f };
-						p_positions[0x1] = (v3){ offset_x + (f32)(nlodf * cell_x + 1 * nlodf), offset_y + (f32)(nlodf * cell_y            ), offset_z + 16.0f };
-						p_positions[0x2] = (v3){ offset_x + (f32)(nlodf * cell_x + 2 * nlodf), offset_y + (f32)(nlodf * cell_y            ), offset_z + 16.0f };
-						p_positions[0x3] = (v3){ offset_x + (f32)(nlodf * cell_x            ), offset_y + (f32)(nlodf * cell_y + 1 * nlodf), offset_z + 16.0f };
-						p_positions[0x4] = (v3){ offset_x + (f32)(nlodf * cell_x + 1 * nlodf), offset_y + (f32)(nlodf * cell_y + 1 * nlodf), offset_z + 16.0f };
-						p_positions[0x5] = (v3){ offset_x + (f32)(nlodf * cell_x + 2 * nlodf), offset_y + (f32)(nlodf * cell_y + 1 * nlodf), offset_z + 16.0f };
-						p_positions[0x6] = (v3){ offset_x + (f32)(nlodf * cell_x            ), offset_y + (f32)(nlodf * cell_y + 2 * nlodf), offset_z + 16.0f };
-						p_positions[0x7] = (v3){ offset_x + (f32)(nlodf * cell_x + 1 * nlodf), offset_y + (f32)(nlodf * cell_y + 2 * nlodf), offset_z + 16.0f };
-						p_positions[0x8] = (v3){ offset_x + (f32)(nlodf * cell_x + 2 * nlodf), offset_y + (f32)(nlodf * cell_y + 2 * nlodf), offset_z + 16.0f };
+						p_positions[0x0] = (v3){ offx0 + (f32)(lodf * cx            ), offy0 + (f32)(lodf * cy            ), offz0 + 16.0f };
+						p_positions[0x1] = (v3){ offx0 + (f32)(lodf * cx + nlodf * 1), offy0 + (f32)(lodf * cy            ), offz0 + 16.0f };
+						p_positions[0x2] = (v3){ offx0 + (f32)(lodf * cx + nlodf * 2), offy0 + (f32)(lodf * cy            ), offz0 + 16.0f };
+						p_positions[0x3] = (v3){ offx0 + (f32)(lodf * cx            ), offy0 + (f32)(lodf * cy + nlodf * 1), offz0 + 16.0f };
+						p_positions[0x4] = (v3){ offx0 + (f32)(lodf * cx + nlodf * 1), offy0 + (f32)(lodf * cy + nlodf * 1), offz0 + 16.0f };
+						p_positions[0x5] = (v3){ offx0 + (f32)(lodf * cx + nlodf * 2), offy0 + (f32)(lodf * cy + nlodf * 1), offz0 + 16.0f };
+						p_positions[0x6] = (v3){ offx0 + (f32)(lodf * cx            ), offy0 + (f32)(lodf * cy + nlodf * 2), offz0 + 16.0f };
+						p_positions[0x7] = (v3){ offx0 + (f32)(lodf * cx + nlodf * 1), offy0 + (f32)(lodf * cy + nlodf * 2), offz0 + 16.0f };
+						p_positions[0x8] = (v3){ offx0 + (f32)(lodf * cx + nlodf * 2), offy0 + (f32)(lodf * cy + nlodf * 2), offz0 + 16.0f };
 
-						p_positions[0x9] = (v3){ offset_x + (f32)(nlodf * cell_x            ), offset_y + (f32)(nlodf * cell_y            ), offset_z + 16.0f - 0.5f * (f32)lodf };
-						p_positions[0xa] = (v3){ offset_x + (f32)(nlodf * cell_x + 2 * nlodf), offset_y + (f32)(nlodf * cell_y            ), offset_z + 16.0f - 0.5f * (f32)lodf };
-						p_positions[0xb] = (v3){ offset_x + (f32)(nlodf * cell_x            ), offset_y + (f32)(nlodf * cell_y + 2 * nlodf), offset_z + 16.0f - 0.5f * (f32)lodf };
-						p_positions[0xc] = (v3){ offset_x + (f32)(nlodf * cell_x + 2 * nlodf), offset_y + (f32)(nlodf * cell_y + 2 * nlodf), offset_z + 16.0f - 0.5f * (f32)lodf };
+						p_positions[0x9] = (v3){ offx0 + (f32)(lodf * cx       ), offy0 + (f32)(lodf * cy       ), offz0 + 16.0f - (f32)lodf * 0.5f };
+						p_positions[0xa] = (v3){ offx0 + (f32)(lodf * cx + lodf), offy0 + (f32)(lodf * cy       ), offz0 + 16.0f - (f32)lodf * 0.5f };
+						p_positions[0xb] = (v3){ offx0 + (f32)(lodf * cx       ), offy0 + (f32)(lodf * cy + lodf), offz0 + 16.0f - (f32)lodf * 0.5f };
+						p_positions[0xc] = (v3){ offx0 + (f32)(lodf * cx + lodf), offy0 + (f32)(lodf * cy + lodf), offz0 + 16.0f - (f32)lodf * 0.5f };
 					} break;
+					}
+
+					if (transition_faces & TG_TRANSVOXEL_FACE_X_NEG && cx == 0)
+					{
+						if (transition_face == TG_TRANSVOXEL_FACE_Z_NEG)
+						{
+							p_positions[0x9].x = p_positions[0xb].x - 0.5f * (f32)lodf;
+							p_positions[0xa].x = p_positions[0xc].x - 0.5f * (f32)lodf;
+						}
+					}
+					else if (transition_faces & TG_TRANSVOXEL_FACE_X_POS && cx == 16 / lodf - 1)
+					{
+						p_positions[0x9].x -= 0.5f * (f32)lodf;
+						p_positions[0xa].x -= 0.5f * (f32)lodf;
+						p_positions[0xb].x -= 0.5f * (f32)lodf;
+						p_positions[0xc].x -= 0.5f * (f32)lodf;
+					}
+					if (transition_faces & TG_TRANSVOXEL_FACE_Y_NEG && cy == 0)
+					{
+						p_positions[0x9].y += 0.5f * (f32)lodf;
+						p_positions[0xa].y += 0.5f * (f32)lodf;
+						p_positions[0xb].y += 0.5f * (f32)lodf;
+						p_positions[0xc].y += 0.5f * (f32)lodf;
+					}
+					else if (transition_faces & TG_TRANSVOXEL_FACE_Y_POS && cy == 16 / lodf - 1)
+					{
+						p_positions[0x9].y -= 0.5f * (f32)lodf;
+						p_positions[0xa].y -= 0.5f * (f32)lodf;
+						p_positions[0xb].y -= 0.5f * (f32)lodf;
+						p_positions[0xc].y -= 0.5f * (f32)lodf;
+					}
+					if (transition_faces & TG_TRANSVOXEL_FACE_Z_NEG && cz == 0)
+					{
+						if (transition_face == TG_TRANSVOXEL_FACE_X_NEG)
+						{
+							p_positions[0xb].z = p_positions[0xc].z - 0.5f * (f32)lodf;
+							p_positions[0x9].z = p_positions[0xa].z - 0.5f * (f32)lodf;
+						}
+					}
+					else if (transition_faces & TG_TRANSVOXEL_FACE_Z_POS && cz == 16 / lodf - 1)
+					{
+						p_positions[0x9].z -= 0.5f * (f32)lodf;
+						p_positions[0xa].z -= 0.5f * (f32)lodf;
+						p_positions[0xb].z -= 0.5f * (f32)lodf;
+						p_positions[0xc].z -= 0.5f * (f32)lodf;
 					}
 
 					for (u32 i = 0; i < cell_triangle_count; i++)
@@ -383,38 +435,38 @@ u32 tg_transvoxel_create_chunk(i32 x, i32 y, i32 z, const tg_transvoxel_isolevel
 
 	i8 p_corners[8] = { 0 };
 	v3 p_positions[8] = { 0 };
-	const u8 lod_factor = 1 << lod;
+	const u8 lodf = 1 << lod;
 
 	if (transition_faces & TG_TRANSVOXEL_FACE_X_NEG)
 	{
-		chunk_triangle_count += tg_transvoxel_internal_create_transition_face(x, y, z, p_isolevels, lod, TG_TRANSVOXEL_FACE_X_NEG, &p_triangles[chunk_triangle_count]);
+		chunk_triangle_count += tg_transvoxel_internal_create_transition_face(x, y, z, p_isolevels, lod, TG_TRANSVOXEL_FACE_X_NEG, transition_faces, &p_triangles[chunk_triangle_count]);
 	}
 	if (transition_faces & TG_TRANSVOXEL_FACE_X_POS)
 	{
-		chunk_triangle_count += tg_transvoxel_internal_create_transition_face(x, y, z, p_isolevels, lod, TG_TRANSVOXEL_FACE_X_POS, &p_triangles[chunk_triangle_count]);
+		chunk_triangle_count += tg_transvoxel_internal_create_transition_face(x, y, z, p_isolevels, lod, TG_TRANSVOXEL_FACE_X_POS, transition_faces, &p_triangles[chunk_triangle_count]);
 	}
 	if (transition_faces & TG_TRANSVOXEL_FACE_Y_NEG)
 	{
-		chunk_triangle_count += tg_transvoxel_internal_create_transition_face(x, y, z, p_isolevels, lod, TG_TRANSVOXEL_FACE_Y_NEG, &p_triangles[chunk_triangle_count]);
+		chunk_triangle_count += tg_transvoxel_internal_create_transition_face(x, y, z, p_isolevels, lod, TG_TRANSVOXEL_FACE_Y_NEG, transition_faces, &p_triangles[chunk_triangle_count]);
 	}
 	if (transition_faces & TG_TRANSVOXEL_FACE_Y_POS)
 	{
-		chunk_triangle_count += tg_transvoxel_internal_create_transition_face(x, y, z, p_isolevels, lod, TG_TRANSVOXEL_FACE_Y_POS, &p_triangles[chunk_triangle_count]);
+		chunk_triangle_count += tg_transvoxel_internal_create_transition_face(x, y, z, p_isolevels, lod, TG_TRANSVOXEL_FACE_Y_POS, transition_faces, &p_triangles[chunk_triangle_count]);
 	}
 	if (transition_faces & TG_TRANSVOXEL_FACE_Z_NEG)
 	{
-		chunk_triangle_count += tg_transvoxel_internal_create_transition_face(x, y, z, p_isolevels, lod, TG_TRANSVOXEL_FACE_Z_NEG, &p_triangles[chunk_triangle_count]);
+		chunk_triangle_count += tg_transvoxel_internal_create_transition_face(x, y, z, p_isolevels, lod, TG_TRANSVOXEL_FACE_Z_NEG, transition_faces, &p_triangles[chunk_triangle_count]);
 	}
 	if (transition_faces & TG_TRANSVOXEL_FACE_Z_POS)
 	{
-		chunk_triangle_count += tg_transvoxel_internal_create_transition_face(x, y, z, p_isolevels, lod, TG_TRANSVOXEL_FACE_Z_POS, &p_triangles[chunk_triangle_count]);
+		chunk_triangle_count += tg_transvoxel_internal_create_transition_face(x, y, z, p_isolevels, lod, TG_TRANSVOXEL_FACE_Z_POS, transition_faces, &p_triangles[chunk_triangle_count]);
 	}
 
-	for (u8 cell_z = 0; cell_z < 16 / lod_factor; cell_z++)
+	for (u8 cz = 0; cz < 16 / lodf; cz++)
 	{
-		for (u8 cell_y = 0; cell_y < 16 / lod_factor; cell_y++)
+		for (u8 cy = 0; cy < 16 / lodf; cy++)
 		{
-			for (u8 cell_x = 0; cell_x < 16 / lod_factor; cell_x++)
+			for (u8 cx = 0; cx < 16 / lodf; cx++)
 			{
 				// Figure 3.7. Voxels at the corners of a cell are numbered as shown.
 				//    2 _____________ 3
@@ -428,14 +480,14 @@ u32 tg_transvoxel_create_chunk(i32 x, i32 y, i32 z, const tg_transvoxel_isolevel
 				//  |/___________|/
 				// 4              5
 
-				p_corners[0] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, (cell_x    ) * lod_factor, (cell_y    ) * lod_factor, (cell_z    ) * lod_factor);
-				p_corners[1] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, (cell_x + 1) * lod_factor, (cell_y    ) * lod_factor, (cell_z    ) * lod_factor);
-				p_corners[2] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, (cell_x    ) * lod_factor, (cell_y + 1) * lod_factor, (cell_z    ) * lod_factor);
-				p_corners[3] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, (cell_x + 1) * lod_factor, (cell_y + 1) * lod_factor, (cell_z    ) * lod_factor);
-				p_corners[4] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, (cell_x    ) * lod_factor, (cell_y    ) * lod_factor, (cell_z + 1) * lod_factor);
-				p_corners[5] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, (cell_x + 1) * lod_factor, (cell_y    ) * lod_factor, (cell_z + 1) * lod_factor);
-				p_corners[6] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, (cell_x    ) * lod_factor, (cell_y + 1) * lod_factor, (cell_z + 1) * lod_factor);
-				p_corners[7] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, (cell_x + 1) * lod_factor, (cell_y + 1) * lod_factor, (cell_z + 1) * lod_factor);
+				p_corners[0] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, (cx    ) * lodf, (cy    ) * lodf, (cz    ) * lodf);
+				p_corners[1] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, (cx + 1) * lodf, (cy    ) * lodf, (cz    ) * lodf);
+				p_corners[2] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, (cx    ) * lodf, (cy + 1) * lodf, (cz    ) * lodf);
+				p_corners[3] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, (cx + 1) * lodf, (cy + 1) * lodf, (cz    ) * lodf);
+				p_corners[4] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, (cx    ) * lodf, (cy    ) * lodf, (cz + 1) * lodf);
+				p_corners[5] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, (cx + 1) * lodf, (cy    ) * lodf, (cz + 1) * lodf);
+				p_corners[6] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, (cx    ) * lodf, (cy + 1) * lodf, (cz + 1) * lodf);
+				p_corners[7] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, (cx + 1) * lodf, (cy + 1) * lodf, (cz + 1) * lodf);
 
 				const u32 case_code =
 					((p_corners[0] >> 7) & 0x01) |
@@ -458,60 +510,60 @@ u32 tg_transvoxel_create_chunk(i32 x, i32 y, i32 z, const tg_transvoxel_isolevel
 					const u32 vertex_count = TG_CELL_GET_VERTEX_COUNT(*p_cell_data);
 					const u32 cell_triangle_count = TG_CELL_GET_TRIANGLE_COUNT(*p_cell_data);
 
-					const f32 offset_x = 16.0f * (f32)x;
-					const f32 offset_y = 16.0f * (f32)y;
-					const f32 offset_z = 16.0f * (f32)z;
+					const f32 offx0 = 16.0f * (f32)x;
+					const f32 offy0 = 16.0f * (f32)y;
+					const f32 offz0 = 16.0f * (f32)z;
 
-					p_positions[0] = (v3){ offset_x + (f32)( cell_x      * lod_factor), offset_y + (f32)( cell_y      * lod_factor), offset_z + (f32)( cell_z      * lod_factor) };
-					p_positions[1] = (v3){ offset_x + (f32)((cell_x + 1) * lod_factor), offset_y + (f32)( cell_y      * lod_factor), offset_z + (f32)( cell_z      * lod_factor) };
-					p_positions[2] = (v3){ offset_x + (f32)( cell_x      * lod_factor), offset_y + (f32)((cell_y + 1) * lod_factor), offset_z + (f32)( cell_z      * lod_factor) };
-					p_positions[3] = (v3){ offset_x + (f32)((cell_x + 1) * lod_factor), offset_y + (f32)((cell_y + 1) * lod_factor), offset_z + (f32)( cell_z      * lod_factor) };
-					p_positions[4] = (v3){ offset_x + (f32)( cell_x      * lod_factor), offset_y + (f32)( cell_y      * lod_factor), offset_z + (f32)((cell_z + 1) * lod_factor) };
-					p_positions[5] = (v3){ offset_x + (f32)((cell_x + 1) * lod_factor), offset_y + (f32)( cell_y      * lod_factor), offset_z + (f32)((cell_z + 1) * lod_factor) };
-					p_positions[6] = (v3){ offset_x + (f32)( cell_x      * lod_factor), offset_y + (f32)((cell_y + 1) * lod_factor), offset_z + (f32)((cell_z + 1) * lod_factor) };
-					p_positions[7] = (v3){ offset_x + (f32)((cell_x + 1) * lod_factor), offset_y + (f32)((cell_y + 1) * lod_factor), offset_z + (f32)((cell_z + 1) * lod_factor) };
+					p_positions[0] = (v3){ offx0 + (f32)( cx      * lodf), offy0 + (f32)( cy      * lodf), offz0 + (f32)( cz      * lodf) };
+					p_positions[1] = (v3){ offx0 + (f32)((cx + 1) * lodf), offy0 + (f32)( cy      * lodf), offz0 + (f32)( cz      * lodf) };
+					p_positions[2] = (v3){ offx0 + (f32)( cx      * lodf), offy0 + (f32)((cy + 1) * lodf), offz0 + (f32)( cz      * lodf) };
+					p_positions[3] = (v3){ offx0 + (f32)((cx + 1) * lodf), offy0 + (f32)((cy + 1) * lodf), offz0 + (f32)( cz      * lodf) };
+					p_positions[4] = (v3){ offx0 + (f32)( cx      * lodf), offy0 + (f32)( cy      * lodf), offz0 + (f32)((cz + 1) * lodf) };
+					p_positions[5] = (v3){ offx0 + (f32)((cx + 1) * lodf), offy0 + (f32)( cy      * lodf), offz0 + (f32)((cz + 1) * lodf) };
+					p_positions[6] = (v3){ offx0 + (f32)( cx      * lodf), offy0 + (f32)((cy + 1) * lodf), offz0 + (f32)((cz + 1) * lodf) };
+					p_positions[7] = (v3){ offx0 + (f32)((cx + 1) * lodf), offy0 + (f32)((cy + 1) * lodf), offz0 + (f32)((cz + 1) * lodf) };
 
-					if (transition_faces & TG_TRANSVOXEL_FACE_X_NEG && cell_x == 0)
+					if (transition_faces & TG_TRANSVOXEL_FACE_X_NEG && cx == 0)
 					{
-						p_positions[0].x += 0.5f * (f32)lod_factor;
-						p_positions[2].x += 0.5f * (f32)lod_factor;
-						p_positions[4].x += 0.5f * (f32)lod_factor;
-						p_positions[6].x += 0.5f * (f32)lod_factor;
+						p_positions[0].x += 0.5f * (f32)lodf;
+						p_positions[2].x += 0.5f * (f32)lodf;
+						p_positions[4].x += 0.5f * (f32)lodf;
+						p_positions[6].x += 0.5f * (f32)lodf;
 					}
-					else if (transition_faces & TG_TRANSVOXEL_FACE_X_POS && cell_x == 16 / lod_factor - 1)
+					else if (transition_faces & TG_TRANSVOXEL_FACE_X_POS && cx == 16 / lodf - 1)
 					{
-						p_positions[1].x -= 0.5f * (f32)lod_factor;
-						p_positions[3].x -= 0.5f * (f32)lod_factor;
-						p_positions[5].x -= 0.5f * (f32)lod_factor;
-						p_positions[7].x -= 0.5f * (f32)lod_factor;
+						p_positions[1].x -= 0.5f * (f32)lodf;
+						p_positions[3].x -= 0.5f * (f32)lodf;
+						p_positions[5].x -= 0.5f * (f32)lodf;
+						p_positions[7].x -= 0.5f * (f32)lodf;
 					}
-					if (transition_faces & TG_TRANSVOXEL_FACE_Y_NEG && cell_y == 0)
+					if (transition_faces & TG_TRANSVOXEL_FACE_Y_NEG && cy == 0)
 					{
-						p_positions[0].y += 0.5f * (f32)lod_factor;
-						p_positions[1].y += 0.5f * (f32)lod_factor;
-						p_positions[4].y += 0.5f * (f32)lod_factor;
-						p_positions[5].y += 0.5f * (f32)lod_factor;
+						p_positions[0].y += 0.5f * (f32)lodf;
+						p_positions[1].y += 0.5f * (f32)lodf;
+						p_positions[4].y += 0.5f * (f32)lodf;
+						p_positions[5].y += 0.5f * (f32)lodf;
 					}
-					else if (transition_faces & TG_TRANSVOXEL_FACE_Y_POS && cell_y == 16 / lod_factor - 1)
+					else if (transition_faces & TG_TRANSVOXEL_FACE_Y_POS && cy == 16 / lodf - 1)
 					{
-						p_positions[2].y -= 0.5f * (f32)lod_factor;
-						p_positions[3].y -= 0.5f * (f32)lod_factor;
-						p_positions[6].y -= 0.5f * (f32)lod_factor;
-						p_positions[7].y -= 0.5f * (f32)lod_factor;
+						p_positions[2].y -= 0.5f * (f32)lodf;
+						p_positions[3].y -= 0.5f * (f32)lodf;
+						p_positions[6].y -= 0.5f * (f32)lodf;
+						p_positions[7].y -= 0.5f * (f32)lodf;
 					}
-					if (transition_faces & TG_TRANSVOXEL_FACE_Z_NEG && cell_z == 0)
+					if (transition_faces & TG_TRANSVOXEL_FACE_Z_NEG && cz == 0)
 					{
-						p_positions[0].z += 0.5f * (f32)lod_factor;
-						p_positions[1].z += 0.5f * (f32)lod_factor;
-						p_positions[2].z += 0.5f * (f32)lod_factor;
-						p_positions[3].z += 0.5f * (f32)lod_factor;
+						p_positions[0].z += 0.5f * (f32)lodf;
+						p_positions[1].z += 0.5f * (f32)lodf;
+						p_positions[2].z += 0.5f * (f32)lodf;
+						p_positions[3].z += 0.5f * (f32)lodf;
 					}
-					else if (transition_faces & TG_TRANSVOXEL_FACE_Z_POS && cell_z == 16 / lod_factor - 1)
+					else if (transition_faces & TG_TRANSVOXEL_FACE_Z_POS && cz == 16 / lodf - 1)
 					{
-						p_positions[4].z -= 0.5f * (f32)lod_factor;
-						p_positions[5].z -= 0.5f * (f32)lod_factor;
-						p_positions[6].z -= 0.5f * (f32)lod_factor;
-						p_positions[7].z -= 0.5f * (f32)lod_factor;
+						p_positions[4].z -= 0.5f * (f32)lodf;
+						p_positions[5].z -= 0.5f * (f32)lodf;
+						p_positions[6].z -= 0.5f * (f32)lodf;
+						p_positions[7].z -= 0.5f * (f32)lodf;
 					}
 
 					for (u8 i = 0; i < cell_triangle_count; i++)
