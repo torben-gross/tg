@@ -212,7 +212,7 @@ void tg_application_internal_game_3d_create()
 
     tg_transvoxel_fill_isolevels(1, 0, 9, &isolevels);
 
-    const u32 triangle_count2 = tg_transvoxel_create_chunk(0, 0, 1, &isolevels, 1, TG_TRANSVOXEL_TRANSITION_FACES(1, 0, 0, 0, 1, 0), p_triangles);
+    const u32 triangle_count2 = tg_transvoxel_create_chunk(0, 0, 1, &isolevels, 1, TG_TRANSVOXEL_TRANSITION_FACES(1, 0, 0, 1, 1, 1), p_triangles);
     tg_mesh_h m2 = tg_mesh_create(3 * triangle_count2, (v3*)p_triangles, TG_NULL, TG_NULL, TG_NULL, 0, TG_NULL);
     test_deferred.transvoxel_entities[2] = tg_entity_create(m2, test_deferred.yellow_material_h);
     //v3 np = { 0.0f, 0.0f, 1.0f };

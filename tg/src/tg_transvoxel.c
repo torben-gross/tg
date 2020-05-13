@@ -226,159 +226,240 @@ u32 tg_transvoxel_internal_create_transition_face(i32 x, i32 y, i32 z, const tg_
 					const u32 vertex_count = TG_CELL_GET_VERTEX_COUNT(*p_cell_data);
 					const u32 cell_triangle_count = TG_CELL_GET_TRIANGLE_COUNT(*p_cell_data);
 
-					const f32 offx0 = 16.0f * (f32)x;
-					const f32 offy0 = 16.0f * (f32)y;
-					const f32 offz0 = 16.0f * (f32)z;
+					const f32 offx = 16.0f * (f32)x;
+					const f32 offy = 16.0f * (f32)y;
+					const f32 offz = 16.0f * (f32)z;
 					
 					switch (transition_face)
 					{
 					case TG_TRANSVOXEL_FACE_X_NEG:
 					{
-						p_positions[0x0] = (v3){ offx0, offy0 + (f32)(lodf * cy            ), offz0 + (f32)(lodf * cz            ) };
-						p_positions[0x1] = (v3){ offx0, offy0 + (f32)(lodf * cy            ), offz0 + (f32)(lodf * cz + nlodf * 1) };
-						p_positions[0x2] = (v3){ offx0, offy0 + (f32)(lodf * cy            ), offz0 + (f32)(lodf * cz + nlodf * 2) };
-						p_positions[0x3] = (v3){ offx0, offy0 + (f32)(lodf * cy + nlodf * 1), offz0 + (f32)(lodf * cz            ) };
-						p_positions[0x4] = (v3){ offx0, offy0 + (f32)(lodf * cy + nlodf * 1), offz0 + (f32)(lodf * cz + nlodf * 1) };
-						p_positions[0x5] = (v3){ offx0, offy0 + (f32)(lodf * cy + nlodf * 1), offz0 + (f32)(lodf * cz + nlodf * 2) };
-						p_positions[0x6] = (v3){ offx0, offy0 + (f32)(lodf * cy + nlodf * 2), offz0 + (f32)(lodf * cz            ) };
-						p_positions[0x7] = (v3){ offx0, offy0 + (f32)(lodf * cy + nlodf * 2), offz0 + (f32)(lodf * cz + nlodf * 1) };
-						p_positions[0x8] = (v3){ offx0, offy0 + (f32)(lodf * cy + nlodf * 2), offz0 + (f32)(lodf * cz + nlodf * 2) };
+						p_positions[0x0] = (v3){ offx, offy + (f32)(lodf * cy            ), offz + (f32)(lodf * cz            ) };
+						p_positions[0x1] = (v3){ offx, offy + (f32)(lodf * cy            ), offz + (f32)(lodf * cz + nlodf * 1) };
+						p_positions[0x2] = (v3){ offx, offy + (f32)(lodf * cy            ), offz + (f32)(lodf * cz + nlodf * 2) };
+						p_positions[0x3] = (v3){ offx, offy + (f32)(lodf * cy + nlodf * 1), offz + (f32)(lodf * cz            ) };
+						p_positions[0x4] = (v3){ offx, offy + (f32)(lodf * cy + nlodf * 1), offz + (f32)(lodf * cz + nlodf * 1) };
+						p_positions[0x5] = (v3){ offx, offy + (f32)(lodf * cy + nlodf * 1), offz + (f32)(lodf * cz + nlodf * 2) };
+						p_positions[0x6] = (v3){ offx, offy + (f32)(lodf * cy + nlodf * 2), offz + (f32)(lodf * cz            ) };
+						p_positions[0x7] = (v3){ offx, offy + (f32)(lodf * cy + nlodf * 2), offz + (f32)(lodf * cz + nlodf * 1) };
+						p_positions[0x8] = (v3){ offx, offy + (f32)(lodf * cy + nlodf * 2), offz + (f32)(lodf * cz + nlodf * 2) };
 
-						p_positions[0x9] = (v3){ offx0 + (f32)lodf * 0.5f, offy0 + (f32)(lodf * cy       ), offz0 + (f32)(lodf * cz       ) };
-						p_positions[0xa] = (v3){ offx0 + (f32)lodf * 0.5f, offy0 + (f32)(lodf * cy       ), offz0 + (f32)(lodf * cz + lodf) };
-						p_positions[0xb] = (v3){ offx0 + (f32)lodf * 0.5f, offy0 + (f32)(lodf * cy + lodf), offz0 + (f32)(lodf * cz       ) };
-						p_positions[0xc] = (v3){ offx0 + (f32)lodf * 0.5f, offy0 + (f32)(lodf * cy + lodf), offz0 + (f32)(lodf * cz + lodf) };
+						p_positions[0x9] = (v3){ offx + (f32)lodf * 0.5f, offy + (f32)(lodf * cy       ), offz + (f32)(lodf * cz       ) };
+						p_positions[0xa] = (v3){ offx + (f32)lodf * 0.5f, offy + (f32)(lodf * cy       ), offz + (f32)(lodf * cz + lodf) };
+						p_positions[0xb] = (v3){ offx + (f32)lodf * 0.5f, offy + (f32)(lodf * cy + lodf), offz + (f32)(lodf * cz       ) };
+						p_positions[0xc] = (v3){ offx + (f32)lodf * 0.5f, offy + (f32)(lodf * cy + lodf), offz + (f32)(lodf * cz + lodf) };
+
+						if (transition_faces & TG_TRANSVOXEL_FACE_Y_NEG && cy == 0)
+						{
+							p_positions[0x9].y += (f32)nlodf;
+							p_positions[0xa].y += (f32)nlodf;
+						}
+						else if (transition_faces & TG_TRANSVOXEL_FACE_Y_POS && cy == 16 / lodf - 1)
+						{
+							p_positions[0xb].y -= (f32)nlodf;
+							p_positions[0xc].y -= (f32)nlodf;
+						}
+						if (transition_faces & TG_TRANSVOXEL_FACE_Z_NEG && cz == 0)
+						{
+							p_positions[0x9].z += (f32)nlodf;
+							p_positions[0xb].z += (f32)nlodf;
+						}
+						else if (transition_faces & TG_TRANSVOXEL_FACE_Z_POS && cz == 16 / lodf - 1)
+						{
+							p_positions[0xa].z -= (f32)nlodf;
+							p_positions[0xc].z -= (f32)nlodf;
+						}
 					} break;
 					case TG_TRANSVOXEL_FACE_X_POS:
 					{
-						p_positions[0x0] = (v3){ offx0 + 16.0f, offy0 + (f32)(lodf * cy            ), offz0 + (f32)(lodf * cz            ) };
-						p_positions[0x1] = (v3){ offx0 + 16.0f, offy0 + (f32)(lodf * cy + nlodf * 1), offz0 + (f32)(lodf * cz            ) };
-						p_positions[0x2] = (v3){ offx0 + 16.0f, offy0 + (f32)(lodf * cy + nlodf * 2), offz0 + (f32)(lodf * cz            ) };
-						p_positions[0x3] = (v3){ offx0 + 16.0f, offy0 + (f32)(lodf * cy            ), offz0 + (f32)(lodf * cz + nlodf * 1) };
-						p_positions[0x4] = (v3){ offx0 + 16.0f, offy0 + (f32)(lodf * cy + nlodf * 1), offz0 + (f32)(lodf * cz + nlodf * 1) };
-						p_positions[0x5] = (v3){ offx0 + 16.0f, offy0 + (f32)(lodf * cy + nlodf * 2), offz0 + (f32)(lodf * cz + nlodf * 1) };
-						p_positions[0x6] = (v3){ offx0 + 16.0f, offy0 + (f32)(lodf * cy            ), offz0 + (f32)(lodf * cz + nlodf * 2) };
-						p_positions[0x7] = (v3){ offx0 + 16.0f, offy0 + (f32)(lodf * cy + nlodf * 1), offz0 + (f32)(lodf * cz + nlodf * 2) };
-						p_positions[0x8] = (v3){ offx0 + 16.0f, offy0 + (f32)(lodf * cy + nlodf * 2), offz0 + (f32)(lodf * cz + nlodf * 2) };
+						p_positions[0x0] = (v3){ offx + 16.0f, offy + (f32)(lodf * cy            ), offz + (f32)(lodf * cz            ) };
+						p_positions[0x1] = (v3){ offx + 16.0f, offy + (f32)(lodf * cy + nlodf * 1), offz + (f32)(lodf * cz            ) };
+						p_positions[0x2] = (v3){ offx + 16.0f, offy + (f32)(lodf * cy + nlodf * 2), offz + (f32)(lodf * cz            ) };
+						p_positions[0x3] = (v3){ offx + 16.0f, offy + (f32)(lodf * cy            ), offz + (f32)(lodf * cz + nlodf * 1) };
+						p_positions[0x4] = (v3){ offx + 16.0f, offy + (f32)(lodf * cy + nlodf * 1), offz + (f32)(lodf * cz + nlodf * 1) };
+						p_positions[0x5] = (v3){ offx + 16.0f, offy + (f32)(lodf * cy + nlodf * 2), offz + (f32)(lodf * cz + nlodf * 1) };
+						p_positions[0x6] = (v3){ offx + 16.0f, offy + (f32)(lodf * cy            ), offz + (f32)(lodf * cz + nlodf * 2) };
+						p_positions[0x7] = (v3){ offx + 16.0f, offy + (f32)(lodf * cy + nlodf * 1), offz + (f32)(lodf * cz + nlodf * 2) };
+						p_positions[0x8] = (v3){ offx + 16.0f, offy + (f32)(lodf * cy + nlodf * 2), offz + (f32)(lodf * cz + nlodf * 2) };
 
-						p_positions[0x9] = (v3){ offx0 + 16.0f - (f32)lodf * 0.5f, offy0 + (f32)(lodf * cy       ), offz0 + (f32)(lodf * cz       ) };
-						p_positions[0xa] = (v3){ offx0 + 16.0f - (f32)lodf * 0.5f, offy0 + (f32)(lodf * cy + lodf), offz0 + (f32)(lodf * cz       ) };
-						p_positions[0xb] = (v3){ offx0 + 16.0f - (f32)lodf * 0.5f, offy0 + (f32)(lodf * cy       ), offz0 + (f32)(lodf * cz + lodf) };
-						p_positions[0xc] = (v3){ offx0 + 16.0f - (f32)lodf * 0.5f, offy0 + (f32)(lodf * cy + lodf), offz0 + (f32)(lodf * cz + lodf) };
+						p_positions[0x9] = (v3){ offx + 16.0f - (f32)lodf * 0.5f, offy + (f32)(lodf * cy       ), offz + (f32)(lodf * cz       ) };
+						p_positions[0xa] = (v3){ offx + 16.0f - (f32)lodf * 0.5f, offy + (f32)(lodf * cy + lodf), offz + (f32)(lodf * cz       ) };
+						p_positions[0xb] = (v3){ offx + 16.0f - (f32)lodf * 0.5f, offy + (f32)(lodf * cy       ), offz + (f32)(lodf * cz + lodf) };
+						p_positions[0xc] = (v3){ offx + 16.0f - (f32)lodf * 0.5f, offy + (f32)(lodf * cy + lodf), offz + (f32)(lodf * cz + lodf) };
+
+						if (transition_faces & TG_TRANSVOXEL_FACE_Y_NEG && cy == 0)
+						{
+							p_positions[0x9].y += (f32)nlodf;
+							p_positions[0xb].y += (f32)nlodf;
+						}
+						else if (transition_faces & TG_TRANSVOXEL_FACE_Y_POS && cy == 16 / lodf - 1)
+						{
+							p_positions[0xa].y -= (f32)nlodf;
+							p_positions[0xc].y -= (f32)nlodf;
+						}
+						if (transition_faces & TG_TRANSVOXEL_FACE_Z_NEG && cz == 0)
+						{
+							p_positions[0x9].z += (f32)nlodf;
+							p_positions[0xa].z += (f32)nlodf;
+						}
+						else if (transition_faces & TG_TRANSVOXEL_FACE_Z_POS && cz == 16 / lodf - 1)
+						{
+							p_positions[0xb].z -= (f32)nlodf;
+							p_positions[0xc].z -= (f32)nlodf;
+						}
 					} break;
 					case TG_TRANSVOXEL_FACE_Y_NEG:
 					{
-						p_positions[0x0] = (v3){ offx0 + (f32)(lodf * cx            ), offy0, offz0 + (f32)(lodf * cz            ) };
-						p_positions[0x1] = (v3){ offx0 + (f32)(lodf * cx + nlodf * 1), offy0, offz0 + (f32)(lodf * cz            ) };
-						p_positions[0x2] = (v3){ offx0 + (f32)(lodf * cx + nlodf * 2), offy0, offz0 + (f32)(lodf * cz            ) };
-						p_positions[0x3] = (v3){ offx0 + (f32)(lodf * cx            ), offy0, offz0 + (f32)(lodf * cz + nlodf * 1) };
-						p_positions[0x4] = (v3){ offx0 + (f32)(lodf * cx + nlodf * 1), offy0, offz0 + (f32)(lodf * cz + nlodf * 1) };
-						p_positions[0x5] = (v3){ offx0 + (f32)(lodf * cx + nlodf * 2), offy0, offz0 + (f32)(lodf * cz + nlodf * 1) };
-						p_positions[0x6] = (v3){ offx0 + (f32)(lodf * cx            ), offy0, offz0 + (f32)(lodf * cz + nlodf * 2) };
-						p_positions[0x7] = (v3){ offx0 + (f32)(lodf * cx + nlodf * 1), offy0, offz0 + (f32)(lodf * cz + nlodf * 2) };
-						p_positions[0x8] = (v3){ offx0 + (f32)(lodf * cx + nlodf * 2), offy0, offz0 + (f32)(lodf * cz + nlodf * 2) };
+						p_positions[0x0] = (v3){ offx + (f32)(lodf * cx            ), offy, offz + (f32)(lodf * cz            ) };
+						p_positions[0x1] = (v3){ offx + (f32)(lodf * cx + nlodf * 1), offy, offz + (f32)(lodf * cz            ) };
+						p_positions[0x2] = (v3){ offx + (f32)(lodf * cx + nlodf * 2), offy, offz + (f32)(lodf * cz            ) };
+						p_positions[0x3] = (v3){ offx + (f32)(lodf * cx            ), offy, offz + (f32)(lodf * cz + nlodf * 1) };
+						p_positions[0x4] = (v3){ offx + (f32)(lodf * cx + nlodf * 1), offy, offz + (f32)(lodf * cz + nlodf * 1) };
+						p_positions[0x5] = (v3){ offx + (f32)(lodf * cx + nlodf * 2), offy, offz + (f32)(lodf * cz + nlodf * 1) };
+						p_positions[0x6] = (v3){ offx + (f32)(lodf * cx            ), offy, offz + (f32)(lodf * cz + nlodf * 2) };
+						p_positions[0x7] = (v3){ offx + (f32)(lodf * cx + nlodf * 1), offy, offz + (f32)(lodf * cz + nlodf * 2) };
+						p_positions[0x8] = (v3){ offx + (f32)(lodf * cx + nlodf * 2), offy, offz + (f32)(lodf * cz + nlodf * 2) };
 
-						p_positions[0x9] = (v3){ offx0 + (f32)(lodf * cx       ), offy0 + (f32)lodf * 0.5f, offz0 + (f32)(lodf * cz       ) };
-						p_positions[0xa] = (v3){ offx0 + (f32)(lodf * cx + lodf), offy0 + (f32)lodf * 0.5f, offz0 + (f32)(lodf * cz       ) };
-						p_positions[0xb] = (v3){ offx0 + (f32)(lodf * cx       ), offy0 + (f32)lodf * 0.5f, offz0 + (f32)(lodf * cz + lodf) };
-						p_positions[0xc] = (v3){ offx0 + (f32)(lodf * cx + lodf), offy0 + (f32)lodf * 0.5f, offz0 + (f32)(lodf * cz + lodf) };
+						p_positions[0x9] = (v3){ offx + (f32)(lodf * cx       ), offy + (f32)lodf * 0.5f, offz + (f32)(lodf * cz       ) };
+						p_positions[0xa] = (v3){ offx + (f32)(lodf * cx + lodf), offy + (f32)lodf * 0.5f, offz + (f32)(lodf * cz       ) };
+						p_positions[0xb] = (v3){ offx + (f32)(lodf * cx       ), offy + (f32)lodf * 0.5f, offz + (f32)(lodf * cz + lodf) };
+						p_positions[0xc] = (v3){ offx + (f32)(lodf * cx + lodf), offy + (f32)lodf * 0.5f, offz + (f32)(lodf * cz + lodf) };
+
+						if (transition_faces & TG_TRANSVOXEL_FACE_X_NEG && cx == 0)
+						{
+							p_positions[0x9].x += (f32)nlodf;
+							p_positions[0xb].x += (f32)nlodf;
+						}
+						else if (transition_faces & TG_TRANSVOXEL_FACE_X_POS && cx == 16 / lodf - 1)
+						{
+							p_positions[0xa].x -= (f32)nlodf;
+							p_positions[0xc].x -= (f32)nlodf;
+						}
+						if (transition_faces & TG_TRANSVOXEL_FACE_Z_NEG && cz == 0)
+						{
+							p_positions[0x9].z += (f32)nlodf;
+							p_positions[0xa].z += (f32)nlodf;
+						}
+						else if (transition_faces & TG_TRANSVOXEL_FACE_Z_POS && cz == 16 / lodf - 1)
+						{
+							p_positions[0xb].z -= (f32)nlodf;
+							p_positions[0xc].z -= (f32)nlodf;
+						}
 					} break;
 					case TG_TRANSVOXEL_FACE_Y_POS:
 					{
-						p_positions[0x0] = (v3){ offx0 + (f32)(lodf * cx            ), offy0 + 16.0f, offz0 + (f32)(lodf * cz            ) };
-						p_positions[0x1] = (v3){ offx0 + (f32)(lodf * cx            ), offy0 + 16.0f, offz0 + (f32)(lodf * cz + nlodf * 1) };
-						p_positions[0x2] = (v3){ offx0 + (f32)(lodf * cx            ), offy0 + 16.0f, offz0 + (f32)(lodf * cz + nlodf * 2) };
-						p_positions[0x3] = (v3){ offx0 + (f32)(lodf * cx + nlodf * 1), offy0 + 16.0f, offz0 + (f32)(lodf * cz            ) };
-						p_positions[0x4] = (v3){ offx0 + (f32)(lodf * cx + nlodf * 1), offy0 + 16.0f, offz0 + (f32)(lodf * cz + nlodf * 1) };
-						p_positions[0x5] = (v3){ offx0 + (f32)(lodf * cx + nlodf * 1), offy0 + 16.0f, offz0 + (f32)(lodf * cz + nlodf * 2) };
-						p_positions[0x6] = (v3){ offx0 + (f32)(lodf * cx + nlodf * 2), offy0 + 16.0f, offz0 + (f32)(lodf * cz            ) };
-						p_positions[0x7] = (v3){ offx0 + (f32)(lodf * cx + nlodf * 2), offy0 + 16.0f, offz0 + (f32)(lodf * cz + nlodf * 1) };
-						p_positions[0x8] = (v3){ offx0 + (f32)(lodf * cx + nlodf * 2), offy0 + 16.0f, offz0 + (f32)(lodf * cz + nlodf * 2) };
+						p_positions[0x0] = (v3){ offx + (f32)(lodf * cx            ), offy + 16.0f, offz + (f32)(lodf * cz            ) };
+						p_positions[0x1] = (v3){ offx + (f32)(lodf * cx            ), offy + 16.0f, offz + (f32)(lodf * cz + nlodf * 1) };
+						p_positions[0x2] = (v3){ offx + (f32)(lodf * cx            ), offy + 16.0f, offz + (f32)(lodf * cz + nlodf * 2) };
+						p_positions[0x3] = (v3){ offx + (f32)(lodf * cx + nlodf * 1), offy + 16.0f, offz + (f32)(lodf * cz            ) };
+						p_positions[0x4] = (v3){ offx + (f32)(lodf * cx + nlodf * 1), offy + 16.0f, offz + (f32)(lodf * cz + nlodf * 1) };
+						p_positions[0x5] = (v3){ offx + (f32)(lodf * cx + nlodf * 1), offy + 16.0f, offz + (f32)(lodf * cz + nlodf * 2) };
+						p_positions[0x6] = (v3){ offx + (f32)(lodf * cx + nlodf * 2), offy + 16.0f, offz + (f32)(lodf * cz            ) };
+						p_positions[0x7] = (v3){ offx + (f32)(lodf * cx + nlodf * 2), offy + 16.0f, offz + (f32)(lodf * cz + nlodf * 1) };
+						p_positions[0x8] = (v3){ offx + (f32)(lodf * cx + nlodf * 2), offy + 16.0f, offz + (f32)(lodf * cz + nlodf * 2) };
 
-						p_positions[0x9] = (v3){ offx0 + (f32)(lodf * cx       ), offy0 + 16.0f - (f32)lodf * 0.5f, offz0 + (f32)(lodf * cz       ) };
-						p_positions[0xa] = (v3){ offx0 + (f32)(lodf * cx       ), offy0 + 16.0f - (f32)lodf * 0.5f, offz0 + (f32)(lodf * cz + lodf) };
-						p_positions[0xb] = (v3){ offx0 + (f32)(lodf * cx + lodf), offy0 + 16.0f - (f32)lodf * 0.5f, offz0 + (f32)(lodf * cz       ) };
-						p_positions[0xc] = (v3){ offx0 + (f32)(lodf * cx + lodf), offy0 + 16.0f - (f32)lodf * 0.5f, offz0 + (f32)(lodf * cz + lodf) };
+						p_positions[0x9] = (v3){ offx + (f32)(lodf * cx       ), offy + 16.0f - (f32)lodf * 0.5f, offz + (f32)(lodf * cz       ) };
+						p_positions[0xa] = (v3){ offx + (f32)(lodf * cx       ), offy + 16.0f - (f32)lodf * 0.5f, offz + (f32)(lodf * cz + lodf) };
+						p_positions[0xb] = (v3){ offx + (f32)(lodf * cx + lodf), offy + 16.0f - (f32)lodf * 0.5f, offz + (f32)(lodf * cz       ) };
+						p_positions[0xc] = (v3){ offx + (f32)(lodf * cx + lodf), offy + 16.0f - (f32)lodf * 0.5f, offz + (f32)(lodf * cz + lodf) };
+
+						if (transition_faces & TG_TRANSVOXEL_FACE_X_NEG && cx == 0)
+						{
+							p_positions[0x9].x += (f32)nlodf;
+							p_positions[0xa].x += (f32)nlodf;
+						}
+						else if (transition_faces & TG_TRANSVOXEL_FACE_X_POS && cx == 16 / lodf - 1)
+						{
+							p_positions[0xb].x -= (f32)nlodf;
+							p_positions[0xc].x -= (f32)nlodf;
+						}
+						if (transition_faces & TG_TRANSVOXEL_FACE_Z_NEG && cz == 0)
+						{
+							p_positions[0x9].z += (f32)nlodf;
+							p_positions[0xb].z += (f32)nlodf;
+						}
+						else if (transition_faces & TG_TRANSVOXEL_FACE_Z_POS && cz == 16 / lodf - 1)
+						{
+							p_positions[0xa].z -= (f32)nlodf;
+							p_positions[0xc].z -= (f32)nlodf;
+						}
 					} break;
 					case TG_TRANSVOXEL_FACE_Z_NEG:
 					{
-						p_positions[0x0] = (v3){ offx0 + (f32)(lodf * cx            ), offy0 + (f32)(lodf * cy            ), offz0 };
-						p_positions[0x1] = (v3){ offx0 + (f32)(lodf * cx            ), offy0 + (f32)(lodf * cy + nlodf * 1), offz0 };
-						p_positions[0x2] = (v3){ offx0 + (f32)(lodf * cx            ), offy0 + (f32)(lodf * cy + nlodf * 2), offz0 };
-						p_positions[0x3] = (v3){ offx0 + (f32)(lodf * cx + nlodf * 1), offy0 + (f32)(lodf * cy            ), offz0 };
-						p_positions[0x4] = (v3){ offx0 + (f32)(lodf * cx + nlodf * 1), offy0 + (f32)(lodf * cy + nlodf * 1), offz0 };
-						p_positions[0x5] = (v3){ offx0 + (f32)(lodf * cx + nlodf * 1), offy0 + (f32)(lodf * cy + nlodf * 2), offz0 };
-						p_positions[0x6] = (v3){ offx0 + (f32)(lodf * cx + nlodf * 2), offy0 + (f32)(lodf * cy            ), offz0 };
-						p_positions[0x7] = (v3){ offx0 + (f32)(lodf * cx + nlodf * 2), offy0 + (f32)(lodf * cy + nlodf * 1), offz0 };
-						p_positions[0x8] = (v3){ offx0 + (f32)(lodf * cx + nlodf * 2), offy0 + (f32)(lodf * cy + nlodf * 2), offz0 };
+						p_positions[0x0] = (v3){ offx + (f32)(lodf * cx            ), offy + (f32)(lodf * cy            ), offz };
+						p_positions[0x1] = (v3){ offx + (f32)(lodf * cx            ), offy + (f32)(lodf * cy + nlodf * 1), offz };
+						p_positions[0x2] = (v3){ offx + (f32)(lodf * cx            ), offy + (f32)(lodf * cy + nlodf * 2), offz };
+						p_positions[0x3] = (v3){ offx + (f32)(lodf * cx + nlodf * 1), offy + (f32)(lodf * cy            ), offz };
+						p_positions[0x4] = (v3){ offx + (f32)(lodf * cx + nlodf * 1), offy + (f32)(lodf * cy + nlodf * 1), offz };
+						p_positions[0x5] = (v3){ offx + (f32)(lodf * cx + nlodf * 1), offy + (f32)(lodf * cy + nlodf * 2), offz };
+						p_positions[0x6] = (v3){ offx + (f32)(lodf * cx + nlodf * 2), offy + (f32)(lodf * cy            ), offz };
+						p_positions[0x7] = (v3){ offx + (f32)(lodf * cx + nlodf * 2), offy + (f32)(lodf * cy + nlodf * 1), offz };
+						p_positions[0x8] = (v3){ offx + (f32)(lodf * cx + nlodf * 2), offy + (f32)(lodf * cy + nlodf * 2), offz };
 
-						p_positions[0x9] = (v3){ offx0 + (f32)(lodf * cx       ), offy0 + (f32)(lodf * cy       ), offz0 + (f32)lodf * 0.5f };
-						p_positions[0xa] = (v3){ offx0 + (f32)(lodf * cx       ), offy0 + (f32)(lodf * cy + lodf), offz0 + (f32)lodf * 0.5f };
-						p_positions[0xb] = (v3){ offx0 + (f32)(lodf * cx + lodf), offy0 + (f32)(lodf * cy       ), offz0 + (f32)lodf * 0.5f };
-						p_positions[0xc] = (v3){ offx0 + (f32)(lodf * cx + lodf), offy0 + (f32)(lodf * cy + lodf), offz0 + (f32)lodf * 0.5f };
+						p_positions[0x9] = (v3){ offx + (f32)(lodf * cx       ), offy + (f32)(lodf * cy       ), offz + (f32)lodf * 0.5f };
+						p_positions[0xa] = (v3){ offx + (f32)(lodf * cx       ), offy + (f32)(lodf * cy + lodf), offz + (f32)lodf * 0.5f };
+						p_positions[0xb] = (v3){ offx + (f32)(lodf * cx + lodf), offy + (f32)(lodf * cy       ), offz + (f32)lodf * 0.5f };
+						p_positions[0xc] = (v3){ offx + (f32)(lodf * cx + lodf), offy + (f32)(lodf * cy + lodf), offz + (f32)lodf * 0.5f };
+
+						if (transition_faces & TG_TRANSVOXEL_FACE_X_NEG && cx == 0)
+						{
+							p_positions[0x9].x += (f32)nlodf;
+							p_positions[0xa].x += (f32)nlodf;
+						}
+						else if (transition_faces & TG_TRANSVOXEL_FACE_X_POS && cx == 16 / lodf - 1)
+						{
+							p_positions[0xb].x -= (f32)nlodf;
+							p_positions[0xc].x -= (f32)nlodf;
+						}
+						if (transition_faces & TG_TRANSVOXEL_FACE_Y_NEG && cy == 0)
+						{
+							p_positions[0x9].y += (f32)nlodf;
+							p_positions[0xb].y += (f32)nlodf;
+						}
+						else if (transition_faces & TG_TRANSVOXEL_FACE_Y_POS && cy == 16 / lodf - 1)
+						{
+							p_positions[0xa].y -= (f32)nlodf;
+							p_positions[0xc].y -= (f32)nlodf;
+						}
 					} break;
 					case TG_TRANSVOXEL_FACE_Z_POS:
 					{
-						p_positions[0x0] = (v3){ offx0 + (f32)(lodf * cx            ), offy0 + (f32)(lodf * cy            ), offz0 + 16.0f };
-						p_positions[0x1] = (v3){ offx0 + (f32)(lodf * cx + nlodf * 1), offy0 + (f32)(lodf * cy            ), offz0 + 16.0f };
-						p_positions[0x2] = (v3){ offx0 + (f32)(lodf * cx + nlodf * 2), offy0 + (f32)(lodf * cy            ), offz0 + 16.0f };
-						p_positions[0x3] = (v3){ offx0 + (f32)(lodf * cx            ), offy0 + (f32)(lodf * cy + nlodf * 1), offz0 + 16.0f };
-						p_positions[0x4] = (v3){ offx0 + (f32)(lodf * cx + nlodf * 1), offy0 + (f32)(lodf * cy + nlodf * 1), offz0 + 16.0f };
-						p_positions[0x5] = (v3){ offx0 + (f32)(lodf * cx + nlodf * 2), offy0 + (f32)(lodf * cy + nlodf * 1), offz0 + 16.0f };
-						p_positions[0x6] = (v3){ offx0 + (f32)(lodf * cx            ), offy0 + (f32)(lodf * cy + nlodf * 2), offz0 + 16.0f };
-						p_positions[0x7] = (v3){ offx0 + (f32)(lodf * cx + nlodf * 1), offy0 + (f32)(lodf * cy + nlodf * 2), offz0 + 16.0f };
-						p_positions[0x8] = (v3){ offx0 + (f32)(lodf * cx + nlodf * 2), offy0 + (f32)(lodf * cy + nlodf * 2), offz0 + 16.0f };
+						p_positions[0x0] = (v3){ offx + (f32)(lodf * cx            ), offy + (f32)(lodf * cy            ), offz + 16.0f };
+						p_positions[0x1] = (v3){ offx + (f32)(lodf * cx + nlodf * 1), offy + (f32)(lodf * cy            ), offz + 16.0f };
+						p_positions[0x2] = (v3){ offx + (f32)(lodf * cx + nlodf * 2), offy + (f32)(lodf * cy            ), offz + 16.0f };
+						p_positions[0x3] = (v3){ offx + (f32)(lodf * cx            ), offy + (f32)(lodf * cy + nlodf * 1), offz + 16.0f };
+						p_positions[0x4] = (v3){ offx + (f32)(lodf * cx + nlodf * 1), offy + (f32)(lodf * cy + nlodf * 1), offz + 16.0f };
+						p_positions[0x5] = (v3){ offx + (f32)(lodf * cx + nlodf * 2), offy + (f32)(lodf * cy + nlodf * 1), offz + 16.0f };
+						p_positions[0x6] = (v3){ offx + (f32)(lodf * cx            ), offy + (f32)(lodf * cy + nlodf * 2), offz + 16.0f };
+						p_positions[0x7] = (v3){ offx + (f32)(lodf * cx + nlodf * 1), offy + (f32)(lodf * cy + nlodf * 2), offz + 16.0f };
+						p_positions[0x8] = (v3){ offx + (f32)(lodf * cx + nlodf * 2), offy + (f32)(lodf * cy + nlodf * 2), offz + 16.0f };
 
-						p_positions[0x9] = (v3){ offx0 + (f32)(lodf * cx       ), offy0 + (f32)(lodf * cy       ), offz0 + 16.0f - (f32)lodf * 0.5f };
-						p_positions[0xa] = (v3){ offx0 + (f32)(lodf * cx + lodf), offy0 + (f32)(lodf * cy       ), offz0 + 16.0f - (f32)lodf * 0.5f };
-						p_positions[0xb] = (v3){ offx0 + (f32)(lodf * cx       ), offy0 + (f32)(lodf * cy + lodf), offz0 + 16.0f - (f32)lodf * 0.5f };
-						p_positions[0xc] = (v3){ offx0 + (f32)(lodf * cx + lodf), offy0 + (f32)(lodf * cy + lodf), offz0 + 16.0f - (f32)lodf * 0.5f };
+						p_positions[0x9] = (v3){ offx + (f32)(lodf * cx       ), offy + (f32)(lodf * cy       ), offz + 16.0f - (f32)lodf * 0.5f };
+						p_positions[0xa] = (v3){ offx + (f32)(lodf * cx + lodf), offy + (f32)(lodf * cy       ), offz + 16.0f - (f32)lodf * 0.5f };
+						p_positions[0xb] = (v3){ offx + (f32)(lodf * cx       ), offy + (f32)(lodf * cy + lodf), offz + 16.0f - (f32)lodf * 0.5f };
+						p_positions[0xc] = (v3){ offx + (f32)(lodf * cx + lodf), offy + (f32)(lodf * cy + lodf), offz + 16.0f - (f32)lodf * 0.5f };
+
+						if (transition_faces & TG_TRANSVOXEL_FACE_X_NEG && cx == 0)
+						{
+							p_positions[0x9].x += (f32)nlodf;
+							p_positions[0xb].x += (f32)nlodf;
+						}
+						else if (transition_faces & TG_TRANSVOXEL_FACE_X_POS && cx == 16 / lodf - 1)
+						{
+							p_positions[0xa].x -= (f32)nlodf;
+							p_positions[0xc].x -= (f32)nlodf;
+						}
+						if (transition_faces & TG_TRANSVOXEL_FACE_Y_NEG && cy == 0)
+						{
+							p_positions[0x9].y += (f32)nlodf;
+							p_positions[0xa].y += (f32)nlodf;
+						}
+						else if (transition_faces & TG_TRANSVOXEL_FACE_Y_POS && cy == 16 / lodf - 1)
+						{
+							p_positions[0xb].y -= (f32)nlodf;
+							p_positions[0xc].y -= (f32)nlodf;
+						}
 					} break;
-					}
-
-					if (transition_faces & TG_TRANSVOXEL_FACE_X_NEG && cx == 0)
-					{
-						if (transition_face == TG_TRANSVOXEL_FACE_Z_NEG)
-						{
-							p_positions[0x9].x = p_positions[0xb].x - 0.5f * (f32)lodf;
-							p_positions[0xa].x = p_positions[0xc].x - 0.5f * (f32)lodf;
-						}
-					}
-					else if (transition_faces & TG_TRANSVOXEL_FACE_X_POS && cx == 16 / lodf - 1)
-					{
-						p_positions[0x9].x -= 0.5f * (f32)lodf;
-						p_positions[0xa].x -= 0.5f * (f32)lodf;
-						p_positions[0xb].x -= 0.5f * (f32)lodf;
-						p_positions[0xc].x -= 0.5f * (f32)lodf;
-					}
-					if (transition_faces & TG_TRANSVOXEL_FACE_Y_NEG && cy == 0)
-					{
-						p_positions[0x9].y += 0.5f * (f32)lodf;
-						p_positions[0xa].y += 0.5f * (f32)lodf;
-						p_positions[0xb].y += 0.5f * (f32)lodf;
-						p_positions[0xc].y += 0.5f * (f32)lodf;
-					}
-					else if (transition_faces & TG_TRANSVOXEL_FACE_Y_POS && cy == 16 / lodf - 1)
-					{
-						p_positions[0x9].y -= 0.5f * (f32)lodf;
-						p_positions[0xa].y -= 0.5f * (f32)lodf;
-						p_positions[0xb].y -= 0.5f * (f32)lodf;
-						p_positions[0xc].y -= 0.5f * (f32)lodf;
-					}
-					if (transition_faces & TG_TRANSVOXEL_FACE_Z_NEG && cz == 0)
-					{
-						if (transition_face == TG_TRANSVOXEL_FACE_X_NEG)
-						{
-							p_positions[0xb].z = p_positions[0xc].z - 0.5f * (f32)lodf;
-							p_positions[0x9].z = p_positions[0xa].z - 0.5f * (f32)lodf;
-						}
-					}
-					else if (transition_faces & TG_TRANSVOXEL_FACE_Z_POS && cz == 16 / lodf - 1)
-					{
-						p_positions[0x9].z -= 0.5f * (f32)lodf;
-						p_positions[0xa].z -= 0.5f * (f32)lodf;
-						p_positions[0xb].z -= 0.5f * (f32)lodf;
-						p_positions[0xc].z -= 0.5f * (f32)lodf;
 					}
 
 					for (u32 i = 0; i < cell_triangle_count; i++)
@@ -510,18 +591,18 @@ u32 tg_transvoxel_create_chunk(i32 x, i32 y, i32 z, const tg_transvoxel_isolevel
 					const u32 vertex_count = TG_CELL_GET_VERTEX_COUNT(*p_cell_data);
 					const u32 cell_triangle_count = TG_CELL_GET_TRIANGLE_COUNT(*p_cell_data);
 
-					const f32 offx0 = 16.0f * (f32)x;
-					const f32 offy0 = 16.0f * (f32)y;
-					const f32 offz0 = 16.0f * (f32)z;
+					const f32 offx = 16.0f * (f32)x;
+					const f32 offy = 16.0f * (f32)y;
+					const f32 offz = 16.0f * (f32)z;
 
-					p_positions[0] = (v3){ offx0 + (f32)( cx      * lodf), offy0 + (f32)( cy      * lodf), offz0 + (f32)( cz      * lodf) };
-					p_positions[1] = (v3){ offx0 + (f32)((cx + 1) * lodf), offy0 + (f32)( cy      * lodf), offz0 + (f32)( cz      * lodf) };
-					p_positions[2] = (v3){ offx0 + (f32)( cx      * lodf), offy0 + (f32)((cy + 1) * lodf), offz0 + (f32)( cz      * lodf) };
-					p_positions[3] = (v3){ offx0 + (f32)((cx + 1) * lodf), offy0 + (f32)((cy + 1) * lodf), offz0 + (f32)( cz      * lodf) };
-					p_positions[4] = (v3){ offx0 + (f32)( cx      * lodf), offy0 + (f32)( cy      * lodf), offz0 + (f32)((cz + 1) * lodf) };
-					p_positions[5] = (v3){ offx0 + (f32)((cx + 1) * lodf), offy0 + (f32)( cy      * lodf), offz0 + (f32)((cz + 1) * lodf) };
-					p_positions[6] = (v3){ offx0 + (f32)( cx      * lodf), offy0 + (f32)((cy + 1) * lodf), offz0 + (f32)((cz + 1) * lodf) };
-					p_positions[7] = (v3){ offx0 + (f32)((cx + 1) * lodf), offy0 + (f32)((cy + 1) * lodf), offz0 + (f32)((cz + 1) * lodf) };
+					p_positions[0] = (v3){ offx + (f32)( cx      * lodf), offy + (f32)( cy      * lodf), offz + (f32)( cz      * lodf) };
+					p_positions[1] = (v3){ offx + (f32)((cx + 1) * lodf), offy + (f32)( cy      * lodf), offz + (f32)( cz      * lodf) };
+					p_positions[2] = (v3){ offx + (f32)( cx      * lodf), offy + (f32)((cy + 1) * lodf), offz + (f32)( cz      * lodf) };
+					p_positions[3] = (v3){ offx + (f32)((cx + 1) * lodf), offy + (f32)((cy + 1) * lodf), offz + (f32)( cz      * lodf) };
+					p_positions[4] = (v3){ offx + (f32)( cx      * lodf), offy + (f32)( cy      * lodf), offz + (f32)((cz + 1) * lodf) };
+					p_positions[5] = (v3){ offx + (f32)((cx + 1) * lodf), offy + (f32)( cy      * lodf), offz + (f32)((cz + 1) * lodf) };
+					p_positions[6] = (v3){ offx + (f32)( cx      * lodf), offy + (f32)((cy + 1) * lodf), offz + (f32)((cz + 1) * lodf) };
+					p_positions[7] = (v3){ offx + (f32)((cx + 1) * lodf), offy + (f32)((cy + 1) * lodf), offz + (f32)((cz + 1) * lodf) };
 
 					if (transition_faces & TG_TRANSVOXEL_FACE_X_NEG && cx == 0)
 					{
