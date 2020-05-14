@@ -79,6 +79,7 @@ typedef struct tg_test_deferred
     f32                            dtsum;
 
     tg_entity                      transvoxel_entities[9];
+    tg_terrain_h                   terrain_h;
 } tg_test_deferred;
 
 
@@ -194,41 +195,41 @@ void tg_application_internal_game_3d_create()
 
 
 
-    test_deferred.yellow_fragment_shader_h = tg_fragment_shader_create("shaders/deferred_yellow.frag");
-    test_deferred.yellow_material_h = tg_material_create_deferred(test_deferred.default_vertex_shader_h, test_deferred.yellow_fragment_shader_h, 0, TG_NULL);
-    test_deferred.red_fragment_shader_h = tg_fragment_shader_create("shaders/deferred_red.frag");
-    test_deferred.red_material_h = tg_material_create_deferred(test_deferred.default_vertex_shader_h, test_deferred.red_fragment_shader_h, 0, TG_NULL);
-
-    tg_transvoxel_triangle* p_triangles = TG_MEMORY_ALLOC(5 * 16 * 16 * 16 * sizeof(*p_triangles));
-    tg_transvoxel_triangle* p_transition_triangles = TG_MEMORY_ALLOC(5 * 16 * 16 * sizeof(*p_transition_triangles));
-    
-    tg_transvoxel_isolevels isolevels = { 0 };
-    tg_transvoxel_fill_isolevels(1, 0, 8, &isolevels);
-
-    const u32 triangle_count = tg_transvoxel_create_chunk(0, 0, 0, &isolevels, 0, TG_TRANSVOXEL_TRANSITION_FACES(0, 0, 0, 0, 0, 0), p_triangles);
-    tg_mesh_h m = tg_mesh_create(3 * triangle_count, (v3*)p_triangles, TG_NULL, TG_NULL, TG_NULL, 0, TG_NULL);
-    test_deferred.transvoxel_entities[0] = tg_entity_create(m, test_deferred.red_material_h);
-    tg_entity* p_e = &test_deferred.transvoxel_entities[0];
-
-    tg_transvoxel_fill_isolevels(1, 0, 9, &isolevels);
-
-    const u32 triangle_count2 = tg_transvoxel_create_chunk(0, 0, 1, &isolevels, 1, TG_TRANSVOXEL_TRANSITION_FACES(1, 0, 0, 1, 1, 1), p_triangles);
-    tg_mesh_h m2 = tg_mesh_create(3 * triangle_count2, (v3*)p_triangles, TG_NULL, TG_NULL, TG_NULL, 0, TG_NULL);
-    test_deferred.transvoxel_entities[2] = tg_entity_create(m2, test_deferred.yellow_material_h);
+    //test_deferred.yellow_fragment_shader_h = tg_fragment_shader_create("shaders/deferred_yellow.frag");
+    //test_deferred.yellow_material_h = tg_material_create_deferred(test_deferred.default_vertex_shader_h, test_deferred.yellow_fragment_shader_h, 0, TG_NULL);
+    //test_deferred.red_fragment_shader_h = tg_fragment_shader_create("shaders/deferred_red.frag");
+    //test_deferred.red_material_h = tg_material_create_deferred(test_deferred.default_vertex_shader_h, test_deferred.red_fragment_shader_h, 0, TG_NULL);
+    //
+    //tg_transvoxel_triangle* p_triangles = TG_MEMORY_ALLOC(5 * 16 * 16 * 16 * sizeof(*p_triangles));
+    //tg_transvoxel_triangle* p_transition_triangles = TG_MEMORY_ALLOC(5 * 16 * 16 * sizeof(*p_transition_triangles));
+    //
+    //tg_transvoxel_isolevels isolevels = { 0 };
+    //tg_transvoxel_fill_isolevels(1, 0, 8, &isolevels);
+    //
+    //const u32 triangle_count = tg_transvoxel_create_chunk(0, 0, 0, &isolevels, 0, TG_TRANSVOXEL_TRANSITION_FACES(0, 0, 0, 0, 0, 0), p_triangles);
+    //tg_mesh_h m = tg_mesh_create(3 * triangle_count, (v3*)p_triangles, TG_NULL, TG_NULL, TG_NULL, 0, TG_NULL);
+    //test_deferred.transvoxel_entities[0] = tg_entity_create(m, test_deferred.red_material_h);
+    //tg_entity* p_e = &test_deferred.transvoxel_entities[0];
+    //
+    //tg_transvoxel_fill_isolevels(1, 0, 9, &isolevels);
+    //
+    //const u32 triangle_count2 = tg_transvoxel_create_chunk(0, 0, 1, &isolevels, 1, TG_TRANSVOXEL_TRANSITION_FACES(1, 0, 0, 1, 1, 1), p_triangles);
+    //tg_mesh_h m2 = tg_mesh_create(3 * triangle_count2, (v3*)p_triangles, TG_NULL, TG_NULL, TG_NULL, 0, TG_NULL);
+    //test_deferred.transvoxel_entities[2] = tg_entity_create(m2, test_deferred.yellow_material_h);
     //v3 np = { 0.0f, 0.0f, 1.0f };
     //tg_entity_set_position(&test_deferred.transvoxel_entities[2], &np);
-    tg_entity* p_e2 = &test_deferred.transvoxel_entities[2];
+    //tg_entity* p_e2 = &test_deferred.transvoxel_entities[2];
+    //
+    //
+    //
+    //tg_list_insert(&test_deferred.entities, &p_e);
+    //tg_list_insert(&test_deferred.entities, &p_e2);
+    //
+    //TG_MEMORY_FREE(p_transition_triangles);
+    //TG_MEMORY_FREE(p_triangles);
 
-    
-    
-    tg_list_insert(&test_deferred.entities, &p_e);
-    tg_list_insert(&test_deferred.entities, &p_e2);
 
-    TG_MEMORY_FREE(p_transition_triangles);
-    TG_MEMORY_FREE(p_triangles);
-
-
-    tg_terrain_h terrain_h = tg_terrain_create(test_deferred.camera_info.camera_h);
+    test_deferred.terrain_h = tg_terrain_create(test_deferred.camera_info.camera_h);
 
 
 
@@ -391,6 +392,7 @@ void tg_application_internal_game_3d_update_and_render(f32 delta_ms)
     tg_camera_end(test_deferred.secondary_camera_h);
 
     tg_camera_begin(test_deferred.camera_info.camera_h);
+    tg_terrain_capture(test_deferred.terrain_h, test_deferred.camera_info.camera_h);
     p_entities = TG_LIST_POINTER_TO(test_deferred.entities, 0);
     for (u32 i = 0; i < test_deferred.entities.count; i++)
     {

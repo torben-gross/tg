@@ -267,6 +267,9 @@ b32    tgm_i32_is_power_of_two(i32 v);
 i32    tgm_i32_max(i32 v0, i32 v1);
 i32    tgm_i32_min(i32 v0, i32 v1);
 
+u8     tgm_u8_max(u8 v0, u8 v1);
+u8     tgm_u8_min(u8 v0, u8 v1);
+
 u32    tgm_u32_clamp(u32 v, u32 low, u32 high);
 u32    tgm_u32_digits(u32 v);
 b32    tgm_u32_is_power_of_two(u32 v);

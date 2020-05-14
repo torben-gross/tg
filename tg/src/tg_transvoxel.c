@@ -244,31 +244,10 @@ u32 tg_transvoxel_internal_create_transition_face(i32 x, i32 y, i32 z, const tg_
 						p_positions[0x7] = (v3){ offx, offy + (f32)(lodf * cy + nlodf * 2), offz + (f32)(lodf * cz + nlodf * 1) };
 						p_positions[0x8] = (v3){ offx, offy + (f32)(lodf * cy + nlodf * 2), offz + (f32)(lodf * cz + nlodf * 2) };
 
-						p_positions[0x9] = (v3){ offx + (f32)lodf * 0.5f, offy + (f32)(lodf * cy       ), offz + (f32)(lodf * cz       ) };
-						p_positions[0xa] = (v3){ offx + (f32)lodf * 0.5f, offy + (f32)(lodf * cy       ), offz + (f32)(lodf * cz + lodf) };
-						p_positions[0xb] = (v3){ offx + (f32)lodf * 0.5f, offy + (f32)(lodf * cy + lodf), offz + (f32)(lodf * cz       ) };
-						p_positions[0xc] = (v3){ offx + (f32)lodf * 0.5f, offy + (f32)(lodf * cy + lodf), offz + (f32)(lodf * cz + lodf) };
-
-						if (transition_faces & TG_TRANSVOXEL_FACE_Y_NEG && cy == 0)
-						{
-							p_positions[0x9].y += (f32)nlodf;
-							p_positions[0xa].y += (f32)nlodf;
-						}
-						else if (transition_faces & TG_TRANSVOXEL_FACE_Y_POS && cy == 16 / lodf - 1)
-						{
-							p_positions[0xb].y -= (f32)nlodf;
-							p_positions[0xc].y -= (f32)nlodf;
-						}
-						if (transition_faces & TG_TRANSVOXEL_FACE_Z_NEG && cz == 0)
-						{
-							p_positions[0x9].z += (f32)nlodf;
-							p_positions[0xb].z += (f32)nlodf;
-						}
-						else if (transition_faces & TG_TRANSVOXEL_FACE_Z_POS && cz == 16 / lodf - 1)
-						{
-							p_positions[0xa].z -= (f32)nlodf;
-							p_positions[0xc].z -= (f32)nlodf;
-						}
+						p_positions[0x9] = (v3){ offx, offy + (f32)(lodf * cy       ), offz + (f32)(lodf * cz       ) };
+						p_positions[0xa] = (v3){ offx, offy + (f32)(lodf * cy       ), offz + (f32)(lodf * cz + lodf) };
+						p_positions[0xb] = (v3){ offx, offy + (f32)(lodf * cy + lodf), offz + (f32)(lodf * cz       ) };
+						p_positions[0xc] = (v3){ offx, offy + (f32)(lodf * cy + lodf), offz + (f32)(lodf * cz + lodf) };
 					} break;
 					case TG_TRANSVOXEL_FACE_X_POS:
 					{
@@ -282,31 +261,10 @@ u32 tg_transvoxel_internal_create_transition_face(i32 x, i32 y, i32 z, const tg_
 						p_positions[0x7] = (v3){ offx + 16.0f, offy + (f32)(lodf * cy + nlodf * 1), offz + (f32)(lodf * cz + nlodf * 2) };
 						p_positions[0x8] = (v3){ offx + 16.0f, offy + (f32)(lodf * cy + nlodf * 2), offz + (f32)(lodf * cz + nlodf * 2) };
 
-						p_positions[0x9] = (v3){ offx + 16.0f - (f32)lodf * 0.5f, offy + (f32)(lodf * cy       ), offz + (f32)(lodf * cz       ) };
-						p_positions[0xa] = (v3){ offx + 16.0f - (f32)lodf * 0.5f, offy + (f32)(lodf * cy + lodf), offz + (f32)(lodf * cz       ) };
-						p_positions[0xb] = (v3){ offx + 16.0f - (f32)lodf * 0.5f, offy + (f32)(lodf * cy       ), offz + (f32)(lodf * cz + lodf) };
-						p_positions[0xc] = (v3){ offx + 16.0f - (f32)lodf * 0.5f, offy + (f32)(lodf * cy + lodf), offz + (f32)(lodf * cz + lodf) };
-
-						if (transition_faces & TG_TRANSVOXEL_FACE_Y_NEG && cy == 0)
-						{
-							p_positions[0x9].y += (f32)nlodf;
-							p_positions[0xb].y += (f32)nlodf;
-						}
-						else if (transition_faces & TG_TRANSVOXEL_FACE_Y_POS && cy == 16 / lodf - 1)
-						{
-							p_positions[0xa].y -= (f32)nlodf;
-							p_positions[0xc].y -= (f32)nlodf;
-						}
-						if (transition_faces & TG_TRANSVOXEL_FACE_Z_NEG && cz == 0)
-						{
-							p_positions[0x9].z += (f32)nlodf;
-							p_positions[0xa].z += (f32)nlodf;
-						}
-						else if (transition_faces & TG_TRANSVOXEL_FACE_Z_POS && cz == 16 / lodf - 1)
-						{
-							p_positions[0xb].z -= (f32)nlodf;
-							p_positions[0xc].z -= (f32)nlodf;
-						}
+						p_positions[0x9] = (v3){ offx + 16.0f, offy + (f32)(lodf * cy       ), offz + (f32)(lodf * cz       ) };
+						p_positions[0xa] = (v3){ offx + 16.0f, offy + (f32)(lodf * cy + lodf), offz + (f32)(lodf * cz       ) };
+						p_positions[0xb] = (v3){ offx + 16.0f, offy + (f32)(lodf * cy       ), offz + (f32)(lodf * cz + lodf) };
+						p_positions[0xc] = (v3){ offx + 16.0f, offy + (f32)(lodf * cy + lodf), offz + (f32)(lodf * cz + lodf) };
 					} break;
 					case TG_TRANSVOXEL_FACE_Y_NEG:
 					{
@@ -320,31 +278,10 @@ u32 tg_transvoxel_internal_create_transition_face(i32 x, i32 y, i32 z, const tg_
 						p_positions[0x7] = (v3){ offx + (f32)(lodf * cx + nlodf * 1), offy, offz + (f32)(lodf * cz + nlodf * 2) };
 						p_positions[0x8] = (v3){ offx + (f32)(lodf * cx + nlodf * 2), offy, offz + (f32)(lodf * cz + nlodf * 2) };
 
-						p_positions[0x9] = (v3){ offx + (f32)(lodf * cx       ), offy + (f32)lodf * 0.5f, offz + (f32)(lodf * cz       ) };
-						p_positions[0xa] = (v3){ offx + (f32)(lodf * cx + lodf), offy + (f32)lodf * 0.5f, offz + (f32)(lodf * cz       ) };
-						p_positions[0xb] = (v3){ offx + (f32)(lodf * cx       ), offy + (f32)lodf * 0.5f, offz + (f32)(lodf * cz + lodf) };
-						p_positions[0xc] = (v3){ offx + (f32)(lodf * cx + lodf), offy + (f32)lodf * 0.5f, offz + (f32)(lodf * cz + lodf) };
-
-						if (transition_faces & TG_TRANSVOXEL_FACE_X_NEG && cx == 0)
-						{
-							p_positions[0x9].x += (f32)nlodf;
-							p_positions[0xb].x += (f32)nlodf;
-						}
-						else if (transition_faces & TG_TRANSVOXEL_FACE_X_POS && cx == 16 / lodf - 1)
-						{
-							p_positions[0xa].x -= (f32)nlodf;
-							p_positions[0xc].x -= (f32)nlodf;
-						}
-						if (transition_faces & TG_TRANSVOXEL_FACE_Z_NEG && cz == 0)
-						{
-							p_positions[0x9].z += (f32)nlodf;
-							p_positions[0xa].z += (f32)nlodf;
-						}
-						else if (transition_faces & TG_TRANSVOXEL_FACE_Z_POS && cz == 16 / lodf - 1)
-						{
-							p_positions[0xb].z -= (f32)nlodf;
-							p_positions[0xc].z -= (f32)nlodf;
-						}
+						p_positions[0x9] = (v3){ offx + (f32)(lodf * cx       ), offy, offz + (f32)(lodf * cz       ) };
+						p_positions[0xa] = (v3){ offx + (f32)(lodf * cx + lodf), offy, offz + (f32)(lodf * cz       ) };
+						p_positions[0xb] = (v3){ offx + (f32)(lodf * cx       ), offy, offz + (f32)(lodf * cz + lodf) };
+						p_positions[0xc] = (v3){ offx + (f32)(lodf * cx + lodf), offy, offz + (f32)(lodf * cz + lodf) };
 					} break;
 					case TG_TRANSVOXEL_FACE_Y_POS:
 					{
@@ -358,31 +295,10 @@ u32 tg_transvoxel_internal_create_transition_face(i32 x, i32 y, i32 z, const tg_
 						p_positions[0x7] = (v3){ offx + (f32)(lodf * cx + nlodf * 2), offy + 16.0f, offz + (f32)(lodf * cz + nlodf * 1) };
 						p_positions[0x8] = (v3){ offx + (f32)(lodf * cx + nlodf * 2), offy + 16.0f, offz + (f32)(lodf * cz + nlodf * 2) };
 
-						p_positions[0x9] = (v3){ offx + (f32)(lodf * cx       ), offy + 16.0f - (f32)lodf * 0.5f, offz + (f32)(lodf * cz       ) };
-						p_positions[0xa] = (v3){ offx + (f32)(lodf * cx       ), offy + 16.0f - (f32)lodf * 0.5f, offz + (f32)(lodf * cz + lodf) };
-						p_positions[0xb] = (v3){ offx + (f32)(lodf * cx + lodf), offy + 16.0f - (f32)lodf * 0.5f, offz + (f32)(lodf * cz       ) };
-						p_positions[0xc] = (v3){ offx + (f32)(lodf * cx + lodf), offy + 16.0f - (f32)lodf * 0.5f, offz + (f32)(lodf * cz + lodf) };
-
-						if (transition_faces & TG_TRANSVOXEL_FACE_X_NEG && cx == 0)
-						{
-							p_positions[0x9].x += (f32)nlodf;
-							p_positions[0xa].x += (f32)nlodf;
-						}
-						else if (transition_faces & TG_TRANSVOXEL_FACE_X_POS && cx == 16 / lodf - 1)
-						{
-							p_positions[0xb].x -= (f32)nlodf;
-							p_positions[0xc].x -= (f32)nlodf;
-						}
-						if (transition_faces & TG_TRANSVOXEL_FACE_Z_NEG && cz == 0)
-						{
-							p_positions[0x9].z += (f32)nlodf;
-							p_positions[0xb].z += (f32)nlodf;
-						}
-						else if (transition_faces & TG_TRANSVOXEL_FACE_Z_POS && cz == 16 / lodf - 1)
-						{
-							p_positions[0xa].z -= (f32)nlodf;
-							p_positions[0xc].z -= (f32)nlodf;
-						}
+						p_positions[0x9] = (v3){ offx + (f32)(lodf * cx       ), offy + 16.0f, offz + (f32)(lodf * cz       ) };
+						p_positions[0xa] = (v3){ offx + (f32)(lodf * cx       ), offy + 16.0f, offz + (f32)(lodf * cz + lodf) };
+						p_positions[0xb] = (v3){ offx + (f32)(lodf * cx + lodf), offy + 16.0f, offz + (f32)(lodf * cz       ) };
+						p_positions[0xc] = (v3){ offx + (f32)(lodf * cx + lodf), offy + 16.0f, offz + (f32)(lodf * cz + lodf) };
 					} break;
 					case TG_TRANSVOXEL_FACE_Z_NEG:
 					{
@@ -396,31 +312,10 @@ u32 tg_transvoxel_internal_create_transition_face(i32 x, i32 y, i32 z, const tg_
 						p_positions[0x7] = (v3){ offx + (f32)(lodf * cx + nlodf * 2), offy + (f32)(lodf * cy + nlodf * 1), offz };
 						p_positions[0x8] = (v3){ offx + (f32)(lodf * cx + nlodf * 2), offy + (f32)(lodf * cy + nlodf * 2), offz };
 
-						p_positions[0x9] = (v3){ offx + (f32)(lodf * cx       ), offy + (f32)(lodf * cy       ), offz + (f32)lodf * 0.5f };
-						p_positions[0xa] = (v3){ offx + (f32)(lodf * cx       ), offy + (f32)(lodf * cy + lodf), offz + (f32)lodf * 0.5f };
-						p_positions[0xb] = (v3){ offx + (f32)(lodf * cx + lodf), offy + (f32)(lodf * cy       ), offz + (f32)lodf * 0.5f };
-						p_positions[0xc] = (v3){ offx + (f32)(lodf * cx + lodf), offy + (f32)(lodf * cy + lodf), offz + (f32)lodf * 0.5f };
-
-						if (transition_faces & TG_TRANSVOXEL_FACE_X_NEG && cx == 0)
-						{
-							p_positions[0x9].x += (f32)nlodf;
-							p_positions[0xa].x += (f32)nlodf;
-						}
-						else if (transition_faces & TG_TRANSVOXEL_FACE_X_POS && cx == 16 / lodf - 1)
-						{
-							p_positions[0xb].x -= (f32)nlodf;
-							p_positions[0xc].x -= (f32)nlodf;
-						}
-						if (transition_faces & TG_TRANSVOXEL_FACE_Y_NEG && cy == 0)
-						{
-							p_positions[0x9].y += (f32)nlodf;
-							p_positions[0xb].y += (f32)nlodf;
-						}
-						else if (transition_faces & TG_TRANSVOXEL_FACE_Y_POS && cy == 16 / lodf - 1)
-						{
-							p_positions[0xa].y -= (f32)nlodf;
-							p_positions[0xc].y -= (f32)nlodf;
-						}
+						p_positions[0x9] = (v3){ offx + (f32)(lodf * cx       ), offy + (f32)(lodf * cy       ), offz };
+						p_positions[0xa] = (v3){ offx + (f32)(lodf * cx       ), offy + (f32)(lodf * cy + lodf), offz };
+						p_positions[0xb] = (v3){ offx + (f32)(lodf * cx + lodf), offy + (f32)(lodf * cy       ), offz };
+						p_positions[0xc] = (v3){ offx + (f32)(lodf * cx + lodf), offy + (f32)(lodf * cy + lodf), offz };
 					} break;
 					case TG_TRANSVOXEL_FACE_Z_POS:
 					{
@@ -434,31 +329,10 @@ u32 tg_transvoxel_internal_create_transition_face(i32 x, i32 y, i32 z, const tg_
 						p_positions[0x7] = (v3){ offx + (f32)(lodf * cx + nlodf * 1), offy + (f32)(lodf * cy + nlodf * 2), offz + 16.0f };
 						p_positions[0x8] = (v3){ offx + (f32)(lodf * cx + nlodf * 2), offy + (f32)(lodf * cy + nlodf * 2), offz + 16.0f };
 
-						p_positions[0x9] = (v3){ offx + (f32)(lodf * cx       ), offy + (f32)(lodf * cy       ), offz + 16.0f - (f32)lodf * 0.5f };
-						p_positions[0xa] = (v3){ offx + (f32)(lodf * cx + lodf), offy + (f32)(lodf * cy       ), offz + 16.0f - (f32)lodf * 0.5f };
-						p_positions[0xb] = (v3){ offx + (f32)(lodf * cx       ), offy + (f32)(lodf * cy + lodf), offz + 16.0f - (f32)lodf * 0.5f };
-						p_positions[0xc] = (v3){ offx + (f32)(lodf * cx + lodf), offy + (f32)(lodf * cy + lodf), offz + 16.0f - (f32)lodf * 0.5f };
-
-						if (transition_faces & TG_TRANSVOXEL_FACE_X_NEG && cx == 0)
-						{
-							p_positions[0x9].x += (f32)nlodf;
-							p_positions[0xb].x += (f32)nlodf;
-						}
-						else if (transition_faces & TG_TRANSVOXEL_FACE_X_POS && cx == 16 / lodf - 1)
-						{
-							p_positions[0xa].x -= (f32)nlodf;
-							p_positions[0xc].x -= (f32)nlodf;
-						}
-						if (transition_faces & TG_TRANSVOXEL_FACE_Y_NEG && cy == 0)
-						{
-							p_positions[0x9].y += (f32)nlodf;
-							p_positions[0xa].y += (f32)nlodf;
-						}
-						else if (transition_faces & TG_TRANSVOXEL_FACE_Y_POS && cy == 16 / lodf - 1)
-						{
-							p_positions[0xb].y -= (f32)nlodf;
-							p_positions[0xc].y -= (f32)nlodf;
-						}
+						p_positions[0x9] = (v3){ offx + (f32)(lodf * cx       ), offy + (f32)(lodf * cy       ), offz + 16.0f };
+						p_positions[0xa] = (v3){ offx + (f32)(lodf * cx + lodf), offy + (f32)(lodf * cy       ), offz + 16.0f };
+						p_positions[0xb] = (v3){ offx + (f32)(lodf * cx       ), offy + (f32)(lodf * cy + lodf), offz + 16.0f };
+						p_positions[0xc] = (v3){ offx + (f32)(lodf * cx + lodf), offy + (f32)(lodf * cy + lodf), offz + 16.0f };
 					} break;
 					}
 
@@ -604,49 +478,6 @@ u32 tg_transvoxel_create_chunk(i32 x, i32 y, i32 z, const tg_transvoxel_isolevel
 					p_positions[6] = (v3){ offx + (f32)( cx      * lodf), offy + (f32)((cy + 1) * lodf), offz + (f32)((cz + 1) * lodf) };
 					p_positions[7] = (v3){ offx + (f32)((cx + 1) * lodf), offy + (f32)((cy + 1) * lodf), offz + (f32)((cz + 1) * lodf) };
 
-					if (transition_faces & TG_TRANSVOXEL_FACE_X_NEG && cx == 0)
-					{
-						p_positions[0].x += 0.5f * (f32)lodf;
-						p_positions[2].x += 0.5f * (f32)lodf;
-						p_positions[4].x += 0.5f * (f32)lodf;
-						p_positions[6].x += 0.5f * (f32)lodf;
-					}
-					else if (transition_faces & TG_TRANSVOXEL_FACE_X_POS && cx == 16 / lodf - 1)
-					{
-						p_positions[1].x -= 0.5f * (f32)lodf;
-						p_positions[3].x -= 0.5f * (f32)lodf;
-						p_positions[5].x -= 0.5f * (f32)lodf;
-						p_positions[7].x -= 0.5f * (f32)lodf;
-					}
-					if (transition_faces & TG_TRANSVOXEL_FACE_Y_NEG && cy == 0)
-					{
-						p_positions[0].y += 0.5f * (f32)lodf;
-						p_positions[1].y += 0.5f * (f32)lodf;
-						p_positions[4].y += 0.5f * (f32)lodf;
-						p_positions[5].y += 0.5f * (f32)lodf;
-					}
-					else if (transition_faces & TG_TRANSVOXEL_FACE_Y_POS && cy == 16 / lodf - 1)
-					{
-						p_positions[2].y -= 0.5f * (f32)lodf;
-						p_positions[3].y -= 0.5f * (f32)lodf;
-						p_positions[6].y -= 0.5f * (f32)lodf;
-						p_positions[7].y -= 0.5f * (f32)lodf;
-					}
-					if (transition_faces & TG_TRANSVOXEL_FACE_Z_NEG && cz == 0)
-					{
-						p_positions[0].z += 0.5f * (f32)lodf;
-						p_positions[1].z += 0.5f * (f32)lodf;
-						p_positions[2].z += 0.5f * (f32)lodf;
-						p_positions[3].z += 0.5f * (f32)lodf;
-					}
-					else if (transition_faces & TG_TRANSVOXEL_FACE_Z_POS && cz == 16 / lodf - 1)
-					{
-						p_positions[4].z -= 0.5f * (f32)lodf;
-						p_positions[5].z -= 0.5f * (f32)lodf;
-						p_positions[6].z -= 0.5f * (f32)lodf;
-						p_positions[7].z -= 0.5f * (f32)lodf;
-					}
-
 					for (u8 i = 0; i < cell_triangle_count; i++)
 					{
 						const u8 i0 = p_cell_data->vertex_indices[3 * i + 0];
@@ -664,9 +495,9 @@ u32 tg_transvoxel_create_chunk(i32 x, i32 y, i32 z, const tg_transvoxel_isolevel
 						const u16 e2v0 = (e2 >> 4) & 0x0f;
 						const u16 e2v1 = e2 & 0x0f;
 
-						const v3 v0 = tg_transvoxel_internal_interpolate(p_corners[e0v0], p_corners[e0v1], &p_positions[e0v0], &p_positions[e0v1]);
-						const v3 v1 = tg_transvoxel_internal_interpolate(p_corners[e1v0], p_corners[e1v1], &p_positions[e1v0], &p_positions[e1v1]);
-						const v3 v2 = tg_transvoxel_internal_interpolate(p_corners[e2v0], p_corners[e2v1], &p_positions[e2v0], &p_positions[e2v1]);
+						v3 v0 = tg_transvoxel_internal_interpolate(p_corners[e0v0], p_corners[e0v1], &p_positions[e0v0], &p_positions[e0v1]);
+						v3 v1 = tg_transvoxel_internal_interpolate(p_corners[e1v0], p_corners[e1v1], &p_positions[e1v0], &p_positions[e1v1]);
+						v3 v2 = tg_transvoxel_internal_interpolate(p_corners[e2v0], p_corners[e2v1], &p_positions[e2v0], &p_positions[e2v1]);
 
 						p_triangles[chunk_triangle_count].positions[0] = v0;
 						p_triangles[chunk_triangle_count].positions[1] = v1;
@@ -682,7 +513,7 @@ u32 tg_transvoxel_create_chunk(i32 x, i32 y, i32 z, const tg_transvoxel_isolevel
 	return chunk_triangle_count;
 }
 
-void tg_transvoxel_fill_isolevels(i32 x, i32 y, i32 z, tg_transvoxel_isolevels* p_isolevels)
+void tg_transvoxel_fill_isolevels(i32 x, i32 y, i32 z, tg_transvoxel_isolevels* p_isolevels) // TODO: this should be located in tg_terrain.c
 {
 	TG_ASSERT(p_isolevels);
 
@@ -690,21 +521,30 @@ void tg_transvoxel_fill_isolevels(i32 x, i32 y, i32 z, tg_transvoxel_isolevels* 
 	const f32 offset_y = 16.0f * (f32)y;
 	const f32 offset_z = 16.0f * (f32)z;
 
-	for (i32 i = -1; i < 18; i++)
+	for (i32 cz = -1; cz < 18; cz++)
 	{
-		for (i32 j = -1; j < 18; j++)
+		for (i32 cy = -1; cy < 18; cy++)
 		{
-			for (i32 k = -1; k < 18; k++)
+			for (i32 cx = -1; cx < 18; cx++)
 			{
-				const f32 nx = (offset_x + (f32)i) * 0.1f;
-				const f32 ny = (offset_y + (f32)j) * 0.1f;
-				const f32 nz = (offset_z + (f32)k) * 0.1f;
+				const f32 bias = 1024.0f; // TODO: why do it need bias? or rather, why do negative values for noise_x or noise_y result in cliffs?
+				const f32 base_x = 16.0f * (f32)x + bias + (f32)cx;
+				const f32 base_y = 16.0f * (f32)y + bias + (f32)cy;
+				const f32 base_z = 16.0f * (f32)z + bias + (f32)cz;
 
-				const f32 n = tgm_noise(nx, ny, nz);
-				const f32 n_clamped = tgm_f32_clamp(n, -1.0f, 1.0f);
-				const i8 isolevel = (i8)(127.0f * n_clamped);
-				
-				TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, i, j, k) = isolevel;
+				const f32 n_hills0 = tgm_noise(base_x * 0.02f, 0.0f, base_z * 0.02f);
+				const f32 n_hills1 = tgm_noise(base_x * 0.2f, 0.0f, base_z * 0.2f);
+				const f32 n_hills = tgm_f32_lerp(n_hills0, n_hills1, 0.1f);
+
+				const f32 s_caves = 0.06f;
+				const f32 n_caves = tgm_noise(s_caves * base_x, s_caves * base_y, s_caves * base_z);
+
+				const f32 n = n_hills + (n_hills < n_caves ? 0.0f : 0.3f * n_caves);
+
+				const f32 noise = (n * 64.0f) - ((f32)cy + (f32)y * 16.0f);
+				const f32 noise_clamped = tgm_f32_clamp(noise, -1.0f, 1.0f);
+				const i8 isolevel = (i8)(127.0f * noise_clamped) * -1;
+				TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, cx, cy, cz) = isolevel;
 			}
 		}
 	}

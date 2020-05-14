@@ -650,6 +650,18 @@ i32 tgm_i32_min(i32 v0, i32 v1)
 	return result;
 }
 
+u8 tgm_u8_max(u8 v0, u8 v1)
+{
+	const u8 result = v0 > v1 ? v0 : v1;
+	return result;
+}
+
+u8 tgm_u8_min(u8 v0, u8 v1)
+{
+	const u8 result = v0 < v1 ? v0 : v1;
+	return result;
+}
+
 u32 tgm_u32_clamp(u32 v, u32 low, u32 high)
 {
 	const u32 result = tgm_u32_max(low, tgm_u32_min(high, v));

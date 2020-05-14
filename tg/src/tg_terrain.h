@@ -16,9 +16,9 @@ void                         tg_terrain_chunk_entity_destroy(tg_terrain_chunk_en
 TG_DECLARE_HANDLE(tg_camera);
 TG_DECLARE_HANDLE(tg_terrain);
 
+void            tg_terrain_capture(tg_terrain_h terrain_h, tg_camera_h camera_h);
 tg_terrain_h    tg_terrain_create(tg_camera_h focal_point);
 void            tg_terrain_update(tg_terrain_h terrain_h);
-void            tg_terrain_render(tg_terrain_h terrain_h, tg_camera_h camera_h);
 void            tg_terrain_destroy(tg_terrain_h terrain_h);
 
 #endif

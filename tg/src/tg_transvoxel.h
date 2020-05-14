@@ -22,7 +22,7 @@ typedef struct tg_transvoxel_triangle
 } tg_transvoxel_triangle;
 
 
-
+// TODO: these currently do not scale transition cells, which results in straight edges in some locations
 u32     tg_transvoxel_create_chunk(i32 x, i32 y, i32 z, const tg_transvoxel_isolevels* p_isolevels, u8 lod, u8 transition_faces, tg_transvoxel_triangle* p_triangles);
 void    tg_transvoxel_fill_isolevels(i32 x, i32 y, i32 z, tg_transvoxel_isolevels* p_isolevels);
 
