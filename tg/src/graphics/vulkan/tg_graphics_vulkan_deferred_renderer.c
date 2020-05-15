@@ -163,7 +163,7 @@ void tg_deferred_renderer_internal_init_shading_pass(tg_deferred_renderer_h defe
     TG_ASSERT(deferred_renderer_h);
 
     deferred_renderer_h->shading_pass.point_lights_ubo = tg_vulkan_buffer_create(sizeof(tg_deferred_renderer_light_setup_uniform_buffer), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-    tg_deferred_renderer_light_setup_uniform_buffer* p_light_setup_uniform_buffer = deferred_renderer_h->shading_pass.point_lights_ubo.p_mapped_device_memory;
+    tg_deferred_renderer_light_setup_uniform_buffer* p_light_setup_uniform_buffer = deferred_renderer_h->shading_pass.point_lights_ubo.memory.p_mapped_device_memory;
     p_light_setup_uniform_buffer->point_light_count = 0;
 
     tg_vulkan_color_image_create_info vulkan_color_image_create_info = { 0 };
@@ -206,7 +206,7 @@ void tg_deferred_renderer_internal_init_shading_pass(tg_deferred_renderer_h defe
     p_vertices[3].uv.y = 1.0f;
 
     staging_buffer = tg_vulkan_buffer_create(sizeof(p_vertices), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-    memcpy(staging_buffer.p_mapped_device_memory, p_vertices, sizeof(p_vertices));
+    memcpy(staging_buffer.memory.p_mapped_device_memory, p_vertices, sizeof(p_vertices));
     deferred_renderer_h->shading_pass.vbo = tg_vulkan_buffer_create(sizeof(p_vertices), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     tg_vulkan_buffer_copy(sizeof(p_vertices), staging_buffer.buffer, deferred_renderer_h->shading_pass.vbo.buffer);
     tg_vulkan_buffer_destroy(&staging_buffer);
@@ -221,7 +221,7 @@ void tg_deferred_renderer_internal_init_shading_pass(tg_deferred_renderer_h defe
     p_indices[5] = 0;
 
     staging_buffer = tg_vulkan_buffer_create(sizeof(p_indices), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-    memcpy(staging_buffer.p_mapped_device_memory, p_indices, sizeof(p_indices));
+    memcpy(staging_buffer.memory.p_mapped_device_memory, p_indices, sizeof(p_indices));
     deferred_renderer_h->shading_pass.ibo = tg_vulkan_buffer_create(sizeof(p_indices), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     tg_vulkan_buffer_copy(sizeof(p_indices), staging_buffer.buffer, deferred_renderer_h->shading_pass.ibo.buffer);
     tg_vulkan_buffer_destroy(&staging_buffer);

@@ -5,6 +5,7 @@
 
 #ifdef TG_VULKAN
 
+#include "graphics/vulkan/tg_graphics_vulkan_memory_allocator.h"
 #include <vulkan/vulkan.h>
 #undef near
 #undef far
@@ -56,9 +57,9 @@
 
 
 
-#define TG_CAMERA_VIEW(camera_h)                                     (((m4*)camera_h->view_projection_ubo.p_mapped_device_memory)[0])
-#define TG_CAMERA_PROJ(camera_h)                                     (((m4*)camera_h->view_projection_ubo.p_mapped_device_memory)[1])
-#define TG_ENTITY_GRAPHICS_DATA_PTR_MODEL(e_h)                       (*(m4*)e_h->model_ubo.p_mapped_device_memory)
+#define TG_CAMERA_VIEW(camera_h)                                     (((m4*)camera_h->view_projection_ubo.memory.p_mapped_device_memory)[0])
+#define TG_CAMERA_PROJ(camera_h)                                     (((m4*)camera_h->view_projection_ubo.memory.p_mapped_device_memory)[1])
+#define TG_ENTITY_GRAPHICS_DATA_PTR_MODEL(e_h)                       (*(m4*)e_h->model_ubo.memory.p_mapped_device_memory)
 
 
 
@@ -79,10 +80,9 @@ typedef struct tg_vulkan_descriptor
 
 typedef struct tg_vulkan_buffer
 {
-    u64               size;
-    VkBuffer          buffer;
-    VkDeviceMemory    device_memory;
-    void*             p_mapped_device_memory;
+    u64                       size;
+    VkBuffer                  buffer;
+    tg_vulkan_memory_block    memory;
 } tg_vulkan_buffer;
 
 typedef struct tg_vulkan_compute_shader
@@ -179,15 +179,15 @@ typedef struct tg_deferred_renderer_light_setup_uniform_buffer
 
 typedef struct tg_color_image
 {
-    tg_handle_type    type;
-    u32               width;
-    u32               height;
-    u32               mip_levels;
-    VkFormat          format;
-    VkImage           image;
-    VkDeviceMemory    device_memory;
-    VkImageView       image_view;
-    VkSampler         sampler;
+    tg_handle_type            type;
+    u32                       width;
+    u32                       height;
+    u32                       mip_levels;
+    VkFormat                  format;
+    VkImage                   image;
+    tg_vulkan_memory_block    memory;
+    VkImageView               image_view;
+    VkSampler                 sampler;
 } tg_color_image;
 
 typedef struct tg_compute_shader
@@ -199,15 +199,14 @@ typedef struct tg_compute_shader
 
 typedef struct tg_depth_image
 {
-    tg_handle_type    type;
-    u32               width;
-    u32               height;
-    VkFormat          format;
-    VkImage           image;
-    VkDeviceMemory    device_memory;
-    void*             p_mapped_device_memory;
-    VkImageView       image_view;
-    VkSampler         sampler;
+    tg_handle_type            type;
+    u32                       width;
+    u32                       height;
+    VkFormat                  format;
+    VkImage                   image;
+    tg_vulkan_memory_block    memory;
+    VkImageView               image_view;
+    VkSampler                 sampler;
 } tg_depth_image;
 
 typedef struct tg_render_target
@@ -304,14 +303,14 @@ typedef struct tg_storage_buffer
 
 typedef struct tg_storage_image_3d
 {
-    tg_handle_type    type;
-    u32               width;
-    u32               height;
-    u32               depth;
-    VkFormat          format;
-    VkImage           image;
-    VkDeviceMemory    device_memory;
-    VkImageView       image_view;
+    tg_handle_type            type;
+    u32                       width;
+    u32                       height;
+    u32                       depth;
+    VkFormat                  format;
+    VkImage                   image;
+    tg_vulkan_memory_block    memory;
+    VkImageView               image_view;
 } tg_storage_image_3d;
 
 typedef struct tg_texture_atlas

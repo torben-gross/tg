@@ -30,6 +30,7 @@ TG_DECLARE_HANDLE(tg_index_buffer);
 TG_DECLARE_HANDLE(tg_render_target);
 TG_DECLARE_HANDLE(tg_storage_buffer);
 TG_DECLARE_HANDLE(tg_storage_image_3d);
+TG_DECLARE_HANDLE(tg_terrain);
 TG_DECLARE_HANDLE(tg_texture_atlas);
 TG_DECLARE_HANDLE(tg_uniform_buffer);
 TG_DECLARE_HANDLE(tg_vertex_buffer);
@@ -164,6 +165,7 @@ void                             tg_graphics_shutdown();
 
 void                             tg_camera_begin(tg_camera_h camera_h);
 void                             tg_camera_capture(tg_camera_h camera_h, tg_entity_graphics_data_ptr_h entity_graphics_data_ptr_h);
+void                             tg_camera_capture_terrain(tg_camera_h camera_h, tg_terrain_h terrain_h);
 void                             tg_camera_clear(tg_camera_h camera_h);
 tg_camera_h                      tg_camera_create_orthographic(const v3* p_position, f32 pitch, f32 yaw, f32 roll, f32 left, f32 right, f32 bottom, f32 top, f32 far, f32 near);
 tg_camera_h                      tg_camera_create_perspective(const v3* p_position, f32 pitch, f32 yaw, f32 roll, f32 fov_y, f32 near, f32 far);

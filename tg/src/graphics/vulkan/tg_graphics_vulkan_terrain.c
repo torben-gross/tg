@@ -1,191 +1,214 @@
+#include "tg_terrain.h"
 #include "graphics/vulkan/tg_graphics_vulkan_terrain.h"
 
 #ifdef TG_VULKAN
 
 #include "memory/tg_memory.h"
+#include "tg_entity.h"
+#include "tg_transvoxel.h"
+#include <string.h> // TODO: implement yourself
 
-tg_terrain_chunk_entity_h tg_terrain_chunk_entity_create(i32 x, i32 y, i32 z, tg_material_h material_h)
+
+
+void tg_terrain_fill_isolevels(i32 x, i32 y, i32 z, tg_transvoxel_isolevels* p_isolevels)
 {
-    tg_terrain_chunk_entity_h terrain_chunk_entity_h = TG_MEMORY_ALLOC(sizeof(*terrain_chunk_entity_h));
+	TG_ASSERT(p_isolevels);
 
+	const f32 offset_x = 16.0f * (f32)x;
+	const f32 offset_y = 16.0f * (f32)y;
+	const f32 offset_z = 16.0f * (f32)z;
 
+	for (i32 cz = -1; cz < 18; cz++)
+	{
+		for (i32 cy = -1; cy < 18; cy++)
+		{
+			for (i32 cx = -1; cx < 18; cx++)
+			{
+				const f32 bias = 1024.0f; // TODO: why do it need bias? or rather, why do negative values for noise_x or noise_y result in cliffs?
+				const f32 base_x = 16.0f * (f32)x + bias + (f32)cx;
+				const f32 base_y = 16.0f * (f32)y + bias + (f32)cy;
+				const f32 base_z = 16.0f * (f32)z + bias + (f32)cz;
 
-    tg_vulkan_buffer isolevel_ubo = { 0 };
-    tg_vulkan_compute_shader isolevel_cs = { 0 };
-    tg_vulkan_buffer p_marching_cubes_ubos[TG_VULKAN_TERRAIN_LOD_COUNT] = { 0 };
-    tg_vulkan_compute_shader p_marching_cubes_cs[TG_VULKAN_TERRAIN_LOD_COUNT] = { 0 };
-    tg_vulkan_compute_shader p_normals_cs[TG_VULKAN_TERRAIN_LOD_COUNT] = { 0 };
-    VkCommandBuffer command_buffer = VK_NULL_HANDLE;
+				const f32 n_hills0 = tgm_noise(base_x * 0.02f, 0.0f, base_z * 0.02f);
+				const f32 n_hills1 = tgm_noise(base_x * 0.2f, 0.0f, base_z * 0.2f);
+				const f32 n_hills = tgm_f32_lerp(n_hills0, n_hills1, 0.1f);
 
+				const f32 s_caves = 0.06f;
+				const f32 n_caves = tgm_noise(s_caves * base_x, s_caves * base_y, s_caves * base_z);
 
+				const f32 n = n_hills + (n_hills < n_caves ? 0.0f : 0.3f * n_caves);
 
-    isolevel_ubo = tg_vulkan_buffer_create(sizeof(tg_terrain_chunk_entity_create_isolevel_ubo), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT); // TODO: measure performance with staging buffer instead of flushing this one
-    ((tg_terrain_chunk_entity_create_isolevel_ubo*)isolevel_ubo.p_mapped_device_memory)->chunk_index_x = x;
-    ((tg_terrain_chunk_entity_create_isolevel_ubo*)isolevel_ubo.p_mapped_device_memory)->chunk_index_y = y;
-    ((tg_terrain_chunk_entity_create_isolevel_ubo*)isolevel_ubo.p_mapped_device_memory)->chunk_index_z = z;
-    tg_vulkan_buffer_flush_mapped_memory(&isolevel_ubo);
-    
-    terrain_chunk_entity_h->isolevel_si3d = tg_vulkan_storage_image_3d_create(TG_CHUNK_VERTEX_COUNT_X, TG_CHUNK_VERTEX_COUNT_Y, TG_CHUNK_VERTEX_COUNT_Z, VK_FORMAT_R32_SFLOAT);
-
-    VkDescriptorSetLayoutBinding p_isolevel_descriptor_set_layout_bindings[2] = { 0 };
-
-    p_isolevel_descriptor_set_layout_bindings[0].binding = 0;
-    p_isolevel_descriptor_set_layout_bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    p_isolevel_descriptor_set_layout_bindings[0].descriptorCount = 1;
-    p_isolevel_descriptor_set_layout_bindings[0].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-    p_isolevel_descriptor_set_layout_bindings[0].pImmutableSamplers = TG_NULL;
-
-    p_isolevel_descriptor_set_layout_bindings[1].binding = 1;
-    p_isolevel_descriptor_set_layout_bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-    p_isolevel_descriptor_set_layout_bindings[1].descriptorCount = 1;
-    p_isolevel_descriptor_set_layout_bindings[1].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-    p_isolevel_descriptor_set_layout_bindings[1].pImmutableSamplers = TG_NULL;
-
-    isolevel_cs = tg_vulkan_compute_shader_create("shaders/terrain/isolevel.comp", 2, p_isolevel_descriptor_set_layout_bindings);
-    tg_vulkan_descriptor_set_update_uniform_buffer(isolevel_cs.descriptor.descriptor_set, isolevel_ubo.buffer, 0);
-    tg_vulkan_descriptor_set_update_storage_image_3d(isolevel_cs.descriptor.descriptor_set, &terrain_chunk_entity_h->isolevel_si3d, 1);
-
-    for (u32 i = 0; i < TG_VULKAN_TERRAIN_LOD_COUNT; i++)
-    {
-        p_marching_cubes_ubos[i] = tg_vulkan_buffer_create(sizeof(tg_terrain_chunk_entity_create_marching_cubes_ubo), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-        ((tg_terrain_chunk_entity_create_marching_cubes_ubo*)p_marching_cubes_ubos[i].p_mapped_device_memory)->chunk_index_x = x;
-        ((tg_terrain_chunk_entity_create_marching_cubes_ubo*)p_marching_cubes_ubos[i].p_mapped_device_memory)->chunk_index_y = y;
-        ((tg_terrain_chunk_entity_create_marching_cubes_ubo*)p_marching_cubes_ubos[i].p_mapped_device_memory)->chunk_index_z = z;
-        ((tg_terrain_chunk_entity_create_marching_cubes_ubo*)p_marching_cubes_ubos[i].p_mapped_device_memory)->lod = i;
-        tg_vulkan_buffer_flush_mapped_memory(&p_marching_cubes_ubos[i]);
-    }
-
-    for (u32 i = 0; i < TG_VULKAN_TERRAIN_LOD_COUNT; i++)
-    {
-        const u32 denominator = (1 << i);
-        const u32 mesh_size = ((TG_CHUNK_VERTEX_COUNT_X - 1) / denominator) * ((TG_CHUNK_VERTEX_COUNT_Y - 1) / denominator) * ((TG_CHUNK_VERTEX_COUNT_Z - 1) / denominator) * 15 * sizeof(tg_vertex_3d);
-
-        terrain_chunk_entity_h->p_lod_meshes[i].type = TG_HANDLE_TYPE_MESH;
-        terrain_chunk_entity_h->p_lod_meshes[i].bounds.min = (v3){ (f32)TG_CHUNK_VERTEX_COUNT_X * (f32)x, (f32)TG_CHUNK_VERTEX_COUNT_Y * (f32)y, (f32)TG_CHUNK_VERTEX_COUNT_Z * (f32)z };
-        terrain_chunk_entity_h->p_lod_meshes[i].bounds.max = (v3){ (f32)TG_CHUNK_VERTEX_COUNT_X * ((f32)x + 1.0f), (f32)TG_CHUNK_VERTEX_COUNT_Y * ((f32)y + 1.0f), (f32)TG_CHUNK_VERTEX_COUNT_Z * ((f32)z + 1.0f) };
-        terrain_chunk_entity_h->p_lod_meshes[i].vbo = tg_vulkan_buffer_create(mesh_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-        terrain_chunk_entity_h->p_lod_meshes[i].ibo.size = 0;
-        terrain_chunk_entity_h->p_lod_meshes[i].ibo.buffer = VK_NULL_HANDLE;
-        terrain_chunk_entity_h->p_lod_meshes[i].ibo.device_memory = VK_NULL_HANDLE;
-        terrain_chunk_entity_h->p_lod_meshes[i].ibo.p_mapped_device_memory = TG_NULL;
-    }
-
-    VkDescriptorSetLayoutBinding p_marching_cubes_descriptor_set_layout_bindings[3] = { 0 };
-
-    p_marching_cubes_descriptor_set_layout_bindings[0].binding = 0;
-    p_marching_cubes_descriptor_set_layout_bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    p_marching_cubes_descriptor_set_layout_bindings[0].descriptorCount = 1;
-    p_marching_cubes_descriptor_set_layout_bindings[0].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-    p_marching_cubes_descriptor_set_layout_bindings[0].pImmutableSamplers = TG_NULL;
-
-    p_marching_cubes_descriptor_set_layout_bindings[1].binding = 1;
-    p_marching_cubes_descriptor_set_layout_bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-    p_marching_cubes_descriptor_set_layout_bindings[1].descriptorCount = 1;
-    p_marching_cubes_descriptor_set_layout_bindings[1].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-    p_marching_cubes_descriptor_set_layout_bindings[1].pImmutableSamplers = TG_NULL;
-
-    p_marching_cubes_descriptor_set_layout_bindings[2].binding = 2;
-    p_marching_cubes_descriptor_set_layout_bindings[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    p_marching_cubes_descriptor_set_layout_bindings[2].descriptorCount = 1;
-    p_marching_cubes_descriptor_set_layout_bindings[2].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-    p_marching_cubes_descriptor_set_layout_bindings[2].pImmutableSamplers = TG_NULL;
-
-    for (u32 i = 0; i < TG_VULKAN_TERRAIN_LOD_COUNT; i++)
-    {
-        p_marching_cubes_cs[i] = tg_vulkan_compute_shader_create("shaders/terrain/marching_cubes.comp", 3, p_marching_cubes_descriptor_set_layout_bindings);
-        tg_vulkan_descriptor_set_update_uniform_buffer(p_marching_cubes_cs[i].descriptor.descriptor_set, p_marching_cubes_ubos[i].buffer, 0);
-        tg_vulkan_descriptor_set_update_storage_image_3d(p_marching_cubes_cs[i].descriptor.descriptor_set, &terrain_chunk_entity_h->isolevel_si3d, 1);
-        tg_vulkan_descriptor_set_update_storage_buffer(p_marching_cubes_cs[i].descriptor.descriptor_set, terrain_chunk_entity_h->p_lod_meshes[i].vbo.buffer, 2);
-    }
-
-    VkDescriptorSetLayoutBinding normals_descriptor_set_layout_binding = { 0 };
-    normals_descriptor_set_layout_binding.binding = 0;
-    normals_descriptor_set_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    normals_descriptor_set_layout_binding.descriptorCount = 1;
-    normals_descriptor_set_layout_binding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-    normals_descriptor_set_layout_binding.pImmutableSamplers = TG_NULL;
-
-    for (u32 i = 0; i < TG_VULKAN_TERRAIN_LOD_COUNT; i++)
-    {
-        p_normals_cs[i] = tg_vulkan_compute_shader_create("shaders/terrain/normals.comp", 1, &normals_descriptor_set_layout_binding);
-        tg_vulkan_descriptor_set_update_storage_buffer(p_normals_cs[i].descriptor.descriptor_set, terrain_chunk_entity_h->p_lod_meshes[i].vbo.buffer, 0);
-    }
-
-    command_buffer = tg_vulkan_command_buffer_allocate(compute_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
-    tg_vulkan_command_buffer_begin(command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
-    {
-        vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, isolevel_cs.compute_pipeline);
-        vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, isolevel_cs.pipeline_layout, 0, 1, &isolevel_cs.descriptor.descriptor_set, 0, TG_NULL);
-        vkCmdDispatch(command_buffer, TG_CHUNK_VERTEX_COUNT_X, TG_CHUNK_VERTEX_COUNT_Y, TG_CHUNK_VERTEX_COUNT_Z);
-
-        VkMemoryBarrier isolevel_memory_barrier = { 0 };
-        isolevel_memory_barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
-        isolevel_memory_barrier.pNext = TG_NULL;
-        isolevel_memory_barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-        isolevel_memory_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-        vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1, &isolevel_memory_barrier, 0, TG_NULL, 0, TG_NULL);
-        
-        for (u32 i = 0; i < TG_VULKAN_TERRAIN_LOD_COUNT; i++)
-        {
-            const u32 denominator = (1 << i);
-
-            vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, p_marching_cubes_cs[i].compute_pipeline);
-            vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, p_marching_cubes_cs[i].pipeline_layout, 0, 1, &p_marching_cubes_cs[i].descriptor.descriptor_set, 0, TG_NULL);
-            vkCmdDispatch(command_buffer, (TG_CHUNK_VERTEX_COUNT_X - 1) / denominator, (TG_CHUNK_VERTEX_COUNT_Y - 1) / denominator, (TG_CHUNK_VERTEX_COUNT_Z - 1) / denominator); // TODO: update shaders to consider lod
-
-            VkMemoryBarrier marching_cubes_memory_barrier = { 0 };
-            marching_cubes_memory_barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
-            marching_cubes_memory_barrier.pNext = TG_NULL;
-            marching_cubes_memory_barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-            marching_cubes_memory_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-            vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1, &marching_cubes_memory_barrier, 0, TG_NULL, 0, TG_NULL);
-
-            vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, p_normals_cs[i].compute_pipeline);
-            vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, p_normals_cs[i].pipeline_layout, 0, 1, &p_normals_cs[i].descriptor.descriptor_set, 0, TG_NULL);
-            vkCmdDispatch(command_buffer, 5 * ((TG_CHUNK_VERTEX_COUNT_X - 1) / denominator) * ((TG_CHUNK_VERTEX_COUNT_X - 1) / denominator) * ((TG_CHUNK_VERTEX_COUNT_X - 1) / denominator), 1, 1);
-        }
-    }
-    tg_vulkan_command_buffer_end_and_submit(command_buffer, &compute_queue);
-
-
-
-    tg_vulkan_command_buffer_free(compute_command_pool, command_buffer);
-    for (u32 i = 0; i < TG_VULKAN_TERRAIN_LOD_COUNT; i++)
-    {
-        tg_vulkan_compute_shader_destroy(&p_normals_cs[i]);
-        tg_vulkan_compute_shader_destroy(&p_marching_cubes_cs[i]);
-        tg_vulkan_buffer_destroy(&p_marching_cubes_ubos[i]);
-    }
-    tg_vulkan_compute_shader_destroy(&isolevel_cs);
-    tg_vulkan_buffer_destroy(&isolevel_ubo);
-
-
-
-    terrain_chunk_entity_h->entity = tg_entity_create(TG_NULL, material_h);
-    terrain_chunk_entity_h->entity.graphics_data_ptr_h->lod_count = TG_VULKAN_TERRAIN_LOD_COUNT; // TODO: find prettier solution
-    for (u32 i = 0; i < TG_VULKAN_TERRAIN_LOD_COUNT; i++)
-    {
-        tg_entity_set_mesh(&terrain_chunk_entity_h->entity, &terrain_chunk_entity_h->p_lod_meshes[i], i);
-    }
-
-
-
-    return terrain_chunk_entity_h;
+				const f32 noise = (n * 64.0f) - ((f32)cy + (f32)y * 16.0f);
+				const f32 noise_clamped = tgm_f32_clamp(noise, -1.0f, 1.0f);
+				const i8 isolevel = (i8)(127.0f * noise_clamped) * -1;
+				TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, cx, cy, cz) = isolevel;
+			}
+		}
+	}
 }
 
-void tg_terrain_chunk_entity_destroy(tg_terrain_chunk_entity_h terrain_chunk_entity_h)
+f32 tg_terrain_internal_chunk_distance_to_focal_point(const v3* p_focal_point, const tg_terrain_chunk* p_terrain_chunk)
 {
-    TG_ASSERT(terrain_chunk_entity_h);
+	const v3 chunk_center = TG_TERRAIN_CHUNK_CENTER(*p_terrain_chunk);
+	const v3 v = tgm_v3_subtract_v3(p_focal_point, &chunk_center);
+	const f32 d = tgm_v3_magnitude_squared(&v);
+	return d;
+}
 
-    for (u32 i = 0; i < TG_VULKAN_TERRAIN_LOD_COUNT; i++)
-    {
-        tg_vulkan_buffer_destroy(&terrain_chunk_entity_h->p_lod_meshes[i].vbo);
-    }
-    tg_vulkan_storage_image_3d_destroy(&terrain_chunk_entity_h->isolevel_si3d);
-    tg_entity_destroy(&terrain_chunk_entity_h->entity);
-    TG_MEMORY_FREE(terrain_chunk_entity_h);
+u8 tg_terrain_internal_select_lod(const v3* p_focal_point, i32 x, i32 y, i32 z)
+{
+	const v3 v = { p_focal_point->x - (f32)x, p_focal_point->y - (f32)y, p_focal_point->z - (f32)z };
+	const f32 d = tgm_v3_magnitude_squared(&v);
+	const u8 lod = tgm_u8_min((u8)d / 8, 3);
+	return lod;
+}
+
+void tg_terrain_internal_qsort_swap(tg_terrain_chunk** pp_chunk0, tg_terrain_chunk** pp_chunk1)
+{
+	tg_terrain_chunk* p_temp = *pp_chunk0;
+	*pp_chunk0 = *pp_chunk1;
+	*pp_chunk1 = p_temp;
+}
+
+i32 tg_terrain_internal_qsort_partition(tg_terrain_h terrain_h, i32 low, i32 high)
+{
+	const tg_terrain_chunk* p_pivot = terrain_h->pp_chunks[high];
+	const v3 focal_point = tg_camera_get_position(terrain_h->focal_point);
+	const f32 distance_pivot = tg_terrain_internal_chunk_distance_to_focal_point(&focal_point, p_pivot);
+
+	i32 i = low - 1;
+
+	for (i32 j = low; j <= high - 1; j++)
+	{
+		const tg_terrain_chunk* p_chunk = terrain_h->pp_chunks[j];
+		const f32 distance_chunk = tg_terrain_internal_chunk_distance_to_focal_point(&focal_point, p_chunk);
+		if (distance_chunk < distance_pivot)
+		{
+			i++;
+			tg_terrain_internal_qsort_swap(&terrain_h->pp_chunks[i], &terrain_h->pp_chunks[j]);
+		}
+	}
+	tg_terrain_internal_qsort_swap(&terrain_h->pp_chunks[i + 1], &terrain_h->pp_chunks[high]);
+
+	return i + 1;
+}
+
+void tg_terrain_internal_qsort(tg_terrain_h terrain_h, i32 low, i32 high)
+{
+	if (low < high)
+	{
+		const i32 pi = tg_terrain_internal_qsort_partition(terrain_h, low, high);
+		tg_terrain_internal_qsort(terrain_h, low, pi - 1);
+		tg_terrain_internal_qsort(terrain_h, pi + 1, high);
+	}
+}
+
+
+
+tg_terrain_h tg_terrain_create(tg_camera_h focal_point)
+{
+	tg_terrain_h terrain_h = TG_MEMORY_ALLOC(sizeof(*terrain_h));
+
+	terrain_h->focal_point = focal_point;
+	terrain_h->vertex_shader_h = tg_vertex_shader_create("shaders/deferred.vert");
+	terrain_h->fragment_shader_h = tg_fragment_shader_create("shaders/deferred.frag");
+	tg_fragment_shader_h fragment_shader_alt0_h = tg_fragment_shader_create("shaders/deferred_red.frag"); // TODO: these must be removed!
+	tg_fragment_shader_h fragment_shader_alt1_h = tg_fragment_shader_create("shaders/deferred_yellow.frag");
+	terrain_h->material_h = tg_material_create_deferred(terrain_h->vertex_shader_h, terrain_h->fragment_shader_h, 0, TG_NULL);
+	tg_material_h material_alt0_h = tg_material_create_deferred(terrain_h->vertex_shader_h, fragment_shader_alt0_h, 0, TG_NULL);
+	tg_material_h material_alt1_h = tg_material_create_deferred(terrain_h->vertex_shader_h, fragment_shader_alt1_h, 0, TG_NULL);
+
+	terrain_h->next_memory_block_index = 0;
+	memset(terrain_h->p_memory_blocks, 0, TG_TERRAIN_MAX_CHUNK_COUNT * sizeof(*terrain_h->p_memory_blocks)); // TODO: do we need to set this to zero?
+	terrain_h->chunk_count = 0;
+	memset(terrain_h->pp_chunks, 0, TG_TERRAIN_MAX_CHUNK_COUNT * sizeof(*terrain_h->pp_chunks));
+
+	const v3 fp = tg_camera_get_position(focal_point);
+
+	u8 matid = 0;
+	for (i32 z = -TG_TERRAIN_VIEW_DISTANCE_CHUNKS; z < TG_TERRAIN_VIEW_DISTANCE_CHUNKS + 1; z++)
+	{
+		for (i32 y = -TG_TERRAIN_VIEW_DISTANCE_CHUNKS; y < TG_TERRAIN_VIEW_DISTANCE_CHUNKS + 1; y++)
+		{
+			for (i32 x = -TG_TERRAIN_VIEW_DISTANCE_CHUNKS; x < TG_TERRAIN_VIEW_DISTANCE_CHUNKS + 1; x++)
+			{
+				tg_terrain_chunk* p_chunk = &terrain_h->p_memory_blocks[terrain_h->next_memory_block_index++];
+				p_chunk->x = x;
+				p_chunk->y = y;
+				p_chunk->z = z;
+				p_chunk->lod = tg_terrain_internal_select_lod(&fp, x, y, z);
+				p_chunk->transitions = TG_TRANSVOXEL_TRANSITION_FACES(
+					p_chunk->lod > tg_terrain_internal_select_lod(&fp, x - 1, y, z),
+					p_chunk->lod > tg_terrain_internal_select_lod(&fp, x + 1, y, z),
+					p_chunk->lod > tg_terrain_internal_select_lod(&fp, x, y - 1, z),
+					p_chunk->lod > tg_terrain_internal_select_lod(&fp, x, y + 1, z),
+					p_chunk->lod > tg_terrain_internal_select_lod(&fp, x, y, z - 1),
+					p_chunk->lod > tg_terrain_internal_select_lod(&fp, x, y, z + 1)
+				);
+				p_chunk->entity = tg_entity_create(TG_NULL, p_chunk->lod == 0 ? terrain_h->material_h : (p_chunk->lod == 1 ? material_alt0_h : material_alt1_h));
+				matid++;
+				if (matid == 3)
+				{
+					matid = 0;
+				}
+				terrain_h->pp_chunks[terrain_h->chunk_count++] = p_chunk;
+			}
+		}
+	}
+
+	tg_transvoxel_triangle* p_triangles = TG_MEMORY_ALLOC(5 * 16 * 16 * 16 * sizeof(*p_triangles));
+	tg_transvoxel_isolevels isolevels = { 0 };
+	for (u32 i = 0; i < terrain_h->chunk_count; i++)
+	{
+		tg_terrain_chunk* p_terrain_chunk = terrain_h->pp_chunks[i];
+		tg_terrain_fill_isolevels(p_terrain_chunk->x, p_terrain_chunk->y, p_terrain_chunk->z, &isolevels);
+		p_terrain_chunk->triangle_count = tg_transvoxel_create_chunk(p_terrain_chunk->x, p_terrain_chunk->y, p_terrain_chunk->z, &isolevels, p_terrain_chunk->lod, p_terrain_chunk->transitions, p_triangles);
+		if (p_terrain_chunk->triangle_count)
+		{
+			tg_entity_set_mesh(&p_terrain_chunk->entity, tg_mesh_create(3 * p_terrain_chunk->triangle_count, (v3*)p_triangles, TG_NULL, TG_NULL, TG_NULL, 0, TG_NULL), 0);
+		}
+	}
+	TG_MEMORY_FREE(p_triangles);
+
+	return terrain_h;
+}
+
+void tg_terrain_update(tg_terrain_h terrain_h)
+{
+	TG_ASSERT(terrain_h);
+
+	const v3 focal_point = tg_camera_get_position(terrain_h->focal_point);
+	for (u32 i = 0; i < terrain_h->chunk_count; i++)
+	{
+		const u32 x = terrain_h->pp_chunks[i]->x;
+		const u32 y = terrain_h->pp_chunks[i]->y;
+		const u32 z = terrain_h->pp_chunks[i]->z;
+
+		const u8 lod = tg_terrain_internal_select_lod(&focal_point, x, y, z);
+		const u8 transitions = TG_TRANSVOXEL_TRANSITION_FACES(
+			lod > tg_terrain_internal_select_lod(&focal_point, x - 1, y, z),
+			lod > tg_terrain_internal_select_lod(&focal_point, x + 1, y, z),
+			lod > tg_terrain_internal_select_lod(&focal_point, x, y - 1, z),
+			lod > tg_terrain_internal_select_lod(&focal_point, x, y + 1, z),
+			lod > tg_terrain_internal_select_lod(&focal_point, x, y, z - 1),
+			lod > tg_terrain_internal_select_lod(&focal_point, x, y, z + 1)
+		);
+
+		if (terrain_h->pp_chunks[i]->lod != lod || terrain_h->pp_chunks[i]->transitions != transitions)
+		{
+			// TODO: regenerate...
+		}
+		terrain_h->pp_chunks[i]->lod = lod;
+		terrain_h->pp_chunks[i]->transitions = transitions;
+	}
+}
+
+void tg_terrain_destroy(tg_terrain_h terrain_h)
+{
+	TG_ASSERT(terrain_h);
+
+	TG_MEMORY_FREE(terrain_h);
+	TG_ASSERT(TG_FALSE);
 }
 
 #endif

@@ -28,7 +28,7 @@ void* tg_storage_buffer_data(tg_storage_buffer_h storage_buffer_h)
 {
 	TG_ASSERT(storage_buffer_h);
 
-	return storage_buffer_h->buffer.p_mapped_device_memory;
+	return storage_buffer_h->buffer.memory.p_mapped_device_memory;
 }
 
 void tg_storage_buffer_destroy(tg_storage_buffer_h storage_buffer_h)
@@ -56,7 +56,7 @@ void* tg_uniform_buffer_data(tg_uniform_buffer_h uniform_buffer_h)
 {
 	TG_ASSERT(uniform_buffer_h);
 
-	return uniform_buffer_h->buffer.p_mapped_device_memory;
+	return uniform_buffer_h->buffer.memory.p_mapped_device_memory;
 }
 
 void tg_uniform_buffer_destroy(tg_uniform_buffer_h uniform_buffer_h)

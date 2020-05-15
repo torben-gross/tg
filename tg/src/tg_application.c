@@ -53,7 +53,6 @@ typedef struct tg_debug_info
 typedef struct tg_test_deferred
 {
     tg_list                        entities;
-    tg_list                        terrain_chunks;
     tg_camera_info                 camera_info;
     tg_camera_h                    secondary_camera_h;
     tg_color_image_h               textures_h[13];
@@ -230,23 +229,6 @@ void tg_application_internal_game_3d_create()
 
 
     test_deferred.terrain_h = tg_terrain_create(test_deferred.camera_info.camera_h);
-
-
-
-    test_deferred.terrain_chunks = TG_LIST_CREATE(tg_terrain_chunk_entity_h);
-    const i32 chunk_count = 6;
-    for (i32 chunk_x = -chunk_count; chunk_x < chunk_count; chunk_x++)
-    {
-        for (i32 chunk_y = -2; chunk_y < 2; chunk_y++)
-        {
-            for (i32 chunk_z = -chunk_count; chunk_z < chunk_count; chunk_z++)
-            {
-                //tg_terrain_chunk_entity_h terrain_chunk_entity_h = tg_terrain_chunk_entity_create(chunk_x, chunk_y, chunk_z, test_deferred.default_material_h); // TODO: this can not be destructed properly atm
-                //tg_list_insert(&test_deferred.entities, &terrain_chunk_entity_h);
-                //tg_list_insert(&test_deferred.terrain_chunks, &terrain_chunk_entity_h);
-            }
-        }
-    }
     
     /*
     
@@ -383,6 +365,7 @@ void tg_application_internal_game_3d_update_and_render(f32 delta_ms)
         //tg_camera_set_perspective_projection(test_deferred.secondary_camera_h, test_deferred.camera_info.fov_y_in_radians, test_deferred.camera_info.near, test_deferred.camera_info.far);
     }
 
+    tg_terrain_update(test_deferred.terrain_h);
     tg_camera_begin(test_deferred.secondary_camera_h);
     tg_entity** p_entities = TG_LIST_POINTER_TO(test_deferred.entities, 0);
     for (u32 i = 0; i < test_deferred.entities.count; i++)
@@ -392,7 +375,7 @@ void tg_application_internal_game_3d_update_and_render(f32 delta_ms)
     tg_camera_end(test_deferred.secondary_camera_h);
 
     tg_camera_begin(test_deferred.camera_info.camera_h);
-    tg_terrain_capture(test_deferred.terrain_h, test_deferred.camera_info.camera_h);
+    tg_camera_capture_terrain(test_deferred.camera_info.camera_h, test_deferred.terrain_h);
     p_entities = TG_LIST_POINTER_TO(test_deferred.entities, 0);
     for (u32 i = 0; i < test_deferred.entities.count; i++)
     {
@@ -412,10 +395,6 @@ void tg_application_internal_game_3d_destroy()
     {
         tg_color_image_destroy(test_deferred.textures_h[i]);
     }
-    for (u32 i = 0; i < test_deferred.terrain_chunks.count; i++)
-    {
-        tg_terrain_chunk_entity_destroy(((tg_terrain_chunk_entity_h*)test_deferred.terrain_chunks.p_elements)[i]);
-    }
 
     tg_entity_destroy(&test_deferred.quad_entity);
     tg_entity_destroy(&test_deferred.ground_entity);
@@ -434,7 +413,6 @@ void tg_application_internal_game_3d_destroy()
     tg_camera_destroy(test_deferred.secondary_camera_h);
     tg_camera_destroy(test_deferred.camera_info.camera_h);
     tg_list_destroy(&test_deferred.entities);
-    tg_list_destroy(&test_deferred.terrain_chunks);
 }
 
 

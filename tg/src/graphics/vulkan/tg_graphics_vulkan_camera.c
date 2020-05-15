@@ -4,6 +4,7 @@
 
 #ifdef TG_VULKAN
 
+#include "graphics/vulkan/tg_graphics_vulkan_terrain.h"
 #include "memory/tg_memory.h"
 #include "platform/tg_platform.h"
 
@@ -107,7 +108,7 @@ void tg_camera_internal_init_present_pass(tg_camera_h camera_h)
     p_vertices[3].uv.y = 0.0f;
 
     staging_buffer = tg_vulkan_buffer_create(sizeof(p_vertices), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-    memcpy(staging_buffer.p_mapped_device_memory, p_vertices, sizeof(p_vertices));
+    memcpy(staging_buffer.memory.p_mapped_device_memory, p_vertices, sizeof(p_vertices));
     camera_h->present_pass.vbo = tg_vulkan_buffer_create(sizeof(p_vertices), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     tg_vulkan_buffer_copy(sizeof(p_vertices), staging_buffer.buffer, camera_h->present_pass.vbo.buffer);
     tg_vulkan_buffer_destroy(&staging_buffer);
@@ -122,7 +123,7 @@ void tg_camera_internal_init_present_pass(tg_camera_h camera_h)
     p_indices[5] = 0;
 
     staging_buffer = tg_vulkan_buffer_create(sizeof(p_indices), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-    memcpy(staging_buffer.p_mapped_device_memory, p_indices, sizeof(p_indices));
+    memcpy(staging_buffer.memory.p_mapped_device_memory, p_indices, sizeof(p_indices));
     camera_h->present_pass.ibo = tg_vulkan_buffer_create(sizeof(p_indices), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     tg_vulkan_buffer_copy(sizeof(p_indices), staging_buffer.buffer, camera_h->present_pass.ibo.buffer);
     tg_vulkan_buffer_destroy(&staging_buffer);
@@ -595,6 +596,19 @@ void tg_camera_capture(tg_camera_h camera_h, tg_entity_graphics_data_ptr_h entit
     TG_ASSERT(camera_h->captured_entity_count < TG_VULKAN_MAX_ENTITIES_PER_CAMERA);
 
     camera_h->captured_entities[camera_h->captured_entity_count++] = entity_graphics_data_ptr_h;
+}
+
+void tg_camera_capture_terrain(tg_camera_h camera_h, tg_terrain_h terrain_h)
+{
+    TG_ASSERT(camera_h && terrain_h);
+
+    for (u32 i = 0; i < terrain_h->chunk_count; i++)
+    {
+        if (terrain_h->pp_chunks[i]->triangle_count)
+        {
+            tg_camera_capture(camera_h, terrain_h->pp_chunks[i]->entity.graphics_data_ptr_h);
+        }
+    }
 }
 
 void tg_camera_clear(tg_camera_h camera_h) // TODO: should this be combined with begin?
