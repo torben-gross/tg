@@ -9,7 +9,6 @@
 #include <string.h> // TODO: implement yourself
 
 
-
 void tg_terrain_fill_isolevels(i32 x, i32 y, i32 z, tg_transvoxel_isolevels* p_isolevels)
 {
 	TG_ASSERT(p_isolevels);
@@ -29,19 +28,58 @@ void tg_terrain_fill_isolevels(i32 x, i32 y, i32 z, tg_transvoxel_isolevels* p_i
 				const f32 base_y = 16.0f * (f32)y + bias + (f32)cy;
 				const f32 base_z = 16.0f * (f32)z + bias + (f32)cz;
 
-				const f32 n_hills0 = tgm_noise(base_x * 0.02f, 0.0f, base_z * 0.02f);
+				const f32 n_hills0 = tgm_noise(base_x * 0.008f, 0.0f, base_z * 0.008f);
 				const f32 n_hills1 = tgm_noise(base_x * 0.2f, 0.0f, base_z * 0.2f);
-				const f32 n_hills = tgm_f32_lerp(n_hills0, n_hills1, 0.1f);
+				const f32 n_hills = n_hills0 + 0.01f * n_hills1;
 
 				const f32 s_caves = 0.06f;
 				const f32 n_caves = tgm_noise(s_caves * base_x, s_caves * base_y, s_caves * base_z);
 
-				const f32 n = n_hills + (n_hills < n_caves ? 0.0f : 0.3f * n_caves);
-
-				const f32 noise = (n * 64.0f) - ((f32)cy + (f32)y * 16.0f);
+				const f32 n = n_hills;
+				f32 noise = (n * 64.0f) - ((f32)cy + (f32)y * 16.0f);
+				noise += 5.0f * n_caves;
 				const f32 noise_clamped = tgm_f32_clamp(noise, -1.0f, 1.0f);
-				const i8 isolevel = (i8)(127.0f * noise_clamped) * -1;
-				TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, cx, cy, cz) = isolevel;
+				const f32 f0 = (noise_clamped + 1.0f) * 0.5f;
+				const f32 f1 = 254.0f * f0;
+				i8 f2 = -(i8)(tgm_f32_round_to_i32(f1) - 127);
+				TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, cx, cy, cz) = f2;
+
+				if (x == 3 && y == -1 && z == -4)
+				{
+					int dd = 0;
+					if (cx == 9 && cy == 13 && cz == 5)
+					{
+						dd = 0;
+					}
+					else if (cx == 10 && cy == 13 && cz == 5)
+					{
+						dd = 0;
+					}
+					else if (cx == 9 && cy == 14 && cz == 5)
+					{
+						dd = 0;
+					}
+					else if (cx == 10 && cy == 14 && cz == 5)
+					{
+						dd = 0;
+					}
+					else if (cx == 9 && cy == 13 && cz == 6)
+					{
+						dd = 0;
+					}
+					else if (cx == 10 && cy == 13 && cz == 6)
+					{
+						dd = 0;
+					}
+					else if (cx == 9 && cy == 14 && cz == 6)
+					{
+						dd = 0;
+					}
+					else if (cx == 10 && cy == 14 && cz == 6)
+					{
+						dd = 0;
+					}
+				}
 			}
 		}
 	}
@@ -59,7 +97,7 @@ u8 tg_terrain_internal_select_lod(const v3* p_focal_point, i32 x, i32 y, i32 z)
 {
 	const v3 v = { p_focal_point->x - (f32)x, p_focal_point->y - (f32)y, p_focal_point->z - (f32)z };
 	const f32 d = tgm_v3_magnitude_squared(&v);
-	const u8 lod = tgm_u8_min((u8)d / 8, 3);
+	const u8 lod = (u8)tgm_u64_min((u64)(d / 32.0f), 4);
 	return lod;
 }
 
@@ -112,11 +150,7 @@ tg_terrain_h tg_terrain_create(tg_camera_h focal_point)
 	terrain_h->focal_point = focal_point;
 	terrain_h->vertex_shader_h = tg_vertex_shader_create("shaders/deferred.vert");
 	terrain_h->fragment_shader_h = tg_fragment_shader_create("shaders/deferred.frag");
-	tg_fragment_shader_h fragment_shader_alt0_h = tg_fragment_shader_create("shaders/deferred_red.frag"); // TODO: these must be removed!
-	tg_fragment_shader_h fragment_shader_alt1_h = tg_fragment_shader_create("shaders/deferred_yellow.frag");
 	terrain_h->material_h = tg_material_create_deferred(terrain_h->vertex_shader_h, terrain_h->fragment_shader_h, 0, TG_NULL);
-	tg_material_h material_alt0_h = tg_material_create_deferred(terrain_h->vertex_shader_h, fragment_shader_alt0_h, 0, TG_NULL);
-	tg_material_h material_alt1_h = tg_material_create_deferred(terrain_h->vertex_shader_h, fragment_shader_alt1_h, 0, TG_NULL);
 
 	terrain_h->next_memory_block_index = 0;
 	memset(terrain_h->p_memory_blocks, 0, TG_TERRAIN_MAX_CHUNK_COUNT * sizeof(*terrain_h->p_memory_blocks)); // TODO: do we need to set this to zero?
@@ -128,7 +162,7 @@ tg_terrain_h tg_terrain_create(tg_camera_h focal_point)
 	u8 matid = 0;
 	for (i32 z = -TG_TERRAIN_VIEW_DISTANCE_CHUNKS; z < TG_TERRAIN_VIEW_DISTANCE_CHUNKS + 1; z++)
 	{
-		for (i32 y = -TG_TERRAIN_VIEW_DISTANCE_CHUNKS; y < TG_TERRAIN_VIEW_DISTANCE_CHUNKS + 1; y++)
+		for (i32 y = -2; y < 3; y++)
 		{
 			for (i32 x = -TG_TERRAIN_VIEW_DISTANCE_CHUNKS; x < TG_TERRAIN_VIEW_DISTANCE_CHUNKS + 1; x++)
 			{
@@ -145,7 +179,7 @@ tg_terrain_h tg_terrain_create(tg_camera_h focal_point)
 					p_chunk->lod > tg_terrain_internal_select_lod(&fp, x, y, z - 1),
 					p_chunk->lod > tg_terrain_internal_select_lod(&fp, x, y, z + 1)
 				);
-				p_chunk->entity = tg_entity_create(TG_NULL, p_chunk->lod == 0 ? terrain_h->material_h : (p_chunk->lod == 1 ? material_alt0_h : material_alt1_h));
+				p_chunk->entity = tg_entity_create(TG_NULL, terrain_h->material_h);
 				matid++;
 				if (matid == 3)
 				{

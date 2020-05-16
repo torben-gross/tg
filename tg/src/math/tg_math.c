@@ -600,6 +600,12 @@ f32 tgm_f32_min(f32 v0, f32 v1)
 	return result;
 }
 
+i32 tgm_f32_round_to_i32(f32 v)
+{
+	const i32 result = v >= 0.0f ? (i32)(v + 0.5f) : (i32)(-(tgm_f32_abs(v) + 0.5f));
+	return result;
+}
+
 f32 tgm_f32_tlerp(f32 v000, f32 v001, f32 v010, f32 v011, f32 v100, f32 v101, f32 v110, f32 v111, f32 tx, f32 ty, f32 tz)
 {
 	const f32 lz0 = tgm_f32_blerp(v000, v010, v100, v110, tx, ty);

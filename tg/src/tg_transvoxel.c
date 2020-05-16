@@ -1,7 +1,7 @@
 #include "tg_transvoxel.h"
 #include "tg_transvoxel_lookup_tables.h"
-
-
+#include "util/tg_string.h"
+#include "platform/tg_platform.h"
 
 typedef enum tg_transvoxel_face
 {
@@ -23,20 +23,20 @@ v3 tg_transvoxel_internal_interpolate(i32 d0, i32 d1, const v3* p_p0, const v3* 
 	if ((t & 0x00ff) != 0)
 	{
 		// Vertex lies in the interior of the edge.
-		const i32 u = 0x0100 - t;
-		q.x = ((f32)t * p_p0->x + (f32)u * p_p1->x) / 256.0f;
-		q.y = ((f32)t * p_p0->y + (f32)u * p_p1->y) / 256.0f;
-		q.z = ((f32)t * p_p0->z + (f32)u * p_p1->z) / 256.0f;
+		const f32 f = (f32)d1 / ((f32)d1 - (f32)d0);
+		q.x = (f * p_p0->x + (1.0f - f) * p_p1->x);
+		q.y = (f * p_p0->y + (1.0f - f) * p_p1->y);
+		q.z = (f * p_p0->z + (1.0f - f) * p_p1->z);
 	}
 	else if (t == 0)
 	{
 		// Vertex lies at the higher-numbered endpoint.
-		q = *p_p0;
+		q = *p_p1;
 	}
 	else
 	{
 		// Vertex lies at the lower-numbered endpoint.
-		q = *p_p1;
+		q = *p_p0;
 	}
 
 	return q;
@@ -495,9 +495,15 @@ u32 tg_transvoxel_create_chunk(i32 x, i32 y, i32 z, const tg_transvoxel_isolevel
 						const u16 e2v0 = (e2 >> 4) & 0x0f;
 						const u16 e2v1 = e2 & 0x0f;
 
-						v3 v0 = tg_transvoxel_internal_interpolate(p_corners[e0v0], p_corners[e0v1], &p_positions[e0v0], &p_positions[e0v1]);
-						v3 v1 = tg_transvoxel_internal_interpolate(p_corners[e1v0], p_corners[e1v1], &p_positions[e1v0], &p_positions[e1v1]);
-						v3 v2 = tg_transvoxel_internal_interpolate(p_corners[e2v0], p_corners[e2v1], &p_positions[e2v0], &p_positions[e2v1]);
+						const v3 v0 = tg_transvoxel_internal_interpolate(p_corners[e0v0], p_corners[e0v1], &p_positions[e0v0], &p_positions[e0v1]);
+						const v3 v1 = tg_transvoxel_internal_interpolate(p_corners[e1v0], p_corners[e1v1], &p_positions[e1v0], &p_positions[e1v1]);
+						const v3 v2 = tg_transvoxel_internal_interpolate(p_corners[e2v0], p_corners[e2v1], &p_positions[e2v0], &p_positions[e2v1]);
+
+						const v3 v01 = tgm_v3_subtract_v3(&v1, &v0);
+						const v3 v02 = tgm_v3_subtract_v3(&v2, &v0);
+						const v3 normal = tgm_v3_cross(&v01, &v02);
+						const v3 up = { 0.0f, 1.0f, 0.0f };
+						const f32 dot = tgm_v3_dot(&normal, &up);
 
 						p_triangles[chunk_triangle_count].positions[0] = v0;
 						p_triangles[chunk_triangle_count].positions[1] = v1;

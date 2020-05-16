@@ -10,8 +10,8 @@
 
 
 
-#define TG_TERRAIN_VIEW_DISTANCE_CHUNKS           3
-#define TG_TERRAIN_MAX_CHUNK_COUNT                512
+#define TG_TERRAIN_VIEW_DISTANCE_CHUNKS           4
+#define TG_TERRAIN_MAX_CHUNK_COUNT                65536
 #define TG_TERRAIN_CHUNK_CENTER(terrain_chunk)    ((v3){ 16.0f * (f32)(terrain_chunk).x + 8.0f, 16.0f * (f32)(terrain_chunk).y + 8.0f, 16.0f * (f32)(terrain_chunk).z + 8.0f })
 
 

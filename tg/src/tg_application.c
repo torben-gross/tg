@@ -58,8 +58,8 @@ typedef struct tg_test_deferred
     tg_color_image_h               textures_h[13];
     tg_texture_atlas_h             texture_atlas_h;
     tg_mesh_h                      quad_mesh_h;
-    tg_vertex_shader_h             default_vertex_shader_h;
-    tg_fragment_shader_h           default_fragment_shader_h;
+    tg_vertex_shader_h             deferred_vertex_shader_h;
+    tg_fragment_shader_h           deferred_fragment_shader_h;
     tg_material_h                  default_material_h;
     tg_fragment_shader_h           yellow_fragment_shader_h;
     tg_material_h                  yellow_material_h;
@@ -68,14 +68,16 @@ typedef struct tg_test_deferred
     tg_uniform_buffer_h            custom_uniform_buffer_h;
     v3*                            p_custom_uniform_buffer_data;
     tg_color_image_h               image_h;
-    tg_vertex_shader_h             custom_vertex_shader_h;
-    tg_fragment_shader_h           custom_fragment_shader_h;
+    tg_vertex_shader_h             forward_vertex_shader_h;
+    tg_fragment_shader_h           forward_custom_fragment_shader_h;
     tg_material_h                  custom_material_h;
     tg_entity                      quad_entity;
     tg_mesh_h                      ground_mesh_h;
     tg_entity                      ground_entity;
     f32                            quad_offset;
     f32                            dtsum;
+    tg_fragment_shader_h           forward_water_fragment_shader_h;
+    tg_material_h                  water_material_h;
 
     tg_entity                      transvoxel_entities[9];
     tg_terrain_h                   terrain_h;
@@ -89,7 +91,6 @@ tg_test_deferred test_deferred = { 0 };
 
 
 
-#include "tg_transvoxel.h"
 void tg_application_internal_game_3d_create()
 {
     test_deferred.entities = TG_LIST_CREATE(tg_entity*);
@@ -167,21 +168,23 @@ void tg_application_internal_game_3d_create()
     };
 
     test_deferred.quad_mesh_h = tg_mesh_create(4, p_quad_positions, TG_NULL, p_uvs, TG_NULL, 6, p_indices);
-    test_deferred.default_vertex_shader_h = tg_vertex_shader_create("shaders/geometry.vert");
-    test_deferred.default_fragment_shader_h = tg_fragment_shader_create("shaders/geometry.frag");
-    test_deferred.default_material_h = tg_material_create_deferred(test_deferred.default_vertex_shader_h, test_deferred.default_fragment_shader_h, 0, TG_NULL);
+    test_deferred.deferred_vertex_shader_h = tg_vertex_shader_create("shaders/deferred.vert");
+    test_deferred.deferred_fragment_shader_h = tg_fragment_shader_create("shaders/deferred.frag");
+    test_deferred.default_material_h = tg_material_create_deferred(test_deferred.deferred_vertex_shader_h, test_deferred.deferred_fragment_shader_h, 0, TG_NULL);
 
     test_deferred.custom_uniform_buffer_h = tg_uniform_buffer_create(sizeof(v3));
     test_deferred.p_custom_uniform_buffer_data = tg_uniform_buffer_data(test_deferred.custom_uniform_buffer_h);
     *test_deferred.p_custom_uniform_buffer_data = (v3){ 1.0f, 0.0f, 0.0f };
     test_deferred.image_h = tg_color_image_load("textures/test_icon.bmp");
-    test_deferred.custom_vertex_shader_h = tg_vertex_shader_create("shaders/custom_forward.vert");
-    test_deferred.custom_fragment_shader_h = tg_fragment_shader_create("shaders/custom_forward.frag");
+    test_deferred.forward_vertex_shader_h = tg_vertex_shader_create("shaders/forward.vert");
+    test_deferred.forward_custom_fragment_shader_h = tg_fragment_shader_create("shaders/forward_custom.frag");
+    test_deferred.forward_water_fragment_shader_h = tg_fragment_shader_create("shaders/forward_water.frag");
     tg_handle p_custom_handles[2] = { test_deferred.custom_uniform_buffer_h, tg_camera_get_render_target(test_deferred.secondary_camera_h) };
-    test_deferred.custom_material_h = tg_material_create_forward(test_deferred.custom_vertex_shader_h, test_deferred.custom_fragment_shader_h, 2, p_custom_handles);
+    test_deferred.custom_material_h = tg_material_create_forward(test_deferred.forward_vertex_shader_h, test_deferred.forward_custom_fragment_shader_h, 2, p_custom_handles);
+    test_deferred.water_material_h = tg_material_create_forward(test_deferred.forward_vertex_shader_h, test_deferred.forward_water_fragment_shader_h, 0, TG_NULL);
 
     test_deferred.ground_mesh_h = tg_mesh_create(4, p_ground_positions, TG_NULL, p_uvs, TG_NULL, 6, p_indices);
-    test_deferred.ground_entity = tg_entity_create(test_deferred.ground_mesh_h, test_deferred.custom_material_h);
+    test_deferred.ground_entity = tg_entity_create(test_deferred.ground_mesh_h, test_deferred.water_material_h);
     tg_entity* p_ground_entity = &test_deferred.ground_entity;
     tg_list_insert(&test_deferred.entities, &p_ground_entity);
 
@@ -192,49 +195,9 @@ void tg_application_internal_game_3d_create()
 
 
 
-
-
-    //test_deferred.yellow_fragment_shader_h = tg_fragment_shader_create("shaders/deferred_yellow.frag");
-    //test_deferred.yellow_material_h = tg_material_create_deferred(test_deferred.default_vertex_shader_h, test_deferred.yellow_fragment_shader_h, 0, TG_NULL);
-    //test_deferred.red_fragment_shader_h = tg_fragment_shader_create("shaders/deferred_red.frag");
-    //test_deferred.red_material_h = tg_material_create_deferred(test_deferred.default_vertex_shader_h, test_deferred.red_fragment_shader_h, 0, TG_NULL);
-    //
-    //tg_transvoxel_triangle* p_triangles = TG_MEMORY_ALLOC(5 * 16 * 16 * 16 * sizeof(*p_triangles));
-    //tg_transvoxel_triangle* p_transition_triangles = TG_MEMORY_ALLOC(5 * 16 * 16 * sizeof(*p_transition_triangles));
-    //
-    //tg_transvoxel_isolevels isolevels = { 0 };
-    //tg_transvoxel_fill_isolevels(1, 0, 8, &isolevels);
-    //
-    //const u32 triangle_count = tg_transvoxel_create_chunk(0, 0, 0, &isolevels, 0, TG_TRANSVOXEL_TRANSITION_FACES(0, 0, 0, 0, 0, 0), p_triangles);
-    //tg_mesh_h m = tg_mesh_create(3 * triangle_count, (v3*)p_triangles, TG_NULL, TG_NULL, TG_NULL, 0, TG_NULL);
-    //test_deferred.transvoxel_entities[0] = tg_entity_create(m, test_deferred.red_material_h);
-    //tg_entity* p_e = &test_deferred.transvoxel_entities[0];
-    //
-    //tg_transvoxel_fill_isolevels(1, 0, 9, &isolevels);
-    //
-    //const u32 triangle_count2 = tg_transvoxel_create_chunk(0, 0, 1, &isolevels, 1, TG_TRANSVOXEL_TRANSITION_FACES(1, 0, 0, 1, 1, 1), p_triangles);
-    //tg_mesh_h m2 = tg_mesh_create(3 * triangle_count2, (v3*)p_triangles, TG_NULL, TG_NULL, TG_NULL, 0, TG_NULL);
-    //test_deferred.transvoxel_entities[2] = tg_entity_create(m2, test_deferred.yellow_material_h);
-    //v3 np = { 0.0f, 0.0f, 1.0f };
-    //tg_entity_set_position(&test_deferred.transvoxel_entities[2], &np);
-    //tg_entity* p_e2 = &test_deferred.transvoxel_entities[2];
-    //
-    //
-    //
-    //tg_list_insert(&test_deferred.entities, &p_e);
-    //tg_list_insert(&test_deferred.entities, &p_e2);
-    //
-    //TG_MEMORY_FREE(p_transition_triangles);
-    //TG_MEMORY_FREE(p_triangles);
-
-
     test_deferred.terrain_h = tg_terrain_create(test_deferred.camera_info.camera_h);
     
     /*
-    
-
-
-
     On create:
         Generate isolevels
         for each LOD (each LOD can be created simultaneously, as they use different buffers/buffer-offsets):
@@ -354,7 +317,7 @@ void tg_application_internal_game_3d_update_and_render(f32 delta_ms)
     }
 
     tg_camera_set_view(test_deferred.camera_info.camera_h, &test_deferred.camera_info.position, TGM_TO_RADIANS(test_deferred.camera_info.pitch), TGM_TO_RADIANS(test_deferred.camera_info.yaw), TGM_TO_RADIANS(test_deferred.camera_info.roll));
-    //tg_camera_set_view(test_deferred.secondary_camera_h, &test_deferred.camera_info.position, TGM_TO_RADIANS(test_deferred.camera_info.pitch), TGM_TO_RADIANS(test_deferred.camera_info.yaw), TGM_TO_RADIANS(test_deferred.camera_info.roll));
+    tg_camera_set_view(test_deferred.secondary_camera_h, &test_deferred.camera_info.position, TGM_TO_RADIANS(test_deferred.camera_info.pitch), TGM_TO_RADIANS(test_deferred.camera_info.yaw), TGM_TO_RADIANS(test_deferred.camera_info.roll));
     test_deferred.camera_info.last_mouse_x = mouse_x;
     test_deferred.camera_info.last_mouse_y = mouse_y;
 
@@ -362,15 +325,16 @@ void tg_application_internal_game_3d_update_and_render(f32 delta_ms)
     {
         test_deferred.camera_info.fov_y_in_radians -= 0.1f * tg_input_get_mouse_wheel_detents(TG_TRUE);
         tg_camera_set_perspective_projection(test_deferred.camera_info.camera_h, test_deferred.camera_info.fov_y_in_radians, test_deferred.camera_info.near, test_deferred.camera_info.far);
-        //tg_camera_set_perspective_projection(test_deferred.secondary_camera_h, test_deferred.camera_info.fov_y_in_radians, test_deferred.camera_info.near, test_deferred.camera_info.far);
+        tg_camera_set_perspective_projection(test_deferred.secondary_camera_h, test_deferred.camera_info.fov_y_in_radians, test_deferred.camera_info.near, test_deferred.camera_info.far);
     }
 
     tg_terrain_update(test_deferred.terrain_h);
     tg_camera_begin(test_deferred.secondary_camera_h);
+    tg_camera_capture_terrain(test_deferred.secondary_camera_h, test_deferred.terrain_h);
     tg_entity** p_entities = TG_LIST_POINTER_TO(test_deferred.entities, 0);
     for (u32 i = 0; i < test_deferred.entities.count; i++)
     {
-        //tg_camera_capture(test_deferred.secondary_camera_h, p_entities[i]->graphics_data_ptr_h);
+        tg_camera_capture(test_deferred.secondary_camera_h, p_entities[i]->graphics_data_ptr_h);
     }
     tg_camera_end(test_deferred.secondary_camera_h);
 
@@ -405,10 +369,10 @@ void tg_application_internal_game_3d_destroy()
     tg_uniform_buffer_destroy(test_deferred.custom_uniform_buffer_h);
     tg_material_destroy(test_deferred.custom_material_h);
     tg_material_destroy(test_deferred.default_material_h);
-    tg_fragment_shader_destroy(test_deferred.default_fragment_shader_h);
-    tg_fragment_shader_destroy(test_deferred.custom_fragment_shader_h);
-    tg_vertex_shader_destroy(test_deferred.default_vertex_shader_h);
-    tg_vertex_shader_destroy(test_deferred.custom_vertex_shader_h);
+    tg_fragment_shader_destroy(test_deferred.deferred_fragment_shader_h);
+    tg_fragment_shader_destroy(test_deferred.forward_custom_fragment_shader_h);
+    tg_vertex_shader_destroy(test_deferred.deferred_vertex_shader_h);
+    tg_vertex_shader_destroy(test_deferred.forward_vertex_shader_h);
 
     tg_camera_destroy(test_deferred.secondary_camera_h);
     tg_camera_destroy(test_deferred.camera_info.camera_h);

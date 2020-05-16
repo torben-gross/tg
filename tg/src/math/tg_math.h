@@ -258,6 +258,7 @@ f32    tgm_f32_clamp(f32 v, f32 low, f32 high);
 f32    tgm_f32_lerp(f32 v0, f32 v1, f32 t);
 f32    tgm_f32_max(f32 v0, f32 v1);
 f32    tgm_f32_min(f32 v0, f32 v1);
+i32    tgm_f32_round_to_i32(f32 v);
 f32    tgm_f32_tlerp(f32 v000, f32 v001, f32 v010, f32 v011, f32 v100, f32 v101, f32 v110, f32 v111, f32 tx, f32 ty, f32 tz);
 
 i32    tgm_i32_abs(i32 v);

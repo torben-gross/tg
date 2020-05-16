@@ -52,7 +52,7 @@
 
 
 #define TG_VULKAN_MAX_CAMERAS_PER_ENTITY                             4
-#define TG_VULKAN_MAX_ENTITIES_PER_CAMERA                            1024
+#define TG_VULKAN_MAX_ENTITIES_PER_CAMERA                            65536
 #define TG_VULKAN_MAX_LOD_COUNT                                      8
 
 

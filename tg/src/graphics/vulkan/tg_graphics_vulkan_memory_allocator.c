@@ -172,7 +172,9 @@ void tg_vulkan_memory_allocator_init(VkDevice device, VkPhysicalDevice physical_
         }
     }
 
+#ifdef TG_DEBUG
     initialized = TG_TRUE;
+#endif
 }
 
 void tg_vulkan_memory_allocator_shutdown()
