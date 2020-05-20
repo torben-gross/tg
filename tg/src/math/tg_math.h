@@ -168,6 +168,20 @@ typedef struct v3
 	};
 } v3;
 
+typedef struct v3i
+{
+	union
+	{
+		struct
+		{
+			i32    x;
+			i32    y;
+			i32    z;
+		};
+		i32        data[3];
+	};
+} v3i;
+
 typedef struct v4
 {
 	union

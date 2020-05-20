@@ -3,16 +3,6 @@
 #include "util/tg_string.h"
 #include "platform/tg_platform.h"
 
-typedef enum tg_transvoxel_face
-{
-	TG_TRANSVOXEL_FACE_X_NEG = (1 << 0),
-	TG_TRANSVOXEL_FACE_X_POS = (1 << 1),
-	TG_TRANSVOXEL_FACE_Y_NEG = (1 << 2),
-	TG_TRANSVOXEL_FACE_Y_POS = (1 << 3),
-	TG_TRANSVOXEL_FACE_Z_NEG = (1 << 4),
-	TG_TRANSVOXEL_FACE_Z_POS = (1 << 5)
-} tg_transvoxel_face;
-
 
 
 v3 tg_transvoxel_internal_interpolate(i32 d0, i32 d1, const v3* p_p0, const v3* p_p1)
@@ -42,6 +32,67 @@ v3 tg_transvoxel_internal_interpolate(i32 d0, i32 d1, const v3* p_p0, const v3* 
 	return q;
 }
 
+v3 tg_transvoxel_internal_interpolate_alt(const tg_transvoxel_isolevels* p_isolevels, u8 lod, v3i i0, v3i i1, v3 p0, v3 p1)
+{
+	const u8 lodf = 1 << lod;
+
+	i32 d0 = (i32)TG_TRANSVOXEL_ISOLEVEL_AT_V3I(*p_isolevels, i0);
+	i32 d1 = (i32)TG_TRANSVOXEL_ISOLEVEL_AT_V3I(*p_isolevels, i1);
+	i32 t = (d1 << 8) / (d1 - d0);
+
+	v3 q = { 0 };
+	if ((t & 0x00ff) != 0)
+	{
+		// Vertex lies in the interior of the edge.
+		for (u8 i = 0; i < lod; i++)
+		{
+			v3i midpoint = { 0 };
+			midpoint.x = (i0.x + i1.x) / 2;
+			midpoint.y = (i0.y + i1.y) / 2;
+			midpoint.z = (i0.z + i1.z) / 2;
+			const i8 imid = TG_TRANSVOXEL_ISOLEVEL_AT_V3I(*p_isolevels, midpoint);
+
+			if (imid < 0 && d0 < 0 || imid >= 0 && d0 >= 0)
+			{
+				d0 = imid;
+				i0 = midpoint;
+				p0.x = (p0.x + p1.x) / 2;
+				p0.y = (p0.y + p1.y) / 2;
+				p0.z = (p0.z + p1.z) / 2;
+			}
+			else if (imid < 0 && d1 < 0 || imid >= 0 && d1 >= 0)
+			{
+				d1 = imid;
+				i1 = midpoint;
+				p1.x = (p0.x + p1.x) / 2;
+				p1.y = (p0.y + p1.y) / 2;
+				p1.z = (p0.z + p1.z) / 2;
+			}
+			else
+			{
+				TG_ASSERT(TG_FALSE); // TODO: remove this line m8
+			}
+		}
+
+		const f32 f = (f32)d1 / ((f32)d1 - (f32)d0);
+		q.x = (f * p0.x + (1.0f - f) * p1.x);
+		q.y = (f * p0.y + (1.0f - f) * p1.y);
+		q.z = (f * p0.z + (1.0f - f) * p1.z);
+	}
+	else if (t == 0)
+	{
+		// Vertex lies at the higher-numbered endpoint.
+		q = p1;
+	}
+	else
+	{
+		// Vertex lies at the lower-numbered endpoint.
+		q = p0;
+	}
+
+	return q;
+}
+
 u32 tg_transvoxel_internal_create_transition_face(i32 x, i32 y, i32 z, const tg_transvoxel_isolevels* p_isolevels, u8 lod, u8 transition_face, u8 transition_faces, tg_transvoxel_triangle* p_triangles)
 {
 	TG_ASSERT(p_isolevels && lod > 0 && p_triangles);
@@ -50,9 +101,10 @@ u32 tg_transvoxel_internal_create_transition_face(i32 x, i32 y, i32 z, const tg_
 
 	u32 chunk_triangle_count = 0;
 	const u32 lodf = 1 << lod;
-	const u32 nlodf = 1 << (lod - 1);
+	const u8 nlod = lod - 1;
+	const u32 nlodf = 1 << nlod;
 
-	i8 p_corners[13] = { 0 };
+	v3i p_isolevel_indices[13] = { 0 };
 	v3 p_positions[13] = { 0 };
 
 	const u8 x_start = transition_face == TG_TRANSVOXEL_FACE_X_POS ? 16 / lodf - 1 : 0;
@@ -82,15 +134,15 @@ u32 tg_transvoxel_internal_create_transition_face(i32 x, i32 y, i32 z, const tg_
 					//  |              |      |      |       |             |
 					//  +-----> z      +------+------+       +-------------+
 					//                0       1       2     9               A
-					p_corners[0x0] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 0, lodf * cy            , lodf * cz            );
-					p_corners[0x1] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 0, lodf * cy            , lodf * cz + nlodf * 1);
-					p_corners[0x2] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 0, lodf * cy            , lodf * cz + nlodf * 2);
-					p_corners[0x3] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 0, lodf * cy + nlodf * 1, lodf * cz            );
-					p_corners[0x4] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 0, lodf * cy + nlodf * 1, lodf * cz + nlodf * 1);
-					p_corners[0x5] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 0, lodf * cy + nlodf * 1, lodf * cz + nlodf * 2);
-					p_corners[0x6] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 0, lodf * cy + nlodf * 2, lodf * cz            );
-					p_corners[0x7] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 0, lodf * cy + nlodf * 2, lodf * cz + nlodf * 1);
-					p_corners[0x8] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 0, lodf * cy + nlodf * 2, lodf * cz + nlodf * 2);
+					p_isolevel_indices[0x0] = (v3i){ 0, lodf * cy            , lodf * cz             };
+					p_isolevel_indices[0x1] = (v3i){ 0, lodf * cy            , lodf * cz + nlodf * 1 };
+					p_isolevel_indices[0x2] = (v3i){ 0, lodf * cy            , lodf * cz + nlodf * 2 };
+					p_isolevel_indices[0x3] = (v3i){ 0, lodf * cy + nlodf * 1, lodf * cz             };
+					p_isolevel_indices[0x4] = (v3i){ 0, lodf * cy + nlodf * 1, lodf * cz + nlodf * 1 };
+					p_isolevel_indices[0x5] = (v3i){ 0, lodf * cy + nlodf * 1, lodf * cz + nlodf * 2 };
+					p_isolevel_indices[0x6] = (v3i){ 0, lodf * cy + nlodf * 2, lodf * cz             };
+					p_isolevel_indices[0x7] = (v3i){ 0, lodf * cy + nlodf * 2, lodf * cz + nlodf * 1 };
+					p_isolevel_indices[0x8] = (v3i){ 0, lodf * cy + nlodf * 2, lodf * cz + nlodf * 2 };
 				} break;
 				case TG_TRANSVOXEL_FACE_X_POS:
 				{
@@ -103,15 +155,15 @@ u32 tg_transvoxel_internal_create_transition_face(i32 x, i32 y, i32 z, const tg_
 					//  |              |      |      |       |             |
 					//  o-----> y      +------+------+       +-------------+
 					//                0       1       2     9               A
-					p_corners[0x0] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 16, lodf * cy            , lodf * cz            );
-					p_corners[0x1] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 16, lodf * cy + nlodf * 1, lodf * cz            );
-					p_corners[0x2] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 16, lodf * cy + nlodf * 2, lodf * cz            );
-					p_corners[0x3] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 16, lodf * cy            , lodf * cz + nlodf * 1);
-					p_corners[0x4] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 16, lodf * cy + nlodf * 1, lodf * cz + nlodf * 1);
-					p_corners[0x5] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 16, lodf * cy + nlodf * 2, lodf * cz + nlodf * 1);
-					p_corners[0x6] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 16, lodf * cy            , lodf * cz + nlodf * 2);
-					p_corners[0x7] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 16, lodf * cy + nlodf * 1, lodf * cz + nlodf * 2);
-					p_corners[0x8] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, 16, lodf * cy + nlodf * 2, lodf * cz + nlodf * 2);
+					p_isolevel_indices[0x0] = (v3i){ 16, lodf * cy            , lodf * cz             };
+					p_isolevel_indices[0x1] = (v3i){ 16, lodf * cy + nlodf * 1, lodf * cz             };
+					p_isolevel_indices[0x2] = (v3i){ 16, lodf * cy + nlodf * 2, lodf * cz             };
+					p_isolevel_indices[0x3] = (v3i){ 16, lodf * cy            , lodf * cz + nlodf * 1 };
+					p_isolevel_indices[0x4] = (v3i){ 16, lodf * cy + nlodf * 1, lodf * cz + nlodf * 1 };
+					p_isolevel_indices[0x5] = (v3i){ 16, lodf * cy + nlodf * 2, lodf * cz + nlodf * 1 };
+					p_isolevel_indices[0x6] = (v3i){ 16, lodf * cy            , lodf * cz + nlodf * 2 };
+					p_isolevel_indices[0x7] = (v3i){ 16, lodf * cy + nlodf * 1, lodf * cz + nlodf * 2 };
+					p_isolevel_indices[0x8] = (v3i){ 16, lodf * cy + nlodf * 2, lodf * cz + nlodf * 2 };
 				} break;
 				case TG_TRANSVOXEL_FACE_Y_NEG:
 				{
@@ -124,15 +176,15 @@ u32 tg_transvoxel_internal_create_transition_face(i32 x, i32 y, i32 z, const tg_
 					//  |              |      |      |       |             |
 					//  +-----> x      +------+------+       +-------------+
 					//                0       1       2     9               A
-					p_corners[0x0] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx            , 0, lodf * cz            );
-					p_corners[0x1] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx + nlodf * 1, 0, lodf * cz            );
-					p_corners[0x2] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx + nlodf * 2, 0, lodf * cz            );
-					p_corners[0x3] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx            , 0, lodf * cz + nlodf * 1);
-					p_corners[0x4] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx + nlodf * 1, 0, lodf * cz + nlodf * 1);
-					p_corners[0x5] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx + nlodf * 2, 0, lodf * cz + nlodf * 1);
-					p_corners[0x6] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx            , 0, lodf * cz + nlodf * 2);
-					p_corners[0x7] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx + nlodf * 1, 0, lodf * cz + nlodf * 2);
-					p_corners[0x8] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx + nlodf * 2, 0, lodf * cz + nlodf * 2);
+					p_isolevel_indices[0x0] = (v3i){ lodf * cx            , 0, lodf * cz             };
+					p_isolevel_indices[0x1] = (v3i){ lodf * cx + nlodf * 1, 0, lodf * cz             };
+					p_isolevel_indices[0x2] = (v3i){ lodf * cx + nlodf * 2, 0, lodf * cz             };
+					p_isolevel_indices[0x3] = (v3i){ lodf * cx            , 0, lodf * cz + nlodf * 1 };
+					p_isolevel_indices[0x4] = (v3i){ lodf * cx + nlodf * 1, 0, lodf * cz + nlodf * 1 };
+					p_isolevel_indices[0x5] = (v3i){ lodf * cx + nlodf * 2, 0, lodf * cz + nlodf * 1 };
+					p_isolevel_indices[0x6] = (v3i){ lodf * cx            , 0, lodf * cz + nlodf * 2 };
+					p_isolevel_indices[0x7] = (v3i){ lodf * cx + nlodf * 1, 0, lodf * cz + nlodf * 2 };
+					p_isolevel_indices[0x8] = (v3i){ lodf * cx + nlodf * 2, 0, lodf * cz + nlodf * 2 };
 				} break;
 				case TG_TRANSVOXEL_FACE_Y_POS:
 				{
@@ -145,15 +197,15 @@ u32 tg_transvoxel_internal_create_transition_face(i32 x, i32 y, i32 z, const tg_
 					//  |              |      |      |       |             |
 					//  o-----> z      +------+------+       +-------------+
 					//                0       1       2     9               A
-					p_corners[0x0] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx            , 16, lodf * cz            );
-					p_corners[0x1] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx            , 16, lodf * cz + nlodf * 1);
-					p_corners[0x2] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx            , 16, lodf * cz + nlodf * 2);
-					p_corners[0x3] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx + nlodf * 1, 16, lodf * cz            );
-					p_corners[0x4] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx + nlodf * 1, 16, lodf * cz + nlodf * 1);
-					p_corners[0x5] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx + nlodf * 1, 16, lodf * cz + nlodf * 2);
-					p_corners[0x6] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx + nlodf * 2, 16, lodf * cz            );
-					p_corners[0x7] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx + nlodf * 2, 16, lodf * cz + nlodf * 1);
-					p_corners[0x8] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx + nlodf * 2, 16, lodf * cz + nlodf * 2);
+					p_isolevel_indices[0x0] = (v3i){ lodf * cx            , 16, lodf * cz             };
+					p_isolevel_indices[0x1] = (v3i){ lodf * cx            , 16, lodf * cz + nlodf * 1 };
+					p_isolevel_indices[0x2] = (v3i){ lodf * cx            , 16, lodf * cz + nlodf * 2 };
+					p_isolevel_indices[0x3] = (v3i){ lodf * cx + nlodf * 1, 16, lodf * cz             };
+					p_isolevel_indices[0x4] = (v3i){ lodf * cx + nlodf * 1, 16, lodf * cz + nlodf * 1 };
+					p_isolevel_indices[0x5] = (v3i){ lodf * cx + nlodf * 1, 16, lodf * cz + nlodf * 2 };
+					p_isolevel_indices[0x6] = (v3i){ lodf * cx + nlodf * 2, 16, lodf * cz             };
+					p_isolevel_indices[0x7] = (v3i){ lodf * cx + nlodf * 2, 16, lodf * cz + nlodf * 1 };
+					p_isolevel_indices[0x8] = (v3i){ lodf * cx + nlodf * 2, 16, lodf * cz + nlodf * 2 };
 				} break;
 				case TG_TRANSVOXEL_FACE_Z_NEG:
 				{
@@ -166,15 +218,15 @@ u32 tg_transvoxel_internal_create_transition_face(i32 x, i32 y, i32 z, const tg_
 					//  |              |      |      |       |             |
 					//  +-----> y      +------+------+       +-------------+
 					//                0       1       2     9               A
-					p_corners[0x0] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx            , lodf * cy            , 0);
-					p_corners[0x1] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx            , lodf * cy + nlodf * 1, 0);
-					p_corners[0x2] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx            , lodf * cy + nlodf * 2, 0);
-					p_corners[0x3] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx + nlodf * 1, lodf * cy            , 0);
-					p_corners[0x4] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx + nlodf * 1, lodf * cy + nlodf * 1, 0);
-					p_corners[0x5] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx + nlodf * 1, lodf * cy + nlodf * 2, 0);
-					p_corners[0x6] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx + nlodf * 2, lodf * cy            , 0);
-					p_corners[0x7] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx + nlodf * 2, lodf * cy + nlodf * 1, 0);
-					p_corners[0x8] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx + nlodf * 2, lodf * cy + nlodf * 2, 0);
+					p_isolevel_indices[0x0] = (v3i){ lodf * cx            , lodf * cy            , 0 };
+					p_isolevel_indices[0x1] = (v3i){ lodf * cx            , lodf * cy + nlodf * 1, 0 };
+					p_isolevel_indices[0x2] = (v3i){ lodf * cx            , lodf * cy + nlodf * 2, 0 };
+					p_isolevel_indices[0x3] = (v3i){ lodf * cx + nlodf * 1, lodf * cy            , 0 };
+					p_isolevel_indices[0x4] = (v3i){ lodf * cx + nlodf * 1, lodf * cy + nlodf * 1, 0 };
+					p_isolevel_indices[0x5] = (v3i){ lodf * cx + nlodf * 1, lodf * cy + nlodf * 2, 0 };
+					p_isolevel_indices[0x6] = (v3i){ lodf * cx + nlodf * 2, lodf * cy            , 0 };
+					p_isolevel_indices[0x7] = (v3i){ lodf * cx + nlodf * 2, lodf * cy + nlodf * 1, 0 };
+					p_isolevel_indices[0x8] = (v3i){ lodf * cx + nlodf * 2, lodf * cy + nlodf * 2, 0 };
 				} break;
 				case TG_TRANSVOXEL_FACE_Z_POS:
 				{
@@ -187,33 +239,33 @@ u32 tg_transvoxel_internal_create_transition_face(i32 x, i32 y, i32 z, const tg_
 					//  |              |      |      |       |             |
 					//  o-----> x      +------+------+       +-------------+
 					//                0       1       2     9               A
-					p_corners[0x0] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx            , lodf * cy            , 16);
-					p_corners[0x1] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx + nlodf * 1, lodf * cy            , 16);
-					p_corners[0x2] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx + nlodf * 2, lodf * cy            , 16);
-					p_corners[0x3] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx            , lodf * cy + nlodf * 1, 16);
-					p_corners[0x4] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx + nlodf * 1, lodf * cy + nlodf * 1, 16);
-					p_corners[0x5] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx + nlodf * 2, lodf * cy + nlodf * 1, 16);
-					p_corners[0x6] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx            , lodf * cy + nlodf * 2, 16);
-					p_corners[0x7] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx + nlodf * 1, lodf * cy + nlodf * 2, 16);
-					p_corners[0x8] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, lodf * cx + nlodf * 2, lodf * cy + nlodf * 2, 16);
+					p_isolevel_indices[0x0] = (v3i){ lodf * cx            , lodf * cy            , 16 };
+					p_isolevel_indices[0x1] = (v3i){ lodf * cx + nlodf * 1, lodf * cy            , 16 };
+					p_isolevel_indices[0x2] = (v3i){ lodf * cx + nlodf * 2, lodf * cy            , 16 };
+					p_isolevel_indices[0x3] = (v3i){ lodf * cx            , lodf * cy + nlodf * 1, 16 };
+					p_isolevel_indices[0x4] = (v3i){ lodf * cx + nlodf * 1, lodf * cy + nlodf * 1, 16 };
+					p_isolevel_indices[0x5] = (v3i){ lodf * cx + nlodf * 2, lodf * cy + nlodf * 1, 16 };
+					p_isolevel_indices[0x6] = (v3i){ lodf * cx            , lodf * cy + nlodf * 2, 16 };
+					p_isolevel_indices[0x7] = (v3i){ lodf * cx + nlodf * 1, lodf * cy + nlodf * 2, 16 };
+					p_isolevel_indices[0x8] = (v3i){ lodf * cx + nlodf * 2, lodf * cy + nlodf * 2, 16 };
 				} break;
 				}
 
-				p_corners[0x9] = p_corners[0x0];
-				p_corners[0xa] = p_corners[0x2];
-				p_corners[0xb] = p_corners[0x6];
-				p_corners[0xc] = p_corners[0x8];
+				p_isolevel_indices[0x9] = p_isolevel_indices[0x0];
+				p_isolevel_indices[0xa] = p_isolevel_indices[0x2];
+				p_isolevel_indices[0xb] = p_isolevel_indices[0x6];
+				p_isolevel_indices[0xc] = p_isolevel_indices[0x8];
 
 				const u32 case_code =
-					(p_corners[0x0] < 0 ? 0x01 : 0) |
-					(p_corners[0x1] < 0 ? 0x02 : 0) |
-					(p_corners[0x2] < 0 ? 0x04 : 0) |
-					(p_corners[0x3] < 0 ? 0x80 : 0) |
-					(p_corners[0x4] < 0 ? 0x100 : 0) |
-					(p_corners[0x5] < 0 ? 0x08 : 0) |
-					(p_corners[0x6] < 0 ? 0x40 : 0) |
-					(p_corners[0x7] < 0 ? 0x20 : 0) |
-					(p_corners[0x8] < 0 ? 0x10 : 0);
+					(TG_TRANSVOXEL_ISOLEVEL_AT_V3I(*p_isolevels, p_isolevel_indices[0x0]) < 0 ? 0x01  : 0) |
+					(TG_TRANSVOXEL_ISOLEVEL_AT_V3I(*p_isolevels, p_isolevel_indices[0x1]) < 0 ? 0x02  : 0) |
+					(TG_TRANSVOXEL_ISOLEVEL_AT_V3I(*p_isolevels, p_isolevel_indices[0x2]) < 0 ? 0x04  : 0) |
+					(TG_TRANSVOXEL_ISOLEVEL_AT_V3I(*p_isolevels, p_isolevel_indices[0x3]) < 0 ? 0x80  : 0) |
+					(TG_TRANSVOXEL_ISOLEVEL_AT_V3I(*p_isolevels, p_isolevel_indices[0x4]) < 0 ? 0x100 : 0) |
+					(TG_TRANSVOXEL_ISOLEVEL_AT_V3I(*p_isolevels, p_isolevel_indices[0x5]) < 0 ? 0x08  : 0) |
+					(TG_TRANSVOXEL_ISOLEVEL_AT_V3I(*p_isolevels, p_isolevel_indices[0x6]) < 0 ? 0x40  : 0) |
+					(TG_TRANSVOXEL_ISOLEVEL_AT_V3I(*p_isolevels, p_isolevel_indices[0x7]) < 0 ? 0x20  : 0) |
+					(TG_TRANSVOXEL_ISOLEVEL_AT_V3I(*p_isolevels, p_isolevel_indices[0x8]) < 0 ? 0x10  : 0);
 
 				if (case_code != 0 && case_code != 511)
 				{
@@ -353,9 +405,13 @@ u32 tg_transvoxel_internal_create_transition_face(i32 x, i32 y, i32 z, const tg_
 						const u16 e2v0 = (e2 >> 4) & 0x0f;
 						const u16 e2v1 = e2 & 0x0f;
 
-						const v3 v0 = tg_transvoxel_internal_interpolate(p_corners[e0v0], p_corners[e0v1], &p_positions[e0v0], &p_positions[e0v1]);
-						const v3 v1 = tg_transvoxel_internal_interpolate(p_corners[e1v0], p_corners[e1v1], &p_positions[e1v0], &p_positions[e1v1]);
-						const v3 v2 = tg_transvoxel_internal_interpolate(p_corners[e2v0], p_corners[e2v1], &p_positions[e2v0], &p_positions[e2v1]);
+						TG_ASSERT(e0v0 < 9 && e0v1 < 9 || e0v0 >= 9 && e0v1 >= 9);
+						TG_ASSERT(e1v0 < 9 && e1v1 < 9 || e1v0 >= 9 && e1v1 >= 9);
+						TG_ASSERT(e2v0 < 9 && e2v1 < 9 || e2v0 >= 9 && e2v1 >= 9);
+
+						const v3 v0 = tg_transvoxel_internal_interpolate_alt(p_isolevels, e0v0 < 9 ? nlod : lod, p_isolevel_indices[e0v0], p_isolevel_indices[e0v1], p_positions[e0v0], p_positions[e0v1]);
+						const v3 v1 = tg_transvoxel_internal_interpolate_alt(p_isolevels, e1v0 < 9 ? nlod : lod, p_isolevel_indices[e1v0], p_isolevel_indices[e1v1], p_positions[e1v0], p_positions[e1v1]);
+						const v3 v2 = tg_transvoxel_internal_interpolate_alt(p_isolevels, e2v0 < 9 ? nlod : lod, p_isolevel_indices[e2v0], p_isolevel_indices[e2v1], p_positions[e2v0], p_positions[e2v1]);
 
 						if (!inverted)
 						{
@@ -388,10 +444,6 @@ u32 tg_transvoxel_create_chunk(i32 x, i32 y, i32 z, const tg_transvoxel_isolevel
 
 	u32 chunk_triangle_count = 0;
 
-	i8 p_corners[8] = { 0 };
-	v3 p_positions[8] = { 0 };
-	const u8 lodf = 1 << lod;
-
 	if (transition_faces & TG_TRANSVOXEL_FACE_X_NEG)
 	{
 		chunk_triangle_count += tg_transvoxel_internal_create_transition_face(x, y, z, p_isolevels, lod, TG_TRANSVOXEL_FACE_X_NEG, transition_faces, &p_triangles[chunk_triangle_count]);
@@ -417,6 +469,10 @@ u32 tg_transvoxel_create_chunk(i32 x, i32 y, i32 z, const tg_transvoxel_isolevel
 		chunk_triangle_count += tg_transvoxel_internal_create_transition_face(x, y, z, p_isolevels, lod, TG_TRANSVOXEL_FACE_Z_POS, transition_faces, &p_triangles[chunk_triangle_count]);
 	}
 
+	v3i p_isolevel_indices[8] = { 0 };
+	v3 p_positions[8] = { 0 };
+	const u8 lodf = 1 << lod;
+
 	for (u8 cz = 0; cz < 16 / lodf; cz++)
 	{
 		for (u8 cy = 0; cy < 16 / lodf; cy++)
@@ -435,26 +491,26 @@ u32 tg_transvoxel_create_chunk(i32 x, i32 y, i32 z, const tg_transvoxel_isolevel
 				//  |/___________|/
 				// 4              5
 
-				p_corners[0] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, (cx    ) * lodf, (cy    ) * lodf, (cz    ) * lodf);
-				p_corners[1] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, (cx + 1) * lodf, (cy    ) * lodf, (cz    ) * lodf);
-				p_corners[2] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, (cx    ) * lodf, (cy + 1) * lodf, (cz    ) * lodf);
-				p_corners[3] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, (cx + 1) * lodf, (cy + 1) * lodf, (cz    ) * lodf);
-				p_corners[4] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, (cx    ) * lodf, (cy    ) * lodf, (cz + 1) * lodf);
-				p_corners[5] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, (cx + 1) * lodf, (cy    ) * lodf, (cz + 1) * lodf);
-				p_corners[6] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, (cx    ) * lodf, (cy + 1) * lodf, (cz + 1) * lodf);
-				p_corners[7] = TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, (cx + 1) * lodf, (cy + 1) * lodf, (cz + 1) * lodf);
+				p_isolevel_indices[0] = (v3i){ (cx    ) * lodf, (cy    ) * lodf, (cz    ) * lodf };
+				p_isolevel_indices[1] = (v3i){ (cx + 1) * lodf, (cy    ) * lodf, (cz    ) * lodf };
+				p_isolevel_indices[2] = (v3i){ (cx    ) * lodf, (cy + 1) * lodf, (cz    ) * lodf };
+				p_isolevel_indices[3] = (v3i){ (cx + 1) * lodf, (cy + 1) * lodf, (cz    ) * lodf };
+				p_isolevel_indices[4] = (v3i){ (cx    ) * lodf, (cy    ) * lodf, (cz + 1) * lodf };
+				p_isolevel_indices[5] = (v3i){ (cx + 1) * lodf, (cy    ) * lodf, (cz + 1) * lodf };
+				p_isolevel_indices[6] = (v3i){ (cx    ) * lodf, (cy + 1) * lodf, (cz + 1) * lodf };
+				p_isolevel_indices[7] = (v3i){ (cx + 1) * lodf, (cy + 1) * lodf, (cz + 1) * lodf };
 
 				const u32 case_code =
-					((p_corners[0] >> 7) & 0x01) |
-					((p_corners[1] >> 6) & 0x02) |
-					((p_corners[2] >> 5) & 0x04) |
-					((p_corners[3] >> 4) & 0x08) |
-					((p_corners[4] >> 3) & 0x10) |
-					((p_corners[5] >> 2) & 0x20) |
-					((p_corners[6] >> 1) & 0x40) |
-					((p_corners[7]     ) & 0x80);
+					((TG_TRANSVOXEL_ISOLEVEL_AT_V3I(*p_isolevels, p_isolevel_indices[0]) >> 7) & 0x01) |
+					((TG_TRANSVOXEL_ISOLEVEL_AT_V3I(*p_isolevels, p_isolevel_indices[1]) >> 6) & 0x02) |
+					((TG_TRANSVOXEL_ISOLEVEL_AT_V3I(*p_isolevels, p_isolevel_indices[2]) >> 5) & 0x04) |
+					((TG_TRANSVOXEL_ISOLEVEL_AT_V3I(*p_isolevels, p_isolevel_indices[3]) >> 4) & 0x08) |
+					((TG_TRANSVOXEL_ISOLEVEL_AT_V3I(*p_isolevels, p_isolevel_indices[4]) >> 3) & 0x10) |
+					((TG_TRANSVOXEL_ISOLEVEL_AT_V3I(*p_isolevels, p_isolevel_indices[5]) >> 2) & 0x20) |
+					((TG_TRANSVOXEL_ISOLEVEL_AT_V3I(*p_isolevels, p_isolevel_indices[6]) >> 1) & 0x40) |
+					((TG_TRANSVOXEL_ISOLEVEL_AT_V3I(*p_isolevels, p_isolevel_indices[7])     ) & 0x80);
 
-				if ((case_code ^ ((p_corners[7] >> 7) & 0xff)) != 0)
+				if ((case_code ^ ((TG_TRANSVOXEL_ISOLEVEL_AT_V3I(*p_isolevels, p_isolevel_indices[7]) >> 7) & 0xff)) != 0)
 				{
 					// Cell has a nontrivial triangulation.
 
@@ -495,9 +551,10 @@ u32 tg_transvoxel_create_chunk(i32 x, i32 y, i32 z, const tg_transvoxel_isolevel
 						const u16 e2v0 = (e2 >> 4) & 0x0f;
 						const u16 e2v1 = e2 & 0x0f;
 
-						const v3 v0 = tg_transvoxel_internal_interpolate(p_corners[e0v0], p_corners[e0v1], &p_positions[e0v0], &p_positions[e0v1]);
-						const v3 v1 = tg_transvoxel_internal_interpolate(p_corners[e1v0], p_corners[e1v1], &p_positions[e1v0], &p_positions[e1v1]);
-						const v3 v2 = tg_transvoxel_internal_interpolate(p_corners[e2v0], p_corners[e2v1], &p_positions[e2v0], &p_positions[e2v1]);
+						// TODO: p_corners should be selected for the closest transition from negative to positive. also, scale transitions...
+						const v3 v0 = tg_transvoxel_internal_interpolate_alt(p_isolevels, lod, p_isolevel_indices[e0v0], p_isolevel_indices[e0v1], p_positions[e0v0], p_positions[e0v1]);
+						const v3 v1 = tg_transvoxel_internal_interpolate_alt(p_isolevels, lod, p_isolevel_indices[e1v0], p_isolevel_indices[e1v1], p_positions[e1v0], p_positions[e1v1]);
+						const v3 v2 = tg_transvoxel_internal_interpolate_alt(p_isolevels, lod, p_isolevel_indices[e2v0], p_isolevel_indices[e2v1], p_positions[e2v0], p_positions[e2v1]);
 
 						const v3 v01 = tgm_v3_subtract_v3(&v1, &v0);
 						const v3 v02 = tgm_v3_subtract_v3(&v2, &v0);

@@ -33,7 +33,7 @@ void tg_terrain_fill_isolevels(i32 x, i32 y, i32 z, tg_transvoxel_isolevels* p_i
 				const f32 n_hills = n_hills0 + 0.01f * n_hills1;
 
 				const f32 s_caves = 0.06f;
-				const f32 n_caves = tgm_noise(s_caves * base_x, s_caves * base_y, s_caves * base_z);
+				const f32 n_caves = tgm_f32_clamp(tgm_noise(s_caves * base_x, s_caves * base_y, s_caves * base_z), -1.0f, 0.0f);
 
 				const f32 n = n_hills;
 				f32 noise = (n * 64.0f) - ((f32)cy + (f32)y * 16.0f);
@@ -43,43 +43,6 @@ void tg_terrain_fill_isolevels(i32 x, i32 y, i32 z, tg_transvoxel_isolevels* p_i
 				const f32 f1 = 254.0f * f0;
 				i8 f2 = -(i8)(tgm_f32_round_to_i32(f1) - 127);
 				TG_TRANSVOXEL_ISOLEVEL_AT(*p_isolevels, cx, cy, cz) = f2;
-
-				if (x == 3 && y == -1 && z == -4)
-				{
-					int dd = 0;
-					if (cx == 9 && cy == 13 && cz == 5)
-					{
-						dd = 0;
-					}
-					else if (cx == 10 && cy == 13 && cz == 5)
-					{
-						dd = 0;
-					}
-					else if (cx == 9 && cy == 14 && cz == 5)
-					{
-						dd = 0;
-					}
-					else if (cx == 10 && cy == 14 && cz == 5)
-					{
-						dd = 0;
-					}
-					else if (cx == 9 && cy == 13 && cz == 6)
-					{
-						dd = 0;
-					}
-					else if (cx == 10 && cy == 13 && cz == 6)
-					{
-						dd = 0;
-					}
-					else if (cx == 9 && cy == 14 && cz == 6)
-					{
-						dd = 0;
-					}
-					else if (cx == 10 && cy == 14 && cz == 6)
-					{
-						dd = 0;
-					}
-				}
 			}
 		}
 	}
@@ -97,7 +60,7 @@ u8 tg_terrain_internal_select_lod(const v3* p_focal_point, i32 x, i32 y, i32 z)
 {
 	const v3 v = { p_focal_point->x - (f32)x, p_focal_point->y - (f32)y, p_focal_point->z - (f32)z };
 	const f32 d = tgm_v3_magnitude_squared(&v);
-	const u8 lod = (u8)tgm_u64_min((u64)(d / 32.0f), 4);
+	const u8 lod = (u8)tgm_u64_min((u64)(d / 8.0f), 4);
 	return lod;
 }
 
@@ -179,6 +142,14 @@ tg_terrain_h tg_terrain_create(tg_camera_h focal_point)
 					p_chunk->lod > tg_terrain_internal_select_lod(&fp, x, y, z - 1),
 					p_chunk->lod > tg_terrain_internal_select_lod(&fp, x, y, z + 1)
 				);
+
+				TG_ASSERT(tgm_i32_abs(p_chunk->lod - tg_terrain_internal_select_lod(&fp, x - 1, y, z)) <= 1);
+				TG_ASSERT(tgm_i32_abs(p_chunk->lod - tg_terrain_internal_select_lod(&fp, x + 1, y, z)) <= 1);
+				TG_ASSERT(tgm_i32_abs(p_chunk->lod - tg_terrain_internal_select_lod(&fp, x, y - 1, z)) <= 1);
+				TG_ASSERT(tgm_i32_abs(p_chunk->lod - tg_terrain_internal_select_lod(&fp, x, y + 1, z)) <= 1);
+				TG_ASSERT(tgm_i32_abs(p_chunk->lod - tg_terrain_internal_select_lod(&fp, x, y, z - 1)) <= 1);
+				TG_ASSERT(tgm_i32_abs(p_chunk->lod - tg_terrain_internal_select_lod(&fp, x, y, z + 1)) <= 1);
+
 				p_chunk->entity = tg_entity_create(TG_NULL, terrain_h->material_h);
 				matid++;
 				if (matid == 3)
