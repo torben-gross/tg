@@ -272,8 +272,30 @@ tg_mesh_h tg_mesh_create(u32 vertex_count, const v3* p_positions, const v3* p_no
     {
         mesh_h->ibo.size = 0;
         mesh_h->ibo.buffer = VK_NULL_HANDLE;
-        mesh_h->ibo.memory.device_memory = VK_NULL_HANDLE;
+        mesh_h->ibo.memory = (tg_vulkan_memory_block){ 0 };
     }
+
+    return mesh_h;
+}
+
+tg_mesh_h tg_mesh_create2(u32 vertex_count, const tg_vertex_3d* p_vertices)
+{
+    TG_ASSERT(vertex_count && p_vertices && vertex_count % 3 == 0);
+
+    tg_mesh_h mesh_h = TG_MEMORY_ALLOC(sizeof(*mesh_h));
+    mesh_h->type = TG_HANDLE_TYPE_MESH;
+
+    tg_vulkan_buffer staging_buffer = tg_vulkan_buffer_create(vertex_count * sizeof(*p_vertices), VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+    memcpy(staging_buffer.memory.p_mapped_device_memory, p_vertices, vertex_count * sizeof(*p_vertices));
+    tg_vulkan_buffer_flush_mapped_memory(&staging_buffer);
+
+    mesh_h->vbo = tg_vulkan_buffer_create(vertex_count * sizeof(*p_vertices), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    tg_vulkan_buffer_copy(vertex_count * sizeof(*p_vertices), staging_buffer.buffer, mesh_h->vbo.buffer);
+    tg_vulkan_buffer_destroy(&staging_buffer);
+
+    mesh_h->ibo.size = 0;
+    mesh_h->ibo.buffer = VK_NULL_HANDLE;
+    mesh_h->ibo.memory = (tg_vulkan_memory_block){ 0 };
 
     return mesh_h;
 }

@@ -5,11 +5,58 @@
 
 #include "memory/tg_memory.h"
 #include "tg_entity.h"
-#include "tg_transvoxel.h"
 #include <string.h> // TODO: implement yourself
 
 
-void tg_terrain_fill_isolevels(i32 x, i32 y, i32 z, tg_transvoxel_isolevels* p_isolevels)
+#define TG_TERRAIN_HASH(x, y, z)    (((u32)(x) * 9 + (u32)(y) * 37 + (u32)(z) * 149) % TG_TERRAIN_HASHMAP_COUNT) // TODO: better hash function!!!
+
+
+
+tg_terrain_chunk* tg_terrain_internal_get_chunk(tg_terrain_h terrain_h, i32 x, i32 y, i32 z)
+{
+	const u32 original_hashed_index = TG_TERRAIN_HASH(x, y, z);
+
+	u32 hash_index = original_hashed_index;
+	tg_terrain_chunk* p_chunk = terrain_h->pp_chunks_hashmap[hash_index];
+
+	if (!p_chunk)
+	{
+		return TG_NULL;
+	}
+
+	while (p_chunk->x != x || p_chunk->y != y || p_chunk->z != z)
+	{
+		hash_index = hash_index + 1 == TG_TERRAIN_HASHMAP_COUNT ? 0 : hash_index++;
+		p_chunk = terrain_h->pp_chunks_hashmap[hash_index];
+
+		if (!p_chunk || hash_index == original_hashed_index)
+		{
+			return TG_NULL;
+		}
+	}
+
+	return p_chunk;
+}
+
+b32 tg_terrain_internal_set_chunk(tg_terrain_h terrain_h, i32 x, i32 y, i32 z, tg_terrain_chunk* p_chunk)
+{
+	b32 result = TG_FALSE;
+
+	if (terrain_h->chunk_count + 1 < TG_TERRAIN_HASHMAP_COUNT)
+	{
+		u32 hash_index = TG_TERRAIN_HASH(x, y, z);
+		while (terrain_h->pp_chunks_hashmap[hash_index])
+		{
+			hash_index = hash_index + 1 == TG_TERRAIN_HASHMAP_COUNT ? 0 : hash_index++;
+		}
+		terrain_h->pp_chunks_hashmap[hash_index] = p_chunk;
+		terrain_h->chunk_count++;
+	}
+
+	return result;
+}
+
+void tg_terrain_internal_fill_isolevels(i32 x, i32 y, i32 z, tg_transvoxel_isolevels* p_isolevels)
 {
 	TG_ASSERT(p_isolevels);
 
@@ -17,11 +64,11 @@ void tg_terrain_fill_isolevels(i32 x, i32 y, i32 z, tg_transvoxel_isolevels* p_i
 	const f32 offset_y = 16.0f * (f32)y;
 	const f32 offset_z = 16.0f * (f32)z;
 
-	for (i32 cz = -1; cz < 18; cz++)
+	for (i32 cz = 0; cz < 17; cz++)
 	{
-		for (i32 cy = -1; cy < 18; cy++)
+		for (i32 cy = 0; cy < 17; cy++)
 		{
-			for (i32 cx = -1; cx < 18; cx++)
+			for (i32 cx = 0; cx < 17; cx++)
 			{
 				const f32 bias = 1024.0f; // TODO: why do it need bias? or rather, why do negative values for noise_x or noise_y result in cliffs?
 				const f32 base_x = 16.0f * (f32)x + bias + (f32)cx;
@@ -64,46 +111,6 @@ u8 tg_terrain_internal_select_lod(const v3* p_focal_point, i32 x, i32 y, i32 z)
 	return lod;
 }
 
-void tg_terrain_internal_qsort_swap(tg_terrain_chunk** pp_chunk0, tg_terrain_chunk** pp_chunk1)
-{
-	tg_terrain_chunk* p_temp = *pp_chunk0;
-	*pp_chunk0 = *pp_chunk1;
-	*pp_chunk1 = p_temp;
-}
-
-i32 tg_terrain_internal_qsort_partition(tg_terrain_h terrain_h, i32 low, i32 high)
-{
-	const tg_terrain_chunk* p_pivot = terrain_h->pp_chunks[high];
-	const v3 focal_point = tg_camera_get_position(terrain_h->focal_point);
-	const f32 distance_pivot = tg_terrain_internal_chunk_distance_to_focal_point(&focal_point, p_pivot);
-
-	i32 i = low - 1;
-
-	for (i32 j = low; j <= high - 1; j++)
-	{
-		const tg_terrain_chunk* p_chunk = terrain_h->pp_chunks[j];
-		const f32 distance_chunk = tg_terrain_internal_chunk_distance_to_focal_point(&focal_point, p_chunk);
-		if (distance_chunk < distance_pivot)
-		{
-			i++;
-			tg_terrain_internal_qsort_swap(&terrain_h->pp_chunks[i], &terrain_h->pp_chunks[j]);
-		}
-	}
-	tg_terrain_internal_qsort_swap(&terrain_h->pp_chunks[i + 1], &terrain_h->pp_chunks[high]);
-
-	return i + 1;
-}
-
-void tg_terrain_internal_qsort(tg_terrain_h terrain_h, i32 low, i32 high)
-{
-	if (low < high)
-	{
-		const i32 pi = tg_terrain_internal_qsort_partition(terrain_h, low, high);
-		tg_terrain_internal_qsort(terrain_h, low, pi - 1);
-		tg_terrain_internal_qsort(terrain_h, pi + 1, high);
-	}
-}
-
 
 
 tg_terrain_h tg_terrain_create(tg_camera_h focal_point)
@@ -116,13 +123,10 @@ tg_terrain_h tg_terrain_create(tg_camera_h focal_point)
 	terrain_h->material_h = tg_material_create_deferred(terrain_h->vertex_shader_h, terrain_h->fragment_shader_h, 0, TG_NULL);
 
 	terrain_h->next_memory_block_index = 0;
-	memset(terrain_h->p_memory_blocks, 0, TG_TERRAIN_MAX_CHUNK_COUNT * sizeof(*terrain_h->p_memory_blocks)); // TODO: do we need to set this to zero?
-	terrain_h->chunk_count = 0;
-	memset(terrain_h->pp_chunks, 0, TG_TERRAIN_MAX_CHUNK_COUNT * sizeof(*terrain_h->pp_chunks));
+	memset(terrain_h->pp_chunks_hashmap, 0, TG_TERRAIN_MAX_CHUNK_COUNT * sizeof(*terrain_h->pp_chunks_hashmap));
 
 	const v3 fp = tg_camera_get_position(focal_point);
 
-	u8 matid = 0;
 	for (i32 z = -TG_TERRAIN_VIEW_DISTANCE_CHUNKS; z < TG_TERRAIN_VIEW_DISTANCE_CHUNKS + 1; z++)
 	{
 		for (i32 y = -2; y < 3; y++)
@@ -133,6 +137,7 @@ tg_terrain_h tg_terrain_create(tg_camera_h focal_point)
 				p_chunk->x = x;
 				p_chunk->y = y;
 				p_chunk->z = z;
+				tg_terrain_internal_fill_isolevels(x, y, z, &p_chunk->isolevels);
 				p_chunk->lod = tg_terrain_internal_select_lod(&fp, x, y, z);
 				p_chunk->transitions = TG_TRANSVOXEL_TRANSITION_FACES(
 					p_chunk->lod > tg_terrain_internal_select_lod(&fp, x - 1, y, z),
@@ -142,6 +147,7 @@ tg_terrain_h tg_terrain_create(tg_camera_h focal_point)
 					p_chunk->lod > tg_terrain_internal_select_lod(&fp, x, y, z - 1),
 					p_chunk->lod > tg_terrain_internal_select_lod(&fp, x, y, z + 1)
 				);
+				p_chunk->triangle_count = 0;
 
 				TG_ASSERT(tgm_i32_abs(p_chunk->lod - tg_terrain_internal_select_lod(&fp, x - 1, y, z)) <= 1);
 				TG_ASSERT(tgm_i32_abs(p_chunk->lod - tg_terrain_internal_select_lod(&fp, x + 1, y, z)) <= 1);
@@ -151,26 +157,49 @@ tg_terrain_h tg_terrain_create(tg_camera_h focal_point)
 				TG_ASSERT(tgm_i32_abs(p_chunk->lod - tg_terrain_internal_select_lod(&fp, x, y, z + 1)) <= 1);
 
 				p_chunk->entity = tg_entity_create(TG_NULL, terrain_h->material_h);
-				matid++;
-				if (matid == 3)
-				{
-					matid = 0;
-				}
-				terrain_h->pp_chunks[terrain_h->chunk_count++] = p_chunk;
+				p_chunk->isolevels;
+				tg_terrain_internal_set_chunk(terrain_h, x, y, z, p_chunk);
 			}
 		}
 	}
 
-	tg_transvoxel_triangle* p_triangles = TG_MEMORY_ALLOC(5 * 16 * 16 * 16 * sizeof(*p_triangles));
-	tg_transvoxel_isolevels isolevels = { 0 };
-	for (u32 i = 0; i < terrain_h->chunk_count; i++)
+	u32 index = 0;
+	const u64 triangles_size = (TG_MAX_TRIANGLES_PER_CHUNK + TG_MAX_TRIANGLES_FOR_TRANSITIONS) * sizeof(tg_transvoxel_triangle);
+	tg_transvoxel_triangle* p_triangles = TG_MEMORY_ALLOC(triangles_size);
+	for (i32 z = -TG_TERRAIN_VIEW_DISTANCE_CHUNKS; z < TG_TERRAIN_VIEW_DISTANCE_CHUNKS + 1; z++)
 	{
-		tg_terrain_chunk* p_terrain_chunk = terrain_h->pp_chunks[i];
-		tg_terrain_fill_isolevels(p_terrain_chunk->x, p_terrain_chunk->y, p_terrain_chunk->z, &isolevels);
-		p_terrain_chunk->triangle_count = tg_transvoxel_create_chunk(p_terrain_chunk->x, p_terrain_chunk->y, p_terrain_chunk->z, &isolevels, p_terrain_chunk->lod, p_terrain_chunk->transitions, p_triangles);
-		if (p_terrain_chunk->triangle_count)
+		for (i32 y = -2; y < 3; y++)
 		{
-			tg_entity_set_mesh(&p_terrain_chunk->entity, tg_mesh_create(3 * p_terrain_chunk->triangle_count, (v3*)p_triangles, TG_NULL, TG_NULL, TG_NULL, 0, TG_NULL), 0);
+			for (i32 x = -TG_TERRAIN_VIEW_DISTANCE_CHUNKS; x < TG_TERRAIN_VIEW_DISTANCE_CHUNKS + 1; x++)
+			{
+				tg_terrain_chunk* p_terrain_chunk = tg_terrain_internal_get_chunk(terrain_h, x, y, z);
+				
+				TG_ASSERT(p_terrain_chunk);
+
+				const tg_terrain_chunk* pp_neighbouring_chunks[6] = {
+					tg_terrain_internal_get_chunk(terrain_h, x - 1, y    , z    ),
+					tg_terrain_internal_get_chunk(terrain_h, x + 1, y    , z    ),
+					tg_terrain_internal_get_chunk(terrain_h, x    , y - 1, z    ),
+					tg_terrain_internal_get_chunk(terrain_h, x    , y + 1, z    ),
+					tg_terrain_internal_get_chunk(terrain_h, x    , y    , z - 1),
+					tg_terrain_internal_get_chunk(terrain_h, x    , y    , z + 1)
+				};
+
+				const tg_transvoxel_isolevels* pp_neighbouring_isolevels[6] = {
+					pp_neighbouring_chunks[0] ? &pp_neighbouring_chunks[0]->isolevels : TG_NULL,
+					pp_neighbouring_chunks[1] ? &pp_neighbouring_chunks[1]->isolevels : TG_NULL,
+					pp_neighbouring_chunks[2] ? &pp_neighbouring_chunks[2]->isolevels : TG_NULL,
+					pp_neighbouring_chunks[3] ? &pp_neighbouring_chunks[3]->isolevels : TG_NULL,
+					pp_neighbouring_chunks[4] ? &pp_neighbouring_chunks[4]->isolevels : TG_NULL,
+					pp_neighbouring_chunks[5] ? &pp_neighbouring_chunks[5]->isolevels : TG_NULL
+				};
+
+				p_terrain_chunk->triangle_count = tg_transvoxel_create_chunk(p_terrain_chunk->x, p_terrain_chunk->y, p_terrain_chunk->z, &p_terrain_chunk->isolevels, pp_neighbouring_isolevels, p_terrain_chunk->lod, p_terrain_chunk->transitions, p_triangles);
+				if (p_terrain_chunk->triangle_count)
+				{
+					tg_entity_set_mesh(&p_terrain_chunk->entity, tg_mesh_create2(3 * p_terrain_chunk->triangle_count, (tg_vertex_3d*)p_triangles), 0);
+				}
+			}
 		}
 	}
 	TG_MEMORY_FREE(p_triangles);
@@ -183,28 +212,35 @@ void tg_terrain_update(tg_terrain_h terrain_h)
 	TG_ASSERT(terrain_h);
 
 	const v3 focal_point = tg_camera_get_position(terrain_h->focal_point);
-	for (u32 i = 0; i < terrain_h->chunk_count; i++)
+	for (i32 z = -TG_TERRAIN_VIEW_DISTANCE_CHUNKS; z < TG_TERRAIN_VIEW_DISTANCE_CHUNKS + 1; z++)
 	{
-		const u32 x = terrain_h->pp_chunks[i]->x;
-		const u32 y = terrain_h->pp_chunks[i]->y;
-		const u32 z = terrain_h->pp_chunks[i]->z;
-
-		const u8 lod = tg_terrain_internal_select_lod(&focal_point, x, y, z);
-		const u8 transitions = TG_TRANSVOXEL_TRANSITION_FACES(
-			lod > tg_terrain_internal_select_lod(&focal_point, x - 1, y, z),
-			lod > tg_terrain_internal_select_lod(&focal_point, x + 1, y, z),
-			lod > tg_terrain_internal_select_lod(&focal_point, x, y - 1, z),
-			lod > tg_terrain_internal_select_lod(&focal_point, x, y + 1, z),
-			lod > tg_terrain_internal_select_lod(&focal_point, x, y, z - 1),
-			lod > tg_terrain_internal_select_lod(&focal_point, x, y, z + 1)
-		);
-
-		if (terrain_h->pp_chunks[i]->lod != lod || terrain_h->pp_chunks[i]->transitions != transitions)
+		for (i32 y = -2; y < 3; y++)
 		{
-			// TODO: regenerate...
+			for (i32 x = -TG_TERRAIN_VIEW_DISTANCE_CHUNKS; x < TG_TERRAIN_VIEW_DISTANCE_CHUNKS + 1; x++)
+			{
+				const u8 lod = tg_terrain_internal_select_lod(&focal_point, x, y, z);
+				const u8 transitions = TG_TRANSVOXEL_TRANSITION_FACES(
+					lod > tg_terrain_internal_select_lod(&focal_point, x - 1, y, z),
+					lod > tg_terrain_internal_select_lod(&focal_point, x + 1, y, z),
+					lod > tg_terrain_internal_select_lod(&focal_point, x, y - 1, z),
+					lod > tg_terrain_internal_select_lod(&focal_point, x, y + 1, z),
+					lod > tg_terrain_internal_select_lod(&focal_point, x, y, z - 1),
+					lod > tg_terrain_internal_select_lod(&focal_point, x, y, z + 1)
+				);
+
+				tg_terrain_chunk* p_chunk = tg_terrain_internal_get_chunk(terrain_h, x, y, z);
+
+				if (p_chunk)
+				{
+					if (p_chunk->lod != lod || p_chunk->transitions != transitions)
+					{
+						// TODO: regenerate...
+					}
+					p_chunk->lod = lod;
+					p_chunk->transitions = transitions;
+				}
+			}
 		}
-		terrain_h->pp_chunks[i]->lod = lod;
-		terrain_h->pp_chunks[i]->transitions = transitions;
 	}
 }
 

@@ -43,7 +43,7 @@ typedef struct m2
 			f32    m01;
 			f32    m11;
 		};
-		f32        data[4];
+		f32        p_data[4];
 
 #ifdef TG_CPU_x64
 		__m64      simd_m64[2];
@@ -78,7 +78,7 @@ typedef struct m3
 			f32    m12;
 			f32    m22;
 		};
-		f32        data[9];
+		f32        p_data[9];
 
 #ifdef TG_CPU_x64 // TODO: ?
 #endif
@@ -120,7 +120,7 @@ typedef struct m4
 			f32    m23;
 			f32    m33;
 		};
-		f32        data[16];
+		f32        p_data[16];
 
 #ifdef TG_CPU_x64
 		__m64      simd_m64[8];
@@ -141,7 +141,7 @@ typedef struct v2
 			f32    x;
 			f32    y;
 		};
-		f32        data[2];
+		f32        p_data[2];
 
 #ifdef TG_CPU_x64
 		__m64      simd_m64;
@@ -160,7 +160,7 @@ typedef struct v3
 			f32    y;
 			f32    z;
 		};
-		f32        data[3];
+		f32        p_data[3];
 
 #ifdef TG_CPU_x64 // TODO: ?
 #endif
@@ -178,7 +178,7 @@ typedef struct v3i
 			i32    y;
 			i32    z;
 		};
-		i32        data[3];
+		i32        p_data[3];
 	};
 } v3i;
 
@@ -193,7 +193,7 @@ typedef struct v4
 			f32    z;
 			f32    w;
 		};
-		f32        data[4];
+		f32        p_data[4];
 
 #ifdef TG_CPU_x64
 		__m64      simd_m64[2];

@@ -198,6 +198,8 @@ void tg_application_internal_game_3d_create()
     test_deferred.terrain_h = tg_terrain_create(test_deferred.camera_info.camera_h);
     
     /*
+    TODO:
+
     On create:
         Generate isolevels
         for each LOD (each LOD can be created simultaneously, as they use different buffers/buffer-offsets):

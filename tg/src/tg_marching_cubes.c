@@ -317,91 +317,91 @@ u32 tg_marching_cubes_polygonise(const tg_marching_cubes_grid_cell* p_grid_cell,
 		return 0;
 	}
 
-	v3 vertices[12] = { 0 };
+	v3 p_vertices[12] = { 0 };
 	if (marching_cubes_edge_table[cubeindex] & 1)
 	{
 		const u32 i0 = 0;
 		const u32 i1 = 1;
-		vertices[0] = tg_marching_cubes_vertex_interpolate(isolevel, &p_grid_cell->positions[i0], &p_grid_cell->positions[i1], p_grid_cell->values[i0], p_grid_cell->values[i1]);
+		p_vertices[0] = tg_marching_cubes_vertex_interpolate(isolevel, &p_grid_cell->positions[i0], &p_grid_cell->positions[i1], p_grid_cell->values[i0], p_grid_cell->values[i1]);
 	}
 	if (marching_cubes_edge_table[cubeindex] & 2)
 	{
 		const u32 i0 = 1;
 		const u32 i1 = 2;
-		vertices[1] = tg_marching_cubes_vertex_interpolate(isolevel, &p_grid_cell->positions[i0], &p_grid_cell->positions[i1], p_grid_cell->values[i0], p_grid_cell->values[i1]);
+		p_vertices[1] = tg_marching_cubes_vertex_interpolate(isolevel, &p_grid_cell->positions[i0], &p_grid_cell->positions[i1], p_grid_cell->values[i0], p_grid_cell->values[i1]);
 	}
 	if (marching_cubes_edge_table[cubeindex] & 4)
 	{
 		const u32 i0 = 2;
 		const u32 i1 = 3;
-		vertices[2] = tg_marching_cubes_vertex_interpolate(isolevel, &p_grid_cell->positions[i0], &p_grid_cell->positions[i1], p_grid_cell->values[i0], p_grid_cell->values[i1]);
+		p_vertices[2] = tg_marching_cubes_vertex_interpolate(isolevel, &p_grid_cell->positions[i0], &p_grid_cell->positions[i1], p_grid_cell->values[i0], p_grid_cell->values[i1]);
 	}
 	if (marching_cubes_edge_table[cubeindex] & 8)
 	{
 		const u32 i0 = 3;
 		const u32 i1 = 0;
-		vertices[3] = tg_marching_cubes_vertex_interpolate(isolevel, &p_grid_cell->positions[i0], &p_grid_cell->positions[i1], p_grid_cell->values[i0], p_grid_cell->values[i1]);
+		p_vertices[3] = tg_marching_cubes_vertex_interpolate(isolevel, &p_grid_cell->positions[i0], &p_grid_cell->positions[i1], p_grid_cell->values[i0], p_grid_cell->values[i1]);
 	}
 	if (marching_cubes_edge_table[cubeindex] & 16)
 	{
 		const u32 i0 = 4;
 		const u32 i1 = 5;
-		vertices[4] = tg_marching_cubes_vertex_interpolate(isolevel, &p_grid_cell->positions[i0], &p_grid_cell->positions[i1], p_grid_cell->values[i0], p_grid_cell->values[i1]);
+		p_vertices[4] = tg_marching_cubes_vertex_interpolate(isolevel, &p_grid_cell->positions[i0], &p_grid_cell->positions[i1], p_grid_cell->values[i0], p_grid_cell->values[i1]);
 	}
 	if (marching_cubes_edge_table[cubeindex] & 32)
 	{
 		const u32 i0 = 5;
 		const u32 i1 = 6;
-		vertices[5] = tg_marching_cubes_vertex_interpolate(isolevel, &p_grid_cell->positions[i0], &p_grid_cell->positions[i1], p_grid_cell->values[i0], p_grid_cell->values[i1]);
+		p_vertices[5] = tg_marching_cubes_vertex_interpolate(isolevel, &p_grid_cell->positions[i0], &p_grid_cell->positions[i1], p_grid_cell->values[i0], p_grid_cell->values[i1]);
 	}
 	if (marching_cubes_edge_table[cubeindex] & 64)
 	{
 		const u32 i0 = 6;
 		const u32 i1 = 7;
-		vertices[6] = tg_marching_cubes_vertex_interpolate(isolevel, &p_grid_cell->positions[i0], &p_grid_cell->positions[i1], p_grid_cell->values[i0], p_grid_cell->values[i1]);
+		p_vertices[6] = tg_marching_cubes_vertex_interpolate(isolevel, &p_grid_cell->positions[i0], &p_grid_cell->positions[i1], p_grid_cell->values[i0], p_grid_cell->values[i1]);
 	}
 	if (marching_cubes_edge_table[cubeindex] & 128)
 	{
 		const u32 i0 = 7;
 		const u32 i1 = 4;
-		vertices[7] = tg_marching_cubes_vertex_interpolate(isolevel, &p_grid_cell->positions[i0], &p_grid_cell->positions[i1], p_grid_cell->values[i0], p_grid_cell->values[i1]);
+		p_vertices[7] = tg_marching_cubes_vertex_interpolate(isolevel, &p_grid_cell->positions[i0], &p_grid_cell->positions[i1], p_grid_cell->values[i0], p_grid_cell->values[i1]);
 	}
 	if (marching_cubes_edge_table[cubeindex] & 256)
 	{
 		const u32 i0 = 0;
 		const u32 i1 = 4;
-		vertices[8] = tg_marching_cubes_vertex_interpolate(isolevel, &p_grid_cell->positions[i0], &p_grid_cell->positions[i1], p_grid_cell->values[i0], p_grid_cell->values[i1]);
+		p_vertices[8] = tg_marching_cubes_vertex_interpolate(isolevel, &p_grid_cell->positions[i0], &p_grid_cell->positions[i1], p_grid_cell->values[i0], p_grid_cell->values[i1]);
 	}
 	if (marching_cubes_edge_table[cubeindex] & 512)
 	{
 		const u32 i0 = 1;
 		const u32 i1 = 5;
-		vertices[9] = tg_marching_cubes_vertex_interpolate(isolevel, &p_grid_cell->positions[i0], &p_grid_cell->positions[i1], p_grid_cell->values[i0], p_grid_cell->values[i1]);
+		p_vertices[9] = tg_marching_cubes_vertex_interpolate(isolevel, &p_grid_cell->positions[i0], &p_grid_cell->positions[i1], p_grid_cell->values[i0], p_grid_cell->values[i1]);
 	}
 	if (marching_cubes_edge_table[cubeindex] & 1024)
 	{
 		const u32 i0 = 2;
 		const u32 i1 = 6;
-		vertices[10] = tg_marching_cubes_vertex_interpolate(isolevel, &p_grid_cell->positions[i0], &p_grid_cell->positions[i1], p_grid_cell->values[i0], p_grid_cell->values[i1]);
+		p_vertices[10] = tg_marching_cubes_vertex_interpolate(isolevel, &p_grid_cell->positions[i0], &p_grid_cell->positions[i1], p_grid_cell->values[i0], p_grid_cell->values[i1]);
 	}
 	if (marching_cubes_edge_table[cubeindex] & 2048)
 	{
 		const u32 i0 = 3;
 		const u32 i1 = 7;
-		vertices[11] = tg_marching_cubes_vertex_interpolate(isolevel, &p_grid_cell->positions[i0], &p_grid_cell->positions[i1], p_grid_cell->values[i0], p_grid_cell->values[i1]);
+		p_vertices[11] = tg_marching_cubes_vertex_interpolate(isolevel, &p_grid_cell->positions[i0], &p_grid_cell->positions[i1], p_grid_cell->values[i0], p_grid_cell->values[i1]);
 	}
 
 	u32 triangle_count = 0;
 	for (u32 i = 0; marching_cubes_triangle_table[cubeindex][i] != -1; i += 3)
 	{
-        const v3 v0 = vertices[marching_cubes_triangle_table[cubeindex][i]];
-        const v3 v1 = vertices[marching_cubes_triangle_table[cubeindex][i + 1]];
-        const v3 v2 = vertices[marching_cubes_triangle_table[cubeindex][i + 2]];
+        const v3 v0 = p_vertices[marching_cubes_triangle_table[cubeindex][i]];
+        const v3 v1 = p_vertices[marching_cubes_triangle_table[cubeindex][i + 1]];
+        const v3 v2 = p_vertices[marching_cubes_triangle_table[cubeindex][i + 2]];
         if (!tgm_v3_equal(&v0, &v1) && !tgm_v3_equal(&v0, &v2) && !tgm_v3_equal(&v1, &v2))
         {
-		    p_triangles[triangle_count].positions[0] = vertices[marching_cubes_triangle_table[cubeindex][i]];
-		    p_triangles[triangle_count].positions[1] = vertices[marching_cubes_triangle_table[cubeindex][i + 1]];
-		    p_triangles[triangle_count].positions[2] = vertices[marching_cubes_triangle_table[cubeindex][i + 2]];
+		    p_triangles[triangle_count].positions[0] = p_vertices[marching_cubes_triangle_table[cubeindex][i]];
+		    p_triangles[triangle_count].positions[1] = p_vertices[marching_cubes_triangle_table[cubeindex][i + 1]];
+		    p_triangles[triangle_count].positions[2] = p_vertices[marching_cubes_triangle_table[cubeindex][i + 2]];
     		triangle_count++;
         }
 	}
