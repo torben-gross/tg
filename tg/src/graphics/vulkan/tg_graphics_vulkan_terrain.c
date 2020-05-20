@@ -176,22 +176,64 @@ tg_terrain_h tg_terrain_create(tg_camera_h focal_point)
 				
 				TG_ASSERT(p_terrain_chunk);
 
-				const tg_terrain_chunk* pp_neighbouring_chunks[6] = {
+				const tg_terrain_chunk* pp_neighbouring_chunks[26] = {
+					tg_terrain_internal_get_chunk(terrain_h, x - 1, y - 1, z - 1),
+					tg_terrain_internal_get_chunk(terrain_h, x    , y - 1, z - 1),
+					tg_terrain_internal_get_chunk(terrain_h, x + 1, y - 1, z - 1),
+					tg_terrain_internal_get_chunk(terrain_h, x - 1, y    , z - 1),
+					tg_terrain_internal_get_chunk(terrain_h, x    , y    , z - 1),
+					tg_terrain_internal_get_chunk(terrain_h, x + 1, y    , z - 1),
+					tg_terrain_internal_get_chunk(terrain_h, x - 1, y + 1, z - 1),
+					tg_terrain_internal_get_chunk(terrain_h, x    , y + 1, z - 1),
+					tg_terrain_internal_get_chunk(terrain_h, x + 1, y + 1, z - 1),
+					
+					tg_terrain_internal_get_chunk(terrain_h, x - 1, y - 1, z    ),
+					tg_terrain_internal_get_chunk(terrain_h, x    , y - 1, z    ),
+					tg_terrain_internal_get_chunk(terrain_h, x + 1, y - 1, z    ),
 					tg_terrain_internal_get_chunk(terrain_h, x - 1, y    , z    ),
 					tg_terrain_internal_get_chunk(terrain_h, x + 1, y    , z    ),
-					tg_terrain_internal_get_chunk(terrain_h, x    , y - 1, z    ),
+					tg_terrain_internal_get_chunk(terrain_h, x - 1, y + 1, z    ),
 					tg_terrain_internal_get_chunk(terrain_h, x    , y + 1, z    ),
-					tg_terrain_internal_get_chunk(terrain_h, x    , y    , z - 1),
-					tg_terrain_internal_get_chunk(terrain_h, x    , y    , z + 1)
+					tg_terrain_internal_get_chunk(terrain_h, x + 1, y + 1, z    ),
+
+					tg_terrain_internal_get_chunk(terrain_h, x - 1, y - 1, z + 1),
+					tg_terrain_internal_get_chunk(terrain_h, x    , y - 1, z + 1),
+					tg_terrain_internal_get_chunk(terrain_h, x + 1, y - 1, z + 1),
+					tg_terrain_internal_get_chunk(terrain_h, x - 1, y    , z + 1),
+					tg_terrain_internal_get_chunk(terrain_h, x    , y    , z + 1),
+					tg_terrain_internal_get_chunk(terrain_h, x + 1, y    , z + 1),
+					tg_terrain_internal_get_chunk(terrain_h, x - 1, y + 1, z + 1),
+					tg_terrain_internal_get_chunk(terrain_h, x    , y + 1, z + 1),
+					tg_terrain_internal_get_chunk(terrain_h, x + 1, y + 1, z + 1),
 				};
 
-				const tg_transvoxel_isolevels* pp_neighbouring_isolevels[6] = {
-					pp_neighbouring_chunks[0] ? &pp_neighbouring_chunks[0]->isolevels : TG_NULL,
-					pp_neighbouring_chunks[1] ? &pp_neighbouring_chunks[1]->isolevels : TG_NULL,
-					pp_neighbouring_chunks[2] ? &pp_neighbouring_chunks[2]->isolevels : TG_NULL,
-					pp_neighbouring_chunks[3] ? &pp_neighbouring_chunks[3]->isolevels : TG_NULL,
-					pp_neighbouring_chunks[4] ? &pp_neighbouring_chunks[4]->isolevels : TG_NULL,
-					pp_neighbouring_chunks[5] ? &pp_neighbouring_chunks[5]->isolevels : TG_NULL
+				const tg_transvoxel_isolevels* pp_neighbouring_isolevels[26] = {
+					pp_neighbouring_chunks[ 0] ? &pp_neighbouring_chunks[ 0]->isolevels : TG_NULL,
+					pp_neighbouring_chunks[ 1] ? &pp_neighbouring_chunks[ 1]->isolevels : TG_NULL,
+					pp_neighbouring_chunks[ 2] ? &pp_neighbouring_chunks[ 2]->isolevels : TG_NULL,
+					pp_neighbouring_chunks[ 3] ? &pp_neighbouring_chunks[ 3]->isolevels : TG_NULL,
+					pp_neighbouring_chunks[ 4] ? &pp_neighbouring_chunks[ 4]->isolevels : TG_NULL,
+					pp_neighbouring_chunks[ 5] ? &pp_neighbouring_chunks[ 5]->isolevels : TG_NULL,
+					pp_neighbouring_chunks[ 6] ? &pp_neighbouring_chunks[ 6]->isolevels : TG_NULL,
+					pp_neighbouring_chunks[ 7] ? &pp_neighbouring_chunks[ 7]->isolevels : TG_NULL,
+					pp_neighbouring_chunks[ 8] ? &pp_neighbouring_chunks[ 8]->isolevels : TG_NULL,
+					pp_neighbouring_chunks[ 9] ? &pp_neighbouring_chunks[ 9]->isolevels : TG_NULL,
+					pp_neighbouring_chunks[10] ? &pp_neighbouring_chunks[10]->isolevels : TG_NULL,
+					pp_neighbouring_chunks[11] ? &pp_neighbouring_chunks[11]->isolevels : TG_NULL,
+					pp_neighbouring_chunks[12] ? &pp_neighbouring_chunks[12]->isolevels : TG_NULL,
+					pp_neighbouring_chunks[13] ? &pp_neighbouring_chunks[13]->isolevels : TG_NULL,
+					pp_neighbouring_chunks[14] ? &pp_neighbouring_chunks[14]->isolevels : TG_NULL,
+					pp_neighbouring_chunks[15] ? &pp_neighbouring_chunks[15]->isolevels : TG_NULL,
+					pp_neighbouring_chunks[16] ? &pp_neighbouring_chunks[16]->isolevels : TG_NULL,
+					pp_neighbouring_chunks[17] ? &pp_neighbouring_chunks[17]->isolevels : TG_NULL,
+					pp_neighbouring_chunks[18] ? &pp_neighbouring_chunks[18]->isolevels : TG_NULL,
+					pp_neighbouring_chunks[19] ? &pp_neighbouring_chunks[19]->isolevels : TG_NULL,
+					pp_neighbouring_chunks[20] ? &pp_neighbouring_chunks[20]->isolevels : TG_NULL,
+					pp_neighbouring_chunks[21] ? &pp_neighbouring_chunks[21]->isolevels : TG_NULL,
+					pp_neighbouring_chunks[22] ? &pp_neighbouring_chunks[22]->isolevels : TG_NULL,
+					pp_neighbouring_chunks[23] ? &pp_neighbouring_chunks[23]->isolevels : TG_NULL,
+					pp_neighbouring_chunks[24] ? &pp_neighbouring_chunks[24]->isolevels : TG_NULL,
+					pp_neighbouring_chunks[25] ? &pp_neighbouring_chunks[25]->isolevels : TG_NULL
 				};
 
 				p_terrain_chunk->triangle_count = tg_transvoxel_create_chunk(p_terrain_chunk->x, p_terrain_chunk->y, p_terrain_chunk->z, &p_terrain_chunk->isolevels, pp_neighbouring_isolevels, p_terrain_chunk->lod, p_terrain_chunk->transitions, p_triangles);

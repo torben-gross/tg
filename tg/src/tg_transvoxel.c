@@ -7,6 +7,14 @@
 
 
 
+typedef struct tg_transvoxel_cell
+{
+	u32                        triangle_count;
+	tg_transvoxel_triangle*    p_triangles;
+} tg_transvoxel_cell;
+
+
+
 v3 tg_transvoxel_internal_interpolate(const tg_transvoxel_isolevels* p_isolevels, u8 lod, v3i i0, v3i i1, v3 p0, v3 p1)
 {
 	const u8 lodf = 1 << lod;
@@ -443,7 +451,7 @@ u32 tg_transvoxel_internal_create_transition_faces(i32 x, i32 y, i32 z, const tg
 	return triangle_count;
 }
 
-tg_transvoxel_internal_create_cell(i32 x, i32 y, i32 z, i32 cx, i32 cy, i32 cz, const tg_transvoxel_isolevels* p_isolevels, const tg_transvoxel_isolevels** pp_neighbouring_isolevels, u8 lod, u8 transition_faces, tg_transvoxel_triangle* p_triangles)
+tg_transvoxel_internal_create_cell(i32 x, i32 y, i32 z, i32 cx, i32 cy, i32 cz, const tg_transvoxel_isolevels* p_isolevels, u8 lod, u8 transition_faces, tg_transvoxel_triangle* p_triangles)
 {
 	// Figure 3.7. Voxels at the corners of a cell are numbered as shown.
 	//    2 _____________ 3
@@ -478,7 +486,7 @@ tg_transvoxel_internal_create_cell(i32 x, i32 y, i32 z, i32 cx, i32 cy, i32 cz, 
 		((TG_TRANSVOXEL_ISOLEVEL_AT_V3I(*p_isolevels, p_isolevel_indices[4]) >> 3) & 0x10) |
 		((TG_TRANSVOXEL_ISOLEVEL_AT_V3I(*p_isolevels, p_isolevel_indices[5]) >> 2) & 0x20) |
 		((TG_TRANSVOXEL_ISOLEVEL_AT_V3I(*p_isolevels, p_isolevel_indices[6]) >> 1) & 0x40) |
-		((TG_TRANSVOXEL_ISOLEVEL_AT_V3I(*p_isolevels, p_isolevel_indices[7])) & 0x80);
+		((TG_TRANSVOXEL_ISOLEVEL_AT_V3I(*p_isolevels, p_isolevel_indices[7])     ) & 0x80);
 
 	if ((case_code ^ ((TG_TRANSVOXEL_ISOLEVEL_AT_V3I(*p_isolevels, p_isolevel_indices[7]) >> 7) & 0xff)) != 0)
 	{
@@ -578,13 +586,13 @@ tg_transvoxel_internal_create_cell(i32 x, i32 y, i32 z, i32 cx, i32 cy, i32 cz, 
 				}
 				if (transition_face)
 				{
-					const v3 proj0 = tgm_m3_multiply_v3(&mat, &soff0);
-					const v3 proj1 = tgm_m3_multiply_v3(&mat, &soff1);
-					const v3 proj2 = tgm_m3_multiply_v3(&mat, &soff2);
-
-					v0 = tgm_v3_add_v3(&v0, &proj0);
-					v1 = tgm_v3_add_v3(&v1, &proj1);
-					v2 = tgm_v3_add_v3(&v2, &proj2);
+					//const v3 proj0 = tgm_m3_multiply_v3(&mat, &soff0);
+					//const v3 proj1 = tgm_m3_multiply_v3(&mat, &soff1);
+					//const v3 proj2 = tgm_m3_multiply_v3(&mat, &soff2);
+					//
+					//v0 = tgm_v3_add_v3(&v0, &proj0);
+					//v1 = tgm_v3_add_v3(&v1, &proj1);
+					//v2 = tgm_v3_add_v3(&v2, &proj2);
 				}
 
 				p_triangles[triangle_count].p_vertices[0].position = v0;
@@ -602,25 +610,209 @@ tg_transvoxel_internal_create_cell(i32 x, i32 y, i32 z, i32 cx, i32 cy, i32 cz, 
 	return triangle_count;
 }
 
+v3 tg_transvoxel_internal_generate_normal(tg_transvoxel_triangle* p_triangle)
+{
+	v3 result = { 0 };
+
+	const v3 v01 = tgm_v3_subtract_v3(&p_triangle->p_vertices[1].position, &p_triangle->p_vertices[0].position);
+	const v3 v02 = tgm_v3_subtract_v3(&p_triangle->p_vertices[2].position, &p_triangle->p_vertices[0].position);
+	result = tgm_v3_cross(&v01, &v02);
+	result = tgm_v3_normalized(&result);
+
+	return result;
+}
+
 
 
 u32 tg_transvoxel_create_chunk(i32 x, i32 y, i32 z, const tg_transvoxel_isolevels* p_isolevels, const tg_transvoxel_isolevels** pp_neighbouring_isolevels, u8 lod, u8 transition_faces, tg_transvoxel_triangle* p_triangles)
 {
 	TG_ASSERT(p_isolevels && p_triangles);
 
+	const u64 cells_size = 16 * 16 * 16 * sizeof(tg_transvoxel_cell);
+	const u64 temp_triangles_size = 26 * 5 * sizeof(tg_transvoxel_triangle);
+	const u64 temp_cells_size = 26 * sizeof(tg_transvoxel_cell);
+	const u64 total_allocation_size = cells_size + temp_triangles_size + temp_cells_size;
+	void* p_data = TG_MEMORY_ALLOC(total_allocation_size);
+
+	tg_transvoxel_cell* p_cells = p_data;
+
 	u32 triangle_count = 0;// tg_transvoxel_internal_create_transition_faces(x, y, z, p_isolevels, lod, transition_faces, p_triangles);
 	const u8 lodf = 1 << lod;
+	const u8 stride = 16 / lodf;
 
-	for (i8 cz = 0; cz < 16 / lodf; cz++)
+	for (i8 cz = 0; cz < stride; cz++)
 	{
-		for (i8 cy = 0; cy < 16 / lodf; cy++)
+		for (i8 cy = 0; cy < stride; cy++)
 		{
-			for (i8 cx = 0; cx < 16 / lodf; cx++)
+			for (i8 cx = 0; cx < stride; cx++)
 			{
-				triangle_count += tg_transvoxel_internal_create_cell(x, y, z, cx, cy, cz, p_isolevels, pp_neighbouring_isolevels, lod, transition_faces, &p_triangles[triangle_count]);
+				const u32 cell_index = stride * stride * cz + stride * cy + cx;
+				p_cells[cell_index].triangle_count = tg_transvoxel_internal_create_cell(x, y, z, cx, cy, cz, p_isolevels, lod, transition_faces, &p_triangles[triangle_count]);
+				p_cells[cell_index].p_triangles = &p_triangles[triangle_count];
+
+				triangle_count += p_cells[cell_index].triangle_count;
 			}
 		}
 	}
+
+	tg_transvoxel_triangle* p_temp_triangles = (tg_transvoxel_triangle*)&((u8*)p_data)[cells_size];
+	tg_transvoxel_cell* p_temp_cells = (tg_transvoxel_cell*)&((u8*)p_data)[cells_size + temp_triangles_size];
+	for (u8 i = 0; i < 26; i++)
+	{
+		p_temp_cells[i].p_triangles = &p_temp_triangles[5 * i];
+	}
+
+	i32 neighbouring_cell_indices[26] = { 0 };
+	v3i neighbouring_chunk_coordinates[26] = { 0 };
+	v3i neighbouring_cell_coordinates[26] = { 0 };
+
+	for (i8 cz = 0; cz < stride; cz++)
+	{
+		for (i8 cy = 0; cy < stride; cy++)
+		{
+			for (i8 cx = 0; cx < stride; cx++)
+			{
+				const u32 cell_index = stride * stride * cz + stride * cy + cx;
+
+				neighbouring_cell_indices[ 0] = stride * stride * (cz - 1) + stride * (cy - 1) + (cx - 1);
+				neighbouring_cell_indices[ 1] = stride * stride * (cz - 1) + stride * (cy - 1) +  cx     ;
+				neighbouring_cell_indices[ 2] = stride * stride * (cz - 1) + stride * (cy - 1) + (cx + 1);
+				neighbouring_cell_indices[ 3] = stride * stride * (cz - 1) + stride *  cy      + (cx - 1);
+				neighbouring_cell_indices[ 4] = stride * stride * (cz - 1) + stride *  cy      +  cx     ;
+				neighbouring_cell_indices[ 5] = stride * stride * (cz - 1) + stride *  cy      + (cx + 1);
+				neighbouring_cell_indices[ 6] = stride * stride * (cz - 1) + stride * (cy + 1) + (cx - 1);
+				neighbouring_cell_indices[ 7] = stride * stride * (cz - 1) + stride * (cy + 1) +  cx     ;
+				neighbouring_cell_indices[ 8] = stride * stride * (cz - 1) + stride * (cy + 1) + (cx + 1);
+
+				neighbouring_cell_indices[ 9] = stride * stride *  cz      + stride * (cy - 1) + (cx - 1);
+				neighbouring_cell_indices[10] = stride * stride *  cz      + stride * (cy - 1) +  cx     ;
+				neighbouring_cell_indices[11] = stride * stride *  cz      + stride * (cy - 1) + (cx + 1);
+				neighbouring_cell_indices[12] = stride * stride *  cz      + stride *  cy      + (cx - 1);
+				neighbouring_cell_indices[13] = stride * stride *  cz      + stride *  cy      + (cx + 1);
+				neighbouring_cell_indices[14] = stride * stride *  cz      + stride * (cy + 1) + (cx - 1);
+				neighbouring_cell_indices[15] = stride * stride *  cz      + stride * (cy + 1) +  cx     ;
+				neighbouring_cell_indices[16] = stride * stride *  cz      + stride * (cy + 1) + (cx + 1);
+				
+				neighbouring_cell_indices[17] = stride * stride * (cz + 1) + stride * (cy - 1) + (cx - 1);
+				neighbouring_cell_indices[18] = stride * stride * (cz + 1) + stride * (cy - 1) +  cx     ;
+				neighbouring_cell_indices[19] = stride * stride * (cz + 1) + stride * (cy - 1) + (cx + 1);
+				neighbouring_cell_indices[20] = stride * stride * (cz + 1) + stride *  cy      + (cx - 1);
+				neighbouring_cell_indices[21] = stride * stride * (cz + 1) + stride *  cy      +  cx     ;
+				neighbouring_cell_indices[22] = stride * stride * (cz + 1) + stride *  cy      + (cx + 1);
+				neighbouring_cell_indices[23] = stride * stride * (cz + 1) + stride * (cy + 1) + (cx - 1);
+				neighbouring_cell_indices[24] = stride * stride * (cz + 1) + stride * (cy + 1) +  cx     ;
+				neighbouring_cell_indices[25] = stride * stride * (cz + 1) + stride * (cy + 1) + (cx + 1);
+
+				neighbouring_chunk_coordinates[ 0] = (v3i){ x - 1, y - 1, z - 1 };
+				neighbouring_chunk_coordinates[ 1] = (v3i){ x    , y - 1, z - 1 };
+				neighbouring_chunk_coordinates[ 2] = (v3i){ x + 1, y - 1, z - 1 };
+				neighbouring_chunk_coordinates[ 3] = (v3i){ x - 1, y    , z - 1 };
+				neighbouring_chunk_coordinates[ 4] = (v3i){ x    , y    , z - 1 };
+				neighbouring_chunk_coordinates[ 5] = (v3i){ x + 1, y    , z - 1 };
+				neighbouring_chunk_coordinates[ 6] = (v3i){ x - 1, y + 1, z - 1 };
+				neighbouring_chunk_coordinates[ 7] = (v3i){ x    , y + 1, z - 1 };
+				neighbouring_chunk_coordinates[ 8] = (v3i){ x + 1, y + 1, z - 1 };
+
+				neighbouring_chunk_coordinates[ 9] = (v3i){ x - 1, y - 1, z     };
+				neighbouring_chunk_coordinates[10] = (v3i){ x    , y - 1, z     };
+				neighbouring_chunk_coordinates[11] = (v3i){ x + 1, y - 1, z     };
+				neighbouring_chunk_coordinates[12] = (v3i){ x - 1, y    , z     };
+				neighbouring_chunk_coordinates[13] = (v3i){ x + 1, y    , z     };
+				neighbouring_chunk_coordinates[14] = (v3i){ x - 1, y + 1, z     };
+				neighbouring_chunk_coordinates[15] = (v3i){ x    , y + 1, z     };
+				neighbouring_chunk_coordinates[16] = (v3i){ x + 1, y + 1, z     };
+
+				neighbouring_chunk_coordinates[17] = (v3i){ x - 1, y - 1, z + 1 };
+				neighbouring_chunk_coordinates[18] = (v3i){ x    , y - 1, z + 1 };
+				neighbouring_chunk_coordinates[19] = (v3i){ x + 1, y - 1, z + 1 };
+				neighbouring_chunk_coordinates[20] = (v3i){ x - 1, y    , z + 1 };
+				neighbouring_chunk_coordinates[21] = (v3i){ x    , y    , z + 1 };
+				neighbouring_chunk_coordinates[22] = (v3i){ x + 1, y    , z + 1 };
+				neighbouring_chunk_coordinates[23] = (v3i){ x - 1, y + 1, z + 1 };
+				neighbouring_chunk_coordinates[24] = (v3i){ x    , y + 1, z + 1 };
+				neighbouring_chunk_coordinates[25] = (v3i){ x + 1, y + 1, z + 1 };
+
+				neighbouring_cell_coordinates[ 0] = (v3i){ cx     ==    0 ? stride : cx - 1, cy     ==    0 ? stride : cy - 1, cz     ==    0 ? stride : cz - 1 };
+				neighbouring_cell_coordinates[ 1] = (v3i){                           cx    , cy     ==    0 ? stride : cy - 1, cz     ==    0 ? stride : cz - 1 };
+				neighbouring_cell_coordinates[ 2] = (v3i){ cx + 1 == 4096 ?      0 : cx + 1, cy     ==    0 ? stride : cy - 1, cz     ==    0 ? stride : cz - 1 };
+				neighbouring_cell_coordinates[ 3] = (v3i){ cx     ==    0 ? stride : cx - 1,                           cy    , cz     ==    0 ? stride : cz - 1 };
+				neighbouring_cell_coordinates[ 4] = (v3i){                           cx    ,                           cy    , cz     ==    0 ? stride : cz - 1 };
+				neighbouring_cell_coordinates[ 5] = (v3i){ cx + 1 == 4096 ?      0 : cx + 1,                           cy    , cz     ==    0 ? stride : cz - 1 };
+				neighbouring_cell_coordinates[ 6] = (v3i){ cx     ==    0 ? stride : cx - 1, cy + 1 == 4096 ?      0 : cy + 1, cz     ==    0 ? stride : cz - 1 };
+				neighbouring_cell_coordinates[ 7] = (v3i){                           cx    , cy + 1 == 4096 ?      0 : cy + 1, cz     ==    0 ? stride : cz - 1 };
+				neighbouring_cell_coordinates[ 8] = (v3i){ cx + 1 == 4096 ?      0 : cx + 1, cy + 1 == 4096 ?      0 : cy + 1, cz     ==    0 ? stride : cz - 1 };
+
+				neighbouring_cell_coordinates[ 9] = (v3i){ cx     ==    0 ? stride : cx - 1, cy     ==    0 ? stride : cy - 1,                           cz     };
+				neighbouring_cell_coordinates[10] = (v3i){                           cx    , cy     ==    0 ? stride : cy - 1,                           cz     };
+				neighbouring_cell_coordinates[11] = (v3i){ cx + 1 == 4096 ?      0 : cx + 1, cy     ==    0 ? stride : cy - 1,                           cz     };
+				neighbouring_cell_coordinates[12] = (v3i){ cx     ==    0 ? stride : cx - 1,                           cy    ,                           cz     };
+				neighbouring_cell_coordinates[13] = (v3i){ cx + 1 == 4096 ?      0 : cx + 1,                           cy    ,                           cz     };
+				neighbouring_cell_coordinates[14] = (v3i){ cx     ==    0 ? stride : cx - 1, cy + 1 == 4096 ?      0 : cy + 1,                           cz     };
+				neighbouring_cell_coordinates[15] = (v3i){                           cx    , cy + 1 == 4096 ?      0 : cy + 1,                           cz     };
+				neighbouring_cell_coordinates[16] = (v3i){ cx + 1 == 4096 ?      0 : cx + 1, cy + 1 == 4096 ?      0 : cy + 1,                           cz     };
+
+				neighbouring_cell_coordinates[17] = (v3i){ cx     ==    0 ? stride : cx - 1, cy     ==    0 ? stride : cy - 1, cz + 1 == 4096 ?      0 : cz + 1 };
+				neighbouring_cell_coordinates[18] = (v3i){                           cx    , cy     ==    0 ? stride : cy - 1, cz + 1 == 4096 ?      0 : cz + 1 };
+				neighbouring_cell_coordinates[19] = (v3i){ cx + 1 == 4096 ?      0 : cx + 1, cy     ==    0 ? stride : cy - 1, cz + 1 == 4096 ?      0 : cz + 1 };
+				neighbouring_cell_coordinates[20] = (v3i){ cx     ==    0 ? stride : cx - 1,                           cy    , cz + 1 == 4096 ?      0 : cz + 1 };
+				neighbouring_cell_coordinates[21] = (v3i){                           cx    ,                           cy    , cz + 1 == 4096 ?      0 : cz + 1 };
+				neighbouring_cell_coordinates[22] = (v3i){ cx + 1 == 4096 ?      0 : cx + 1,                           cy    , cz + 1 == 4096 ?      0 : cz + 1 };
+				neighbouring_cell_coordinates[23] = (v3i){ cx     ==    0 ? stride : cx - 1, cy + 1 == 4096 ?      0 : cy + 1, cz + 1 == 4096 ?      0 : cz + 1 };
+				neighbouring_cell_coordinates[24] = (v3i){                           cx    , cy + 1 == 4096 ?      0 : cy + 1, cz + 1 == 4096 ?      0 : cz + 1 };
+				neighbouring_cell_coordinates[25] = (v3i){ cx + 1 == 4096 ?      0 : cx + 1, cy + 1 == 4096 ?      0 : cy + 1, cz + 1 == 4096 ?      0 : cz + 1 };
+
+				const tg_transvoxel_cell* pp_neighbouring_cells[26] = { 0 };
+
+				for (u8 i = 0; i < 26; i++)
+				{
+					if (neighbouring_cell_indices[i] >= 0 && neighbouring_cell_indices[i] + 1 < 16 * 16 * 16)
+					{
+						pp_neighbouring_cells[i] = &p_cells[neighbouring_cell_indices[i]];
+					}
+					else if (pp_neighbouring_isolevels[i])
+					{
+						p_temp_cells[i].triangle_count = tg_transvoxel_internal_create_cell(
+							neighbouring_chunk_coordinates[i].x, neighbouring_chunk_coordinates[i].y, neighbouring_chunk_coordinates[i].z,
+							neighbouring_cell_coordinates[i].x, neighbouring_cell_coordinates[i].y, neighbouring_cell_coordinates[i].z,
+							pp_neighbouring_isolevels[i], lod, 0, p_temp_cells[i].p_triangles
+						);
+						pp_neighbouring_cells[i] = &p_temp_cells[i];
+					}
+				}
+
+				for (u32 t = 0; t < p_cells[cell_index].triangle_count; t++)
+				{
+					for (u32 v = 0; v < 3; v++)
+					{
+						v3 normal = tg_transvoxel_internal_generate_normal(&p_cells[cell_index].p_triangles[t]);
+						for (u32 nc = 0; nc < 26; nc++)
+						{
+							if (pp_neighbouring_cells[nc])
+							{
+								for (u32 nct = 0; nct < pp_neighbouring_cells[nc]->triangle_count; nct++)
+								{
+									if (tgm_v3_equal(&p_cells[cell_index].p_triangles[t].p_vertices[v].position, &pp_neighbouring_cells[nc]->p_triangles[nct].p_vertices[0].position) ||
+										tgm_v3_equal(&p_cells[cell_index].p_triangles[t].p_vertices[v].position, &pp_neighbouring_cells[nc]->p_triangles[nct].p_vertices[1].position) ||
+										tgm_v3_equal(&p_cells[cell_index].p_triangles[t].p_vertices[v].position, &pp_neighbouring_cells[nc]->p_triangles[nct].p_vertices[2].position))
+									{
+										const v3 n = tg_transvoxel_internal_generate_normal(&pp_neighbouring_cells[nc]->p_triangles[nct]);
+										normal = tgm_v3_add_v3(&normal, &n);
+									}
+								}
+							}
+						}
+						normal = tgm_v3_normalized(&normal);
+						p_cells[cell_index].p_triangles[t].p_vertices[v].normal = normal;
+					}
+				}
+			}
+		}
+	}
+
+
+	// TODO: now we need some data structure to be able to find the cells. then we need to generate normals and finally move the vertices at transition cells.
+
+	TG_MEMORY_FREE(p_data);
 
 	return triangle_count;
 }
