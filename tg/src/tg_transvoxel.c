@@ -629,8 +629,8 @@ u32 tg_transvoxel_create_chunk(i32 x, i32 y, i32 z, const tg_transvoxel_isolevel
 	TG_ASSERT(p_isolevels && p_triangles);
 
 	const u64 cells_size = 16 * 16 * 16 * sizeof(tg_transvoxel_cell);
-	const u64 temp_triangles_size = 26 * 5 * sizeof(tg_transvoxel_triangle);
-	const u64 temp_cells_size = 26 * sizeof(tg_transvoxel_cell);
+	const u64 temp_triangles_size = 27 * 5 * sizeof(tg_transvoxel_triangle);
+	const u64 temp_cells_size = 27 * sizeof(tg_transvoxel_cell);
 	const u64 total_allocation_size = cells_size + temp_triangles_size + temp_cells_size;
 	void* p_data = TG_MEMORY_ALLOC(total_allocation_size);
 
@@ -657,14 +657,13 @@ u32 tg_transvoxel_create_chunk(i32 x, i32 y, i32 z, const tg_transvoxel_isolevel
 
 	tg_transvoxel_triangle* p_temp_triangles = (tg_transvoxel_triangle*)&((u8*)p_data)[cells_size];
 	tg_transvoxel_cell* p_temp_cells = (tg_transvoxel_cell*)&((u8*)p_data)[cells_size + temp_triangles_size];
-	for (u8 i = 0; i < 26; i++)
+	for (u8 i = 0; i < 27; i++)
 	{
 		p_temp_cells[i].p_triangles = &p_temp_triangles[5 * i];
 	}
 
-	i32 neighbouring_cell_indices[26] = { 0 };
-	v3i neighbouring_chunk_coordinates[26] = { 0 };
-	v3i neighbouring_cell_coordinates[26] = { 0 };
+	v3i p_connecting_chunk_coordinates[27] = { 0 };
+	v3i p_connecting_cell_coordinates[27] = { 0 };
 
 	for (i8 cz = 0; cz < stride; cz++)
 	{
@@ -672,128 +671,64 @@ u32 tg_transvoxel_create_chunk(i32 x, i32 y, i32 z, const tg_transvoxel_isolevel
 		{
 			for (i8 cx = 0; cx < stride; cx++)
 			{
-				const u32 cell_index = stride * stride * cz + stride * cy + cx;
-
-				neighbouring_cell_indices[ 0] = stride * stride * (cz - 1) + stride * (cy - 1) + (cx - 1);
-				neighbouring_cell_indices[ 1] = stride * stride * (cz - 1) + stride * (cy - 1) +  cx     ;
-				neighbouring_cell_indices[ 2] = stride * stride * (cz - 1) + stride * (cy - 1) + (cx + 1);
-				neighbouring_cell_indices[ 3] = stride * stride * (cz - 1) + stride *  cy      + (cx - 1);
-				neighbouring_cell_indices[ 4] = stride * stride * (cz - 1) + stride *  cy      +  cx     ;
-				neighbouring_cell_indices[ 5] = stride * stride * (cz - 1) + stride *  cy      + (cx + 1);
-				neighbouring_cell_indices[ 6] = stride * stride * (cz - 1) + stride * (cy + 1) + (cx - 1);
-				neighbouring_cell_indices[ 7] = stride * stride * (cz - 1) + stride * (cy + 1) +  cx     ;
-				neighbouring_cell_indices[ 8] = stride * stride * (cz - 1) + stride * (cy + 1) + (cx + 1);
-
-				neighbouring_cell_indices[ 9] = stride * stride *  cz      + stride * (cy - 1) + (cx - 1);
-				neighbouring_cell_indices[10] = stride * stride *  cz      + stride * (cy - 1) +  cx     ;
-				neighbouring_cell_indices[11] = stride * stride *  cz      + stride * (cy - 1) + (cx + 1);
-				neighbouring_cell_indices[12] = stride * stride *  cz      + stride *  cy      + (cx - 1);
-				neighbouring_cell_indices[13] = stride * stride *  cz      + stride *  cy      + (cx + 1);
-				neighbouring_cell_indices[14] = stride * stride *  cz      + stride * (cy + 1) + (cx - 1);
-				neighbouring_cell_indices[15] = stride * stride *  cz      + stride * (cy + 1) +  cx     ;
-				neighbouring_cell_indices[16] = stride * stride *  cz      + stride * (cy + 1) + (cx + 1);
-				
-				neighbouring_cell_indices[17] = stride * stride * (cz + 1) + stride * (cy - 1) + (cx - 1);
-				neighbouring_cell_indices[18] = stride * stride * (cz + 1) + stride * (cy - 1) +  cx     ;
-				neighbouring_cell_indices[19] = stride * stride * (cz + 1) + stride * (cy - 1) + (cx + 1);
-				neighbouring_cell_indices[20] = stride * stride * (cz + 1) + stride *  cy      + (cx - 1);
-				neighbouring_cell_indices[21] = stride * stride * (cz + 1) + stride *  cy      +  cx     ;
-				neighbouring_cell_indices[22] = stride * stride * (cz + 1) + stride *  cy      + (cx + 1);
-				neighbouring_cell_indices[23] = stride * stride * (cz + 1) + stride * (cy + 1) + (cx - 1);
-				neighbouring_cell_indices[24] = stride * stride * (cz + 1) + stride * (cy + 1) +  cx     ;
-				neighbouring_cell_indices[25] = stride * stride * (cz + 1) + stride * (cy + 1) + (cx + 1);
-
-				neighbouring_chunk_coordinates[ 0] = (v3i){ x - 1, y - 1, z - 1 };
-				neighbouring_chunk_coordinates[ 1] = (v3i){ x    , y - 1, z - 1 };
-				neighbouring_chunk_coordinates[ 2] = (v3i){ x + 1, y - 1, z - 1 };
-				neighbouring_chunk_coordinates[ 3] = (v3i){ x - 1, y    , z - 1 };
-				neighbouring_chunk_coordinates[ 4] = (v3i){ x    , y    , z - 1 };
-				neighbouring_chunk_coordinates[ 5] = (v3i){ x + 1, y    , z - 1 };
-				neighbouring_chunk_coordinates[ 6] = (v3i){ x - 1, y + 1, z - 1 };
-				neighbouring_chunk_coordinates[ 7] = (v3i){ x    , y + 1, z - 1 };
-				neighbouring_chunk_coordinates[ 8] = (v3i){ x + 1, y + 1, z - 1 };
-
-				neighbouring_chunk_coordinates[ 9] = (v3i){ x - 1, y - 1, z     };
-				neighbouring_chunk_coordinates[10] = (v3i){ x    , y - 1, z     };
-				neighbouring_chunk_coordinates[11] = (v3i){ x + 1, y - 1, z     };
-				neighbouring_chunk_coordinates[12] = (v3i){ x - 1, y    , z     };
-				neighbouring_chunk_coordinates[13] = (v3i){ x + 1, y    , z     };
-				neighbouring_chunk_coordinates[14] = (v3i){ x - 1, y + 1, z     };
-				neighbouring_chunk_coordinates[15] = (v3i){ x    , y + 1, z     };
-				neighbouring_chunk_coordinates[16] = (v3i){ x + 1, y + 1, z     };
-
-				neighbouring_chunk_coordinates[17] = (v3i){ x - 1, y - 1, z + 1 };
-				neighbouring_chunk_coordinates[18] = (v3i){ x    , y - 1, z + 1 };
-				neighbouring_chunk_coordinates[19] = (v3i){ x + 1, y - 1, z + 1 };
-				neighbouring_chunk_coordinates[20] = (v3i){ x - 1, y    , z + 1 };
-				neighbouring_chunk_coordinates[21] = (v3i){ x    , y    , z + 1 };
-				neighbouring_chunk_coordinates[22] = (v3i){ x + 1, y    , z + 1 };
-				neighbouring_chunk_coordinates[23] = (v3i){ x - 1, y + 1, z + 1 };
-				neighbouring_chunk_coordinates[24] = (v3i){ x    , y + 1, z + 1 };
-				neighbouring_chunk_coordinates[25] = (v3i){ x + 1, y + 1, z + 1 };
-
-				neighbouring_cell_coordinates[ 0] = (v3i){ cx     ==    0 ? stride : cx - 1, cy     ==    0 ? stride : cy - 1, cz     ==    0 ? stride : cz - 1 };
-				neighbouring_cell_coordinates[ 1] = (v3i){                           cx    , cy     ==    0 ? stride : cy - 1, cz     ==    0 ? stride : cz - 1 };
-				neighbouring_cell_coordinates[ 2] = (v3i){ cx + 1 == 4096 ?      0 : cx + 1, cy     ==    0 ? stride : cy - 1, cz     ==    0 ? stride : cz - 1 };
-				neighbouring_cell_coordinates[ 3] = (v3i){ cx     ==    0 ? stride : cx - 1,                           cy    , cz     ==    0 ? stride : cz - 1 };
-				neighbouring_cell_coordinates[ 4] = (v3i){                           cx    ,                           cy    , cz     ==    0 ? stride : cz - 1 };
-				neighbouring_cell_coordinates[ 5] = (v3i){ cx + 1 == 4096 ?      0 : cx + 1,                           cy    , cz     ==    0 ? stride : cz - 1 };
-				neighbouring_cell_coordinates[ 6] = (v3i){ cx     ==    0 ? stride : cx - 1, cy + 1 == 4096 ?      0 : cy + 1, cz     ==    0 ? stride : cz - 1 };
-				neighbouring_cell_coordinates[ 7] = (v3i){                           cx    , cy + 1 == 4096 ?      0 : cy + 1, cz     ==    0 ? stride : cz - 1 };
-				neighbouring_cell_coordinates[ 8] = (v3i){ cx + 1 == 4096 ?      0 : cx + 1, cy + 1 == 4096 ?      0 : cy + 1, cz     ==    0 ? stride : cz - 1 };
-
-				neighbouring_cell_coordinates[ 9] = (v3i){ cx     ==    0 ? stride : cx - 1, cy     ==    0 ? stride : cy - 1,                           cz     };
-				neighbouring_cell_coordinates[10] = (v3i){                           cx    , cy     ==    0 ? stride : cy - 1,                           cz     };
-				neighbouring_cell_coordinates[11] = (v3i){ cx + 1 == 4096 ?      0 : cx + 1, cy     ==    0 ? stride : cy - 1,                           cz     };
-				neighbouring_cell_coordinates[12] = (v3i){ cx     ==    0 ? stride : cx - 1,                           cy    ,                           cz     };
-				neighbouring_cell_coordinates[13] = (v3i){ cx + 1 == 4096 ?      0 : cx + 1,                           cy    ,                           cz     };
-				neighbouring_cell_coordinates[14] = (v3i){ cx     ==    0 ? stride : cx - 1, cy + 1 == 4096 ?      0 : cy + 1,                           cz     };
-				neighbouring_cell_coordinates[15] = (v3i){                           cx    , cy + 1 == 4096 ?      0 : cy + 1,                           cz     };
-				neighbouring_cell_coordinates[16] = (v3i){ cx + 1 == 4096 ?      0 : cx + 1, cy + 1 == 4096 ?      0 : cy + 1,                           cz     };
-
-				neighbouring_cell_coordinates[17] = (v3i){ cx     ==    0 ? stride : cx - 1, cy     ==    0 ? stride : cy - 1, cz + 1 == 4096 ?      0 : cz + 1 };
-				neighbouring_cell_coordinates[18] = (v3i){                           cx    , cy     ==    0 ? stride : cy - 1, cz + 1 == 4096 ?      0 : cz + 1 };
-				neighbouring_cell_coordinates[19] = (v3i){ cx + 1 == 4096 ?      0 : cx + 1, cy     ==    0 ? stride : cy - 1, cz + 1 == 4096 ?      0 : cz + 1 };
-				neighbouring_cell_coordinates[20] = (v3i){ cx     ==    0 ? stride : cx - 1,                           cy    , cz + 1 == 4096 ?      0 : cz + 1 };
-				neighbouring_cell_coordinates[21] = (v3i){                           cx    ,                           cy    , cz + 1 == 4096 ?      0 : cz + 1 };
-				neighbouring_cell_coordinates[22] = (v3i){ cx + 1 == 4096 ?      0 : cx + 1,                           cy    , cz + 1 == 4096 ?      0 : cz + 1 };
-				neighbouring_cell_coordinates[23] = (v3i){ cx     ==    0 ? stride : cx - 1, cy + 1 == 4096 ?      0 : cy + 1, cz + 1 == 4096 ?      0 : cz + 1 };
-				neighbouring_cell_coordinates[24] = (v3i){                           cx    , cy + 1 == 4096 ?      0 : cy + 1, cz + 1 == 4096 ?      0 : cz + 1 };
-				neighbouring_cell_coordinates[25] = (v3i){ cx + 1 == 4096 ?      0 : cx + 1, cy + 1 == 4096 ?      0 : cy + 1, cz + 1 == 4096 ?      0 : cz + 1 };
-
-				const tg_transvoxel_cell* pp_neighbouring_cells[26] = { 0 };
-
-				for (u8 i = 0; i < 26; i++)
+				if (x == 0 && y == 0 && z == 0)
 				{
-					if (neighbouring_cell_indices[i] >= 0 && neighbouring_cell_indices[i] + 1 < 16 * 16 * 16)
+					int i = 0;
+				}
+
+				const v3i chunk_coordinates = { x, y, z };
+				const tg_transvoxel_cell* pp_neighbouring_cells[27] = { 0 };
+				for (i8 iz = -1; iz < 2; iz++)
+				{
+					for (i8 iy = -1; iy < 2; iy++)
 					{
-						pp_neighbouring_cells[i] = &p_cells[neighbouring_cell_indices[i]];
-					}
-					else if (pp_neighbouring_isolevels[i])
-					{
-						p_temp_cells[i].triangle_count = tg_transvoxel_internal_create_cell(
-							neighbouring_chunk_coordinates[i].x, neighbouring_chunk_coordinates[i].y, neighbouring_chunk_coordinates[i].z,
-							neighbouring_cell_coordinates[i].x, neighbouring_cell_coordinates[i].y, neighbouring_cell_coordinates[i].z,
-							pp_neighbouring_isolevels[i], lod, 0, p_temp_cells[i].p_triangles
-						);
-						pp_neighbouring_cells[i] = &p_temp_cells[i];
+						for (i8 ix = -1; ix < 2; ix++)
+						{
+							const u8 i = 9 * (iz + 1) + 3 * (iy + 1) + (ix + 1);
+							p_connecting_chunk_coordinates[i] = (v3i){
+								cx + ix == -1 ? x - 1 : (cx + ix == stride ? x + 1 : x),
+								cy + iy == -1 ? y - 1 : (cy + iy == stride ? y + 1 : y),
+								cz + iz == -1 ? z - 1 : (cz + iz == stride ? z + 1 : z)
+							};
+							p_connecting_cell_coordinates[i] = (v3i){
+								cx + ix == -1 ? stride - 1 : (cx + ix == stride ? 0 : cx + ix),
+								cy + iy == -1 ? stride - 1 : (cy + iy == stride ? 0 : cy + iy),
+								cz + iz == -1 ? stride - 1 : (cz + iz == stride ? 0 : cz + iz)
+							};
+
+							if (tgm_v3i_equal(&p_connecting_chunk_coordinates[i], &chunk_coordinates))
+							{
+								const u32 idx = stride * stride * p_connecting_cell_coordinates[i].z + stride * p_connecting_cell_coordinates[i].y + p_connecting_cell_coordinates[i].x;
+								pp_neighbouring_cells[i] = &p_cells[idx];
+							}
+							else if (pp_neighbouring_isolevels[i])
+							{
+								p_temp_cells[i].triangle_count = tg_transvoxel_internal_create_cell(
+									p_connecting_chunk_coordinates[i].x, p_connecting_chunk_coordinates[i].y, p_connecting_chunk_coordinates[i].z,
+									p_connecting_cell_coordinates[i].x, p_connecting_cell_coordinates[i].y, p_connecting_cell_coordinates[i].z,
+									pp_neighbouring_isolevels[i], lod, 0, p_temp_cells[i].p_triangles
+								);
+								pp_neighbouring_cells[i] = &p_temp_cells[i];
+							}
+						}
 					}
 				}
 
+				const u32 cell_index = stride * stride * cz + stride * cy + cx;
 				for (u32 t = 0; t < p_cells[cell_index].triangle_count; t++)
 				{
 					for (u32 v = 0; v < 3; v++)
 					{
-						v3 normal = tg_transvoxel_internal_generate_normal(&p_cells[cell_index].p_triangles[t]);
-						for (u32 nc = 0; nc < 26; nc++)
+						v3 normal = { 0 };
+						for (u32 nc = 0; nc < 27; nc++)
 						{
 							if (pp_neighbouring_cells[nc])
 							{
 								for (u32 nct = 0; nct < pp_neighbouring_cells[nc]->triangle_count; nct++)
 								{
-									if (tgm_v3_equal(&p_cells[cell_index].p_triangles[t].p_vertices[v].position, &pp_neighbouring_cells[nc]->p_triangles[nct].p_vertices[0].position) ||
-										tgm_v3_equal(&p_cells[cell_index].p_triangles[t].p_vertices[v].position, &pp_neighbouring_cells[nc]->p_triangles[nct].p_vertices[1].position) ||
-										tgm_v3_equal(&p_cells[cell_index].p_triangles[t].p_vertices[v].position, &pp_neighbouring_cells[nc]->p_triangles[nct].p_vertices[2].position))
+									if (tgm_v3_similar(&p_cells[cell_index].p_triangles[t].p_vertices[v].position, &pp_neighbouring_cells[nc]->p_triangles[nct].p_vertices[0].position, 0.0f) ||
+										tgm_v3_similar(&p_cells[cell_index].p_triangles[t].p_vertices[v].position, &pp_neighbouring_cells[nc]->p_triangles[nct].p_vertices[1].position, 0.0f) ||
+										tgm_v3_similar(&p_cells[cell_index].p_triangles[t].p_vertices[v].position, &pp_neighbouring_cells[nc]->p_triangles[nct].p_vertices[2].position, 0.0f))
 									{
 										const v3 n = tg_transvoxel_internal_generate_normal(&pp_neighbouring_cells[nc]->p_triangles[nct]);
 										normal = tgm_v3_add_v3(&normal, &n);
@@ -803,14 +738,12 @@ u32 tg_transvoxel_create_chunk(i32 x, i32 y, i32 z, const tg_transvoxel_isolevel
 						}
 						normal = tgm_v3_normalized(&normal);
 						p_cells[cell_index].p_triangles[t].p_vertices[v].normal = normal;
+						// TODO: instead of setting these normals, move the vertex on edge!
 					}
 				}
 			}
 		}
 	}
-
-
-	// TODO: now we need some data structure to be able to find the cells. then we need to generate normals and finally move the vertices at transition cells.
 
 	TG_MEMORY_FREE(p_data);
 

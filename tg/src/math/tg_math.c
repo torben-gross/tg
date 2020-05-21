@@ -958,6 +958,17 @@ v3 tgm_v3_normalized(const v3* p_v)
 	return result;
 }
 
+b32 tgm_v3_similar(const v3* p_v0, const v3* p_v1, f32 epsilon)
+{
+	TG_ASSERT(p_v0 && p_v1);
+
+	const v3 v01 = tgm_v3_subtract_v3(p_v1, p_v0);
+	const f32 mag_sqr = tgm_v3_magnitude_squared(&v01);
+	const b32 result = mag_sqr <= epsilon * epsilon;
+
+	return result;
+}
+
 v3 tgm_v3_subtract_v3(const v3* p_v0, const v3* p_v1)
 {
 	TG_ASSERT(p_v0 && p_v1);
@@ -995,6 +1006,16 @@ v4 tgm_v3_to_v4(const v3* p_v, f32 w)
 	result.z = p_v->z;
 	result.w = w;
 
+	return result;
+}
+
+
+
+b32 tgm_v3i_equal(const v3i* p_v0, const v3i* p_v1)
+{
+	TG_ASSERT(p_v0 && p_v1);
+
+	const b32 result = p_v0->x == p_v1->x && p_v0->y == p_v1->y && p_v0->z == p_v1->z;
 	return result;
 }
 

@@ -321,9 +321,12 @@ v3     tgm_v3_multiply_v3(const v3* p_v0, const v3* p_v1);
 v3     tgm_v3_multiply_f(const v3* p_v, f32 f);
 v3     tgm_v3_negated(const v3* p_v);
 v3     tgm_v3_normalized(const v3* p_v);
+b32    tgm_v3_similar(const v3* p_v0, const v3* p_v1, f32 epsilon);
 v3     tgm_v3_subtract_v3(const v3* p_v0, const v3* p_v1);
 v3     tgm_v3_subtract_f(const v3* p_v, f32 f);
 v4     tgm_v3_to_v4(const v3* p_v, f32 w);
+
+b32    tgm_v3i_equal(const v3i* p_v0, const v3i* p_v1);
 
 v4     tgm_v4_add_v4(const v4* p_v0, const v4* p_v1);
 v4     tgm_v4_add_f(const v4* p_v, f32 f);
