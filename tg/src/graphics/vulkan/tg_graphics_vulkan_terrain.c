@@ -77,7 +77,7 @@ void tg_terrain_internal_fill_isolevels(i32 x, i32 y, i32 z, tg_transvoxel_isole
 
 				const f32 n_hills0 = tgm_noise(base_x * 0.008f, 0.0f, base_z * 0.008f);
 				const f32 n_hills1 = tgm_noise(base_x * 0.2f, 0.0f, base_z * 0.2f);
-				const f32 n_hills = n_hills0;// +0.01f * n_hills1;
+				const f32 n_hills = n_hills0 + 0.01f * n_hills1;
 
 				const f32 s_caves = 0.06f;
 				const f32 n_caves = tgm_f32_clamp(tgm_noise(s_caves * base_x, s_caves * base_y, s_caves * base_z), -1.0f, 0.0f);
@@ -190,7 +190,6 @@ tg_terrain_h tg_terrain_create(tg_camera_h focal_point)
 						}
 					}
 				}
-
 				p_terrain_chunk->triangle_count = tg_transvoxel_create_chunk(p_terrain_chunk->x, p_terrain_chunk->y, p_terrain_chunk->z, &p_terrain_chunk->isolevels, pp_connecting_isolevels, p_terrain_chunk->lod, p_terrain_chunk->transitions, p_triangles);
 				if (p_terrain_chunk->triangle_count)
 				{
