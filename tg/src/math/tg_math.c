@@ -754,6 +754,19 @@ v2 tgm_v2_subtract_v2(const v2* p_v0, const v2* p_v1)
 
 
 
+v3 tgm_v3_abs(const v3* p_v)
+{
+	TG_ASSERT(p_v);
+
+	v3 result = { 0 };
+
+	result.x = p_v->x < 0 ? -p_v->x : p_v->x;
+	result.y = p_v->y < 0 ? -p_v->y : p_v->y;
+	result.z = p_v->z < 0 ? -p_v->z : p_v->z;
+
+	return result;
+}
+
 v3 tgm_v3_add_v3(const v3* p_v0, const v3* p_v1)
 {
 	TG_ASSERT(p_v0 && p_v1);

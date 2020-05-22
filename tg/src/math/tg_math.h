@@ -304,6 +304,7 @@ v2     tgm_v2_max(const v2* p_v0, const v2* p_v1);
 v2     tgm_v2_min(const v2* p_v0, const v2* p_v1);
 v2     tgm_v2_subtract_v2(const v2* p_v0, const v2* p_v1);
 
+v3     tgm_v3_abs(const v3* p_v);
 v3     tgm_v3_add_v3(const v3* p_v0, const v3* p_v1);
 v3     tgm_v3_add_f(const v3* p_v, f32 f);
 v3     tgm_v3_clamp(const v3* p_v, const v3* p_min, const v3* p_max);
