@@ -8,14 +8,21 @@
 #endif
 
 #ifdef TG_DEBUG
-#define    TG_MEMORY_ALLOC(size)                tg_memory_alloc_impl((size), __FILE__, __LINE__)
-#define    TG_MEMORY_REALLOC(p_memory, size)    tg_memory_realloc_impl((p_memory), (size), __FILE__, __LINE__);
-#define    TG_MEMORY_FREE(p_memory)             tg_memory_free_impl((p_memory), __FILE__, __LINE__)
+
+#define    TG_MEMORY_ALLOC(size)                tg_memory_alloc_impl(size, __FILE__, __LINE__)
+#define    TG_MEMORY_REALLOC(p_memory, size)    tg_memory_realloc_impl(p_memory, size, __FILE__, __LINE__)
+#define    TG_MEMORY_FREE(p_memory)             tg_memory_free_impl(p_memory, __FILE__, __LINE__)
+
 #else
+
 #define    TG_MEMORY_ALLOC(size)                malloc((size_t)size)
 #define    TG_MEMORY_REALLOC(p_memory, size)    realloc(p_memory, (size_t)size);
 #define    TG_MEMORY_FREE(p_memory)             free(p_memory);
+
 #endif
+
+#define    TG_MEMORY_STACK_ALLOC(size)          tg_memory_stack_alloc(size);
+#define    TG_MEMORY_STACK_FREE(size)           tg_memory_stack_free(size);
 
 
 
@@ -34,12 +41,21 @@ typedef struct tg_memory_allocation
 void       tg_memory_init();
 void       tg_memory_shutdown();
 
+
+
 #ifdef TG_DEBUG
+
 void*      tg_memory_alloc_impl(u64 size, const char* p_filename, u32 line);
 void*      tg_memory_realloc_impl(void* p_memory, u64 size, const char* p_filename, u32 line);
 void       tg_memory_free_impl(void* p_memory, const char* p_filename, u32 line);
 u32        tg_memory_unfreed_allocation_count();
 tg_list    tg_memory_create_unfreed_allocations_list();
+
 #endif
+
+
+
+void*      tg_memory_stack_alloc(u64 size);
+void       tg_memory_stack_free(u64 size);
 
 #endif

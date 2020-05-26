@@ -26,7 +26,7 @@ tg_terrain_chunk* tg_terrain_internal_get_chunk(tg_terrain_h terrain_h, i32 x, i
 
 	while (p_chunk->x != x || p_chunk->y != y || p_chunk->z != z)
 	{
-		hash_index = hash_index + 1 == TG_TERRAIN_HASHMAP_COUNT ? 0 : hash_index++;
+		hash_index = hash_index + 1 == TG_TERRAIN_HASHMAP_COUNT ? 0 : ++hash_index;
 		p_chunk = terrain_h->pp_chunks_hashmap[hash_index];
 
 		if (!p_chunk || hash_index == original_hashed_index)
@@ -47,7 +47,7 @@ b32 tg_terrain_internal_set_chunk(tg_terrain_h terrain_h, i32 x, i32 y, i32 z, t
 		u32 hash_index = TG_TERRAIN_HASH(x, y, z);
 		while (terrain_h->pp_chunks_hashmap[hash_index])
 		{
-			hash_index = hash_index + 1 == TG_TERRAIN_HASHMAP_COUNT ? 0 : hash_index++;
+			hash_index = hash_index + 1 == TG_TERRAIN_HASHMAP_COUNT ? 0 : ++hash_index;
 		}
 		terrain_h->pp_chunks_hashmap[hash_index] = p_chunk;
 		terrain_h->chunk_count++;
@@ -84,7 +84,7 @@ void tg_terrain_internal_fill_isolevels(i32 x, i32 y, i32 z, tg_transvoxel_isole
 
 				const f32 n = n_hills;
 				f32 noise = (n * 64.0f) - ((f32)cy + (f32)y * 16.0f);
-				//noise += 5.0f * n_caves;
+				noise += 15.0f * n_caves;
 				const f32 noise_clamped = tgm_f32_clamp(noise, -1.0f, 1.0f);
 				const f32 f0 = (noise_clamped + 1.0f) * 0.5f;
 				const f32 f1 = 254.0f * f0;
@@ -107,7 +107,7 @@ u8 tg_terrain_internal_select_lod(const v3* p_focal_point, i32 x, i32 y, i32 z)
 {
 	const v3 v = { p_focal_point->x - (f32)x, p_focal_point->y - (f32)y, p_focal_point->z - (f32)z };
 	const f32 d = tgm_v3_magnitude_squared(&v);
-	const u8 lod = (u8)tgm_u64_min((u64)(d / 8.0f), 4);
+	const u8 lod = (u8)tgm_u64_min((u64)(d / 8.0f), 3);
 	return lod;
 }
 
@@ -165,7 +165,7 @@ tg_terrain_h tg_terrain_create(tg_camera_h focal_point)
 
 	u32 index = 0;
 	const u64 triangles_size = (TG_MAX_TRIANGLES_PER_CHUNK + TG_MAX_TRIANGLES_FOR_TRANSITIONS) * sizeof(tg_transvoxel_triangle);
-	tg_transvoxel_triangle* p_triangles = TG_MEMORY_ALLOC(triangles_size);
+	tg_transvoxel_triangle* p_triangles = TG_MEMORY_STACK_ALLOC(triangles_size);
 	for (i32 z = -TG_TERRAIN_VIEW_DISTANCE_CHUNKS; z < TG_TERRAIN_VIEW_DISTANCE_CHUNKS + 1; z++)
 	{
 		for (i32 y = -2; y < 3; y++)
@@ -198,7 +198,7 @@ tg_terrain_h tg_terrain_create(tg_camera_h focal_point)
 			}
 		}
 	}
-	TG_MEMORY_FREE(p_triangles);
+	TG_MEMORY_STACK_FREE(triangles_size);
 
 	return terrain_h;
 }
