@@ -12,8 +12,8 @@
 
 
 
-#define TG_CELL_GET_VERTEX_COUNT(cell)      (cell).geometry_counts >> 4
-#define TG_CELL_GET_TRIANGLE_COUNT(cell)    (cell).geometry_counts & 0x0f
+#define TG_TRANSVOXEL_CELL_GET_VERTEX_COUNT(cell)      (cell).geometry_counts >> 4
+#define TG_TRANSVOXEL_CELL_GET_TRIANGLE_COUNT(cell)    (cell).geometry_counts & 0x0f
 
 
 
