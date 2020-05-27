@@ -7,11 +7,32 @@
 
 
 
-#define TG_TRANSVOXEL_ISOLEVEL_AT(isolevels, x, y, z)                               ((isolevels).p_data[17 * 17 * (i8)(z) + 17 * (i8)(y) + (i8)(x)])
-#define TG_TRANSVOXEL_ISOLEVEL_AT_V3I(isolevels, v)                                 (TG_TRANSVOXEL_ISOLEVEL_AT(isolevels, (v).x, (v).y, (v).z))
-#define TG_TRANSVOXEL_TRANSITION_FACES(x_neg, x_pos, y_neg, y_pos, z_neg, z_pos)    ((x_neg) << 0 | (x_pos) << 1 | (y_neg) << 2 | (y_pos) << 3 | (z_neg) << 4 | (z_pos) << 5)
-#define TG_TRANSVOXEL_MAX_TRIANGLES_PER_TRANSITION_CELL                             0xc
-#define TG_TRANSVOXEL_MAX_TRIANGLES_PER_REGULAR_CELL                                0x5
+#define TG_TRANSVOXEL_VERTICES_X 17
+#define TG_TRANSVOXEL_VERTICES_Y 17
+#define TG_TRANSVOXEL_VERTICES_Z 17
+
+#define TG_TRANSVOXEL_CELLS_X (TG_TRANSVOXEL_VERTICES_X - 1)
+#define TG_TRANSVOXEL_CELLS_Y (TG_TRANSVOXEL_VERTICES_Y - 1)
+#define TG_TRANSVOXEL_CELLS_Z (TG_TRANSVOXEL_VERTICES_Z - 1)
+
+#define TG_TRANSVOXEL_ISOLEVEL_AT(isolevels, x, y, z) ((isolevels).p_data[TG_TRANSVOXEL_VERTICES_X * TG_TRANSVOXEL_VERTICES_Y * (i8)(z) + TG_TRANSVOXEL_VERTICES_X * (i8)(y) + (i8)(x)])
+#define TG_TRANSVOXEL_ISOLEVEL_AT_V3I(isolevels, v) (TG_TRANSVOXEL_ISOLEVEL_AT(isolevels, (v).x, (v).y, (v).z))
+#define TG_TRANSVOXEL_TRANSITION_FACES(x_neg, x_pos, y_neg, y_pos, z_neg, z_pos) ((x_neg) << 0 | (x_pos) << 1 | (y_neg) << 2 | (y_pos) << 3 | (z_neg) << 4 | (z_pos) << 5)
+
+#define TG_TRANSVOXEL_REGULAR_CELL_MAX_TRIANGLES 0x5
+#define TG_TRANSVOXEL_REGULAR_CHUNK_CELL_COUNT (TG_TRANSVOXEL_CELLS_X * TG_TRANSVOXEL_CELLS_Y * TG_TRANSVOXEL_CELLS_Z)
+#define TG_TRANSVOXEL_REGULAR_CHUNK_MAX_TRIANGLES (TG_TRANSVOXEL_REGULAR_CHUNK_CELL_COUNT * TG_TRANSVOXEL_REGULAR_CELL_MAX_TRIANGLES)
+
+#define TG_TRANSVOXEL_TRANSITION_CELL_MAX_TRIANGLES 0xc
+#define TG_TRANSVOXEL_TRANSITION_X_CELL_COUNT (TG_TRANSVOXEL_CELLS_Y * TG_TRANSVOXEL_CELLS_Z)
+#define TG_TRANSVOXEL_TRANSITION_Y_CELL_COUNT (TG_TRANSVOXEL_CELLS_X * TG_TRANSVOXEL_CELLS_Z)
+#define TG_TRANSVOXEL_TRANSITION_Z_CELL_COUNT (TG_TRANSVOXEL_CELLS_X * TG_TRANSVOXEL_CELLS_Y)
+#define TG_TRANSVOXEL_TRANSITIONS_CELL_COUNT (2 * (TG_TRANSVOXEL_TRANSITION_X_CELL_COUNT + TG_TRANSVOXEL_TRANSITION_Y_CELL_COUNT + TG_TRANSVOXEL_TRANSITION_Z_CELL_COUNT))
+#define TG_TRANSVOXEL_TRANSITIONS_MAX_TRIANGLES (TG_TRANSVOXEL_TRANSITIONS_CELL_COUNT * TG_TRANSVOXEL_TRANSITION_CELL_MAX_TRIANGLES)
+
+#define TG_TRANSVOXEL_CHUNK_MAX_TRIANGLES (TG_TRANSVOXEL_REGULAR_CHUNK_MAX_TRIANGLES + TG_TRANSVOXEL_TRANSITIONS_MAX_TRIANGLES)
+
+#define TG_TRANSVOXEL_REGULAR_CELL_AT(chunk, cx, cy, cz) ((chunk).p_regular_cells[(TG_TRANSVOXEL_CELLS_X / (1 << (chunk).lod)) * (TG_TRANSVOXEL_CELLS_Y / (1 << (chunk).lod)) * (cz) + (TG_TRANSVOXEL_CELLS_X / (1 << (chunk).lod)) * (cy) + (cx)])
 
 
 
@@ -25,9 +46,11 @@ typedef enum tg_transvoxel_face
 	TG_TRANSVOXEL_FACE_Z_POS = (1 << 5)
 } tg_transvoxel_face;
 
+
+
 typedef struct tg_transvoxel_isolevels
 {
-	i8    p_data[4913]; // 17^3
+	i8    p_data[TG_TRANSVOXEL_VERTICES_X * TG_TRANSVOXEL_VERTICES_Y * TG_TRANSVOXEL_VERTICES_Z];
 } tg_transvoxel_isolevels;
 
 typedef struct tg_transvoxel_triangle
@@ -35,8 +58,87 @@ typedef struct tg_transvoxel_triangle
 	tg_vertex_3d    p_vertices[3];
 } tg_transvoxel_triangle;
 
+typedef struct tg_transvoxel_regular_cell
+{
+	u32                        triangle_count;
+	tg_transvoxel_triangle*    p_triangles;
+} tg_transvoxel_regular_cell;
 
-// TODO: these currently do not scale transition cells, which results in straight edges in some locations
-u32     tg_transvoxel_create_chunk(i32 x, i32 y, i32 z, const tg_transvoxel_isolevels* p_isolevels, const tg_transvoxel_isolevels** pp_connecting_isolevels, u8 lod, u8 transition_faces, tg_transvoxel_triangle* p_triangles);
+typedef struct tg_transvoxel_transition_cell
+{
+	u16                        low_res_vertex_bitmap;
+	u32                        triangle_count;
+	tg_transvoxel_triangle*    p_triangles;
+} tg_transvoxel_transition_cell;
+
+typedef struct tg_transvoxel_chunk
+{
+	v3i                              coordinates;
+	u8                               lod;
+	tg_transvoxel_isolevels          isolevels;
+	u8                               transition_faces_bitmap;
+	u32                              triangle_count;
+	tg_transvoxel_triangle*          p_triangles;
+
+	tg_transvoxel_regular_cell       p_regular_cells[TG_TRANSVOXEL_REGULAR_CHUNK_CELL_COUNT];
+
+	tg_transvoxel_transition_cell    p_transition_cells_x_neg[TG_TRANSVOXEL_TRANSITION_X_CELL_COUNT];
+	tg_transvoxel_transition_cell    p_transition_cells_x_pos[TG_TRANSVOXEL_TRANSITION_X_CELL_COUNT];
+	tg_transvoxel_transition_cell    p_transition_cells_y_neg[TG_TRANSVOXEL_TRANSITION_Y_CELL_COUNT];
+	tg_transvoxel_transition_cell    p_transition_cells_y_pos[TG_TRANSVOXEL_TRANSITION_Y_CELL_COUNT];
+	tg_transvoxel_transition_cell    p_transition_cells_z_neg[TG_TRANSVOXEL_TRANSITION_Z_CELL_COUNT];
+	tg_transvoxel_transition_cell    p_transition_cells_z_pos[TG_TRANSVOXEL_TRANSITION_Z_CELL_COUNT];
+} tg_transvoxel_chunk;
+
+typedef struct tg_transvoxel_connecting_chunks
+{
+	union
+	{
+		tg_transvoxel_chunk*            pp_chunks[27];
+		struct
+		{
+			tg_transvoxel_chunk*        p_xneg_yneg_zneg;
+			tg_transvoxel_chunk*        p_xneu_yneg_zneg;
+			tg_transvoxel_chunk*        p_xpos_yneg_zneg;
+			tg_transvoxel_chunk*        p_xneg_yneu_zneg;
+			tg_transvoxel_chunk*        p_xneu_yneu_zneg;
+			tg_transvoxel_chunk*        p_xpos_yneu_zneg;
+			tg_transvoxel_chunk*        p_xneg_ypos_zneg;
+			tg_transvoxel_chunk*        p_xneu_ypos_zneg;
+			tg_transvoxel_chunk*        p_xpos_ypos_zneg;
+			
+			tg_transvoxel_chunk*        p_xneg_yneg_zneu;
+			tg_transvoxel_chunk*        p_xneu_yneg_zneu;
+			tg_transvoxel_chunk*        p_xpos_yneg_zneu;
+			tg_transvoxel_chunk*        p_xneg_yneu_zneu;
+
+			union
+			{
+				tg_transvoxel_chunk*    p_xneu_yneu_zneu;
+				tg_transvoxel_chunk*    p_central_chunk;
+			};
+
+			tg_transvoxel_chunk*        p_xpos_yneu_zneu;
+			tg_transvoxel_chunk*        p_xneg_ypos_zneu;
+			tg_transvoxel_chunk*        p_xneu_ypos_zneu;
+			tg_transvoxel_chunk*        p_xpos_ypos_zneu;
+			
+			tg_transvoxel_chunk*        p_xneg_yneg_zpos;
+			tg_transvoxel_chunk*        p_xneu_yneg_zpos;
+			tg_transvoxel_chunk*        p_xpos_yneg_zpos;
+			tg_transvoxel_chunk*        p_xneg_yneu_zpos;
+			tg_transvoxel_chunk*        p_xneu_yneu_zpos;
+			tg_transvoxel_chunk*        p_xpos_yneu_zpos;
+			tg_transvoxel_chunk*        p_xneg_ypos_zpos;
+			tg_transvoxel_chunk*        p_xneu_ypos_zpos;
+			tg_transvoxel_chunk*        p_xpos_ypos_zpos;
+		};
+	};
+} tg_transvoxel_connecting_chunks;
+
+
+
+void     tg_transvoxel_fill_chunk(tg_transvoxel_chunk* p_chunk);
+void     tg_transvoxel_fill_transitions(tg_transvoxel_connecting_chunks* p_connecting_chunks);
 
 #endif

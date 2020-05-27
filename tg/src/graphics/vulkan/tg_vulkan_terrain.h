@@ -16,21 +16,12 @@
 #define TG_TERRAIN_HASHMAP_COUNT                  65536
 #define TG_TERRAIN_CHUNK_CENTER(terrain_chunk)    ((v3){ 16.0f * (f32)(terrain_chunk).x + 8.0f, 16.0f * (f32)(terrain_chunk).y + 8.0f, 16.0f * (f32)(terrain_chunk).z + 8.0f })
 
-#define TG_MAX_TRIANGLES_PER_CHUNK                ((TG_TRANSVOXEL_MAX_TRIANGLES_PER_REGULAR_CELL) * 16 * 16 * 16)
-#define TG_MAX_TRIANGLES_FOR_TRANSITIONS          ((TG_TRANSVOXEL_MAX_TRIANGLES_PER_TRANSITION_CELL) * 6 * 8 * 8)
-
 
 
 typedef struct tg_terrain_chunk
 {
-	i32                        x;
-	i32                        y;
-	i32                        z;
-	tg_transvoxel_isolevels    isolevels;
-	u8                         lod;
-	u8                         transitions;
-	u32                        triangle_count;
-	tg_entity                  entity;
+	tg_transvoxel_chunk*   p_transvoxel_chunk;
+	tg_entity              entity;
 } tg_terrain_chunk;
 
 typedef struct tg_terrain

@@ -604,7 +604,7 @@ void tg_camera_capture_terrain(tg_camera_h camera_h, tg_terrain_h terrain_h)
 
     for (u32 i = 0; i < TG_TERRAIN_HASHMAP_COUNT; i++) // TODO: do not run through entire hashmap, but rather search in area around camera for chunks!
     {
-        if (terrain_h->pp_chunks_hashmap[i] && terrain_h->pp_chunks_hashmap[i]->triangle_count)
+        if (terrain_h->pp_chunks_hashmap[i] && terrain_h->pp_chunks_hashmap[i]->p_transvoxel_chunk->triangle_count)
         {
             tg_camera_capture(camera_h, terrain_h->pp_chunks_hashmap[i]->entity.graphics_data_ptr_h);
         }
