@@ -2,7 +2,7 @@
 
 #ifdef TG_VULKAN
 
-#include "graphics/tg_graphics_image_loader.h"
+#include "graphics/tg_image_loader.h"
 #include "memory/tg_memory.h"
 
 tg_color_image_h tg_color_image_load(const char* p_filename)

@@ -17,7 +17,8 @@ tg_material_h tg_material_internal_create(tg_vulkan_material_type vulkan_materia
 
     if (handle_count != 0)
     {
-        VkDescriptorSetLayoutBinding* p_descriptor_set_layout_bindings = TG_MEMORY_ALLOC(handle_count * sizeof(*p_descriptor_set_layout_bindings));
+        const u64 descriptor_set_layout_bindings_size = handle_count * sizeof(VkDescriptorSetLayoutBinding);
+        VkDescriptorSetLayoutBinding* p_descriptor_set_layout_bindings = TG_MEMORY_STACK_ALLOC(descriptor_set_layout_bindings_size);
         for (u32 i = 0; i < handle_count; i++)
         {
             p_descriptor_set_layout_bindings[i].binding = i;
@@ -27,7 +28,7 @@ tg_material_h tg_material_internal_create(tg_vulkan_material_type vulkan_materia
             p_descriptor_set_layout_bindings[i].pImmutableSamplers = TG_NULL;
         }
         material_h->descriptor = tg_vulkan_descriptor_create(handle_count, p_descriptor_set_layout_bindings);
-        TG_MEMORY_FREE(p_descriptor_set_layout_bindings);
+        TG_MEMORY_STACK_FREE(descriptor_set_layout_bindings_size);
 
         for (u32 i = 0; i < handle_count; i++)
         {

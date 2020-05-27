@@ -106,7 +106,7 @@ void tg_memory_free_impl(void* p_memory, const char* p_filename, u32 line)
 	if (recording_allocations)
 	{
 		recording_allocations = TG_FALSE;
-		tg_hashmap_try_remove(&memory_allocations, &p_memory);
+		tg_hashmap_remove(&memory_allocations, &p_memory);
 		recording_allocations = TG_TRUE;
 	}
 
@@ -141,7 +141,7 @@ void* tg_memory_stack_alloc(u64 size)
 
 void tg_memory_stack_free(u64 size)
 {
-	TG_ASSERT(size);
+	TG_ASSERT(size && memory_stack.exhausted_size >= size);
 
 	memory_stack.exhausted_size -= size;
 }

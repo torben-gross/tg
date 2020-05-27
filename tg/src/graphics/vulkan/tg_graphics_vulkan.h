@@ -5,7 +5,7 @@
 
 #ifdef TG_VULKAN
 
-#include "graphics/vulkan/tg_graphics_vulkan_memory_allocator.h"
+#include "graphics/vulkan/tg_vulkan_memory_allocator.h"
 #include <vulkan/vulkan.h>
 #undef near
 #undef far

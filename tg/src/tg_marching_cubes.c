@@ -397,7 +397,7 @@ u32 tg_marching_cubes_polygonise(const tg_marching_cubes_grid_cell* p_grid_cell,
         const v3 v0 = p_vertices[marching_cubes_triangle_table[cubeindex][i]];
         const v3 v1 = p_vertices[marching_cubes_triangle_table[cubeindex][i + 1]];
         const v3 v2 = p_vertices[marching_cubes_triangle_table[cubeindex][i + 2]];
-        if (!tgm_v3_equal(&v0, &v1) && !tgm_v3_equal(&v0, &v2) && !tgm_v3_equal(&v1, &v2))
+        if (!tgm_v3_equal(v0, v1) && !tgm_v3_equal(v0, v2) && !tgm_v3_equal(v1, v2))
         {
 		    p_triangles[triangle_count].positions[0] = p_vertices[marching_cubes_triangle_table[cubeindex][i]];
 		    p_triangles[triangle_count].positions[1] = p_vertices[marching_cubes_triangle_table[cubeindex][i + 1]];

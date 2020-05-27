@@ -21,7 +21,8 @@ tg_compute_shader_h tg_compute_shader_create(const char* filename, u32 handle_ty
 	tg_compute_shader_h compute_shader_h = TG_MEMORY_ALLOC(sizeof(*compute_shader_h));
 	compute_shader_h->type = TG_HANDLE_TYPE_COMPUTE_SHADER;
 
-	VkDescriptorSetLayoutBinding* p_descriptor_set_layout_bindings = TG_MEMORY_ALLOC(handle_type_count * sizeof(*p_descriptor_set_layout_bindings));
+	const u64 descriptor_set_layout_bindings_size = handle_type_count * sizeof(VkDescriptorSetLayoutBinding);
+	VkDescriptorSetLayoutBinding* p_descriptor_set_layout_bindings = TG_MEMORY_STACK_ALLOC(descriptor_set_layout_bindings_size);
 	for (u32 i = 0; i < handle_type_count; i++)
 	{
 		p_descriptor_set_layout_bindings[i].binding = i;
@@ -34,7 +35,7 @@ tg_compute_shader_h tg_compute_shader_create(const char* filename, u32 handle_ty
 	compute_shader_h->compute_shader = tg_vulkan_compute_shader_create(filename, handle_type_count, p_descriptor_set_layout_bindings);
 	compute_shader_h->command_buffer = tg_vulkan_command_buffer_allocate(compute_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
-	TG_MEMORY_FREE(p_descriptor_set_layout_bindings);
+	TG_MEMORY_STACK_FREE(descriptor_set_layout_bindings_size);
 
 	return compute_shader_h;
 }

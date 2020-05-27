@@ -29,12 +29,12 @@ void tg_entity_set_mesh(tg_entity* p_entity, tg_mesh_h mesh_h, u32 lod)
 	tg_entity_graphics_data_ptr_set_mesh(p_entity->graphics_data_ptr_h, mesh_h, lod);
 }
 
-void tg_entity_set_position(tg_entity* p_entity, const v3* p_position)
+void tg_entity_set_position(tg_entity* p_entity, v3 position)
 {
-	TG_ASSERT(p_entity && p_position);
+	TG_ASSERT(p_entity);
 
-	p_entity->transform.position = *p_position;
-	p_entity->transform.position_matrix = tgm_m4_translate(p_position);
+	p_entity->transform.position = position;
+	p_entity->transform.position_matrix = tgm_m4_translate(position);
 	p_entity->transform.model_matrix = p_entity->transform.position_matrix; // TODO: rotation
 
 	tg_entity_graphics_data_ptr_set_model_matrix(p_entity->graphics_data_ptr_h, &p_entity->transform.position_matrix);

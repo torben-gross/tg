@@ -167,8 +167,8 @@ void                             tg_camera_begin(tg_camera_h camera_h);
 void                             tg_camera_capture(tg_camera_h camera_h, tg_entity_graphics_data_ptr_h entity_graphics_data_ptr_h);
 void                             tg_camera_capture_terrain(tg_camera_h camera_h, tg_terrain_h terrain_h);
 void                             tg_camera_clear(tg_camera_h camera_h);
-tg_camera_h                      tg_camera_create_orthographic(const v3* p_position, f32 pitch, f32 yaw, f32 roll, f32 left, f32 right, f32 bottom, f32 top, f32 far, f32 near);
-tg_camera_h                      tg_camera_create_perspective(const v3* p_position, f32 pitch, f32 yaw, f32 roll, f32 fov_y, f32 near, f32 far);
+tg_camera_h                      tg_camera_create_orthographic(v3 position, f32 pitch, f32 yaw, f32 roll, f32 left, f32 right, f32 bottom, f32 top, f32 far, f32 near);
+tg_camera_h                      tg_camera_create_perspective(v3 position, f32 pitch, f32 yaw, f32 roll, f32 fov_y, f32 near, f32 far);
 void                             tg_camera_destroy(tg_camera_h camera_h);
 void                             tg_camera_end(tg_camera_h camera_h);
 v3                               tg_camera_get_position(tg_camera_h camera_h);
@@ -176,7 +176,7 @@ tg_render_target_h               tg_camera_get_render_target(tg_camera_h camera_
 void                             tg_camera_present(tg_camera_h camera_h);
 void                             tg_camera_set_orthographic_projection(tg_camera_h camera_h, f32 left, f32 right, f32 bottom, f32 top, f32 far, f32 near);
 void                             tg_camera_set_perspective_projection(tg_camera_h camera_h, f32 fov_y, f32 near, f32 far);
-void                             tg_camera_set_view(tg_camera_h camera_h, const v3* p_position, f32 pitch, f32 yaw, f32 roll);
+void                             tg_camera_set_view(tg_camera_h camera_h, v3 position, f32 pitch, f32 yaw, f32 roll);
 
 tg_color_image_h                 tg_color_image_load(const char* p_filename);
 tg_color_image_h                 tg_color_image_create(const tg_color_image_create_info* p_color_image_create_info);

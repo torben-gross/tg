@@ -1,11 +1,11 @@
 #include "tg_terrain.h"
-#include "graphics/vulkan/tg_graphics_vulkan_terrain.h"
+#include "graphics/vulkan/tg_vulkan_terrain.h"
 
 #ifdef TG_VULKAN
 
 #include "memory/tg_memory.h"
 #include "tg_entity.h"
-#include <string.h> // TODO: implement yourself
+#include <string.h> // TODO: implement memset yourself
 
 
 #define TG_TERRAIN_HASH(x, y, z)    (((u32)(x) * 9 + (u32)(y) * 37 + (u32)(z) * 149) % TG_TERRAIN_HASHMAP_COUNT) // TODO: better hash function!!!
@@ -95,18 +95,10 @@ void tg_terrain_internal_fill_isolevels(i32 x, i32 y, i32 z, tg_transvoxel_isole
 	}
 }
 
-f32 tg_terrain_internal_chunk_distance_to_focal_point(const v3* p_focal_point, const tg_terrain_chunk* p_terrain_chunk)
-{
-	const v3 chunk_center = TG_TERRAIN_CHUNK_CENTER(*p_terrain_chunk);
-	const v3 v = tgm_v3_subtract_v3(p_focal_point, &chunk_center);
-	const f32 d = tgm_v3_magnitude_squared(&v);
-	return d;
-}
-
 u8 tg_terrain_internal_select_lod(const v3* p_focal_point, i32 x, i32 y, i32 z)
 {
 	const v3 v = { p_focal_point->x - (f32)x, p_focal_point->y - (f32)y, p_focal_point->z - (f32)z };
-	const f32 d = tgm_v3_magnitude_squared(&v);
+	const f32 d = tgm_v3_magnitude_squared(v);
 	const u8 lod = (u8)tgm_u64_min((u64)(d / 8.0f), 3);
 	return lod;
 }

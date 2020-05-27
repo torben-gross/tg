@@ -20,10 +20,9 @@ typedef struct tg_normals_compute_shader_uniform_buffer
 
 void tg_mesh_internal_recalculate_normal(tg_vertex_3d* p_v0, tg_vertex_3d* p_v1, tg_vertex_3d* p_v2)
 {
-    const v3 v01 = tgm_v3_subtract_v3(&p_v1->position, &p_v0->position);
-    const v3 v02 = tgm_v3_subtract_v3(&p_v2->position, &p_v0->position);
-    const v3 normal_direction = tgm_v3_cross(&v01, &v02);
-    const v3 normal = tgm_v3_normalized(&normal_direction);
+    const v3 v01 = tgm_v3_subtract(p_v1->position, p_v0->position);
+    const v3 v02 = tgm_v3_subtract(p_v2->position, p_v0->position);
+    const v3 normal = tgm_v3_normalized(tgm_v3_cross(v01, v02));
 
     p_v0->normal = normal;
     p_v1->normal = normal;
@@ -119,33 +118,31 @@ void tg_mesh_internal_recalculate_normals(u32 vertex_count, u32 index_count, con
 
 void tg_mesh_internal_recalculate_tangent_bitangent(tg_vertex_3d* p_v0, tg_vertex_3d* p_v1, tg_vertex_3d* p_v2)
 {
-    const v3 delta_p_01 = tgm_v3_subtract_v3(&p_v1->position, &p_v0->position);
-    const v3 delta_p_02 = tgm_v3_subtract_v3(&p_v2->position, &p_v0->position);
+    const v3 delta_p_01 = tgm_v3_subtract(p_v1->position, p_v0->position);
+    const v3 delta_p_02 = tgm_v3_subtract(p_v2->position, p_v0->position);
 
-    const v2 delta_uv_01 = tgm_v2_subtract_v2(&p_v1->uv, &p_v0->uv);
-    const v2 delta_uv_02 = tgm_v2_subtract_v2(&p_v2->uv, &p_v0->uv);
+    const v2 delta_uv_01 = tgm_v2_subtract_v2(p_v1->uv, p_v0->uv);
+    const v2 delta_uv_02 = tgm_v2_subtract_v2(p_v2->uv, p_v0->uv);
 
     const f32 f = 1.0f / (delta_uv_01.x * delta_uv_02.y - delta_uv_01.y * delta_uv_02.x);
 
-    const v3 tangent_l_part = tgm_v3_multiply_f(&delta_p_01, delta_uv_02.y);
-    const v3 tangent_r_part = tgm_v3_multiply_f(&delta_p_02, delta_uv_01.y);
-    const v3 tlp_minus_trp = tgm_v3_subtract_v3(&tangent_l_part, &tangent_r_part);
-    const v3 tangent = tgm_v3_multiply_f(&tlp_minus_trp, f);
-    const v3 normalized_tangent = tgm_v3_normalized(&tangent);
+    const v3 tangent_l_part = tgm_v3_multiply_f(delta_p_01, delta_uv_02.y);
+    const v3 tangent_r_part = tgm_v3_multiply_f(delta_p_02, delta_uv_01.y);
+    const v3 tlp_minus_trp = tgm_v3_subtract(tangent_l_part, tangent_r_part);
+    const v3 tangent = tgm_v3_normalized(tgm_v3_multiply_f(tlp_minus_trp, f));
 
-    p_v0->tangent = normalized_tangent;
-    p_v1->tangent = normalized_tangent;
-    p_v2->tangent = normalized_tangent;
+    p_v0->tangent = tangent;
+    p_v1->tangent = tangent;
+    p_v2->tangent = tangent;
 
-    const v3 bitangent_l_part = tgm_v3_multiply_f(&delta_p_02, delta_uv_01.x);
-    const v3 bitangent_r_part = tgm_v3_multiply_f(&delta_p_01, delta_uv_02.x);
-    const v3 blp_minus_brp = tgm_v3_subtract_v3(&bitangent_l_part, &bitangent_r_part);
-    const v3 bitangent = tgm_v3_multiply_f(&blp_minus_brp, f);
-    const v3 normalized_bitangent = tgm_v3_normalized(&bitangent);
+    const v3 bitangent_l_part = tgm_v3_multiply_f(delta_p_02, delta_uv_01.x);
+    const v3 bitangent_r_part = tgm_v3_multiply_f(delta_p_01, delta_uv_02.x);
+    const v3 blp_minus_brp = tgm_v3_subtract(bitangent_l_part, bitangent_r_part);
+    const v3 bitangent = tgm_v3_normalized(tgm_v3_multiply_f(blp_minus_brp, f));
 
-    p_v0->bitangent = normalized_bitangent;
-    p_v1->bitangent = normalized_bitangent;
-    p_v2->bitangent = normalized_bitangent;
+    p_v0->bitangent = bitangent;
+    p_v1->bitangent = bitangent;
+    p_v2->bitangent = bitangent;
 }
 
 void tg_mesh_internal_recalculate_tangents_bitangents(u32 vertex_count, u32 index_count, const u16* p_indices, tg_vertex_3d* p_vertices)
@@ -170,8 +167,7 @@ void tg_mesh_internal_recalculate_bitangents(u32 vertex_count, tg_vertex_3d* p_v
 {
     for (u32 i = 0; i < vertex_count; i++)
     {
-        p_vertices[i].bitangent = tgm_v3_cross(&p_vertices[i].normal, &p_vertices[i].tangent);
-        p_vertices[i].bitangent = tgm_v3_normalized(&p_vertices[i].bitangent);
+        p_vertices[i].bitangent = tgm_v3_normalized(tgm_v3_cross(p_vertices[i].normal, p_vertices[i].tangent));
     }
 }
 
@@ -196,8 +192,8 @@ tg_mesh_h tg_mesh_create(u32 vertex_count, const v3* p_positions, const v3* p_no
     mesh_h->bounds.max = (v3){ p_positions[0].x, p_positions[0].y, p_positions[0].z };
     for (u32 i = 1; i < vertex_count; i++)
     {
-        mesh_h->bounds.min = tgm_v3_min(&mesh_h->bounds.min, &p_positions[i]);
-        mesh_h->bounds.max = tgm_v3_max(&mesh_h->bounds.max, &p_positions[i]);
+        mesh_h->bounds.min = tgm_v3_min(mesh_h->bounds.min, p_positions[i]);
+        mesh_h->bounds.max = tgm_v3_max(mesh_h->bounds.max, p_positions[i]);
     }
     // positions
     for (u32 i = 0; i < vertex_count; i++)

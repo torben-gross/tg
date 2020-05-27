@@ -1,10 +1,10 @@
 #include "graphics/vulkan/tg_graphics_vulkan.h"
-#include "graphics/vulkan/tg_graphics_vulkan_deferred_renderer.h"
-#include "graphics/vulkan/tg_graphics_vulkan_forward_renderer.h"
+#include "graphics/vulkan/tg_vulkan_deferred_renderer.h"
+#include "graphics/vulkan/tg_vulkan_forward_renderer.h"
 
 #ifdef TG_VULKAN
 
-#include "graphics/vulkan/tg_graphics_vulkan_terrain.h"
+#include "graphics/vulkan/tg_vulkan_terrain.h"
 #include "memory/tg_memory.h"
 #include "platform/tg_platform.h"
 
@@ -632,24 +632,24 @@ void tg_camera_clear(tg_camera_h camera_h) // TODO: should this be combined with
     VK_CALL(vkQueueSubmit(graphics_queue.queue, 1, &submit_info, camera_h->render_target.fence));
 }
 
-tg_camera_h tg_camera_create_orthographic(const v3* p_position, f32 pitch, f32 yaw, f32 roll, f32 left, f32 right, f32 bottom, f32 top, f32 far, f32 near)
+tg_camera_h tg_camera_create_orthographic(v3 position, f32 pitch, f32 yaw, f32 roll, f32 left, f32 right, f32 bottom, f32 top, f32 far, f32 near)
 {
-	TG_ASSERT(p_position && left != right && bottom != top && far != near);
+	TG_ASSERT(left != right && bottom != top && far != near);
 
 	tg_camera_h camera_h = TG_MEMORY_ALLOC(sizeof(*camera_h));
     tg_camera_internal_init(camera_h);
-	tg_camera_set_view(camera_h, p_position, pitch, yaw, roll);
+	tg_camera_set_view(camera_h, position, pitch, yaw, roll);
 	tg_camera_set_orthographic_projection(camera_h, left, right, bottom, top, far, near);
 	return camera_h;
 }
 
-tg_camera_h tg_camera_create_perspective(const v3* p_position, f32 pitch, f32 yaw, f32 roll, f32 fov_y, f32 near, f32 far)
+tg_camera_h tg_camera_create_perspective(v3 position, f32 pitch, f32 yaw, f32 roll, f32 fov_y, f32 near, f32 far)
 {
-	TG_ASSERT(p_position && near < 0 && far < 0 && near > far);
+	TG_ASSERT(near < 0 && far < 0 && near > far);
 
 	tg_camera_h camera_h = TG_MEMORY_ALLOC(sizeof(*camera_h));
     tg_camera_internal_init(camera_h);
-	tg_camera_set_view(camera_h, p_position, pitch, yaw, roll);
+	tg_camera_set_view(camera_h, position, pitch, yaw, roll);
 	tg_camera_set_perspective_projection(camera_h, fov_y, near, far);
 	return camera_h;
 }
@@ -701,18 +701,18 @@ void tg_camera_end(tg_camera_h camera_h)
                         v3 p_cartesian_points_clip_space[8] = { 0 };
                         for (u8 i = 0; i < 8; i++)
                         {
-                            p_homogenous_points_clip_space[i] = tgm_m4_multiply_v4(&TG_ENTITY_GRAPHICS_DATA_PTR_MODEL(entity_graphics_data_ptr_h), &p_points[i]);
-                            p_homogenous_points_clip_space[i] = tgm_m4_multiply_v4(&TG_CAMERA_VIEW(camera_h), &p_homogenous_points_clip_space[i]);
-                            p_homogenous_points_clip_space[i] = tgm_m4_multiply_v4(&TG_CAMERA_PROJ(camera_h), &p_homogenous_points_clip_space[i]);// TODO: SIMD
-                            p_cartesian_points_clip_space[i] = tgm_v4_to_v3(&p_homogenous_points_clip_space[i]);
+                            p_homogenous_points_clip_space[i] = tgm_m4_multiply_v4(TG_ENTITY_GRAPHICS_DATA_PTR_MODEL(entity_graphics_data_ptr_h), p_points[i]);
+                            p_homogenous_points_clip_space[i] = tgm_m4_multiply_v4(TG_CAMERA_VIEW(camera_h), p_homogenous_points_clip_space[i]);
+                            p_homogenous_points_clip_space[i] = tgm_m4_multiply_v4(TG_CAMERA_PROJ(camera_h), p_homogenous_points_clip_space[i]);// TODO: SIMD
+                            p_cartesian_points_clip_space[i] = tgm_v4_to_v3(p_homogenous_points_clip_space[i]);
                         }
 
                         v3 min = p_cartesian_points_clip_space[0];
                         v3 max = p_cartesian_points_clip_space[0];
                         for (u8 i = 1; i < 8; i++)
                         {
-                            min = tgm_v3_min(&min, &p_cartesian_points_clip_space[i]);
-                            max = tgm_v3_max(&max, &p_cartesian_points_clip_space[i]);
+                            min = tgm_v3_min(min, p_cartesian_points_clip_space[i]);
+                            max = tgm_v3_max(max, p_cartesian_points_clip_space[i]);
                         }
 
                         const b32 cull = min.x >= 1.0f || min.y >= 1.0f || max.x <= -1.0f || max.y <= -1.0f || min.z >= 1.0f || max.z <= 0.0f;
@@ -720,8 +720,8 @@ void tg_camera_end(tg_camera_h camera_h)
                         {
                             const v3 clamp_min = { -1.0f, -1.0f, 0.0f };
                             const v3 clamp_max = { 1.0f,  1.0f, 0.0f };
-                            const v3 clamped_min = tgm_v3_clamp(&min, &clamp_min, &clamp_max);
-                            const v3 clamped_max = tgm_v3_clamp(&max, &clamp_min, &clamp_max);
+                            const v3 clamped_min = tgm_v3_clamp(min, clamp_min, clamp_max);
+                            const v3 clamped_max = tgm_v3_clamp(max, clamp_min, clamp_max);
                             const f32 area = (clamped_max.x - clamped_min.x) * (clamped_max.y - clamped_min.y);
 
                             if (area >= 0.9f)
@@ -825,15 +825,13 @@ void tg_camera_set_perspective_projection(tg_camera_h camera_h, f32 fov_y, f32 n
     TG_CAMERA_PROJ(camera_h) = tgm_m4_perspective(fov_y, tg_platform_get_window_aspect_ratio(), near, far);
 }
 
-void tg_camera_set_view(tg_camera_h camera_h, const v3* p_position, f32 pitch, f32 yaw, f32 roll)
+void tg_camera_set_view(tg_camera_h camera_h, v3 position, f32 pitch, f32 yaw, f32 roll)
 {
-	TG_ASSERT(camera_h && p_position);
+	TG_ASSERT(camera_h);
 
-	const m4 rotation = tgm_m4_euler(pitch, yaw, roll);
-	const m4 inverse_rotation = tgm_m4_inverse(&rotation);
-	const v3 negated_position = tgm_v3_negated(p_position);
-	const m4 inverse_translation = tgm_m4_translate(&negated_position);
-    TG_CAMERA_VIEW(camera_h) = tgm_m4_multiply_m4(&inverse_rotation, &inverse_translation);
+	const m4 inverse_rotation = tgm_m4_inverse(tgm_m4_euler(pitch, yaw, roll));
+	const m4 inverse_translation = tgm_m4_translate(tgm_v3_negated(position));
+    TG_CAMERA_VIEW(camera_h) = tgm_m4_multiply(inverse_rotation, inverse_translation);
 }
 
 #endif

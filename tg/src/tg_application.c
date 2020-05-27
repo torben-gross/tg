@@ -103,8 +103,8 @@ void tg_application_internal_game_3d_create()
     test_deferred.camera_info.near = -0.1f;
     test_deferred.camera_info.far = -1000.0f;
     tg_input_get_mouse_position(&test_deferred.camera_info.last_mouse_x, &test_deferred.camera_info.last_mouse_y);
-    test_deferred.camera_info.camera_h = tg_camera_create_perspective(&test_deferred.camera_info.position, test_deferred.camera_info.pitch, test_deferred.camera_info.yaw, test_deferred.camera_info.roll, test_deferred.camera_info.fov_y_in_radians, test_deferred.camera_info.near, test_deferred.camera_info.far);
-    test_deferred.secondary_camera_h = tg_camera_create_perspective(&test_deferred.camera_info.position, test_deferred.camera_info.pitch, test_deferred.camera_info.yaw, test_deferred.camera_info.roll, test_deferred.camera_info.fov_y_in_radians, test_deferred.camera_info.near, test_deferred.camera_info.far);
+    test_deferred.camera_info.camera_h = tg_camera_create_perspective(test_deferred.camera_info.position, test_deferred.camera_info.pitch, test_deferred.camera_info.yaw, test_deferred.camera_info.roll, test_deferred.camera_info.fov_y_in_radians, test_deferred.camera_info.near, test_deferred.camera_info.far);
+    test_deferred.secondary_camera_h = tg_camera_create_perspective(test_deferred.camera_info.position, test_deferred.camera_info.pitch, test_deferred.camera_info.yaw, test_deferred.camera_info.roll, test_deferred.camera_info.fov_y_in_radians, test_deferred.camera_info.near, test_deferred.camera_info.far);
 
     tg_point_light p_point_lights[TG_POINT_LIGHT_COUNT] = { 0 };
     tg_random random = { 0 };
@@ -244,7 +244,7 @@ void tg_application_internal_game_3d_update_and_render(f32 delta_ms)
         test_deferred.quad_offset -= 0.01f * delta_ms;
     }
     v3 quad_offset_translation_z = { 0.0f, 0.0f, test_deferred.quad_offset };
-    tg_entity_set_position(&test_deferred.quad_entity, &quad_offset_translation_z);
+    tg_entity_set_position(&test_deferred.quad_entity, quad_offset_translation_z);
 
     test_deferred.dtsum += delta_ms;
     if (test_deferred.dtsum >= 10000.0f)
@@ -273,53 +273,42 @@ void tg_application_internal_game_3d_update_and_render(f32 delta_ms)
     const v4 up = { 0.0f, 1.0f, 0.0f, 0.0f };
     const v4 forward = { -camera_rotation.m02, -camera_rotation.m12, -camera_rotation.m22, -camera_rotation.m32 };
 
-    v3 temp;
     v3 velocity = { 0 };
     if (tg_input_is_key_down(TG_KEY_W))
     {
-        temp = tgm_v4_to_v3(&forward);
-        velocity = tgm_v3_add_v3(&velocity, &temp);
+        velocity = tgm_v3_add(velocity, tgm_v4_to_v3(forward));
     }
     if (tg_input_is_key_down(TG_KEY_A))
     {
-        temp = tgm_v4_to_v3(&right);
-        temp = tgm_v3_multiply_f(&temp, -1.0f);
-        velocity = tgm_v3_add_v3(&velocity, &temp);
+        velocity = tgm_v3_add(velocity, tgm_v3_multiply_f(tgm_v4_to_v3(right), -1.0f));
     }
     if (tg_input_is_key_down(TG_KEY_S))
     {
-        temp = tgm_v4_to_v3(&forward);
-        temp = tgm_v3_multiply_f(&temp, -1.0f);
-        velocity = tgm_v3_add_v3(&velocity, &temp);
+        velocity = tgm_v3_add(velocity, tgm_v3_multiply_f(tgm_v4_to_v3(forward), -1.0f));
     }
     if (tg_input_is_key_down(TG_KEY_D))
     {
-        temp = tgm_v4_to_v3(&right);
-        velocity = tgm_v3_add_v3(&velocity, &temp);
+        velocity = tgm_v3_add(velocity, tgm_v4_to_v3(right));
     }
     if (tg_input_is_key_down(TG_KEY_SPACE))
     {
-        temp = tgm_v4_to_v3(&up);
-        velocity = tgm_v3_add_v3(&velocity, &temp);
+        velocity = tgm_v3_add(velocity, tgm_v4_to_v3(up));
     }
     if (tg_input_is_key_down(TG_KEY_CONTROL))
     {
-        temp = tgm_v4_to_v3(&up);
-        temp = tgm_v3_multiply_f(&temp, -1.0f);
-        velocity = tgm_v3_add_v3(&velocity, &temp);
+        velocity = tgm_v3_add(velocity, tgm_v3_multiply_f(tgm_v4_to_v3(up), -1.0f));
     }
 
-    if (tgm_v3_magnitude_squared(&velocity) != 0.0f)
+    if (tgm_v3_magnitude_squared(velocity) != 0.0f)
     {
         const f32 camera_base_speed = tg_input_is_key_down(TG_KEY_SHIFT) ? 0.1f : 0.01f;
         const f32 camera_speed = camera_base_speed * delta_ms;
-        velocity = tgm_v3_normalized(&velocity);
-        velocity = tgm_v3_multiply_f(&velocity, camera_speed);
-        test_deferred.camera_info.position = tgm_v3_add_v3(&test_deferred.camera_info.position, &velocity);
+        velocity = tgm_v3_multiply_f(tgm_v3_normalized(velocity), camera_speed);
+        test_deferred.camera_info.position = tgm_v3_add(test_deferred.camera_info.position, velocity);
     }
 
-    tg_camera_set_view(test_deferred.camera_info.camera_h, &test_deferred.camera_info.position, TGM_TO_RADIANS(test_deferred.camera_info.pitch), TGM_TO_RADIANS(test_deferred.camera_info.yaw), TGM_TO_RADIANS(test_deferred.camera_info.roll));
-    tg_camera_set_view(test_deferred.secondary_camera_h, &test_deferred.camera_info.position, TGM_TO_RADIANS(test_deferred.camera_info.pitch), TGM_TO_RADIANS(test_deferred.camera_info.yaw), TGM_TO_RADIANS(test_deferred.camera_info.roll));
+    tg_camera_set_view(test_deferred.camera_info.camera_h, test_deferred.camera_info.position, TGM_TO_RADIANS(test_deferred.camera_info.pitch), TGM_TO_RADIANS(test_deferred.camera_info.yaw), TGM_TO_RADIANS(test_deferred.camera_info.roll));
+    tg_camera_set_view(test_deferred.secondary_camera_h, test_deferred.camera_info.position, TGM_TO_RADIANS(test_deferred.camera_info.pitch), TGM_TO_RADIANS(test_deferred.camera_info.yaw), TGM_TO_RADIANS(test_deferred.camera_info.roll));
     test_deferred.camera_info.last_mouse_x = mouse_x;
     test_deferred.camera_info.last_mouse_y = mouse_y;
 

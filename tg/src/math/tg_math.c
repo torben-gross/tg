@@ -716,544 +716,389 @@ u64 tgm_u64_min(u64 v0, u64 v1)
 | Vectors                                                     |
 +------------------------------------------------------------*/
 
-v2 tgm_v2_max(const v2* p_v0, const v2* p_v1)
+v2 tgm_v2_max(v2 v0, v2 v1)
 {
-	TG_ASSERT(p_v0 && p_v1);
-
 	v2 result = { 0 };
-
-	result.x = p_v0->x > p_v1->x ? p_v0->x : p_v1->x;
-	result.y = p_v0->y > p_v1->y ? p_v0->y : p_v1->y;
-
+	result.x = v0.x > v1.x ? v0.x : v1.x;
+	result.y = v0.y > v1.y ? v0.y : v1.y;
 	return result;
 }
 
-v2 tgm_v2_min(const v2* p_v0, const v2* p_v1)
+v2 tgm_v2_min(v2 v0, v2 v1)
 {
-	TG_ASSERT(p_v0 && p_v1);
-
 	v2 result = { 0 };
-
-	result.x = p_v0->x < p_v1->x ? p_v0->x : p_v1->x;
-	result.y = p_v0->y < p_v1->y ? p_v0->y : p_v1->y;
-
+	result.x = v0.x < v1.x ? v0.x : v1.x;
+	result.y = v0.y < v1.y ? v0.y : v1.y;
 	return result;
 }
 
-v2 tgm_v2_subtract_v2(const v2* p_v0, const v2* p_v1)
+v2 tgm_v2_subtract_v2(v2 v0, v2 v1)
 {
-	TG_ASSERT(p_v0 && p_v1);
-
 	v2 result = { 0 };
-
-	result.x = p_v0->x - p_v1->x;
-	result.y = p_v0->y - p_v1->y;
-
+	result.x = v0.x - v1.x;
+	result.y = v0.y - v1.y;
 	return result;
 }
 
 
 
-v3 tgm_v3_abs(const v3* p_v)
+v3 tgm_v3_abs(v3 v)
 {
-	TG_ASSERT(p_v);
-
 	v3 result = { 0 };
-
-	result.x = p_v->x < 0 ? -p_v->x : p_v->x;
-	result.y = p_v->y < 0 ? -p_v->y : p_v->y;
-	result.z = p_v->z < 0 ? -p_v->z : p_v->z;
-
+	result.x = v.x < 0 ? -v.x : v.x;
+	result.y = v.y < 0 ? -v.y : v.y;
+	result.z = v.z < 0 ? -v.z : v.z;
 	return result;
 }
 
-v3 tgm_v3_add_v3(const v3* p_v0, const v3* p_v1)
+v3 tgm_v3_add(v3 v0, v3 v1)
 {
-	TG_ASSERT(p_v0 && p_v1);
-
 	v3 result = { 0 };
-
-	result.x = p_v0->x + p_v1->x;
-	result.y = p_v0->y + p_v1->y;
-	result.z = p_v0->z + p_v1->z;
-
+	result.x = v0.x + v1.x;
+	result.y = v0.y + v1.y;
+	result.z = v0.z + v1.z;
 	return result;
 }
 
-v3 tgm_v3_add_f(const v3* p_v, f32 f)
+v3 tgm_v3_add_f(v3 v, f32 f)
 {
-	TG_ASSERT(p_v);
-
 	v3 result = { 0 };
-
-	result.x = p_v->x + f;
-	result.y = p_v->y + f;
-	result.z = p_v->z + f;
-
+	result.x = v.x + f;
+	result.y = v.y + f;
+	result.z = v.z + f;
 	return result;
 }
 
-v3 tgm_v3_clamp(const v3* p_v, const v3* p_min, const v3* p_max)
+v3 tgm_v3_clamp(v3 v, v3 min, v3 max)
 {
-	TG_ASSERT(p_v && p_min && p_max);
-
 	v3 result = { 0 };
-
-	result.x = tgm_f32_clamp(p_v->x, p_min->x, p_max->x);
-	result.y = tgm_f32_clamp(p_v->y, p_min->y, p_max->y);
-	result.z = tgm_f32_clamp(p_v->z, p_min->z, p_max->z);
-
+	result.x = tgm_f32_clamp(v.x, min.x, max.x);
+	result.y = tgm_f32_clamp(v.y, min.y, max.y);
+	result.z = tgm_f32_clamp(v.z, min.z, max.z);
 	return result;
 }
 
-v3 tgm_v3_cross(const v3* p_v0, const v3* p_v1)
+v3 tgm_v3_cross(v3 v0, v3 v1)
 {
-	TG_ASSERT(p_v0 && p_v1);
-
 	v3 result = { 0 };
-
-	result.x = p_v0->y * p_v1->z - p_v0->z * p_v1->y;
-	result.y = p_v0->z * p_v1->x - p_v0->x * p_v1->z;
-	result.z = p_v0->x * p_v1->y - p_v0->y * p_v1->x;
-
+	result.x = v0.y * v1.z - v0.z * v1.y;
+	result.y = v0.z * v1.x - v0.x * v1.z;
+	result.z = v0.x * v1.y - v0.y * v1.x;
 	return result;
 }
 
-v3 tgm_v3_divide_v3(const v3* p_v0, const v3* p_v1)
+v3 tgm_v3_divide(v3 v0, v3 v1)
 {
-	TG_ASSERT(p_v0 && p_v1 && p_v1->x && p_v1->y && p_v1->z);
-
 	v3 result = { 0 };
-
-	result.x = p_v0->x / p_v1->x;
-	result.y = p_v0->y / p_v1->y;
-	result.z = p_v0->z / p_v1->z;
-
+	result.x = v0.x / v1.x;
+	result.y = v0.y / v1.y;
+	result.z = v0.z / v1.z;
 	return result;
 }
 
-v3 tgm_v3_divide_f(const v3* p_v, f32 f)
+v3 tgm_v3_divide_f(v3 v, f32 f)
 {
-	TG_ASSERT(p_v && f);
-
 	v3 result = { 0 };
-
-	result.x = p_v->x / f;
-	result.y = p_v->y / f;
-	result.z = p_v->z / f;
-
+	result.x = v.x / f;
+	result.y = v.y / f;
+	result.z = v.z / f;
 	return result;
 }
 
-f32 tgm_v3_dot(const v3* p_v0, const v3* p_v1)
+f32 tgm_v3_dot(v3 v0, v3 v1)
 {
-	TG_ASSERT(p_v0 && p_v1);
-
-	const f32 result = p_v0->x * p_v1->x + p_v0->y * p_v1->y + p_v0->z * p_v1->z;
+	const f32 result = v0.x * v1.x + v0.y * v1.y + v0.z * v1.z;
 	return result;
 }
 
-b32 tgm_v3_equal(const v3* p_v0, const v3* p_v1)
+b32 tgm_v3_equal(v3 v0, v3 v1)
 {
-	TG_ASSERT(p_v0 && p_v1);
-
-	const b32 result = p_v0 == p_v1 || p_v0->x == p_v1->x && p_v0->y == p_v1->y && p_v0->z == p_v1->z;
+	const b32 result = v0.x == v1.x && v0.y == v1.y && v0.z == v1.z;
 	return result;
 }
 
-v3 tgm_v3_lerp(const v3* p_v0, const v3* p_v1, f32 t)
+v3 tgm_v3_lerp(v3 v0, v3 v1, f32 t)
 {
-	TG_ASSERT(p_v0 && p_v1);
-
 	v3 result = { 0 };
-	
-	result.x = (1.0f - t) * p_v0->x + t * p_v1->x;
-	result.y = (1.0f - t) * p_v0->y + t * p_v1->y;
-	result.z = (1.0f - t) * p_v0->z + t * p_v1->z;
-	
+	result.x = (1.0f - t) * v0.x + t * v1.x;
+	result.y = (1.0f - t) * v0.y + t * v1.y;
+	result.z = (1.0f - t) * v0.z + t * v1.z;
 	return result;
 }
 
-f32 tgm_v3_magnitude(const v3* p_v)
+f32 tgm_v3_magnitude(v3 v)
 {
-	TG_ASSERT(p_v);
-
-	const f32 result = tgm_f32_sqrt(p_v->x * p_v->x + p_v->y * p_v->y + p_v->z * p_v->z);
+	const f32 result = tgm_f32_sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
 	return result;
 }
 
-f32 tgm_v3_magnitude_squared(const v3* p_v)
+f32 tgm_v3_magnitude_squared(v3 v)
 {
-	TG_ASSERT(p_v);
-
-	const f32 result = p_v->x * p_v->x + p_v->y * p_v->y + p_v->z * p_v->z;
+	const f32 result = v.x * v.x + v.y * v.y + v.z * v.z;
 	return result;
 }
 
-v3 tgm_v3_max(const v3* p_v0, const v3* p_v1)
+v3 tgm_v3_max(v3 v0, v3 v1)
 {
-	TG_ASSERT(p_v0 && p_v1);
-
 	v3 result = { 0 };
-
-	result.x = p_v0->x > p_v1->x ? p_v0->x : p_v1->x;
-	result.y = p_v0->y > p_v1->y ? p_v0->y : p_v1->y;
-	result.z = p_v0->z > p_v1->z ? p_v0->z : p_v1->z;
-
+	result.x = v0.x > v1.x ? v0.x : v1.x;
+	result.y = v0.y > v1.y ? v0.y : v1.y;
+	result.z = v0.z > v1.z ? v0.z : v1.z;
 	return result;
 }
 
-v3 tgm_v3_min(const v3* p_v0, const v3* p_v1)
+v3 tgm_v3_min(v3 v0, v3 v1)
 {
-	TG_ASSERT(p_v0 && p_v1);
-
 	v3 result = { 0 };
-
-	result.x = p_v0->x < p_v1->x ? p_v0->x : p_v1->x;
-	result.y = p_v0->y < p_v1->y ? p_v0->y : p_v1->y;
-	result.z = p_v0->z < p_v1->z ? p_v0->z : p_v1->z;
-
+	result.x = v0.x < v1.x ? v0.x : v1.x;
+	result.y = v0.y < v1.y ? v0.y : v1.y;
+	result.z = v0.z < v1.z ? v0.z : v1.z;
 	return result;
 }
 
-v3 tgm_v3_multiply_v3(const v3* p_v0, const v3* p_v1)
+v3 tgm_v3_multiply(v3 v0, v3 v1)
 {
-	TG_ASSERT(p_v0 && p_v1);
-
 	v3 result = { 0 };
-
-	result.x = p_v0->x * p_v1->x;
-	result.y = p_v0->y * p_v1->y;
-	result.z = p_v0->z * p_v1->z;
-
+	result.x = v0.x * v1.x;
+	result.y = v0.y * v1.y;
+	result.z = v0.z * v1.z;
 	return result;
 }
 
-v3 tgm_v3_multiply_f(const v3* p_v, f32 f)
+v3 tgm_v3_multiply_f(v3 v, f32 f)
 {
-	TG_ASSERT(p_v);
-
 	v3 result = { 0 };
-
-	result.x = p_v->x * f;
-	result.y = p_v->y * f;
-	result.z = p_v->z * f;
-
+	result.x = v.x * f;
+	result.y = v.y * f;
+	result.z = v.z * f;
 	return result;
 }
 
-v3 tgm_v3_negated(const v3* p_v)
+v3 tgm_v3_negated(v3 v)
 {
-	TG_ASSERT(p_v);
-
 	v3 result = { 0 };
-
-	result.x = -p_v->x;
-	result.y = -p_v->y;
-	result.z = -p_v->z;
-
+	result.x = -v.x;
+	result.y = -v.y;
+	result.z = -v.z;
 	return result;
 }
 
-v3 tgm_v3_normalized(const v3* p_v)
+v3 tgm_v3_normalized(v3 v)
 {
-	TG_ASSERT(p_v);
-
 	v3 result = { 0 };
-
-	const f32 magnitude = tgm_v3_magnitude(p_v);
+	const f32 magnitude = tgm_v3_magnitude(v);
 	TG_ASSERT(magnitude);
-
-	result.x = p_v->x / magnitude;
-	result.y = p_v->y / magnitude;
-	result.z = p_v->z / magnitude;
-
+	result.x = v.x / magnitude;
+	result.y = v.y / magnitude;
+	result.z = v.z / magnitude;
 	return result;
 }
 
-b32 tgm_v3_similar(const v3* p_v0, const v3* p_v1, f32 epsilon)
+b32 tgm_v3_similar(v3 v0, v3 v1, f32 epsilon)
 {
-	TG_ASSERT(p_v0 && p_v1);
-
-	const v3 v01 = tgm_v3_subtract_v3(p_v1, p_v0);
-	const f32 mag_sqr = tgm_v3_magnitude_squared(&v01);
+	const v3 v01 = tgm_v3_subtract(v1, v0);
+	const f32 mag_sqr = tgm_v3_magnitude_squared(v01);
 	const b32 result = mag_sqr <= epsilon * epsilon;
-
 	return result;
 }
 
-v3 tgm_v3_subtract_v3(const v3* p_v0, const v3* p_v1)
+v3 tgm_v3_subtract(v3 v0, v3 v1)
 {
-	TG_ASSERT(p_v0 && p_v1);
-
 	v3 result = { 0 };
-
-	result.x = p_v0->x - p_v1->x;
-	result.y = p_v0->y - p_v1->y;
-	result.z = p_v0->z - p_v1->z;
-
+	result.x = v0.x - v1.x;
+	result.y = v0.y - v1.y;
+	result.z = v0.z - v1.z;
 	return result;
 }
 
-v3 tgm_v3_subtract_f(const v3* p_v, f32 f)
+v3 tgm_v3_subtract_f(v3 v, f32 f)
 {
-	TG_ASSERT(p_v);
-
 	v3 result = { 0 };
-
-	result.x = p_v->x - f;
-	result.y = p_v->y - f;
-	result.z = p_v->z - f;
-
+	result.x = v.x - f;
+	result.y = v.y - f;
+	result.z = v.z - f;
 	return result;
 }
 
-v4 tgm_v3_to_v4(const v3* p_v, f32 w)
+v4 tgm_v3_to_v4(v3 v, f32 w)
 {
-	TG_ASSERT(p_v);
-
 	v4 result = { 0 };
-
-	result.x = p_v->x;
-	result.y = p_v->y;
-	result.z = p_v->z;
+	result.x = v.x;
+	result.y = v.y;
+	result.z = v.z;
 	result.w = w;
-
 	return result;
 }
 
 
 
-b32 tgm_v3i_equal(const v3i* p_v0, const v3i* p_v1)
+b32 tgm_v3i_equal(v3i v0, v3i v1)
 {
-	TG_ASSERT(p_v0 && p_v1);
-
-	const b32 result = p_v0->x == p_v1->x && p_v0->y == p_v1->y && p_v0->z == p_v1->z;
+	const b32 result = v0.x == v1.x && v0.y == v1.y && v0.z == v1.z;
 	return result;
 }
 
 
 
-v4 tgm_v4_add_v4(const v4* p_v0, const v4* p_v1)
+v4 tgm_v4_add(v4 v0, v4 v1)
 {
-	TG_ASSERT(p_v0 && p_v1);
-	
 	v4 result = { 0 };
-
-	result.x = p_v0->x + p_v1->x;
-	result.y = p_v0->y + p_v1->y;
-	result.z = p_v0->z + p_v1->z;
-	result.w = p_v0->w + p_v1->w;
-
+	result.x = v0.x + v1.x;
+	result.y = v0.y + v1.y;
+	result.z = v0.z + v1.z;
+	result.w = v0.w + v1.w;
 	return result;
 }
 
-v4 tgm_v4_add_f(const v4* p_v, f32 f)
+v4 tgm_v4_add_f(v4 v, f32 f)
 {
-	TG_ASSERT(p_v);
-
 	v4 result = { 0 };
-
-	result.x = p_v->x + f;
-	result.y = p_v->y + f;
-	result.z = p_v->z + f;
-	result.w = p_v->w + f;
-
+	result.x = v.x + f;
+	result.y = v.y + f;
+	result.z = v.z + f;
+	result.w = v.w + f;
 	return result;
 }
 
-v4 tgm_v4_divide_v4(const v4* p_v0, const v4* p_v1)
+v4 tgm_v4_divide(v4 v0, v4 v1)
 {
-	TG_ASSERT(p_v0 && p_v1);
-
 	v4 result = { 0 };
-
-	result.x = p_v0->x / p_v1->x;
-	result.y = p_v0->y / p_v1->y;
-	result.z = p_v0->z / p_v1->z;
-	result.w = p_v0->w / p_v1->w;
-
+	result.x = v0.x / v1.x;
+	result.y = v0.y / v1.y;
+	result.z = v0.z / v1.z;
+	result.w = v0.w / v1.w;
 	return result;
 }
 
-v4 tgm_v4_divide_f(const v4* p_v, f32 f)
+v4 tgm_v4_divide_f(v4 v, f32 f)
 {
-	TG_ASSERT(p_v);
-	
 	v4 result = { 0 };
-
-	result.x = p_v->x / f;
-	result.y = p_v->y / f;
-	result.z = p_v->z / f;
-	result.w = p_v->w / f;
-
+	result.x = v.x / f;
+	result.y = v.y / f;
+	result.z = v.z / f;
+	result.w = v.w / f;
 	return result;
 }
 
-f32 tgm_v4_dot(const v4* p_v0, const v4* p_v1)
+f32 tgm_v4_dot(v4 v0, v4 v1)
 {
-	TG_ASSERT(p_v0 && p_v1);
-
-	const f32 result = p_v0->x * p_v1->x + p_v0->y * p_v1->y + p_v0->z * p_v1->z + p_v0->w * p_v1->w;
+	const f32 result = v0.x * v1.x + v0.y * v1.y + v0.z * v1.z + v0.w * v1.w;
 	return result;
 }
 
-b32 tgm_v4_equal(const v4* p_v0, const v4* p_v1)
+b32 tgm_v4_equal(v4 v0, v4 v1)
 {
-	TG_ASSERT(p_v0 && p_v1);
-
-	const b32 result = p_v0 == p_v1 || p_v0->x == p_v1->x && p_v0->y == p_v1->y && p_v0->z == p_v1->z && p_v0->w == p_v1->w;
+	const b32 result = v0.x == v1.x && v0.y == v1.y && v0.z == v1.z && v0.w == v1.w;
 	return result;
 }
 
-f32 tgm_v4_magnitude(const v4* p_v)
+f32 tgm_v4_magnitude(v4 v)
 {
-	TG_ASSERT(p_v);
-
-	const f32 result = tgm_f32_sqrt(p_v->x * p_v->x + p_v->y * p_v->y + p_v->z * p_v->z + p_v->w * p_v->w);
+	const f32 result = tgm_f32_sqrt(v.x * v.x + v.y * v.y + v.z * v.z + v.w * v.w);
 	return result;
 }
 
-f32 tgm_v4_magnitude_squared(const v4* p_v)
+f32 tgm_v4_magnitude_squared(v4 v)
 {
-	TG_ASSERT(p_v);
-
-	const f32 result = p_v->x * p_v->x + p_v->y * p_v->y + p_v->z * p_v->z + p_v->w * p_v->w;
+	const f32 result = v.x * v.x + v.y * v.y + v.z * v.z + v.w * v.w;
 	return result;
 }
 
-v4 tgm_v4_max(const v4* p_v0, const v4* p_v1)
+v4 tgm_v4_max(v4 v0, v4 v1)
 {
-	TG_ASSERT(p_v0 && p_v1);
-
 	v4 result = { 0 };
-
-	result.x = p_v0->x > p_v1->x ? p_v0->x : p_v1->x;
-	result.y = p_v0->y > p_v1->y ? p_v0->y : p_v1->y;
-	result.z = p_v0->z > p_v1->z ? p_v0->z : p_v1->z;
-	result.w = p_v0->w > p_v1->w ? p_v0->w : p_v1->w;
-
+	result.x = v0.x > v1.x ? v0.x : v1.x;
+	result.y = v0.y > v1.y ? v0.y : v1.y;
+	result.z = v0.z > v1.z ? v0.z : v1.z;
+	result.w = v0.w > v1.w ? v0.w : v1.w;
 	return result;
 }
 
-v4 tgm_v4_min(const v4* p_v0, const v4* p_v1)
+v4 tgm_v4_min(v4 v0, v4 v1)
 {
-	TG_ASSERT(p_v0 && p_v1);
-
 	v4 result = { 0 };
-
-	result.x = p_v0->x < p_v1->x ? p_v0->x : p_v1->x;
-	result.y = p_v0->y < p_v1->y ? p_v0->y : p_v1->y;
-	result.z = p_v0->z < p_v1->z ? p_v0->z : p_v1->z;
-	result.w = p_v0->w < p_v1->w ? p_v0->w : p_v1->w;
-
+	result.x = v0.x < v1.x ? v0.x : v1.x;
+	result.y = v0.y < v1.y ? v0.y : v1.y;
+	result.z = v0.z < v1.z ? v0.z : v1.z;
+	result.w = v0.w < v1.w ? v0.w : v1.w;
 	return result;
 }
 
-v4 tgm_v4_multiply_v4(const v4* p_v0, const v4* p_v1)
+v4 tgm_v4_multiply(v4 v0, v4 v1)
 {
-	TG_ASSERT(p_v0 && p_v1);
-
 	v4 result = { 0 };
-
-	result.x = p_v0->x * p_v1->x;
-	result.y = p_v0->y * p_v1->y;
-	result.z = p_v0->z * p_v1->z;
-	result.w = p_v0->w * p_v1->w;
-
+	result.x = v0.x * v1.x;
+	result.y = v0.y * v1.y;
+	result.z = v0.z * v1.z;
+	result.w = v0.w * v1.w;
 	return result;
 }
 
-v4 tgm_v4_multiply_f(const v4* p_v, f32 f)
+v4 tgm_v4_multiply_f(v4 v, f32 f)
 {
-	TG_ASSERT(p_v);
-
 	v4 result = { 0 };
-
-	result.x = p_v->x * f;
-	result.y = p_v->y * f;
-	result.z = p_v->z * f;
-	result.w = p_v->w * f;
-
+	result.x = v.x * f;
+	result.y = v.y * f;
+	result.z = v.z * f;
 	return result;
 }
 
-v4 tgm_v4_negated(const v4* p_v)
+v4 tgm_v4_negated(v4 v)
 {
-	TG_ASSERT(p_v);
-
 	v4 result = { 0 };
-
-	result.x = -p_v->x;
-	result.y = -p_v->y;
-	result.z = -p_v->z;
-	result.w = -p_v->w;
-
+	result.x = -v.x;
+	result.y = -v.y;
+	result.z = -v.z;
+	result.w = -v.w;
 	return result;
 }
 
-v4 tgm_v4_normalized(const v4* p_v)
+v4 tgm_v4_normalized(v4 v)
 {
-	TG_ASSERT(p_v);
-
 	v4 result = { 0 };
-
-	const f32 magnitude = tgm_v4_magnitude(p_v);
+	const f32 magnitude = tgm_v4_magnitude(v);
 	TG_ASSERT(magnitude);
-
-	result.x = p_v->x / magnitude;
-	result.y = p_v->y / magnitude;
-	result.z = p_v->z / magnitude;
-	result.w = p_v->w / magnitude;
-
+	result.x = v.x / magnitude;
+	result.y = v.y / magnitude;
+	result.z = v.z / magnitude;
+	result.w = v.w / magnitude;
 	return result;
 }
 
-v4 tgm_v4_subtract_v4(const v4* p_v0, const v4* p_v1)
+v4 tgm_v4_subtract(v4 v0, v4 v1)
 {
-	TG_ASSERT(p_v0 && p_v1);
-
 	v4 result = { 0 };
-
-	result.x = p_v0->x - p_v1->x;
-	result.y = p_v0->y - p_v1->y;
-	result.z = p_v0->z - p_v1->z;
-	result.w = p_v0->w - p_v1->w;
-
+	result.x = v0.x - v1.x;
+	result.y = v0.y - v1.y;
+	result.z = v0.z - v1.z;
+	result.w = v0.w - v1.w;
 	return result;
 }
 
-v4 tgm_v4_subtract_f(const v4* p_v, f32 f)
+v4 tgm_v4_subtract_f(v4 v, f32 f)
 {
-	TG_ASSERT(p_v);
-
 	v4 result = { 0 };
-
-	result.x = p_v->x - f;
-	result.y = p_v->y - f;
-	result.z = p_v->z - f;
-	result.w = p_v->w - f;
-
+	result.x = v.x - f;
+	result.y = v.y - f;
+	result.z = v.z - f;
+	result.w = v.w - f;
 	return result;
 }
 
-v3 tgm_v4_to_v3(const v4* p_v)
+v3 tgm_v4_to_v3(v4 v)
 {
-	TG_ASSERT(p_v);
-
 	v3 result = { 0 };
-
-	if (p_v->w == 0.0f)
+	if (v.w == 0.0f)
 	{
-		result.x = p_v->x;
-		result.y = p_v->y;
-		result.z = p_v->z;
+		result.x = v.x;
+		result.y = v.y;
+		result.z = v.z;
 	}
 	else
 	{
-		result.x = p_v->x / p_v->w;
-		result.y = p_v->y / p_v->w;
-		result.z = p_v->z / p_v->w;
+		result.x = v.x / v.w;
+		result.y = v.y / v.w;
+		result.z = v.z / v.w;
 	}
 	return result;
 }
@@ -1277,43 +1122,37 @@ m2 tgm_m2_identity()
 	return result;
 }
 
-m2 tgm_m2_multiply_m2(const m2* p_m0, const m2* p_m1)
+m2 tgm_m2_multiply(m2 m0, m2 m1)
 {
-	TG_ASSERT(p_m0 && p_m1);
-
 	m2 result = { 0 };
 
-	result.m00 = p_m0->m00 * p_m1->m00 + p_m0->m01 * p_m1->m10;
-	result.m10 = p_m0->m10 * p_m1->m00 + p_m0->m11 * p_m1->m10;
+	result.m00 = m0.m00 * m1.m00 + m0.m01 * m1.m10;
+	result.m10 = m0.m10 * m1.m00 + m0.m11 * m1.m10;
 
-	result.m01 = p_m0->m00 * p_m1->m01 + p_m0->m01 * p_m1->m11;
-	result.m11 = p_m0->m10 * p_m1->m01 + p_m0->m11 * p_m1->m11;
+	result.m01 = m0.m00 * m1.m01 + m0.m01 * m1.m11;
+	result.m11 = m0.m10 * m1.m01 + m0.m11 * m1.m11;
 
 	return result;
 }
 
-v2 tgm_m2_multiply_v2(const m2* p_m, const v2* p_v)
+v2 tgm_m2_multiply_v2(m2 m, v2 v)
 {
-	TG_ASSERT(p_m && p_v);
-
 	v2 result = { 0 };
 
-	result.x = p_v->x * p_m->m00 + p_v->y * p_m->m01;
-	result.y = p_v->x * p_m->m10 + p_v->y * p_m->m11;
+	result.x = v.x * m.m00 + v.y * m.m01;
+	result.y = v.x * m.m10 + v.y * m.m11;
 
 	return result;
 }
 
-m2 tgm_m2_transposed(const m2* p_m)
+m2 tgm_m2_transposed(m2 m)
 {
-	TG_ASSERT(p_m);
-
 	m2 result = { 0 };
 
-	result.m00 = p_m->m00;
-	result.m10 = p_m->m01;
-	result.m01 = p_m->m10;
-	result.m11 = p_m->m11;
+	result.m00 = m.m00;
+	result.m10 = m.m01;
+	result.m01 = m.m10;
+	result.m11 = m.m11;
 
 	return result;
 }
@@ -1339,36 +1178,32 @@ m3 tgm_m3_identity()
 	return result;
 }
 
-m3 tgm_m3_multiply_m3(const m3* p_m0, const m3* p_m1)
+m3 tgm_m3_multiply(m3 m0, m3 m1)
 {
-	TG_ASSERT(p_m0 && p_m1);
-
 	m3 result = { 0 };
 
-	result.m00 = p_m0->m00 * p_m1->m00 + p_m0->m01 * p_m1->m10 + p_m0->m02 * p_m1->m20;
-	result.m10 = p_m0->m10 * p_m1->m00 + p_m0->m11 * p_m1->m10 + p_m0->m12 * p_m1->m20;
-	result.m20 = p_m0->m20 * p_m1->m00 + p_m0->m21 * p_m1->m10 + p_m0->m22 * p_m1->m20;
+	result.m00 = m0.m00 * m1.m00 + m0.m01 * m1.m10 + m0.m02 * m1.m20;
+	result.m10 = m0.m10 * m1.m00 + m0.m11 * m1.m10 + m0.m12 * m1.m20;
+	result.m20 = m0.m20 * m1.m00 + m0.m21 * m1.m10 + m0.m22 * m1.m20;
 
-	result.m01 = p_m0->m00 * p_m1->m01 + p_m0->m01 * p_m1->m11 + p_m0->m02 * p_m1->m21;
-	result.m11 = p_m0->m10 * p_m1->m01 + p_m0->m11 * p_m1->m11 + p_m0->m12 * p_m1->m21;
-	result.m21 = p_m0->m20 * p_m1->m01 + p_m0->m21 * p_m1->m11 + p_m0->m22 * p_m1->m21;
+	result.m01 = m0.m00 * m1.m01 + m0.m01 * m1.m11 + m0.m02 * m1.m21;
+	result.m11 = m0.m10 * m1.m01 + m0.m11 * m1.m11 + m0.m12 * m1.m21;
+	result.m21 = m0.m20 * m1.m01 + m0.m21 * m1.m11 + m0.m22 * m1.m21;
 
-	result.m02 = p_m0->m00 * p_m1->m02 + p_m0->m01 * p_m1->m12 + p_m0->m02 * p_m1->m22;
-	result.m12 = p_m0->m10 * p_m1->m02 + p_m0->m11 * p_m1->m12 + p_m0->m12 * p_m1->m22;
-	result.m22 = p_m0->m20 * p_m1->m02 + p_m0->m21 * p_m1->m12 + p_m0->m22 * p_m1->m22;
+	result.m02 = m0.m00 * m1.m02 + m0.m01 * m1.m12 + m0.m02 * m1.m22;
+	result.m12 = m0.m10 * m1.m02 + m0.m11 * m1.m12 + m0.m12 * m1.m22;
+	result.m22 = m0.m20 * m1.m02 + m0.m21 * m1.m12 + m0.m22 * m1.m22;
 
 	return result;
 }
 
-v3 tgm_m3_multiply_v3(const m3* p_m, const v3* p_v)
+v3 tgm_m3_multiply_v3(m3 m, v3 v)
 {
-	TG_ASSERT(p_m && p_v);
-
 	v3 result = { 0 };
 
-	result.x = p_v->x * p_m->m00 + p_v->y * p_m->m01 + p_v->z * p_m->m02;
-	result.y = p_v->x * p_m->m10 + p_v->y * p_m->m11 + p_v->z * p_m->m12;
-	result.z = p_v->x * p_m->m20 + p_v->y * p_m->m21 + p_v->z * p_m->m22;
+	result.x = v.x * m.m00 + v.y * m.m01 + v.z * m.m02;
+	result.y = v.x * m.m10 + v.y * m.m11 + v.z * m.m12;
+	result.z = v.x * m.m20 + v.y * m.m21 + v.z * m.m22;
 
 	return result;
 }
@@ -1394,43 +1229,39 @@ m3 tgm_m3_orthographic(f32 left, f32 right, f32 bottom, f32 top)
 	return result;
 }
 
-m3 tgm_m3_transposed(const m3* p_m)
+m3 tgm_m3_transposed(m3 m)
 {
-	TG_ASSERT(p_m);
-
 	m3 result = { 0 };
 
-	result.m00 = p_m->m00;
-	result.m10 = p_m->m01;
-	result.m20 = p_m->m01;
+	result.m00 = m.m00;
+	result.m10 = m.m01;
+	result.m20 = m.m01;
 
-	result.m01 = p_m->m10;
-	result.m11 = p_m->m11;
-	result.m21 = p_m->m12;
+	result.m01 = m.m10;
+	result.m11 = m.m11;
+	result.m21 = m.m12;
 
-	result.m02 = p_m->m20;
-	result.m12 = p_m->m21;
-	result.m22 = p_m->m22;
+	result.m02 = m.m20;
+	result.m12 = m.m21;
+	result.m22 = m.m22;
 
 	return result;
 }
 
 
 
-m4 tgm_m4_angle_axis(f32 angle_in_radians, const v3* p_axis)
+m4 tgm_m4_angle_axis(f32 angle_in_radians, v3 axis)
 {
-	TG_ASSERT(p_axis);
-
 	m4 result = { 0 };
 
 	const f32 c = tgm_f32_cos(angle_in_radians);
 	const f32 s = tgm_f32_sin(angle_in_radians);
 	const f32 omc = 1.0f - c;
-	const f32 l = tgm_v3_magnitude(p_axis);
+	const f32 l = tgm_v3_magnitude(axis);
 	TG_ASSERT(l);
-	const f32 x = p_axis->x / l;
-	const f32 y = p_axis->y / l;
-	const f32 z = p_axis->z / l;
+	const f32 x = axis.x / l;
+	const f32 y = axis.y / l;
+	const f32 z = axis.z / l;
 
 	result.m00 = x * x * omc + c;
 	result.m10 = y * x * omc + z * s;
@@ -1455,23 +1286,21 @@ m4 tgm_m4_angle_axis(f32 angle_in_radians, const v3* p_axis)
 	return result;
 }
 
-f32 tgm_m4_determinant(const m4* p_m)
+f32 tgm_m4_determinant(m4 m)
 {
-	TG_ASSERT(p_m);
-
 	const f32 result =
-		p_m->m03 * p_m->m12 * p_m->m21 * p_m->m30 - p_m->m02 * p_m->m03 * p_m->m21 * p_m->m30 -
-		p_m->m03 * p_m->m11 * p_m->m22 * p_m->m30 + p_m->m01 * p_m->m03 * p_m->m22 * p_m->m30 +
-		p_m->m02 * p_m->m11 * p_m->m23 * p_m->m30 - p_m->m01 * p_m->m02 * p_m->m23 * p_m->m30 -
-		p_m->m03 * p_m->m12 * p_m->m20 * p_m->m31 + p_m->m02 * p_m->m03 * p_m->m20 * p_m->m31 +
-		p_m->m03 * p_m->m10 * p_m->m22 * p_m->m31 - p_m->m00 * p_m->m03 * p_m->m22 * p_m->m31 -
-		p_m->m02 * p_m->m10 * p_m->m23 * p_m->m31 + p_m->m00 * p_m->m02 * p_m->m23 * p_m->m31 +
-		p_m->m03 * p_m->m11 * p_m->m20 * p_m->m32 - p_m->m01 * p_m->m03 * p_m->m20 * p_m->m32 -
-		p_m->m03 * p_m->m10 * p_m->m21 * p_m->m32 + p_m->m00 * p_m->m03 * p_m->m21 * p_m->m32 +
-		p_m->m01 * p_m->m10 * p_m->m23 * p_m->m32 - p_m->m00 * p_m->m01 * p_m->m23 * p_m->m32 -
-		p_m->m02 * p_m->m11 * p_m->m20 * p_m->m33 + p_m->m01 * p_m->m02 * p_m->m20 * p_m->m33 +
-		p_m->m02 * p_m->m10 * p_m->m21 * p_m->m33 - p_m->m00 * p_m->m02 * p_m->m21 * p_m->m33 -
-		p_m->m01 * p_m->m10 * p_m->m22 * p_m->m33 + p_m->m00 * p_m->m01 * p_m->m22 * p_m->m33;
+		m.m03 * m.m12 * m.m21 * m.m30 - m.m02 * m.m03 * m.m21 * m.m30 -
+		m.m03 * m.m11 * m.m22 * m.m30 + m.m01 * m.m03 * m.m22 * m.m30 +
+		m.m02 * m.m11 * m.m23 * m.m30 - m.m01 * m.m02 * m.m23 * m.m30 -
+		m.m03 * m.m12 * m.m20 * m.m31 + m.m02 * m.m03 * m.m20 * m.m31 +
+		m.m03 * m.m10 * m.m22 * m.m31 - m.m00 * m.m03 * m.m22 * m.m31 -
+		m.m02 * m.m10 * m.m23 * m.m31 + m.m00 * m.m02 * m.m23 * m.m31 +
+		m.m03 * m.m11 * m.m20 * m.m32 - m.m01 * m.m03 * m.m20 * m.m32 -
+		m.m03 * m.m10 * m.m21 * m.m32 + m.m00 * m.m03 * m.m21 * m.m32 +
+		m.m01 * m.m10 * m.m23 * m.m32 - m.m00 * m.m01 * m.m23 * m.m32 -
+		m.m02 * m.m11 * m.m20 * m.m33 + m.m01 * m.m02 * m.m20 * m.m33 +
+		m.m02 * m.m10 * m.m21 * m.m33 - m.m00 * m.m02 * m.m21 * m.m33 -
+		m.m01 * m.m10 * m.m22 * m.m33 + m.m00 * m.m01 * m.m22 * m.m33;
 
 	return result;
 }
@@ -1481,9 +1310,8 @@ m4 tgm_m4_euler(f32 pitch_in_radians, f32 yaw_in_radians, f32 roll_in_radians)
 	const m4 x = tgm_m4_rotate_x(pitch_in_radians);
 	const m4 y = tgm_m4_rotate_y(yaw_in_radians);
 	const m4 z = tgm_m4_rotate_z(roll_in_radians);
-	const m4 yx = tgm_m4_multiply_m4(&y, &x);
-	const m4 zyx = tgm_m4_multiply_m4(&z, &yx);
-
+	const m4 yx = tgm_m4_multiply(y, x);
+	const m4 zyx = tgm_m4_multiply(z, yx);
 	return zyx;
 }
 
@@ -1514,75 +1342,66 @@ m4 tgm_m4_identity()
 	return result;
 }
 
-m4 tgm_m4_inverse(const m4* p_m)
+m4 tgm_m4_inverse(m4 m)
 {
 	m4 result = { 0 };
 
-	const f32 m2323 = p_m->m22 * p_m->m33 - p_m->m23 * p_m->m32;
-	const f32 m1323 = p_m->m21 * p_m->m33 - p_m->m23 * p_m->m31;
-	const f32 m1223 = p_m->m21 * p_m->m32 - p_m->m22 * p_m->m31;
-	const f32 m0323 = p_m->m20 * p_m->m33 - p_m->m23 * p_m->m30;
-	const f32 m0223 = p_m->m20 * p_m->m32 - p_m->m22 * p_m->m30;
-	const f32 m0123 = p_m->m20 * p_m->m31 - p_m->m21 * p_m->m30;
-	const f32 m2313 = p_m->m12 * p_m->m33 - p_m->m13 * p_m->m32;
-	const f32 m1313 = p_m->m11 * p_m->m33 - p_m->m13 * p_m->m31;
-	const f32 m1213 = p_m->m11 * p_m->m32 - p_m->m12 * p_m->m31;
-	const f32 m2312 = p_m->m12 * p_m->m23 - p_m->m13 * p_m->m22;
-	const f32 m1312 = p_m->m11 * p_m->m23 - p_m->m13 * p_m->m21;
-	const f32 m1212 = p_m->m11 * p_m->m22 - p_m->m12 * p_m->m21;
-	const f32 m0313 = p_m->m10 * p_m->m33 - p_m->m13 * p_m->m30;
-	const f32 m0213 = p_m->m10 * p_m->m32 - p_m->m12 * p_m->m30;
-	const f32 m0312 = p_m->m10 * p_m->m23 - p_m->m13 * p_m->m20;
-	const f32 m0212 = p_m->m10 * p_m->m22 - p_m->m12 * p_m->m20;
-	const f32 m0113 = p_m->m10 * p_m->m31 - p_m->m11 * p_m->m30;
-	const f32 m0112 = p_m->m10 * p_m->m21 - p_m->m11 * p_m->m20;
+	const f32 m2323 = m.m22 * m.m33 - m.m23 * m.m32;
+	const f32 m1323 = m.m21 * m.m33 - m.m23 * m.m31;
+	const f32 m1223 = m.m21 * m.m32 - m.m22 * m.m31;
+	const f32 m0323 = m.m20 * m.m33 - m.m23 * m.m30;
+	const f32 m0223 = m.m20 * m.m32 - m.m22 * m.m30;
+	const f32 m0123 = m.m20 * m.m31 - m.m21 * m.m30;
+	const f32 m2313 = m.m12 * m.m33 - m.m13 * m.m32;
+	const f32 m1313 = m.m11 * m.m33 - m.m13 * m.m31;
+	const f32 m1213 = m.m11 * m.m32 - m.m12 * m.m31;
+	const f32 m2312 = m.m12 * m.m23 - m.m13 * m.m22;
+	const f32 m1312 = m.m11 * m.m23 - m.m13 * m.m21;
+	const f32 m1212 = m.m11 * m.m22 - m.m12 * m.m21;
+	const f32 m0313 = m.m10 * m.m33 - m.m13 * m.m30;
+	const f32 m0213 = m.m10 * m.m32 - m.m12 * m.m30;
+	const f32 m0312 = m.m10 * m.m23 - m.m13 * m.m20;
+	const f32 m0212 = m.m10 * m.m22 - m.m12 * m.m20;
+	const f32 m0113 = m.m10 * m.m31 - m.m11 * m.m30;
+	const f32 m0112 = m.m10 * m.m21 - m.m11 * m.m20;
 
 	const f32 det = 1.0f / (
-		p_m->m00 * (p_m->m11 * m2323 - p_m->m12 * m1323 + p_m->m13 * m1223) -
-		p_m->m01 * (p_m->m10 * m2323 - p_m->m12 * m0323 + p_m->m13 * m0223) +
-		p_m->m02 * (p_m->m10 * m1323 - p_m->m11 * m0323 + p_m->m13 * m0123) -
-		p_m->m03 * (p_m->m10 * m1223 - p_m->m11 * m0223 + p_m->m12 * m0123));
+		m.m00 * (m.m11 * m2323 - m.m12 * m1323 + m.m13 * m1223) -
+		m.m01 * (m.m10 * m2323 - m.m12 * m0323 + m.m13 * m0223) +
+		m.m02 * (m.m10 * m1323 - m.m11 * m0323 + m.m13 * m0123) -
+		m.m03 * (m.m10 * m1223 - m.m11 * m0223 + m.m12 * m0123));
 
-	result.m00 = det * (p_m->m11 * m2323 - p_m->m12 * m1323 + p_m->m13 * m1223);
-	result.m01 = det * -(p_m->m01 * m2323 - p_m->m02 * m1323 + p_m->m03 * m1223);
-	result.m02 = det * (p_m->m01 * m2313 - p_m->m02 * m1313 + p_m->m03 * m1213);
-	result.m03 = det * -(p_m->m01 * m2312 - p_m->m02 * m1312 + p_m->m03 * m1212);
-	result.m10 = det * -(p_m->m10 * m2323 - p_m->m12 * m0323 + p_m->m13 * m0223);
-	result.m11 = det * (p_m->m00 * m2323 - p_m->m02 * m0323 + p_m->m03 * m0223);
-	result.m12 = det * -(p_m->m00 * m2313 - p_m->m02 * m0313 + p_m->m03 * m0213);
-	result.m13 = det * (p_m->m00 * m2312 - p_m->m02 * m0312 + p_m->m03 * m0212);
-	result.m20 = det * (p_m->m10 * m1323 - p_m->m11 * m0323 + p_m->m13 * m0123);
-	result.m21 = det * -(p_m->m00 * m1323 - p_m->m01 * m0323 + p_m->m03 * m0123);
-	result.m22 = det * (p_m->m00 * m1313 - p_m->m01 * m0313 + p_m->m03 * m0113);
-	result.m23 = det * -(p_m->m00 * m1312 - p_m->m01 * m0312 + p_m->m03 * m0112);
-	result.m30 = det * -(p_m->m10 * m1223 - p_m->m11 * m0223 + p_m->m12 * m0123);
-	result.m31 = det * (p_m->m00 * m1223 - p_m->m01 * m0223 + p_m->m02 * m0123);
-	result.m32 = det * -(p_m->m00 * m1213 - p_m->m01 * m0213 + p_m->m02 * m0113);
-	result.m33 = det * (p_m->m00 * m1212 - p_m->m01 * m0212 + p_m->m02 * m0112);
+	result.m00 = det * (m.m11 * m2323 - m.m12 * m1323 + m.m13 * m1223);
+	result.m01 = det * -(m.m01 * m2323 - m.m02 * m1323 + m.m03 * m1223);
+	result.m02 = det * (m.m01 * m2313 - m.m02 * m1313 + m.m03 * m1213);
+	result.m03 = det * -(m.m01 * m2312 - m.m02 * m1312 + m.m03 * m1212);
+	result.m10 = det * -(m.m10 * m2323 - m.m12 * m0323 + m.m13 * m0223);
+	result.m11 = det * (m.m00 * m2323 - m.m02 * m0323 + m.m03 * m0223);
+	result.m12 = det * -(m.m00 * m2313 - m.m02 * m0313 + m.m03 * m0213);
+	result.m13 = det * (m.m00 * m2312 - m.m02 * m0312 + m.m03 * m0212);
+	result.m20 = det * (m.m10 * m1323 - m.m11 * m0323 + m.m13 * m0123);
+	result.m21 = det * -(m.m00 * m1323 - m.m01 * m0323 + m.m03 * m0123);
+	result.m22 = det * (m.m00 * m1313 - m.m01 * m0313 + m.m03 * m0113);
+	result.m23 = det * -(m.m00 * m1312 - m.m01 * m0312 + m.m03 * m0112);
+	result.m30 = det * -(m.m10 * m1223 - m.m11 * m0223 + m.m12 * m0123);
+	result.m31 = det * (m.m00 * m1223 - m.m01 * m0223 + m.m02 * m0123);
+	result.m32 = det * -(m.m00 * m1213 - m.m01 * m0213 + m.m02 * m0113);
+	result.m33 = det * (m.m00 * m1212 - m.m01 * m0212 + m.m02 * m0112);
 
 	return result;
 }
 
-m4 tgm_m4_look_at(const v3* p_from, const v3* p_to, const v3* p_up)
+m4 tgm_m4_look_at(v3 from, v3 to, v3 up)
 {
-	TG_ASSERT(p_from && p_to && p_up && !tgm_v3_equal(p_from, p_to) && !tgm_v3_equal(p_from, p_up) && !tgm_v3_equal(p_to, p_up));
+	TG_ASSERT(!tgm_v3_equal(from, to) && !tgm_v3_equal(from, up) && !tgm_v3_equal(to, up));
 
 	m4 result = { 0 };
-	v3 temp = { 0 };
 
-	temp = tgm_v3_subtract_v3(p_to, p_from);
-	const v3 f_negated = tgm_v3_normalized(&temp);
-
-	temp = tgm_v3_normalized(p_up);
-	temp = tgm_v3_cross(&f_negated, &temp);
-	const v3 r = tgm_v3_normalized(&temp);
-
-	temp = tgm_v3_cross(&r, &f_negated);
-	const v3 u = tgm_v3_normalized(&temp);
-
-	const v3 f = tgm_v3_negated(&f_negated);
-
-	v3 from_negated = tgm_v3_negated(p_from);
+	const v3 f_negated = tgm_v3_normalized(tgm_v3_subtract(to, from));
+	const v3 r = tgm_v3_normalized(tgm_v3_cross(f_negated, tgm_v3_normalized(up)));
+	const v3 u = tgm_v3_normalized(tgm_v3_cross(r, f_negated));
+	const v3 f = tgm_v3_negated(f_negated);
+	const v3 from_negated = tgm_v3_negated(from);
 
 	result.m00 = r.x;
 	result.m10 = u.x;
@@ -1599,53 +1418,49 @@ m4 tgm_m4_look_at(const v3* p_from, const v3* p_to, const v3* p_up)
 	result.m22 = f.z;
 	result.m32 = 0.0f;
 
-	result.m03 = tgm_v3_dot(&r, &from_negated);
-	result.m13 = tgm_v3_dot(&u, &from_negated);
-	result.m23 = tgm_v3_dot(&f, &from_negated);
+	result.m03 = tgm_v3_dot(r, from_negated);
+	result.m13 = tgm_v3_dot(u, from_negated);
+	result.m23 = tgm_v3_dot(f, from_negated);
 	result.m33 = 1.0f;
 
 	return result;
 }
 
-m4 tgm_m4_multiply_m4(const m4* p_m0, const m4* p_m1)
+m4 tgm_m4_multiply(m4 m0, m4 m1)
 {
-	TG_ASSERT(p_m0 && p_m1);
-
 	m4 result = { 0 };
 
-	result.m00 = p_m0->m00 * p_m1->m00 + p_m0->m01 * p_m1->m10 + p_m0->m02 * p_m1->m20 + p_m0->m03 * p_m1->m30;
-	result.m10 = p_m0->m10 * p_m1->m00 + p_m0->m11 * p_m1->m10 + p_m0->m12 * p_m1->m20 + p_m0->m13 * p_m1->m30;
-	result.m20 = p_m0->m20 * p_m1->m00 + p_m0->m21 * p_m1->m10 + p_m0->m22 * p_m1->m20 + p_m0->m23 * p_m1->m30;
-	result.m30 = p_m0->m30 * p_m1->m00 + p_m0->m31 * p_m1->m10 + p_m0->m32 * p_m1->m20 + p_m0->m33 * p_m1->m30;
+	result.m00 = m0.m00 * m1.m00 + m0.m01 * m1.m10 + m0.m02 * m1.m20 + m0.m03 * m1.m30;
+	result.m10 = m0.m10 * m1.m00 + m0.m11 * m1.m10 + m0.m12 * m1.m20 + m0.m13 * m1.m30;
+	result.m20 = m0.m20 * m1.m00 + m0.m21 * m1.m10 + m0.m22 * m1.m20 + m0.m23 * m1.m30;
+	result.m30 = m0.m30 * m1.m00 + m0.m31 * m1.m10 + m0.m32 * m1.m20 + m0.m33 * m1.m30;
 
-	result.m01 = p_m0->m00 * p_m1->m01 + p_m0->m01 * p_m1->m11 + p_m0->m02 * p_m1->m21 + p_m0->m03 * p_m1->m31;
-	result.m11 = p_m0->m10 * p_m1->m01 + p_m0->m11 * p_m1->m11 + p_m0->m12 * p_m1->m21 + p_m0->m13 * p_m1->m31;
-	result.m21 = p_m0->m20 * p_m1->m01 + p_m0->m21 * p_m1->m11 + p_m0->m22 * p_m1->m21 + p_m0->m23 * p_m1->m31;
-	result.m31 = p_m0->m30 * p_m1->m01 + p_m0->m31 * p_m1->m11 + p_m0->m32 * p_m1->m21 + p_m0->m33 * p_m1->m31;
+	result.m01 = m0.m00 * m1.m01 + m0.m01 * m1.m11 + m0.m02 * m1.m21 + m0.m03 * m1.m31;
+	result.m11 = m0.m10 * m1.m01 + m0.m11 * m1.m11 + m0.m12 * m1.m21 + m0.m13 * m1.m31;
+	result.m21 = m0.m20 * m1.m01 + m0.m21 * m1.m11 + m0.m22 * m1.m21 + m0.m23 * m1.m31;
+	result.m31 = m0.m30 * m1.m01 + m0.m31 * m1.m11 + m0.m32 * m1.m21 + m0.m33 * m1.m31;
 
-	result.m02 = p_m0->m00 * p_m1->m02 + p_m0->m01 * p_m1->m12 + p_m0->m02 * p_m1->m22 + p_m0->m03 * p_m1->m32;
-	result.m12 = p_m0->m10 * p_m1->m02 + p_m0->m11 * p_m1->m12 + p_m0->m12 * p_m1->m22 + p_m0->m13 * p_m1->m32;
-	result.m22 = p_m0->m20 * p_m1->m02 + p_m0->m21 * p_m1->m12 + p_m0->m22 * p_m1->m22 + p_m0->m23 * p_m1->m32;
-	result.m32 = p_m0->m30 * p_m1->m02 + p_m0->m31 * p_m1->m12 + p_m0->m32 * p_m1->m22 + p_m0->m33 * p_m1->m32;
+	result.m02 = m0.m00 * m1.m02 + m0.m01 * m1.m12 + m0.m02 * m1.m22 + m0.m03 * m1.m32;
+	result.m12 = m0.m10 * m1.m02 + m0.m11 * m1.m12 + m0.m12 * m1.m22 + m0.m13 * m1.m32;
+	result.m22 = m0.m20 * m1.m02 + m0.m21 * m1.m12 + m0.m22 * m1.m22 + m0.m23 * m1.m32;
+	result.m32 = m0.m30 * m1.m02 + m0.m31 * m1.m12 + m0.m32 * m1.m22 + m0.m33 * m1.m32;
 
-	result.m03 = p_m0->m00 * p_m1->m03 + p_m0->m01 * p_m1->m13 + p_m0->m02 * p_m1->m23 + p_m0->m03 * p_m1->m33;
-	result.m13 = p_m0->m10 * p_m1->m03 + p_m0->m11 * p_m1->m13 + p_m0->m12 * p_m1->m23 + p_m0->m13 * p_m1->m33;
-	result.m23 = p_m0->m20 * p_m1->m03 + p_m0->m21 * p_m1->m13 + p_m0->m22 * p_m1->m23 + p_m0->m23 * p_m1->m33;
-	result.m33 = p_m0->m30 * p_m1->m03 + p_m0->m31 * p_m1->m13 + p_m0->m32 * p_m1->m23 + p_m0->m33 * p_m1->m33;
+	result.m03 = m0.m00 * m1.m03 + m0.m01 * m1.m13 + m0.m02 * m1.m23 + m0.m03 * m1.m33;
+	result.m13 = m0.m10 * m1.m03 + m0.m11 * m1.m13 + m0.m12 * m1.m23 + m0.m13 * m1.m33;
+	result.m23 = m0.m20 * m1.m03 + m0.m21 * m1.m13 + m0.m22 * m1.m23 + m0.m23 * m1.m33;
+	result.m33 = m0.m30 * m1.m03 + m0.m31 * m1.m13 + m0.m32 * m1.m23 + m0.m33 * m1.m33;
 
 	return result;
 }
 
-v4 tgm_m4_multiply_v4(const m4* p_m, const v4* p_v)
+v4 tgm_m4_multiply_v4(m4 m, v4 v)
 {
-	TG_ASSERT(p_m && p_v);
-
 	v4 result = { 0 };
 
-	result.x = p_v->x * p_m->m00 + p_v->y * p_m->m01 + p_v->z * p_m->m02 + p_v->w * p_m->m03;
-	result.y = p_v->x * p_m->m10 + p_v->y * p_m->m11 + p_v->z * p_m->m12 + p_v->w * p_m->m13;
-	result.z = p_v->x * p_m->m20 + p_v->y * p_m->m21 + p_v->z * p_m->m22 + p_v->w * p_m->m23;
-	result.w = p_v->x * p_m->m30 + p_v->y * p_m->m31 + p_v->z * p_m->m32 + p_v->w * p_m->m33;
+	result.x = v.x * m.m00 + v.y * m.m01 + v.z * m.m02 + v.w * m.m03;
+	result.y = v.x * m.m10 + v.y * m.m11 + v.z * m.m12 + v.w * m.m13;
+	result.z = v.x * m.m20 + v.y * m.m21 + v.z * m.m22 + v.w * m.m23;
+	result.w = v.x * m.m30 + v.y * m.m31 + v.z * m.m32 + v.w * m.m33;
 
 	return result;
 }
@@ -1792,10 +1607,8 @@ m4 tgm_m4_rotate_z(f32 angle_in_radians)
 	return result;
 }
 
-m4 tgm_m4_translate(const v3* p_v)
+m4 tgm_m4_translate(v3 v)
 {
-	TG_ASSERT(p_v);
-
 	m4 result = { 0 };
 
 	result.m00 = 1.0f;
@@ -1813,39 +1626,37 @@ m4 tgm_m4_translate(const v3* p_v)
 	result.m22 = 1.0f;
 	result.m32 = 0.0f;
 
-	result.m03 = p_v->x;
-	result.m13 = p_v->y;
-	result.m23 = p_v->z;
+	result.m03 = v.x;
+	result.m13 = v.y;
+	result.m23 = v.z;
 	result.m33 = 1.0f;
 
 	return result;
 }
 
-m4 tgm_m4_transposed(const m4* p_m)
+m4 tgm_m4_transposed(m4 m)
 {
-	TG_ASSERT(p_m);
-
 	m4 result = { 0 };
 
-	result.m00 = p_m->m00;
-	result.m10 = p_m->m01;
-	result.m20 = p_m->m02;
-	result.m30 = p_m->m03;
+	result.m00 = m.m00;
+	result.m10 = m.m01;
+	result.m20 = m.m02;
+	result.m30 = m.m03;
 
-	result.m01 = p_m->m10;
-	result.m11 = p_m->m11;
-	result.m21 = p_m->m12;
-	result.m31 = p_m->m13;
+	result.m01 = m.m10;
+	result.m11 = m.m11;
+	result.m21 = m.m12;
+	result.m31 = m.m13;
 
-	result.m02 = p_m->m20;
-	result.m12 = p_m->m21;
-	result.m22 = p_m->m22;
-	result.m32 = p_m->m23;
+	result.m02 = m.m20;
+	result.m12 = m.m21;
+	result.m22 = m.m22;
+	result.m32 = m.m23;
 
-	result.m03 = p_m->m30;
-	result.m13 = p_m->m31;
-	result.m23 = p_m->m32;
-	result.m33 = p_m->m33;
+	result.m03 = m.m30;
+	result.m13 = m.m31;
+	result.m23 = m.m32;
+	result.m33 = m.m33;
 
 	return result;
 }

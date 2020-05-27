@@ -881,14 +881,15 @@ tg_vulkan_descriptor tg_vulkan_descriptor_create(u32 binding_count, VkDescriptor
 {
     tg_vulkan_descriptor vulkan_descriptor = { 0 };
 
-    VkDescriptorPoolSize* p_descriptor_pool_sizes = TG_MEMORY_ALLOC(binding_count * sizeof(*p_descriptor_pool_sizes));
+    const u64 descriptor_pool_sizes_size = binding_count * sizeof(VkDescriptorPoolSize);
+    VkDescriptorPoolSize* p_descriptor_pool_sizes = TG_MEMORY_STACK_ALLOC(descriptor_pool_sizes_size);
     for (u32 i = 0; i < binding_count; i++)
     {
         p_descriptor_pool_sizes[i].type = p_bindings[i].descriptorType;
         p_descriptor_pool_sizes[i].descriptorCount = p_bindings[i].descriptorCount;
     }
     vulkan_descriptor.descriptor_pool = tg_vulkan_internal_descriptor_pool_create(0, 1, 1, p_descriptor_pool_sizes);
-    TG_MEMORY_FREE(p_descriptor_pool_sizes);
+    TG_MEMORY_STACK_FREE(descriptor_pool_sizes_size);
 
     vulkan_descriptor.descriptor_set_layout = tg_vulkan_internal_descriptor_set_layout_create(0, binding_count, p_bindings);
     vulkan_descriptor.descriptor_set = tg_vulkan_internal_descriptor_set_allocate(vulkan_descriptor.descriptor_pool, vulkan_descriptor.descriptor_set_layout);
@@ -1331,7 +1332,8 @@ VkPipeline tg_vulkan_graphics_pipeline_create(const tg_vulkan_graphics_pipeline_
     pipeline_depth_stencil_state_create_info.minDepthBounds = 0.0f;
     pipeline_depth_stencil_state_create_info.maxDepthBounds = 0.0f;
 
-    VkPipelineColorBlendAttachmentState* p_pipeline_color_blend_attachment_states = TG_MEMORY_ALLOC(p_vulkan_graphics_pipeline_create_info->attachment_count * sizeof(*p_pipeline_color_blend_attachment_states));
+    const u64 pipeline_color_blend_attachment_states_size = p_vulkan_graphics_pipeline_create_info->attachment_count * sizeof(VkPipelineColorBlendAttachmentState);
+    VkPipelineColorBlendAttachmentState* p_pipeline_color_blend_attachment_states = TG_MEMORY_STACK_ALLOC(pipeline_color_blend_attachment_states_size);
 
     for (u32 i = 0; i < p_vulkan_graphics_pipeline_create_info->attachment_count; i++)
     {
@@ -1380,7 +1382,7 @@ VkPipeline tg_vulkan_graphics_pipeline_create(const tg_vulkan_graphics_pipeline_
     graphics_pipeline_create_info.basePipelineIndex = -1;
 
     VK_CALL(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &graphics_pipeline_create_info, TG_NULL, &graphics_pipeline));
-    TG_MEMORY_FREE(p_pipeline_color_blend_attachment_states);
+    TG_MEMORY_STACK_FREE(pipeline_color_blend_attachment_states_size);
 
     return graphics_pipeline;
 }
@@ -1711,7 +1713,8 @@ b32 tg_vulkan_physical_device_check_extension_support(VkPhysicalDevice physical_
 {
     u32 device_extension_property_count;
     VK_CALL(vkEnumerateDeviceExtensionProperties(physical_device, TG_NULL, &device_extension_property_count, TG_NULL));
-    VkExtensionProperties* device_extension_properties = TG_MEMORY_ALLOC(device_extension_property_count * sizeof(*device_extension_properties));
+    const u64 device_extension_properties_size = device_extension_property_count * sizeof(VkExtensionProperties);
+    VkExtensionProperties* device_extension_properties = TG_MEMORY_STACK_ALLOC(device_extension_properties_size);
     VK_CALL(vkEnumerateDeviceExtensionProperties(physical_device, TG_NULL, &device_extension_property_count, device_extension_properties));
 
     b32 supports_extensions = TG_TRUE;
@@ -1729,7 +1732,7 @@ b32 tg_vulkan_physical_device_check_extension_support(VkPhysicalDevice physical_
         supports_extensions &= supports_extension;
     }
 
-    TG_MEMORY_FREE(device_extension_properties);
+    TG_MEMORY_STACK_FREE(device_extension_properties_size);
     return supports_extensions;
 }
 
@@ -1738,7 +1741,8 @@ b32 tg_vulkan_physical_device_find_queue_families(VkPhysicalDevice physical_devi
     u32 queue_family_count;
     vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, TG_NULL);
     TG_ASSERT(queue_family_count);
-    VkQueueFamilyProperties* queue_family_properties = TG_MEMORY_ALLOC(queue_family_count * sizeof(*queue_family_properties));
+    const u64 queue_family_properties_size = queue_family_count * sizeof(VkQueueFamilyProperties);
+    VkQueueFamilyProperties* queue_family_properties = TG_MEMORY_STACK_ALLOC(queue_family_properties_size);
     vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, queue_family_properties);
 
     b32 supports_graphics_family = TG_FALSE;
@@ -1778,7 +1782,7 @@ b32 tg_vulkan_physical_device_find_queue_families(VkPhysicalDevice physical_devi
     }
 
     const b32 complete = supports_graphics_family && supports_present_family && supports_compute_family;
-    TG_MEMORY_FREE(queue_family_properties);
+    TG_MEMORY_STACK_FREE(queue_family_properties_size);
     return complete;
 }
 
@@ -1856,7 +1860,8 @@ VkInstance tg_vulkan_instance_create()
 #ifdef TG_DEBUG
     u32 layer_property_count;
     vkEnumerateInstanceLayerProperties(&layer_property_count, TG_NULL);
-    VkLayerProperties* layer_properties = TG_MEMORY_ALLOC(layer_property_count * sizeof(*layer_properties));
+    const u64 layer_properties_size = layer_property_count * sizeof(VkLayerProperties);
+    VkLayerProperties* layer_properties = TG_MEMORY_STACK_ALLOC(layer_properties_size);
     vkEnumerateInstanceLayerProperties(&layer_property_count, layer_properties);
 
     for (u32 i = 0; i < TG_VULKAN_VALIDATION_LAYER_COUNT; i++)
@@ -1872,7 +1877,7 @@ VkInstance tg_vulkan_instance_create()
         }
         TG_ASSERT(layer_found);
     }
-    TG_MEMORY_FREE(layer_properties);
+    TG_MEMORY_STACK_FREE(layer_properties_size);
 #endif
 
     VkApplicationInfo application_info = { 0 };
@@ -1957,7 +1962,8 @@ VkPhysicalDevice tg_vulkan_physical_device_create()
     u32 physical_device_count;
     VK_CALL(vkEnumeratePhysicalDevices(instance, &physical_device_count, TG_NULL));
     TG_ASSERT(physical_device_count);
-    VkPhysicalDevice* physical_devices = TG_MEMORY_ALLOC(physical_device_count * sizeof(*physical_devices));
+    const u64 physical_devices_size = physical_device_count * sizeof(VkPhysicalDevice);
+    VkPhysicalDevice* physical_devices = TG_MEMORY_STACK_ALLOC(physical_devices_size);
     VK_CALL(vkEnumeratePhysicalDevices(instance, &physical_device_count, physical_devices));
 
     for (u32 i = 0; i < physical_device_count; i++)
@@ -1970,7 +1976,7 @@ VkPhysicalDevice tg_vulkan_physical_device_create()
         }
     }
 
-    TG_MEMORY_FREE(physical_devices);
+    TG_MEMORY_STACK_FREE(physical_devices_size);
     TG_ASSERT(physical_device != VK_NULL_HANDLE);
 
     return physical_device;
@@ -2104,7 +2110,8 @@ void tg_vulkan_swapchain_create()
 
     u32 surface_format_count;
     VK_CALL(vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface.surface, &surface_format_count, TG_NULL));
-    VkSurfaceFormatKHR* surface_formats = TG_MEMORY_ALLOC(surface_format_count * sizeof(*surface_formats));
+    const u64 surface_formats_size = surface_format_count * sizeof(VkSurfaceFormatKHR);
+    VkSurfaceFormatKHR* surface_formats = TG_MEMORY_STACK_ALLOC(surface_formats_size);
     VK_CALL(vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface.surface, &surface_format_count, surface_formats));
     surface.format = surface_formats[0];
     for (u32 i = 0; i < surface_format_count; i++)
@@ -2115,7 +2122,7 @@ void tg_vulkan_swapchain_create()
             break;
         }
     }
-    TG_MEMORY_FREE(surface_formats);
+    TG_MEMORY_STACK_FREE(surface_formats_size);
 
     VkPresentModeKHR p_present_modes[9] = { 0 };
     u32 present_mode_count = 0;

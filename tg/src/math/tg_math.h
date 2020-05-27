@@ -300,52 +300,52 @@ u64    tgm_u64_min(u64 v0, u64 v1);
 | Vectors                                                     |
 +------------------------------------------------------------*/
 
-v2     tgm_v2_max(const v2* p_v0, const v2* p_v1);
-v2     tgm_v2_min(const v2* p_v0, const v2* p_v1);
-v2     tgm_v2_subtract_v2(const v2* p_v0, const v2* p_v1);
+v2     tgm_v2_max(v2 v0, v2 v1);
+v2     tgm_v2_min(v2 v0, v2 v1);
+v2     tgm_v2_subtract_v2(v2 v0, v2 v1);
 
-v3     tgm_v3_abs(const v3* p_v);
-v3     tgm_v3_add_v3(const v3* p_v0, const v3* p_v1);
-v3     tgm_v3_add_f(const v3* p_v, f32 f);
-v3     tgm_v3_clamp(const v3* p_v, const v3* p_min, const v3* p_max);
-v3     tgm_v3_cross(const v3* p_v0, const v3* p_v1);
-v3     tgm_v3_divide_v3(const v3* p_v0, const v3* p_v1);
-v3     tgm_v3_divide_f(const v3* p_v, f32 f);
-f32    tgm_v3_dot(const v3* p_v0, const v3* p_v1);
-b32    tgm_v3_equal(const v3* p_v0, const v3* p_v1);
-v3     tgm_v3_lerp(const v3* p_v0, const v3* p_v1, f32 t);
-f32    tgm_v3_magnitude(const v3* p_v);
-f32    tgm_v3_magnitude_squared(const v3* p_v);
-v3     tgm_v3_max(const v3* p_v0, const v3* p_v1);
-v3     tgm_v3_min(const v3* p_v0, const v3* p_v1);
-v3     tgm_v3_multiply_v3(const v3* p_v0, const v3* p_v1);
-v3     tgm_v3_multiply_f(const v3* p_v, f32 f);
-v3     tgm_v3_negated(const v3* p_v);
-v3     tgm_v3_normalized(const v3* p_v);
-b32    tgm_v3_similar(const v3* p_v0, const v3* p_v1, f32 epsilon);
-v3     tgm_v3_subtract_v3(const v3* p_v0, const v3* p_v1);
-v3     tgm_v3_subtract_f(const v3* p_v, f32 f);
-v4     tgm_v3_to_v4(const v3* p_v, f32 w);
+v3     tgm_v3_abs(v3 v);
+v3     tgm_v3_add(v3 v0, v3 v1);
+v3     tgm_v3_add_f(v3 v, f32 f);
+v3     tgm_v3_clamp(v3 v, v3 min, v3 max);
+v3     tgm_v3_cross(v3 v0, v3 v1);
+v3     tgm_v3_divide(v3 v0, v3 v1);
+v3     tgm_v3_divide_f(v3 v, f32 f);
+f32    tgm_v3_dot(v3 v0, v3 v1);
+b32    tgm_v3_equal(v3 v0, v3 v1);
+v3     tgm_v3_lerp(v3 v0, v3 v1, f32 t);
+f32    tgm_v3_magnitude(v3 v);
+f32    tgm_v3_magnitude_squared(v3 v);
+v3     tgm_v3_max(v3 v0, v3 v1);
+v3     tgm_v3_min(v3 v0, v3 v1);
+v3     tgm_v3_multiply(v3 v0, v3 v1);
+v3     tgm_v3_multiply_f(v3 v, f32 f);
+v3     tgm_v3_negated(v3 v);
+v3     tgm_v3_normalized(v3 v);
+b32    tgm_v3_similar(v3 v0, v3 v1, f32 epsilon);
+v3     tgm_v3_subtract(v3 v0, v3 v1);
+v3     tgm_v3_subtract_f(v3 v, f32 f);
+v4     tgm_v3_to_v4(v3 v, f32 w);
 
-b32    tgm_v3i_equal(const v3i* p_v0, const v3i* p_v1);
+b32    tgm_v3i_equal(v3i v0, v3i v1);
 
-v4     tgm_v4_add_v4(const v4* p_v0, const v4* p_v1);
-v4     tgm_v4_add_f(const v4* p_v, f32 f);
-v4     tgm_v4_divide_v4(const v4* p_v0, const v4* p_v1);
-v4     tgm_v4_divide_f(const v4* p_v, f32 f);
-f32    tgm_v4_dot(const v4* p_v0, const v4* p_v1);
-b32    tgm_v4_equal(const v4* p_v0, const v4* p_v1);
-f32    tgm_v4_magnitude(const v4* p_v);
-f32    tgm_v4_magnitude_squared(const v4* p_v);
-v4     tgm_v4_max(const v4* p_v0, const v4* p_v1);
-v4     tgm_v4_min(const v4* p_v0, const v4* p_v1);
-v4     tgm_v4_multiply_v4(const v4* p_v0, const v4* p_v1);
-v4     tgm_v4_multiply_f(const v4* p_v, f32 f);
-v4     tgm_v4_negated(const v4* p_v);
-v4     tgm_v4_normalized(const v4* p_v);
-v4     tgm_v4_subtract_v4(const v4* p_v0, const v4* p_v1);
-v4     tgm_v4_subtract_f(const v4* p_v, f32 f);
-v3     tgm_v4_to_v3(const v4* p_v);
+v4     tgm_v4_add(v4 v0, v4 v1);
+v4     tgm_v4_add_f(v4 v, f32 f);
+v4     tgm_v4_divide(v4 v0, v4 v1);
+v4     tgm_v4_divide_f(v4 v, f32 f);
+f32    tgm_v4_dot(v4 v0, v4 v1);
+b32    tgm_v4_equal(v4 v0, v4 v1);
+f32    tgm_v4_magnitude(v4 v);
+f32    tgm_v4_magnitude_squared(v4 v);
+v4     tgm_v4_max(v4 v0, v4 v1);
+v4     tgm_v4_min(v4 v0, v4 v1);
+v4     tgm_v4_multiply(v4 v0, v4 v1);
+v4     tgm_v4_multiply_f(v4 v, f32 f);
+v4     tgm_v4_negated(v4 v);
+v4     tgm_v4_normalized(v4 v);
+v4     tgm_v4_subtract(v4 v0, v4 v1);
+v4     tgm_v4_subtract_f(v4 v, f32 f);
+v3     tgm_v4_to_v3(v4 v);
 
 
 
@@ -354,30 +354,30 @@ v3     tgm_v4_to_v3(const v4* p_v);
 +------------------------------------------------------------*/
 
 m2     tgm_m2_identity();
-m2     tgm_m2_multiply_m2(const m2* p_m0, const m2* p_m1);
-v2     tgm_m2_multiply_v2(const m2* p_m, const v2* p_v);
-m2     tgm_m2_transposed(const m2* p_m);
+m2     tgm_m2_multiply(m2 m0, m2 m1);
+v2     tgm_m2_multiply_v2(m2 m, v2 v);
+m2     tgm_m2_transposed(m2 m);
 
 m3     tgm_m3_identity();
-m3     tgm_m3_multiply_m3(const m3* p_m0, const m3* p_m1);
-v3     tgm_m3_multiply_v3(const m3* p_m, const v3* p_v);
+m3     tgm_m3_multiply(m3 m0, m3 m1);
+v3     tgm_m3_multiply_v3(m3 m, v3 v);
 m3     tgm_m3_orthographic(f32 left, f32 right, f32 bottom, f32 top);
-m3     tgm_m3_transposed(const m3* p_m);
+m3     tgm_m3_transposed(m3 m);
 
-m4     tgm_m4_angle_axis(f32 angle_in_radians, const v3* p_axis);
-f32    tgm_m4_determinant(const m4* p_m);
+m4     tgm_m4_angle_axis(f32 angle_in_radians, v3 axis);
+f32    tgm_m4_determinant(m4 m);
 m4     tgm_m4_euler(f32 pitch_in_radians, f32 yaw_in_radians, f32 roll_in_radians);
 m4     tgm_m4_identity();
-m4     tgm_m4_inverse(const m4* p_m);
-m4     tgm_m4_look_at(const v3* p_from, const v3* p_to, const v3* p_up);
-m4     tgm_m4_multiply_m4(const m4* p_m0, const m4* p_m1);
-v4     tgm_m4_multiply_v4(const m4* p_m, const v4* p_v);
+m4     tgm_m4_inverse(m4 m);
+m4     tgm_m4_look_at(v3 from, v3 to, v3 up);
+m4     tgm_m4_multiply(m4 m0, m4 m1);
+v4     tgm_m4_multiply_v4(m4 m, v4 v);
 m4     tgm_m4_orthographic(f32 left, f32 right, f32 bottom, f32 top, f32 far, f32 near);
 m4     tgm_m4_perspective(f32 fov_y_in_radians, f32 aspect, f32 near, f32 far);
 m4     tgm_m4_rotate_x(f32 angle_in_radians);
 m4     tgm_m4_rotate_y(f32 angle_in_radians);
 m4     tgm_m4_rotate_z(f32 angle_in_radians);
-m4     tgm_m4_translate(const v3* p_v);
-m4     tgm_m4_transposed(const m4* p_m);
+m4     tgm_m4_translate(v3 v);
+m4     tgm_m4_transposed(m4 m);
 
 #endif

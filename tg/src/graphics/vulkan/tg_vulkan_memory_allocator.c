@@ -1,4 +1,4 @@
-#include "graphics/vulkan/tg_graphics_vulkan_memory_allocator.h"
+#include "graphics/vulkan/tg_vulkan_memory_allocator.h"
 
 #ifdef TG_VULKAN
 
