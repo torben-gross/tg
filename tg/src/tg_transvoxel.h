@@ -50,7 +50,7 @@ typedef struct tg_transvoxel_isolevels
 
 typedef struct tg_transvoxel_triangle
 {
-	tg_vertex_3d    p_vertices[3];
+	tg_vertex    p_vertices[3];
 } tg_transvoxel_triangle;
 
 typedef struct tg_transvoxel_regular_cell

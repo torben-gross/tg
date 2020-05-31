@@ -20,12 +20,14 @@
 
 typedef struct tg_terrain_chunk
 {
-	tg_transvoxel_chunk*   p_transvoxel_chunk;
-	tg_entity              entity;
+	b32                     regenerate;
+	tg_transvoxel_chunk*    p_transvoxel_chunk;
+	tg_entity               entity;
 } tg_terrain_chunk;
 
 typedef struct tg_terrain
 {
+	u32                     flags;
 	tg_camera_h             focal_point;
 	tg_vertex_shader_h      vertex_shader_h;
 	tg_fragment_shader_h    fragment_shader_h;

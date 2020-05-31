@@ -114,7 +114,7 @@ void tg_transvoxel_internal_scale_vertex(
 	u8 lod, u8 transition_faces,
 	u8 x_start, u8 y_start, u8 z_start,
 	u8 x_end, u8 y_end, u8 z_end,
-	tg_vertex_3d* p_vertex)
+	tg_vertex* p_vertex)
 {
 	const u32 cell_index = x_end * y_end * cz + x_end * cy + cx;
 	const u8 cell_scale = 1 << lod;

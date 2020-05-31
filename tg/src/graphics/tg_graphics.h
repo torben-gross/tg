@@ -3,18 +3,8 @@
 
 #include "math/tg_math.h"
 #include "tg_common.h"
-#include "util/tg_list.h"
 
 
-
-#define TG_CHUNK_VERTEX_COUNT_X    17
-#define TG_CHUNK_VERTEX_COUNT_Y    17
-#define TG_CHUNK_VERTEX_COUNT_Z    17
-
-
-
-TG_DECLARE_TYPE(tg_entity);
-TG_DECLARE_TYPE(tg_scene);
 
 TG_DECLARE_HANDLE(tg_camera);
 TG_DECLARE_HANDLE(tg_color_image);
@@ -145,14 +135,14 @@ typedef struct tg_bounds
 	v3    max;
 } tg_bounds;
 
-typedef struct tg_vertex_3d
+typedef struct tg_vertex
 {
 	v3    position;
 	v3    normal;
 	v2    uv;
 	v3    tangent;
 	v3    bitangent;
-} tg_vertex_3d;
+} tg_vertex;
 
 
 
@@ -194,7 +184,7 @@ void                             tg_compute_shader_destroy(tg_compute_shader_h c
 
 tg_entity_graphics_data_ptr_h    tg_entity_graphics_data_ptr_create(tg_mesh_h mesh_h, tg_material_h material_h);
 void                             tg_entity_graphics_data_ptr_destroy(tg_entity_graphics_data_ptr_h entity_graphics_data_ptr_h);
-void                             tg_entity_graphics_data_ptr_set_mesh(tg_entity_graphics_data_ptr_h entity_graphics_data_ptr_h, tg_mesh_h mesh_h, u32 lod);
+void                             tg_entity_graphics_data_ptr_set_mesh(tg_entity_graphics_data_ptr_h entity_graphics_data_ptr_h, tg_mesh_h mesh_h, u8 lod);
 void                             tg_entity_graphics_data_ptr_set_model_matrix(tg_entity_graphics_data_ptr_h entity_graphics_data_ptr_h, const m4* p_model_matrix);
 
 tg_depth_image_h                 tg_depth_image_create(const tg_depth_image_create_info* p_depth_image_create_info);
@@ -210,8 +200,9 @@ b32                              tg_material_is_deferred(tg_material_h material_
 b32                              tg_material_is_forward(tg_material_h material_h);
 
 tg_mesh_h                        tg_mesh_create(u32 vertex_count, const v3* p_positions, const v3* p_normals, const v2* p_uvs, const v3* p_tangents, u32 index_count, const u16* p_indices);
-tg_mesh_h                        tg_mesh_create2(u32 vertex_count, const tg_vertex_3d* p_vertices);
+tg_mesh_h                        tg_mesh_create2(u32 vertex_count, const tg_vertex* p_vertices);
 void                             tg_mesh_destroy(tg_mesh_h mesh_h);
+void                             tg_mesh_recreate2(tg_mesh_h mesh_h, u32 vertex_count, const tg_vertex* p_vertices);
 
 void                             tg_storage_image_3d_copy_to_storage_buffer(tg_storage_image_3d_h storage_image_3d_h, tg_storage_buffer_h storage_buffer_h);
 void                             tg_storage_image_3d_clear(tg_storage_image_3d_h storage_image_3d_h);

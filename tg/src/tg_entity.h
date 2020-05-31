@@ -31,7 +31,7 @@ typedef struct tg_entity
 
 tg_entity    tg_entity_create(tg_mesh_h mesh_h, tg_material_h material_h);
 void         tg_entity_destroy(tg_entity *p_entity);
-void         tg_entity_set_mesh(tg_entity* p_entity, tg_mesh_h mesh_h, u32 lod);
+void         tg_entity_set_mesh(tg_entity* p_entity, tg_mesh_h mesh_h, u8 lod);
 void         tg_entity_set_position(tg_entity* p_entity, v3 position);
 
 #endif

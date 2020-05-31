@@ -16,13 +16,7 @@
 
 
 
-#define TG_POINT_LIGHT_COUNT       64
-#define TG_CHUNKS_X                8
-#define TG_CHUNKS_Y                4
-#define TG_CHUNKS_Z                8
-#define TG_CHUNK_VERTEX_COUNT_X    17
-#define TG_CHUNK_VERTEX_COUNT_Y    17
-#define TG_CHUNK_VERTEX_COUNT_Z    17
+#define TG_POINT_LIGHT_COUNT    64
 
 
 

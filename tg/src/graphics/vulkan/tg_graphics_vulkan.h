@@ -222,6 +222,7 @@ typedef struct tg_render_target
 typedef struct tg_camera
 {
     tg_handle_type                   type;
+    v3                               position;
     tg_vulkan_buffer                 view_projection_ubo;
     tg_render_target                 render_target;
     u32                              captured_entity_count;
@@ -357,6 +358,8 @@ void                          tg_vulkan_buffer_copy(VkDeviceSize size, VkBuffer 
 tg_vulkan_buffer              tg_vulkan_buffer_create(VkDeviceSize size, VkBufferUsageFlags buffer_usage_flags, VkMemoryPropertyFlags memory_property_flags);
 void                          tg_vulkan_buffer_destroy(tg_vulkan_buffer* p_vulkan_buffer);
 void                          tg_vulkan_buffer_flush_mapped_memory(tg_vulkan_buffer* p_vulkan_buffer);
+
+void                          tg_vulkan_camera_info_clear(tg_vulkan_camera_info* p_vulkan_camera_info);
 
 tg_color_image                tg_vulkan_color_image_create(const tg_vulkan_color_image_create_info* p_vulkan_color_image_create_info);
 VkFormat                      tg_vulkan_color_image_convert_format(tg_color_image_format format);

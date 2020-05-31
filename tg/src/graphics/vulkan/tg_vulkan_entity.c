@@ -39,11 +39,15 @@ void tg_entity_graphics_data_ptr_destroy(tg_entity_graphics_data_ptr_h entity_gr
 	TG_MEMORY_FREE(entity_graphics_data_ptr_h);
 }
 
-void tg_entity_graphics_data_ptr_set_mesh(tg_entity_graphics_data_ptr_h entity_graphics_data_ptr_h, tg_mesh_h mesh_h, u32 lod)
+void tg_entity_graphics_data_ptr_set_mesh(tg_entity_graphics_data_ptr_h entity_graphics_data_ptr_h, tg_mesh_h mesh_h, u8 lod)
 {
     TG_ASSERT(lod < TG_VULKAN_MAX_LOD_COUNT);
 
-    // TODO: once the camera records a command buffer, this will kinda be ignored or break things! so reset parts of the ptr and let camera rebuild...
+    for (u32 i = 0; i < entity_graphics_data_ptr_h->camera_info_count; i++)
+    {
+        tg_vulkan_camera_info_clear(&entity_graphics_data_ptr_h->p_camera_infos[i]);
+    }
+    entity_graphics_data_ptr_h->camera_info_count = 0;
     entity_graphics_data_ptr_h->p_lod_meshes_h[lod] = mesh_h;
 }
 

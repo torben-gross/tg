@@ -24,7 +24,7 @@ void tg_entity_destroy(tg_entity* p_entity)
 	tg_entity_graphics_data_ptr_destroy(p_entity->graphics_data_ptr_h);
 }
 
-void tg_entity_set_mesh(tg_entity* p_entity, tg_mesh_h mesh_h, u32 lod)
+void tg_entity_set_mesh(tg_entity* p_entity, tg_mesh_h mesh_h, u8 lod)
 {
 	tg_entity_graphics_data_ptr_set_mesh(p_entity->graphics_data_ptr_h, mesh_h, lod);
 }
