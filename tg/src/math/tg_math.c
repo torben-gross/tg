@@ -680,6 +680,16 @@ u32 tgm_u32_digits(u32 v)
 	return result;
 }
 
+u32 tgm_u32_incmod(u32 v, u32 mod)
+{
+	u32 result = v + 1;
+	if (result == mod)
+	{
+		result = 0;
+	}
+	return result;
+}
+
 b32 tgm_u32_is_power_of_two(u32 v)
 {
 	const b32 result = tgm_f32_ceil(tgm_u32_log2(v)) == tgm_f32_floor(tgm_u32_log2(v));

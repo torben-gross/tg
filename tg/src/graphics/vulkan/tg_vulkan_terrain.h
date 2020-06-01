@@ -11,17 +11,26 @@
 
 
 
-#define TG_TERRAIN_VIEW_DISTANCE_CHUNKS           10
-#define TG_TERRAIN_VIEW_DISTANCE_CHUNKS_Y         3
-#define TG_TERRAIN_MAX_CHUNK_COUNT                65536
-#define TG_TERRAIN_HASHMAP_COUNT                  65536
-#define TG_TERRAIN_CHUNK_CENTER(terrain_chunk)    ((v3){ 16.0f * (f32)(terrain_chunk).x + 8.0f, 16.0f * (f32)(terrain_chunk).y + 8.0f, 16.0f * (f32)(terrain_chunk).z + 8.0f })
+#define TG_TERRAIN_VIEW_DISTANCE_CHUNKS      4
+#define TG_TERRAIN_VIEW_DISTANCE_CHUNKS_Y    3
+#define TG_TERRAIN_MAX_CHUNK_COUNT           65536
+#define TG_TERRAIN_HASHMAP_COUNT             65536
+
+#define TG_TERRAIN_CHUNK_CENTER(x, y, z)     ((v3){ \
+	(f32)(TG_TRANSVOXEL_CELLS * (x) + (TG_TRANSVOXEL_CELLS / 2)), \
+	(f32)(TG_TRANSVOXEL_CELLS * (y) + (TG_TRANSVOXEL_CELLS / 2)), \
+	(f32)(TG_TRANSVOXEL_CELLS * (z) + (TG_TRANSVOXEL_CELLS / 2)) })
 
 
+
+typedef enum tg_terrain_flags
+{
+	TG_TERRAIN_FLAG_REGENERATE    = (1 << 0)
+} tg_terrain_flags;
 
 typedef struct tg_terrain_chunk
 {
-	b32                     regenerate;
+	u32                     flags;
 	tg_transvoxel_chunk*    p_transvoxel_chunk;
 	tg_entity               entity;
 } tg_terrain_chunk;

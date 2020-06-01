@@ -7,6 +7,10 @@
 
 
 
+#define TG_TRANSVOXEL_ENABLE_SCALING 0
+
+
+
 // Figure 3.7. Voxels at the corners of a cell are numbered as shown.
 //    2 _____________ 3
 //     /|           /|
@@ -702,10 +706,12 @@ void tg_transvoxel_internal_fill_and_scale_transitions(tg_transvoxel_face transi
 					&p_chunk->isolevels, p_chunk->lod, p_chunk->transition_faces_bitmap, &p_chunk->p_triangles[p_chunk->triangle_count]);
 				p_chunk->triangle_count += p_transition_cells[cell_index].triangle_count;
 
+#if TG_TRANSVOXEL_ENABLE_SCALING
 				tg_transvoxel_internal_find_connecting_cells(p_connecting_chunks, cx, cy, cz, p_transient_triangle_buffer, p_connecting_cells);
-
+#endif
 				for (u32 triangle_index = 0; triangle_index < p_transition_cells[cell_index].triangle_count; triangle_index++)
 				{
+#if TG_TRANSVOXEL_ENABLE_SCALING
 					for (u8 vertex_index = 0; vertex_index < 3; vertex_index++)
 					{
 						if (p_transition_cells[cell_index].low_res_vertex_bitmap & (1 << (3 * triangle_index + vertex_index)))
@@ -722,6 +728,7 @@ void tg_transvoxel_internal_fill_and_scale_transitions(tg_transvoxel_face transi
 							);
 						}
 					}
+#endif
 
 					const v3 v01 = tgm_v3_subtract(p_transition_cells[cell_index].p_triangles[triangle_index].p_vertices[1].position, p_transition_cells[cell_index].p_triangles[triangle_index].p_vertices[0].position);
 					const v3 v02 = tgm_v3_subtract(p_transition_cells[cell_index].p_triangles[triangle_index].p_vertices[2].position, p_transition_cells[cell_index].p_triangles[triangle_index].p_vertices[0].position);
@@ -789,7 +796,9 @@ void tg_transvoxel_fill_transitions(tg_transvoxel_connecting_chunks* p_connectin
 			}
 		}
 	
+#if TG_TRANSVOXEL_ENABLE_SCALING
 		tg_transvoxel_internal_scale_regular_cells(p_connecting_chunks);
+#endif
 	}
 
 }

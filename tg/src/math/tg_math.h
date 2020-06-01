@@ -287,6 +287,7 @@ u8     tgm_u8_min(u8 v0, u8 v1);
 
 u32    tgm_u32_clamp(u32 v, u32 low, u32 high);
 u32    tgm_u32_digits(u32 v);
+u32    tgm_u32_incmod(u32 v, u32 mod);
 b32    tgm_u32_is_power_of_two(u32 v);
 u32    tgm_u32_max(u32 v0, u32 v1);
 u32    tgm_u32_min(u32 v0, u32 v1);

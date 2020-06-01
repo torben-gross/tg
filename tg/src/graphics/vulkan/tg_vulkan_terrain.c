@@ -8,46 +8,78 @@
 #include <string.h> // TODO: implement memset yourself
 
 
-#define TG_TERRAIN_HASH(x, y, z)    (((u32)(x) * 9 + (u32)(y) * 37 + (u32)(z) * 149) % TG_TERRAIN_HASHMAP_COUNT) // TODO: better hash function!!!
+#define TG_TERRAIN_HASH(x, y, z)          (((u32)(x) * 9 + (u32)(y) * 37 + (u32)(z) * 149) % TG_TERRAIN_HASHMAP_COUNT) // TODO: better hash function! also, mod
+#define TG_TERRAIN_HASH_V3(v)             TG_TERRAIN_HASH((v).x, (v).y, (v).z)
+#define TG_TERRAIN_INVALID_CHUNK_INDEX    TG_U32_MAX
 
 
+
+v3i tg_terrain_internal_convert_to_chunk_coordinates(v3 v)
+{
+	const i32 x = (i32)((v.x < 0.0f ? (v.x - 1) : v.x) / (f32)TG_TRANSVOXEL_CELLS);
+	const i32 y = (i32)((v.y < 0.0f ? (v.y - 1) : v.y) / (f32)TG_TRANSVOXEL_CELLS);
+	const i32 z = (i32)((v.z < 0.0f ? (v.z - 1) : v.z) / (f32)TG_TRANSVOXEL_CELLS);
+	const v3i result = { x, y, z };
+	return result;
+}
+
+u32 tg_terrain_internal_find_chunk_index(tg_terrain_h terrain_h, tg_terrain_chunk* p_terrain_chunk)
+{
+	const u32 original_hash_index = TG_TERRAIN_HASH_V3(p_terrain_chunk->p_transvoxel_chunk->coordinates);
+
+	u32 hash_index = original_hash_index;
+	tg_terrain_chunk* p_current_terrain_chunk = terrain_h->pp_chunks_hashmap[hash_index];
+
+	while (p_current_terrain_chunk != p_terrain_chunk)
+	{
+		hash_index = tgm_u32_incmod(hash_index, TG_TERRAIN_HASHMAP_COUNT);
+		p_current_terrain_chunk = terrain_h->pp_chunks_hashmap[hash_index];
+
+		if (!p_current_terrain_chunk || hash_index == original_hash_index)
+		{
+			return TG_TERRAIN_INVALID_CHUNK_INDEX;
+		}
+	}
+
+	return hash_index;
+}
 
 tg_terrain_chunk* tg_terrain_internal_get_chunk(tg_terrain_h terrain_h, i32 x, i32 y, i32 z)
 {
-	const u32 original_hashed_index = TG_TERRAIN_HASH(x, y, z);
+	const u32 original_hash_index = TG_TERRAIN_HASH(x, y, z);
 
-	u32 hash_index = original_hashed_index;
-	tg_terrain_chunk* p_chunk = terrain_h->pp_chunks_hashmap[hash_index];
+	u32 hash_index = original_hash_index;
+	tg_terrain_chunk* p_current_terrain_chunk = terrain_h->pp_chunks_hashmap[hash_index];
 
-	if (!p_chunk)
+	if (!p_current_terrain_chunk)
 	{
 		return TG_NULL;
 	}
 
-	while (p_chunk->p_transvoxel_chunk->coordinates.x != x || p_chunk->p_transvoxel_chunk->coordinates.y != y || p_chunk->p_transvoxel_chunk->coordinates.z != z)
+	while (p_current_terrain_chunk->p_transvoxel_chunk->coordinates.x != x || p_current_terrain_chunk->p_transvoxel_chunk->coordinates.y != y || p_current_terrain_chunk->p_transvoxel_chunk->coordinates.z != z)
 	{
-		hash_index = hash_index + 1 == TG_TERRAIN_HASHMAP_COUNT ? 0 : ++hash_index;
-		p_chunk = terrain_h->pp_chunks_hashmap[hash_index];
+		hash_index = tgm_u32_incmod(hash_index, TG_TERRAIN_HASHMAP_COUNT);
+		p_current_terrain_chunk = terrain_h->pp_chunks_hashmap[hash_index];
 
-		if (!p_chunk || hash_index == original_hashed_index)
+		if (!p_current_terrain_chunk || hash_index == original_hash_index)
 		{
 			return TG_NULL;
 		}
 	}
 
-	return p_chunk;
+	return p_current_terrain_chunk;
 }
 
-b32 tg_terrain_internal_store_chunk(tg_terrain_h terrain_h, i32 x, i32 y, i32 z, tg_terrain_chunk* p_chunk)
+b32 tg_terrain_internal_store_chunk(tg_terrain_h terrain_h, tg_terrain_chunk* p_chunk)
 {
 	b32 result = TG_FALSE;
 
 	if (terrain_h->chunk_count + 1 < TG_TERRAIN_HASHMAP_COUNT)
 	{
-		u32 hash_index = TG_TERRAIN_HASH(x, y, z);
+		u32 hash_index = TG_TERRAIN_HASH_V3(p_chunk->p_transvoxel_chunk->coordinates);
 		while (terrain_h->pp_chunks_hashmap[hash_index])
 		{
-			hash_index = hash_index + 1 == TG_TERRAIN_HASHMAP_COUNT ? 0 : ++hash_index;
+			hash_index = tgm_u32_incmod(hash_index, TG_TERRAIN_HASHMAP_COUNT);
 		}
 		terrain_h->pp_chunks_hashmap[hash_index] = p_chunk;
 		terrain_h->chunk_count++;
@@ -95,16 +127,102 @@ void tg_terrain_internal_fill_isolevels(i32 x, i32 y, i32 z, tg_transvoxel_isole
 	}
 }
 
+b32 tg_terrain_internal_is_in_view_radius(v3 focal_point, i32 x, i32 y, i32 z)
+{
+	const v3 chunk_center = TG_TERRAIN_CHUNK_CENTER(x, y, z);
+	const f32 distance_sqr = tgm_v3_magnitude_squared(tgm_v3_subtract(focal_point, chunk_center));
+	const f32 view_radius = (f32)(TG_TRANSVOXEL_CELLS * TG_TERRAIN_VIEW_DISTANCE_CHUNKS);
+	const b32 result = distance_sqr <= view_radius * view_radius;
+	return result;
+}
+
+b32 tg_terrain_internal_remove_chunk(tg_terrain_h terrain_h, i32 x, i32 y, i32 z)
+{
+	const u32 original_hash_index = TG_TERRAIN_HASH(x, y, z);
+
+	u32 hash_index = original_hash_index;
+	tg_terrain_chunk* p_chunk = terrain_h->pp_chunks_hashmap[hash_index];
+
+	if (!p_chunk)
+	{
+		return TG_FALSE;
+	}
+
+	while (p_chunk->p_transvoxel_chunk->coordinates.x != x || p_chunk->p_transvoxel_chunk->coordinates.y != y || p_chunk->p_transvoxel_chunk->coordinates.z != z)
+	{
+		hash_index = tgm_u32_incmod(hash_index, TG_TERRAIN_HASHMAP_COUNT);
+		p_chunk = terrain_h->pp_chunks_hashmap[hash_index];
+
+		if (!p_chunk || hash_index == original_hash_index)
+		{
+			return TG_FALSE;
+		}
+	}
+
+	terrain_h->chunk_count--;
+	const b32 is_last_chunk = terrain_h->pp_chunks_hashmap[hash_index] == &terrain_h->p_memory_blocks[terrain_h->chunk_count];
+	terrain_h->pp_chunks_hashmap[hash_index] = TG_NULL;
+
+	if (terrain_h->chunk_count != 0)
+	{
+		if (!is_last_chunk)
+		{
+			*p_chunk = terrain_h->p_memory_blocks[terrain_h->chunk_count];
+
+			const u32 original_last_hash_index = TG_TERRAIN_HASH_V3(terrain_h->p_memory_blocks[terrain_h->chunk_count].p_transvoxel_chunk->coordinates);
+			u32 last_hash_index = original_last_hash_index;
+			tg_terrain_chunk* p_current_terrain_chunk = terrain_h->pp_chunks_hashmap[last_hash_index];
+
+			while (p_current_terrain_chunk != &terrain_h->p_memory_blocks[terrain_h->chunk_count])
+			{
+				last_hash_index = tgm_u32_incmod(last_hash_index, TG_TERRAIN_HASHMAP_COUNT);
+				p_current_terrain_chunk = terrain_h->pp_chunks_hashmap[last_hash_index];
+				TG_ASSERT(last_hash_index != original_last_hash_index);
+			}
+
+			terrain_h->pp_chunks_hashmap[last_hash_index] = p_chunk;
+		}
+
+		u32 neighbour_count = 0;
+		u32 neighbour_hash_index = tgm_u32_incmod(hash_index, TG_TERRAIN_HASHMAP_COUNT);
+		while (terrain_h->pp_chunks_hashmap[neighbour_hash_index])
+		{
+			neighbour_count++;
+			neighbour_hash_index = tgm_u32_incmod(neighbour_hash_index, TG_TERRAIN_HASHMAP_COUNT);
+		}
+
+		if (neighbour_count != 0)
+		{
+			const u64 size = neighbour_count * sizeof(tg_terrain_chunk**);
+			tg_terrain_chunk** pp_neighbour_chunks = TG_MEMORY_STACK_ALLOC(size);
+
+			neighbour_hash_index = tgm_u32_incmod(hash_index, TG_TERRAIN_HASHMAP_COUNT);
+			for (u32 i = 0; i < neighbour_count; i++)
+			{
+				pp_neighbour_chunks[i] = terrain_h->pp_chunks_hashmap[neighbour_hash_index];
+				terrain_h->pp_chunks_hashmap[neighbour_hash_index] = TG_NULL;
+				neighbour_hash_index = tgm_u32_incmod(neighbour_hash_index, TG_TERRAIN_HASHMAP_COUNT);
+			}
+
+			terrain_h->chunk_count -= neighbour_count;
+			for (u32 i = 0; i < neighbour_count; i++)
+			{
+				tg_terrain_internal_store_chunk(terrain_h, pp_neighbour_chunks[i]);
+			}
+
+			TG_MEMORY_STACK_FREE(size);
+		}
+	}
+
+	return TG_TRUE;
+}
+
 u8 tg_terrain_internal_select_lod(v3 focal_point, i32 x, i32 y, i32 z)
 {
-	const v3 chunk_center = {
-		(f32)(x * TG_TRANSVOXEL_CELLS + (TG_TRANSVOXEL_CELLS / 2)),
-		(f32)(y * TG_TRANSVOXEL_CELLS + (TG_TRANSVOXEL_CELLS / 2)),
-		(f32)(z * TG_TRANSVOXEL_CELLS + (TG_TRANSVOXEL_CELLS / 2))
-	};
+	const v3 chunk_center = TG_TERRAIN_CHUNK_CENTER(x, y, z);
 	const v3 delta = tgm_v3_subtract((v3){ focal_point.x, 0.0f, focal_point.z }, chunk_center);
 	const f32 distance = tgm_v3_magnitude(delta);
-	const u8 lod = (u8)tgm_u64_min((u64)(distance / 64.0f), 3);
+	const u8 lod = (u8)tgm_u64_min((u64)(distance / 32.0f), 3);
 	return lod;
 }
 
@@ -123,13 +241,23 @@ tg_terrain_h tg_terrain_create(tg_camera_h focal_point_camera_h)
 	memset(terrain_h->pp_chunks_hashmap, 0, TG_TERRAIN_MAX_CHUNK_COUNT * sizeof(*terrain_h->pp_chunks_hashmap));
 
 	const v3 focal_point = tg_camera_get_position(focal_point_camera_h);
+	const v3i focal_point_chunk = tg_terrain_internal_convert_to_chunk_coordinates(focal_point);
 
-	for (i32 z = -TG_TERRAIN_VIEW_DISTANCE_CHUNKS; z < TG_TERRAIN_VIEW_DISTANCE_CHUNKS + 1; z++)
+	for (i32 relz = -TG_TERRAIN_VIEW_DISTANCE_CHUNKS; relz < TG_TERRAIN_VIEW_DISTANCE_CHUNKS + 1; relz++)
 	{
-		for (i32 y = -TG_TERRAIN_VIEW_DISTANCE_CHUNKS_Y; y < TG_TERRAIN_VIEW_DISTANCE_CHUNKS_Y + 1; y++)
+		for (i32 rely = -TG_TERRAIN_VIEW_DISTANCE_CHUNKS_Y; rely < TG_TERRAIN_VIEW_DISTANCE_CHUNKS_Y + 1; rely++)
 		{
-			for (i32 x = -TG_TERRAIN_VIEW_DISTANCE_CHUNKS; x < TG_TERRAIN_VIEW_DISTANCE_CHUNKS + 1; x++)
+			for (i32 relx = -TG_TERRAIN_VIEW_DISTANCE_CHUNKS; relx < TG_TERRAIN_VIEW_DISTANCE_CHUNKS + 1; relx++)
 			{
+				const i32 x = focal_point_chunk.x + relx;
+				const i32 y = focal_point_chunk.y + rely;
+				const i32 z = focal_point_chunk.z + relz;
+
+				if (!tg_terrain_internal_is_in_view_radius(focal_point, x, y, z))
+				{
+					continue;
+				}
+
 				tg_terrain_chunk* p_terrain_chunk = &terrain_h->p_memory_blocks[terrain_h->next_memory_block_index++];
 
 				p_terrain_chunk->p_transvoxel_chunk = TG_MEMORY_ALLOC(sizeof(*p_terrain_chunk->p_transvoxel_chunk));
@@ -157,20 +285,27 @@ tg_terrain_h tg_terrain_create(tg_camera_h focal_point_camera_h)
 				tg_transvoxel_fill_chunk(p_terrain_chunk->p_transvoxel_chunk);
 
 				p_terrain_chunk->entity = tg_entity_create(TG_NULL, terrain_h->material_h);
-				tg_terrain_internal_store_chunk(terrain_h, x, y, z, p_terrain_chunk);
+				tg_terrain_internal_store_chunk(terrain_h, p_terrain_chunk);
 			}
 		}
 	}
 
 	tg_transvoxel_connecting_chunks transvoxel_connecting_chunks = { 0 };
-	for (i32 z = -TG_TERRAIN_VIEW_DISTANCE_CHUNKS; z < TG_TERRAIN_VIEW_DISTANCE_CHUNKS + 1; z++)
+	for (i32 relz = -TG_TERRAIN_VIEW_DISTANCE_CHUNKS; relz < TG_TERRAIN_VIEW_DISTANCE_CHUNKS + 1; relz++)
 	{
-		for (i32 y = -TG_TERRAIN_VIEW_DISTANCE_CHUNKS_Y; y < TG_TERRAIN_VIEW_DISTANCE_CHUNKS_Y + 1; y++)
+		for (i32 rely = -TG_TERRAIN_VIEW_DISTANCE_CHUNKS_Y; rely < TG_TERRAIN_VIEW_DISTANCE_CHUNKS_Y + 1; rely++)
 		{
-			for (i32 x = -TG_TERRAIN_VIEW_DISTANCE_CHUNKS; x < TG_TERRAIN_VIEW_DISTANCE_CHUNKS + 1; x++)
+			for (i32 relx = -TG_TERRAIN_VIEW_DISTANCE_CHUNKS; relx < TG_TERRAIN_VIEW_DISTANCE_CHUNKS + 1; relx++)
 			{
+				const i32 x = focal_point_chunk.x + relx;
+				const i32 y = focal_point_chunk.y + rely;
+				const i32 z = focal_point_chunk.z + relz;
 				tg_terrain_chunk* p_terrain_chunk = tg_terrain_internal_get_chunk(terrain_h, x, y, z);
-				TG_ASSERT(p_terrain_chunk);
+
+				if (!p_terrain_chunk)
+				{
+					continue;
+				}
 
 				if (p_terrain_chunk->p_transvoxel_chunk->transition_faces_bitmap)
 				{
@@ -211,13 +346,43 @@ void tg_terrain_update(tg_terrain_h terrain_h)
 	TG_ASSERT(terrain_h);
 	
 	const v3 focal_point = tg_camera_get_position(terrain_h->focal_point);
+	const v3i focal_point_chunk = tg_terrain_internal_convert_to_chunk_coordinates(focal_point);
 
-	for (i32 z = -TG_TERRAIN_VIEW_DISTANCE_CHUNKS; z < TG_TERRAIN_VIEW_DISTANCE_CHUNKS + 1; z++)
+	for (i32 relz = -(TG_TERRAIN_VIEW_DISTANCE_CHUNKS + 1); relz < (TG_TERRAIN_VIEW_DISTANCE_CHUNKS + 1) + 1; relz++)
 	{
-		for (i32 y = -TG_TERRAIN_VIEW_DISTANCE_CHUNKS_Y; y < TG_TERRAIN_VIEW_DISTANCE_CHUNKS_Y + 1; y++)
+		for (i32 rely = -(TG_TERRAIN_VIEW_DISTANCE_CHUNKS_Y + 1); rely < (TG_TERRAIN_VIEW_DISTANCE_CHUNKS_Y + 1) + 1; rely++)
 		{
-			for (i32 x = -TG_TERRAIN_VIEW_DISTANCE_CHUNKS; x < TG_TERRAIN_VIEW_DISTANCE_CHUNKS + 1; x++)
+			for (i32 relx = -(TG_TERRAIN_VIEW_DISTANCE_CHUNKS + 1); relx < (TG_TERRAIN_VIEW_DISTANCE_CHUNKS + 1) + 1; relx++)
 			{
+				const i32 x = focal_point_chunk.x + relx;
+				const i32 y = focal_point_chunk.y + rely;
+				const i32 z = focal_point_chunk.z + relz;
+				tg_terrain_chunk* p_terrain_chunk = tg_terrain_internal_get_chunk(terrain_h, x, y, z);
+	
+				if (p_terrain_chunk)
+				{
+					if (!tg_terrain_internal_is_in_view_radius(
+						focal_point,
+						p_terrain_chunk->p_transvoxel_chunk->coordinates.x,
+						p_terrain_chunk->p_transvoxel_chunk->coordinates.y,
+						p_terrain_chunk->p_transvoxel_chunk->coordinates.z))
+					{
+						tg_terrain_internal_remove_chunk(terrain_h, x, y, z);
+					}
+				}
+			}
+		}
+	}
+
+	for (i32 relz = -TG_TERRAIN_VIEW_DISTANCE_CHUNKS; relz < TG_TERRAIN_VIEW_DISTANCE_CHUNKS + 1; relz++)
+	{
+		for (i32 rely = -TG_TERRAIN_VIEW_DISTANCE_CHUNKS_Y; rely < TG_TERRAIN_VIEW_DISTANCE_CHUNKS_Y + 1; rely++)
+		{
+			for (i32 relx = -TG_TERRAIN_VIEW_DISTANCE_CHUNKS; relx < TG_TERRAIN_VIEW_DISTANCE_CHUNKS + 1; relx++)
+			{
+				const i32 x = focal_point_chunk.x + relx;
+				const i32 y = focal_point_chunk.y + rely;
+				const i32 z = focal_point_chunk.z + relz;
 				tg_terrain_chunk* p_terrain_chunk = tg_terrain_internal_get_chunk(terrain_h, x, y, z);
 	
 				if (p_terrain_chunk)
@@ -235,7 +400,7 @@ void tg_terrain_update(tg_terrain_h terrain_h)
 
 					if (lod != p_terrain_chunk->p_transvoxel_chunk->lod || transition_faces_bitmap != p_terrain_chunk->p_transvoxel_chunk->transition_faces_bitmap)
 					{
-						p_terrain_chunk->regenerate = TG_TRUE;
+						p_terrain_chunk->flags |= TG_TERRAIN_FLAG_REGENERATE;
 						p_terrain_chunk->p_transvoxel_chunk->lod = lod;
 						p_terrain_chunk->p_transvoxel_chunk->transition_faces_bitmap = transition_faces_bitmap;
 					}
@@ -248,15 +413,18 @@ void tg_terrain_update(tg_terrain_h terrain_h)
 		}
 	}
 
-	for (i32 z = -TG_TERRAIN_VIEW_DISTANCE_CHUNKS; z < TG_TERRAIN_VIEW_DISTANCE_CHUNKS + 1; z++)
+	for (i32 relz = -TG_TERRAIN_VIEW_DISTANCE_CHUNKS; relz < TG_TERRAIN_VIEW_DISTANCE_CHUNKS + 1; relz++)
 	{
-		for (i32 y = -TG_TERRAIN_VIEW_DISTANCE_CHUNKS_Y; y < TG_TERRAIN_VIEW_DISTANCE_CHUNKS_Y + 1; y++)
+		for (i32 rely = -TG_TERRAIN_VIEW_DISTANCE_CHUNKS_Y; rely < TG_TERRAIN_VIEW_DISTANCE_CHUNKS_Y + 1; rely++)
 		{
-			for (i32 x = -TG_TERRAIN_VIEW_DISTANCE_CHUNKS; x < TG_TERRAIN_VIEW_DISTANCE_CHUNKS + 1; x++)
+			for (i32 relx = -TG_TERRAIN_VIEW_DISTANCE_CHUNKS; relx < TG_TERRAIN_VIEW_DISTANCE_CHUNKS + 1; relx++)
 			{
+				const i32 x = focal_point_chunk.x + relx;
+				const i32 y = focal_point_chunk.y + rely;
+				const i32 z = focal_point_chunk.z + relz;
 				tg_terrain_chunk* p_terrain_chunk = tg_terrain_internal_get_chunk(terrain_h, x, y, z);
 
-				if (p_terrain_chunk && p_terrain_chunk->regenerate)
+				if (p_terrain_chunk && (p_terrain_chunk->flags & TG_TERRAIN_FLAG_REGENERATE))
 				{
 					p_terrain_chunk->p_transvoxel_chunk->triangle_count = 0;
 					tg_transvoxel_fill_chunk(p_terrain_chunk->p_transvoxel_chunk);
@@ -266,17 +434,20 @@ void tg_terrain_update(tg_terrain_h terrain_h)
 	}
 
 	tg_transvoxel_connecting_chunks transvoxel_connecting_chunks = { 0 };
-	for (i32 z = -TG_TERRAIN_VIEW_DISTANCE_CHUNKS; z < TG_TERRAIN_VIEW_DISTANCE_CHUNKS + 1; z++)
+	for (i32 relz = -TG_TERRAIN_VIEW_DISTANCE_CHUNKS; relz < TG_TERRAIN_VIEW_DISTANCE_CHUNKS + 1; relz++)
 	{
-		for (i32 y = -TG_TERRAIN_VIEW_DISTANCE_CHUNKS_Y; y < TG_TERRAIN_VIEW_DISTANCE_CHUNKS_Y + 1; y++)
+		for (i32 rely = -TG_TERRAIN_VIEW_DISTANCE_CHUNKS_Y; rely < TG_TERRAIN_VIEW_DISTANCE_CHUNKS_Y + 1; rely++)
 		{
-			for (i32 x = -TG_TERRAIN_VIEW_DISTANCE_CHUNKS; x < TG_TERRAIN_VIEW_DISTANCE_CHUNKS + 1; x++)
+			for (i32 relx = -TG_TERRAIN_VIEW_DISTANCE_CHUNKS; relx < TG_TERRAIN_VIEW_DISTANCE_CHUNKS + 1; relx++)
 			{
+				const i32 x = focal_point_chunk.x + relx;
+				const i32 y = focal_point_chunk.y + rely;
+				const i32 z = focal_point_chunk.z + relz;
 				tg_terrain_chunk* p_terrain_chunk = tg_terrain_internal_get_chunk(terrain_h, x, y, z);
 
-				if (p_terrain_chunk && p_terrain_chunk->regenerate)
+				if (p_terrain_chunk && (p_terrain_chunk->flags & TG_TERRAIN_FLAG_REGENERATE))
 				{
-					p_terrain_chunk->regenerate = TG_FALSE;
+					p_terrain_chunk->flags &= ~TG_TERRAIN_FLAG_REGENERATE;
 
 					if (p_terrain_chunk->p_transvoxel_chunk->transition_faces_bitmap)
 					{
