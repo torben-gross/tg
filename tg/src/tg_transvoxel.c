@@ -134,8 +134,8 @@ void tg_transvoxel_internal_scale_vertex(
 	const v3 cell_base = { (f32)(16 * x + cx * cell_scale), (f32)(16 * y + cy * cell_scale), (f32)(16 * z + cz * cell_scale) };
 	const v3 rel = tgm_v3_subtract(p_vertex->position, cell_base);
 	v3 relf = tgm_v3_divide_f(rel, cell_scale);
-	relf = tgm_v3_abs(relf);// TODO: do we need abs?
 
+	// TODO: this is still not perfect
 	const b32 scale_x_neg = cx == x_start && !(transition_faces & TG_TRANSVOXEL_FACE_X_NEG);
 	const b32 scale_x_pos = cx == x_end - 1 && !(transition_faces & TG_TRANSVOXEL_FACE_X_POS);
 	const b32 scale_y_neg = cy == y_start && !(transition_faces & TG_TRANSVOXEL_FACE_Y_NEG);
@@ -143,9 +143,13 @@ void tg_transvoxel_internal_scale_vertex(
 	const b32 scale_z_neg = cz == z_start && !(transition_faces & TG_TRANSVOXEL_FACE_Z_NEG);
 	const b32 scale_z_pos = cz == z_end - 1 && !(transition_faces & TG_TRANSVOXEL_FACE_Z_POS);
 
-	const f32 scale_x_factor = scale_x_neg ? relf.x : (scale_x_pos ? 1.0f - relf.x : 1.0f);
-	const f32 scale_y_factor = scale_y_neg ? relf.y : (scale_y_pos ? 1.0f - relf.y : 1.0f);
-	const f32 scale_z_factor = scale_z_neg ? relf.z : (scale_z_pos ? 1.0f - relf.z : 1.0f);
+	f32 scale_x_factor = scale_x_neg ? relf.x : (scale_x_pos ? (1.0f - relf.x) : 1.0f);
+	f32 scale_y_factor = scale_y_neg ? relf.y : (scale_y_pos ? (1.0f - relf.y) : 1.0f);
+	f32 scale_z_factor = scale_z_neg ? relf.z : (scale_z_pos ? (1.0f - relf.z) : 1.0f);
+
+	scale_x_factor = (f32)((u32)(scale_x_factor + 0.5f));
+	scale_y_factor = (f32)((u32)(scale_y_factor + 0.5f));
+	scale_z_factor = (f32)((u32)(scale_z_factor + 0.5f));
 
 	v3 offset = { 0 };
 	if ((transition_faces & TG_TRANSVOXEL_FACE_X_NEG) && cx == 0)
@@ -521,6 +525,7 @@ void tg_transvoxel_internal_find_connecting_cells(tg_transvoxel_connecting_chunk
 	const u8 cell_count = TG_TRANSVOXEL_CELLS / cell_scale;
 
 	u32 connecting_cells_index = 0;
+	u32 transient_triangle_buffer_offset = 0;
 	for (i8 iz = -1; iz < 2; iz++)
 	{
 		for (i8 iy = -1; iy < 2; iy++)
@@ -532,20 +537,19 @@ void tg_transvoxel_internal_find_connecting_cells(tg_transvoxel_connecting_chunk
 					cy + iy == -1 ? -1 : (cy + iy == cell_count ? 1 : 0),
 					cz + iz == -1 ? -1 : (cz + iz == cell_count ? 1 : 0)
 				};
-				const v3i connecting_cell_coordinates = {
-					cx + ix == -1 ? cell_count - 1 : (cx + ix == cell_count ? 0 : cx + ix),
-					cy + iy == -1 ? cell_count - 1 : (cy + iy == cell_count ? 0 : cy + iy),
-					cz + iz == -1 ? cell_count - 1 : (cz + iz == cell_count ? 0 : cz + iz),
-				};
 
 				const u8 connecting_chunk_index = 9 * (1 + connecting_chunk_offset.z) + 3 * (1 + connecting_chunk_offset.y) + (1 + connecting_chunk_offset.x);
 				tg_transvoxel_chunk* p_connecting_chunk = p_connecting_chunks->pp_chunks[connecting_chunk_index];
 
-				//TG_ASSERT(p_connecting_chunk); // TODO: put back in?
-
 				if (p_connecting_chunk)
 				{
-					if (p_connecting_chunk->lod == p_central_chunk->lod)
+					const v3i connecting_cell_coordinates = {
+						cx + ix == -1 ? cell_count - 1 : (cx + ix == cell_count ? 0 : cx + ix),
+						cy + iy == -1 ? cell_count - 1 : (cy + iy == cell_count ? 0 : cy + iy),
+						cz + iz == -1 ? cell_count - 1 : (cz + iz == cell_count ? 0 : cz + iz),
+					};
+
+					if (p_connecting_chunk->lod == p_central_chunk->lod && !(p_connecting_chunk->flags & TG_TRANSVOXEL_FLAG_SCALED))
 					{
 						p_connecting_cells[connecting_cells_index] = TG_TRANSVOXEL_REGULAR_CELL_AT(*p_connecting_chunk, connecting_cell_coordinates.x, connecting_cell_coordinates.y, connecting_cell_coordinates.z);
 					}
@@ -554,9 +558,10 @@ void tg_transvoxel_internal_find_connecting_cells(tg_transvoxel_connecting_chunk
 						tg_transvoxel_internal_fill_regular_cell(
 							&p_connecting_cells[connecting_cells_index],
 							p_connecting_chunk->coordinates.x, p_connecting_chunk->coordinates.y, p_connecting_chunk->coordinates.z,
-							cx, cy, cz,
-							&p_connecting_chunk->isolevels, p_central_chunk->lod, p_transient_triangle_buffer
+							connecting_cell_coordinates.x, connecting_cell_coordinates.y, connecting_cell_coordinates.z,
+							&p_connecting_chunk->isolevels, p_central_chunk->lod, &p_transient_triangle_buffer[transient_triangle_buffer_offset]
 						);
+						transient_triangle_buffer_offset += p_connecting_cells[connecting_cells_index].triangle_count;
 					}
 				}
 				else
@@ -646,6 +651,8 @@ void tg_transvoxel_internal_scale_regular_cells(tg_transvoxel_connecting_chunks*
 			}
 		}
 	}
+
+	p_central_chunk->flags |= TG_TRANSVOXEL_FLAG_SCALED;
 }
 
 void tg_transvoxel_internal_fill_and_scale_transitions(tg_transvoxel_face transition_face, tg_transvoxel_connecting_chunks* p_connecting_chunks)
@@ -748,6 +755,7 @@ void tg_transvoxel_fill_chunk(tg_transvoxel_chunk* p_chunk)
 	const u8 cell_scale = 1 << p_chunk->lod;
 	const u8 cell_count = TG_TRANSVOXEL_CELLS / cell_scale;
 
+	p_chunk->flags = 0;
 	p_chunk->triangle_count = 0;
 	for (u8 cz = 0; cz < cell_count; cz++)
 	{
@@ -780,7 +788,7 @@ void tg_transvoxel_fill_transitions(tg_transvoxel_connecting_chunks* p_connectin
 				tg_transvoxel_internal_fill_and_scale_transitions((1 << i), p_connecting_chunks);
 			}
 		}
-
+	
 		tg_transvoxel_internal_scale_regular_cells(p_connecting_chunks);
 	}
 

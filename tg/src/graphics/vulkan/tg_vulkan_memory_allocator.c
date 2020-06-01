@@ -18,6 +18,7 @@ typedef struct tg_vulkan_memory_pool
     VkDeviceMemory           device_memory;
     void*                    p_mapped_device_memory;
     u32                      page_count;
+    u32                      reserved_page_count;
     b32*                     p_pages_reserved;
 } tg_vulkan_memory_pool;
 
@@ -60,7 +61,7 @@ tg_vulkan_memory_block tg_vulkan_memory_allocator_alloc(VkDeviceSize size, u32 m
 
         i32 first_available_page = -1;
         u32 available_page_count = 0;
-        if (is_required_memory_type && has_required_memory_properties)
+        if (is_required_memory_type && has_required_memory_properties && vulkan_memory.p_pools[i].reserved_page_count + required_page_count <= vulkan_memory.p_pools[i].page_count)
         {
             for (u32 j = 0; j < vulkan_memory.p_pools[i].page_count; j++)
             {
@@ -73,6 +74,7 @@ tg_vulkan_memory_block tg_vulkan_memory_allocator_alloc(VkDeviceSize size, u32 m
                     available_page_count++;
                     if (available_page_count == required_page_count)
                     {
+                        vulkan_memory.p_pools[i].reserved_page_count += required_page_count;
                         for (u32 k = 0; k < required_page_count; k++)
                         {
                             vulkan_memory.p_pools[i].p_pages_reserved[(u32)first_available_page + k] = VK_TRUE;
@@ -107,6 +109,7 @@ void tg_vulkan_memory_allocator_free(tg_vulkan_memory_block* p_memory)
 
     const u32 first_page = (u32)(p_memory->offset / (VkDeviceSize)vulkan_memory.page_size);
     const u32 page_count = (u32)(p_memory->size / vulkan_memory.page_size);
+    vulkan_memory.p_pools[p_memory->pool_index].reserved_page_count -= page_count;
     for (u32 i = 0; i < page_count; i++)
     {
         vulkan_memory.p_pools[p_memory->pool_index].p_pages_reserved[first_page + i] = TG_FALSE;

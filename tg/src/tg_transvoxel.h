@@ -41,6 +41,11 @@ typedef enum tg_transvoxel_face
 	TG_TRANSVOXEL_FACE_Z_POS = (1 << 5)
 } tg_transvoxel_face;
 
+typedef enum tg_transvoxel_flag
+{
+	TG_TRANSVOXEL_FLAG_SCALED    = (1 << 0)
+} tg_transvoxel_flag;
+
 
 
 typedef struct tg_transvoxel_isolevels
@@ -68,6 +73,7 @@ typedef struct tg_transvoxel_transition_cell
 
 typedef struct tg_transvoxel_chunk
 {
+	u32                              flags;
 	v3i                              coordinates;
 	u8                               lod;
 	tg_transvoxel_isolevels          isolevels;
