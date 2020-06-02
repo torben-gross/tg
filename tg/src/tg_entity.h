@@ -14,6 +14,11 @@ TG_DECLARE_HANDLE(tg_mesh);
 
 
 
+typedef enum tg_entity_flags
+{
+	TG_ENTITY_FLAG_INITIALIZED    = (1 << 0)
+} tg_entity_flags;
+
 typedef struct tg_entity
 {
 	u32                              id;

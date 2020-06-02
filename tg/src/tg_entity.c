@@ -9,7 +9,7 @@ tg_entity tg_entity_create(tg_mesh_h mesh_h, tg_material_h material_h)
 {
 	tg_entity entity = { 0 };
 	entity.id = entity_next_id++;
-	entity.flags = 0;
+	entity.flags = TG_ENTITY_FLAG_INITIALIZED;
     entity.transform.position = (v3){ 0.0f, 0.0f, 0.0f };
     entity.transform.position_matrix = tgm_m4_identity();
 	entity.graphics_data_ptr_h = tg_entity_graphics_data_ptr_create(mesh_h, material_h);

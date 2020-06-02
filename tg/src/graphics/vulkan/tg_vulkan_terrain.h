@@ -11,7 +11,7 @@
 
 
 
-#define TG_TERRAIN_VIEW_DISTANCE_CHUNKS      10
+#define TG_TERRAIN_VIEW_DISTANCE_CHUNKS      4
 #define TG_TERRAIN_VIEW_DISTANCE_CHUNKS_Y    3
 #define TG_TERRAIN_MAX_CHUNK_COUNT           65536
 #define TG_TERRAIN_HASHMAP_COUNT             65536
@@ -44,7 +44,6 @@ typedef struct tg_terrain
 	tg_fragment_shader_h    fragment_shader_h;
 	tg_material_h           material_h;
 
-	u32                     next_memory_block_index;
 	tg_terrain_chunk        p_memory_blocks[TG_TERRAIN_MAX_CHUNK_COUNT];
 	// TODO: free-list?
 

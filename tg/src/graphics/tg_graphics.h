@@ -202,7 +202,7 @@ b32                              tg_material_is_forward(tg_material_h material_h
 tg_mesh_h                        tg_mesh_create(u32 vertex_count, const v3* p_positions, const v3* p_normals, const v2* p_uvs, const v3* p_tangents, u32 index_count, const u16* p_indices);
 tg_mesh_h                        tg_mesh_create2(u32 vertex_count, const tg_vertex* p_vertices);
 void                             tg_mesh_destroy(tg_mesh_h mesh_h);
-void                             tg_mesh_recreate2(tg_mesh_h mesh_h, u32 vertex_count, const tg_vertex* p_vertices);
+void                             tg_mesh_recreate2(tg_mesh_h mesh_h, u32 vertex_count, const tg_vertex* p_vertices); // TODO: this needs to set a flag or a time, so that the camera knows, that it needs a reset
 
 void                             tg_storage_image_3d_copy_to_storage_buffer(tg_storage_image_3d_h storage_image_3d_h, tg_storage_buffer_h storage_buffer_h);
 void                             tg_storage_image_3d_clear(tg_storage_image_3d_h storage_image_3d_h);
