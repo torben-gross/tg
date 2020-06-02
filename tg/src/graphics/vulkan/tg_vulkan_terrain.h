@@ -11,7 +11,7 @@
 
 
 
-#define TG_TERRAIN_VIEW_DISTANCE_CHUNKS      4
+#define TG_TERRAIN_VIEW_DISTANCE_CHUNKS      10
 #define TG_TERRAIN_VIEW_DISTANCE_CHUNKS_Y    3
 #define TG_TERRAIN_MAX_CHUNK_COUNT           65536
 #define TG_TERRAIN_HASHMAP_COUNT             65536
@@ -39,6 +39,7 @@ typedef struct tg_terrain
 {
 	u32                     flags;
 	tg_camera_h             focal_point;
+	v3                      last_focal_point_position;
 	tg_vertex_shader_h      vertex_shader_h;
 	tg_fragment_shader_h    fragment_shader_h;
 	tg_material_h           material_h;

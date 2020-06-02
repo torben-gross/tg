@@ -274,11 +274,11 @@ void tg_application_internal_game_3d_update_and_render(f32 delta_ms)
     }
     if (tg_input_is_key_down(TG_KEY_A))
     {
-        velocity = tgm_v3_add(velocity, tgm_v3_multiply_f(tgm_v4_to_v3(right), -1.0f));
+        velocity = tgm_v3_add(velocity, tgm_v3_mulf(tgm_v4_to_v3(right), -1.0f));
     }
     if (tg_input_is_key_down(TG_KEY_S))
     {
-        velocity = tgm_v3_add(velocity, tgm_v3_multiply_f(tgm_v4_to_v3(forward), -1.0f));
+        velocity = tgm_v3_add(velocity, tgm_v3_mulf(tgm_v4_to_v3(forward), -1.0f));
     }
     if (tg_input_is_key_down(TG_KEY_D))
     {
@@ -290,14 +290,14 @@ void tg_application_internal_game_3d_update_and_render(f32 delta_ms)
     }
     if (tg_input_is_key_down(TG_KEY_CONTROL))
     {
-        velocity = tgm_v3_add(velocity, tgm_v3_multiply_f(tgm_v4_to_v3(up), -1.0f));
+        velocity = tgm_v3_add(velocity, tgm_v3_mulf(tgm_v4_to_v3(up), -1.0f));
     }
 
-    if (tgm_v3_magnitude_squared(velocity) != 0.0f)
+    if (tgm_v3_magsqr(velocity) != 0.0f)
     {
         const f32 camera_base_speed = tg_input_is_key_down(TG_KEY_SHIFT) ? 0.1f : 0.01f;
         const f32 camera_speed = camera_base_speed * delta_ms;
-        velocity = tgm_v3_multiply_f(tgm_v3_normalized(velocity), camera_speed);
+        velocity = tgm_v3_mulf(tgm_v3_normalized(velocity), camera_speed);
         test_deferred.camera_info.position = tgm_v3_add(test_deferred.camera_info.position, velocity);
     }
 

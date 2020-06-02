@@ -20,8 +20,8 @@ typedef struct tg_normals_compute_shader_uniform_buffer
 
 void tg_mesh_internal_recalculate_normal(tg_vertex* p_v0, tg_vertex* p_v1, tg_vertex* p_v2)
 {
-    const v3 v01 = tgm_v3_subtract(p_v1->position, p_v0->position);
-    const v3 v02 = tgm_v3_subtract(p_v2->position, p_v0->position);
+    const v3 v01 = tgm_v3_sub(p_v1->position, p_v0->position);
+    const v3 v02 = tgm_v3_sub(p_v2->position, p_v0->position);
     const v3 normal = tgm_v3_normalized(tgm_v3_cross(v01, v02));
 
     p_v0->normal = normal;
@@ -118,27 +118,27 @@ void tg_mesh_internal_recalculate_normals(u32 vertex_count, u32 index_count, con
 
 void tg_mesh_internal_recalculate_tangent_bitangent(tg_vertex* p_v0, tg_vertex* p_v1, tg_vertex* p_v2)
 {
-    const v3 delta_p_01 = tgm_v3_subtract(p_v1->position, p_v0->position);
-    const v3 delta_p_02 = tgm_v3_subtract(p_v2->position, p_v0->position);
+    const v3 delta_p_01 = tgm_v3_sub(p_v1->position, p_v0->position);
+    const v3 delta_p_02 = tgm_v3_sub(p_v2->position, p_v0->position);
 
-    const v2 delta_uv_01 = tgm_v2_subtract_v2(p_v1->uv, p_v0->uv);
-    const v2 delta_uv_02 = tgm_v2_subtract_v2(p_v2->uv, p_v0->uv);
+    const v2 delta_uv_01 = tgm_v2_sub(p_v1->uv, p_v0->uv);
+    const v2 delta_uv_02 = tgm_v2_sub(p_v2->uv, p_v0->uv);
 
     const f32 f = 1.0f / (delta_uv_01.x * delta_uv_02.y - delta_uv_01.y * delta_uv_02.x);
 
-    const v3 tangent_l_part = tgm_v3_multiply_f(delta_p_01, delta_uv_02.y);
-    const v3 tangent_r_part = tgm_v3_multiply_f(delta_p_02, delta_uv_01.y);
-    const v3 tlp_minus_trp = tgm_v3_subtract(tangent_l_part, tangent_r_part);
-    const v3 tangent = tgm_v3_normalized(tgm_v3_multiply_f(tlp_minus_trp, f));
+    const v3 tangent_l_part = tgm_v3_mulf(delta_p_01, delta_uv_02.y);
+    const v3 tangent_r_part = tgm_v3_mulf(delta_p_02, delta_uv_01.y);
+    const v3 tlp_minus_trp = tgm_v3_sub(tangent_l_part, tangent_r_part);
+    const v3 tangent = tgm_v3_normalized(tgm_v3_mulf(tlp_minus_trp, f));
 
     p_v0->tangent = tangent;
     p_v1->tangent = tangent;
     p_v2->tangent = tangent;
 
-    const v3 bitangent_l_part = tgm_v3_multiply_f(delta_p_02, delta_uv_01.x);
-    const v3 bitangent_r_part = tgm_v3_multiply_f(delta_p_01, delta_uv_02.x);
-    const v3 blp_minus_brp = tgm_v3_subtract(bitangent_l_part, bitangent_r_part);
-    const v3 bitangent = tgm_v3_normalized(tgm_v3_multiply_f(blp_minus_brp, f));
+    const v3 bitangent_l_part = tgm_v3_mulf(delta_p_02, delta_uv_01.x);
+    const v3 bitangent_r_part = tgm_v3_mulf(delta_p_01, delta_uv_02.x);
+    const v3 blp_minus_brp = tgm_v3_sub(bitangent_l_part, bitangent_r_part);
+    const v3 bitangent = tgm_v3_normalized(tgm_v3_mulf(blp_minus_brp, f));
 
     p_v0->bitangent = bitangent;
     p_v1->bitangent = bitangent;

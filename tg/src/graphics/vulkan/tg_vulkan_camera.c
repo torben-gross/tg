@@ -717,9 +717,9 @@ void tg_camera_end(tg_camera_h camera_h)
                         v3 p_cartesian_points_clip_space[8] = { 0 };
                         for (u8 i = 0; i < 8; i++)
                         {
-                            p_homogenous_points_clip_space[i] = tgm_m4_multiply_v4(TG_ENTITY_GRAPHICS_DATA_PTR_MODEL(entity_graphics_data_ptr_h), p_points[i]);
-                            p_homogenous_points_clip_space[i] = tgm_m4_multiply_v4(TG_CAMERA_VIEW(camera_h), p_homogenous_points_clip_space[i]);
-                            p_homogenous_points_clip_space[i] = tgm_m4_multiply_v4(TG_CAMERA_PROJ(camera_h), p_homogenous_points_clip_space[i]);// TODO: SIMD
+                            p_homogenous_points_clip_space[i] = tgm_m4_mulv4(TG_ENTITY_GRAPHICS_DATA_PTR_MODEL(entity_graphics_data_ptr_h), p_points[i]);
+                            p_homogenous_points_clip_space[i] = tgm_m4_mulv4(TG_CAMERA_VIEW(camera_h), p_homogenous_points_clip_space[i]);
+                            p_homogenous_points_clip_space[i] = tgm_m4_mulv4(TG_CAMERA_PROJ(camera_h), p_homogenous_points_clip_space[i]);// TODO: SIMD
                             p_cartesian_points_clip_space[i] = tgm_v4_to_v3(p_homogenous_points_clip_space[i]);
                         }
 
@@ -841,8 +841,8 @@ void tg_camera_set_view(tg_camera_h camera_h, v3 position, f32 pitch, f32 yaw, f
 
     camera_h->position = position;
 	const m4 inverse_rotation = tgm_m4_inverse(tgm_m4_euler(pitch, yaw, roll));
-	const m4 inverse_translation = tgm_m4_translate(tgm_v3_negated(position));
-    TG_CAMERA_VIEW(camera_h) = tgm_m4_multiply(inverse_rotation, inverse_translation);
+	const m4 inverse_translation = tgm_m4_translate(tgm_v3_neg(position));
+    TG_CAMERA_VIEW(camera_h) = tgm_m4_mul(inverse_rotation, inverse_translation);
 }
 
 #endif

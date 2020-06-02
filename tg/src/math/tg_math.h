@@ -19,9 +19,10 @@ TODO: Support other clipping setups via macros!
 #include <immintrin.h>
 #endif
 
-#define TGM_PI                      3.14159265358979323846
-#define TGM_TO_DEGREES(radians)     (radians * (360.0f / ((f32)TGM_PI * 2.0f)))
-#define TGM_TO_RADIANS(degrees)     (degrees * (((f32)TGM_PI * 2.0f) / 360.0f))
+#define TGM_PI                     3.14159265358979323846
+#define TGM_TO_DEGREES(radians)    (radians * (360.0f / ((f32)TGM_PI * 2.0f)))
+#define TGM_TO_RADIANS(degrees)    (degrees * (((f32)TGM_PI * 2.0f) / 360.0f))
+#define TGM_SQRT(v)                tgm_f32_sqrt((f32)(v))
 
 
 
@@ -303,49 +304,53 @@ u64    tgm_u64_min(u64 v0, u64 v1);
 
 v2     tgm_v2_max(v2 v0, v2 v1);
 v2     tgm_v2_min(v2 v0, v2 v1);
-v2     tgm_v2_subtract_v2(v2 v0, v2 v1);
+v2     tgm_v2_sub(v2 v0, v2 v1);
 
 v3     tgm_v3_abs(v3 v);
 v3     tgm_v3_add(v3 v0, v3 v1);
-v3     tgm_v3_add_f(v3 v, f32 f);
+v3     tgm_v3_addf(v3 v, f32 f);
 v3     tgm_v3_clamp(v3 v, v3 min, v3 max);
 v3     tgm_v3_cross(v3 v0, v3 v1);
-v3     tgm_v3_divide(v3 v0, v3 v1);
-v3     tgm_v3_divide_f(v3 v, f32 f);
+v3     tgm_v3_div(v3 v0, v3 v1);
+v3     tgm_v3_divf(v3 v, f32 f);
 f32    tgm_v3_dot(v3 v0, v3 v1);
 b32    tgm_v3_equal(v3 v0, v3 v1);
 v3     tgm_v3_lerp(v3 v0, v3 v1, f32 t);
-f32    tgm_v3_magnitude(v3 v);
-f32    tgm_v3_magnitude_squared(v3 v);
+f32    tgm_v3_mag(v3 v);
+f32    tgm_v3_magsqr(v3 v);
 v3     tgm_v3_max(v3 v0, v3 v1);
 v3     tgm_v3_min(v3 v0, v3 v1);
-v3     tgm_v3_multiply(v3 v0, v3 v1);
-v3     tgm_v3_multiply_f(v3 v, f32 f);
-v3     tgm_v3_negated(v3 v);
+v3     tgm_v3_mul(v3 v0, v3 v1);
+v3     tgm_v3_mulf(v3 v, f32 f);
+v3     tgm_v3_neg(v3 v);
 v3     tgm_v3_normalized(v3 v);
 b32    tgm_v3_similar(v3 v0, v3 v1, f32 epsilon);
-v3     tgm_v3_subtract(v3 v0, v3 v1);
-v3     tgm_v3_subtract_f(v3 v, f32 f);
+v3     tgm_v3_sub(v3 v0, v3 v1);
+v3     tgm_v3_subf(v3 v, f32 f);
 v4     tgm_v3_to_v4(v3 v, f32 w);
 
 b32    tgm_v3i_equal(v3i v0, v3i v1);
+f32    tgm_v3i_mag(v3i v);
+i32    tgm_v3i_magsqr(v3i v);
+v3i    tgm_v3i_sub(v3i v0, v3i v1);
+v3i    tgm_v3i_subi(v3i v, i32 i);
 
 v4     tgm_v4_add(v4 v0, v4 v1);
-v4     tgm_v4_add_f(v4 v, f32 f);
-v4     tgm_v4_divide(v4 v0, v4 v1);
-v4     tgm_v4_divide_f(v4 v, f32 f);
+v4     tgm_v4_addf(v4 v, f32 f);
+v4     tgm_v4_div(v4 v0, v4 v1);
+v4     tgm_v4_divf(v4 v, f32 f);
 f32    tgm_v4_dot(v4 v0, v4 v1);
 b32    tgm_v4_equal(v4 v0, v4 v1);
-f32    tgm_v4_magnitude(v4 v);
-f32    tgm_v4_magnitude_squared(v4 v);
+f32    tgm_v4_mag(v4 v);
+f32    tgm_v4_magsqr(v4 v);
 v4     tgm_v4_max(v4 v0, v4 v1);
 v4     tgm_v4_min(v4 v0, v4 v1);
-v4     tgm_v4_multiply(v4 v0, v4 v1);
-v4     tgm_v4_multiply_f(v4 v, f32 f);
-v4     tgm_v4_negated(v4 v);
+v4     tgm_v4_mul(v4 v0, v4 v1);
+v4     tgm_v4_mulf(v4 v, f32 f);
+v4     tgm_v4_neg(v4 v);
 v4     tgm_v4_normalized(v4 v);
-v4     tgm_v4_subtract(v4 v0, v4 v1);
-v4     tgm_v4_subtract_f(v4 v, f32 f);
+v4     tgm_v4_sub(v4 v0, v4 v1);
+v4     tgm_v4_subf(v4 v, f32 f);
 v3     tgm_v4_to_v3(v4 v);
 
 
@@ -360,8 +365,8 @@ v2     tgm_m2_multiply_v2(m2 m, v2 v);
 m2     tgm_m2_transposed(m2 m);
 
 m3     tgm_m3_identity();
-m3     tgm_m3_multiply(m3 m0, m3 m1);
-v3     tgm_m3_multiply_v3(m3 m, v3 v);
+m3     tgm_m3_mul(m3 m0, m3 m1);
+v3     tgm_m3_mulv3(m3 m, v3 v);
 m3     tgm_m3_orthographic(f32 left, f32 right, f32 bottom, f32 top);
 m3     tgm_m3_transposed(m3 m);
 
@@ -371,8 +376,8 @@ m4     tgm_m4_euler(f32 pitch_in_radians, f32 yaw_in_radians, f32 roll_in_radian
 m4     tgm_m4_identity();
 m4     tgm_m4_inverse(m4 m);
 m4     tgm_m4_look_at(v3 from, v3 to, v3 up);
-m4     tgm_m4_multiply(m4 m0, m4 m1);
-v4     tgm_m4_multiply_v4(m4 m, v4 v);
+m4     tgm_m4_mul(m4 m0, m4 m1);
+v4     tgm_m4_mulv4(m4 m, v4 v);
 m4     tgm_m4_orthographic(f32 left, f32 right, f32 bottom, f32 top, f32 far, f32 near);
 m4     tgm_m4_perspective(f32 fov_y_in_radians, f32 aspect, f32 near, f32 far);
 m4     tgm_m4_rotate_x(f32 angle_in_radians);

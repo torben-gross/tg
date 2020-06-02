@@ -742,7 +742,7 @@ v2 tgm_v2_min(v2 v0, v2 v1)
 	return result;
 }
 
-v2 tgm_v2_subtract_v2(v2 v0, v2 v1)
+v2 tgm_v2_sub(v2 v0, v2 v1)
 {
 	v2 result = { 0 };
 	result.x = v0.x - v1.x;
@@ -770,7 +770,7 @@ v3 tgm_v3_add(v3 v0, v3 v1)
 	return result;
 }
 
-v3 tgm_v3_add_f(v3 v, f32 f)
+v3 tgm_v3_addf(v3 v, f32 f)
 {
 	v3 result = { 0 };
 	result.x = v.x + f;
@@ -797,7 +797,7 @@ v3 tgm_v3_cross(v3 v0, v3 v1)
 	return result;
 }
 
-v3 tgm_v3_divide(v3 v0, v3 v1)
+v3 tgm_v3_div(v3 v0, v3 v1)
 {
 	v3 result = { 0 };
 	result.x = v0.x / v1.x;
@@ -806,7 +806,7 @@ v3 tgm_v3_divide(v3 v0, v3 v1)
 	return result;
 }
 
-v3 tgm_v3_divide_f(v3 v, f32 f)
+v3 tgm_v3_divf(v3 v, f32 f)
 {
 	v3 result = { 0 };
 	result.x = v.x / f;
@@ -836,13 +836,13 @@ v3 tgm_v3_lerp(v3 v0, v3 v1, f32 t)
 	return result;
 }
 
-f32 tgm_v3_magnitude(v3 v)
+f32 tgm_v3_mag(v3 v)
 {
 	const f32 result = tgm_f32_sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
 	return result;
 }
 
-f32 tgm_v3_magnitude_squared(v3 v)
+f32 tgm_v3_magsqr(v3 v)
 {
 	const f32 result = v.x * v.x + v.y * v.y + v.z * v.z;
 	return result;
@@ -866,7 +866,7 @@ v3 tgm_v3_min(v3 v0, v3 v1)
 	return result;
 }
 
-v3 tgm_v3_multiply(v3 v0, v3 v1)
+v3 tgm_v3_mul(v3 v0, v3 v1)
 {
 	v3 result = { 0 };
 	result.x = v0.x * v1.x;
@@ -875,7 +875,7 @@ v3 tgm_v3_multiply(v3 v0, v3 v1)
 	return result;
 }
 
-v3 tgm_v3_multiply_f(v3 v, f32 f)
+v3 tgm_v3_mulf(v3 v, f32 f)
 {
 	v3 result = { 0 };
 	result.x = v.x * f;
@@ -884,7 +884,7 @@ v3 tgm_v3_multiply_f(v3 v, f32 f)
 	return result;
 }
 
-v3 tgm_v3_negated(v3 v)
+v3 tgm_v3_neg(v3 v)
 {
 	v3 result = { 0 };
 	result.x = -v.x;
@@ -896,7 +896,7 @@ v3 tgm_v3_negated(v3 v)
 v3 tgm_v3_normalized(v3 v)
 {
 	v3 result = { 0 };
-	const f32 magnitude = tgm_v3_magnitude(v);
+	const f32 magnitude = tgm_v3_mag(v);
 	TG_ASSERT(magnitude);
 	result.x = v.x / magnitude;
 	result.y = v.y / magnitude;
@@ -906,13 +906,13 @@ v3 tgm_v3_normalized(v3 v)
 
 b32 tgm_v3_similar(v3 v0, v3 v1, f32 epsilon)
 {
-	const v3 v01 = tgm_v3_subtract(v1, v0);
-	const f32 mag_sqr = tgm_v3_magnitude_squared(v01);
+	const v3 v01 = tgm_v3_sub(v1, v0);
+	const f32 mag_sqr = tgm_v3_magsqr(v01);
 	const b32 result = mag_sqr <= epsilon * epsilon;
 	return result;
 }
 
-v3 tgm_v3_subtract(v3 v0, v3 v1)
+v3 tgm_v3_sub(v3 v0, v3 v1)
 {
 	v3 result = { 0 };
 	result.x = v0.x - v1.x;
@@ -921,7 +921,7 @@ v3 tgm_v3_subtract(v3 v0, v3 v1)
 	return result;
 }
 
-v3 tgm_v3_subtract_f(v3 v, f32 f)
+v3 tgm_v3_subf(v3 v, f32 f)
 {
 	v3 result = { 0 };
 	result.x = v.x - f;
@@ -948,6 +948,36 @@ b32 tgm_v3i_equal(v3i v0, v3i v1)
 	return result;
 }
 
+f32 tgm_v3i_mag(v3i v)
+{
+	const f32 result = TGM_SQRT(v.x * v.x + v.y * v.y + v.z * v.z);
+	return result;
+}
+
+i32 tgm_v3i_magsqr(v3i v)
+{
+	const i32 result = v.x * v.x + v.y * v.y + v.z * v.z;
+	return result;
+}
+
+v3i tgm_v3i_sub(v3i v0, v3i v1)
+{
+	v3i result = { 0 };
+	result.x = v0.x - v1.x;
+	result.y = v0.y - v1.y;
+	result.z = v0.z - v1.z;
+	return result;
+}
+
+v3i tgm_v3i_subi(v3i v, i32 i)
+{
+	v3i result = { 0 };
+	result.x = v.x - i;
+	result.y = v.y - i;
+	result.z = v.z - i;
+	return result;
+}
+
 
 
 v4 tgm_v4_add(v4 v0, v4 v1)
@@ -960,7 +990,7 @@ v4 tgm_v4_add(v4 v0, v4 v1)
 	return result;
 }
 
-v4 tgm_v4_add_f(v4 v, f32 f)
+v4 tgm_v4_addf(v4 v, f32 f)
 {
 	v4 result = { 0 };
 	result.x = v.x + f;
@@ -970,7 +1000,7 @@ v4 tgm_v4_add_f(v4 v, f32 f)
 	return result;
 }
 
-v4 tgm_v4_divide(v4 v0, v4 v1)
+v4 tgm_v4_div(v4 v0, v4 v1)
 {
 	v4 result = { 0 };
 	result.x = v0.x / v1.x;
@@ -980,7 +1010,7 @@ v4 tgm_v4_divide(v4 v0, v4 v1)
 	return result;
 }
 
-v4 tgm_v4_divide_f(v4 v, f32 f)
+v4 tgm_v4_divf(v4 v, f32 f)
 {
 	v4 result = { 0 };
 	result.x = v.x / f;
@@ -1002,13 +1032,13 @@ b32 tgm_v4_equal(v4 v0, v4 v1)
 	return result;
 }
 
-f32 tgm_v4_magnitude(v4 v)
+f32 tgm_v4_mag(v4 v)
 {
 	const f32 result = tgm_f32_sqrt(v.x * v.x + v.y * v.y + v.z * v.z + v.w * v.w);
 	return result;
 }
 
-f32 tgm_v4_magnitude_squared(v4 v)
+f32 tgm_v4_magsqr(v4 v)
 {
 	const f32 result = v.x * v.x + v.y * v.y + v.z * v.z + v.w * v.w;
 	return result;
@@ -1034,7 +1064,7 @@ v4 tgm_v4_min(v4 v0, v4 v1)
 	return result;
 }
 
-v4 tgm_v4_multiply(v4 v0, v4 v1)
+v4 tgm_v4_mul(v4 v0, v4 v1)
 {
 	v4 result = { 0 };
 	result.x = v0.x * v1.x;
@@ -1044,7 +1074,7 @@ v4 tgm_v4_multiply(v4 v0, v4 v1)
 	return result;
 }
 
-v4 tgm_v4_multiply_f(v4 v, f32 f)
+v4 tgm_v4_mulf(v4 v, f32 f)
 {
 	v4 result = { 0 };
 	result.x = v.x * f;
@@ -1053,7 +1083,7 @@ v4 tgm_v4_multiply_f(v4 v, f32 f)
 	return result;
 }
 
-v4 tgm_v4_negated(v4 v)
+v4 tgm_v4_neg(v4 v)
 {
 	v4 result = { 0 };
 	result.x = -v.x;
@@ -1066,7 +1096,7 @@ v4 tgm_v4_negated(v4 v)
 v4 tgm_v4_normalized(v4 v)
 {
 	v4 result = { 0 };
-	const f32 magnitude = tgm_v4_magnitude(v);
+	const f32 magnitude = tgm_v4_mag(v);
 	TG_ASSERT(magnitude);
 	result.x = v.x / magnitude;
 	result.y = v.y / magnitude;
@@ -1075,7 +1105,7 @@ v4 tgm_v4_normalized(v4 v)
 	return result;
 }
 
-v4 tgm_v4_subtract(v4 v0, v4 v1)
+v4 tgm_v4_sub(v4 v0, v4 v1)
 {
 	v4 result = { 0 };
 	result.x = v0.x - v1.x;
@@ -1085,7 +1115,7 @@ v4 tgm_v4_subtract(v4 v0, v4 v1)
 	return result;
 }
 
-v4 tgm_v4_subtract_f(v4 v, f32 f)
+v4 tgm_v4_subf(v4 v, f32 f)
 {
 	v4 result = { 0 };
 	result.x = v.x - f;
@@ -1188,7 +1218,7 @@ m3 tgm_m3_identity()
 	return result;
 }
 
-m3 tgm_m3_multiply(m3 m0, m3 m1)
+m3 tgm_m3_mul(m3 m0, m3 m1)
 {
 	m3 result = { 0 };
 
@@ -1207,7 +1237,7 @@ m3 tgm_m3_multiply(m3 m0, m3 m1)
 	return result;
 }
 
-v3 tgm_m3_multiply_v3(m3 m, v3 v)
+v3 tgm_m3_mulv3(m3 m, v3 v)
 {
 	v3 result = { 0 };
 
@@ -1267,7 +1297,7 @@ m4 tgm_m4_angle_axis(f32 angle_in_radians, v3 axis)
 	const f32 c = tgm_f32_cos(angle_in_radians);
 	const f32 s = tgm_f32_sin(angle_in_radians);
 	const f32 omc = 1.0f - c;
-	const f32 l = tgm_v3_magnitude(axis);
+	const f32 l = tgm_v3_mag(axis);
 	TG_ASSERT(l);
 	const f32 x = axis.x / l;
 	const f32 y = axis.y / l;
@@ -1320,8 +1350,8 @@ m4 tgm_m4_euler(f32 pitch_in_radians, f32 yaw_in_radians, f32 roll_in_radians)
 	const m4 x = tgm_m4_rotate_x(pitch_in_radians);
 	const m4 y = tgm_m4_rotate_y(yaw_in_radians);
 	const m4 z = tgm_m4_rotate_z(roll_in_radians);
-	const m4 yx = tgm_m4_multiply(y, x);
-	const m4 zyx = tgm_m4_multiply(z, yx);
+	const m4 yx = tgm_m4_mul(y, x);
+	const m4 zyx = tgm_m4_mul(z, yx);
 	return zyx;
 }
 
@@ -1407,11 +1437,11 @@ m4 tgm_m4_look_at(v3 from, v3 to, v3 up)
 
 	m4 result = { 0 };
 
-	const v3 f_negated = tgm_v3_normalized(tgm_v3_subtract(to, from));
+	const v3 f_negated = tgm_v3_normalized(tgm_v3_sub(to, from));
 	const v3 r = tgm_v3_normalized(tgm_v3_cross(f_negated, tgm_v3_normalized(up)));
 	const v3 u = tgm_v3_normalized(tgm_v3_cross(r, f_negated));
-	const v3 f = tgm_v3_negated(f_negated);
-	const v3 from_negated = tgm_v3_negated(from);
+	const v3 f = tgm_v3_neg(f_negated);
+	const v3 from_negated = tgm_v3_neg(from);
 
 	result.m00 = r.x;
 	result.m10 = u.x;
@@ -1436,7 +1466,7 @@ m4 tgm_m4_look_at(v3 from, v3 to, v3 up)
 	return result;
 }
 
-m4 tgm_m4_multiply(m4 m0, m4 m1)
+m4 tgm_m4_mul(m4 m0, m4 m1)
 {
 	m4 result = { 0 };
 
@@ -1463,7 +1493,7 @@ m4 tgm_m4_multiply(m4 m0, m4 m1)
 	return result;
 }
 
-v4 tgm_m4_multiply_v4(m4 m, v4 v)
+v4 tgm_m4_mulv4(m4 m, v4 v)
 {
 	v4 result = { 0 };
 

@@ -129,7 +129,7 @@ typedef struct tg_point_light
 	f32   radius;
 } tg_point_light;
 
-typedef struct tg_bounds
+typedef struct tg_bounds // TODO: this should be part of physics
 {
 	v3    min;
 	v3    max;

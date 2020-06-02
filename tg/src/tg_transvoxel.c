@@ -27,8 +27,8 @@
 
 v3 tg_transvoxel_internal_generate_triangle_normal(const tg_transvoxel_triangle* p_triangle)
 {
-	const v3 v01 = tgm_v3_subtract(p_triangle->p_vertices[1].position, p_triangle->p_vertices[0].position);
-	const v3 v02 = tgm_v3_subtract(p_triangle->p_vertices[2].position, p_triangle->p_vertices[0].position);
+	const v3 v01 = tgm_v3_sub(p_triangle->p_vertices[1].position, p_triangle->p_vertices[0].position);
+	const v3 v02 = tgm_v3_sub(p_triangle->p_vertices[2].position, p_triangle->p_vertices[0].position);
 	const v3 result = tgm_v3_normalized(tgm_v3_cross(v01, v02));
 	return result;
 }
@@ -136,8 +136,8 @@ void tg_transvoxel_internal_scale_vertex(
 	projection_matrix.m22 = 1.0f - (normal.z * normal.z);
 
 	const v3 cell_base = { (f32)(16 * x + cx * cell_scale), (f32)(16 * y + cy * cell_scale), (f32)(16 * z + cz * cell_scale) };
-	const v3 rel = tgm_v3_subtract(p_vertex->position, cell_base);
-	v3 relf = tgm_v3_divide_f(rel, cell_scale);
+	const v3 rel = tgm_v3_sub(p_vertex->position, cell_base);
+	v3 relf = tgm_v3_divf(rel, cell_scale);
 
 	// TODO: this is still not perfect
 	const b32 scale_x_neg = cx == x_start && !(transition_faces & TG_TRANSVOXEL_FACE_X_NEG);
@@ -181,7 +181,7 @@ void tg_transvoxel_internal_scale_vertex(
 		offset.z = -0.5f * cell_scale * relf.z * scale_x_factor * scale_y_factor;
 	}
 
-	const v3 projected_offset = tgm_m3_multiply_v3(projection_matrix, offset);
+	const v3 projected_offset = tgm_m3_mulv3(projection_matrix, offset);
 	p_vertex->position = tgm_v3_add(p_vertex->position, projected_offset);
 }
 
@@ -278,8 +278,8 @@ void tg_transvoxel_internal_fill_regular_cell(tg_transvoxel_regular_cell* p_cell
 
 			if (!tgm_v3_equal(vec0, vec1) && !tgm_v3_equal(vec0, vec2) && !tgm_v3_equal(vec1, vec2))
 			{
-				const v3 v01 = tgm_v3_subtract(vec1, vec0);
-				const v3 v02 = tgm_v3_subtract(vec2, vec0);
+				const v3 v01 = tgm_v3_sub(vec1, vec0);
+				const v3 v02 = tgm_v3_sub(vec2, vec0);
 				const v3 n = tgm_v3_normalized(tgm_v3_cross(v01, v02));
 
 				p_cell->p_triangles[p_cell->triangle_count].p_vertices[0].position = vec0;
@@ -730,10 +730,10 @@ void tg_transvoxel_internal_fill_and_scale_transitions(tg_transvoxel_face transi
 					}
 #endif
 
-					const v3 v01 = tgm_v3_subtract(p_transition_cells[cell_index].p_triangles[triangle_index].p_vertices[1].position, p_transition_cells[cell_index].p_triangles[triangle_index].p_vertices[0].position);
-					const v3 v02 = tgm_v3_subtract(p_transition_cells[cell_index].p_triangles[triangle_index].p_vertices[2].position, p_transition_cells[cell_index].p_triangles[triangle_index].p_vertices[0].position);
+					const v3 v01 = tgm_v3_sub(p_transition_cells[cell_index].p_triangles[triangle_index].p_vertices[1].position, p_transition_cells[cell_index].p_triangles[triangle_index].p_vertices[0].position);
+					const v3 v02 = tgm_v3_sub(p_transition_cells[cell_index].p_triangles[triangle_index].p_vertices[2].position, p_transition_cells[cell_index].p_triangles[triangle_index].p_vertices[0].position);
 					const v3 cross = tgm_v3_cross(v01, v02);
-					if (tgm_v3_magnitude_squared(cross) != 0.0f)
+					if (tgm_v3_magsqr(cross) != 0.0f)
 					{
 						const v3 triangle_normal = tg_transvoxel_internal_generate_triangle_normal(&p_transition_cells[cell_index].p_triangles[triangle_index]);
 						p_transition_cells[cell_index].p_triangles[triangle_index].p_vertices[0].normal = triangle_normal;
