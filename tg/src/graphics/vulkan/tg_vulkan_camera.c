@@ -568,13 +568,13 @@ void tg_camera_internal_register_entity(tg_camera_h camera_h, tg_vulkan_camera_i
             }
             vkCmdBindDescriptorSets(p_vulkan_camera_info->p_command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, p_vulkan_camera_info->pipeline_layout, 0, descriptor_set_count, p_descriptor_sets, 0, TG_NULL);
 
-            if (entity_graphics_data_ptr_h->p_lod_meshes_h[i]->ibo.size != 0)
+            if (entity_graphics_data_ptr_h->p_lod_meshes_h[i]->index_count != 0)
             {
-                vkCmdDrawIndexed(p_vulkan_camera_info->p_command_buffers[i], (u32)(entity_graphics_data_ptr_h->p_lod_meshes_h[i]->ibo.size / sizeof(u16)), 1, 0, 0, 0); // TODO: u16
+                vkCmdDrawIndexed(p_vulkan_camera_info->p_command_buffers[i], (u32)(entity_graphics_data_ptr_h->p_lod_meshes_h[i]->index_count), 1, 0, 0, 0); // TODO: u16
             }
             else
             {
-                vkCmdDraw(p_vulkan_camera_info->p_command_buffers[i], (u32)(entity_graphics_data_ptr_h->p_lod_meshes_h[i]->vbo.size / sizeof(tg_vertex)), 1, 0, 0);
+                vkCmdDraw(p_vulkan_camera_info->p_command_buffers[i], (u32)(entity_graphics_data_ptr_h->p_lod_meshes_h[i]->vertex_count), 1, 0, 0);
             }
         }
         VK_CALL(vkEndCommandBuffer(p_vulkan_camera_info->p_command_buffers[i]));

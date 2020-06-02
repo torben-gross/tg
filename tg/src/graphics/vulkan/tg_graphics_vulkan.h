@@ -292,7 +292,9 @@ typedef struct tg_mesh
 {
     tg_handle_type      type;
     tg_bounds           bounds;
+    u32                 vertex_count;
     tg_vulkan_buffer    vbo;
+    u32                 index_count;
     tg_vulkan_buffer    ibo;
 } tg_mesh;
 

@@ -329,6 +329,7 @@ v3     tgm_v3_sub(v3 v0, v3 v1);
 v3     tgm_v3_subf(v3 v, f32 f);
 v4     tgm_v3_to_v4(v3 v, f32 w);
 
+v3i    tgm_v3i_abs(v3i v);
 b32    tgm_v3i_equal(v3i v0, v3i v1);
 f32    tgm_v3i_mag(v3i v);
 i32    tgm_v3i_magsqr(v3i v);

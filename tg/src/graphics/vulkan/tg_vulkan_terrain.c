@@ -11,6 +11,8 @@
 #define TG_TERRAIN_HASH(x, y, z)          (((u32)(x) * 9 + (u32)(y) * 37 + (u32)(z) * 149) % TG_TERRAIN_HASHMAP_COUNT) // TODO: better hash function! also, mod
 #define TG_TERRAIN_HASH_V3(v)             TG_TERRAIN_HASH((v).x, (v).y, (v).z)
 #define TG_TERRAIN_INVALID_CHUNK_INDEX    TG_U32_MAX
+#define TG_TERRAIN_CHUNKS_PER_LOD         2
+#define TG_TERRAIN_MAX_LOD                3
 
 
 
@@ -136,14 +138,14 @@ void tg_terrain_internal_fill_isolevels(i32 x, i32 y, i32 z, tg_transvoxel_isole
 
 				const f32 n_hills0 = tgm_noise(base_x * 0.008f, 0.0f, base_z * 0.008f);
 				const f32 n_hills1 = tgm_noise(base_x * 0.2f, 0.0f, base_z * 0.2f);
-				const f32 n_hills = n_hills0 + 0.01f * n_hills1;
+				const f32 n_hills = n_hills0 + 0.005f * n_hills1;
 
 				const f32 s_caves = 0.06f;
 				const f32 n_caves = tgm_f32_clamp(tgm_noise(s_caves * base_x, s_caves * base_y, s_caves * base_z), -1.0f, 0.0f);
 
 				const f32 n = n_hills;
 				f32 noise = (n * 64.0f) - ((f32)cy + (f32)y * 16.0f);
-				noise += 15.0f * n_caves;
+				noise += 60.0f * n_caves;
 				const f32 noise_clamped = tgm_f32_clamp(noise, -1.0f, 1.0f);
 				const f32 f0 = (noise_clamped + 1.0f) * 0.5f;
 				const f32 f1 = 254.0f * f0;
@@ -154,7 +156,7 @@ void tg_terrain_internal_fill_isolevels(i32 x, i32 y, i32 z, tg_transvoxel_isole
 	}
 }
 
-b32 tg_terrain_internal_is_in_view_radius_xz(v3i focal_point_chunk_coordinates, i32 x, i32 y, i32 z)
+b32 tg_terrain_internal_is_in_view_radius_xz(v3i focal_point_chunk_coordinates, i32 x, i32 z)
 {
 	const v3i v0 = { focal_point_chunk_coordinates.x, 0, focal_point_chunk_coordinates.z };
 	const v3i v1 = { x, 0, z };
@@ -252,7 +254,7 @@ u8 tg_terrain_internal_select_lod(v3 focal_point, i32 x, i32 y, i32 z)
 	const v3 chunk_center = TG_TERRAIN_CHUNK_CENTER(x, y, z);
 	const v3 delta = tgm_v3_sub((v3){ focal_point.x, focal_point.y, focal_point.z }, chunk_center);
 	const f32 distance = tgm_v3_mag(delta);
-	const u8 lod = (u8)tgm_u64_min((u64)(distance / 32.0f), 3);
+	const u8 lod = (u8)tgm_u64_min((u64)(distance / (f32)(TG_TERRAIN_CHUNKS_PER_LOD * TG_TRANSVOXEL_CELLS)), TG_TERRAIN_MAX_LOD);
 	return lod;
 }
 
@@ -306,13 +308,12 @@ void tg_terrain_internal_generate_chunk(tg_terrain_h terrain_h, i32 x, i32 y, i3
 		const tg_vertex* p_vertices = (tg_vertex*)p_terrain_chunk->p_transvoxel_chunk->p_triangles;
 		if (p_terrain_chunk->entity.graphics_data_ptr_h->p_lod_meshes_h[0])
 		{
-			tg_mesh_recreate2(p_terrain_chunk->entity.graphics_data_ptr_h->p_lod_meshes_h[0], vertex_count, p_vertices);
+			tg_mesh_update2(p_terrain_chunk->entity.graphics_data_ptr_h->p_lod_meshes_h[0], vertex_count, p_vertices, 0, TG_NULL);
 			tg_entity_graphics_data_ptr_set_mesh(p_terrain_chunk->entity.graphics_data_ptr_h, p_terrain_chunk->entity.graphics_data_ptr_h->p_lod_meshes_h[0], 0);
 		}
 		else
 		{
-			tg_mesh_h mesh_h = tg_mesh_create2(vertex_count, p_vertices);
-			tg_entity_graphics_data_ptr_set_mesh(p_terrain_chunk->entity.graphics_data_ptr_h, mesh_h, 0);
+			TG_ASSERT(TG_FALSE);
 		}
 	}
 }
@@ -343,7 +344,7 @@ tg_terrain_h tg_terrain_create(tg_camera_h focal_point_camera_h)
 				const i32 x = focal_point_chunk.x + relx;
 				const i32 z = focal_point_chunk.z + relz;
 
-				if (!tg_terrain_internal_is_in_view_radius_xz(focal_point_chunk, x, y, z))
+				if (!tg_terrain_internal_is_in_view_radius_xz(focal_point_chunk, x, z))
 				{
 					continue;
 				}
@@ -419,11 +420,12 @@ tg_terrain_h tg_terrain_create(tg_camera_h focal_point_camera_h)
 					}
 					tg_transvoxel_fill_transitions(&transvoxel_connecting_chunks);
 				}
+				tg_mesh_h mesh_h = tg_mesh_create_empty(p_terrain_chunk->p_transvoxel_chunk->triangle_count, 0);
 				if (p_terrain_chunk->p_transvoxel_chunk->triangle_count)
 				{
-					tg_mesh_h mesh_h = tg_mesh_create2(3 * p_terrain_chunk->p_transvoxel_chunk->triangle_count, (tg_vertex*)p_terrain_chunk->p_transvoxel_chunk->p_triangles);
-					tg_entity_graphics_data_ptr_set_mesh(p_terrain_chunk->entity.graphics_data_ptr_h, mesh_h, 0);
+					tg_mesh_update2(mesh_h, 3 * p_terrain_chunk->p_transvoxel_chunk->triangle_count, (tg_vertex*)p_terrain_chunk->p_transvoxel_chunk->p_triangles, 0, TG_NULL);
 				}
+				tg_entity_graphics_data_ptr_set_mesh(p_terrain_chunk->entity.graphics_data_ptr_h, mesh_h, 0);
 			}
 		}
 	}
@@ -446,21 +448,21 @@ void tg_terrain_update(tg_terrain_h terrain_h)
 		return;
 	}
 
-	if (!tgm_v3i_equal(last_focal_point_chunk, focal_point_chunk))
+	// TODO: if this becomes too slow, cut 45 degree rotated quad out of center, that will not be updated
+	if (last_focal_point_chunk.x != focal_point_chunk.x || last_focal_point_chunk.z != focal_point_chunk.z)
 	{
 		for (i32 relz = -TG_TERRAIN_VIEW_DISTANCE_CHUNKS; relz < TG_TERRAIN_VIEW_DISTANCE_CHUNKS + 1; relz++)
 		{
-			for (i32 y = -TG_TERRAIN_VIEW_DISTANCE_CHUNKS_Y; y < TG_TERRAIN_VIEW_DISTANCE_CHUNKS_Y + 1; y++)
+			const i32 z = last_focal_point_chunk.z + relz;
+			for (i32 relx = -TG_TERRAIN_VIEW_DISTANCE_CHUNKS; relx < TG_TERRAIN_VIEW_DISTANCE_CHUNKS + 1; relx++)
 			{
-				for (i32 relx = -TG_TERRAIN_VIEW_DISTANCE_CHUNKS; relx < TG_TERRAIN_VIEW_DISTANCE_CHUNKS + 1; relx++)
+				const i32 x = last_focal_point_chunk.x + relx;
+				if (!tg_terrain_internal_is_in_view_radius_xz(focal_point_chunk, x, z))
 				{
-					const i32 x = last_focal_point_chunk.x + relx;
-					const i32 z = last_focal_point_chunk.z + relz;
-					tg_terrain_chunk* p_terrain_chunk = tg_terrain_internal_get_chunk(terrain_h, x, y, z);
-	
-					if (p_terrain_chunk)
+					for (i32 y = -TG_TERRAIN_VIEW_DISTANCE_CHUNKS_Y; y < TG_TERRAIN_VIEW_DISTANCE_CHUNKS_Y + 1; y++)
 					{
-						if (!tg_terrain_internal_is_in_view_radius_xz(focal_point_chunk, x, y, z))
+						tg_terrain_chunk* p_terrain_chunk = tg_terrain_internal_get_chunk(terrain_h, x, y, z);
+						if (p_terrain_chunk)
 						{
 							tg_terrain_internal_remove_chunk(terrain_h, x, y, z);
 						}
@@ -484,7 +486,7 @@ void tg_terrain_update(tg_terrain_h terrain_h)
 				{
 					const u8 lod = tg_terrain_internal_select_lod(focal_point, x, y, z);
 
-					const u8 transition_faces_bitmap = TG_TRANSVOXEL_TRANSITION_FACES(
+					const u8 transition_faces_bitmap = lod == 0 ? 0 : TG_TRANSVOXEL_TRANSITION_FACES(
 						lod > tg_terrain_internal_select_lod(focal_point, x - 1, y, z),
 						lod > tg_terrain_internal_select_lod(focal_point, x + 1, y, z),
 						lod > tg_terrain_internal_select_lod(focal_point, x, y - 1, z),
@@ -502,7 +504,7 @@ void tg_terrain_update(tg_terrain_h terrain_h)
 				}
 				else
 				{
-					if (tg_terrain_internal_is_in_view_radius_xz(focal_point_chunk, x, y, z))
+					if (tg_terrain_internal_is_in_view_radius_xz(focal_point_chunk, x, z))
 					{
 						tg_terrain_internal_generate_chunk(terrain_h, x, y, z);
 					}
@@ -553,17 +555,17 @@ void tg_terrain_update(tg_terrain_h terrain_h)
 					{
 						if (p_terrain_chunk->entity.graphics_data_ptr_h->p_lod_meshes_h[0])
 						{
-							tg_mesh_recreate2(
+							tg_mesh_update2(
 								p_terrain_chunk->entity.graphics_data_ptr_h->p_lod_meshes_h[0],
 								3 * p_terrain_chunk->p_transvoxel_chunk->triangle_count,
-								(tg_vertex*)p_terrain_chunk->p_transvoxel_chunk->p_triangles
+								(tg_vertex*)p_terrain_chunk->p_transvoxel_chunk->p_triangles,
+								0, TG_NULL
 							);
 							tg_entity_graphics_data_ptr_set_mesh(p_terrain_chunk->entity.graphics_data_ptr_h, p_terrain_chunk->entity.graphics_data_ptr_h->p_lod_meshes_h[0], 0);
 						}
 						else
 						{
-							tg_mesh_h mesh_h = tg_mesh_create2(3 * p_terrain_chunk->p_transvoxel_chunk->triangle_count, (tg_vertex*)p_terrain_chunk->p_transvoxel_chunk->p_triangles);
-							tg_entity_graphics_data_ptr_set_mesh(p_terrain_chunk->entity.graphics_data_ptr_h, mesh_h, 0);
+							TG_ASSERT(TG_FALSE);
 						}
 					}
 				}

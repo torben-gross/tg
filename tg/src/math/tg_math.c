@@ -942,6 +942,15 @@ v4 tgm_v3_to_v4(v3 v, f32 w)
 
 
 
+v3i tgm_v3i_abs(v3i v)
+{
+	v3i result = { 0 };
+	result.x = v.x < 0 ? -v.x : v.x;
+	result.y = v.y < 0 ? -v.y : v.y;
+	result.z = v.z < 0 ? -v.z : v.z;
+	return result;
+}
+
 b32 tgm_v3i_equal(v3i v0, v3i v1)
 {
 	const b32 result = v0.x == v1.x && v0.y == v1.y && v0.z == v1.z;
