@@ -61,20 +61,36 @@ void tg_memory_shutdown()
 
 
 
+void tg_memory_copy(u64 size, const void* p_source, void* p_destination)
+{
+	for (u64 i = 0; i < size; i++)
+	{
+		((u8*)p_destination)[i] = ((u8*)p_source)[i];
+	}
+}
+
+void tg_memory_nullify(u64 size, void* p_memory)
+{
+	for (u64 i = 0; i < size; i++)
+	{
+		((u8*)p_memory)[i] = 0;
+	}
+}
+
 #ifdef TG_DEBUG
 
 void* tg_memory_alloc_impl(u64 size, const char* p_filename, u32 line)
 {
 	void* p_memory = malloc((size_t)size);
 	TG_ASSERT(p_memory);
-	memset(p_memory, 0, (size_t)size);
+	tg_memory_nullify(size, p_memory);
 
 	if (recording_allocations)
 	{
 		recording_allocations = TG_FALSE;
 		tg_memory_allocator_allocation allocation = { 0 };
 		allocation.line = line;
-		memcpy(allocation.p_filename, p_filename, tg_string_length(p_filename) * sizeof(*p_filename));
+		tg_memory_copy(tg_string_length(p_filename) * sizeof(*p_filename), p_filename, allocation.p_filename);
 		tg_hashmap_insert(&memory_allocations, &p_memory, &allocation);
 		recording_allocations = TG_TRUE;
 	}
@@ -93,7 +109,7 @@ void* tg_memory_realloc_impl(void* p_memory, u64 size, const char* p_filename, u
 		tg_hashmap_remove(&memory_allocations, &p_memory);
 		tg_memory_allocator_allocation allocation = { 0 };
 		allocation.line = line;
-		memcpy(allocation.p_filename, p_filename, tg_string_length(p_filename) * sizeof(*p_filename));
+		tg_memory_copy(tg_string_length(p_filename) * sizeof(*p_filename), p_filename, allocation.p_filename);
 		tg_hashmap_insert(&memory_allocations, &p_reallocated_memory, &allocation);
 		recording_allocations = TG_TRUE;
 	}

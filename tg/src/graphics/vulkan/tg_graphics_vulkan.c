@@ -6,7 +6,6 @@
 #include "memory/tg_memory.h"
 #include "platform/tg_platform.h"
 #include "tg_application.h"
-#include "util/tg_file_io.h"
 #include "util/tg_hashmap.h"
 #include "util/tg_string.h"
 
@@ -53,7 +52,7 @@ tg_string_hashmap           shader_hashmap;
 #ifdef TG_DEBUG
 VKAPI_ATTR VkBool32 VKAPI_CALL tg_vulkan_internal_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity, VkDebugUtilsMessageTypeFlagsEXT message_type, const VkDebugUtilsMessengerCallbackDataEXT* callback_data, void* user_data)
 {
-    TG_DEBUG_PRINT(callback_data->pMessage);
+    TG_DEBUG_LOG(callback_data->pMessage);
     return VK_TRUE;
 }
 #endif
@@ -1582,7 +1581,7 @@ VkShaderModule tg_vulkan_shader_module_create(const char* p_filename)
 #ifdef TG_DEBUG
         char p_debug_buffer[256] = { 0 };
         tg_string_format(sizeof(p_debug_buffer), p_debug_buffer, "%s.spv", p_filename);
-        if (!tg_file_io_exists(p_debug_buffer))
+        if (!tg_platform_file_exists(p_debug_buffer))
         {
             tg_string_format(sizeof(p_debug_buffer), p_debug_buffer, "C:/VulkanSDK/1.2.131.2/Bin/glslc.exe %s/%s -o %s/%s.spv", tg_application_get_asset_path(), p_filename, tg_application_get_asset_path(), p_filename);
             TG_ASSERT(system(p_debug_buffer) != -1);
@@ -1592,19 +1591,19 @@ VkShaderModule tg_vulkan_shader_module_create(const char* p_filename)
         char p_filename_buffer[256] = { 0 };
         tg_string_format(sizeof(p_filename_buffer), p_filename_buffer, "%s.spv", p_filename);
 
-        u64 size = 0;
-        char* content = TG_NULL;
-        tg_file_io_read(p_filename_buffer, &size, &content);
+        u32 size = 0;
+        char* p_content = TG_NULL;
+        tg_platform_read_file(p_filename_buffer, &size, &p_content);
 
         VkShaderModuleCreateInfo shader_module_create_info = { 0 };
         shader_module_create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
         shader_module_create_info.pNext = TG_NULL;
         shader_module_create_info.flags = 0;
         shader_module_create_info.codeSize = size;
-        shader_module_create_info.pCode = (const u32*)content;
+        shader_module_create_info.pCode = (const u32*)p_content;
 
         VK_CALL(vkCreateShaderModule(device, &shader_module_create_info, TG_NULL, &shader_module));
-        tg_file_io_free(content);
+        tg_platform_free_file(p_content);
 
         tg_string_hashmap_insert(&shader_hashmap, p_filename, &shader_module);
     }

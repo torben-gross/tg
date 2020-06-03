@@ -1,10 +1,10 @@
 #include "util/tg_list.h"
 
 #include "memory/tg_memory.h"
-#include <string.h> // TODO: memcpy
 
 
-#define TG_LIST_SET_AT(list, index, p_value)    memcpy(TG_LIST_POINTER_TO(list, index), p_value, (list).element_size)
+
+#define TG_LIST_SET_AT(list, index, p_value)    tg_memory_copy((list).element_size, p_value, TG_LIST_POINTER_TO(list, index))
 
 
 

@@ -43,6 +43,9 @@ void       tg_memory_shutdown();
 
 
 
+void       tg_memory_copy(u64 size, const void* p_source, void* p_destination);
+void       tg_memory_nullify(u64 size, void* p_memory);
+
 #ifdef TG_DEBUG
 
 void*      tg_memory_alloc_impl(u64 size, const char* p_filename, u32 line);

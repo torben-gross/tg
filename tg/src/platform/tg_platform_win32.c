@@ -8,7 +8,6 @@
 #include "tg_input.h"
 #include "util/tg_list.h"
 #include "util/tg_string.h"
-#include "util/tg_timer.h"
 #include <windows.h>
 
 #ifdef TG_DEBUG
@@ -18,6 +17,49 @@
 #endif
 
 HWND    window_h = TG_NULL;
+
+
+
+/*------------------------------------------------------------+
+| File IO                                                     |
++------------------------------------------------------------*/
+
+b32 tg_platform_file_exists(const char* p_filename)
+{
+    TG_ASSERT(p_filename);
+
+    char p_path[MAX_PATH] = { 0 };
+    tg_string_format(sizeof(p_path), p_path, "%s/%s", tg_application_get_asset_path(), p_filename);
+
+    const u32 result = GetFileAttributesA(p_path) != INVALID_FILE_ATTRIBUTES;
+    return result;
+}
+
+void tg_platform_free_file(char* p_data)
+{
+    TG_ASSERT(p_data);
+
+    TG_MEMORY_FREE(p_data);
+}
+
+void tg_platform_read_file(const char* p_filename, u32* p_size, char** pp_data)
+{
+    TG_ASSERT(p_filename && p_size && pp_data);
+
+    char p_path[MAX_PATH] = { 0 };
+    tg_string_format(sizeof(p_path), p_path, "%s/%s", tg_application_get_asset_path(), p_filename);
+
+    HANDLE file_handle = CreateFileA(p_path, GENERIC_READ | GENERIC_WRITE, 0, TG_NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, TG_NULL);
+    TG_ASSERT(GetLastError() != ERROR_FILE_NOT_FOUND);
+
+    *p_size = GetFileSize(file_handle, TG_NULL);
+
+    *pp_data = TG_MEMORY_ALLOC(*p_size);
+    u32 number_of_bytes_read = 0;
+    ReadFile(file_handle, *pp_data, *p_size, &number_of_bytes_read, TG_NULL);
+
+    CloseHandle(file_handle);
+}
 
 
 
@@ -36,7 +78,7 @@ typedef struct tg_timer
 
 
 
-tg_timer_h tg_timer_create()
+tg_timer_h tg_platform_timer_create()
 {
     tg_timer_h timer_h = TG_MEMORY_ALLOC(sizeof(*timer_h));
 
@@ -48,7 +90,7 @@ tg_timer_h tg_timer_create()
     return timer_h;
 }
 
-void tg_timer_start(tg_timer_h timer_h)
+void tg_platform_timer_start(tg_timer_h timer_h)
 {
     TG_ASSERT(timer_h);
 
@@ -59,7 +101,7 @@ void tg_timer_start(tg_timer_h timer_h)
     }
 }
 
-void tg_timer_stop(tg_timer_h timer_h)
+void tg_platform_timer_stop(tg_timer_h timer_h)
 {
     TG_ASSERT(timer_h);
 
@@ -71,7 +113,7 @@ void tg_timer_stop(tg_timer_h timer_h)
     }
 }
 
-void tg_timer_reset(tg_timer_h timer_h)
+void tg_platform_timer_reset(tg_timer_h timer_h)
 {
     TG_ASSERT(timer_h);
 
@@ -81,14 +123,14 @@ void tg_timer_reset(tg_timer_h timer_h)
     QueryPerformanceCounter(&timer_h->end_performance_counter);
 }
 
-f32  tg_timer_elapsed_milliseconds(tg_timer_h timer_h)
+f32  tg_platform_timer_elapsed_milliseconds(tg_timer_h timer_h)
 {
     TG_ASSERT(timer_h);
 
     return (f32)((1000000000LL * timer_h->counter_elapsed) / timer_h->performance_frequency.QuadPart) / 1000000.0f;
 }
 
-void tg_timer_destroy(tg_timer_h timer_h)
+void tg_platform_timer_destroy(tg_timer_h timer_h)
 {
     TG_ASSERT(timer_h);
 
@@ -102,7 +144,7 @@ void tg_timer_destroy(tg_timer_h timer_h)
 +------------------------------------------------------------*/
 
 #ifdef TG_DEBUG
-void tg_platform_debug_print(const char* p_message)
+void tg_platform_debug_log(const char* p_message)
 {
     OutputDebugStringA(p_message);
     OutputDebugStringA("\n");
@@ -214,6 +256,8 @@ LRESULT CALLBACK tg_platform_win32_window_proc(HWND window_h, UINT message, WPAR
     return 0;
 }
 
+
+// TODO: use this for shader compilation
 void print_all_files(const char* dir)
 {
     char szDir[MAX_PATH] = { 0 };
@@ -232,7 +276,7 @@ void print_all_files(const char* dir)
     {
         if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
         {
-            TG_DEBUG_PRINT(ffd.cFileName);
+            TG_DEBUG_LOG(ffd.cFileName);
             if (!(ffd.cFileName[0] == '.' && (ffd.cFileName[1] == '\0' || ffd.cFileName[1] == '.')))
             {
                 char dir_buffer[MAX_PATH] = { 0 };
@@ -242,7 +286,7 @@ void print_all_files(const char* dir)
         }
         else
         {
-            TG_DEBUG_PRINT(ffd.cFileName);
+            TG_DEBUG_LOG(ffd.cFileName);
             filesize.LowPart = ffd.nFileSizeLow;
             filesize.HighPart = ffd.nFileSizeHigh;
             //_tprintf(TEXT("  %s   %ld bytes\n"), ffd.cFileName, filesize.QuadPart);
@@ -306,16 +350,16 @@ int CALLBACK WinMain(_In_ HINSTANCE instance_h, _In_opt_ HINSTANCE prev_instance
     {
         tg_list unfreed_allocations_list = tg_memory_create_unfreed_allocations_list();
         char buffer[512] = { 0 };
-        TG_DEBUG_PRINT("");
-        TG_DEBUG_PRINT("MEMORY LEAKS:");
+        TG_DEBUG_LOG("");
+        TG_DEBUG_LOG("MEMORY LEAKS:");
         for (u32 i = 0; i < unfreed_allocations_list.count; i++)
         {
             const tg_memory_allocator_allocation* p_allocation = TG_LIST_POINTER_TO(unfreed_allocations_list, i);
             tg_string_format(sizeof(buffer), buffer, "\tFilename: %s, Line: %u", p_allocation->p_filename, p_allocation->line);
-            TG_DEBUG_PRINT(buffer);
+            TG_DEBUG_LOG(buffer);
             memset(buffer, 0, sizeof(buffer));
         }
-        TG_DEBUG_PRINT("");
+        TG_DEBUG_LOG("");
         tg_list_destroy(&unfreed_allocations_list);
     }
     TG_ASSERT(alloc_count == 0);

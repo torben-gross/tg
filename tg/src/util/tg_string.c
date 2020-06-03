@@ -1,7 +1,6 @@
 #include "util/tg_string.h"
 
 #include "math/tg_math.h"
-#include <stdarg.h>
 
 b32 tg_string_equal(const char* p_s0, const char* p_s1)
 {
@@ -18,9 +17,14 @@ void tg_string_format(u32 size, char* p_buffer, const char* p_format, ...)
 {
 	TG_ASSERT(size && p_buffer && p_format);
 
-	va_list list;
-	va_start(list, p_format);
+	va_list v = TG_NULL;
+	va_start(v, p_format);
+	tg_string_format_va(size, p_buffer, p_format, v);
+	va_end(v);
+}
 
+void tg_string_format_va(u32 size, char* p_buffer, const char* p_format, va_list v)
+{
 	const char* p_format_position = p_format;
 	char* p_buffer_position = p_buffer;
 	while (*p_format_position != '\0')
@@ -35,7 +39,7 @@ void tg_string_format(u32 size, char* p_buffer, const char* p_format, ...)
 
 			case 'd': // TODO: this does not generate a proper string! Exponent is missing entirely...
 			{
-				f64 f = va_arg(list, f64);
+				f64 f = va_arg(v, f64);
 
 				if (f < 0)
 				{
@@ -70,7 +74,7 @@ void tg_string_format(u32 size, char* p_buffer, const char* p_format, ...)
 
 			case 'i':
 			{
-				i32 integer = va_arg(list, i32);
+				i32 integer = va_arg(v, i32);
 
 				if (integer < 0)
 				{
@@ -90,7 +94,7 @@ void tg_string_format(u32 size, char* p_buffer, const char* p_format, ...)
 
 			case 's':
 			{
-				const char* s = va_arg(list, const char*);
+				const char* s = va_arg(v, const char*);
 				while (*s)
 				{
 					*p_buffer_position++ = *s++;
@@ -99,7 +103,7 @@ void tg_string_format(u32 size, char* p_buffer, const char* p_format, ...)
 
 			case 'u':
 			{
-				u32 integer = va_arg(list, u32);
+				u32 integer = va_arg(v, u32);
 
 				const u32 digit_count = tgm_u32_digits(integer);
 				u32 pow = tgm_u32_pow(10, digit_count - 1);
@@ -124,8 +128,6 @@ void tg_string_format(u32 size, char* p_buffer, const char* p_format, ...)
 		}
 	}
 	*p_buffer_position = '\0';
-
-	va_end(list);
 }
 
 u32 tg_string_length(const char* p_string)

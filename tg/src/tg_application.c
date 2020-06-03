@@ -12,7 +12,6 @@
 #include "util/tg_qsort.h"
 #include "util/tg_rectangle_packer.h"
 #include "util/tg_string.h"
-#include "util/tg_timer.h"
 
 
 
@@ -382,8 +381,8 @@ void tg_application_start()
     tg_debug_info debug_info = { 0 };
 #endif
 
-    tg_timer_h timer_h = tg_timer_create();
-    tg_timer_start(timer_h);
+    tg_timer_h timer_h = tg_platform_timer_create();
+    tg_platform_timer_start(timer_h);
 
     /*--------------------------------------------------------+
     | Start main loop                                         |
@@ -391,10 +390,10 @@ void tg_application_start()
 
     while (running)
     {
-        tg_timer_stop(timer_h);
-        const f32 delta_ms = tg_timer_elapsed_milliseconds(timer_h);
-        tg_timer_reset(timer_h);
-        tg_timer_start(timer_h);
+        tg_platform_timer_stop(timer_h);
+        const f32 delta_ms = tg_platform_timer_elapsed_milliseconds(timer_h);
+        tg_platform_timer_reset(timer_h);
+        tg_platform_timer_start(timer_h);
 
 #ifdef TG_DEBUG
         debug_info.ms_sum += delta_ms;
@@ -403,14 +402,14 @@ void tg_application_start()
         {
             if (debug_info.fps < 60)
             {
-                TG_DEBUG_PRINT("Low framerate!");
+                TG_DEBUG_LOG("Low framerate!");
             }
 
             tg_string_format(sizeof(debug_info.buffer), debug_info.buffer, "%d ms", debug_info.ms_sum / debug_info.fps);
-            TG_DEBUG_PRINT(debug_info.buffer);
+            TG_DEBUG_LOG(debug_info.buffer);
 
             tg_string_format(sizeof(debug_info.buffer), debug_info.buffer, "%u fps", debug_info.fps);
-            TG_DEBUG_PRINT(debug_info.buffer);
+            TG_DEBUG_LOG(debug_info.buffer);
 
             debug_info.ms_sum = 0.0f;
             debug_info.fps = 0;
@@ -426,7 +425,7 @@ void tg_application_start()
     /*--------------------------------------------------------+
     | End main loop                                           |
     +--------------------------------------------------------*/
-    tg_timer_destroy(timer_h);
+    tg_platform_timer_destroy(timer_h);
     tg_graphics_wait_idle();
     //tg_application_internal_game_2d_destroy();
     tg_application_internal_game_3d_destroy();

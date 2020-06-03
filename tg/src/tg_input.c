@@ -1,8 +1,7 @@
 #include "tg_input.h"
 
+#include "memory/tg_memory.h"
 #include "platform/tg_platform.h"
-#include <string.h> // TODO: memset
-
 
 
 typedef struct tg_input
@@ -25,8 +24,8 @@ tg_input input = { 0 };
 
 void tg_input_clear()
 {
-	memset(input.pressed_buttons, 0, sizeof(input.pressed_buttons));
-	memset(input.pressed_keys, 0, sizeof(input.pressed_keys));
+	tg_memory_nullify(sizeof(input.pressed_buttons), input.pressed_buttons);
+	tg_memory_nullify(sizeof(input.pressed_keys), input.pressed_keys);
 	input.mouse_wheel_detents = 0.0f;
 }
 

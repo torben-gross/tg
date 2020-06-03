@@ -4,7 +4,6 @@
 #include "memory/tg_memory.h"
 #include "util/tg_list.h"
 #include "util/tg_string.h"
-#include <string.h>
 
 
 
@@ -303,7 +302,7 @@ void tg_string_hashmap_insert(tg_string_hashmap* p_string_hashmap, const char* p
 	p_string_hashmap->element_count++;
 	u64 key_size = ((u64)tg_string_length(p_key) + 1) * sizeof(char);
 	char* p_key_copy = TG_MEMORY_ALLOC(key_size);
-	memcpy(p_key_copy, p_key, key_size);
+	tg_memory_copy(key_size, p_key, p_key_copy);
 	tg_list_insert(&p_bucket->keys, &p_key_copy);
 	tg_list_insert(&p_bucket->values, p_value);
 }

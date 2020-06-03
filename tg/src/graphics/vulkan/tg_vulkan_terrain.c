@@ -5,7 +5,6 @@
 
 #include "memory/tg_memory.h"
 #include "tg_entity.h"
-#include <string.h> // TODO: implement memset yourself
 
 
 #define TG_TERRAIN_HASH(x, y, z)          (((u32)(x) * 9 + (u32)(y) * 37 + (u32)(z) * 149) % TG_TERRAIN_HASHMAP_COUNT) // TODO: better hash function! also, mod
@@ -330,7 +329,7 @@ tg_terrain_h tg_terrain_create(tg_camera_h focal_point_camera_h)
 	terrain_h->fragment_shader_h = tg_fragment_shader_create("shaders/deferred_terrain.frag");
 	terrain_h->material_h = tg_material_create_deferred(terrain_h->vertex_shader_h, terrain_h->fragment_shader_h, 0, TG_NULL);
 
-	memset(terrain_h->pp_chunks_hashmap, 0, TG_TERRAIN_MAX_CHUNK_COUNT * sizeof(*terrain_h->pp_chunks_hashmap));
+	tg_memory_nullify(TG_TERRAIN_MAX_CHUNK_COUNT * sizeof(*terrain_h->pp_chunks_hashmap), terrain_h->pp_chunks_hashmap);
 
 	const v3 focal_point = terrain_h->last_focal_point_position;
 	const v3i focal_point_chunk = tg_terrain_internal_convert_to_chunk_coordinates(focal_point);

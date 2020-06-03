@@ -9,6 +9,6 @@
 
 void    tg_image_load(const char* p_filename, u32* p_width, u32* p_height, tg_color_image_format* p_format, u32** pp_data);
 void    tg_image_free(u32* p_data);
-void    tg_image_convert_format(u32* p_data, u32 width, u32 height, tg_color_image_format old_format, tg_color_image_format new_format);
+void    tg_image_internal_convert_format(u32* p_data, u32 width, u32 height, tg_color_image_format old_format, tg_color_image_format new_format);
 
 #endif

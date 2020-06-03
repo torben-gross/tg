@@ -144,7 +144,6 @@
     <ClCompile Include="src\util\tg_qsort.c" />
     <ClCompile Include="src\util\tg_rectangle_packer.c" />
     <ClCompile Include="src\util\tg_string.c" />
-    <ClCompile Include="src\util\tg_file_io.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\assets\tg_assets.h" />
@@ -171,8 +170,6 @@
     <ClInclude Include="src\util\tg_rectangle_packer.h" />
     <ClInclude Include="src\util\tg_qsort.h" />
     <ClInclude Include="src\util\tg_string.h" />
-    <ClInclude Include="src\util\tg_file_io.h" />
-    <ClInclude Include="src\util\tg_timer.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="assets\shaders\frag.spv" />
