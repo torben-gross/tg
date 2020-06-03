@@ -106,7 +106,10 @@ void tg_memory_free_impl(void* p_memory, const char* p_filename, u32 line)
 	if (recording_allocations)
 	{
 		recording_allocations = TG_FALSE;
-		tg_hashmap_remove(&memory_allocations, &p_memory);
+		// TODO: this needs to 'try', because the platform layer calls
+		// 'tg_memory_create_unfreed_allocations_list', which disables recording
+		// temporarily and thus, the hashmap does not contain it.
+		tg_hashmap_try_remove(&memory_allocations, &p_memory);
 		recording_allocations = TG_TRUE;
 	}
 

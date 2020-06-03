@@ -214,6 +214,46 @@ LRESULT CALLBACK tg_platform_win32_window_proc(HWND window_h, UINT message, WPAR
     return 0;
 }
 
+void print_all_files(const char* dir)
+{
+    char szDir[MAX_PATH] = { 0 };
+
+    u32 dir_length = tg_string_length(dir);
+    TG_ASSERT(dir_length <= MAX_PATH - 3);
+
+    tg_string_format(dir_length, szDir, "%s%s", dir, "\\*");
+
+    WIN32_FIND_DATAA ffd;
+    HANDLE hFind = hFind = FindFirstFileA(szDir, &ffd);
+    TG_ASSERT(hFind != INVALID_HANDLE_VALUE);
+
+    LARGE_INTEGER filesize;
+    do
+    {
+        if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+        {
+            TG_DEBUG_PRINT(ffd.cFileName);
+            if (!(ffd.cFileName[0] == '.' && (ffd.cFileName[1] == '\0' || ffd.cFileName[1] == '.')))
+            {
+                char dir_buffer[MAX_PATH] = { 0 };
+                tg_string_format(MAX_PATH, dir_buffer, "%s\\%s", dir, ffd.cFileName);
+                print_all_files(dir_buffer);
+            }
+        }
+        else
+        {
+            TG_DEBUG_PRINT(ffd.cFileName);
+            filesize.LowPart = ffd.nFileSizeLow;
+            filesize.HighPart = ffd.nFileSizeHigh;
+            //_tprintf(TEXT("  %s   %ld bytes\n"), ffd.cFileName, filesize.QuadPart);
+        }
+    } while (FindNextFileA(hFind, &ffd) != 0);
+
+    TG_ASSERT(GetLastError() == ERROR_NO_MORE_FILES);
+
+    FindClose(hFind);
+}
+
 int CALLBACK WinMain(_In_ HINSTANCE instance_h, _In_opt_ HINSTANCE prev_instance_h, _In_ LPSTR cmd_line, _In_ int show_cmd)
 {
     tg_memory_init();
@@ -247,6 +287,16 @@ int CALLBACK WinMain(_In_ HINSTANCE instance_h, _In_opt_ HINSTANCE prev_instance
 
     ShowWindow(window_h, show_cmd);
     SetWindowLongPtr(window_h, GWLP_WNDPROC, (LONG_PTR)&tg_platform_win32_window_proc);
+
+
+
+
+
+    print_all_files("assets");
+
+
+
+
 
     tg_application_start();
 

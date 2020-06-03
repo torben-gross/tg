@@ -2242,7 +2242,7 @@ void tg_graphics_shutdown()
     }
     tg_string_hashmap_destroy(&shader_hashmap);
 
-    tg_vulkan_memory_allocator_shutdown();
+    tg_vulkan_memory_allocator_shutdown(device);
 
     tg_vulkan_command_pool_destroy(compute_command_pool);
     tg_vulkan_command_pool_destroy(graphics_command_pool);

@@ -31,6 +31,7 @@ void tg_entity_graphics_data_ptr_destroy(tg_entity_graphics_data_ptr_h entity_gr
     tg_vulkan_buffer_destroy(&entity_graphics_data_ptr_h->model_ubo);
     for (u32 i = 0; i < entity_graphics_data_ptr_h->camera_info_count; i++)
     {
+        // TODO: i believe, the same content exists in the vulkan camera file
         tg_vulkan_command_buffers_free(graphics_command_pool, entity_graphics_data_ptr_h->lod_count, entity_graphics_data_ptr_h->p_camera_infos[i].p_command_buffers);
         tg_vulkan_graphics_pipeline_destroy(entity_graphics_data_ptr_h->p_camera_infos[i].graphics_pipeline);
         tg_vulkan_pipeline_layout_destroy(entity_graphics_data_ptr_h->p_camera_infos[i].pipeline_layout);

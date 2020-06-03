@@ -167,7 +167,7 @@ void tg_vulkan_memory_allocator_init(VkDevice device, VkPhysicalDevice physical_
         VK_CALL(vkAllocateMemory(device, &memory_allocate_info, TG_NULL, &vulkan_memory.p_pools[i].device_memory));
         if (physical_device_memory_properties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
         {
-            vkMapMemory(device, vulkan_memory.p_pools[i].device_memory, 0, VK_WHOLE_SIZE, 0, &vulkan_memory.p_pools[i].p_mapped_device_memory);
+            VK_CALL(vkMapMemory(device, vulkan_memory.p_pools[i].device_memory, 0, VK_WHOLE_SIZE, 0, &vulkan_memory.p_pools[i].p_mapped_device_memory));
         }
         else
         {
@@ -180,11 +180,16 @@ void tg_vulkan_memory_allocator_init(VkDevice device, VkPhysicalDevice physical_
 #endif
 }
 
-void tg_vulkan_memory_allocator_shutdown()
+void tg_vulkan_memory_allocator_shutdown(VkDevice device)
 {
     TG_ASSERT(initialized);
 
-    TG_ASSERT(TG_FALSE);
+    for (u32 i = 0; i < vulkan_memory.pool_count; i++)
+    {
+        TG_ASSERT(vulkan_memory.p_pools[i].reserved_page_count == 0);
+        vkFreeMemory(device, vulkan_memory.p_pools[i].device_memory, TG_NULL);
+        TG_MEMORY_FREE(vulkan_memory.p_pools[i].p_pages_reserved);
+    }
 }
 
 #endif

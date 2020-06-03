@@ -327,7 +327,7 @@ tg_terrain_h tg_terrain_create(tg_camera_h focal_point_camera_h)
 	terrain_h->focal_point = focal_point_camera_h;
 	terrain_h->last_focal_point_position = tg_camera_get_position(focal_point_camera_h);
 	terrain_h->vertex_shader_h = tg_vertex_shader_create("shaders/deferred.vert");
-	terrain_h->fragment_shader_h = tg_fragment_shader_create("shaders/deferred.frag");
+	terrain_h->fragment_shader_h = tg_fragment_shader_create("shaders/deferred_terrain.frag");
 	terrain_h->material_h = tg_material_create_deferred(terrain_h->vertex_shader_h, terrain_h->fragment_shader_h, 0, TG_NULL);
 
 	memset(terrain_h->pp_chunks_hashmap, 0, TG_TERRAIN_MAX_CHUNK_COUNT * sizeof(*terrain_h->pp_chunks_hashmap));
@@ -364,6 +364,8 @@ tg_terrain_h tg_terrain_create(tg_camera_h focal_point_camera_h)
 					p_terrain_chunk->p_transvoxel_chunk->lod > tg_terrain_internal_select_lod(focal_point, x, y, z + 1)
 				);
 				p_terrain_chunk->p_transvoxel_chunk->triangle_count = 0;
+				// TODO: to reduce memory consumption, create only one of those for (re)creation of
+				// chunks and let the chunks have smaller buffers, that can grow if need be.
 				p_terrain_chunk->p_transvoxel_chunk->p_triangles = TG_MEMORY_ALLOC(TG_TRANSVOXEL_CHUNK_MAX_TRIANGLES * sizeof(tg_transvoxel_triangle));
 
 				TG_ASSERT(tgm_i32_abs(p_terrain_chunk->p_transvoxel_chunk->lod - tg_terrain_internal_select_lod(focal_point, x - 1, y, z)) <= 1);
@@ -578,8 +580,25 @@ void tg_terrain_destroy(tg_terrain_h terrain_h)
 {
 	TG_ASSERT(terrain_h);
 
+	tg_terrain_chunk* p_terrain_chunk = &terrain_h->p_memory_blocks[0];
+	while (p_terrain_chunk->entity.flags & TG_ENTITY_FLAG_INITIALIZED)
+	{
+		if (p_terrain_chunk->entity.graphics_data_ptr_h->p_lod_meshes_h[0])
+		{
+			tg_mesh_destroy(p_terrain_chunk->entity.graphics_data_ptr_h->p_lod_meshes_h[0]);
+		}
+		tg_entity_destroy(&p_terrain_chunk->entity);
+		TG_MEMORY_FREE(p_terrain_chunk->p_transvoxel_chunk->p_triangles);
+		TG_MEMORY_FREE(p_terrain_chunk->p_transvoxel_chunk);
+
+		p_terrain_chunk++;
+	}
+
+	tg_material_destroy(terrain_h->material_h);
+	tg_fragment_shader_destroy(terrain_h->fragment_shader_h);
+	tg_vertex_shader_destroy(terrain_h->vertex_shader_h);
+
 	TG_MEMORY_FREE(terrain_h);
-	TG_ASSERT(TG_FALSE);
 }
 
 #endif

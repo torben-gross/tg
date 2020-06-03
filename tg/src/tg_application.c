@@ -339,6 +339,8 @@ void tg_application_internal_game_3d_update_and_render(f32 delta_ms)
 
 void tg_application_internal_game_3d_destroy()
 {
+    tg_terrain_destroy(test_deferred.terrain_h);
+
     tg_texture_atlas_destroy(test_deferred.texture_atlas_h);
     for (u32 i = 0; i < 13; i++)
     {
@@ -350,10 +352,14 @@ void tg_application_internal_game_3d_destroy()
     tg_mesh_destroy(test_deferred.ground_mesh_h);
     tg_mesh_destroy(test_deferred.quad_mesh_h);
 
+    tg_material_destroy(test_deferred.water_material_h);
+    tg_fragment_shader_destroy(test_deferred.forward_water_fragment_shader_h);
+
     tg_color_image_destroy(test_deferred.image_h);
     tg_uniform_buffer_destroy(test_deferred.custom_uniform_buffer_h);
     tg_material_destroy(test_deferred.custom_material_h);
     tg_material_destroy(test_deferred.default_material_h);
+
     tg_fragment_shader_destroy(test_deferred.deferred_fragment_shader_h);
     tg_fragment_shader_destroy(test_deferred.forward_custom_fragment_shader_h);
     tg_vertex_shader_destroy(test_deferred.deferred_vertex_shader_h);
