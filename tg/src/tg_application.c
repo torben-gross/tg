@@ -1,9 +1,9 @@
 #include "tg_application.h"
 
-
 #include "graphics/tg_graphics.h"
 #include "memory/tg_memory.h"
 #include "platform/tg_platform.h"
+#include "tg_assets.h"
 #include "tg_entity.h"
 #include "tg_input.h"
 #include "tg_marching_cubes.h"
@@ -374,6 +374,7 @@ void tg_application_internal_game_3d_destroy()
 void tg_application_start()
 {
     tg_graphics_init();
+    tg_assets_init();
     tg_application_internal_game_3d_create();
     //tg_application_internal_game_2d_create();
 

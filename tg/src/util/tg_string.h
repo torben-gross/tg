@@ -5,7 +5,9 @@
 #include <stdarg.h>
 
 b32     tg_string_equal(const char* p_s0, const char* p_s1);
+
 /*
+%c - char
 %d - f64
 %i - i32
 %s - string

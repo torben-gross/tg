@@ -36,6 +36,11 @@ void tg_string_format_va(u32 size, char* p_buffer, const char* p_format, va_list
 
 			switch (format_parameter)
 			{
+			case 'c':
+			{
+				const c = va_arg(v, char);
+				*p_buffer_position++ = c;
+			} break;
 
 			case 'd': // TODO: this does not generate a proper string! Exponent is missing entirely...
 			{
