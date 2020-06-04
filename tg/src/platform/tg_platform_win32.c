@@ -16,7 +16,8 @@
 #define WIN32_CALL(x) x
 #endif
 
-HWND    window_h = TG_NULL;
+HANDLE    process_heap_handle = INVALID_HANDLE_VALUE;
+HWND      window_h = INVALID_HANDLE_VALUE;
 
 
 
@@ -222,6 +223,38 @@ void tg_platform_debug_log(const char* p_message)
 }
 #endif
 
+
+
+void* tg_platform_memory_alloc(u64 size)
+{
+#ifdef TG_DEBUG
+    void* p_memory = HeapAlloc(process_heap_handle, HEAP_ZERO_MEMORY, size);
+#else
+    void* p_memory = HeapAlloc(process_heap_handle, 0, size);
+#endif
+    TG_ASSERT(p_memory);
+    return p_memory;
+}
+
+void tg_platform_memory_free(void* p_memory)
+{
+    const BOOL result = HeapFree(process_heap_handle, 0, p_memory);
+    TG_ASSERT(result);
+}
+
+void* tg_platform_memory_realloc(u64 size, void* p_memory)
+{
+#ifdef TG_DEBUG
+    void* p_reallocated_memory = HeapReAlloc(process_heap_handle, HEAP_ZERO_MEMORY, p_memory, size);
+#else
+    void* p_reallocated_memory = HeapReAlloc(process_heap_handle, 0, p_memory, size);
+#endif
+    TG_ASSERT(p_reallocated_memory);
+    return p_reallocated_memory;
+}
+
+
+
 void tg_platform_get_mouse_position(u32* p_x, u32* p_y)
 {
     POINT point = { 0 };
@@ -329,6 +362,7 @@ LRESULT CALLBACK tg_platform_win32_window_proc(HWND window_h, UINT message, WPAR
 
 int CALLBACK WinMain(_In_ HINSTANCE instance_h, _In_opt_ HINSTANCE prev_instance_h, _In_ LPSTR cmd_line, _In_ int show_cmd)
 {
+    process_heap_handle = GetProcessHeap();
     tg_memory_init();
 
     const char* window_class_id = "tg";

@@ -147,5 +147,5 @@ void tg_list_reserve(tg_list* p_list, u32 capacity)
 	TG_ASSERT(p_list && capacity > p_list->capacity);
 
 	p_list->capacity = capacity;
-	p_list->p_elements = TG_MEMORY_REALLOC(p_list->p_elements, (u64)capacity * (u64)p_list->element_size);
+	p_list->p_elements = TG_MEMORY_REALLOC((u64)capacity * (u64)p_list->element_size, p_list->p_elements);
 }

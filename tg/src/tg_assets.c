@@ -16,7 +16,8 @@ void tg_assets_internal_extract_extension(u64 size, char* p_buffer, const char* 
 		}
 		extension_length++;
 	}
-
+	
+	TG_ASSERT(extension_length < filename_length);
 	TG_ASSERT(size >= (u64)extension_length + 1);
 
 	for (u32 i = 0; i < extension_length; i++)

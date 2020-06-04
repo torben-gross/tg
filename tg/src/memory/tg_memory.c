@@ -1,10 +1,9 @@
 #include "memory/tg_memory.h"
 
 #ifdef TG_DEBUG
+#include "platform/tg_platform.h"
 #include "util/tg_hashmap.h"
 #include "util/tg_string.h"
-#include <memory.h>
-#include <stdlib.h>
 #endif
 
 
@@ -37,7 +36,7 @@ void tg_memory_init()
 #endif
 
 	memory_stack.exhausted_size = 0;
-	memory_stack.p_memory = malloc(TG_MEMORY_STACK_SIZE);
+	memory_stack.p_memory = tg_platform_memory_alloc(TG_MEMORY_STACK_SIZE);
 	TG_ASSERT(memory_stack.p_memory);
 
 #ifdef TG_DEBUG
@@ -51,7 +50,7 @@ void tg_memory_shutdown()
 	recording_allocations = TG_FALSE;
 #endif
 
-	free(memory_stack.p_memory);
+	tg_platform_memory_free(memory_stack.p_memory);
 	memory_stack.exhausted_size = 0;
 
 #ifdef TG_DEBUG
@@ -81,7 +80,7 @@ void tg_memory_nullify(u64 size, void* p_memory)
 
 void* tg_memory_alloc_impl(u64 size, const char* p_filename, u32 line)
 {
-	void* p_memory = malloc((size_t)size);
+	void* p_memory = tg_platform_memory_alloc((size_t)size);
 	TG_ASSERT(p_memory);
 	tg_memory_nullify(size, p_memory);
 
@@ -98,9 +97,9 @@ void* tg_memory_alloc_impl(u64 size, const char* p_filename, u32 line)
 	return p_memory;
 }
 
-void* tg_memory_realloc_impl(void* p_memory, u64 size, const char* p_filename, u32 line)
+void* tg_memory_realloc_impl(u64 size, void* p_memory, const char* p_filename, u32 line)
 {
-	void* p_reallocated_memory = realloc(p_memory, size);
+	void* p_reallocated_memory = tg_platform_memory_realloc(size, p_memory);
 	TG_ASSERT(p_reallocated_memory);
 
 	if (recording_allocations)
@@ -129,7 +128,7 @@ void tg_memory_free_impl(void* p_memory, const char* p_filename, u32 line)
 		recording_allocations = TG_TRUE;
 	}
 
-	free(p_memory);
+	tg_platform_memory_free(p_memory);
 }
 
 u32 tg_memory_unfreed_allocation_count()

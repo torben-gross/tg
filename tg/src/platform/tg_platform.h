@@ -49,6 +49,10 @@ typedef struct tg_file_properties
 void                  tg_platform_debug_log(const char* p_message);
 #endif
 
+void*                 tg_platform_memory_alloc(u64 size);
+void                  tg_platform_memory_free(void* p_memory);
+void*                 tg_platform_memory_realloc(u64 size, void* p_memory);
+
 void                  tg_platform_get_mouse_position(u32* p_x, u32* p_y);
 void                  tg_platform_get_screen_size(u32* p_width, u32* p_height);
 f32                   tg_platform_get_window_aspect_ratio();

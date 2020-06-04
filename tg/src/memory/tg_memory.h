@@ -4,20 +4,20 @@
 #include "tg_common.h"
 
 #ifndef TG_DEBUG
-#include <stdlib.h>
+#include "platform/tg_platform.h"
 #endif
 
 #ifdef TG_DEBUG
 
 #define    TG_MEMORY_ALLOC(size)                tg_memory_alloc_impl(size, __FILE__, __LINE__)
-#define    TG_MEMORY_REALLOC(p_memory, size)    tg_memory_realloc_impl(p_memory, size, __FILE__, __LINE__)
+#define    TG_MEMORY_REALLOC(size, p_memory)    tg_memory_realloc_impl(size, p_memory, __FILE__, __LINE__)
 #define    TG_MEMORY_FREE(p_memory)             tg_memory_free_impl(p_memory, __FILE__, __LINE__)
 
 #else
 
-#define    TG_MEMORY_ALLOC(size)                malloc((size_t)size)
-#define    TG_MEMORY_REALLOC(p_memory, size)    realloc(p_memory, (size_t)size);
-#define    TG_MEMORY_FREE(p_memory)             free(p_memory);
+#define    TG_MEMORY_ALLOC(size)                tg_platform_memory_alloc((size_t)size)
+#define    TG_MEMORY_REALLOC(size, p_memory)    tg_platform_memory_realloc((size_t)size, p_memory);
+#define    TG_MEMORY_FREE(p_memory)             tg_platform_memory_free(p_memory);
 
 #endif
 
@@ -49,7 +49,7 @@ void       tg_memory_nullify(u64 size, void* p_memory);
 #ifdef TG_DEBUG
 
 void*      tg_memory_alloc_impl(u64 size, const char* p_filename, u32 line);
-void*      tg_memory_realloc_impl(void* p_memory, u64 size, const char* p_filename, u32 line);
+void*      tg_memory_realloc_impl(u64 size, void* p_memory, const char* p_filename, u32 line);
 void       tg_memory_free_impl(void* p_memory, const char* p_filename, u32 line);
 u32        tg_memory_unfreed_allocation_count();
 tg_list    tg_memory_create_unfreed_allocations_list();
