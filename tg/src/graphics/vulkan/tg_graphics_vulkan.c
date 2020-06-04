@@ -1579,11 +1579,14 @@ VkShaderModule tg_vulkan_shader_module_create(const char* p_filename)
     else
     {
 #ifdef TG_DEBUG
-        char p_debug_buffer[256] = { 0 };
-        tg_string_format(sizeof(p_debug_buffer), p_debug_buffer, "%s.spv", p_filename);
+        char p_debug_filename_buffer[TG_MAX_PATH] = { 0 };
+        tg_memory_copy(tg_string_length(p_filename), p_filename, p_debug_filename_buffer);
+        tg_string_replace_characters(p_debug_filename_buffer, '\\', '/');
+        char p_debug_buffer[38 + 4 + 2 * TG_MAX_PATH] = { 0 };
+        tg_string_format(sizeof(p_debug_buffer), p_debug_buffer, "%s.spv", p_debug_filename_buffer);
         if (!tg_platform_file_exists(p_debug_buffer))
         {
-            tg_string_format(sizeof(p_debug_buffer), p_debug_buffer, "C:/VulkanSDK/1.2.131.2/Bin/glslc.exe %s/%s -o %s/%s.spv", tg_application_get_asset_path(), p_filename, tg_application_get_asset_path(), p_filename);
+            tg_string_format(sizeof(p_debug_buffer), p_debug_buffer, "C:/VulkanSDK/1.2.131.2/Bin/glslc.exe %s/%s -o %s/%s.spv", tg_application_get_asset_path(), p_debug_filename_buffer, tg_application_get_asset_path(), p_debug_filename_buffer);
             TG_ASSERT(system(p_debug_buffer) != -1);
         }
 #endif

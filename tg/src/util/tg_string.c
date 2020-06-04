@@ -137,10 +137,23 @@ void tg_string_format_va(u32 size, char* p_buffer, const char* p_format, va_list
 
 u32 tg_string_length(const char* p_string)
 {
-	u32 length = 0;
-	while (*p_string++)
+	const char* p_it = p_string;
+	while (*p_it)
 	{
-		length++;
+		p_it++;
 	}
-	return length;
+	const u32 result = (u32)(p_it - p_string);
+	return result;
+}
+
+void tg_string_replace_characters(char* p_string, char replace, char with)
+{
+	char* p_it = p_string;
+	do
+	{
+		if (*p_it == replace)
+		{
+			*p_it = with;
+		}
+	} while (*++p_it != '\0');
 }

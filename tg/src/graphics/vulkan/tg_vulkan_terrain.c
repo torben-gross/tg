@@ -325,8 +325,8 @@ tg_terrain_h tg_terrain_create(tg_camera_h focal_point_camera_h)
 
 	terrain_h->focal_point = focal_point_camera_h;
 	terrain_h->last_focal_point_position = tg_camera_get_position(focal_point_camera_h);
-	terrain_h->vertex_shader_h = tg_vertex_shader_create("shaders/deferred.vert");
-	terrain_h->fragment_shader_h = tg_fragment_shader_create("shaders/deferred_terrain.frag");
+	terrain_h->vertex_shader_h = tg_vertex_shader_get("shaders/deferred.vert");
+	terrain_h->fragment_shader_h = tg_fragment_shader_get("shaders/deferred_terrain.frag");
 	terrain_h->material_h = tg_material_create_deferred(terrain_h->vertex_shader_h, terrain_h->fragment_shader_h, 0, TG_NULL);
 
 	tg_memory_nullify(TG_TERRAIN_MAX_CHUNK_COUNT * sizeof(*terrain_h->pp_chunks_hashmap), terrain_h->pp_chunks_hashmap);
@@ -594,8 +594,6 @@ void tg_terrain_destroy(tg_terrain_h terrain_h)
 	}
 
 	tg_material_destroy(terrain_h->material_h);
-	tg_fragment_shader_destroy(terrain_h->fragment_shader_h);
-	tg_vertex_shader_destroy(terrain_h->vertex_shader_h);
 
 	TG_MEMORY_FREE(terrain_h);
 }

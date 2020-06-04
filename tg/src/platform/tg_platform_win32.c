@@ -99,6 +99,28 @@ char tg_platform_get_file_separator()
     return '\\';
 }
 
+u64 tg_platform_get_full_directory_size(const char* p_directory)
+{
+    tg_file_properties file_properties = { 0 };
+    tg_file_iterator_h file_iterator_h = tg_platform_begin_file_iteration(p_directory, &file_properties);
+
+    u64 size = 0;
+    do
+    {
+        if (file_properties.is_directory)
+        {
+            char p_buffer[TG_MAX_PATH] = { 0 };
+            tg_string_format(TG_MAX_PATH, p_buffer, "%s%c%s", p_directory, tg_platform_get_file_separator(), file_properties.p_filename);
+            size += tg_platform_get_full_directory_size(p_buffer);
+        }
+        else
+        {
+            size += file_properties.size;
+        }
+    } while (tg_platform_continue_file_iteration(p_directory, file_iterator_h, &file_properties));
+    return size;
+}
+
 b32 tg_platform_continue_file_iteration(const char* p_directory, tg_file_iterator_h file_iterator_h, tg_file_properties* p_properties)
 {
     TG_ASSERT(file_iterator_h && p_properties);
@@ -122,6 +144,7 @@ void tg_platform_read_file(const char* p_filename, u32* p_size, char** pp_data)
     tg_string_format(sizeof(p_filename_buffer), p_filename_buffer, "%s/%s", tg_application_get_asset_path(), p_filename);
 
     HANDLE file_handle = CreateFileA(p_filename_buffer, GENERIC_READ | GENERIC_WRITE, 0, TG_NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, TG_NULL);
+    TG_ASSERT(file_handle != INVALID_HANDLE_VALUE);
     TG_ASSERT(GetLastError() != ERROR_FILE_NOT_FOUND);
 
     *p_size = GetFileSize(file_handle, TG_NULL);

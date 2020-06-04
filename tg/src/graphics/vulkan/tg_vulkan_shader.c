@@ -3,6 +3,7 @@
 #ifdef TG_VULKAN
 
 #include "memory/tg_memory.h"
+#include "tg_assets.h"
 
 
 
@@ -79,12 +80,13 @@ void tg_compute_shader_destroy(tg_compute_shader_h compute_shader_h)
 
 tg_vertex_shader_h tg_vertex_shader_create(const char* p_filename)
 {
-    TG_ASSERT(p_filename);
+	TG_ASSERT(p_filename);
 
-    tg_vertex_shader_h vertex_shader_h = TG_MEMORY_ALLOC(sizeof(*vertex_shader_h));
+	TG_ASSERT(tg_get_asset(p_filename) == TG_NULL);
+	tg_vertex_shader_h vertex_shader_h = TG_MEMORY_ALLOC(sizeof(*vertex_shader_h));
 	vertex_shader_h->type = TG_HANDLE_TYPE_VERTEX_SHADER;
-    vertex_shader_h->shader_module = tg_vulkan_shader_module_create(p_filename);
-    return vertex_shader_h;
+	vertex_shader_h->shader_module = tg_vulkan_shader_module_create(p_filename);
+	return vertex_shader_h;
 }
 
 void tg_vertex_shader_destroy(tg_vertex_shader_h vertex_shader_h)
@@ -94,16 +96,25 @@ void tg_vertex_shader_destroy(tg_vertex_shader_h vertex_shader_h)
 	TG_MEMORY_FREE(vertex_shader_h);
 }
 
+tg_vertex_shader_h tg_vertex_shader_get(const char* p_filename)
+{
+    TG_ASSERT(p_filename);
+
+	tg_vertex_shader_h vertex_shader_h = tg_get_asset(p_filename);
+	return vertex_shader_h;
+}
+
 
 
 tg_fragment_shader_h tg_fragment_shader_create(const char* p_filename)
 {
-    TG_ASSERT(p_filename);
+	TG_ASSERT(p_filename);
 
-    tg_fragment_shader_h fragment_shader_h = TG_MEMORY_ALLOC(sizeof(*fragment_shader_h));
-	fragment_shader_h->type = TG_HANDLE_TYPE_FRAGMENT_SHADER,
-    fragment_shader_h->shader_module = tg_vulkan_shader_module_create(p_filename);
-    return fragment_shader_h;
+	TG_ASSERT(tg_get_asset(p_filename) == TG_NULL);
+	tg_fragment_shader_h fragment_shader_h = TG_MEMORY_ALLOC(sizeof(*fragment_shader_h));
+	fragment_shader_h->type = TG_HANDLE_TYPE_FRAGMENT_SHADER;
+	fragment_shader_h->shader_module = tg_vulkan_shader_module_create(p_filename);
+	return fragment_shader_h;
 }
 
 void tg_fragment_shader_destroy(tg_fragment_shader_h fragment_shader_h)
@@ -111,6 +122,14 @@ void tg_fragment_shader_destroy(tg_fragment_shader_h fragment_shader_h)
 	TG_ASSERT(fragment_shader_h);
 
 	TG_MEMORY_FREE(fragment_shader_h);
+}
+
+tg_fragment_shader_h tg_fragment_shader_get(const char* p_filename)
+{
+    TG_ASSERT(p_filename);
+
+	tg_fragment_shader_h fragment_shader_h = tg_get_asset(p_filename);
+    return fragment_shader_h;
 }
 
 #endif

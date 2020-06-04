@@ -192,6 +192,7 @@ void                             tg_depth_image_destroy(tg_depth_image_h depth_i
 
 tg_fragment_shader_h             tg_fragment_shader_create(const char* p_filename);
 void                             tg_fragment_shader_destroy(tg_fragment_shader_h fragment_shader_h);
+tg_fragment_shader_h             tg_fragment_shader_get(const char* p_filename);
 
 tg_material_h                    tg_material_create_deferred(tg_vertex_shader_h vertex_shader_h, tg_fragment_shader_h fragment_shader_h, u32 handle_count, tg_handle* p_handles);
 tg_material_h                    tg_material_create_forward(tg_vertex_shader_h vertex_shader_h, tg_fragment_shader_h fragment_shader_h, u32 handle_count, tg_handle* p_handles);
@@ -220,6 +221,7 @@ void                             tg_uniform_buffer_destroy(tg_uniform_buffer_h u
 
 tg_vertex_shader_h               tg_vertex_shader_create(const char* p_filename);
 void                             tg_vertex_shader_destroy(tg_vertex_shader_h vertex_shader_h);
+tg_vertex_shader_h               tg_vertex_shader_get(const char* p_filename);
 
 
 

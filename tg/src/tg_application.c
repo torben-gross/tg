@@ -161,17 +161,17 @@ void tg_application_internal_game_3d_create()
     };
 
     test_deferred.quad_mesh_h = tg_mesh_create(4, p_quad_positions, TG_NULL, p_uvs, TG_NULL, 6, p_indices);
-    test_deferred.deferred_vertex_shader_h = tg_vertex_shader_create("shaders/deferred.vert");
-    test_deferred.deferred_fragment_shader_h = tg_fragment_shader_create("shaders/deferred.frag");
+    test_deferred.deferred_vertex_shader_h = tg_vertex_shader_get("shaders/deferred.vert");
+    test_deferred.deferred_fragment_shader_h = tg_fragment_shader_get("shaders/deferred.frag");
     test_deferred.default_material_h = tg_material_create_deferred(test_deferred.deferred_vertex_shader_h, test_deferred.deferred_fragment_shader_h, 0, TG_NULL);
 
     test_deferred.custom_uniform_buffer_h = tg_uniform_buffer_create(sizeof(v3));
     test_deferred.p_custom_uniform_buffer_data = tg_uniform_buffer_data(test_deferred.custom_uniform_buffer_h);
     *test_deferred.p_custom_uniform_buffer_data = (v3){ 1.0f, 0.0f, 0.0f };
     test_deferred.image_h = tg_color_image_load("textures/test_icon.bmp");
-    test_deferred.forward_vertex_shader_h = tg_vertex_shader_create("shaders/forward.vert");
-    test_deferred.forward_custom_fragment_shader_h = tg_fragment_shader_create("shaders/forward_custom.frag");
-    test_deferred.forward_water_fragment_shader_h = tg_fragment_shader_create("shaders/forward_water.frag");
+    test_deferred.forward_vertex_shader_h = tg_vertex_shader_get("shaders/forward.vert");
+    test_deferred.forward_custom_fragment_shader_h = tg_fragment_shader_get("shaders/forward_custom.frag");
+    test_deferred.forward_water_fragment_shader_h = tg_fragment_shader_get("shaders/forward_water.frag");
     tg_handle p_custom_handles[2] = { test_deferred.custom_uniform_buffer_h, tg_camera_get_render_target(test_deferred.secondary_camera_h) };
     test_deferred.custom_material_h = tg_material_create_forward(test_deferred.forward_vertex_shader_h, test_deferred.forward_custom_fragment_shader_h, 2, p_custom_handles);
     test_deferred.water_material_h = tg_material_create_forward(test_deferred.forward_vertex_shader_h, test_deferred.forward_water_fragment_shader_h, 0, TG_NULL);
@@ -352,17 +352,11 @@ void tg_application_internal_game_3d_destroy()
     tg_mesh_destroy(test_deferred.quad_mesh_h);
 
     tg_material_destroy(test_deferred.water_material_h);
-    tg_fragment_shader_destroy(test_deferred.forward_water_fragment_shader_h);
 
     tg_color_image_destroy(test_deferred.image_h);
     tg_uniform_buffer_destroy(test_deferred.custom_uniform_buffer_h);
     tg_material_destroy(test_deferred.custom_material_h);
     tg_material_destroy(test_deferred.default_material_h);
-
-    tg_fragment_shader_destroy(test_deferred.deferred_fragment_shader_h);
-    tg_fragment_shader_destroy(test_deferred.forward_custom_fragment_shader_h);
-    tg_vertex_shader_destroy(test_deferred.deferred_vertex_shader_h);
-    tg_vertex_shader_destroy(test_deferred.forward_vertex_shader_h);
 
     tg_camera_destroy(test_deferred.secondary_camera_h);
     tg_camera_destroy(test_deferred.camera_info.camera_h);
@@ -430,6 +424,7 @@ void tg_application_start()
     tg_graphics_wait_idle();
     //tg_application_internal_game_2d_destroy();
     tg_application_internal_game_3d_destroy();
+    tg_assets_shutdown();
     tg_graphics_shutdown();
 }
 

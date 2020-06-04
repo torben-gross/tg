@@ -65,6 +65,7 @@ b32                   tg_platform_continue_file_iteration(const char* p_director
 b32                   tg_platform_file_exists(const char* p_filename);
 void                  tg_platform_free_file(char* p_data);
 char                  tg_platform_get_file_separator();
+u64                   tg_platform_get_full_directory_size(const char* p_directory);
 void                  tg_platform_read_file(const char* p_filename, u32* p_size, char** pp_data);
 
 tg_timer_h            tg_platform_timer_create();
