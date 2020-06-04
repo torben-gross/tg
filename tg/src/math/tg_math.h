@@ -26,6 +26,77 @@ TODO: Support other clipping setups via macros!
 
 
 
+typedef struct v2
+{
+	union
+	{
+		struct
+		{
+			f32    x;
+			f32    y;
+		};
+		f32        p_data[2];
+
+#ifdef TG_CPU_x64
+		__m64      simd_m64;
+#endif
+
+	};
+} v2;
+
+typedef struct v3
+{
+	union
+	{
+		struct
+		{
+			f32    x;
+			f32    y;
+			f32    z;
+		};
+		f32        p_data[3];
+
+#ifdef TG_CPU_x64 // TODO: ?
+#endif
+
+	};
+} v3;
+
+typedef struct v3i
+{
+	union
+	{
+		struct
+		{
+			i32    x;
+			i32    y;
+			i32    z;
+		};
+		i32        p_data[3];
+	};
+} v3i;
+
+typedef struct v4
+{
+	union
+	{
+		struct
+		{
+			f32    x;
+			f32    y;
+			f32    z;
+			f32    w;
+		};
+		f32        p_data[4];
+
+#ifdef TG_CPU_x64
+		__m64      simd_m64[2];
+		__m128     simd_m128;
+#endif
+
+	};
+} v4;
+
 /*
 +-       -+
 | m00 m01 |
@@ -133,77 +204,6 @@ typedef struct m4
 	};
 } m4;
 
-typedef struct v2
-{
-	union
-	{
-		struct
-		{
-			f32    x;
-			f32    y;
-		};
-		f32        p_data[2];
-
-#ifdef TG_CPU_x64
-		__m64      simd_m64;
-#endif
-
-	};
-} v2;
-
-typedef struct v3
-{
-	union
-	{
-		struct
-		{
-			f32    x;
-			f32    y;
-			f32    z;
-		};
-		f32        p_data[3];
-
-#ifdef TG_CPU_x64 // TODO: ?
-#endif
-
-	};
-} v3;
-
-typedef struct v3i
-{
-	union
-	{
-		struct
-		{
-			i32    x;
-			i32    y;
-			i32    z;
-		};
-		i32        p_data[3];
-	};
-} v3i;
-
-typedef struct v4
-{
-	union
-	{
-		struct
-		{
-			f32    x;
-			f32    y;
-			f32    z;
-			f32    w;
-		};
-		f32        p_data[4];
-
-#ifdef TG_CPU_x64
-		__m64      simd_m64[2];
-		__m128     simd_m128;
-#endif
-
-	};
-} v4;
-
 typedef struct tg_random
 {
 	u32    state;
@@ -234,17 +234,19 @@ u32     tgm_random_next_u32(tg_random* p_random);
 | Intrinsics                                                  |
 +------------------------------------------------------------*/
 
-f32    tgm_f32_arccos(f32 v);
-f32    tgm_f32_arccosh(f32 v);
-f32    tgm_f32_arcsin(f32 v);
-f32    tgm_f32_arcsinh(f32 v);
-f32    tgm_f32_arctan(f32 v);
-f32    tgm_f32_arctanh(f32 v);
+f32    tgm_f32_acos(f32 v);
+f32    tgm_f32_acosh(f32 v);
+f32    tgm_f32_asin(f32 v);
+f32    tgm_f32_asinh(f32 v);
+f32    tgm_f32_atan(f32 v);
+f32    tgm_f32_atanh(f32 v);
 f32    tgm_f32_ceil(f32 v);
 f32    tgm_f32_cos(f32 v);
 f32    tgm_f32_cosh(f32 v);
 f32    tgm_f32_floor(f32 v);
+f32    tgm_f32_log10(f32 v);
 f32    tgm_f32_log2(f32 v);
+f32    tgm_f32_pow(f32 base, f32 exponent);
 f32    tgm_f32_sin(f32 v);
 f32    tgm_f32_sinh(f32 v);
 f32    tgm_f32_sqrt(f32 v);

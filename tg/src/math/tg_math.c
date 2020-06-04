@@ -1,9 +1,5 @@
 #include "math/tg_math.h"
 
-#ifndef TG_CPU_x64
-#include <math.h>
-#endif
-
 
 
 /*------------------------------------------------------------+
@@ -215,234 +211,57 @@ u32 tgm_random_next_u32(tg_random* p_random)
 | Intrinsics                                                  |
 +------------------------------------------------------------*/
 
-#ifdef TG_CPU_x64
+f32 acosf(f32 v);
+f32 asinf(f32 v);
+f32 atanf(f32 v);
+f32 acoshf(f32 v);
+f32 asinhf(f32 v);
+f32 atanhf(f32 v);
+f32 ceilf(f32 v);
+f32 cosf(f32 v);
+f32 coshf(f32 v);
+f32 floorf(f32 v);
+f32 log10f(f32 v);
+f32 logf(f32 v);
+f64 pow(f64 base, f64 exponent);
+f32 powf(f32 base, f32 exponent);
+f32 sinf(f32 v);
+f32 sinhf(f32 v);
+f32 sqrtf(f32 v);
+f32 tanf(f32 v);
+f32 tanhf(f32 v);
 
-f32 tgm_f32_arccos(f32 v)
-{
-	const __m128 simd_v = _mm_set_ss(v);
-	const __m128 simd_result = _mm_acos_ps(simd_v);
-	const f32 result = simd_result.m128_f32[0];
-	return result;
-}
-
-f32 tgm_f32_arccosh(f32 v)
-{
-	const __m128 simd_v = _mm_set_ss(v);
-	const __m128 simd_result = _mm_acosh_ps(simd_v);
-	const f32 result = simd_result.m128_f32[0];
-	return result;
-}
-
-f32 tgm_f32_arcsin(f32 v)
-{
-	const __m128 simd_v = _mm_set_ss(v);
-	const __m128 simd_result = _mm_asin_ps(simd_v);
-	const f32 result = simd_result.m128_f32[0];
-	return result;
-}
-
-f32 tgm_f32_arcsinh(f32 v)
-{
-	const __m128 simd_v = _mm_set_ss(v);
-	const __m128 simd_result = _mm_asinh_ps(simd_v);
-	const f32 result = simd_result.m128_f32[0];
-	return result;
-}
-
-f32 tgm_f32_arctan(f32 v)
-{
-	const __m128 simd_v = _mm_set_ss(v);
-	const __m128 simd_result = _mm_atan_ps(simd_v);
-	const f32 result = simd_result.m128_f32[0];
-	return result;
-}
-
-f32 tgm_f32_arctanh(f32 v)
-{
-	const __m128 simd_v = _mm_set_ss(v);
-	const __m128 simd_result = _mm_atanh_ps(simd_v);
-	const f32 result = simd_result.m128_f32[0];
-	return result;
-}
-
-f32 tgm_f32_ceil(f32 v)
-{
-	const __m128 simd_v = _mm_set_ss(v);
-	const __m128 simd_result = _mm_ceil_ps(simd_v);
-	const f32 result = simd_result.m128_f32[0];
-	return result;
-}
-
-f32 tgm_f32_cos(f32 v)
-{
-	const __m128 simd_v = _mm_set_ss(v);
-	const __m128 simd_result = _mm_cos_ps(simd_v);
-	const f32 result = simd_result.m128_f32[0];
-	return result;
-}
-
-f32 tgm_f32_cosh(f32 v)
-{
-	const __m128 simd_v = _mm_set_ss(v);
-	const __m128 simd_result = _mm_cosh_ps(simd_v);
-	const f32 result = simd_result.m128_f32[0];
-	return result;
-}
-
-f32 tgm_f32_floor(f32 v)
-{
-	const __m128 simd_v = _mm_set_ss(v);
-	const __m128 simd_result = _mm_floor_ps(simd_v);
-	const f32 result = simd_result.m128_f32[0];
-	return result;
-}
-
-f32 tgm_f32_log2(f32 v)
-{
-	const __m128 simd_v = _mm_set_ss(v);
-	const __m128 simd_result = _mm_log2_ps(simd_v);
-	const f32 result = simd_result.m128_f32[0];
-	return result;
-}
-
-f32 tgm_f32_sin(f32 v)
-{
-	const __m128 simd_v = _mm_set_ss(v);
-	const __m128 simd_result = _mm_sin_ps(simd_v);
-	const f32 result = simd_result.m128_f32[0];
-	return result;
-}
-
-f32 tgm_f32_sinh(f32 v)
-{
-	const __m128 simd_v = _mm_set_ss(v);
-	const __m128 simd_result = _mm_sinh_ps(simd_v);
-	const f32 result = simd_result.m128_f32[0];
-	return result;
-}
-
-f32 tgm_f32_sqrt(f32 v)
-{
-	const __m128 simd_v = _mm_set_ss(v);
-	const __m128 simd_result = _mm_sqrt_ps(simd_v);
-	const f32 result = simd_result.m128_f32[0];
-	return result;
-}
-
-f32 tgm_f32_tan(f32 v)
-{
-	const __m128 simd_v = _mm_set_ss(v);
-	const __m128 simd_result = _mm_tan_ps(simd_v);
-	const f32 result = simd_result.m128_f32[0];
-	return result;
-}
-
-f32 tgm_f32_tanh(f32 v)
-{
-	const __m128 simd_v = _mm_set_ss(v);
-	const __m128 simd_result = _mm_tanh_ps(simd_v);
-	const f32 result = simd_result.m128_f32[0];
-	return result;
-}
-
-
-
-f64 tgm_f64_pow(f64 base, f64 exponent)
-{
-	const __m128d simd_base = _mm_set_sd(base);
-	const __m128d simd_exponent = _mm_set_sd(exponent);
-	const __m128d simd_result = _mm_pow_pd(simd_base, simd_exponent);
-	const f64 result = simd_result.m128d_f64[0];
-	return result;
-}
-
-
-
-f32 tgm_i32_log10(i32 v)
-{
-	const __m128 simd_v = _mm_set_ss((f32)v);
-	const __m128 simd_result = _mm_log10_ps(simd_v);
-	const f32 result = simd_result.m128_f32[0];
-	return result;
-}
-
-f32 tgm_i32_log2(i32 v)
-{
-	const __m128 simd_v = _mm_set_ss((f32)v);
-	const __m128 simd_result = _mm_log2_ps(simd_v);
-	const f32 result = simd_result.m128_f32[0];
-	return result;
-}
-
-i32 tgm_i32_pow(i32 base, i32 exponent)
-{
-	const __m128 simd_base = _mm_set_ss((f32)base);
-	const __m128 simd_exponent = _mm_set_ss((f32)exponent);
-	const __m128 simd_result = _mm_pow_ps(simd_base, simd_exponent);
-	const i32 result = (i32)simd_result.m128_f32[0];
-	return result;
-}
-
-
-
-f32 tgm_u32_log10(u32 v)
-{
-	const __m128 simd_v = _mm_set_ss((f32)v);
-	const __m128 simd_result = _mm_log10_ps(simd_v);
-	const f32 result = simd_result.m128_f32[0];
-	return result;
-}
-
-f32 tgm_u32_log2(u32 v)
-{
-	const __m128 simd_v = _mm_set_ss((f32)v);
-	const __m128 simd_result = _mm_log2_ps(simd_v);
-	const f32 result = simd_result.m128_f32[0];
-	return result;
-}
-
-u32 tgm_u32_pow(u32 base, u32 exponent)
-{
-	const __m128 simd_base = _mm_set_ss((f32)base);
-	const __m128 simd_exponent = _mm_set_ss((f32)exponent);
-	const __m128 simd_result = _mm_pow_ps(simd_base, simd_exponent);
-	const u32 result = (u32)simd_result.m128_f32[0];
-	return result;
-}
-
-#else
-
-f32 tgm_f32_arccos(f32 v)
+f32 tgm_f32_acos(f32 v)
 {
 	const f32 result = acosf(v);
 	return result;
 }
 
-f32 tgm_f32_arccosh(f32 v)
+f32 tgm_f32_acosh(f32 v)
 {
 	const f32 result = acoshf(v);
 	return result;
 }
 
-f32 tgm_f32_arcsin(f32 v)
+f32 tgm_f32_asin(f32 v)
 {
 	const f32 result = asinf(v);
 	return result;
 }
 
-f32 tgm_f32_arcsinh(f32 v)
+f32 tgm_f32_asinh(f32 v)
 {
 	const f32 result = asinhf(v);
 	return result;
 }
 
-f32 tgm_f32_arctan(f32 v)
+f32 tgm_f32_atan(f32 v)
 {
 	const f32 result = atanf(v);
 	return result;
 }
 
-f32 tgm_f32_arctanh(f32 v)
+f32 tgm_f32_atanh(f32 v)
 {
 	const f32 result = atanhf(v);
 	return result;
@@ -472,9 +291,21 @@ f32 tgm_f32_floor(f32 v)
 	return result;
 }
 
+f32 tgm_f32_log10(f32 v)
+{
+	const f32 result = log10f(v);
+	return result;
+}
+
 f32 tgm_f32_log2(f32 v)
 {
 	const f32 result = logf(v);
+	return result;
+}
+
+f32 tgm_f32_pow(f32 base, f32 exponent)
+{
+	const f32 result = powf(base, exponent);
 	return result;
 }
 
@@ -526,13 +357,13 @@ f32 tgm_i32_log10(i32 v)
 
 f32 tgm_i32_log2(i32 v)
 {
-	const f32 result = log2f((f32)v);
+	const f32 result = logf((f32)v);
 	return result;
 }
 
 i32 tgm_i32_pow(i32 base, i32 exponent)
 {
-	const i32 result = (i32)pow((f64)base, (f64)exponent);
+	const i32 result = (i32)powf((f32)base, (f32)exponent);
 	return result;
 }
 
@@ -546,17 +377,15 @@ f32 tgm_u32_log10(u32 v)
 
 f32 tgm_u32_log2(u32 v)
 {
-	const f32 result = log2f((f32)v);
+	const f32 result = logf((f32)v);
 	return result;
 }
 
 u32 tgm_u32_pow(u32 base, u32 exponent)
 {
-	const u32 result = (u32)pow((f64)base, (f64)exponent);
+	const u32 result = (u32)powf((f32)base, (f32)exponent);
 	return result;
 }
-
-#endif
 
 
 
