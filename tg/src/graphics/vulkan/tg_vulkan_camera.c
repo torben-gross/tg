@@ -7,6 +7,7 @@
 #include "graphics/vulkan/tg_vulkan_terrain.h"
 #include "memory/tg_memory.h"
 #include "platform/tg_platform.h"
+#include "tg_assets.h"
 
 
 
@@ -186,8 +187,8 @@ void tg_camera_internal_init_present_pass(tg_camera_h camera_h)
 
     camera_h->present_pass.descriptor = tg_vulkan_descriptor_create(1, &descriptor_set_layout_binding);
 
-    camera_h->present_pass.vertex_shader = tg_vulkan_shader_module_create("shaders/present.vert");
-    camera_h->present_pass.fragment_shader = tg_vulkan_shader_module_create("shaders/present.frag");
+    camera_h->present_pass.vertex_shader = ((tg_vertex_shader_h)tg_assets_get_asset("shaders/present.vert"))->shader_module;
+    camera_h->present_pass.fragment_shader = ((tg_fragment_shader_h)tg_assets_get_asset("shaders/present.frag"))->shader_module;
 
     camera_h->present_pass.pipeline_layout = tg_vulkan_pipeline_layout_create(1, &camera_h->present_pass.descriptor.descriptor_set_layout, 0, TG_NULL);
 

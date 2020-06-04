@@ -168,8 +168,8 @@ void                             tg_camera_set_orthographic_projection(tg_camera
 void                             tg_camera_set_perspective_projection(tg_camera_h camera_h, f32 fov_y, f32 near, f32 far);
 void                             tg_camera_set_view(tg_camera_h camera_h, v3 position, f32 pitch, f32 yaw, f32 roll);
 
-tg_color_image_h                 tg_color_image_load(const char* p_filename);
-tg_color_image_h                 tg_color_image_create(const tg_color_image_create_info* p_color_image_create_info);
+tg_color_image_h                 tg_color_image_create(const char* p_filename);
+tg_color_image_h                 tg_color_image_create_empty(const tg_color_image_create_info* p_color_image_create_info);
 void                             tg_color_image_destroy(tg_color_image_h color_image_h);
 
 tg_storage_buffer_h              tg_storage_buffer_create(u64 size, b32 visible);

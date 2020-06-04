@@ -5,7 +5,7 @@
 #include "graphics/tg_image_loader.h"
 #include "memory/tg_memory.h"
 
-tg_color_image_h tg_color_image_load(const char* p_filename)
+tg_color_image_h tg_color_image_create(const char* p_filename)
 {
     TG_ASSERT(p_filename);
 
@@ -44,7 +44,7 @@ tg_color_image_h tg_color_image_load(const char* p_filename)
     return color_image_h;
 }
 
-tg_color_image_h tg_color_image_create(const tg_color_image_create_info* p_color_image_create_info)
+tg_color_image_h tg_color_image_create_empty(const tg_color_image_create_info* p_color_image_create_info)
 {
     TG_ASSERT(p_color_image_create_info);
 

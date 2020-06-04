@@ -79,7 +79,6 @@ typedef struct tg_test_deferred
 
 
 b32 running = TG_TRUE;
-const char* asset_path = "assets"; // TODO: determine this some other way
 tg_test_deferred test_deferred = { 0 };
 
 
@@ -127,12 +126,12 @@ void tg_application_internal_game_3d_create()
     {
         char image_buffer[256] = { 0 };
         tg_string_format(sizeof(image_buffer), image_buffer, "textures/%i.bmp", i + 1);
-        test_deferred.textures_h[i] = tg_color_image_load(image_buffer);
+        test_deferred.textures_h[i] = tg_color_image_create(image_buffer);
     }
-    test_deferred.textures_h[9] = tg_color_image_load("textures/cabin_final.bmp");
-    test_deferred.textures_h[10] = tg_color_image_load("textures/test_icon.bmp");
-    test_deferred.textures_h[11] = tg_color_image_load("textures/pbb_birch.bmp");
-    test_deferred.textures_h[12] = tg_color_image_load("textures/squirrel.bmp");
+    test_deferred.textures_h[9] = tg_color_image_create("textures/cabin_final.bmp");
+    test_deferred.textures_h[10] = tg_color_image_create("textures/test_icon.bmp");
+    test_deferred.textures_h[11] = tg_color_image_create("textures/pbb_birch.bmp");
+    test_deferred.textures_h[12] = tg_color_image_create("textures/squirrel.bmp");
     test_deferred.texture_atlas_h = tg_texture_atlas_create_from_images(13, test_deferred.textures_h);
 
 
@@ -168,7 +167,7 @@ void tg_application_internal_game_3d_create()
     test_deferred.custom_uniform_buffer_h = tg_uniform_buffer_create(sizeof(v3));
     test_deferred.p_custom_uniform_buffer_data = tg_uniform_buffer_data(test_deferred.custom_uniform_buffer_h);
     *test_deferred.p_custom_uniform_buffer_data = (v3){ 1.0f, 0.0f, 0.0f };
-    test_deferred.image_h = tg_color_image_load("textures/test_icon.bmp");
+    test_deferred.image_h = tg_color_image_create("textures/test_icon.bmp");
     test_deferred.forward_vertex_shader_h = tg_vertex_shader_get("shaders/forward.vert");
     test_deferred.forward_custom_fragment_shader_h = tg_fragment_shader_get("shaders/forward_custom.frag");
     test_deferred.forward_water_fragment_shader_h = tg_fragment_shader_get("shaders/forward_water.frag");
@@ -435,9 +434,4 @@ void tg_application_on_window_resize(u32 width, u32 height)
 void tg_application_quit()
 {
 	running = TG_FALSE;
-}
-
-const char* tg_application_get_asset_path()
-{
-    return asset_path;
 }

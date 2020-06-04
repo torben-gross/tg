@@ -5,6 +5,7 @@
 #include "graphics/tg_graphics.h"
 #include "memory/tg_memory.h"
 #include "tg_application.h"
+#include "tg_assets.h"
 #include "tg_input.h"
 #include "util/tg_list.h"
 #include "util/tg_string.h"
@@ -31,13 +32,28 @@ typedef struct tg_file_iterator
     char      p_directory[MAX_PATH];
 } tg_file_iterator;
 
+
+
+void tg_platform_internal_convert_filetime_to_systemtime(const FILETIME* p_file_time, tg_system_time* p_system_time)
+{
+    SYSTEMTIME systemtime = { 0 };
+    FileTimeToSystemTime(p_file_time, &systemtime);
+    p_system_time->year = systemtime.wYear;
+    p_system_time->month = systemtime.wMonth;
+    p_system_time->day = systemtime.wDay;
+    p_system_time->hour = systemtime.wHour;
+    p_system_time->minute = systemtime.wMinute;
+    p_system_time->second = systemtime.wSecond;
+    p_system_time->milliseconds = systemtime.wMilliseconds;
+}
+
 void tg_platform_internal_fill_file_properties(const char* p_directory, WIN32_FIND_DATAA* p_find_data, tg_file_properties* p_properties)
 {
     p_properties->is_directory = (p_find_data->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
 
-    FileTimeToSystemTime(&p_find_data->ftCreationTime, (LPSYSTEMTIME)&p_properties->creation_time);
-    FileTimeToSystemTime(&p_find_data->ftLastAccessTime, (LPSYSTEMTIME)&p_properties->last_access_time);
-    FileTimeToSystemTime(&p_find_data->ftLastWriteTime, (LPSYSTEMTIME)&p_properties->last_write_time);
+    tg_platform_internal_convert_filetime_to_systemtime(&p_find_data->ftCreationTime, &p_properties->creation_time);
+    tg_platform_internal_convert_filetime_to_systemtime(&p_find_data->ftLastAccessTime, &p_properties->last_access_time);
+    tg_platform_internal_convert_filetime_to_systemtime(&p_find_data->ftLastWriteTime, &p_properties->last_write_time);
 
     LARGE_INTEGER size = { 0 };
     size.LowPart = p_find_data->nFileSizeLow;
@@ -47,6 +63,8 @@ void tg_platform_internal_fill_file_properties(const char* p_directory, WIN32_FI
     tg_memory_copy(MAX_PATH, p_directory, p_properties->p_relative_directory);
     tg_memory_copy(MAX_PATH, p_find_data->cFileName, p_properties->p_filename);
 }
+
+
 
 tg_file_iterator_h tg_platform_begin_file_iteration(const char* p_directory, tg_file_properties* p_properties)
 {
@@ -76,12 +94,45 @@ tg_file_iterator_h tg_platform_begin_file_iteration(const char* p_directory, tg_
     return file_iterator_h;
 }
 
+b32 tg_platform_continue_file_iteration(const char* p_directory, tg_file_iterator_h file_iterator_h, tg_file_properties* p_properties)
+{
+    TG_ASSERT(file_iterator_h && p_properties);
+
+    WIN32_FIND_DATAA find_data = { 0 };
+    if (!FindNextFileA(file_iterator_h, &find_data))
+    {
+        TG_ASSERT(GetLastError() == ERROR_NO_MORE_FILES);
+        FindClose(file_iterator_h);
+        return TG_FALSE;
+    }
+    tg_platform_internal_fill_file_properties(p_directory, &find_data, p_properties);
+    return TG_TRUE;
+}
+
+void tg_platform_extraxt_file_directory(u64 size, char* p_buffer, const char* p_filename)
+{
+    u32 character_count = 0;
+    const char* p_it = p_filename;
+    while (*p_it != '\0')
+    {
+        if (*p_it == '/' || *p_it == '\\')
+        {
+            character_count = (u32)(p_it - p_filename);
+        }
+        p_it++;
+    }
+
+    TG_ASSERT(character_count < size);
+    tg_memory_copy((u64)character_count, p_filename, p_buffer);
+    p_buffer[character_count] = '\0';
+}
+
 b32 tg_platform_file_exists(const char* p_filename)
 {
     TG_ASSERT(p_filename);
 
     char p_filename_buffer[MAX_PATH] = { 0 };
-    tg_string_format(sizeof(p_filename_buffer), p_filename_buffer, "%s/%s", tg_application_get_asset_path(), p_filename);
+    tg_string_format(sizeof(p_filename_buffer), p_filename_buffer, "%s/%s", tg_assets_get_asset_path(), p_filename);
 
     const u32 result = GetFileAttributesA(p_filename_buffer) != INVALID_FILE_ATTRIBUTES;
     return result;
@@ -92,6 +143,31 @@ void tg_platform_free_file(char* p_data)
     TG_ASSERT(p_data);
 
     TG_MEMORY_FREE(p_data);
+}
+
+b32 tg_platform_get_file_properties(const char* p_filename, tg_file_properties* p_properties)
+{
+    char p_filename_buffer[MAX_PATH] = { 0 };
+    tg_string_format(sizeof(p_filename_buffer), p_filename_buffer, "%s/%s", tg_assets_get_asset_path(), p_filename);
+
+    WIN32_FIND_DATAA find_data = { 0 };
+    HANDLE handle = FindFirstFileA(p_filename_buffer, &find_data);
+    if (handle == INVALID_HANDLE_VALUE)
+    {
+        return TG_FALSE;
+    }
+
+    char p_relative_directory_buffer[MAX_PATH] = { 0 };
+    tg_platform_extraxt_file_directory(MAX_PATH, p_relative_directory_buffer, p_filename);
+
+    char p_directory_buffer[MAX_PATH] = { 0 };
+    tg_string_format(MAX_PATH, p_directory_buffer, "%s\\%s", tg_assets_get_asset_path(), p_relative_directory_buffer);
+    tg_string_replace_characters(p_directory_buffer, '/', '\\');
+
+    tg_platform_internal_fill_file_properties(p_directory_buffer, &find_data, p_properties);
+    FindClose(handle);
+
+    return TG_TRUE;
 }
 
 char tg_platform_get_file_separator()
@@ -121,27 +197,12 @@ u64 tg_platform_get_full_directory_size(const char* p_directory)
     return size;
 }
 
-b32 tg_platform_continue_file_iteration(const char* p_directory, tg_file_iterator_h file_iterator_h, tg_file_properties* p_properties)
-{
-    TG_ASSERT(file_iterator_h && p_properties);
-
-    WIN32_FIND_DATAA find_data = { 0 };
-    if (!FindNextFileA(file_iterator_h, &find_data))
-    {
-        TG_ASSERT(GetLastError() == ERROR_NO_MORE_FILES);
-        FindClose(file_iterator_h);
-        return TG_FALSE;
-    }
-    tg_platform_internal_fill_file_properties(p_directory, &find_data, p_properties);
-    return TG_TRUE;
-}
-
 void tg_platform_read_file(const char* p_filename, u32* p_size, char** pp_data)
 {
     TG_ASSERT(p_filename && p_size && pp_data);
 
     char p_filename_buffer[MAX_PATH] = { 0 };
-    tg_string_format(sizeof(p_filename_buffer), p_filename_buffer, "%s/%s", tg_application_get_asset_path(), p_filename);
+    tg_string_format(sizeof(p_filename_buffer), p_filename_buffer, "%s/%s", tg_assets_get_asset_path(), p_filename);
 
     HANDLE file_handle = CreateFileA(p_filename_buffer, GENERIC_READ | GENERIC_WRITE, 0, TG_NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, TG_NULL);
     TG_ASSERT(file_handle != INVALID_HANDLE_VALUE);
@@ -327,6 +388,76 @@ void tg_platform_handle_events()
         TranslateMessage(&msg);
         DispatchMessageA(&msg);
     }
+}
+
+
+
+i8 tg_platform_system_time_compare(tg_system_time* p_time0, tg_system_time* p_time1)
+{
+    if (p_time0->year < p_time1->year)
+    {
+        return -1;
+    }
+    else if (p_time0->year > p_time1->year)
+    {
+        return 1;
+    }
+    
+    if (p_time0->month < p_time1->month)
+    {
+        return -1;
+    }
+    else if (p_time0->month > p_time1->month)
+    {
+        return 1;
+    }
+    
+    if (p_time0->day < p_time1->day)
+    {
+        return -1;
+    }
+    else if (p_time0->day > p_time1->day)
+    {
+        return 1;
+    }
+    
+    if (p_time0->hour < p_time1->hour)
+    {
+        return -1;
+    }
+    else if (p_time0->hour > p_time1->hour)
+    {
+        return 1;
+    }
+    
+    if (p_time0->minute < p_time1->minute)
+    {
+        return -1;
+    }
+    else if (p_time0->minute > p_time1->minute)
+    {
+        return 1;
+    }
+    
+    if (p_time0->second < p_time1->second)
+    {
+        return -1;
+    }
+    else if (p_time0->second > p_time1->second)
+    {
+        return 1;
+    }
+    
+    if (p_time0->milliseconds < p_time1->milliseconds)
+    {
+        return -1;
+    }
+    else if (p_time0->milliseconds > p_time1->milliseconds)
+    {
+        return 1;
+    }
+
+    return 0;
 }
 
 

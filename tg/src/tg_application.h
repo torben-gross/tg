@@ -31,6 +31,5 @@
 void           tg_application_start();
 void           tg_application_on_window_resize(u32 width, u32 height);
 void           tg_application_quit();
-const char*    tg_application_get_asset_path();
 
 #endif

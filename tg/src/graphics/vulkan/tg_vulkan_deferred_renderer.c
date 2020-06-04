@@ -3,6 +3,7 @@
 #ifdef TG_VULKAN
 
 #include "memory/tg_memory.h"
+#include "tg_assets.h"
 #include "tg_entity.h"
 
 
@@ -293,8 +294,8 @@ void tg_deferred_renderer_internal_init_shading_pass(tg_deferred_renderer_h defe
     p_descriptor_set_layout_bindings[3].pImmutableSamplers = TG_NULL;
 
     deferred_renderer_h->shading_pass.descriptor = tg_vulkan_descriptor_create(TG_DEFERRED_RENDERER_GEOMETRY_PASS_COLOR_ATTACHMENT_COUNT + 1, p_descriptor_set_layout_bindings);
-    deferred_renderer_h->shading_pass.vertex_shader = tg_vulkan_shader_module_create("shaders/shading.vert");
-    deferred_renderer_h->shading_pass.fragment_shader = tg_vulkan_shader_module_create("shaders/shading.frag");
+    deferred_renderer_h->shading_pass.vertex_shader = ((tg_vertex_shader_h)tg_assets_get_asset("shaders/shading.vert"))->shader_module;
+    deferred_renderer_h->shading_pass.fragment_shader = ((tg_fragment_shader_h)tg_assets_get_asset("shaders/shading.frag"))->shader_module;
     deferred_renderer_h->shading_pass.pipeline_layout = tg_vulkan_pipeline_layout_create(1, &deferred_renderer_h->shading_pass.descriptor.descriptor_set_layout, 0, TG_NULL);
 
     VkVertexInputBindingDescription vertex_input_binding_description = { 0 };
@@ -522,8 +523,8 @@ void tg_deferred_renderer_internal_init_tone_mapping_pass(tg_deferred_renderer_h
     p_adapt_exposure_descriptor_set_layout_bindings[1].pImmutableSamplers = TG_NULL;
 
     deferred_renderer_h->tone_mapping_pass.descriptor = tg_vulkan_descriptor_create(2, p_adapt_exposure_descriptor_set_layout_bindings);
-    deferred_renderer_h->tone_mapping_pass.vertex_shader = tg_vulkan_shader_module_create("shaders/adapt_exposure.vert");
-    deferred_renderer_h->tone_mapping_pass.fragment_shader = tg_vulkan_shader_module_create("shaders/adapt_exposure.frag");
+    deferred_renderer_h->tone_mapping_pass.vertex_shader = ((tg_vertex_shader_h)tg_assets_get_asset("shaders/adapt_exposure.vert"))->shader_module;
+    deferred_renderer_h->tone_mapping_pass.fragment_shader = ((tg_fragment_shader_h)tg_assets_get_asset("shaders/adapt_exposure.frag"))->shader_module;
     deferred_renderer_h->tone_mapping_pass.pipeline_layout = tg_vulkan_pipeline_layout_create(1, &deferred_renderer_h->tone_mapping_pass.descriptor.descriptor_set_layout, 0, TG_NULL);
 
     VkVertexInputBindingDescription vertex_input_binding_description = { 0 };

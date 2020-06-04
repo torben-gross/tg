@@ -24,7 +24,6 @@ TG_DECLARE_HANDLE(tg_timer);
 typedef struct tg_system_time {
     u16    year;
     u16    month;
-    u16    dayOfWeek;
     u16    day;
     u16    hour;
     u16    minute;
@@ -60,10 +59,14 @@ tg_window_h           tg_platform_get_window_handle();
 void                  tg_platform_get_window_size(u32* p_width, u32* p_height);
 void                  tg_platform_handle_events();
 
+i8                    tg_platform_system_time_compare(tg_system_time* p_time0, tg_system_time* p_time1);
+
 tg_file_iterator_h    tg_platform_begin_file_iteration(const char* p_directory, tg_file_properties* p_properties);
 b32                   tg_platform_continue_file_iteration(const char* p_directory, tg_file_iterator_h file_iterator_h, tg_file_properties* p_properties);
+void                  tg_platform_extraxt_file_directory(u64 size, char* p_buffer, const char* p_filename);
 b32                   tg_platform_file_exists(const char* p_filename);
 void                  tg_platform_free_file(char* p_data);
+b32                   tg_platform_get_file_properties(const char* p_filename, tg_file_properties* p_properties);
 char                  tg_platform_get_file_separator();
 u64                   tg_platform_get_full_directory_size(const char* p_directory);
 void                  tg_platform_read_file(const char* p_filename, u32* p_size, char** pp_data);
