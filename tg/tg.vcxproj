@@ -150,6 +150,7 @@
     <ClInclude Include="src\graphics\vulkan\tg_vulkan_deferred_renderer.h" />
     <ClInclude Include="src\graphics\vulkan\tg_vulkan_forward_renderer.h" />
     <ClInclude Include="src\graphics\vulkan\tg_vulkan_memory_allocator.h" />
+    <ClInclude Include="src\graphics\vulkan\tg_vulkan_spirv.h" />
     <ClInclude Include="src\graphics\vulkan\tg_vulkan_terrain.h" />
     <ClInclude Include="src\tg_assets.h" />
     <ClInclude Include="src\tg_input.h" />
