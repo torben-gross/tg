@@ -117,6 +117,7 @@
     </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\graphics\tg_spirv.c" />
     <ClCompile Include="src\graphics\vulkan\tg_vulkan_buffer.c" />
     <ClCompile Include="src\graphics\vulkan\tg_vulkan_camera.c" />
     <ClCompile Include="src\graphics\vulkan\tg_vulkan_entity.c" />
@@ -150,7 +151,7 @@
     <ClInclude Include="src\graphics\vulkan\tg_vulkan_deferred_renderer.h" />
     <ClInclude Include="src\graphics\vulkan\tg_vulkan_forward_renderer.h" />
     <ClInclude Include="src\graphics\vulkan\tg_vulkan_memory_allocator.h" />
-    <ClInclude Include="src\graphics\vulkan\tg_vulkan_spirv.h" />
+    <ClInclude Include="src\graphics\tg_spirv.h" />
     <ClInclude Include="src\graphics\vulkan\tg_vulkan_terrain.h" />
     <ClInclude Include="src\tg_assets.h" />
     <ClInclude Include="src\tg_input.h" />

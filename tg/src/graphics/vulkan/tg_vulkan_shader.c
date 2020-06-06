@@ -83,6 +83,7 @@ tg_compute_shader_h tg_compute_shader_create(const char* p_filename, u32 handle_
 	}
 
 	compute_shader_h->compute_shader = tg_vulkan_compute_shader_create(p_filename, handle_type_count, p_descriptor_set_layout_bindings);
+	// TODO: global command buffer in tg_graphics_vulkan.c
 	compute_shader_h->command_buffer = tg_vulkan_command_buffer_allocate(compute_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
 	TG_MEMORY_STACK_FREE(descriptor_set_layout_bindings_size);

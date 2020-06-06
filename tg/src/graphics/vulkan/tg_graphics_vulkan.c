@@ -2,7 +2,7 @@
 
 #ifdef TG_VULKAN
 
-#include "graphics/vulkan/tg_vulkan_spirv.h"
+#include "graphics/tg_spirv.h"
 #include "math/tg_math.h"
 #include "memory/tg_memory.h"
 #include "platform/tg_platform.h"
@@ -1605,29 +1605,12 @@ VkShaderModule tg_vulkan_shader_module_create(const char* p_filename)
         char* p_content = TG_NULL;
         tg_platform_read_file(p_filename_buffer, &size, &p_content);
 
+        const u32* p_words = (u32*)p_content;
+        const u32 word_count = size / 4;
 
-
-
-
-        const u32* p_word_stream = (u32*)p_content;
-
-        const u32 magic_number = p_word_stream[0];
-        TG_ASSERT(magic_number == 0x07230203);
-
-        const u32 total_word_count = size / 4;
-        u32 processed_word_count = 5;
-        while (processed_word_count < total_word_count)
-        {
-            const u32 opcode = p_word_stream[processed_word_count];
-            const tg_spirv_op opcode_enumerant = opcode & 0xffff;
-            const u16 word_count = opcode >> 16;
-            processed_word_count += word_count;
-            int bh = 0;
-        }
-
-
-
-
+        tg_spirv_layout spirv_layout = { 0 };
+        tg_spirv_create_layout(word_count, p_words, &spirv_layout);
+        tg_spirv_destroy_layout(&spirv_layout);
 
         VkShaderModuleCreateInfo shader_module_create_info = { 0 };
         shader_module_create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
