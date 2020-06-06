@@ -5,6 +5,38 @@
 
 #define TG_SPIRV_MAX_NAME 256
 
+#define TG_SPIRV_MAKE_IMAGE_DATA(sampled_type, dim, depth, arrayed, ms, sampled, image_format, has_access_qualifier, access_qualifier) \
+    ((sampled_type) | ((dim) << 6) | ((depth) << 9) | ((arrayed) << 11) | ((ms) << 12) | ((sampled) << 13) | ((image_format) << 15) | ((has_access_qualifier) << 21) | ((access_qualifier) << 22))
+
+#define TG_SPIRV_IMAGE_SAMPLED_TYPE(image_data) \
+    ((tg_spirv_op)((image_data) & ((1 << 7) - 1)))
+
+#define TG_SPIRV_IMAGE_DIM(image_data) \
+    ((tg_spirv_dim)(((image_data) >> 6) & ((1 << 4) - 1)))
+
+#define TG_SPIRV_IMAGE_DEPTH(image_data) \
+    ((u32)(((image_data) >> 9) & ((1 << 3) - 1)))
+
+#define TG_SPIRV_IMAGE_ARRAYED(image_data) \
+    ((b32)(((image_data) >> 11) & ((1 << 2) - 1)))
+
+#define TG_SPIRV_IMAGE_MULTISAMPLED(image_data) \
+    ((b32)(((image_data) >> 12) & ((1 << 2) - 1)))
+
+#define TG_SPIRV_IMAGE_SAMPLED(image_data) \
+    ((u32)(((image_data) >> 13) & ((1 << 3) - 1)))
+
+#define TG_SPIRV_IMAGE_FORMAT(image_data) \
+    ((tg_spirv_image_format)(((image_data) >> 15) & ((1 << 7) - 1)))
+
+#define TG_SPIRV_IMAGE_HAS_ACCESS_QUALIFIER(image_data) \
+    ((b32)(((image_data) >> 21) & ((1 << 2) - 1)))
+
+#define TG_SPIRV_IMAGE_ACCESS_QUALIFIER(image_data) \
+    ((tg_spirv_access_qualifier)(((image_data) >> 22) & ((1 << 3) - 1)))
+
+
+
 // Source: https://www.khronos.org/registry/spir-v/specs/1.0/SPIRV.html
 
 typedef enum tg_spirv_execution_model
@@ -521,9 +553,34 @@ typedef struct tg_spirv_structure_base
 {
     tg_spirv_op               type;
     char                      p_name[TG_SPIRV_MAX_NAME];
-    u32                       member_capacity;
-    u32                       member_count;
-    tg_spirv_substructure*    p_members;
+    union
+    {
+        struct int_data
+        {
+            u32               int_width;
+            u32               int_signedness;
+        };
+        u32                   float_width;
+        struct vector_data
+        {
+            tg_spirv_op       vector_component_type;
+            u32               vector_component_number;
+        };
+        struct matrix_data
+        {
+            tg_spirv_op       matrix_column_type;
+            u32               matrix_column_number;
+        };
+        u64 image_data;
+        struct array_data
+        {
+            u32               array_length;
+        };
+        u32                   runtime_array_element_type;
+    };
+    u32                       reference_capacity;
+    u32                       reference_count;
+    tg_spirv_substructure*    p_references;
 } tg_spirv_structure_base;
 
 typedef struct tg_spirv_substructure

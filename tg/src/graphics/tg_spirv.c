@@ -5,7 +5,7 @@
 
 
 
-#define TG_SPIRV_MAGIC_NUMBER           0x07230203
+#define TG_SPIRV_MAGIC_NUMBER    0x07230203
 #define TG_SPIRV_MIN_CAPACITY    4
 
 
@@ -53,32 +53,73 @@ b32 tg_spirv_internal_set_descriptor_set_and_binding(u32 word_count, const u32* 
     return TG_FALSE;
 }
 
-void tg_spirv_internal_reserve(tg_spirv_structure_base* p_structure, u32 member_count)
+void tg_spirv_internal_reserve(tg_spirv_structure_base* p_structure, u32 reference_count)
 {
-    if (p_structure->member_capacity < member_count)
+    if (p_structure->reference_capacity < reference_count)
     {
-        if (p_structure->member_capacity == 0)
+        if (p_structure->reference_capacity == 0)
         {
-            p_structure->member_capacity = TG_SPIRV_MIN_CAPACITY;
+            p_structure->reference_capacity = TG_SPIRV_MIN_CAPACITY;
         }
-        while (p_structure->member_capacity < member_count)
+        while (p_structure->reference_capacity < reference_count)
         {
-            p_structure->member_capacity *= 2;
+            p_structure->reference_capacity *= 2;
         }
 
-        const u64 size = p_structure->member_capacity * sizeof(*p_structure->p_members);
-        if (p_structure->p_members)
+        const u64 size = p_structure->reference_capacity * sizeof(*p_structure->p_references);
+        if (p_structure->p_references)
         {
-            p_structure->p_members = TG_MEMORY_REALLOC(size, p_structure->p_members);
+            p_structure->p_references = TG_MEMORY_REALLOC(size, p_structure->p_references);
         }
         else
         {
-            p_structure->p_members = TG_MEMORY_ALLOC(size);
+            p_structure->p_references = TG_MEMORY_ALLOC(size);
         }
     }
 }
 
-b32 tg_spirv_internal_fill_structure(u32 word_count, const u32* p_words, u32 id, tg_spirv_structure_base* p_structure)
+tg_spirv_op tg_spirv_internal_find_type(u32 word_count, const u32* p_words, u32 id)
+{
+    u32 processed_word_count = 0;
+    while (processed_word_count < word_count)
+    {
+        const u32 opcode = p_words[processed_word_count];
+        const tg_spirv_op opcode_enumerant = opcode & 0xffff;
+        const u16 op_word_count = opcode >> 16;
+
+        if (opcode_enumerant >= TG_SPIRV_OP_TYPE_VOID && opcode_enumerant <= TG_SPIRV_OP_TYPE_FORWARD_POINTER && p_words[processed_word_count + 2] == id)
+        {
+            return opcode_enumerant;
+        }
+
+        processed_word_count += op_word_count;
+    }
+    TG_ASSERT(TG_FALSE);
+    return TG_SPIRV_OP_NOP;
+}
+
+u32 tg_spirv_internal_find_array_length(u32 word_count, const u32* p_words, u32 id)
+{
+    u32 processed_word_count = 0;
+    while (processed_word_count < word_count)
+    {
+        const u32 opcode = p_words[processed_word_count];
+        const tg_spirv_op opcode_enumerant = opcode & 0xffff;
+        const u16 op_word_count = opcode >> 16;
+
+        if (opcode_enumerant == TG_SPIRV_OP_CONSTANT && p_words[processed_word_count + 2] == id)
+        {
+            const u32 element_number = p_words[processed_word_count + 3];
+            return element_number;
+        }
+
+        processed_word_count += op_word_count;
+    }
+    TG_ASSERT(TG_FALSE);
+    return 0;
+}
+
+void tg_spirv_internal_fill_structure(u32 word_count, const u32* p_words, u32 id, tg_spirv_structure_base* p_structure)
 {
     u32 processed_word_count = 0;
     while (processed_word_count < word_count)
@@ -110,11 +151,11 @@ b32 tg_spirv_internal_fill_structure(u32 word_count, const u32* p_words, u32 id,
             {
                 const u32 member_index = p_words[processed_word_count + 2];
                 tg_spirv_internal_reserve(p_structure, member_index + 1);
-                p_structure->member_count++;
+                p_structure->reference_count++;
                 const char* p_member_name = (const char*)&p_words[processed_word_count + 3];
                 const u32 member_name_length = tg_string_length(p_member_name);
                 TG_ASSERT(member_name_length + 1 <= TG_SPIRV_MAX_NAME);
-                tg_memory_copy((u64)member_name_length + 1, p_member_name, p_structure->p_members[member_index].base.p_name);
+                tg_memory_copy((u64)member_name_length + 1, p_member_name, p_structure->p_references[member_index].base.p_name);
             }
         } break;
         case TG_SPIRV_OP_DECORATE:
@@ -146,7 +187,7 @@ b32 tg_spirv_internal_fill_structure(u32 word_count, const u32* p_words, u32 id,
                 const tg_spirv_decoration decoration = p_words[processed_word_count + 3];
                 if (decoration == TG_SPIRV_DECORATION_OFFSET)
                 {
-                    ((tg_spirv_substructure*)p_structure->p_members)[member_index].offset = p_words[processed_word_count + 4];
+                    ((tg_spirv_substructure*)p_structure->p_references)[member_index].offset = p_words[processed_word_count + 4];
                 }
             }
         } break;
@@ -155,7 +196,10 @@ b32 tg_spirv_internal_fill_structure(u32 word_count, const u32* p_words, u32 id,
             const u32 target_id = p_words[processed_word_count + 1];
             if (target_id == id)
             {
-                p_structure->type = opcode_enumerant;
+                if (!p_structure->type)
+                {
+                    p_structure->type = opcode_enumerant;
+                }
             }
         } break;
         case TG_SPIRV_OP_TYPE_INT:
@@ -163,7 +207,12 @@ b32 tg_spirv_internal_fill_structure(u32 word_count, const u32* p_words, u32 id,
             const u32 target_id = p_words[processed_word_count + 1];
             if (target_id == id)
             {
-                p_structure->type = opcode_enumerant;
+                if (!p_structure->type)
+                {
+                    p_structure->type = opcode_enumerant;
+                }
+                p_structure->int_width = p_words[processed_word_count + 2];
+                p_structure->int_signedness = p_words[processed_word_count + 3];
             }
         } break;
         case TG_SPIRV_OP_TYPE_FLOAT:
@@ -171,7 +220,11 @@ b32 tg_spirv_internal_fill_structure(u32 word_count, const u32* p_words, u32 id,
             const u32 target_id = p_words[processed_word_count + 1];
             if (target_id == id)
             {
-                p_structure->type = opcode_enumerant;
+                if (!p_structure->type)
+                {
+                    p_structure->type = opcode_enumerant;
+                }
+                p_structure->float_width = (u16)p_words[processed_word_count + 2];
             }
         } break;
         case TG_SPIRV_OP_TYPE_VECTOR:
@@ -179,7 +232,12 @@ b32 tg_spirv_internal_fill_structure(u32 word_count, const u32* p_words, u32 id,
             const u32 target_id = p_words[processed_word_count + 1];
             if (target_id == id)
             {
-                p_structure->type = opcode_enumerant;
+                if (!p_structure->type)
+                {
+                    p_structure->type = opcode_enumerant;
+                }
+                p_structure->vector_component_type = tg_spirv_internal_find_type(word_count, p_words, p_words[processed_word_count + 2]);
+                p_structure->vector_component_number = p_words[processed_word_count + 3];
             }
         } break;
         case TG_SPIRV_OP_TYPE_MATRIX:
@@ -187,7 +245,12 @@ b32 tg_spirv_internal_fill_structure(u32 word_count, const u32* p_words, u32 id,
             const u32 target_id = p_words[processed_word_count + 1];
             if (target_id == id)
             {
-                p_structure->type = opcode_enumerant;
+                if (!p_structure->type)
+                {
+                    p_structure->type = opcode_enumerant;
+                }
+                p_structure->matrix_column_type = tg_spirv_internal_find_type(word_count, p_words, p_words[processed_word_count + 2]);
+                p_structure->matrix_column_number = p_words[processed_word_count + 3];
             }
         } break;
         case TG_SPIRV_OP_TYPE_IMAGE:
@@ -195,13 +258,22 @@ b32 tg_spirv_internal_fill_structure(u32 word_count, const u32* p_words, u32 id,
             const u32 target_id = p_words[processed_word_count + 1];
             if (target_id == id)
             {
-                // TODO: do i want to save these?
-                //const tg_spirv_dim dim = p_words[processed_word_count + 3];
-                //const u8 depth = p_words[processed_word_count + 4];
-                //const b32 arrayed = p_words[processed_word_count + 5] == 1;
-                //const b32 multisampled = p_words[processed_word_count + 6];
-                //const u8 sampled = p_words[processed_word_count + 7];
-                //const tg_spirv_image_format format = p_words[processed_word_count + 8];
+                if (!p_structure->type)
+                {
+                    p_structure->type = opcode_enumerant;
+                }
+
+                const tg_spirv_op sampled_type = tg_spirv_internal_find_type(word_count, p_words, p_words[processed_word_count + 2]);
+                const u32 dim = p_words[processed_word_count + 3];
+                const u32 depth = p_words[processed_word_count + 4];
+                const u32 arrayed = p_words[processed_word_count + 5];
+                const u32 ms = p_words[processed_word_count + 6];
+                const u32 sampled = p_words[processed_word_count + 7];
+                const tg_spirv_image_format image_format = p_words[processed_word_count + 8];
+                const b32 has_access_qualifier = op_word_count > 9;
+                const tg_spirv_access_qualifier access_qualifier = has_access_qualifier ? p_words[processed_word_count + 9] : 0;
+
+                p_structure->image_data = TG_SPIRV_MAKE_IMAGE_DATA(sampled_type, dim, depth, arrayed, ms, sampled, image_format, has_access_qualifier, access_qualifier);
             }
         } break;
         case TG_SPIRV_OP_TYPE_SAMPLER:
@@ -209,7 +281,10 @@ b32 tg_spirv_internal_fill_structure(u32 word_count, const u32* p_words, u32 id,
             const u32 target_id = p_words[processed_word_count + 1];
             if (target_id == id)
             {
-                p_structure->type = opcode_enumerant;
+                if (!p_structure->type)
+                {
+                    p_structure->type = opcode_enumerant;
+                }
             }
         } break;
         case TG_SPIRV_OP_TYPE_SAMPLED_IMAGE:
@@ -217,10 +292,13 @@ b32 tg_spirv_internal_fill_structure(u32 word_count, const u32* p_words, u32 id,
             const u32 target_id = p_words[processed_word_count + 1];
             if (target_id == id)
             {
-                ((tg_spirv_structure*)p_structure)->bind_type = TG_SPIRV_BIND_TYPE_SAMPLED_IMAGE;
-                p_structure->type = opcode_enumerant;
-                //const u32 image_id = p_words[processed_word_count + 2];
-                // TODO: search for image_id?
+                if (!p_structure->type)
+                {
+                    ((tg_spirv_structure*)p_structure)->bind_type = TG_SPIRV_BIND_TYPE_SAMPLED_IMAGE;
+                    p_structure->type = opcode_enumerant;
+                }
+                const u32 image_id = p_words[processed_word_count + 2];
+                tg_spirv_internal_fill_structure(word_count, p_words, image_id, p_structure);
             }
         } break;
         case TG_SPIRV_OP_TYPE_ARRAY:
@@ -228,7 +306,14 @@ b32 tg_spirv_internal_fill_structure(u32 word_count, const u32* p_words, u32 id,
             const u32 target_id = p_words[processed_word_count + 1];
             if (target_id == id)
             {
-                p_structure->type = opcode_enumerant;
+                if (!p_structure->type)
+                {
+                    p_structure->type = opcode_enumerant;
+                }
+                p_structure->array_length = tg_spirv_internal_find_array_length(word_count, p_words, p_words[processed_word_count + 3]);
+                tg_spirv_internal_reserve(p_structure, 1);
+                p_structure->reference_count++;
+                tg_spirv_internal_fill_structure(word_count, p_words, p_words[processed_word_count + 2], (tg_spirv_structure_base*)p_structure->p_references);
             }
         } break;
         case TG_SPIRV_OP_TYPE_RUNTIME_ARRAY:
@@ -236,7 +321,12 @@ b32 tg_spirv_internal_fill_structure(u32 word_count, const u32* p_words, u32 id,
             const u32 target_id = p_words[processed_word_count + 1];
             if (target_id == id)
             {
-                p_structure->type = opcode_enumerant;
+                if (!p_structure->type)
+                {
+                    p_structure->type = opcode_enumerant;
+                }
+                tg_spirv_internal_reserve(p_structure, 1);
+                tg_spirv_internal_fill_structure(word_count, p_words, p_words[processed_word_count + 2], (tg_spirv_structure_base*)p_structure->p_references);
             }
         } break;
         case TG_SPIRV_OP_TYPE_STRUCT:
@@ -244,12 +334,15 @@ b32 tg_spirv_internal_fill_structure(u32 word_count, const u32* p_words, u32 id,
             const u32 target_id = p_words[processed_word_count + 1];
             if (target_id == id)
             {
-                p_structure->type = opcode_enumerant;
+                if (!p_structure->type)
+                {
+                    p_structure->type = opcode_enumerant;
+                }
                 const u32 member_count = op_word_count - 2;
                 tg_spirv_internal_reserve(p_structure, member_count);
                 for (u32 i = 0; i < member_count; i++)
                 {
-                    tg_spirv_internal_fill_structure(word_count, p_words, p_words[processed_word_count + 2 + i], (tg_spirv_structure_base*)&p_structure->p_members[i]);
+                    tg_spirv_internal_fill_structure(word_count, p_words, p_words[processed_word_count + 2 + i], (tg_spirv_structure_base*)&p_structure->p_references[i]);
                 }
             }
         } break;
@@ -270,18 +363,17 @@ b32 tg_spirv_internal_fill_structure(u32 word_count, const u32* p_words, u32 id,
 
         processed_word_count += op_word_count;
     }
-    return TG_TRUE;
 }
 
 void tg_spirv_internal_destroy_structure(tg_spirv_structure_base* p_structure)
 {
-    if (p_structure->p_members)
+    if (p_structure->p_references)
     {
-        for (u32 i = 0; i < p_structure->member_count; i++)
+        for (u32 i = 0; i < p_structure->reference_count; i++)
         {
-            tg_spirv_internal_destroy_structure((tg_spirv_structure_base*)&p_structure->p_members[i]);
+            tg_spirv_internal_destroy_structure((tg_spirv_structure_base*)&p_structure->p_references[i]);
         }
-        TG_MEMORY_FREE(p_structure->p_members);
+        TG_MEMORY_FREE(p_structure->p_references);
     }
 }
 
