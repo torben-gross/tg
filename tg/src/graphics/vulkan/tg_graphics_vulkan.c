@@ -1609,8 +1609,7 @@ VkShaderModule tg_vulkan_shader_module_create(const char* p_filename)
         const u32 word_count = size / 4;
 
         tg_spirv_layout spirv_layout = { 0 };
-        tg_spirv_create_layout(word_count, p_words, &spirv_layout);
-        tg_spirv_destroy_layout(&spirv_layout);
+        tg_spirv_fill_layout(word_count, p_words, &spirv_layout);
 
         VkShaderModuleCreateInfo shader_module_create_info = { 0 };
         shader_module_create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -1841,10 +1840,10 @@ VkSampleCountFlagBits tg_vulkan_physical_device_find_max_sample_count(VkPhysical
 
 b32 tg_vulkan_physical_device_is_suitable(VkPhysicalDevice physical_device)
 {
-    VkPhysicalDeviceProperties physical_device_properties;
+    VkPhysicalDeviceProperties physical_device_properties = { 0 };
     vkGetPhysicalDeviceProperties(physical_device, &physical_device_properties);
 
-    VkPhysicalDeviceFeatures physical_device_features;
+    VkPhysicalDeviceFeatures physical_device_features = { 0 };
     vkGetPhysicalDeviceFeatures(physical_device, &physical_device_features);
 
     // TODO: is_discrete_gpu does not work on me lappy
