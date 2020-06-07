@@ -5,6 +5,7 @@
 
 #ifdef TG_VULKAN
 
+#include "graphics/tg_spirv.h"
 #include "graphics/vulkan/tg_vulkan_memory_allocator.h"
 #include <vulkan/vulkan.h>
 #undef near
@@ -85,18 +86,16 @@ typedef struct tg_vulkan_buffer
     tg_vulkan_memory_block    memory;
 } tg_vulkan_buffer;
 
-typedef struct tg_vulkan_compute_shader
+typedef struct tg_vulkan_shader
 {
-    VkShaderModule           shader_module;
-    tg_vulkan_descriptor     descriptor;
-    VkPipelineLayout         pipeline_layout;
-    VkPipeline               compute_pipeline;
-} tg_vulkan_compute_shader;
+    tg_spirv_layout    layout;
+    VkShaderModule     shader_module;
+} tg_vulkan_shader;
 
 typedef struct tg_vulkan_graphics_pipeline_create_info
 {
-    VkShaderModule                           vertex_shader;
-    VkShaderModule                           fragment_shader;
+    tg_vulkan_shader                         vertex_shader;
+    tg_vulkan_shader                         fragment_shader;
     VkCullModeFlagBits                       cull_mode;
     VkSampleCountFlagBits                    sample_count;
     VkBool32                                 depth_test_enable;
@@ -193,7 +192,10 @@ typedef struct tg_color_image
 typedef struct tg_compute_shader
 {
     tg_handle_type              type;
-    tg_vulkan_compute_shader    compute_shader;
+    tg_vulkan_shader            vulkan_shader;
+    tg_vulkan_descriptor        descriptor;
+    VkPipelineLayout            pipeline_layout;
+    VkPipeline                  compute_pipeline;
     VkCommandBuffer             command_buffer;
 } tg_compute_shader;
 
@@ -241,8 +243,8 @@ typedef struct tg_camera
         VkRenderPass                 render_pass;
         VkFramebuffer                p_framebuffers[TG_VULKAN_SURFACE_IMAGE_COUNT];
         tg_vulkan_descriptor         descriptor;
-        VkShaderModule               vertex_shader;
-        VkShaderModule               fragment_shader;
+        tg_vulkan_shader             vertex_shader;
+        tg_vulkan_shader             fragment_shader;
         VkPipelineLayout             pipeline_layout;
         VkPipeline                   graphics_pipeline;
         VkCommandBuffer              p_command_buffers[TG_VULKAN_SURFACE_IMAGE_COUNT];
@@ -275,8 +277,8 @@ typedef struct tg_entity_graphics_data_ptr
 
 typedef struct tg_fragment_shader
 {
-    tg_handle_type    type;
-    VkShaderModule    shader_module;
+    tg_handle_type      type;
+    tg_vulkan_shader    vulkan_shader;
 } tg_fragment_shader;
 
 typedef struct tg_material
@@ -331,8 +333,8 @@ typedef struct tg_uniform_buffer
 
 typedef struct tg_vertex_shader
 {
-    tg_handle_type    type;
-    VkShaderModule    shader_module;
+    tg_handle_type      type;
+    tg_vulkan_shader    vulkan_shader;
 } tg_vertex_shader;
 
 
@@ -391,16 +393,15 @@ void                          tg_vulkan_command_buffers_free(VkCommandPool comma
 VkPipeline                    tg_vulkan_compute_pipeline_create(VkShaderModule shader_module, VkPipelineLayout pipeline_layout);
 void                          tg_vulkan_compute_pipeline_destroy(VkPipeline compute_pipeline);
 
-tg_vulkan_compute_shader      tg_vulkan_compute_shader_create(const char* filename, u32 binding_count, VkDescriptorSetLayoutBinding* p_bindings);
-void                          tg_vulkan_compute_shader_destroy(tg_vulkan_compute_shader* p_vulkan_compute_shader);
-
 tg_depth_image                tg_vulkan_depth_image_create(const tg_vulkan_depth_image_create_info* p_vulkan_depth_image_create_info);
 VkFormat                      tg_vulkan_depth_image_convert_format(tg_depth_image_format format);
 void                          tg_vulkan_depth_image_destroy(tg_depth_image* p_depth_image);
 
 void                          tg_deferred_renderer_execute(tg_deferred_renderer_h deferred_renderer_h, VkCommandBuffer command_buffer);// TODO: move everything over and rename functions
 
+// TODO: should the first variant be removed?
 tg_vulkan_descriptor          tg_vulkan_descriptor_create(u32 binding_count, VkDescriptorSetLayoutBinding* p_bindings);
+tg_vulkan_descriptor          tg_vulkan_descriptor_create_for_shader(const tg_vulkan_shader* p_vulkan_shader);
 void                          tg_vulkan_descriptor_destroy(tg_vulkan_descriptor* p_vulkan_descriptor);
 
 void                          tg_vulkan_descriptor_set_update(VkDescriptorSet descriptor_set, tg_handle shader_input_element_handle, u32 dst_binding);
@@ -448,7 +449,8 @@ void                          tg_vulkan_render_target_destroy(tg_render_target* 
 VkSemaphore                   tg_vulkan_semaphore_create();
 void                          tg_vulkan_semaphore_destroy(VkSemaphore semaphore);
 
-VkShaderModule                tg_vulkan_shader_module_create(const char* p_filename);
+tg_vulkan_shader              tg_vulkan_shader_create(const char* p_filename);
+void                          tg_vulkan_shader_destroy(tg_vulkan_shader* p_vulkan_shader);
 
 tg_storage_image_3d           tg_vulkan_storage_image_3d_create(u32 width, u32 height, u32 depth, VkFormat format);
 void                          tg_vulkan_storage_image_3d_destroy(tg_storage_image_3d* p_storage_image_3d);

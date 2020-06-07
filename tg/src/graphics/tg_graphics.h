@@ -178,9 +178,10 @@ void*                            tg_storage_buffer_data(tg_storage_buffer_h stor
 void                             tg_storage_buffer_destroy(tg_storage_buffer_h storage_buffer_h);
 
 void                             tg_compute_shader_bind_input(tg_compute_shader_h compute_shader_h, u32 first_handle_index, u32 handle_count, tg_handle* p_handles);
-tg_compute_shader_h              tg_compute_shader_create(const char* filename, u32 handle_type_count, const tg_handle_type* p_handle_types);
+tg_compute_shader_h              tg_compute_shader_create(const char* filename);
 void                             tg_compute_shader_dispatch(tg_compute_shader_h compute_shader_h, u32 group_count_x, u32 group_count_y, u32 group_count_z);
 void                             tg_compute_shader_destroy(tg_compute_shader_h compute_shader_h);
+tg_compute_shader_h              tg_compute_shader_get(const char* filename);
 
 tg_entity_graphics_data_ptr_h    tg_entity_graphics_data_ptr_create(tg_mesh_h mesh_h, tg_material_h material_h);
 void                             tg_entity_graphics_data_ptr_destroy(tg_entity_graphics_data_ptr_h entity_graphics_data_ptr_h);

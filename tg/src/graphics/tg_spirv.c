@@ -572,6 +572,14 @@ void tg_spirv_internal_fill_global_resource(u32 word_count, const u32* p_words, 
                 }
             }
         } break;
+        case TG_SPIRV_OP_TYPE_IMAGE:
+        {
+            const u32 target_id = p_words[processed_word_count + 1];
+            if (target_id == id && p_resource->type == TG_SPIRV_GLOBAL_RESOURCE_TYPE_INVALID)
+            {
+                p_resource->type = TG_SPIRV_GLOBAL_RESOURCE_TYPE_STORAGE_IMAGE;
+            }
+        } break;
         case TG_SPIRV_OP_TYPE_SAMPLED_IMAGE:
         {
             const u32 target_id = p_words[processed_word_count + 1];
@@ -791,7 +799,7 @@ void tg_spirv_fill_layout(u32 word_count, const u32* p_words, tg_spirv_layout* p
                 tg_spirv_internal_fill_global_resource(word_count, p_words, points_to_id, &p_layout->p_global_resources[p_layout->global_resource_count]);
                 p_layout->global_resource_count++;
             }
-            else if (storage_class == TG_SPIRV_STORAGE_CLASS_INPUT)
+            else if (storage_class == TG_SPIRV_STORAGE_CLASS_INPUT && p_layout->shader_type == TG_SPIRV_SHADER_TYPE_VERTEX)
             {
                 TG_ASSERT(p_layout->input_resource_count < TG_SPIRV_MAX_INPUTS);
                 tg_spirv_internal_fill_input_resource(word_count, p_words, variable_id, &p_layout->p_input_resources[p_layout->input_resource_count]);

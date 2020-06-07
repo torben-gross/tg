@@ -187,8 +187,8 @@ void tg_camera_internal_init_present_pass(tg_camera_h camera_h)
 
     camera_h->present_pass.descriptor = tg_vulkan_descriptor_create(1, &descriptor_set_layout_binding);
 
-    camera_h->present_pass.vertex_shader = ((tg_vertex_shader_h)tg_assets_get_asset("shaders/present.vert"))->shader_module;
-    camera_h->present_pass.fragment_shader = ((tg_fragment_shader_h)tg_assets_get_asset("shaders/present.frag"))->shader_module;
+    camera_h->present_pass.vertex_shader = ((tg_vertex_shader_h)tg_assets_get_asset("shaders/present.vert"))->vulkan_shader;
+    camera_h->present_pass.fragment_shader = ((tg_fragment_shader_h)tg_assets_get_asset("shaders/present.frag"))->vulkan_shader;
 
     camera_h->present_pass.pipeline_layout = tg_vulkan_pipeline_layout_create(1, &camera_h->present_pass.descriptor.descriptor_set_layout, 0, TG_NULL);
 
@@ -428,8 +428,8 @@ void tg_camera_internal_register_entity(tg_camera_h camera_h, tg_vulkan_camera_i
     pipeline_vertex_input_state_create_info.pVertexAttributeDescriptions = p_vertex_input_attribute_descriptions;
 
     tg_vulkan_graphics_pipeline_create_info vulkan_graphics_pipeline_create_info = { 0 };
-    vulkan_graphics_pipeline_create_info.vertex_shader = entity_graphics_data_ptr_h->material_h->vertex_shader_h->shader_module;
-    vulkan_graphics_pipeline_create_info.fragment_shader = entity_graphics_data_ptr_h->material_h->fragment_shader_h->shader_module;
+    vulkan_graphics_pipeline_create_info.vertex_shader = entity_graphics_data_ptr_h->material_h->vertex_shader_h->vulkan_shader;
+    vulkan_graphics_pipeline_create_info.fragment_shader = entity_graphics_data_ptr_h->material_h->fragment_shader_h->vulkan_shader;
     vulkan_graphics_pipeline_create_info.cull_mode = VK_CULL_MODE_BACK_BIT;
     vulkan_graphics_pipeline_create_info.sample_count = VK_SAMPLE_COUNT_1_BIT;
     vulkan_graphics_pipeline_create_info.depth_test_enable = VK_TRUE;

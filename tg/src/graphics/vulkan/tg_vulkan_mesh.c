@@ -6,6 +6,7 @@
 #define TG_MESH_INDEX_CAPACITY(mesh_h)     ((u32)((mesh_h)->ibo.size / sizeof(u16)))
 
 #include "memory/tg_memory.h"
+#include "tg_assets.h"
 
 
 
@@ -59,7 +60,7 @@ void tg_mesh_internal_recalculate_normals(u32 vertex_count, u32 index_count, con
 
 
 
-        shader_module = tg_vulkan_shader_module_create("shaders/normals_vbo.comp");
+        shader_module = ((tg_compute_shader_h)tg_assets_get_asset("shaders/normals_vbo.comp"))->vulkan_shader.shader_module;
 
         VkDescriptorSetLayoutBinding p_descriptor_set_layout_bindings[2] = { 0 };
 

@@ -35,7 +35,9 @@ void tg_deferred_renderer_internal_destroy_shading_pass(tg_deferred_renderer_h d
 
 void tg_deferred_renderer_internal_destroy_tone_mapping_pass(tg_deferred_renderer_h deferred_renderer_h)
 {
-    tg_vulkan_compute_shader_destroy(&deferred_renderer_h->tone_mapping_pass.acquire_exposure_compute_shader);
+    tg_vulkan_compute_pipeline_destroy(deferred_renderer_h->tone_mapping_pass.acquire_exposure_compute_pipeline);
+    tg_vulkan_pipeline_layout_destroy(deferred_renderer_h->tone_mapping_pass.acquire_exposure_pipeline_layout);
+    tg_vulkan_descriptor_destroy(&deferred_renderer_h->tone_mapping_pass.acquire_exposure_descriptor);
     tg_vulkan_buffer_destroy(&deferred_renderer_h->tone_mapping_pass.exposure_storage_buffer);
     tg_vulkan_render_pass_destroy(deferred_renderer_h->tone_mapping_pass.render_pass);
     tg_vulkan_framebuffer_destroy(deferred_renderer_h->tone_mapping_pass.framebuffer);
@@ -294,8 +296,8 @@ void tg_deferred_renderer_internal_init_shading_pass(tg_deferred_renderer_h defe
     p_descriptor_set_layout_bindings[3].pImmutableSamplers = TG_NULL;
 
     deferred_renderer_h->shading_pass.descriptor = tg_vulkan_descriptor_create(TG_DEFERRED_RENDERER_GEOMETRY_PASS_COLOR_ATTACHMENT_COUNT + 1, p_descriptor_set_layout_bindings);
-    deferred_renderer_h->shading_pass.vertex_shader = ((tg_vertex_shader_h)tg_assets_get_asset("shaders/shading.vert"))->shader_module;
-    deferred_renderer_h->shading_pass.fragment_shader = ((tg_fragment_shader_h)tg_assets_get_asset("shaders/shading.frag"))->shader_module;
+    deferred_renderer_h->shading_pass.vertex_shader = ((tg_vertex_shader_h)tg_assets_get_asset("shaders/shading.vert"))->vulkan_shader;
+    deferred_renderer_h->shading_pass.fragment_shader = ((tg_fragment_shader_h)tg_assets_get_asset("shaders/shading.frag"))->vulkan_shader;
     deferred_renderer_h->shading_pass.pipeline_layout = tg_vulkan_pipeline_layout_create(1, &deferred_renderer_h->shading_pass.descriptor.descriptor_set_layout, 0, TG_NULL);
 
     VkVertexInputBindingDescription vertex_input_binding_description = { 0 };
@@ -453,21 +455,10 @@ void tg_deferred_renderer_internal_init_shading_pass(tg_deferred_renderer_h defe
 
 void tg_deferred_renderer_internal_init_tone_mapping_pass(tg_deferred_renderer_h deferred_renderer_h)
 {
-    VkDescriptorSetLayoutBinding p_acquire_exposure_descriptor_set_layout_bindings[2] = { 0 };
-
-    p_acquire_exposure_descriptor_set_layout_bindings[0].binding = 0;
-    p_acquire_exposure_descriptor_set_layout_bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    p_acquire_exposure_descriptor_set_layout_bindings[0].descriptorCount = 1;
-    p_acquire_exposure_descriptor_set_layout_bindings[0].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-    p_acquire_exposure_descriptor_set_layout_bindings[0].pImmutableSamplers = TG_NULL;
-
-    p_acquire_exposure_descriptor_set_layout_bindings[1].binding = 1;
-    p_acquire_exposure_descriptor_set_layout_bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    p_acquire_exposure_descriptor_set_layout_bindings[1].descriptorCount = 1;
-    p_acquire_exposure_descriptor_set_layout_bindings[1].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-    p_acquire_exposure_descriptor_set_layout_bindings[1].pImmutableSamplers = TG_NULL;
-
-    deferred_renderer_h->tone_mapping_pass.acquire_exposure_compute_shader = tg_vulkan_compute_shader_create("shaders/acquire_exposure.comp", 2, p_acquire_exposure_descriptor_set_layout_bindings);
+    deferred_renderer_h->tone_mapping_pass.acquire_exposure_compute_shader = ((tg_compute_shader_h)tg_assets_get_asset("shaders/acquire_exposure.comp"))->vulkan_shader;
+    deferred_renderer_h->tone_mapping_pass.acquire_exposure_descriptor = tg_vulkan_descriptor_create_for_shader(&deferred_renderer_h->tone_mapping_pass.acquire_exposure_compute_shader);
+    deferred_renderer_h->tone_mapping_pass.acquire_exposure_pipeline_layout = tg_vulkan_pipeline_layout_create(1, &deferred_renderer_h->tone_mapping_pass.acquire_exposure_descriptor.descriptor_set_layout, 0, TG_NULL);
+    deferred_renderer_h->tone_mapping_pass.acquire_exposure_compute_pipeline = tg_vulkan_compute_pipeline_create(deferred_renderer_h->tone_mapping_pass.acquire_exposure_compute_shader.shader_module, deferred_renderer_h->tone_mapping_pass.acquire_exposure_pipeline_layout);
     deferred_renderer_h->tone_mapping_pass.exposure_storage_buffer = tg_vulkan_buffer_create(sizeof(f32), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
     VkAttachmentDescription attachment_description = { 0 };
@@ -523,8 +514,8 @@ void tg_deferred_renderer_internal_init_tone_mapping_pass(tg_deferred_renderer_h
     p_adapt_exposure_descriptor_set_layout_bindings[1].pImmutableSamplers = TG_NULL;
 
     deferred_renderer_h->tone_mapping_pass.descriptor = tg_vulkan_descriptor_create(2, p_adapt_exposure_descriptor_set_layout_bindings);
-    deferred_renderer_h->tone_mapping_pass.vertex_shader = ((tg_vertex_shader_h)tg_assets_get_asset("shaders/adapt_exposure.vert"))->shader_module;
-    deferred_renderer_h->tone_mapping_pass.fragment_shader = ((tg_fragment_shader_h)tg_assets_get_asset("shaders/adapt_exposure.frag"))->shader_module;
+    deferred_renderer_h->tone_mapping_pass.vertex_shader = ((tg_vertex_shader_h)tg_assets_get_asset("shaders/adapt_exposure.vert"))->vulkan_shader;
+    deferred_renderer_h->tone_mapping_pass.fragment_shader = ((tg_fragment_shader_h)tg_assets_get_asset("shaders/adapt_exposure.frag"))->vulkan_shader;
     deferred_renderer_h->tone_mapping_pass.pipeline_layout = tg_vulkan_pipeline_layout_create(1, &deferred_renderer_h->tone_mapping_pass.descriptor.descriptor_set_layout, 0, TG_NULL);
 
     VkVertexInputBindingDescription vertex_input_binding_description = { 0 };
@@ -568,8 +559,8 @@ void tg_deferred_renderer_internal_init_tone_mapping_pass(tg_deferred_renderer_h
 
     deferred_renderer_h->tone_mapping_pass.graphics_pipeline = tg_vulkan_graphics_pipeline_create(&exposure_vulkan_graphics_pipeline_create_info);
 
-    tg_vulkan_descriptor_set_update_color_image(deferred_renderer_h->tone_mapping_pass.acquire_exposure_compute_shader.descriptor.descriptor_set, &deferred_renderer_h->shading_pass.color_attachment, 0);
-    tg_vulkan_descriptor_set_update_storage_buffer(deferred_renderer_h->tone_mapping_pass.acquire_exposure_compute_shader.descriptor.descriptor_set, deferred_renderer_h->tone_mapping_pass.exposure_storage_buffer.buffer, 1);
+    tg_vulkan_descriptor_set_update_color_image(deferred_renderer_h->tone_mapping_pass.acquire_exposure_descriptor.descriptor_set, &deferred_renderer_h->shading_pass.color_attachment, 0);
+    tg_vulkan_descriptor_set_update_storage_buffer(deferred_renderer_h->tone_mapping_pass.acquire_exposure_descriptor.descriptor_set, deferred_renderer_h->tone_mapping_pass.exposure_storage_buffer.buffer, 1);
     tg_vulkan_descriptor_set_update_color_image(deferred_renderer_h->tone_mapping_pass.descriptor.descriptor_set, &deferred_renderer_h->shading_pass.color_attachment, 0);
     tg_vulkan_descriptor_set_update_storage_buffer(deferred_renderer_h->tone_mapping_pass.descriptor.descriptor_set, deferred_renderer_h->tone_mapping_pass.exposure_storage_buffer.buffer, 1);
 
@@ -585,8 +576,8 @@ void tg_deferred_renderer_internal_init_tone_mapping_pass(tg_deferred_renderer_h
             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT
         );
 
-        vkCmdBindPipeline(deferred_renderer_h->tone_mapping_pass.command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, deferred_renderer_h->tone_mapping_pass.acquire_exposure_compute_shader.compute_pipeline);
-        vkCmdBindDescriptorSets(deferred_renderer_h->tone_mapping_pass.command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, deferred_renderer_h->tone_mapping_pass.acquire_exposure_compute_shader.pipeline_layout, 0, 1, &deferred_renderer_h->tone_mapping_pass.acquire_exposure_compute_shader.descriptor.descriptor_set, 0, TG_NULL);
+        vkCmdBindPipeline(deferred_renderer_h->tone_mapping_pass.command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, deferred_renderer_h->tone_mapping_pass.acquire_exposure_compute_pipeline);
+        vkCmdBindDescriptorSets(deferred_renderer_h->tone_mapping_pass.command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, deferred_renderer_h->tone_mapping_pass.acquire_exposure_pipeline_layout, 0, 1, &deferred_renderer_h->tone_mapping_pass.acquire_exposure_descriptor.descriptor_set, 0, TG_NULL);
         vkCmdDispatch(deferred_renderer_h->tone_mapping_pass.command_buffer, 1, 1, 1);
 
         tg_vulkan_command_buffer_cmd_transition_color_image_layout(

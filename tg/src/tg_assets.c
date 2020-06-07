@@ -80,10 +80,8 @@ void tg_assets_internal_try_load(const tg_file_properties* p_properties)
 
 	char p_filename_buffer[TG_MAX_PATH] = { 0 };
 	tg_string_format(TG_MAX_PATH, p_filename_buffer, "%s%c%s", p_properties->p_relative_directory, tg_platform_get_file_separator(), p_properties->p_filename);
-	TG_DEBUG_LOG(p_filename_buffer);
 
 	const char* p_file_extension = tg_assets_internal_extract_filename_extension(p_properties->p_filename);
-	TG_DEBUG_LOG(p_file_extension);
 
 	const u32 hash = tg_assets_internal_hash(p_properties->p_filename);
 	u32 index = hash % TG_MAX_ASSET_COUNT;
@@ -105,7 +103,11 @@ void tg_assets_internal_try_load(const tg_file_properties* p_properties)
 
 	b32 loaded_successfully = TG_TRUE;
 
-	if (tg_string_equal(p_file_extension, "frag"))
+	if (tg_string_equal(p_file_extension, "comp"))
+	{
+		assets.p_handles[index] = tg_compute_shader_create(p_filename_buffer);
+	}
+	else if (tg_string_equal(p_file_extension, "frag"))
 	{
 		assets.p_handles[index] = tg_fragment_shader_create(p_filename_buffer);
 	}
@@ -161,7 +163,11 @@ void tg_assets_shutdown()
 		if (assets.p_handles[i])
 		{
 			const char* p_file_extension = tg_assets_internal_extract_filename_extension(assets.p_properties[i].p_filename);
-			if (tg_string_equal(p_file_extension, "frag"))
+			if (tg_string_equal(p_file_extension, "comp"))
+			{
+				tg_compute_shader_destroy(assets.p_handles[i]);
+			}
+			else if (tg_string_equal(p_file_extension, "frag"))
 			{
 				tg_fragment_shader_destroy(assets.p_handles[i]);
 			}
