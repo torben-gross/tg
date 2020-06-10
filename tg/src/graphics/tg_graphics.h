@@ -20,7 +20,7 @@ TG_DECLARE_HANDLE(tg_index_buffer);
 TG_DECLARE_HANDLE(tg_render_target);
 TG_DECLARE_HANDLE(tg_storage_buffer);
 TG_DECLARE_HANDLE(tg_storage_image_3d);
-TG_DECLARE_HANDLE(tg_terrain);
+TG_DECLARE_HANDLE(tg_transvoxel_terrain);
 TG_DECLARE_HANDLE(tg_texture_atlas);
 TG_DECLARE_HANDLE(tg_uniform_buffer);
 TG_DECLARE_HANDLE(tg_vertex_buffer);
@@ -155,7 +155,7 @@ void                             tg_graphics_shutdown();
 
 void                             tg_camera_begin(tg_camera_h camera_h);
 void                             tg_camera_capture(tg_camera_h camera_h, tg_entity_graphics_data_ptr_h entity_graphics_data_ptr_h);
-void                             tg_camera_capture_terrain(tg_camera_h camera_h, tg_terrain_h terrain_h);
+void                             tg_camera_capture_transvoxel_terrain(tg_camera_h camera_h, tg_transvoxel_terrain_h terrain_h);
 void                             tg_camera_clear(tg_camera_h camera_h);
 tg_camera_h                      tg_camera_create_orthographic(v3 position, f32 pitch, f32 yaw, f32 roll, f32 left, f32 right, f32 bottom, f32 top, f32 far, f32 near);
 tg_camera_h                      tg_camera_create_perspective(v3 position, f32 pitch, f32 yaw, f32 roll, f32 fov_y, f32 near, f32 far);
@@ -202,11 +202,11 @@ b32                              tg_material_is_deferred(tg_material_h material_
 b32                              tg_material_is_forward(tg_material_h material_h);
 
 tg_mesh_h                        tg_mesh_create(u32 vertex_count, const v3* p_positions, const v3* p_normals, const v2* p_uvs, const v3* p_tangents, u32 index_count, const u16* p_indices);
-tg_mesh_h                        tg_mesh_create2(u32 vertex_count, const tg_vertex* p_vertices, u32 index_count, const u16* p_indices);
+tg_mesh_h                        tg_mesh_create2(u32 vertex_count, u32 vertex_stride, const void* p_vertices, u32 index_count, const u16* p_indices);
 tg_mesh_h                        tg_mesh_create_empty(u32 vertex_capacity, u32 index_capacity);
 void                             tg_mesh_destroy(tg_mesh_h mesh_h);
 void                             tg_mesh_update(tg_mesh_h mesh_h, u32 vertex_count, const v3* p_positions, const v3* p_normals, const v2* p_uvs, const v3* p_tangents, u32 index_count, const u16* p_indices);
-void                             tg_mesh_update2(tg_mesh_h mesh_h, u32 vertex_count, const tg_vertex* p_vertices, u32 index_count, const u16* p_indices); // TODO: this needs to set a flag or a time, so that the camera knows, that it needs a reset
+void                             tg_mesh_update2(tg_mesh_h mesh_h, u32 vertex_count, u32 vertex_stride, const void* p_vertices, u32 index_count, const u16* p_indices); // TODO: this needs to set a flag or a time, so that the camera knows, that it needs a reset
 
 void                             tg_storage_image_3d_copy_to_storage_buffer(tg_storage_image_3d_h storage_image_3d_h, tg_storage_buffer_h storage_buffer_h);
 void                             tg_storage_image_3d_clear(tg_storage_image_3d_h storage_image_3d_h);

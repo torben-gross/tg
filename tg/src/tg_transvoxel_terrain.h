@@ -1,0 +1,13 @@
+#ifndef TG_TRANSVOXEL_TERRAIN_H
+#define TG_TRANSVOXEL_TERRAIN_H
+
+#include "tg_common.h"
+#include "graphics/tg_graphics.h"
+
+TG_DECLARE_HANDLE(tg_transvoxel_terrain);
+
+tg_transvoxel_terrain_h tg_transvoxel_terrain_create(tg_camera_h camera_h);
+void tg_transvoxel_terrain_destroy(tg_transvoxel_terrain_h transvoxel_terrain_h);
+void tg_transvoxel_terrain_update(tg_transvoxel_terrain_h transvoxel_terrain_h);
+
+#endif

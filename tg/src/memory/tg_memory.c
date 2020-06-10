@@ -162,4 +162,7 @@ void tg_memory_stack_free(u64 size)
 	TG_ASSERT(size && memory_stack.exhausted_size >= size);
 
 	memory_stack.exhausted_size -= size;
+#ifdef TG_DEBUG
+	tg_memory_nullify(size, &memory_stack.p_memory[memory_stack.exhausted_size]);
+#endif
 }

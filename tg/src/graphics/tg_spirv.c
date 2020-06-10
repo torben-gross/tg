@@ -634,10 +634,6 @@ void tg_spirv_internal_fill_input_resource(u32 word_count, const u32* p_words, u
                 {
                     p_resource->location = p_words[processed_word_count + 3];
                 } break;
-                case TG_SPIRV_DECORATION_OFFSET:
-                {
-                    p_resource->offset = p_words[processed_word_count + 3];
-                } break;
                 }
             }
         } break;
@@ -810,4 +806,27 @@ void tg_spirv_fill_layout(u32 word_count, const u32* p_words, tg_spirv_layout* p
 
         processed_word_count += op_word_count;
     }
+
+    u32 offset = 0;
+    for (u8 i = 0; i < p_layout->input_resource_count; i++)
+    {
+        p_layout->p_input_resources[i].offset = offset;
+        switch (p_layout->p_input_resources[i].format)
+        {
+        case TG_SPIRV_INPUT_FORMAT_R32_SFLOAT:          offset += 4; break;
+        case TG_SPIRV_INPUT_FORMAT_R32_SINT:            offset += 4; break;
+        case TG_SPIRV_INPUT_FORMAT_R32_UINT:            offset += 4; break;
+        case TG_SPIRV_INPUT_FORMAT_R32G32_SFLOAT:       offset += 8; break;
+        case TG_SPIRV_INPUT_FORMAT_R32G32_SINT:         offset += 8; break;
+        case TG_SPIRV_INPUT_FORMAT_R32G32_UINT:         offset += 8; break;
+        case TG_SPIRV_INPUT_FORMAT_R32G32B32_SFLOAT:    offset += 12; break;
+        case TG_SPIRV_INPUT_FORMAT_R32G32B32_SINT:      offset += 12; break;
+        case TG_SPIRV_INPUT_FORMAT_R32G32B32_UINT:      offset += 12; break;
+        case TG_SPIRV_INPUT_FORMAT_R32G32B32A32_SFLOAT: offset += 16; break;
+        case TG_SPIRV_INPUT_FORMAT_R32G32B32A32_SINT:   offset += 16; break;
+        case TG_SPIRV_INPUT_FORMAT_R32G32B32A32_UINT:   offset += 16; break;
+        default: TG_INVALID_CODEPATH(); break;
+        }
+    }
+    p_layout->vertex_stride = offset;
 }

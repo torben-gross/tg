@@ -1,5 +1,7 @@
-#include "tg_terrain.h"
-#include "graphics/vulkan/tg_vulkan_terrain.h"
+#if 0
+
+#include "tg_flat_terrain.h"
+#include "graphics/vulkan/tg_vulkan_flat_terrain.h"
 
 #ifdef TG_VULKAN
 
@@ -304,10 +306,10 @@ void tg_terrain_internal_generate_chunk(tg_terrain_h terrain_h, i32 x, i32 y, i3
 	if (p_terrain_chunk->p_transvoxel_chunk->triangle_count)
 	{
 		const u32 vertex_count = 3 * p_terrain_chunk->p_transvoxel_chunk->triangle_count;
-		const tg_vertex* p_vertices = (tg_vertex*)p_terrain_chunk->p_transvoxel_chunk->p_triangles;
+		const tg_transvoxel_vertex* p_vertices = (tg_transvoxel_vertex*)p_terrain_chunk->p_transvoxel_chunk->p_triangles;
 		if (p_terrain_chunk->entity.graphics_data_ptr_h->p_lod_meshes_h[0])
 		{
-			tg_mesh_update2(p_terrain_chunk->entity.graphics_data_ptr_h->p_lod_meshes_h[0], vertex_count, p_vertices, 0, TG_NULL);
+			tg_mesh_update2(p_terrain_chunk->entity.graphics_data_ptr_h->p_lod_meshes_h[0], vertex_count, sizeof(tg_transvoxel_vertex), p_vertices, 0, TG_NULL);
 			tg_entity_graphics_data_ptr_set_mesh(p_terrain_chunk->entity.graphics_data_ptr_h, p_terrain_chunk->entity.graphics_data_ptr_h->p_lod_meshes_h[0], 0);
 		}
 		else
@@ -325,8 +327,8 @@ tg_terrain_h tg_terrain_create(tg_camera_h focal_point_camera_h)
 
 	terrain_h->focal_point = focal_point_camera_h;
 	terrain_h->last_focal_point_position = tg_camera_get_position(focal_point_camera_h);
-	terrain_h->vertex_shader_h = tg_vertex_shader_get("shaders/deferred.vert");
-	terrain_h->fragment_shader_h = tg_fragment_shader_get("shaders/deferred_terrain.frag");
+	terrain_h->vertex_shader_h = tg_vertex_shader_get("shaders/deferred_flat_terrain.vert");
+	terrain_h->fragment_shader_h = tg_fragment_shader_get("shaders/deferred_flat_terrain.frag");
 	terrain_h->material_h = tg_material_create_deferred(terrain_h->vertex_shader_h, terrain_h->fragment_shader_h, 0, TG_NULL);
 
 	tg_memory_nullify(TG_TERRAIN_MAX_CHUNK_COUNT * sizeof(*terrain_h->pp_chunks_hashmap), terrain_h->pp_chunks_hashmap);
@@ -424,7 +426,7 @@ tg_terrain_h tg_terrain_create(tg_camera_h focal_point_camera_h)
 				tg_mesh_h mesh_h = tg_mesh_create_empty(p_terrain_chunk->p_transvoxel_chunk->triangle_count, 0);
 				if (p_terrain_chunk->p_transvoxel_chunk->triangle_count)
 				{
-					tg_mesh_update2(mesh_h, 3 * p_terrain_chunk->p_transvoxel_chunk->triangle_count, (tg_vertex*)p_terrain_chunk->p_transvoxel_chunk->p_triangles, 0, TG_NULL);
+					tg_mesh_update2(mesh_h, 3 * p_terrain_chunk->p_transvoxel_chunk->triangle_count, sizeof(tg_transvoxel_vertex), p_terrain_chunk->p_transvoxel_chunk->p_triangles, 0, TG_NULL);
 				}
 				tg_entity_graphics_data_ptr_set_mesh(p_terrain_chunk->entity.graphics_data_ptr_h, mesh_h, 0);
 			}
@@ -559,7 +561,8 @@ void tg_terrain_update(tg_terrain_h terrain_h)
 							tg_mesh_update2(
 								p_terrain_chunk->entity.graphics_data_ptr_h->p_lod_meshes_h[0],
 								3 * p_terrain_chunk->p_transvoxel_chunk->triangle_count,
-								(tg_vertex*)p_terrain_chunk->p_transvoxel_chunk->p_triangles,
+								sizeof(tg_transvoxel_vertex),
+								p_terrain_chunk->p_transvoxel_chunk->p_triangles,
 								0, TG_NULL
 							);
 							tg_entity_graphics_data_ptr_set_mesh(p_terrain_chunk->entity.graphics_data_ptr_h, p_terrain_chunk->entity.graphics_data_ptr_h->p_lod_meshes_h[0], 0);
@@ -597,5 +600,7 @@ void tg_terrain_destroy(tg_terrain_h terrain_h)
 
 	TG_MEMORY_FREE(terrain_h);
 }
+
+#endif
 
 #endif

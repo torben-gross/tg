@@ -23,8 +23,8 @@
 
 typedef struct tg_regular_cell_data
 {
-	u8    geometry_counts;    // High nibble is vertex count, low nibble is triangle count.
-	u8    vertex_indices[15]; // Groups of 3 indexes giving the triangulation.
+	u8    geometry_counts;      // High nibble is vertex count, low nibble is triangle count.
+	u8    p_vertex_indices[15]; // Groups of 3 indexes giving the triangulation.
 } tg_regular_cell_data;
 
 
@@ -35,8 +35,8 @@ typedef struct tg_regular_cell_data
 
 typedef struct tg_transition_cell_data
 {
-	i32    geometry_counts;    // High nibble is vertex count, low nibble is triangle count.
-	u8     vertex_indices[36]; // Groups of 3 indexes giving the triangulation.
+	u8    geometry_counts;      // High nibble is vertex count, low nibble is triangle count.
+	u8    p_vertex_indices[36]; // Groups of 3 indexes giving the triangulation.
 } tg_transition_cell_data;
 
 

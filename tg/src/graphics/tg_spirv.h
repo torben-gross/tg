@@ -64,6 +64,7 @@ typedef struct tg_spirv_layout
     char                        p_entry_point_name[TG_SPIRV_MAX_NAME];
     u8                          input_resource_count;
     u8                          global_resource_count;
+    u32                         vertex_stride;
     tg_spirv_input_resource     p_input_resources[TG_SPIRV_MAX_INPUTS];
     tg_spirv_global_resource    p_global_resources[TG_SPIRV_MAX_GLOBALS];
 } tg_spirv_layout;

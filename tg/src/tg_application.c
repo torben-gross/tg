@@ -7,7 +7,7 @@
 #include "tg_entity.h"
 #include "tg_input.h"
 #include "tg_marching_cubes.h"
-#include "tg_terrain.h"
+#include "tg_transvoxel_terrain.h"
 #include "util/tg_list.h"
 #include "util/tg_qsort.h"
 #include "util/tg_rectangle_packer.h"
@@ -73,7 +73,7 @@ typedef struct tg_test_deferred
     tg_material_h                  water_material_h;
 
     tg_entity                      transvoxel_entities[9];
-    tg_terrain_h                   terrain_h;
+    tg_transvoxel_terrain_h        terrain_h;
 } tg_test_deferred;
 
 
@@ -187,7 +187,7 @@ void tg_application_internal_game_3d_create()
 
 
 
-    test_deferred.terrain_h = tg_terrain_create(test_deferred.camera_info.camera_h);
+    test_deferred.terrain_h = tg_transvoxel_terrain_create(test_deferred.camera_info.camera_h);
     
     /*
     TODO:
@@ -311,9 +311,10 @@ void tg_application_internal_game_3d_update_and_render(f32 delta_ms)
         tg_camera_set_perspective_projection(test_deferred.secondary_camera_h, test_deferred.camera_info.fov_y_in_radians, test_deferred.camera_info.near, test_deferred.camera_info.far);
     }
 
-    tg_terrain_update(test_deferred.terrain_h);
+    tg_transvoxel_terrain_update(test_deferred.terrain_h);
     tg_camera_begin(test_deferred.secondary_camera_h);
-    tg_camera_capture_terrain(test_deferred.secondary_camera_h, test_deferred.terrain_h);
+    //tg_camera_capture_terrain(test_deferred.secondary_camera_h, test_deferred.terrain_h);
+    tg_camera_capture_transvoxel_terrain(test_deferred.secondary_camera_h, test_deferred.terrain_h);
     tg_entity** p_entities = TG_LIST_POINTER_TO(test_deferred.entities, 0);
     for (u32 i = 0; i < test_deferred.entities.count; i++)
     {
@@ -322,7 +323,8 @@ void tg_application_internal_game_3d_update_and_render(f32 delta_ms)
     tg_camera_end(test_deferred.secondary_camera_h);
 
     tg_camera_begin(test_deferred.camera_info.camera_h);
-    tg_camera_capture_terrain(test_deferred.camera_info.camera_h, test_deferred.terrain_h);
+    //tg_camera_capture_terrain(test_deferred.camera_info.camera_h, test_deferred.terrain_h);
+    tg_camera_capture_transvoxel_terrain(test_deferred.camera_info.camera_h, test_deferred.terrain_h);
     p_entities = TG_LIST_POINTER_TO(test_deferred.entities, 0);
     for (u32 i = 0; i < test_deferred.entities.count; i++)
     {
@@ -337,7 +339,7 @@ void tg_application_internal_game_3d_update_and_render(f32 delta_ms)
 
 void tg_application_internal_game_3d_destroy()
 {
-    tg_terrain_destroy(test_deferred.terrain_h);
+    tg_transvoxel_terrain_destroy(test_deferred.terrain_h);
 
     tg_texture_atlas_destroy(test_deferred.texture_atlas_h);
     for (u32 i = 0; i < 13; i++)

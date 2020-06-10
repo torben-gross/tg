@@ -1,4 +1,6 @@
-#include "tg_transvoxel.h"
+#if 0
+
+#include "tg_flat_transvoxel.h"
 #include "tg_transvoxel_lookup_tables.h"
 
 #include "memory/tg_memory.h"
@@ -118,7 +120,7 @@ void tg_transvoxel_internal_scale_vertex(
 	u8 lod, u8 transition_faces,
 	u8 x_start, u8 y_start, u8 z_start,
 	u8 x_end, u8 y_end, u8 z_end,
-	tg_vertex* p_vertex)
+	tg_transvoxel_vertex* p_vertex)
 {
 	const u32 cell_index = x_end * y_end * cz + x_end * cy + cx;
 	const u8 cell_scale = 1 << lod;
@@ -243,9 +245,9 @@ void tg_transvoxel_internal_fill_regular_cell(tg_transvoxel_regular_cell* p_cell
 
 		for (u8 i = 0; i < triangle_count; i++)
 		{
-			const u8 i0 = p_cell_data->vertex_indices[3 * i + 0];
-			const u8 i1 = p_cell_data->vertex_indices[3 * i + 1];
-			const u8 i2 = p_cell_data->vertex_indices[3 * i + 2];
+			const u8 i0 = p_cell_data->p_vertex_indices[3 * i + 0];
+			const u8 i1 = p_cell_data->p_vertex_indices[3 * i + 1];
+			const u8 i2 = p_cell_data->p_vertex_indices[3 * i + 2];
 
 			const u16 e0 = p_vertex_data[i0];
 			const u16 e1 = p_vertex_data[i1];
@@ -472,9 +474,9 @@ tg_transvoxel_transition_cell tg_transvoxel_internal_create_transition_cell(u8 t
 
 		for (u32 i = 0; i < triangle_count; i++)
 		{
-			const u8 i0 = p_cell_data->vertex_indices[3 * i + 0];
-			const u8 i1 = p_cell_data->vertex_indices[3 * i + 1];
-			const u8 i2 = p_cell_data->vertex_indices[3 * i + 2];
+			const u8 i0 = p_cell_data->p_vertex_indices[3 * i + 0];
+			const u8 i1 = p_cell_data->p_vertex_indices[3 * i + 1];
+			const u8 i2 = p_cell_data->p_vertex_indices[3 * i + 2];
 
 			const u16 e0 = p_vertex_data[i0];
 			const u16 e1 = p_vertex_data[i1];
@@ -802,3 +804,5 @@ void tg_transvoxel_fill_transitions(tg_transvoxel_connecting_chunks* p_connectin
 	}
 
 }
+
+#endif

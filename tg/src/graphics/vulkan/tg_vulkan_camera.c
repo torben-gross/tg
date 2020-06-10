@@ -4,7 +4,7 @@
 
 #ifdef TG_VULKAN
 
-#include "graphics/vulkan/tg_vulkan_terrain.h"
+#include "graphics/vulkan/tg_vulkan_transvoxel_terrain.h"
 #include "memory/tg_memory.h"
 #include "platform/tg_platform.h"
 #include "tg_assets.h"
@@ -386,37 +386,22 @@ void tg_camera_internal_register_entity(tg_camera_h camera_h, tg_vulkan_camera_i
         p_vulkan_camera_info->pipeline_layout = tg_vulkan_pipeline_layout_create(1, &p_vulkan_camera_info->descriptor.descriptor_set_layout, 0, TG_NULL);
     }
 
+    const tg_spirv_layout* p_layout = &entity_graphics_data_ptr_h->material_h->vertex_shader_h->vulkan_shader.layout;
+
     VkVertexInputBindingDescription vertex_input_binding_description = { 0 };
     vertex_input_binding_description.binding = 0;
-    vertex_input_binding_description.stride = sizeof(tg_vertex);
+    vertex_input_binding_description.stride = p_layout->vertex_stride;
     vertex_input_binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-    VkVertexInputAttributeDescription p_vertex_input_attribute_descriptions[5] = { 0 };
-
-    p_vertex_input_attribute_descriptions[0].binding = 0;
-    p_vertex_input_attribute_descriptions[0].location = 0;
-    p_vertex_input_attribute_descriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-    p_vertex_input_attribute_descriptions[0].offset = offsetof(tg_vertex, position);
-
-    p_vertex_input_attribute_descriptions[1].binding = 0;
-    p_vertex_input_attribute_descriptions[1].location = 1;
-    p_vertex_input_attribute_descriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-    p_vertex_input_attribute_descriptions[1].offset = offsetof(tg_vertex, normal);
-
-    p_vertex_input_attribute_descriptions[2].binding = 0;
-    p_vertex_input_attribute_descriptions[2].location = 2;
-    p_vertex_input_attribute_descriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
-    p_vertex_input_attribute_descriptions[2].offset = offsetof(tg_vertex, uv);
-
-    p_vertex_input_attribute_descriptions[3].binding = 0;
-    p_vertex_input_attribute_descriptions[3].location = 3;
-    p_vertex_input_attribute_descriptions[3].format = VK_FORMAT_R32G32B32_SFLOAT;
-    p_vertex_input_attribute_descriptions[3].offset = offsetof(tg_vertex, tangent);
-
-    p_vertex_input_attribute_descriptions[4].binding = 0;
-    p_vertex_input_attribute_descriptions[4].location = 4;
-    p_vertex_input_attribute_descriptions[4].format = VK_FORMAT_R32G32B32_SFLOAT;
-    p_vertex_input_attribute_descriptions[4].offset = offsetof(tg_vertex, bitangent);
+    const u64 vertex_input_attribute_descriptions_size = (u64)p_layout->input_resource_count * sizeof(VkVertexInputAttributeDescription);
+    VkVertexInputAttributeDescription* p_vertex_input_attribute_descriptions = TG_MEMORY_STACK_ALLOC(vertex_input_attribute_descriptions_size);
+    for (u8 i = 0; i < p_layout->input_resource_count; i++)
+    {
+        p_vertex_input_attribute_descriptions[i].binding = 0;
+        p_vertex_input_attribute_descriptions[i].location = p_layout->p_input_resources[i].location;
+        p_vertex_input_attribute_descriptions[i].format = p_layout->p_input_resources[i].format;
+        p_vertex_input_attribute_descriptions[i].offset = p_layout->p_input_resources[i].offset;
+    }
 
     VkPipelineVertexInputStateCreateInfo pipeline_vertex_input_state_create_info = { 0 };
     pipeline_vertex_input_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -424,7 +409,7 @@ void tg_camera_internal_register_entity(tg_camera_h camera_h, tg_vulkan_camera_i
     pipeline_vertex_input_state_create_info.flags = 0;
     pipeline_vertex_input_state_create_info.vertexBindingDescriptionCount = 1;
     pipeline_vertex_input_state_create_info.pVertexBindingDescriptions = &vertex_input_binding_description;
-    pipeline_vertex_input_state_create_info.vertexAttributeDescriptionCount = 5;
+    pipeline_vertex_input_state_create_info.vertexAttributeDescriptionCount = (u32)p_layout->input_resource_count;
     pipeline_vertex_input_state_create_info.pVertexAttributeDescriptions = p_vertex_input_attribute_descriptions;
 
     tg_vulkan_graphics_pipeline_create_info vulkan_graphics_pipeline_create_info = { 0 };
@@ -464,6 +449,7 @@ void tg_camera_internal_register_entity(tg_camera_h camera_h, tg_vulkan_camera_i
     }
 
     p_vulkan_camera_info->graphics_pipeline = tg_vulkan_graphics_pipeline_create(&vulkan_graphics_pipeline_create_info);
+    TG_MEMORY_STACK_FREE(vertex_input_attribute_descriptions_size);
 
     VkDescriptorBufferInfo model_descriptor_buffer_info = { 0 };
     model_descriptor_buffer_info.buffer = entity_graphics_data_ptr_h->model_ubo.buffer;
@@ -615,17 +601,11 @@ void tg_camera_capture(tg_camera_h camera_h, tg_entity_graphics_data_ptr_h entit
     camera_h->captured_entities[camera_h->captured_entity_count++] = entity_graphics_data_ptr_h;
 }
 
-void tg_camera_capture_terrain(tg_camera_h camera_h, tg_terrain_h terrain_h)
+void tg_camera_capture_transvoxel_terrain(tg_camera_h camera_h, tg_transvoxel_terrain_h terrain_h)
 {
     TG_ASSERT(camera_h && terrain_h);
 
-    for (u32 i = 0; i < TG_TERRAIN_HASHMAP_COUNT; i++) // TODO: do not run through entire hashmap, but rather search in area around camera for chunks!
-    {
-        if (terrain_h->pp_chunks_hashmap[i] && terrain_h->pp_chunks_hashmap[i]->p_transvoxel_chunk->triangle_count)
-        {
-            tg_camera_capture(camera_h, terrain_h->pp_chunks_hashmap[i]->entity.graphics_data_ptr_h);
-        }
-    }
+    tg_camera_capture(camera_h, terrain_h->entity.graphics_data_ptr_h);
 }
 
 void tg_camera_clear(tg_camera_h camera_h) // TODO: should this be combined with begin?

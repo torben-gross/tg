@@ -1,3 +1,5 @@
+#if 0
+
 #ifndef TG_GRAPHICS_VULKAN_TERRAIN_H
 #define TG_GRAPHICS_VULKAN_TERRAIN_H
 
@@ -7,7 +9,7 @@
 
 #include "math/tg_math.h"
 #include "tg_entity.h"
-#include "tg_transvoxel.h"
+#include "tg_flat_transvoxel.h"
 
 
 
@@ -50,6 +52,8 @@ typedef struct tg_terrain
 	u32                     chunk_count;
 	tg_terrain_chunk*       pp_chunks_hashmap[TG_TERRAIN_HASHMAP_COUNT];
 } tg_terrain;
+
+#endif
 
 #endif
 

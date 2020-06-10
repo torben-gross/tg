@@ -1,3 +1,5 @@
+#if 0
+
 #ifndef TG_TRANSVOXEL_H
 #define TG_TRANSVOXEL_H
 
@@ -53,9 +55,15 @@ typedef struct tg_transvoxel_isolevels
 	i8    p_data[TG_TRANSVOXEL_VERTICES * TG_TRANSVOXEL_VERTICES * TG_TRANSVOXEL_VERTICES];
 } tg_transvoxel_isolevels;
 
+typedef struct tg_transvoxel_vertex
+{
+	v3    position;
+	v3    normal;
+} tg_transvoxel_vertex;
+
 typedef struct tg_transvoxel_triangle
 {
-	tg_vertex    p_vertices[3];
+	tg_transvoxel_vertex    p_vertices[3];
 } tg_transvoxel_triangle;
 
 typedef struct tg_transvoxel_regular_cell
@@ -141,5 +149,7 @@ typedef struct tg_transvoxel_connecting_chunks
 
 void     tg_transvoxel_fill_chunk(tg_transvoxel_chunk* p_chunk);
 void     tg_transvoxel_fill_transitions(tg_transvoxel_connecting_chunks* p_connecting_chunks);
+
+#endif
 
 #endif
