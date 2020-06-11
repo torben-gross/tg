@@ -76,6 +76,14 @@ void tg_memory_nullify(u64 size, void* p_memory)
 	}
 }
 
+void tg_memory_set_all_bits(u64 size, void* p_memory)
+{
+	for (u64 i = 0; i < size; i++)
+	{
+		((u8*)p_memory)[i] = 0xff;
+	}
+}
+
 #ifdef TG_DEBUG
 
 void* tg_memory_alloc_impl(u64 size, const char* p_filename, u32 line)

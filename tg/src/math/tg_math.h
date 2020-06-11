@@ -15,10 +15,6 @@ TODO: Support other clipping setups via macros!
 
 #include "tg_common.h"
 
-#ifdef TG_CPU_x64
-#include <immintrin.h>
-#endif
-
 #define TGM_PI                     3.14159265358979323846
 #define TGM_TO_DEGREES(radians)    (radians * (360.0f / ((f32)TGM_PI * 2.0f)))
 #define TGM_TO_RADIANS(degrees)    (degrees * (((f32)TGM_PI * 2.0f) / 360.0f))
@@ -36,11 +32,6 @@ typedef struct v2
 			f32    y;
 		};
 		f32        p_data[2];
-
-#ifdef TG_CPU_x64
-		__m64      simd_m64;
-#endif
-
 	};
 } v2;
 
@@ -55,10 +46,6 @@ typedef struct v3
 			f32    z;
 		};
 		f32        p_data[3];
-
-#ifdef TG_CPU_x64 // TODO: ?
-#endif
-
 	};
 } v3;
 
@@ -88,12 +75,6 @@ typedef struct v4
 			f32    w;
 		};
 		f32        p_data[4];
-
-#ifdef TG_CPU_x64
-		__m64      simd_m64[2];
-		__m128     simd_m128;
-#endif
-
 	};
 } v4;
 
@@ -116,12 +97,6 @@ typedef struct m2
 			f32    m11;
 		};
 		f32        p_data[4];
-
-#ifdef TG_CPU_x64
-		__m64      simd_m64[2];
-		__m128     simd_m128;
-#endif
-
 	};
 } m2;
 
@@ -193,14 +168,6 @@ typedef struct m4
 			f32    m33;
 		};
 		f32        p_data[16];
-
-#ifdef TG_CPU_x64
-		__m64      simd_m64[8];
-		__m128     simd_m128[4];
-		__m256     simd_m256[2];
-		__m512     simd_m512;
-#endif
-
 	};
 } m4;
 
@@ -332,11 +299,18 @@ v3     tgm_v3_subf(v3 v, f32 f);
 v4     tgm_v3_to_v4(v3 v, f32 w);
 
 v3i    tgm_v3i_abs(v3i v);
+v3i    tgm_v3i_add(v3i v0, v3i v1);
+v3i    tgm_v3i_addi(v3i v0, i32 i);
+v3i    tgm_v3i_div(v3i v0, v3i v1);
+v3i    tgm_v3i_divi(v3i v0, i32 i);
 b32    tgm_v3i_equal(v3i v0, v3i v1);
 f32    tgm_v3i_mag(v3i v);
 i32    tgm_v3i_magsqr(v3i v);
+v3i    tgm_v3i_mul(v3i v0, v3i v1);
+v3i    tgm_v3i_muli(v3i v0, i32 i);
 v3i    tgm_v3i_sub(v3i v0, v3i v1);
 v3i    tgm_v3i_subi(v3i v, i32 i);
+v3     tgm_v3i_to_v3(v3i v);
 
 v4     tgm_v4_add(v4 v0, v4 v1);
 v4     tgm_v4_addf(v4 v, f32 f);

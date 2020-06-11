@@ -6,7 +6,6 @@
 
 
 #define TG_SPIRV_MAGIC_NUMBER    0x07230203
-#define TG_SPIRV_MIN_CAPACITY    4
 
 
 

@@ -628,6 +628,8 @@ v3 tgm_v3_cross(v3 v0, v3 v1)
 
 v3 tgm_v3_div(v3 v0, v3 v1)
 {
+	TG_ASSERT(v1.x && v1.y && v1.z);
+
 	v3 result = { 0 };
 	result.x = v0.x / v1.x;
 	result.y = v0.y / v1.y;
@@ -637,6 +639,8 @@ v3 tgm_v3_div(v3 v0, v3 v1)
 
 v3 tgm_v3_divf(v3 v, f32 f)
 {
+	TG_ASSERT(f);
+
 	v3 result = { 0 };
 	result.x = v.x / f;
 	result.y = v.y / f;
@@ -780,6 +784,46 @@ v3i tgm_v3i_abs(v3i v)
 	return result;
 }
 
+v3i tgm_v3i_add(v3i v0, v3i v1)
+{
+	v3i result = { 0 };
+	result.x = v0.x + v1.x;
+	result.y = v0.y + v1.y;
+	result.z = v0.z + v1.z;
+	return result;
+}
+
+v3i tgm_v3i_addi(v3i v0, i32 i)
+{
+	v3i result = { 0 };
+	result.x = v0.x + i;
+	result.y = v0.y + i;
+	result.z = v0.z + i;
+	return result;
+}
+
+v3i tgm_v3i_div(v3i v0, v3i v1)
+{
+	TG_ASSERT(v1.x && v1.y && v1.z);
+
+	v3i result = { 0 };
+	result.x = v0.x / v1.x;
+	result.y = v0.y / v1.y;
+	result.z = v0.z / v1.z;
+	return result;
+}
+
+v3i tgm_v3i_divi(v3i v0, i32 i)
+{
+	TG_ASSERT(i != 0);
+
+	v3i result = { 0 };
+	result.x = v0.x / i;
+	result.y = v0.y / i;
+	result.z = v0.z / i;
+	return result;
+}
+
 b32 tgm_v3i_equal(v3i v0, v3i v1)
 {
 	const b32 result = v0.x == v1.x && v0.y == v1.y && v0.z == v1.z;
@@ -798,6 +842,24 @@ i32 tgm_v3i_magsqr(v3i v)
 	return result;
 }
 
+v3i tgm_v3i_mul(v3i v0, v3i v1)
+{
+	v3i result = { 0 };
+	result.x = v0.x * v1.x;
+	result.y = v0.y * v1.y;
+	result.z = v0.z * v1.z;
+	return result;
+}
+
+v3i tgm_v3i_muli(v3i v0, i32 i)
+{
+	v3i result = { 0 };
+	result.x = v0.x * i;
+	result.y = v0.y * i;
+	result.z = v0.z * i;
+	return result;
+}
+
 v3i tgm_v3i_sub(v3i v0, v3i v1)
 {
 	v3i result = { 0 };
@@ -813,6 +875,15 @@ v3i tgm_v3i_subi(v3i v, i32 i)
 	result.x = v.x - i;
 	result.y = v.y - i;
 	result.z = v.z - i;
+	return result;
+}
+
+v3 tgm_v3i_to_v3(v3i v)
+{
+	v3 result = { 0 };
+	result.x = (f32)v.x;
+	result.y = (f32)v.y;
+	result.z = (f32)v.z;
 	return result;
 }
 
@@ -840,6 +911,8 @@ v4 tgm_v4_addf(v4 v, f32 f)
 
 v4 tgm_v4_div(v4 v0, v4 v1)
 {
+	TG_ASSERT(v1.x && v1.y && v1.z && v1.w);
+
 	v4 result = { 0 };
 	result.x = v0.x / v1.x;
 	result.y = v0.y / v1.y;
@@ -850,6 +923,8 @@ v4 tgm_v4_div(v4 v0, v4 v1)
 
 v4 tgm_v4_divf(v4 v, f32 f)
 {
+	TG_ASSERT(f);
+
 	v4 result = { 0 };
 	result.x = v.x / f;
 	result.y = v.y / f;

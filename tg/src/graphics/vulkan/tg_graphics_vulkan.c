@@ -1578,8 +1578,8 @@ tg_vulkan_shader tg_vulkan_shader_create(const char* p_filename)
     char* p_content = TG_NULL;
     tg_platform_read_file(p_filename_buffer, &size, &p_content);
 
-    const u32* p_words = (u32*)p_content;
     const u32 word_count = size / 4;
+    const u32* p_words = (u32*)p_content;
 
     tg_spirv_fill_layout(word_count, p_words, &vulkan_shader.layout);
 
