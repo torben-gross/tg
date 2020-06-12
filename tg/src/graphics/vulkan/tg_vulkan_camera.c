@@ -605,7 +605,7 @@ void tg_camera_capture_transvoxel_terrain(tg_camera_h camera_h, tg_transvoxel_te
 {
     TG_ASSERT(camera_h && terrain_h);
 
-    tg_camera_capture(camera_h, terrain_h->entity.graphics_data_ptr_h);
+    tg_camera_capture(camera_h, terrain_h->octree.root.node.entity.graphics_data_ptr_h);
 }
 
 void tg_camera_clear(tg_camera_h camera_h) // TODO: should this be combined with begin?

@@ -29,7 +29,7 @@
 
 #ifdef TG_DEBUG
 #define TG_ASSERT(x)                    if (!(x)) *(int*)0 = 0
-#define TG_INVALID_CODEPATH()          *(int*)0 = 0
+#define TG_INVALID_CODEPATH()           *(int*)0 = 0
 #else
 #define TG_ASSERT(x)
 #define TG_INVALID_CODEPATH()

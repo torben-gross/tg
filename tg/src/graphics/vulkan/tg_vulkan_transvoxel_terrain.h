@@ -28,9 +28,10 @@
 #define TG_TRANSVOXEL_MAX_TRIANGLES_PER_BLOCK               (5 * TG_TRANSVOXEL_CELLS_PER_BLOCK)
 #define TG_TRANSVOXEL_MAX_VERTICES_PER_BLOCK                (15 * TG_TRANSVOXEL_CELLS_PER_BLOCK)
 
-#define TG_TRANSVOXEL_VOXEL_MAP_AT(voxel_map, x, y, z)      ((voxel_map)[TG_TRANSVOXEL_VOXELS_PER_BLOCK_SIDE_WITH_PADDING * TG_TRANSVOXEL_VOXELS_PER_BLOCK_SIDE_WITH_PADDING * (z) + TG_TRANSVOXEL_VOXELS_PER_BLOCK_SIDE_WITH_PADDING * (y) + (x)])
+#define TG_TRANSVOXEL_VOXEL_MAP_VOXELS_PER_SIDE             ((TG_TRANSVOXEL_CELLS_PER_BLOCK_SIDE * TG_TRANSVOXEL_CELLS_PER_BLOCK_SIDE) + 1 + (2 * TG_TRANSVOXEL_PADDING_PER_SIDE))
+#define TG_TRANSVOXEL_VOXEL_MAP_VOXELS                      (TG_TRANSVOXEL_VOXEL_MAP_VOXELS_PER_SIDE * TG_TRANSVOXEL_VOXEL_MAP_VOXELS_PER_SIDE * TG_TRANSVOXEL_VOXEL_MAP_VOXELS_PER_SIDE)
+#define TG_TRANSVOXEL_VOXEL_MAP_AT(voxel_map, x, y, z)      ((voxel_map)[TG_TRANSVOXEL_VOXEL_MAP_VOXELS_PER_SIDE * TG_TRANSVOXEL_VOXEL_MAP_VOXELS_PER_SIDE * (z) + TG_TRANSVOXEL_VOXEL_MAP_VOXELS_PER_SIDE * (y) + (x)])
 #define TG_TRANSVOXEL_VOXEL_MAP_AT_V3(voxel_map, v)         TG_TRANSVOXEL_VOXEL_MAP_AT(voxel_map, (v).x, (v).y, (v).z)
-#define TG_TRANSVOXEL_VOXEL_MAPS_PER_OCTREE                 (TG_TRANSVOXEL_CELLS_PER_BLOCK_SIDE * TG_TRANSVOXEL_CELLS_PER_BLOCK_SIDE * TG_TRANSVOXEL_CELLS_PER_BLOCK_SIDE)
 
 #define TG_TRANSVOXEL_LOD_COUNT                             2//5
 
@@ -43,8 +44,10 @@ typedef struct tg_transvoxel_vertex
 	v4    extra;
 } tg_transvoxel_vertex;
 
+// TODO: i want all of this to be an entity and have it multiple meshes
 typedef struct tg_transvoxel_block
 {
+	tg_entity                entity;
 	u16                      vertex_count;
 	u16                      index_count;
 	tg_transvoxel_vertex*    p_vertices;
@@ -53,21 +56,24 @@ typedef struct tg_transvoxel_block
 
 
 
-typedef struct tg_transvoxel_octree
+typedef struct tg_transvoxel_node
 {
-	void*                   pp_compressed_voxel_maps[TG_TRANSVOXEL_VOXEL_MAPS_PER_OCTREE];
-	v3i                     coordinates;
 	tg_transvoxel_block     node;
 	tg_transvoxel_block*    pp_children[8];
-	u8                      current_lod;
+} tg_transvoxel_node;
+
+typedef struct tg_transvoxel_octree
+{
+	void*                 p_compressed_voxel_map;
+	v3i                   min_coordinates;
+	tg_transvoxel_node    root;
 } tg_transvoxel_octree;
 
 
 
 typedef struct tg_transvoxel_terrain
 {
-	tg_transvoxel_octree    octree;
-	tg_entity               entity;
+	tg_transvoxel_octree    octree; // TODO: one octree per chunk/block
 } tg_transvoxel_terrain;
 
 #endif
