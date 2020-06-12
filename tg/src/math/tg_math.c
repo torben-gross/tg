@@ -6,13 +6,46 @@
 | Noise                                                       |
 +------------------------------------------------------------*/
 
-const i8 gradient_table[12][3] = {
+const i8 p_gradient_table[12][3] = {
 	{  1,  1,  0 }, { -1,  1,  0 }, {  1, -1,  0 }, { -1, -1,  0 },
 	{  1,  0,  1 }, { -1,  0,  1 }, {  1,  0, -1 }, { -1,  0, -1 },
 	{  0,  1,  1 }, {  0, -1,  1 }, {  0,  1, -1 }, {  0, -1, -1 }
 };
 
-const u8 permutation_table[256] = {
+const u8 p_double_permutation_table[512] = {
+	151, 160, 137,  91,  90,  15, 131,  13,
+	201,  95,  96,  53, 194, 233,   7, 225,
+	140,  36, 103,  30,  69, 142,   8,  99,
+	 37, 240,  21,  10,  23, 190,   6, 148,
+	247, 120, 234,  75,   0,  26, 197,  62,
+	 94, 252, 219, 203, 117,  35,  11,  32,
+	 57, 177,  33,  88, 237, 149,  56,  87,
+	174,  20, 125, 136, 171, 168,  68, 175,
+	 74, 165,  71, 134, 139,  48,  27, 166,
+	 77, 146, 158, 231,  83, 111, 229, 122,
+	 60, 211, 133, 230, 220, 105,  92,  41,
+	 55,  46, 245,  40, 244, 102, 143,  54,
+	 65,  25,  63, 161,   1, 216,  80,  73,
+	209,  76, 132, 187, 208,  89,  18, 169,
+	200, 196, 135, 130, 116, 188, 159,  86,
+	164, 100, 109, 198, 173, 186,   3,  64,
+	 52, 217, 226, 250, 124, 123,   5, 202,
+	 38, 147, 118, 126, 255,  82,  85, 212,
+	207, 206,  59, 227,  47,  16,  58,  17,
+	182, 189,  28,  42, 223, 183, 170, 213,
+	119, 248, 152,   2,  44, 154, 163,  70,
+	221, 153, 101, 155, 167,  43, 172,   9,
+	129,  22,  39, 253,  19,  98, 108, 110,
+	 79, 113, 224, 232, 178, 185, 112, 104,
+	218, 246,  97, 228, 251,  34, 242, 193,
+	238, 210, 144,  12, 191, 179, 162, 241,
+	 81,  51, 145, 235, 249,  14, 239, 107,
+	 49, 192, 214,  31, 181, 199, 106, 157,
+	184,  84, 204, 176, 115, 121,  50,  45,
+	127,   4, 150, 254, 138, 236, 205,  93,
+	222, 114,  67,  29,  24,  72, 243, 141,
+	128, 195,  78,  66, 215,  61, 156, 180,
+
 	151, 160, 137,  91,  90,  15, 131,  13,
 	201,  95,  96,  53, 194, 233,   7, 225,
 	140,  36, 103,  30,  69, 142,   8,  99,
@@ -51,12 +84,12 @@ const u8 permutation_table[256] = {
 
 f32 tgm_noise(f32 x, f32 y, f32 z) // see: http://staffwww.itn.liu.se/~stegu/simplexnoise/simplexnoise.pdf
 {
-	const f32 s = (x + y + z) * 0.333333333f;
+	const f32 s = (x + y + z) * 0.333333343f;
 	const i32 i = TGM_SIMPLEX_NOISE_FASTFLOOR(x + s);
 	const i32 j = TGM_SIMPLEX_NOISE_FASTFLOOR(y + s);
 	const i32 k = TGM_SIMPLEX_NOISE_FASTFLOOR(z + s);
 
-	const f32 g3 = 0.166666667f;
+	const f32 g3 = 0.166666672f;
 	const f32 t = (i + j + k) * g3;
 	const f32 x0 = x - ((f32)i - t);
 	const f32 y0 = y - ((f32)j - t);
@@ -108,10 +141,10 @@ f32 tgm_noise(f32 x, f32 y, f32 z) // see: http://staffwww.itn.liu.se/~stegu/sim
 	const i32 ii = i & 255;
 	const i32 jj = j & 255;
 	const i32 kk = k & 255;
-	const i32 gi0 = (i32)permutation_table[ii      + (i32)permutation_table[jj      + (i32)permutation_table[kk     ]]] % 12;
-	const i32 gi1 = (i32)permutation_table[ii + i1 + (i32)permutation_table[jj + j1 + (i32)permutation_table[kk + k1]]] % 12;
-	const i32 gi2 = (i32)permutation_table[ii + i2 + (i32)permutation_table[jj + j2 + (i32)permutation_table[kk + k2]]] % 12;
-	const i32 gi3 = (i32)permutation_table[ii +  1 + (i32)permutation_table[jj +  1 + (i32)permutation_table[kk +  1]]] % 12;
+	const i32 gi0 = (i32)p_double_permutation_table[ii      + (i32)p_double_permutation_table[jj      + (i32)p_double_permutation_table[kk     ]]] % 12;
+	const i32 gi1 = (i32)p_double_permutation_table[ii + i1 + (i32)p_double_permutation_table[jj + j1 + (i32)p_double_permutation_table[kk + k1]]] % 12;
+	const i32 gi2 = (i32)p_double_permutation_table[ii + i2 + (i32)p_double_permutation_table[jj + j2 + (i32)p_double_permutation_table[kk + k2]]] % 12;
+	const i32 gi3 = (i32)p_double_permutation_table[ii +  1 + (i32)p_double_permutation_table[jj +  1 + (i32)p_double_permutation_table[kk +  1]]] % 12;
 
 	f32 n0, n1, n2, n3;
 
@@ -123,7 +156,7 @@ f32 tgm_noise(f32 x, f32 y, f32 z) // see: http://staffwww.itn.liu.se/~stegu/sim
 	else
 	{
 		t0 *= t0;
-		const f32 dot = (f32)gradient_table[gi0][0] * x0 + (f32)gradient_table[gi0][1] * y0 + (f32)gradient_table[gi0][2] * z0;
+		const f32 dot = (f32)p_gradient_table[gi0][0] * x0 + (f32)p_gradient_table[gi0][1] * y0 + (f32)p_gradient_table[gi0][2] * z0;
 		n0 = t0 * t0 * dot;
 	}
 
@@ -135,7 +168,7 @@ f32 tgm_noise(f32 x, f32 y, f32 z) // see: http://staffwww.itn.liu.se/~stegu/sim
 	else
 	{
 		t1 *= t1;
-		const f32 dot = (f32)gradient_table[gi1][0] * x1 + (f32)gradient_table[gi1][1] * y1 + (f32)gradient_table[gi1][2] * z1;
+		const f32 dot = (f32)p_gradient_table[gi1][0] * x1 + (f32)p_gradient_table[gi1][1] * y1 + (f32)p_gradient_table[gi1][2] * z1;
 		n1 = t1 * t1 * dot;
 	}
 
@@ -147,7 +180,7 @@ f32 tgm_noise(f32 x, f32 y, f32 z) // see: http://staffwww.itn.liu.se/~stegu/sim
 	else
 	{
 		t2 *= t2;
-		const f32 dot = (f32)gradient_table[gi2][0] * x2 + (f32)gradient_table[gi2][1] * y2 + (f32)gradient_table[gi2][2] * z2;
+		const f32 dot = (f32)p_gradient_table[gi2][0] * x2 + (f32)p_gradient_table[gi2][1] * y2 + (f32)p_gradient_table[gi2][2] * z2;
 		n2 = t2 * t2 * dot;
 	}
 
@@ -159,7 +192,7 @@ f32 tgm_noise(f32 x, f32 y, f32 z) // see: http://staffwww.itn.liu.se/~stegu/sim
 	else
 	{
 		t3 *= t3;
-		const f32 dot = (f32)gradient_table[gi3][0] * x3 + (f32)gradient_table[gi3][1] * y3 + (f32)gradient_table[gi3][2] * z3;
+		const f32 dot = (f32)p_gradient_table[gi3][0] * x3 + (f32)p_gradient_table[gi3][1] * y3 + (f32)p_gradient_table[gi3][2] * z3;
 		n3 = t3 * t3 * dot;
 	}
 
