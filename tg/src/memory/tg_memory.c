@@ -37,7 +37,10 @@ void tg_memory_init()
 
 	memory_stack.exhausted_size = 0;
 	memory_stack.p_memory = tg_platform_memory_alloc(TG_MEMORY_STACK_SIZE);
+#ifdef TG_DEBUG
 	TG_ASSERT(memory_stack.p_memory);
+	tg_memory_nullify(TG_MEMORY_STACK_SIZE, memory_stack.p_memory);
+#endif
 
 #ifdef TG_DEBUG
 	recording_allocations = TG_TRUE;
@@ -169,7 +172,15 @@ void tg_memory_stack_free(u64 size)
 {
 	TG_ASSERT(size && memory_stack.exhausted_size >= size);
 
+#ifdef TG_DEBUG
+	for (u8 i = 0; i < 64; i++)
+	{
+		TG_ASSERT(memory_stack.p_memory[memory_stack.exhausted_size + i] == 0);
+	}
+#endif
+
 	memory_stack.exhausted_size -= size;
+
 #ifdef TG_DEBUG
 	tg_memory_nullify(size, &memory_stack.p_memory[memory_stack.exhausted_size]);
 #endif
