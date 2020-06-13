@@ -8,8 +8,9 @@
 
 
 #define TGI_DIRECTION_TO_PRECEDING_CELL(direction)    ((v3i){ -((direction) & 1), -(((direction) >> 1) & 1), -(((direction) >> 2) & 1) })
-#define TGI_REUSE_CELL_AT(reuse_cells, position)      ((reuse_cells).pp_decks[(position).z & 1][(position).y * TG_TRANSVOXEL_CELLS_PER_BLOCK_SIDE_WITH_PADDING + (position).x])
 #define TGI_FIXED_FACTOR                              (1.0f / 256.0f)
+#define TGI_INV_LOD(lod)                              (TG_TRANSVOXEL_LOD_COUNT - 1 - (lod))
+#define TGI_REUSE_CELL_AT(reuse_cells, position)      ((reuse_cells).pp_decks[(position).z & 1][(position).y * TG_TRANSVOXEL_CELLS_PER_BLOCK_SIDE_WITH_PADDING + (position).x])
 #define TGI_TRANSITION_CELL_SCALE                     0.5f
 
 
@@ -33,11 +34,11 @@ void* tgi_create_compressed_voxel_map(const i8* p_voxel_map)
 	u32 size = 4;
 	
 	i8 current_value = p_voxel_map[0];
-	for (u16 z = 0; z < TG_TRANSVOXEL_VOXEL_MAP_VOXELS_PER_SIDE; z++)
+	for (u16 z = 0; z < TG_TRANSVOXEL_OCTREE_STRIDE_IN_VOXELS_WITH_PADDING; z++)
 	{
-		for (u16 y = 0; y < TG_TRANSVOXEL_VOXEL_MAP_VOXELS_PER_SIDE; y++)
+		for (u16 y = 0; y < TG_TRANSVOXEL_OCTREE_STRIDE_IN_VOXELS_WITH_PADDING; y++)
 		{
-			for (u16 x = 0; x < TG_TRANSVOXEL_VOXEL_MAP_VOXELS_PER_SIDE; x++)
+			for (u16 x = 0; x < TG_TRANSVOXEL_OCTREE_STRIDE_IN_VOXELS_WITH_PADDING; x++)
 			{
 				if (TG_TRANSVOXEL_VOXEL_MAP_AT(p_voxel_map, x, y, z) != current_value)
 				{
@@ -56,11 +57,11 @@ void* tgi_create_compressed_voxel_map(const i8* p_voxel_map)
 	size = 4;
 	
 	current_value = p_voxel_map[0];
-	for (u16 z = 0; z < TG_TRANSVOXEL_VOXEL_MAP_VOXELS_PER_SIDE; z++)
+	for (u16 z = 0; z < TG_TRANSVOXEL_OCTREE_STRIDE_IN_VOXELS_WITH_PADDING; z++)
 	{
-		for (u16 y = 0; y < TG_TRANSVOXEL_VOXEL_MAP_VOXELS_PER_SIDE; y++)
+		for (u16 y = 0; y < TG_TRANSVOXEL_OCTREE_STRIDE_IN_VOXELS_WITH_PADDING; y++)
 		{
-			for (u16 x = 0; x < TG_TRANSVOXEL_VOXEL_MAP_VOXELS_PER_SIDE; x++)
+			for (u16 x = 0; x < TG_TRANSVOXEL_OCTREE_STRIDE_IN_VOXELS_WITH_PADDING; x++)
 			{
 				if (TG_TRANSVOXEL_VOXEL_MAP_AT(p_voxel_map, x, y, z) != current_value)
 				{
@@ -107,11 +108,11 @@ void tgi_destroy_compressed_voxel_map(void* p_compressed_voxel_map)
 
 void tgi_fill_voxel_map(v3i min_coordinates, i8* p_voxel_map)
 {
-	for (i32 z = 0; z < TG_TRANSVOXEL_VOXEL_MAP_VOXELS_PER_SIDE; z++)
+	for (i32 z = 0; z < TG_TRANSVOXEL_OCTREE_STRIDE_IN_VOXELS_WITH_PADDING; z++)
 	{
-		for (i32 y = 0; y < TG_TRANSVOXEL_VOXEL_MAP_VOXELS_PER_SIDE; y++)
+		for (i32 y = 0; y < TG_TRANSVOXEL_OCTREE_STRIDE_IN_VOXELS_WITH_PADDING; y++)
 		{
-			for (i32 x = 0; x < TG_TRANSVOXEL_VOXEL_MAP_VOXELS_PER_SIDE; x++)
+			for (i32 x = 0; x < TG_TRANSVOXEL_OCTREE_STRIDE_IN_VOXELS_WITH_PADDING; x++)
 			{
 				const f32 cell_coordinate_x = (f32)(min_coordinates.x + (x - TG_TRANSVOXEL_PADDING_PER_SIDE));
 				const f32 cell_coordinate_y = (f32)(min_coordinates.y + (y - TG_TRANSVOXEL_PADDING_PER_SIDE));
@@ -228,7 +229,7 @@ v3 tgi_normalized_not_null(v3 v)
 	return result;
 }
 
-void tgi_build(const i8* p_voxel_map, u8 lod, u16* p_vertex_count, tg_transvoxel_vertex* p_vertex_buffer, u16* p_index_count, u16* p_index_buffer)
+void tgi_build_block(v3i min_coordinates, const i8* p_voxel_map, u8 lod, u16* p_vertex_count, tg_transvoxel_vertex* p_vertex_buffer, u16* p_index_count, u16* p_index_buffer)
 {
 	*p_vertex_count = 0;
 	*p_index_count = 0;
@@ -260,14 +261,14 @@ void tgi_build(const i8* p_voxel_map, u8 lod, u16* p_vertex_count, tg_transvoxel
 				p_corner_positions[6] = (v3i){ position.x    , position.y + 1, position.z + 1 };
 				p_corner_positions[7] = (v3i){ position.x + 1, position.y + 1, position.z + 1 };
 
-				p_cell_samples[0] = TG_TRANSVOXEL_VOXEL_MAP_AT(p_voxel_map, lod_scale * position.x            , lod_scale * position.y            , lod_scale * position.z            );
-				p_cell_samples[1] = TG_TRANSVOXEL_VOXEL_MAP_AT(p_voxel_map, lod_scale * position.x + lod_scale, lod_scale * position.y            , lod_scale * position.z            );
-				p_cell_samples[2] = TG_TRANSVOXEL_VOXEL_MAP_AT(p_voxel_map, lod_scale * position.x            , lod_scale * position.y + lod_scale, lod_scale * position.z            );
-				p_cell_samples[3] = TG_TRANSVOXEL_VOXEL_MAP_AT(p_voxel_map, lod_scale * position.x + lod_scale, lod_scale * position.y + lod_scale, lod_scale * position.z            );
-				p_cell_samples[4] = TG_TRANSVOXEL_VOXEL_MAP_AT(p_voxel_map, lod_scale * position.x            , lod_scale * position.y            , lod_scale * position.z + lod_scale);
-				p_cell_samples[5] = TG_TRANSVOXEL_VOXEL_MAP_AT(p_voxel_map, lod_scale * position.x + lod_scale, lod_scale * position.y            , lod_scale * position.z + lod_scale);
-				p_cell_samples[6] = TG_TRANSVOXEL_VOXEL_MAP_AT(p_voxel_map, lod_scale * position.x            , lod_scale * position.y + lod_scale, lod_scale * position.z + lod_scale);
-				p_cell_samples[7] = TG_TRANSVOXEL_VOXEL_MAP_AT(p_voxel_map, lod_scale * position.x + lod_scale, lod_scale * position.y + lod_scale, lod_scale * position.z + lod_scale);
+				p_cell_samples[0] = TG_TRANSVOXEL_VOXEL_MAP_AT(p_voxel_map, min_coordinates.x + lod_scale * position.x            , min_coordinates.y + lod_scale * position.y            , min_coordinates.z + lod_scale * position.z            );
+				p_cell_samples[1] = TG_TRANSVOXEL_VOXEL_MAP_AT(p_voxel_map, min_coordinates.x + lod_scale * position.x + lod_scale, min_coordinates.y + lod_scale * position.y            , min_coordinates.z + lod_scale * position.z            );
+				p_cell_samples[2] = TG_TRANSVOXEL_VOXEL_MAP_AT(p_voxel_map, min_coordinates.x + lod_scale * position.x            , min_coordinates.y + lod_scale * position.y + lod_scale, min_coordinates.z + lod_scale * position.z            );
+				p_cell_samples[3] = TG_TRANSVOXEL_VOXEL_MAP_AT(p_voxel_map, min_coordinates.x + lod_scale * position.x + lod_scale, min_coordinates.y + lod_scale * position.y + lod_scale, min_coordinates.z + lod_scale * position.z            );
+				p_cell_samples[4] = TG_TRANSVOXEL_VOXEL_MAP_AT(p_voxel_map, min_coordinates.x + lod_scale * position.x            , min_coordinates.y + lod_scale * position.y            , min_coordinates.z + lod_scale * position.z + lod_scale);
+				p_cell_samples[5] = TG_TRANSVOXEL_VOXEL_MAP_AT(p_voxel_map, min_coordinates.x + lod_scale * position.x + lod_scale, min_coordinates.y + lod_scale * position.y            , min_coordinates.z + lod_scale * position.z + lod_scale);
+				p_cell_samples[6] = TG_TRANSVOXEL_VOXEL_MAP_AT(p_voxel_map, min_coordinates.x + lod_scale * position.x            , min_coordinates.y + lod_scale * position.y + lod_scale, min_coordinates.z + lod_scale * position.z + lod_scale);
+				p_cell_samples[7] = TG_TRANSVOXEL_VOXEL_MAP_AT(p_voxel_map, min_coordinates.x + lod_scale * position.x + lod_scale, min_coordinates.y + lod_scale * position.y + lod_scale, min_coordinates.z + lod_scale * position.z + lod_scale);
 
 				const u8 case_code =
 					((p_cell_samples[0] >> 7) & 0x01) |
@@ -293,12 +294,12 @@ void tgi_build(const i8* p_voxel_map, u8 lod, u16* p_vertex_count, tg_transvoxel
 
 					const v3i p = p_corner_positions[i];
 
-					const f32 nx = (f32)(255 - TG_TRANSVOXEL_VOXEL_MAP_AT(p_voxel_map, lod_scale * p.x - lod_scale, lod_scale * p.y            , lod_scale * p.z            ));
-					const f32 ny = (f32)(255 - TG_TRANSVOXEL_VOXEL_MAP_AT(p_voxel_map, lod_scale * p.x            , lod_scale * p.y - lod_scale, lod_scale * p.z            ));
-					const f32 nz = (f32)(255 - TG_TRANSVOXEL_VOXEL_MAP_AT(p_voxel_map, lod_scale * p.x            , lod_scale * p.y            , lod_scale * p.z - lod_scale));
-					const f32 px = (f32)(255 - TG_TRANSVOXEL_VOXEL_MAP_AT(p_voxel_map, lod_scale * p.x + lod_scale, lod_scale * p.y            , lod_scale * p.z            ));
-					const f32 py = (f32)(255 - TG_TRANSVOXEL_VOXEL_MAP_AT(p_voxel_map, lod_scale * p.x            , lod_scale * p.y + lod_scale, lod_scale * p.z            ));
-					const f32 pz = (f32)(255 - TG_TRANSVOXEL_VOXEL_MAP_AT(p_voxel_map, lod_scale * p.x            , lod_scale * p.y            , lod_scale * p.z + lod_scale));
+					const f32 nx = (f32)(255 - TG_TRANSVOXEL_VOXEL_MAP_AT(p_voxel_map, min_coordinates.x + lod_scale * p.x - lod_scale, min_coordinates.y + lod_scale * p.y            , min_coordinates.z + lod_scale * p.z            ));
+					const f32 ny = (f32)(255 - TG_TRANSVOXEL_VOXEL_MAP_AT(p_voxel_map, min_coordinates.x + lod_scale * p.x            , min_coordinates.y + lod_scale * p.y - lod_scale, min_coordinates.z + lod_scale * p.z            ));
+					const f32 nz = (f32)(255 - TG_TRANSVOXEL_VOXEL_MAP_AT(p_voxel_map, min_coordinates.x + lod_scale * p.x            , min_coordinates.y + lod_scale * p.y            , min_coordinates.z + lod_scale * p.z - lod_scale));
+					const f32 px = (f32)(255 - TG_TRANSVOXEL_VOXEL_MAP_AT(p_voxel_map, min_coordinates.x + lod_scale * p.x + lod_scale, min_coordinates.y + lod_scale * p.y            , min_coordinates.z + lod_scale * p.z            ));
+					const f32 py = (f32)(255 - TG_TRANSVOXEL_VOXEL_MAP_AT(p_voxel_map, min_coordinates.x + lod_scale * p.x            , min_coordinates.y + lod_scale * p.y + lod_scale, min_coordinates.z + lod_scale * p.z            ));
+					const f32 pz = (f32)(255 - TG_TRANSVOXEL_VOXEL_MAP_AT(p_voxel_map, min_coordinates.x + lod_scale * p.x            , min_coordinates.y + lod_scale * p.y            , min_coordinates.z + lod_scale * p.z + lod_scale));
 
 					p_corner_gradients[i].x = nx - px;
 					p_corner_gradients[i].y = ny - py;
@@ -344,9 +345,8 @@ void tgi_build(const i8* p_voxel_map, u8 lod, u16* p_vertex_count, tg_transvoxel
 					const i32 ti0 = t;
 					const i32 ti1 = 0x100 - t;
 
-					const v3i p0 = p_corner_positions[v0];
-					const v3i p1 = p_corner_positions[v1];
-
+					const v3i p0 = tgm_v3i_add(p_corner_positions[v0], min_coordinates);
+					const v3i p1 = tgm_v3i_add(p_corner_positions[v1], min_coordinates);
 					if (t & 0xff)
 					{
 						const u8 reuse_direction = (edge_code_high >> 4) & 0xf;
@@ -451,46 +451,111 @@ void tgi_build(const i8* p_voxel_map, u8 lod, u16* p_vertex_count, tg_transvoxel
 	}
 }
 
+b32 tgi_should_split(v3 camera_position, v3i min_coordinates, u8 lod)
+{
+	if (lod == 0)
+	{
+		return TG_FALSE;
+	}
+	const i32 half_stride = TG_TRANSVOXEL_CELLS_PER_BLOCK_SIDE * (1 << (lod - 1)); // (1 << (lod - 1) => 2^lod / 2
+	const v3 center = tgm_v3i_to_v3(tgm_v3i_add(min_coordinates, V3I(half_stride)));
+	const v3 direction = tgm_v3_sub(center, camera_position);
+	const f32 distance = tgm_v3_mag(direction);
+	const f32 scaled_distance = distance / (1 << lod);
+	const b32 result = scaled_distance < 2 * TG_TRANSVOXEL_CELLS_PER_BLOCK_SIDE;
+	return result;
+}
+
+void tgi_build_node(tg_transvoxel_node* p_node, v3i min_coordinates, u8 lod, v3 camera_position, const i8* p_voxel_map)
+{
+	const u64 vertex_buffer_size = 15 * TG_TRANSVOXEL_CELLS_PER_BLOCK * sizeof(tg_transvoxel_vertex);
+	const u64 index_buffer_size = 15 * TG_TRANSVOXEL_CELLS_PER_BLOCK * sizeof(u16);
+
+	tg_transvoxel_vertex* p_vertex_buffer = TG_MEMORY_STACK_ALLOC(vertex_buffer_size);
+	u16* p_index_buffer = TG_MEMORY_STACK_ALLOC(index_buffer_size);
+
+	const b32 split = tgi_should_split(camera_position, min_coordinates, lod);
+	if (split)
+	{
+		const i32 half_stride = TG_TRANSVOXEL_CELLS_PER_BLOCK_SIDE * (1 << (lod - 1)); // (1 << (lod - 1) => 2^lod / 2
+		const v3i half_stride_vec = V3I(half_stride);
+		for (u8 z = 0; z < 2; z++)
+		{
+			for (u8 y = 0; y < 2; y++)
+			{
+				for (u8 x = 0; x < 2; x++)
+				{
+					const u8 i = 4 * z + 2 * y + x;
+					p_node->pp_children[i] = TG_MEMORY_ALLOC(sizeof(tg_transvoxel_node));
+					tg_memory_nullify(sizeof(*p_node->pp_children[i]), p_node->pp_children[i]);
+					const v3i offset = tgm_v3i_mul((v3i){ x, y, z }, half_stride_vec);
+					const v3i child_min_coordinates = tgm_v3i_add(min_coordinates, offset);
+					tgi_build_node(p_node->pp_children[i], child_min_coordinates, lod - 1, camera_position, p_voxel_map);
+				}
+			}
+		}
+	}
+	else
+	{
+		tgi_build_block(
+			min_coordinates,
+			p_voxel_map, lod,
+			&p_node->node.vertex_count, p_vertex_buffer,
+			&p_node->node.index_count, p_index_buffer
+		);
+
+		if (p_node->node.index_count)
+		{
+			const u64 vertices_size = p_node->node.vertex_count * sizeof(*p_node->node.p_vertices);
+			const u64 indices_size = p_node->node.index_count * sizeof(*p_node->node.p_indices);
+			p_node->node.p_vertices = TG_MEMORY_ALLOC(vertices_size);
+			p_node->node.p_indices = TG_MEMORY_ALLOC(indices_size);
+			tg_memory_copy(vertices_size, p_vertex_buffer, p_node->node.p_vertices);
+			tg_memory_copy(indices_size, p_index_buffer, p_node->node.p_indices);
+
+			// TODO: save these somehow for destruction
+			tg_mesh_h mesh_h = tg_mesh_create2(
+				p_node->node.vertex_count, sizeof(tg_transvoxel_vertex), p_node->node.p_vertices,
+				p_node->node.index_count, p_node->node.p_indices
+			);
+			tg_material_h material_h = tg_material_create_deferred(
+				tg_vertex_shader_get("shaders/deferred_flat_terrain.vert"),
+				tg_fragment_shader_get("shaders/deferred_flat_terrain.frag"),
+				0, TG_NULL
+			);
+			p_node->node.entity = tg_entity_create(mesh_h, material_h);
+		}
+	}
+
+	TG_MEMORY_STACK_FREE(index_buffer_size);
+	TG_MEMORY_STACK_FREE(vertex_buffer_size);
+}
+
 
 
 tg_transvoxel_terrain_h tg_transvoxel_terrain_create(tg_camera_h camera_h)
 {
 	tg_transvoxel_terrain_h terrain_h = TG_MEMORY_ALLOC(sizeof(*terrain_h));
+	terrain_h->camera_h = camera_h;
 	terrain_h->octree.min_coordinates = (v3i){ 0, 0, 0 };
 
+	tgi_should_split(tg_camera_get_position(camera_h), terrain_h->octree.min_coordinates, 0);
+
 	const u64 voxel_map_size = TG_TRANSVOXEL_VOXEL_MAP_VOXELS * sizeof(i8);
-	const u64 vertex_buffer_size = 15 * TG_TRANSVOXEL_CELLS_PER_BLOCK * sizeof(tg_transvoxel_vertex);
-	const u64 index_buffer_size = 15 * TG_TRANSVOXEL_CELLS_PER_BLOCK * sizeof(u16);
 
 	i8* p_voxel_map = TG_MEMORY_STACK_ALLOC(voxel_map_size);
-	tg_transvoxel_vertex* p_vertex_buffer = TG_MEMORY_STACK_ALLOC(vertex_buffer_size);
-	u16* p_index_buffer = TG_MEMORY_STACK_ALLOC(index_buffer_size);
 
 	tgi_fill_voxel_map(terrain_h->octree.min_coordinates, p_voxel_map);
 	terrain_h->octree.p_compressed_voxel_map = tgi_create_compressed_voxel_map(p_voxel_map);
-
-	tgi_build(
-		p_voxel_map, 0,
-		&terrain_h->octree.root.node.vertex_count, p_vertex_buffer,
-		&terrain_h->octree.root.node.index_count, p_index_buffer
+	tgi_build_node(
+		&terrain_h->octree.root,
+		terrain_h->octree.min_coordinates,
+		TG_TRANSVOXEL_LOD_COUNT - 1,
+		tg_camera_get_position(camera_h),
+		p_voxel_map
 	);
 
-	const u64 vertices_size = terrain_h->octree.root.node.vertex_count * sizeof(*terrain_h->octree.root.node.p_vertices);
-	const u64 indices_size = terrain_h->octree.root.node.index_count * sizeof(*terrain_h->octree.root.node.p_indices);
-	terrain_h->octree.root.node.p_vertices = TG_MEMORY_ALLOC(vertices_size);
-	terrain_h->octree.root.node.p_indices = TG_MEMORY_ALLOC(indices_size);
-	tg_memory_copy(vertices_size, p_vertex_buffer, terrain_h->octree.root.node.p_vertices);
-	tg_memory_copy(indices_size, p_index_buffer, terrain_h->octree.root.node.p_indices);
-
-	TG_MEMORY_STACK_FREE(index_buffer_size);
-	TG_MEMORY_STACK_FREE(vertex_buffer_size);
 	TG_MEMORY_STACK_FREE(voxel_map_size);
-
-	tg_mesh_h mesh_h = tg_mesh_create2(terrain_h->octree.root.node.vertex_count, sizeof(tg_transvoxel_vertex), terrain_h->octree.root.node.p_vertices, terrain_h->octree.root.node.index_count, terrain_h->octree.root.node.p_indices);
-	tg_vertex_shader_h vertex_shader_h = tg_vertex_shader_get("shaders/deferred_flat_terrain.vert");
-	tg_fragment_shader_h fragment_shader_h = tg_fragment_shader_get("shaders/deferred_flat_terrain.frag");
-	tg_material_h material_h = tg_material_create_deferred(vertex_shader_h, fragment_shader_h, 0, TG_NULL);
-	terrain_h->octree.root.node.entity = tg_entity_create(mesh_h, material_h);
 
 	return terrain_h;
 }

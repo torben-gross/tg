@@ -20,6 +20,11 @@ TODO: Support other clipping setups via macros!
 #define TGM_TO_RADIANS(degrees)    (degrees * (((f32)TGM_PI * 2.0f) / 360.0f))
 #define TGM_SQRT(v)                tgm_f32_sqrt((f32)(v))
 
+#define V2(f)                      ((v2) { (f), (f) })
+#define V3(f)                      ((v3) { (f), (f), (f) })
+#define V3I(i)                     ((v3i){ (i), (i), (i) })
+#define V4(f)                      ((v4) { (f), (f), (f), (f) })
+
 
 
 typedef struct v2

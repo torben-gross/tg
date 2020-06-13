@@ -601,11 +601,30 @@ void tg_camera_capture(tg_camera_h camera_h, tg_entity_graphics_data_ptr_h entit
     camera_h->captured_entities[camera_h->captured_entity_count++] = entity_graphics_data_ptr_h;
 }
 
+// TODO: this should obviously not stay this way!
+void tgi_capture_transvoxel_terrain(tg_camera_h camera_h, tg_transvoxel_node* p_node)
+{
+    if (p_node->pp_children[0] == TG_NULL)
+    {
+        if (p_node->node.entity.graphics_data_ptr_h)
+        {
+            tg_camera_capture(camera_h, p_node->node.entity.graphics_data_ptr_h);
+        }
+    }
+    else
+    {
+        for (u8 i = 0; i < 8; i++)
+        {
+            tgi_capture_transvoxel_terrain(camera_h, p_node->pp_children[i]);
+        }
+    }
+}
+
 void tg_camera_capture_transvoxel_terrain(tg_camera_h camera_h, tg_transvoxel_terrain_h terrain_h)
 {
     TG_ASSERT(camera_h && terrain_h);
 
-    tg_camera_capture(camera_h, terrain_h->octree.root.node.entity.graphics_data_ptr_h);
+    tgi_capture_transvoxel_terrain(camera_h, &terrain_h->octree.root);
 }
 
 void tg_camera_clear(tg_camera_h camera_h) // TODO: should this be combined with begin?
