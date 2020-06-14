@@ -8,7 +8,8 @@
 
 
 
-#define TG_MEMORY_STACK_SIZE    (1LL << 30LL)
+#define TG_MEMORY_STACK_SIZE            (1LL << 30LL)
+#define TG_MEMORY_STACK_MAGIC_NUMBER    163ui8
 
 
 
@@ -37,10 +38,7 @@ void tg_memory_init()
 
 	memory_stack.exhausted_size = 0;
 	memory_stack.p_memory = tg_platform_memory_alloc(TG_MEMORY_STACK_SIZE);
-#ifdef TG_DEBUG
 	TG_ASSERT(memory_stack.p_memory);
-	tg_memory_nullify(TG_MEMORY_STACK_SIZE, memory_stack.p_memory);
-#endif
 
 #ifdef TG_DEBUG
 	recording_allocations = TG_TRUE;
@@ -93,7 +91,6 @@ void* tg_memory_alloc_impl(u64 size, const char* p_filename, u32 line)
 {
 	void* p_memory = tg_platform_memory_alloc((size_t)size);
 	TG_ASSERT(p_memory);
-	tg_memory_nullify(size, p_memory);
 
 	if (recording_allocations)
 	{
@@ -165,23 +162,22 @@ void* tg_memory_stack_alloc(u64 size)
 
 	void* memory = &memory_stack.p_memory[memory_stack.exhausted_size];
 	memory_stack.exhausted_size += size;
+
+#ifdef TG_DEBUG
+	memory_stack.p_memory[memory_stack.exhausted_size] = TG_MEMORY_STACK_MAGIC_NUMBER;
+#endif
+
 	return memory;
 }
 
 void tg_memory_stack_free(u64 size)
 {
 	TG_ASSERT(size && memory_stack.exhausted_size >= size);
-
-#ifdef TG_DEBUG
-	for (u8 i = 0; i < 64; i++)
-	{
-		TG_ASSERT(memory_stack.p_memory[memory_stack.exhausted_size + i] == 0);
-	}
-#endif
-
+	TG_ASSERT(memory_stack.p_memory[memory_stack.exhausted_size] == TG_MEMORY_STACK_MAGIC_NUMBER);
+	
 	memory_stack.exhausted_size -= size;
 
 #ifdef TG_DEBUG
-	tg_memory_nullify(size, &memory_stack.p_memory[memory_stack.exhausted_size]);
+	memory_stack.p_memory[memory_stack.exhausted_size] = TG_MEMORY_STACK_MAGIC_NUMBER;
 #endif
 }

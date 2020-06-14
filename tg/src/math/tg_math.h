@@ -54,6 +54,19 @@ typedef struct v3
 	};
 } v3;
 
+typedef struct v2i
+{
+	union
+	{
+		struct
+		{
+			i32    x;
+			i32    y;
+		};
+		i32        p_data[2];
+	};
+} v2i;
+
 typedef struct v3i
 {
 	union
