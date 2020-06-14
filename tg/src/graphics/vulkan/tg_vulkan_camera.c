@@ -610,6 +610,13 @@ void tgi_capture_transvoxel_terrain(tg_camera_h camera_h, tg_transvoxel_node* p_
         {
             tg_camera_capture(camera_h, p_node->node.entity.graphics_data_ptr_h);
         }
+        for (u8 i = 0; i < 6; i++)
+        {
+            if (p_node->node.p_transition_entities[i].graphics_data_ptr_h)
+            {
+                tg_camera_capture(camera_h, p_node->node.p_transition_entities[i].graphics_data_ptr_h);
+            }
+        }
     }
     else
     {

@@ -51,6 +51,7 @@ typedef struct tg_transvoxel_vertex
 typedef struct tg_transvoxel_block
 {
 	tg_entity                entity;
+	tg_entity                p_transition_entities[6];
 	
 	u16                      vertex_count;
 	u16                      index_count;

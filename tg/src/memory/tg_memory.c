@@ -34,14 +34,17 @@ void tg_memory_init()
 {
 #ifdef TG_DEBUG
 	memory_allocations = TG_HASHMAP_CREATE(void*, tg_memory_allocator_allocation);
-#endif
 
-	memory_stack.exhausted_size = 0;
+	memory_stack.exhausted_size = 1;
 	memory_stack.p_memory = tg_platform_memory_alloc(TG_MEMORY_STACK_SIZE);
 	TG_ASSERT(memory_stack.p_memory);
+	
+	memory_stack.p_memory[0] = TG_MEMORY_STACK_MAGIC_NUMBER;
 
-#ifdef TG_DEBUG
 	recording_allocations = TG_TRUE;
+#else
+	memory_stack.exhausted_size = 0;
+	memory_stack.p_memory = tg_platform_memory_alloc(TG_MEMORY_STACK_SIZE);
 #endif
 }
 
@@ -49,6 +52,7 @@ void tg_memory_shutdown()
 {
 #ifdef TG_DEBUG
 	recording_allocations = TG_FALSE;
+	TG_ASSERT(memory_stack.exhausted_size == 1);
 #endif
 
 	tg_platform_memory_free(memory_stack.p_memory);
@@ -158,26 +162,31 @@ tg_list tg_memory_create_unfreed_allocations_list()
 
 void* tg_memory_stack_alloc(u64 size)
 {
-	TG_ASSERT(size && memory_stack.exhausted_size + size < TG_MEMORY_STACK_SIZE);
+#ifdef TG_DEBUG
+	TG_ASSERT(size && memory_stack.exhausted_size + size + 1 < TG_MEMORY_STACK_SIZE);
 
+	void* memory = &memory_stack.p_memory[memory_stack.exhausted_size];
+	memory_stack.exhausted_size += size + 1;
+	memory_stack.p_memory[memory_stack.exhausted_size - 1] = TG_MEMORY_STACK_MAGIC_NUMBER;
+
+	return memory;
+#else
 	void* memory = &memory_stack.p_memory[memory_stack.exhausted_size];
 	memory_stack.exhausted_size += size;
 
-#ifdef TG_DEBUG
-	memory_stack.p_memory[memory_stack.exhausted_size] = TG_MEMORY_STACK_MAGIC_NUMBER;
-#endif
-
 	return memory;
+#endif
 }
 
 void tg_memory_stack_free(u64 size)
 {
-	TG_ASSERT(size && memory_stack.exhausted_size >= size);
-	TG_ASSERT(memory_stack.p_memory[memory_stack.exhausted_size] == TG_MEMORY_STACK_MAGIC_NUMBER);
-	
-	memory_stack.exhausted_size -= size;
-
 #ifdef TG_DEBUG
-	memory_stack.p_memory[memory_stack.exhausted_size] = TG_MEMORY_STACK_MAGIC_NUMBER;
+	TG_ASSERT(size && memory_stack.exhausted_size - 1 >= size + 1);
+
+	TG_ASSERT(memory_stack.p_memory[memory_stack.exhausted_size - 1] == TG_MEMORY_STACK_MAGIC_NUMBER);
+	memory_stack.exhausted_size -= size + 1;
+	TG_ASSERT(memory_stack.p_memory[memory_stack.exhausted_size - 1] == TG_MEMORY_STACK_MAGIC_NUMBER);
+#else
+	memory_stack.exhausted_size -= size;
 #endif
 }
