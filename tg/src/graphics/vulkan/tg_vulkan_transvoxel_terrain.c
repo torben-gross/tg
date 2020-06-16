@@ -56,6 +56,8 @@ typedef struct tgi_reuse_transition_cells
 
 
 
+
+
 void* tgi_create_compressed_voxel_map(const i8* p_voxel_map)
 {
 	void* p_compressed_voxel_map = TG_NULL;
@@ -173,6 +175,8 @@ void tgi_fill_voxel_map(v3i octree_min_coordinates, i8* p_voxel_map)
 
 
 
+
+
 u8 tgi_determine_max_lod()
 {
 	u8 max_lod = 0;
@@ -285,6 +289,27 @@ b32 tgi_should_split_node(v3 camera_position, v3i octree_min_coordinates, v3i bl
 	return result;
 }
 
+v3i tgi_transition_face_to_block(v3i pad, u8 low_resolution_lod, i32 x, i32 y, u8 direction)
+{
+	const u8 high_res_scale = 1 << (low_resolution_lod - 1);
+
+	const i32 x0 = pad.x + high_res_scale * x;
+	const i32 y0 = pad.y + high_res_scale * y;
+	const i32 z0 = pad.z + 0;
+	const i32 z1 = pad.z + high_res_scale * (TG_TRANSVOXEL_VOXELS_PER_BLOCK_SIDE - 1);
+
+	switch (direction)
+	{
+	case TGI_CUBE_SIDE_NEGATIVE_X: return (v3i){ z0, x0, y0 };
+	case TGI_CUBE_SIDE_POSITIVE_X: return (v3i){ z1, y0, x0 };
+	case TGI_CUBE_SIDE_NEGATIVE_Y: return (v3i){ y0, z0, x0 };
+	case TGI_CUBE_SIDE_POSITIVE_Y: return (v3i){ x0, z1, y0 };
+	case TGI_CUBE_SIDE_NEGATIVE_Z: return (v3i){ x0, y0, z0 };
+	case TGI_CUBE_SIDE_POSITIVE_Z: return (v3i){ y0, x0, z1 };
+	default: TG_INVALID_CODEPATH(); return (v3i){ 0 };
+	}
+}
+
 
 
 void tgi_build_block(v3i octree_min_coordinates, v3i block_offset_in_octree, u8 lod, const i8* p_voxel_map, u16* p_vertex_count, tg_transvoxel_vertex* p_vertex_buffer, u16* p_index_count, u16* p_index_buffer)
@@ -295,12 +320,10 @@ void tgi_build_block(v3i octree_min_coordinates, v3i block_offset_in_octree, u8 
 	const i32 scaled_block_stride_in_cells = TG_TRANSVOXEL_CELLS_PER_BLOCK_SIDE << lod;
 	const i32 lod_scale = 1 << lod;
 
-	v3i p_directions[8] = { 0 };
-	v3i p_scaled_directions[8] = { 0 };
-	v3i p_corner_positions[8] = { 0 };
 	v3i p_sample_positions[8] = { 0 };
 	i8 p_cell_samples[8] = { 0 };
 	v3 p_corner_gradients[8] = { 0 };
+	v3i p_corner_positions[8] = { 0 };
 
 	v3i position = { 0 };
 	for (position.z = 0; position.z < TG_TRANSVOXEL_CELLS_PER_BLOCK_SIDE; position.z++)
@@ -311,42 +334,15 @@ void tgi_build_block(v3i octree_min_coordinates, v3i block_offset_in_octree, u8 
 			{
 				const v3i position_with_padding = tgm_v3i_addi(position, TG_TRANSVOXEL_PADDING_PER_SIDE);
 
-				p_directions[0] = (v3i){ 0, 0, 0 };
-				p_directions[1] = (v3i){ 1, 0, 0 };
-				p_directions[2] = (v3i){ 0, 1, 0 };
-				p_directions[3] = (v3i){ 1, 1, 0 };
-				p_directions[4] = (v3i){ 0, 0, 1 };
-				p_directions[5] = (v3i){ 1, 0, 1 };
-				p_directions[6] = (v3i){ 0, 1, 1 };
-				p_directions[7] = (v3i){ 1, 1, 1 };
-
-				p_scaled_directions[0] = (v3i){         0,         0,         0 };
-				p_scaled_directions[1] = (v3i){ lod_scale,         0,         0 };
-				p_scaled_directions[2] = (v3i){         0, lod_scale,         0 };
-				p_scaled_directions[3] = (v3i){ lod_scale, lod_scale,         0 };
-				p_scaled_directions[4] = (v3i){         0,         0, lod_scale };
-				p_scaled_directions[5] = (v3i){ lod_scale,         0, lod_scale };
-				p_scaled_directions[6] = (v3i){         0, lod_scale, lod_scale };
-				p_scaled_directions[7] = (v3i){ lod_scale, lod_scale, lod_scale };
-
-				p_corner_positions[0] = tgm_v3i_add(position_with_padding, p_directions[0]);
-				p_corner_positions[1] = tgm_v3i_add(position_with_padding, p_directions[1]);
-				p_corner_positions[2] = tgm_v3i_add(position_with_padding, p_directions[2]);
-				p_corner_positions[3] = tgm_v3i_add(position_with_padding, p_directions[3]);
-				p_corner_positions[4] = tgm_v3i_add(position_with_padding, p_directions[4]);
-				p_corner_positions[5] = tgm_v3i_add(position_with_padding, p_directions[5]);
-				p_corner_positions[6] = tgm_v3i_add(position_with_padding, p_directions[6]);
-				p_corner_positions[7] = tgm_v3i_add(position_with_padding, p_directions[7]);
-
 				const v3i sample_base_position = tgm_v3i_add(tgm_v3i_addi(block_offset_in_octree, TG_TRANSVOXEL_VOXEL_MAP_PADDING), tgm_v3i_muli(position, lod_scale));
-				p_sample_positions[0] = tgm_v3i_add(sample_base_position, p_scaled_directions[0]);
-				p_sample_positions[1] = tgm_v3i_add(sample_base_position, p_scaled_directions[1]);
-				p_sample_positions[2] = tgm_v3i_add(sample_base_position, p_scaled_directions[2]);
-				p_sample_positions[3] = tgm_v3i_add(sample_base_position, p_scaled_directions[3]);
-				p_sample_positions[4] = tgm_v3i_add(sample_base_position, p_scaled_directions[4]);
-				p_sample_positions[5] = tgm_v3i_add(sample_base_position, p_scaled_directions[5]);
-				p_sample_positions[6] = tgm_v3i_add(sample_base_position, p_scaled_directions[6]);
-				p_sample_positions[7] = tgm_v3i_add(sample_base_position, p_scaled_directions[7]);
+				p_sample_positions[0] = tgm_v3i_add(sample_base_position, (v3i){         0,         0,         0 });
+				p_sample_positions[1] = tgm_v3i_add(sample_base_position, (v3i){ lod_scale,         0,         0 });
+				p_sample_positions[2] = tgm_v3i_add(sample_base_position, (v3i){         0, lod_scale,         0 });
+				p_sample_positions[3] = tgm_v3i_add(sample_base_position, (v3i){ lod_scale, lod_scale,         0 });
+				p_sample_positions[4] = tgm_v3i_add(sample_base_position, (v3i){         0,         0, lod_scale });
+				p_sample_positions[5] = tgm_v3i_add(sample_base_position, (v3i){ lod_scale,         0, lod_scale });
+				p_sample_positions[6] = tgm_v3i_add(sample_base_position, (v3i){         0, lod_scale, lod_scale });
+				p_sample_positions[7] = tgm_v3i_add(sample_base_position, (v3i){ lod_scale, lod_scale, lod_scale });
 
 				p_cell_samples[0] = TG_TRANSVOXEL_VOXEL_MAP_AT_V3I(p_voxel_map, p_sample_positions[0]);
 				p_cell_samples[1] = TG_TRANSVOXEL_VOXEL_MAP_AT_V3I(p_voxel_map, p_sample_positions[1]);
@@ -391,11 +387,18 @@ void tgi_build_block(v3i octree_min_coordinates, v3i block_offset_in_octree, u8 
 					p_corner_gradients[i].x = nx - px;
 					p_corner_gradients[i].y = ny - py;
 					p_corner_gradients[i].z = nz - pz;
-
-					p_corner_positions[i].x = (p_corner_positions[i].x - TG_TRANSVOXEL_PADDING_PER_SIDE) << lod;
-					p_corner_positions[i].y = (p_corner_positions[i].y - TG_TRANSVOXEL_PADDING_PER_SIDE) << lod;
-					p_corner_positions[i].z = (p_corner_positions[i].z - TG_TRANSVOXEL_PADDING_PER_SIDE) << lod;
 				}
+
+				// TODO: too many unused adds (block_min_coordinates)
+				const v3i block_min_coordinates = tgm_v3i_add(octree_min_coordinates, block_offset_in_octree);
+				p_corner_positions[0] = tgm_v3i_add(block_min_coordinates, tgm_v3i_muli(tgm_v3i_add(position, (v3i) { 0, 0, 0 }), lod_scale));
+				p_corner_positions[1] = tgm_v3i_add(block_min_coordinates, tgm_v3i_muli(tgm_v3i_add(position, (v3i) { 1, 0, 0 }), lod_scale));
+				p_corner_positions[2] = tgm_v3i_add(block_min_coordinates, tgm_v3i_muli(tgm_v3i_add(position, (v3i) { 0, 1, 0 }), lod_scale));
+				p_corner_positions[3] = tgm_v3i_add(block_min_coordinates, tgm_v3i_muli(tgm_v3i_add(position, (v3i) { 1, 1, 0 }), lod_scale));
+				p_corner_positions[4] = tgm_v3i_add(block_min_coordinates, tgm_v3i_muli(tgm_v3i_add(position, (v3i) { 0, 0, 1 }), lod_scale));
+				p_corner_positions[5] = tgm_v3i_add(block_min_coordinates, tgm_v3i_muli(tgm_v3i_add(position, (v3i) { 1, 0, 1 }), lod_scale));
+				p_corner_positions[6] = tgm_v3i_add(block_min_coordinates, tgm_v3i_muli(tgm_v3i_add(position, (v3i) { 0, 1, 1 }), lod_scale));
+				p_corner_positions[7] = tgm_v3i_add(block_min_coordinates, tgm_v3i_muli(tgm_v3i_add(position, (v3i) { 1, 1, 1 }), lod_scale));
 
 				const u8 direction_validity_mask =
 					((position_with_padding.x > TG_TRANSVOXEL_PADDING_PER_SIDE ? 1 : 0) << 0) |
@@ -427,9 +430,8 @@ void tgi_build_block(v3i octree_min_coordinates, v3i block_offset_in_octree, u8 
 					i32 d0 = p_cell_samples[v0];
 					i32 d1 = p_cell_samples[v1];
 
-					const v3i block_min_coordinates = tgm_v3i_add(octree_min_coordinates, block_offset_in_octree);
-					v3i p0 = tgm_v3i_add(p_corner_positions[v0], block_min_coordinates);
-					v3i p1 = tgm_v3i_add(p_corner_positions[v1], block_min_coordinates);
+					v3i p0 = p_corner_positions[v0];
+					v3i p1 = p_corner_positions[v1];
 
 					for (u8 i = 0; i < lod; i++)
 					{
@@ -569,29 +571,6 @@ void tgi_build_block(v3i octree_min_coordinates, v3i block_offset_in_octree, u8 
 	TG_MEMORY_STACK_FREE(sizeof(*p_reuse_cells));
 }
 
-
-
-v3i tgi_face_to_block(v3i pad, u8 low_resolution_lod, i32 x, i32 y, u8 direction)
-{
-	const u8 high_res_scale = 1 << (low_resolution_lod - 1);
-
-	const i32 x0 = pad.x + high_res_scale * x;
-	const i32 y0 = pad.y + high_res_scale * y;
-	const i32 z0 = pad.z + 0;
-	const i32 z1 = pad.z + high_res_scale * (TG_TRANSVOXEL_VOXELS_PER_BLOCK_SIDE - 1);
-
-	switch (direction)
-	{
-	case TGI_CUBE_SIDE_NEGATIVE_X: return (v3i){ z0, x0, y0 };
-	case TGI_CUBE_SIDE_POSITIVE_X: return (v3i){ z1, y0, x0 };
-	case TGI_CUBE_SIDE_NEGATIVE_Y: return (v3i){ y0, z0, x0 };
-	case TGI_CUBE_SIDE_POSITIVE_Y: return (v3i){ x0, z1, y0 };
-	case TGI_CUBE_SIDE_NEGATIVE_Z: return (v3i){ x0, y0, z0 };
-	case TGI_CUBE_SIDE_POSITIVE_Z: return (v3i){ y0, x0, z1 };
-	default: TG_INVALID_CODEPATH(); return (v3i){ 0 };
-	}
-}
-
 void tgi_build_transition(v3i octree_min_coordinates, v3i block_offset_in_octree, u8 lod, const i8* p_voxel_map, u8 direction, u16* p_vertex_count, tg_transvoxel_vertex* p_vertex_buffer, u16* p_index_count, u16* p_index_buffer)
 {
 	TG_ASSERT(lod > 0);
@@ -619,15 +598,15 @@ void tgi_build_transition(v3i octree_min_coordinates, v3i block_offset_in_octree
 			const u8 xp = x + TG_TRANSVOXEL_PADDING_PER_SIDE;
 
 			const v3i sample_positions_pad = tgm_v3i_addi(block_offset_in_octree, TG_TRANSVOXEL_VOXEL_MAP_PADDING);
-			p_sample_positions[0x0] = tgi_face_to_block(sample_positions_pad, lod, xd    , yd    , direction);
-			p_sample_positions[0x1] = tgi_face_to_block(sample_positions_pad, lod, xd + 1, yd    , direction);
-			p_sample_positions[0x2] = tgi_face_to_block(sample_positions_pad, lod, xd + 2, yd    , direction);
-			p_sample_positions[0x3] = tgi_face_to_block(sample_positions_pad, lod, xd    , yd + 1, direction);
-			p_sample_positions[0x4] = tgi_face_to_block(sample_positions_pad, lod, xd + 1, yd + 1, direction);
-			p_sample_positions[0x5] = tgi_face_to_block(sample_positions_pad, lod, xd + 2, yd + 1, direction);
-			p_sample_positions[0x6] = tgi_face_to_block(sample_positions_pad, lod, xd    , yd + 2, direction);
-			p_sample_positions[0x7] = tgi_face_to_block(sample_positions_pad, lod, xd + 1, yd + 2, direction);
-			p_sample_positions[0x8] = tgi_face_to_block(sample_positions_pad, lod, xd + 2, yd + 2, direction);
+			p_sample_positions[0x0] = tgi_transition_face_to_block(sample_positions_pad, lod, xd    , yd    , direction);
+			p_sample_positions[0x1] = tgi_transition_face_to_block(sample_positions_pad, lod, xd + 1, yd    , direction);
+			p_sample_positions[0x2] = tgi_transition_face_to_block(sample_positions_pad, lod, xd + 2, yd    , direction);
+			p_sample_positions[0x3] = tgi_transition_face_to_block(sample_positions_pad, lod, xd    , yd + 1, direction);
+			p_sample_positions[0x4] = tgi_transition_face_to_block(sample_positions_pad, lod, xd + 1, yd + 1, direction);
+			p_sample_positions[0x5] = tgi_transition_face_to_block(sample_positions_pad, lod, xd + 2, yd + 1, direction);
+			p_sample_positions[0x6] = tgi_transition_face_to_block(sample_positions_pad, lod, xd    , yd + 2, direction);
+			p_sample_positions[0x7] = tgi_transition_face_to_block(sample_positions_pad, lod, xd + 1, yd + 2, direction);
+			p_sample_positions[0x8] = tgi_transition_face_to_block(sample_positions_pad, lod, xd + 2, yd + 2, direction);
 			p_sample_positions[0x9] = p_sample_positions[0x0];
 			p_sample_positions[0xa] = p_sample_positions[0x2];
 			p_sample_positions[0xb] = p_sample_positions[0x6];
@@ -646,6 +625,24 @@ void tgi_build_transition(v3i octree_min_coordinates, v3i block_offset_in_octree
 			p_cell_samples[0xa] = p_cell_samples[0x2];
 			p_cell_samples[0xb] = p_cell_samples[0x6];
 			p_cell_samples[0xc] = p_cell_samples[0x8];
+
+			const u16 case_code =
+				((p_cell_samples[0] >> 7) & 0x001) |
+				((p_cell_samples[1] >> 6) & 0x002) |
+				((p_cell_samples[2] >> 5) & 0x004) |
+				((p_cell_samples[5] >> 4) & 0x008) |
+				((p_cell_samples[8] >> 3) & 0x010) |
+				((p_cell_samples[7] >> 2) & 0x020) |
+				((p_cell_samples[6] >> 1) & 0x040) |
+				((p_cell_samples[3] >> 0) & 0x080) |
+				((p_cell_samples[4] >> 0) & 0x100);
+
+			if (case_code == 0 || case_code == 511)
+			{
+				continue;
+			}
+
+			TG_ASSERT(case_code != 512);
 
 			for (u8 i = 0; i < 9; i++)
 			{
@@ -668,40 +665,21 @@ void tgi_build_transition(v3i octree_min_coordinates, v3i block_offset_in_octree
 			p_cell_gradients[0xc] = p_cell_gradients[0x8];
 
 			const v3i cell_position_pad = tgm_v3i_add(octree_min_coordinates, block_offset_in_octree);
-			p_cell_positions[0x0] = tgi_face_to_block(cell_position_pad, lod, xd    , yd    , direction);
-			p_cell_positions[0x1] = tgi_face_to_block(cell_position_pad, lod, xd + 1, yd    , direction);
-			p_cell_positions[0x2] = tgi_face_to_block(cell_position_pad, lod, xd + 2, yd    , direction);
-			p_cell_positions[0x3] = tgi_face_to_block(cell_position_pad, lod, xd    , yd + 1, direction);
-			p_cell_positions[0x4] = tgi_face_to_block(cell_position_pad, lod, xd + 1, yd + 1, direction);
-			p_cell_positions[0x5] = tgi_face_to_block(cell_position_pad, lod, xd + 2, yd + 1, direction);
-			p_cell_positions[0x6] = tgi_face_to_block(cell_position_pad, lod, xd    , yd + 2, direction);
-			p_cell_positions[0x7] = tgi_face_to_block(cell_position_pad, lod, xd + 1, yd + 2, direction);
-			p_cell_positions[0x8] = tgi_face_to_block(cell_position_pad, lod, xd + 2, yd + 2, direction);
+			p_cell_positions[0x0] = tgi_transition_face_to_block(cell_position_pad, lod, xd    , yd    , direction);
+			p_cell_positions[0x1] = tgi_transition_face_to_block(cell_position_pad, lod, xd + 1, yd    , direction);
+			p_cell_positions[0x2] = tgi_transition_face_to_block(cell_position_pad, lod, xd + 2, yd    , direction);
+			p_cell_positions[0x3] = tgi_transition_face_to_block(cell_position_pad, lod, xd    , yd + 1, direction);
+			p_cell_positions[0x4] = tgi_transition_face_to_block(cell_position_pad, lod, xd + 1, yd + 1, direction);
+			p_cell_positions[0x5] = tgi_transition_face_to_block(cell_position_pad, lod, xd + 2, yd + 1, direction);
+			p_cell_positions[0x6] = tgi_transition_face_to_block(cell_position_pad, lod, xd    , yd + 2, direction);
+			p_cell_positions[0x7] = tgi_transition_face_to_block(cell_position_pad, lod, xd + 1, yd + 2, direction);
+			p_cell_positions[0x8] = tgi_transition_face_to_block(cell_position_pad, lod, xd + 2, yd + 2, direction);
 			p_cell_positions[0x9] = p_cell_positions[0x0];
 			p_cell_positions[0xa] = p_cell_positions[0x2];
 			p_cell_positions[0xb] = p_cell_positions[0x6];
 			p_cell_positions[0xc] = p_cell_positions[0x8];
 
-			const u16 case_code =
-				((p_cell_samples[0] >> 7) & 0x001) |
-				((p_cell_samples[1] >> 6) & 0x002) |
-				((p_cell_samples[2] >> 5) & 0x004) |
-				((p_cell_samples[5] >> 4) & 0x008) |
-				((p_cell_samples[8] >> 3) & 0x010) |
-				((p_cell_samples[7] >> 2) & 0x020) |
-				((p_cell_samples[6] >> 1) & 0x040) |
-				((p_cell_samples[3] >> 0) & 0x080) |
-				((p_cell_samples[4] >> 0) & 0x100);
-
-			TG_ASSERT(case_code != 512);
-
 			TGI_REUSE_TRANSITION_CELL_AT(*p_reuse_cells, xp, yp).p_indices[0] = TG_U16_MAX;
-
-			// TODO: earlier early out?
-			if (case_code == 0 || case_code == 511)
-			{
-				continue;
-			}
 
 			const u8 cell_class = p_transition_cell_class[case_code];
 			TG_ASSERT((cell_class & 0x7f) <= 55);
@@ -724,17 +702,19 @@ void tgi_build_transition(v3i octree_min_coordinates, v3i block_offset_in_octree
 				const u8 v1 = edge_code & 0xf;
 				TG_ASSERT(v0 < 13 && v1 < 13);
 
-				const i32 d0 = p_cell_samples[v0];
-				const i32 d1 = p_cell_samples[v1];
-
-				// TODO: interpolate
-#if 0
 				v3i i0 = p_sample_positions[v0];
 				v3i i1 = p_sample_positions[v1];
-				v3i p0 = tgm_v3i_add(p_corner_positions[v0], block_min_coordinates);
-				v3i p1 = tgm_v3i_add(p_corner_positions[v1], block_min_coordinates);
 
-				for (u8 i = 0; i < lod; i++)
+				i32 d0 = p_cell_samples[v0];
+				i32 d1 = p_cell_samples[v1];
+				TG_ASSERT(d0 != d1);
+
+				v3i p0 = p_cell_positions[v0];
+				v3i p1 = p_cell_positions[v1];
+
+				const b32 high_resolution_side = v0 < 0x9 || v1 < 0x9;
+				const u8 interpolation_end = high_resolution_side ? lod - 1 : lod;
+				for (u8 i = 0; i < interpolation_end; i++)
 				{
 					v3i midpoint = { 0 };
 					midpoint.x = (i0.x + i1.x) / 2;
@@ -759,8 +739,6 @@ void tgi_build_transition(v3i octree_min_coordinates, v3i block_offset_in_octree
 						p1.z = (p0.z + p1.z) / 2;
 					}
 				}
-
-#endif
 				TG_ASSERT(d0 != d1);
 
 				const i32 t = (d1 << 8) / (d1 - d0);
@@ -784,9 +762,6 @@ void tgi_build_transition(v3i octree_min_coordinates, v3i block_offset_in_octree
 
 					if (!present || p_cell_vertex_indices[i] == TG_U16_MAX)
 					{
-						const v3i p0 = p_cell_positions[v0];
-						const v3i p1 = p_cell_positions[v1];
-
 						const v3 n0 = p_cell_gradients[v0];
 						const v3 n1 = p_cell_gradients[v1];
 
@@ -794,7 +769,6 @@ void tgi_build_transition(v3i octree_min_coordinates, v3i block_offset_in_octree
 						const v3 primaryf = tgm_v3_mulf(tgm_v3i_to_v3(primary), TGI_FIXED_FACTOR);
 						const v3 normal = tgi_normalized_not_null(tgm_v3_add(tgm_v3_mulf(n0, t0), tgm_v3_mulf(n1, t1)));
 
-						const b32 high_resolution_side = v0 < 0x9 || v1 < 0x9;
 						u16 border_mask = 0;
 
 						v3 secondary = { 0 };
@@ -872,7 +846,6 @@ void tgi_build_transition(v3i octree_min_coordinates, v3i block_offset_in_octree
 
 	TG_MEMORY_STACK_FREE(sizeof(*p_reuse_cells));
 }
-
 
 void tgi_build_node(tg_transvoxel_node* p_node, v3 camera_position, v3i octree_min_coordinates, v3i block_offset_in_octree, u8 lod, const i8* p_voxel_map)
 {
@@ -1007,6 +980,7 @@ void tg_transvoxel_terrain_update(tg_transvoxel_terrain_h terrain_h)
 
 
 #undef TGI_TRANSITION_CELL_SCALE
+#undef TGI_REUSE_TRANSITION_CELL_AT
 #undef TGI_REUSE_CELL_AT
 #undef TGI_FIXED_FACTOR
 #undef TGI_DIRECTION_TO_PRECEDING_CELL
