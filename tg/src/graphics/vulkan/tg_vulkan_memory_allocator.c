@@ -126,23 +126,23 @@ void tg_vulkan_memory_allocator_init(VkDevice device, VkPhysicalDevice physical_
     VkPhysicalDeviceMemoryProperties physical_device_memory_properties = { 0 };
     vkGetPhysicalDeviceMemoryProperties(physical_device, &physical_device_memory_properties);
     
-    VkDeviceSize memory_types_per_memory_heap[VK_MAX_MEMORY_HEAPS] = { 0 };
+    VkDeviceSize p_memory_types_per_memory_heap[VK_MAX_MEMORY_HEAPS] = { 0 };
     for (u32 i = 0; i < physical_device_memory_properties.memoryTypeCount; i++)
     {
-        memory_types_per_memory_heap[physical_device_memory_properties.memoryTypes[i].heapIndex]++;
+        p_memory_types_per_memory_heap[physical_device_memory_properties.memoryTypes[i].heapIndex]++;
     }
-    VkDeviceSize allocation_size_per_memory_heap[VK_MAX_MEMORY_HEAPS] = { 0 };
+    VkDeviceSize p_allocation_size_per_memory_heap[VK_MAX_MEMORY_HEAPS] = { 0 };
 
     vulkan_memory.page_size = physical_device_properties.limits.bufferImageGranularity;
 
     const VkDeviceSize heap_size_fraction_denominator = 4;
     for (u32 i = 0; i < physical_device_memory_properties.memoryHeapCount; i++)
     {
-        if (memory_types_per_memory_heap[i])
+        if (p_memory_types_per_memory_heap[i])
         {
-            const VkDeviceSize size_per_allocation = (physical_device_memory_properties.memoryHeaps[i].size / heap_size_fraction_denominator) / memory_types_per_memory_heap[i];
+            const VkDeviceSize size_per_allocation = (physical_device_memory_properties.memoryHeaps[i].size / heap_size_fraction_denominator) / p_memory_types_per_memory_heap[i];
             const VkDeviceSize aligned_size_per_allocation = tg_vulkan_memory_allocator_internal_round(size_per_allocation);
-            allocation_size_per_memory_heap[i] = aligned_size_per_allocation;
+            p_allocation_size_per_memory_heap[i] = aligned_size_per_allocation;
         }
     }
 
@@ -151,7 +151,7 @@ void tg_vulkan_memory_allocator_init(VkDevice device, VkPhysicalDevice physical_
     {
         vulkan_memory.p_pools[i].memory_property_flags = physical_device_memory_properties.memoryTypes[i].propertyFlags;
 
-        const VkDeviceSize allocation_size = allocation_size_per_memory_heap[physical_device_memory_properties.memoryTypes[i].heapIndex];
+        const VkDeviceSize allocation_size = p_allocation_size_per_memory_heap[physical_device_memory_properties.memoryTypes[i].heapIndex];
         TG_ASSERT(allocation_size / vulkan_memory.page_size <= TG_U32_MAX);
         const u32 page_count = (u32)(allocation_size / vulkan_memory.page_size);
         

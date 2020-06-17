@@ -21,7 +21,7 @@
 
 typedef struct tg_camera_info
 {
-    tg_camera_h    camera_h;
+    tg_camera_h    h_camera;
     v3             position;
     f32            pitch;
     f32            yaw;
@@ -47,33 +47,33 @@ typedef struct tg_test_deferred
 {
     tg_list                        entities;
     tg_camera_info                 camera_info;
-    tg_camera_h                    secondary_camera_h;
-    tg_color_image_h               textures_h[13];
-    tg_texture_atlas_h             texture_atlas_h;
-    tg_mesh_h                      quad_mesh_h;
-    tg_vertex_shader_h             deferred_vertex_shader_h;
-    tg_fragment_shader_h           deferred_fragment_shader_h;
-    tg_material_h                  default_material_h;
-    tg_fragment_shader_h           yellow_fragment_shader_h;
-    tg_material_h                  yellow_material_h;
-    tg_fragment_shader_h           red_fragment_shader_h;
-    tg_material_h                  red_material_h;
-    tg_uniform_buffer_h            custom_uniform_buffer_h;
+    tg_camera_h                    h_secondary_camera;
+    tg_color_image_h               ph_textures[13];
+    tg_texture_atlas_h             h_texture_atlas;
+    tg_mesh_h                      h_quad_mesh;
+    tg_vertex_shader_h             h_deferred_vertex_shader;
+    tg_fragment_shader_h           h_deferred_fragment_shader;
+    tg_material_h                  h_default_material;
+    tg_fragment_shader_h           h_yellow_fragment_shader;
+    tg_material_h                  h_yellow_material;
+    tg_fragment_shader_h           h_red_fragment_shader;
+    tg_material_h                  h_red_material;
+    tg_uniform_buffer_h            h_custom_uniform_buffer;
     v3*                            p_custom_uniform_buffer_data;
-    tg_color_image_h               image_h;
-    tg_vertex_shader_h             forward_vertex_shader_h;
-    tg_fragment_shader_h           forward_custom_fragment_shader_h;
-    tg_material_h                  custom_material_h;
+    tg_color_image_h               h_image;
+    tg_vertex_shader_h             h_forward_vertex_shader;
+    tg_fragment_shader_h           h_forward_custom_fragment_shader;
+    tg_material_h                  h_custom_material;
     tg_entity                      quad_entity;
-    tg_mesh_h                      ground_mesh_h;
+    tg_mesh_h                      h_ground_mesh;
     tg_entity                      ground_entity;
     f32                            quad_offset;
     f32                            dtsum;
-    tg_fragment_shader_h           forward_water_fragment_shader_h;
-    tg_material_h                  water_material_h;
+    tg_fragment_shader_h           h_forward_water_fragment_shader;
+    tg_material_h                  h_water_material;
 
-    tg_entity                      transvoxel_entities[9];
-    tg_transvoxel_terrain_h        terrain_h;
+    tg_entity                      p_transvoxel_entities[9];
+    tg_transvoxel_terrain_h        h_terrain;
 } tg_test_deferred;
 
 
@@ -95,8 +95,8 @@ void tg_application_internal_game_3d_create()
     test_deferred.camera_info.near = -0.1f;
     test_deferred.camera_info.far = -1000.0f;
     tg_input_get_mouse_position(&test_deferred.camera_info.last_mouse_x, &test_deferred.camera_info.last_mouse_y);
-    test_deferred.camera_info.camera_h = tg_camera_create_perspective(test_deferred.camera_info.position, test_deferred.camera_info.pitch, test_deferred.camera_info.yaw, test_deferred.camera_info.roll, test_deferred.camera_info.fov_y_in_radians, test_deferred.camera_info.near, test_deferred.camera_info.far);
-    test_deferred.secondary_camera_h = tg_camera_create_perspective(test_deferred.camera_info.position, test_deferred.camera_info.pitch, test_deferred.camera_info.yaw, test_deferred.camera_info.roll, test_deferred.camera_info.fov_y_in_radians, test_deferred.camera_info.near, test_deferred.camera_info.far);
+    test_deferred.camera_info.h_camera = tg_camera_create_perspective(test_deferred.camera_info.position, test_deferred.camera_info.pitch, test_deferred.camera_info.yaw, test_deferred.camera_info.roll, test_deferred.camera_info.fov_y_in_radians, test_deferred.camera_info.near, test_deferred.camera_info.far);
+    test_deferred.h_secondary_camera = tg_camera_create_perspective(test_deferred.camera_info.position, test_deferred.camera_info.pitch, test_deferred.camera_info.yaw, test_deferred.camera_info.roll, test_deferred.camera_info.fov_y_in_radians, test_deferred.camera_info.near, test_deferred.camera_info.far);
 
     tg_point_light p_point_lights[TG_POINT_LIGHT_COUNT] = { 0 };
     tg_random random = { 0 };
@@ -126,13 +126,13 @@ void tg_application_internal_game_3d_create()
     {
         char image_buffer[256] = { 0 };
         tg_string_format(sizeof(image_buffer), image_buffer, "textures/%i.bmp", i + 1);
-        test_deferred.textures_h[i] = tg_color_image_create(image_buffer);
+        test_deferred.ph_textures[i] = tg_color_image_create(image_buffer);
     }
-    test_deferred.textures_h[9] = tg_color_image_create("textures/cabin_final.bmp");
-    test_deferred.textures_h[10] = tg_color_image_create("textures/test_icon.bmp");
-    test_deferred.textures_h[11] = tg_color_image_create("textures/pbb_birch.bmp");
-    test_deferred.textures_h[12] = tg_color_image_create("textures/squirrel.bmp");
-    test_deferred.texture_atlas_h = tg_texture_atlas_create_from_images(13, test_deferred.textures_h);
+    test_deferred.ph_textures[9] = tg_color_image_create("textures/cabin_final.bmp");
+    test_deferred.ph_textures[10] = tg_color_image_create("textures/test_icon.bmp");
+    test_deferred.ph_textures[11] = tg_color_image_create("textures/pbb_birch.bmp");
+    test_deferred.ph_textures[12] = tg_color_image_create("textures/squirrel.bmp");
+    test_deferred.h_texture_atlas = tg_texture_atlas_create_from_images(13, test_deferred.ph_textures);
 
 
 
@@ -159,35 +159,35 @@ void tg_application_internal_game_3d_create()
         0, 1, 2, 2, 3, 0
     };
 
-    test_deferred.quad_mesh_h = tg_mesh_create(4, p_quad_positions, TG_NULL, p_uvs, TG_NULL, 6, p_indices);
-    test_deferred.deferred_vertex_shader_h = tg_vertex_shader_get("shaders/deferred.vert");
-    test_deferred.deferred_fragment_shader_h = tg_fragment_shader_get("shaders/deferred.frag");
-    test_deferred.default_material_h = tg_material_create_deferred(test_deferred.deferred_vertex_shader_h, test_deferred.deferred_fragment_shader_h, 0, TG_NULL);
+    test_deferred.h_quad_mesh = tg_mesh_create(4, p_quad_positions, TG_NULL, p_uvs, TG_NULL, 6, p_indices);
+    test_deferred.h_deferred_vertex_shader = tg_vertex_shader_get("shaders/deferred.vert");
+    test_deferred.h_deferred_fragment_shader = tg_fragment_shader_get("shaders/deferred.frag");
+    test_deferred.h_default_material = tg_material_create_deferred(test_deferred.h_deferred_vertex_shader, test_deferred.h_deferred_fragment_shader, 0, TG_NULL);
 
-    test_deferred.custom_uniform_buffer_h = tg_uniform_buffer_create(sizeof(v3));
-    test_deferred.p_custom_uniform_buffer_data = tg_uniform_buffer_data(test_deferred.custom_uniform_buffer_h);
+    test_deferred.h_custom_uniform_buffer = tg_uniform_buffer_create(sizeof(v3));
+    test_deferred.p_custom_uniform_buffer_data = tg_uniform_buffer_data(test_deferred.h_custom_uniform_buffer);
     *test_deferred.p_custom_uniform_buffer_data = (v3){ 1.0f, 0.0f, 0.0f };
-    test_deferred.image_h = tg_color_image_create("textures/test_icon.bmp");
-    test_deferred.forward_vertex_shader_h = tg_vertex_shader_get("shaders/forward.vert");
-    test_deferred.forward_custom_fragment_shader_h = tg_fragment_shader_get("shaders/forward_custom.frag");
-    test_deferred.forward_water_fragment_shader_h = tg_fragment_shader_get("shaders/forward_water.frag");
-    tg_handle p_custom_handles[2] = { test_deferred.custom_uniform_buffer_h, tg_camera_get_render_target(test_deferred.secondary_camera_h) };
-    test_deferred.custom_material_h = tg_material_create_forward(test_deferred.forward_vertex_shader_h, test_deferred.forward_custom_fragment_shader_h, 2, p_custom_handles);
-    test_deferred.water_material_h = tg_material_create_forward(test_deferred.forward_vertex_shader_h, test_deferred.forward_water_fragment_shader_h, 0, TG_NULL);
+    test_deferred.h_image = tg_color_image_create("textures/test_icon.bmp");
+    test_deferred.h_forward_vertex_shader = tg_vertex_shader_get("shaders/forward.vert");
+    test_deferred.h_forward_custom_fragment_shader = tg_fragment_shader_get("shaders/forward_custom.frag");
+    test_deferred.h_forward_water_fragment_shader = tg_fragment_shader_get("shaders/forward_water.frag");
+    tg_handle p_custom_handles[2] = { test_deferred.h_custom_uniform_buffer, tg_camera_get_render_target(test_deferred.h_secondary_camera) };
+    test_deferred.h_custom_material = tg_material_create_forward(test_deferred.h_forward_vertex_shader, test_deferred.h_forward_custom_fragment_shader, 2, p_custom_handles);
+    test_deferred.h_water_material = tg_material_create_forward(test_deferred.h_forward_vertex_shader, test_deferred.h_forward_water_fragment_shader, 0, TG_NULL);
 
-    test_deferred.ground_mesh_h = tg_mesh_create(4, p_ground_positions, TG_NULL, p_uvs, TG_NULL, 6, p_indices);
-    test_deferred.ground_entity = tg_entity_create(test_deferred.ground_mesh_h, test_deferred.water_material_h);
+    test_deferred.h_ground_mesh = tg_mesh_create(4, p_ground_positions, TG_NULL, p_uvs, TG_NULL, 6, p_indices);
+    test_deferred.ground_entity = tg_entity_create(test_deferred.h_ground_mesh, test_deferred.h_water_material);
     tg_entity* p_ground_entity = &test_deferred.ground_entity;
     tg_list_insert(&test_deferred.entities, &p_ground_entity);
 
-    test_deferred.quad_entity = tg_entity_create(test_deferred.quad_mesh_h, test_deferred.custom_material_h);
+    test_deferred.quad_entity = tg_entity_create(test_deferred.h_quad_mesh, test_deferred.h_custom_material);
     tg_entity* p_quad_entity = &test_deferred.quad_entity;
     test_deferred.quad_offset = -65.0f;
     tg_list_insert(&test_deferred.entities, &p_quad_entity);
 
 
 
-    test_deferred.terrain_h = tg_transvoxel_terrain_create(test_deferred.camera_info.camera_h);
+    test_deferred.h_terrain = tg_transvoxel_terrain_create(test_deferred.camera_info.h_camera);
     
     /*
     TODO:
@@ -299,68 +299,68 @@ void tg_application_internal_game_3d_update_and_render(f32 delta_ms)
         test_deferred.camera_info.position = tgm_v3_add(test_deferred.camera_info.position, velocity);
     }
 
-    tg_camera_set_view(test_deferred.camera_info.camera_h, test_deferred.camera_info.position, TGM_TO_RADIANS(test_deferred.camera_info.pitch), TGM_TO_RADIANS(test_deferred.camera_info.yaw), TGM_TO_RADIANS(test_deferred.camera_info.roll));
-    tg_camera_set_view(test_deferred.secondary_camera_h, test_deferred.camera_info.position, TGM_TO_RADIANS(test_deferred.camera_info.pitch), TGM_TO_RADIANS(test_deferred.camera_info.yaw), TGM_TO_RADIANS(test_deferred.camera_info.roll));
+    tg_camera_set_view(test_deferred.camera_info.h_camera, test_deferred.camera_info.position, TGM_TO_RADIANS(test_deferred.camera_info.pitch), TGM_TO_RADIANS(test_deferred.camera_info.yaw), TGM_TO_RADIANS(test_deferred.camera_info.roll));
+    tg_camera_set_view(test_deferred.h_secondary_camera, test_deferred.camera_info.position, TGM_TO_RADIANS(test_deferred.camera_info.pitch), TGM_TO_RADIANS(test_deferred.camera_info.yaw), TGM_TO_RADIANS(test_deferred.camera_info.roll));
     test_deferred.camera_info.last_mouse_x = mouse_x;
     test_deferred.camera_info.last_mouse_y = mouse_y;
 
     if (tg_input_get_mouse_wheel_detents(TG_FALSE))
     {
         test_deferred.camera_info.fov_y_in_radians -= 0.1f * tg_input_get_mouse_wheel_detents(TG_TRUE);
-        tg_camera_set_perspective_projection(test_deferred.camera_info.camera_h, test_deferred.camera_info.fov_y_in_radians, test_deferred.camera_info.near, test_deferred.camera_info.far);
-        tg_camera_set_perspective_projection(test_deferred.secondary_camera_h, test_deferred.camera_info.fov_y_in_radians, test_deferred.camera_info.near, test_deferred.camera_info.far);
+        tg_camera_set_perspective_projection(test_deferred.camera_info.h_camera, test_deferred.camera_info.fov_y_in_radians, test_deferred.camera_info.near, test_deferred.camera_info.far);
+        tg_camera_set_perspective_projection(test_deferred.h_secondary_camera, test_deferred.camera_info.fov_y_in_radians, test_deferred.camera_info.near, test_deferred.camera_info.far);
     }
 
-    tg_transvoxel_terrain_update(test_deferred.terrain_h);
-    tg_camera_begin(test_deferred.secondary_camera_h);
-    //tg_camera_capture_terrain(test_deferred.secondary_camera_h, test_deferred.terrain_h);
-    tg_camera_capture_transvoxel_terrain(test_deferred.secondary_camera_h, test_deferred.terrain_h);
+    tg_transvoxel_terrain_update(test_deferred.h_terrain);
+    tg_camera_begin(test_deferred.h_secondary_camera);
+    //tg_camera_capture_terrain(test_deferred.h_secondary_camera, test_deferred.h_terrain);
+    tg_camera_capture_transvoxel_terrain(test_deferred.h_secondary_camera, test_deferred.h_terrain);
     tg_entity** p_entities = TG_LIST_POINTER_TO(test_deferred.entities, 0);
     for (u32 i = 0; i < test_deferred.entities.count; i++)
     {
-        tg_camera_capture(test_deferred.secondary_camera_h, p_entities[i]->graphics_data_ptr_h);
+        tg_camera_capture(test_deferred.h_secondary_camera, p_entities[i]->h_graphics_data_ptr);
     }
-    tg_camera_end(test_deferred.secondary_camera_h);
+    tg_camera_end(test_deferred.h_secondary_camera);
 
-    tg_camera_begin(test_deferred.camera_info.camera_h);
-    //tg_camera_capture_terrain(test_deferred.camera_info.camera_h, test_deferred.terrain_h);
-    tg_camera_capture_transvoxel_terrain(test_deferred.camera_info.camera_h, test_deferred.terrain_h);
+    tg_camera_begin(test_deferred.camera_info.h_camera);
+    //tg_camera_capture_terrain(test_deferred.camera_info.h_camera, test_deferred.h_terrain);
+    tg_camera_capture_transvoxel_terrain(test_deferred.camera_info.h_camera, test_deferred.h_terrain);
     p_entities = TG_LIST_POINTER_TO(test_deferred.entities, 0);
     for (u32 i = 0; i < test_deferred.entities.count; i++)
     {
-        tg_camera_capture(test_deferred.camera_info.camera_h, p_entities[i]->graphics_data_ptr_h);
+        tg_camera_capture(test_deferred.camera_info.h_camera, p_entities[i]->h_graphics_data_ptr);
     }
-    tg_camera_end(test_deferred.camera_info.camera_h);
+    tg_camera_end(test_deferred.camera_info.h_camera);
 
-    tg_camera_present(test_deferred.camera_info.camera_h);
-    tg_camera_clear(test_deferred.secondary_camera_h);
-    tg_camera_clear(test_deferred.camera_info.camera_h);
+    tg_camera_present(test_deferred.camera_info.h_camera);
+    tg_camera_clear(test_deferred.h_secondary_camera);
+    tg_camera_clear(test_deferred.camera_info.h_camera);
 }
 
 void tg_application_internal_game_3d_destroy()
 {
-    tg_transvoxel_terrain_destroy(test_deferred.terrain_h);
+    tg_transvoxel_terrain_destroy(test_deferred.h_terrain);
 
-    tg_texture_atlas_destroy(test_deferred.texture_atlas_h);
+    tg_texture_atlas_destroy(test_deferred.h_texture_atlas);
     for (u32 i = 0; i < 13; i++)
     {
-        tg_color_image_destroy(test_deferred.textures_h[i]);
+        tg_color_image_destroy(test_deferred.ph_textures[i]);
     }
 
     tg_entity_destroy(&test_deferred.quad_entity);
     tg_entity_destroy(&test_deferred.ground_entity);
-    tg_mesh_destroy(test_deferred.ground_mesh_h);
-    tg_mesh_destroy(test_deferred.quad_mesh_h);
+    tg_mesh_destroy(test_deferred.h_ground_mesh);
+    tg_mesh_destroy(test_deferred.h_quad_mesh);
 
-    tg_material_destroy(test_deferred.water_material_h);
+    tg_material_destroy(test_deferred.h_water_material);
 
-    tg_color_image_destroy(test_deferred.image_h);
-    tg_uniform_buffer_destroy(test_deferred.custom_uniform_buffer_h);
-    tg_material_destroy(test_deferred.custom_material_h);
-    tg_material_destroy(test_deferred.default_material_h);
+    tg_color_image_destroy(test_deferred.h_image);
+    tg_uniform_buffer_destroy(test_deferred.h_custom_uniform_buffer);
+    tg_material_destroy(test_deferred.h_custom_material);
+    tg_material_destroy(test_deferred.h_default_material);
 
-    tg_camera_destroy(test_deferred.secondary_camera_h);
-    tg_camera_destroy(test_deferred.camera_info.camera_h);
+    tg_camera_destroy(test_deferred.h_secondary_camera);
+    tg_camera_destroy(test_deferred.camera_info.h_camera);
     tg_list_destroy(&test_deferred.entities);
 }
 
@@ -377,8 +377,8 @@ void tg_application_start()
     tg_debug_info debug_info = { 0 };
 #endif
 
-    tg_timer_h timer_h = tg_platform_timer_create();
-    tg_platform_timer_start(timer_h);
+    tg_timer_h h_timer = tg_platform_timer_create();
+    tg_platform_timer_start(h_timer);
 
     /*--------------------------------------------------------+
     | Start main loop                                         |
@@ -386,10 +386,10 @@ void tg_application_start()
 
     while (running)
     {
-        tg_platform_timer_stop(timer_h);
-        const f32 delta_ms = tg_platform_timer_elapsed_milliseconds(timer_h);
-        tg_platform_timer_reset(timer_h);
-        tg_platform_timer_start(timer_h);
+        tg_platform_timer_stop(h_timer);
+        const f32 delta_ms = tg_platform_timer_elapsed_milliseconds(h_timer);
+        tg_platform_timer_reset(h_timer);
+        tg_platform_timer_start(h_timer);
 
 #ifdef TG_DEBUG
         debug_info.ms_sum += delta_ms;
@@ -421,7 +421,7 @@ void tg_application_start()
     /*--------------------------------------------------------+
     | End main loop                                           |
     +--------------------------------------------------------*/
-    tg_platform_timer_destroy(timer_h);
+    tg_platform_timer_destroy(h_timer);
     tg_graphics_wait_idle();
     //tg_application_internal_game_2d_destroy();
     tg_application_internal_game_3d_destroy();

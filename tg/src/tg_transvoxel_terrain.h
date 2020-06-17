@@ -6,8 +6,8 @@
 
 TG_DECLARE_HANDLE(tg_transvoxel_terrain);
 
-tg_transvoxel_terrain_h tg_transvoxel_terrain_create(tg_camera_h camera_h);
-void tg_transvoxel_terrain_destroy(tg_transvoxel_terrain_h transvoxel_terrain_h);
-void tg_transvoxel_terrain_update(tg_transvoxel_terrain_h transvoxel_terrain_h);
+tg_transvoxel_terrain_h tg_transvoxel_terrain_create(tg_camera_h h_camera);
+void tg_transvoxel_terrain_destroy(tg_transvoxel_terrain_h h_terrain);
+void tg_transvoxel_terrain_update(tg_transvoxel_terrain_h h_terrain);
 
 #endif

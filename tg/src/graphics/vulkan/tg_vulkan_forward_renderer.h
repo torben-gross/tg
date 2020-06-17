@@ -7,7 +7,7 @@
 
 typedef struct tg_forward_renderer
 {
-    tg_camera_h                  camera_h;
+    tg_camera_h                  h_camera;
     struct
     {
         VkRenderPass             render_pass;

@@ -806,6 +806,7 @@ void tg_spirv_fill_layout(u32 word_count, const u32* p_words, tg_spirv_layout* p
         processed_word_count += op_word_count;
     }
 
+    // TODO: this must consider alignment rules! this only works as long as there is no 64 bit value in here somewhere
     u32 offset = 0;
     for (u8 i = 0; i < p_layout->input_resource_count; i++)
     {

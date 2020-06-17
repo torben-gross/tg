@@ -6,14 +6,14 @@
 
 
 
-tg_material_h tg_material_internal_create(tg_vulkan_material_type vulkan_material_type, tg_vertex_shader_h vertex_shader_h, tg_fragment_shader_h fragment_shader_h, u32 handle_count, tg_handle* p_handles)
+tg_material_h tg_material_internal_create(tg_vulkan_material_type vulkan_material_type, tg_vertex_shader_h h_vertex_shader, tg_fragment_shader_h h_fragment_shader, u32 handle_count, tg_handle* p_handles)
 {
-    tg_material_h material_h = TG_MEMORY_ALLOC(sizeof(*material_h));
+    tg_material_h h_material = TG_MEMORY_ALLOC(sizeof(*h_material));
 
-    material_h->type = TG_HANDLE_TYPE_MATERIAL;
-    material_h->material_type = vulkan_material_type;
-    material_h->vertex_shader_h = vertex_shader_h;
-    material_h->fragment_shader_h = fragment_shader_h;
+    h_material->type = TG_HANDLE_TYPE_MATERIAL;
+    h_material->material_type = vulkan_material_type;
+    h_material->h_vertex_shader = h_vertex_shader;
+    h_material->h_fragment_shader = h_fragment_shader;
 
     if (handle_count != 0)
     {
@@ -27,63 +27,63 @@ tg_material_h tg_material_internal_create(tg_vulkan_material_type vulkan_materia
             p_descriptor_set_layout_bindings[i].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
             p_descriptor_set_layout_bindings[i].pImmutableSamplers = TG_NULL;
         }
-        material_h->descriptor = tg_vulkan_descriptor_create(handle_count, p_descriptor_set_layout_bindings);
+        h_material->descriptor = tg_vulkan_descriptor_create(handle_count, p_descriptor_set_layout_bindings);
         TG_MEMORY_STACK_FREE(descriptor_set_layout_bindings_size);
 
         for (u32 i = 0; i < handle_count; i++)
         {
-            tg_vulkan_descriptor_set_update(material_h->descriptor.descriptor_set, p_handles[i], i);
+            tg_vulkan_descriptor_set_update(h_material->descriptor.descriptor_set, p_handles[i], i);
         }
     }
     else
     {
-        material_h->descriptor.descriptor_pool = VK_NULL_HANDLE;
-        material_h->descriptor.descriptor_set_layout = VK_NULL_HANDLE;
-        material_h->descriptor.descriptor_set = VK_NULL_HANDLE;
+        h_material->descriptor.descriptor_pool = VK_NULL_HANDLE;
+        h_material->descriptor.descriptor_set_layout = VK_NULL_HANDLE;
+        h_material->descriptor.descriptor_set = VK_NULL_HANDLE;
     }
 
-    return material_h;
+    return h_material;
 }
 
 
 
-tg_material_h tg_material_create_deferred(tg_vertex_shader_h vertex_shader_h, tg_fragment_shader_h fragment_shader_h, u32 handle_count, tg_handle* p_handles)
+tg_material_h tg_material_create_deferred(tg_vertex_shader_h h_vertex_shader, tg_fragment_shader_h h_fragment_shader, u32 handle_count, tg_handle* p_handles)
 {
-    TG_ASSERT(vertex_shader_h && fragment_shader_h);
+    TG_ASSERT(h_vertex_shader && h_fragment_shader);
 
-    tg_material_h material_h = tg_material_internal_create(TG_VULKAN_MATERIAL_TYPE_DEFERRED, vertex_shader_h, fragment_shader_h, handle_count, p_handles);
-    return material_h;
+    tg_material_h h_material = tg_material_internal_create(TG_VULKAN_MATERIAL_TYPE_DEFERRED, h_vertex_shader, h_fragment_shader, handle_count, p_handles);
+    return h_material;
 }
 
-tg_material_h tg_material_create_forward(tg_vertex_shader_h vertex_shader_h, tg_fragment_shader_h fragment_shader_h, u32 handle_count, tg_handle* p_handles)
+tg_material_h tg_material_create_forward(tg_vertex_shader_h h_vertex_shader, tg_fragment_shader_h h_fragment_shader, u32 handle_count, tg_handle* p_handles)
 {
-    TG_ASSERT(vertex_shader_h && fragment_shader_h);
+    TG_ASSERT(h_vertex_shader && h_fragment_shader);
 
-    tg_material_h material_h = tg_material_internal_create(TG_VULKAN_MATERIAL_TYPE_FORWARD, vertex_shader_h, fragment_shader_h, handle_count, p_handles);
-    return material_h;
+    tg_material_h h_material = tg_material_internal_create(TG_VULKAN_MATERIAL_TYPE_FORWARD, h_vertex_shader, h_fragment_shader, handle_count, p_handles);
+    return h_material;
 }
 
-void tg_material_destroy(tg_material_h material_h)
+void tg_material_destroy(tg_material_h h_material)
 {
-    TG_ASSERT(material_h);
+    TG_ASSERT(h_material);
 
-    tg_vulkan_descriptor_destroy(&material_h->descriptor);
-	TG_MEMORY_FREE(material_h);
+    tg_vulkan_descriptor_destroy(&h_material->descriptor);
+	TG_MEMORY_FREE(h_material);
 }
 
-b32 tg_material_is_deferred(tg_material_h material_h)
+b32 tg_material_is_deferred(tg_material_h h_material)
 {
-    TG_ASSERT(material_h);
+    TG_ASSERT(h_material);
 
-    const b32 result = material_h->material_type == TG_VULKAN_MATERIAL_TYPE_DEFERRED;
+    const b32 result = h_material->material_type == TG_VULKAN_MATERIAL_TYPE_DEFERRED;
     return result;
 }
 
-b32 tg_material_is_forward(tg_material_h material_h)
+b32 tg_material_is_forward(tg_material_h h_material)
 {
-    TG_ASSERT(material_h);
+    TG_ASSERT(h_material);
 
-    const b32 result = material_h->material_type == TG_VULKAN_MATERIAL_TYPE_FORWARD;
+    const b32 result = h_material->material_type == TG_VULKAN_MATERIAL_TYPE_FORWARD;
     return result;
 }
 

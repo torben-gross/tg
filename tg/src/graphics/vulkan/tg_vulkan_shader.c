@@ -52,11 +52,11 @@ void tg_shader_internal_recompile(const char* p_filename)
 
 
 
-void tg_compute_shader_bind_input(tg_compute_shader_h compute_shader_h, u32 first_handle_index, u32 handle_count, tg_handle* p_handles)
+void tg_compute_shader_bind_input(tg_compute_shader_h h_compute_shader, u32 first_handle_index, u32 handle_count, tg_handle* p_handles)
 {
 	for (u32 i = first_handle_index; i < first_handle_index + handle_count; i++)
 	{
-		tg_vulkan_descriptor_set_update(compute_shader_h->descriptor.descriptor_set, p_handles[i], i);
+		tg_vulkan_descriptor_set_update(h_compute_shader->descriptor.descriptor_set, p_handles[i], i);
 	}
 }
 
@@ -69,28 +69,28 @@ tg_compute_shader_h tg_compute_shader_create(const char* p_filename)
 	tg_shader_internal_recompile(p_filename);
 #endif
 
-	tg_compute_shader_h compute_shader_h = TG_MEMORY_ALLOC(sizeof(*compute_shader_h));
-	compute_shader_h->type = TG_HANDLE_TYPE_COMPUTE_SHADER;
+	tg_compute_shader_h h_compute_shader = TG_MEMORY_ALLOC(sizeof(*h_compute_shader));
+	h_compute_shader->type = TG_HANDLE_TYPE_COMPUTE_SHADER;
 
-	compute_shader_h->vulkan_shader = tg_vulkan_shader_create(p_filename);
-	compute_shader_h->descriptor = tg_vulkan_descriptor_create_for_shader(&compute_shader_h->vulkan_shader);
-	compute_shader_h->pipeline_layout = tg_vulkan_pipeline_layout_create(1, &compute_shader_h->descriptor.descriptor_set_layout, 0, TG_NULL);
-	compute_shader_h->compute_pipeline = tg_vulkan_compute_pipeline_create(compute_shader_h->vulkan_shader.shader_module, compute_shader_h->pipeline_layout);
+	h_compute_shader->vulkan_shader = tg_vulkan_shader_create(p_filename);
+	h_compute_shader->descriptor = tg_vulkan_descriptor_create_for_shader(&h_compute_shader->vulkan_shader);
+	h_compute_shader->pipeline_layout = tg_vulkan_pipeline_layout_create(1, &h_compute_shader->descriptor.descriptor_set_layout, 0, TG_NULL);
+	h_compute_shader->compute_pipeline = tg_vulkan_compute_pipeline_create(h_compute_shader->vulkan_shader.shader_module, h_compute_shader->pipeline_layout);
 	// TODO: global command buffer in tg_graphics_vulkan.c
-	compute_shader_h->command_buffer = tg_vulkan_command_buffer_allocate(compute_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+	h_compute_shader->command_buffer = tg_vulkan_command_buffer_allocate(compute_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
-	return compute_shader_h;
+	return h_compute_shader;
 }
 
-void tg_compute_shader_dispatch(tg_compute_shader_h compute_shader_h, u32 group_count_x, u32 group_count_y, u32 group_count_z)
+void tg_compute_shader_dispatch(tg_compute_shader_h h_compute_shader, u32 group_count_x, u32 group_count_y, u32 group_count_z)
 {
-	TG_ASSERT(compute_shader_h && group_count_x && group_count_y && group_count_z);
+	TG_ASSERT(h_compute_shader && group_count_x && group_count_y && group_count_z);
 
-	tg_vulkan_command_buffer_begin(compute_shader_h->command_buffer, 0, TG_NULL);
-	vkCmdBindPipeline(compute_shader_h->command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute_shader_h->compute_pipeline);
-	vkCmdBindDescriptorSets(compute_shader_h->command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute_shader_h->pipeline_layout, 0, 1, &compute_shader_h->descriptor.descriptor_set, 0, TG_NULL);
-	vkCmdDispatch(compute_shader_h->command_buffer, group_count_x, group_count_y, group_count_z);
-	VK_CALL(vkEndCommandBuffer(compute_shader_h->command_buffer));
+	tg_vulkan_command_buffer_begin(h_compute_shader->command_buffer, 0, TG_NULL);
+	vkCmdBindPipeline(h_compute_shader->command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, h_compute_shader->compute_pipeline);
+	vkCmdBindDescriptorSets(h_compute_shader->command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, h_compute_shader->pipeline_layout, 0, 1, &h_compute_shader->descriptor.descriptor_set, 0, TG_NULL);
+	vkCmdDispatch(h_compute_shader->command_buffer, group_count_x, group_count_y, group_count_z);
+	VK_CALL(vkEndCommandBuffer(h_compute_shader->command_buffer));
 
 	VkSubmitInfo submit_info = { 0 };// TODO: add fence to compute shader
 	{
@@ -100,7 +100,7 @@ void tg_compute_shader_dispatch(tg_compute_shader_h compute_shader_h, u32 group_
 		submit_info.pWaitSemaphores = TG_NULL;
 		submit_info.pWaitDstStageMask = TG_NULL;
 		submit_info.commandBufferCount = 1;
-		submit_info.pCommandBuffers = &compute_shader_h->command_buffer;
+		submit_info.pCommandBuffers = &h_compute_shader->command_buffer;
 		submit_info.signalSemaphoreCount = 0;
 		submit_info.pSignalSemaphores = TG_NULL;
 	}
@@ -108,24 +108,24 @@ void tg_compute_shader_dispatch(tg_compute_shader_h compute_shader_h, u32 group_
 	VK_CALL(vkQueueWaitIdle(compute_queue.queue));
 }
 
-void tg_compute_shader_destroy(tg_compute_shader_h compute_shader_h)
+void tg_compute_shader_destroy(tg_compute_shader_h h_compute_shader)
 {
-	TG_ASSERT(compute_shader_h);
+	TG_ASSERT(h_compute_shader);
 
-	tg_vulkan_command_buffer_free(compute_command_pool, compute_shader_h->command_buffer);
-	tg_vulkan_compute_pipeline_destroy(compute_shader_h->compute_pipeline);
-	tg_vulkan_pipeline_layout_destroy(compute_shader_h->pipeline_layout);
-	tg_vulkan_descriptor_destroy(&compute_shader_h->descriptor);
-	tg_vulkan_shader_destroy(&compute_shader_h->vulkan_shader);
-	TG_MEMORY_FREE(compute_shader_h);
+	tg_vulkan_command_buffer_free(compute_command_pool, h_compute_shader->command_buffer);
+	tg_vulkan_compute_pipeline_destroy(h_compute_shader->compute_pipeline);
+	tg_vulkan_pipeline_layout_destroy(h_compute_shader->pipeline_layout);
+	tg_vulkan_descriptor_destroy(&h_compute_shader->descriptor);
+	tg_vulkan_shader_destroy(&h_compute_shader->vulkan_shader);
+	TG_MEMORY_FREE(h_compute_shader);
 }
 
 tg_compute_shader_h tg_compute_shader_get(const char* p_filename)
 {
 	TG_ASSERT(p_filename);
 
-	tg_compute_shader_h compute_shader_h = tg_assets_get_asset(p_filename);
-	return compute_shader_h;
+	tg_compute_shader_h h_compute_shader = tg_assets_get_asset(p_filename);
+	return h_compute_shader;
 }
 
 
@@ -139,26 +139,26 @@ tg_vertex_shader_h tg_vertex_shader_create(const char* p_filename)
 	tg_shader_internal_recompile(p_filename);
 #endif
 
-	tg_vertex_shader_h vertex_shader_h = TG_MEMORY_ALLOC(sizeof(*vertex_shader_h));
-	vertex_shader_h->type = TG_HANDLE_TYPE_VERTEX_SHADER;
-	vertex_shader_h->vulkan_shader = tg_vulkan_shader_create(p_filename);
-	return vertex_shader_h;
+	tg_vertex_shader_h h_vertex_shader = TG_MEMORY_ALLOC(sizeof(*h_vertex_shader));
+	h_vertex_shader->type = TG_HANDLE_TYPE_VERTEX_SHADER;
+	h_vertex_shader->vulkan_shader = tg_vulkan_shader_create(p_filename);
+	return h_vertex_shader;
 }
 
-void tg_vertex_shader_destroy(tg_vertex_shader_h vertex_shader_h)
+void tg_vertex_shader_destroy(tg_vertex_shader_h h_vertex_shader)
 {
-	TG_ASSERT(vertex_shader_h);
+	TG_ASSERT(h_vertex_shader);
 
-	tg_vulkan_shader_destroy(&vertex_shader_h->vulkan_shader);
-	TG_MEMORY_FREE(vertex_shader_h);
+	tg_vulkan_shader_destroy(&h_vertex_shader->vulkan_shader);
+	TG_MEMORY_FREE(h_vertex_shader);
 }
 
 tg_vertex_shader_h tg_vertex_shader_get(const char* p_filename)
 {
     TG_ASSERT(p_filename);
 
-	tg_vertex_shader_h vertex_shader_h = tg_assets_get_asset(p_filename);
-	return vertex_shader_h;
+	tg_vertex_shader_h h_vertex_shader = tg_assets_get_asset(p_filename);
+	return h_vertex_shader;
 }
 
 
@@ -172,26 +172,26 @@ tg_fragment_shader_h tg_fragment_shader_create(const char* p_filename)
 	tg_shader_internal_recompile(p_filename);
 #endif
 
-	tg_fragment_shader_h fragment_shader_h = TG_MEMORY_ALLOC(sizeof(*fragment_shader_h));
-	fragment_shader_h->type = TG_HANDLE_TYPE_FRAGMENT_SHADER;
-	fragment_shader_h->vulkan_shader = tg_vulkan_shader_create(p_filename);
-	return fragment_shader_h;
+	tg_fragment_shader_h h_fragment_shader = TG_MEMORY_ALLOC(sizeof(*h_fragment_shader));
+	h_fragment_shader->type = TG_HANDLE_TYPE_FRAGMENT_SHADER;
+	h_fragment_shader->vulkan_shader = tg_vulkan_shader_create(p_filename);
+	return h_fragment_shader;
 }
 
-void tg_fragment_shader_destroy(tg_fragment_shader_h fragment_shader_h)
+void tg_fragment_shader_destroy(tg_fragment_shader_h h_fragment_shader)
 {
-	TG_ASSERT(fragment_shader_h);
+	TG_ASSERT(h_fragment_shader);
 
-	tg_vulkan_shader_destroy(&fragment_shader_h->vulkan_shader);
-	TG_MEMORY_FREE(fragment_shader_h);
+	tg_vulkan_shader_destroy(&h_fragment_shader->vulkan_shader);
+	TG_MEMORY_FREE(h_fragment_shader);
 }
 
 tg_fragment_shader_h tg_fragment_shader_get(const char* p_filename)
 {
     TG_ASSERT(p_filename);
 
-	tg_fragment_shader_h fragment_shader_h = tg_assets_get_asset(p_filename);
-    return fragment_shader_h;
+	tg_fragment_shader_h h_fragment_shader = tg_assets_get_asset(p_filename);
+    return h_fragment_shader;
 }
 
 #endif

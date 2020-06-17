@@ -29,14 +29,14 @@ typedef struct tg_entity
 		m4                           position_matrix;
 		m4                           model_matrix;
 	} transform;
-	tg_entity_graphics_data_ptr_h    graphics_data_ptr_h;
+	tg_entity_graphics_data_ptr_h    h_graphics_data_ptr;
 } tg_entity;
 
 
 
-tg_entity    tg_entity_create(tg_mesh_h mesh_h, tg_material_h material_h);
+tg_entity    tg_entity_create(tg_mesh_h h_mesh, tg_material_h h_material);
 void         tg_entity_destroy(tg_entity *p_entity);
-void         tg_entity_set_mesh(tg_entity* p_entity, tg_mesh_h mesh_h, u8 lod);
+void         tg_entity_set_mesh(tg_entity* p_entity, tg_mesh_h h_mesh, u8 lod);
 void         tg_entity_set_position(tg_entity* p_entity, v3 position);
 
 #endif

@@ -890,16 +890,16 @@ void tgi_build_node(tg_transvoxel_node* p_node, v3 camera_position, v3i octree_m
 			tg_memory_copy(indices_size, p_index_buffer, p_node->node.p_indices);
 
 			// TODO: save these somehow for destruction
-			tg_mesh_h mesh_h = tg_mesh_create2(
+			tg_mesh_h h_mesh = tg_mesh_create2(
 				p_node->node.vertex_count, sizeof(tg_transvoxel_vertex), p_node->node.p_vertices,
 				p_node->node.index_count, p_node->node.p_indices
 			);
-			tg_material_h material_h = tg_material_create_deferred(
+			tg_material_h h_material = tg_material_create_deferred(
 				tg_vertex_shader_get("shaders/deferred_flat_terrain.vert"),
 				tg_fragment_shader_get("shaders/deferred_flat_terrain.frag"),
 				0, TG_NULL
 			);
-			p_node->node.entity = tg_entity_create(mesh_h, material_h);
+			p_node->node.entity = tg_entity_create(h_mesh, h_material);
 		}
 
 		if (lod > 0)
@@ -918,16 +918,16 @@ void tgi_build_node(tg_transvoxel_node* p_node, v3 camera_position, v3i octree_m
 					tg_memory_copy(indices_size, p_index_buffer, p_node->node.pp_transition_indices[i]);
 
 					// TODO: save these somehow for destruction
-					tg_mesh_h mesh_h = tg_mesh_create2(
+					tg_mesh_h h_mesh = tg_mesh_create2(
 						p_node->node.p_transition_vertex_counts[i], sizeof(tg_transvoxel_vertex), p_node->node.pp_transition_vertices[i],
 						p_node->node.p_transition_index_counts[i], p_node->node.pp_transition_indices[i]
 					);
-					tg_material_h material_h = tg_material_create_deferred(
+					tg_material_h h_material = tg_material_create_deferred(
 						tg_vertex_shader_get("shaders/deferred_flat_terrain.vert"),
 						tg_fragment_shader_get("shaders/deferred_flat_terrain.frag"),
 						0, TG_NULL
 					);
-					p_node->node.p_transition_entities[i] = tg_entity_create(mesh_h, material_h);
+					p_node->node.p_transition_entities[i] = tg_entity_create(h_mesh, h_material);
 				}
 			}
 		}
@@ -941,21 +941,21 @@ void tgi_build_node(tg_transvoxel_node* p_node, v3 camera_position, v3i octree_m
 
 
 
-tg_transvoxel_terrain_h tg_transvoxel_terrain_create(tg_camera_h camera_h)
+tg_transvoxel_terrain_h tg_transvoxel_terrain_create(tg_camera_h h_camera)
 {
-	tg_transvoxel_terrain_h terrain_h = TG_MEMORY_ALLOC(sizeof(*terrain_h));
-	terrain_h->camera_h = camera_h;
-	terrain_h->octree.min_coordinates = (v3i){ -128, -128, -128 };
+	tg_transvoxel_terrain_h h_terrain = TG_MEMORY_ALLOC(sizeof(*h_terrain));
+	h_terrain->h_camera = h_camera;
+	h_terrain->octree.min_coordinates = (v3i){ -128, -128, -128 };
 
 	const u64 voxel_map_size = TG_TRANSVOXEL_VOXEL_MAP_VOXELS * sizeof(i8);
 	i8* p_voxel_map = TG_MEMORY_STACK_ALLOC(voxel_map_size);
 
-	tgi_fill_voxel_map(terrain_h->octree.min_coordinates, p_voxel_map);
-	terrain_h->octree.p_compressed_voxel_map = tgi_create_compressed_voxel_map(p_voxel_map);
+	tgi_fill_voxel_map(h_terrain->octree.min_coordinates, p_voxel_map);
+	h_terrain->octree.p_compressed_voxel_map = tgi_create_compressed_voxel_map(p_voxel_map);
 	tgi_build_node(
-		&terrain_h->octree.root,
-		tg_camera_get_position(camera_h),
-		terrain_h->octree.min_coordinates,
+		&h_terrain->octree.root,
+		tg_camera_get_position(h_camera),
+		h_terrain->octree.min_coordinates,
 		V3I(0),
 		tgi_determine_max_lod(),
 		p_voxel_map
@@ -963,16 +963,16 @@ tg_transvoxel_terrain_h tg_transvoxel_terrain_create(tg_camera_h camera_h)
 
 	TG_MEMORY_STACK_FREE(voxel_map_size);
 
-	return terrain_h;
+	return h_terrain;
 }
 
-void tg_transvoxel_terrain_destroy(tg_transvoxel_terrain_h terrain_h)
+void tg_transvoxel_terrain_destroy(tg_transvoxel_terrain_h h_terrain)
 {
-	TG_ASSERT(terrain_h);
+	TG_ASSERT(h_terrain);
 	TG_ASSERT(TG_FALSE);
 }
 
-void tg_transvoxel_terrain_update(tg_transvoxel_terrain_h terrain_h)
+void tg_transvoxel_terrain_update(tg_transvoxel_terrain_h h_terrain)
 {
 
 }

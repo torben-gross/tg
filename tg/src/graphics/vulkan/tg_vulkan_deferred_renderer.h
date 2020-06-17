@@ -7,7 +7,7 @@
 
 typedef struct tg_deferred_renderer
 {
-    tg_camera_h                         camera_h;
+    tg_camera_h                         h_camera;
     struct
     {
         tg_color_image                  position_attachment;

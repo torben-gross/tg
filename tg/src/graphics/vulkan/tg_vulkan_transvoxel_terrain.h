@@ -84,7 +84,7 @@ typedef struct tg_transvoxel_octree
 
 typedef struct tg_transvoxel_terrain
 {
-	tg_camera_h             camera_h;
+	tg_camera_h             h_camera;
 	tg_transvoxel_octree    octree; // TODO: one octree per chunk/block
 } tg_transvoxel_terrain;
 

@@ -130,7 +130,7 @@ void tg_assets_internal_try_load(const tg_file_properties* p_properties)
 void tg_assets_internal_try_load_directory(const char* p_relative_directory)
 {
 	tg_file_properties file_properties = { 0 };
-	tg_file_iterator_h file_iterator_h = tg_platform_begin_file_iteration(p_relative_directory, &file_properties);
+	tg_file_iterator_h h_file_iterator = tg_platform_begin_file_iteration(p_relative_directory, &file_properties);
 
 	do
 	{
@@ -144,7 +144,7 @@ void tg_assets_internal_try_load_directory(const char* p_relative_directory)
 		{
 			tg_assets_internal_try_load(&file_properties);
 		}
-	} while (tg_platform_continue_file_iteration(p_relative_directory, file_iterator_h, &file_properties));
+	} while (tg_platform_continue_file_iteration(p_relative_directory, h_file_iterator, &file_properties));
 }
 
 

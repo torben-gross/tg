@@ -62,7 +62,7 @@ void                  tg_platform_handle_events();
 i8                    tg_platform_system_time_compare(tg_system_time* p_time0, tg_system_time* p_time1);
 
 tg_file_iterator_h    tg_platform_begin_file_iteration(const char* p_directory, tg_file_properties* p_properties);
-b32                   tg_platform_continue_file_iteration(const char* p_directory, tg_file_iterator_h file_iterator_h, tg_file_properties* p_properties);
+b32                   tg_platform_continue_file_iteration(const char* p_directory, tg_file_iterator_h h_file_iterator, tg_file_properties* p_properties);
 void                  tg_platform_extraxt_file_directory(u64 size, char* p_buffer, const char* p_filename);
 b32                   tg_platform_file_exists(const char* p_filename);
 void                  tg_platform_free_file(char* p_data);
@@ -72,10 +72,10 @@ u64                   tg_platform_get_full_directory_size(const char* p_director
 void                  tg_platform_read_file(const char* p_filename, u32* p_size, char** pp_data);
 
 tg_timer_h            tg_platform_timer_create();
-void                  tg_platform_timer_start(tg_timer_h timer_h);
-void                  tg_platform_timer_stop(tg_timer_h timer_h);
-void                  tg_platform_timer_reset(tg_timer_h timer_h);
-f32                   tg_platform_timer_elapsed_milliseconds(tg_timer_h timer_h);
-void                  tg_platform_timer_destroy(tg_timer_h timer_h);
+void                  tg_platform_timer_start(tg_timer_h h_timer);
+void                  tg_platform_timer_stop(tg_timer_h h_timer);
+void                  tg_platform_timer_reset(tg_timer_h h_timer);
+f32                   tg_platform_timer_elapsed_milliseconds(tg_timer_h h_timer);
+void                  tg_platform_timer_destroy(tg_timer_h h_timer);
 
 #endif

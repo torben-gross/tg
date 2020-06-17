@@ -58,9 +58,9 @@
 
 
 
-#define TG_CAMERA_VIEW(camera_h)                                     (((m4*)camera_h->view_projection_ubo.memory.p_mapped_device_memory)[0])
-#define TG_CAMERA_PROJ(camera_h)                                     (((m4*)camera_h->view_projection_ubo.memory.p_mapped_device_memory)[1])
-#define TG_ENTITY_GRAPHICS_DATA_PTR_MODEL(e_h)                       (*(m4*)e_h->model_ubo.memory.p_mapped_device_memory)
+#define TG_CAMERA_VIEW(h_camera)                                     (((m4*)h_camera->view_projection_ubo.memory.p_mapped_device_memory)[0])
+#define TG_CAMERA_PROJ(h_camera)                                     (((m4*)h_camera->view_projection_ubo.memory.p_mapped_device_memory)[1])
+#define TG_ENTITY_GRAPHICS_DATA_PTR_MODEL(h_entity_graphics)         (*(m4*)h_entity_graphics->model_ubo.memory.p_mapped_device_memory)
 
 
 
@@ -117,7 +117,7 @@ typedef struct tg_vulkan_image_extent
 
 typedef struct tg_vulkan_queue
 {
-    u8         index;
+    u32        index;
     VkQueue    queue;
 } tg_vulkan_queue;
 
@@ -228,11 +228,11 @@ typedef struct tg_camera
     tg_vulkan_buffer                 view_projection_ubo;
     tg_render_target                 render_target;
     u32                              captured_entity_count;
-    tg_entity_graphics_data_ptr_h    captured_entities[TG_VULKAN_MAX_ENTITIES_PER_CAMERA];
+    tg_entity_graphics_data_ptr_h    ph_captured_entities[TG_VULKAN_MAX_ENTITIES_PER_CAMERA];
     struct
     {
-        tg_deferred_renderer_h       deferred_renderer_h;
-        tg_forward_renderer_h        forward_renderer_h;
+        tg_deferred_renderer_h       h_deferred_renderer;
+        tg_forward_renderer_h        h_forward_renderer;
     } capture_pass;
     struct
     {
@@ -257,7 +257,7 @@ typedef struct tg_camera
 
 typedef struct tg_vulkan_camera_info
 {
-    tg_camera_h               camera_h;
+    tg_camera_h               h_camera;
     tg_vulkan_descriptor      descriptor;
     VkPipelineLayout          pipeline_layout;
     VkPipeline                graphics_pipeline;
@@ -268,8 +268,8 @@ typedef struct tg_entity_graphics_data_ptr
 {
     tg_handle_type           type;
     u32                      lod_count;
-    tg_mesh_h                p_lod_meshes_h[TG_VULKAN_MAX_LOD_COUNT]; // TODO: does this need to be a pointer?
-    tg_material_h            material_h;
+    tg_mesh_h                ph_lod_meshes[TG_VULKAN_MAX_LOD_COUNT]; // TODO: does this need to be a pointer?
+    tg_material_h            h_material;
     tg_vulkan_buffer         model_ubo;
     u32                      camera_info_count;
     tg_vulkan_camera_info    p_camera_infos[TG_VULKAN_MAX_CAMERAS_PER_ENTITY];
@@ -285,8 +285,8 @@ typedef struct tg_material
 {
     tg_handle_type             type;
     tg_vulkan_material_type    material_type;
-    tg_vertex_shader_h         vertex_shader_h;
-    tg_fragment_shader_h       fragment_shader_h;
+    tg_vertex_shader_h         h_vertex_shader;
+    tg_fragment_shader_h       h_fragment_shader;
     tg_vulkan_descriptor       descriptor;
 } tg_material;
 
@@ -353,8 +353,8 @@ VkCommandPool        compute_command_pool;
 
 VkSwapchainKHR       swapchain;
 VkExtent2D           swapchain_extent;
-VkImage              swapchain_images[TG_VULKAN_SURFACE_IMAGE_COUNT];
-VkImageView          swapchain_image_views[TG_VULKAN_SURFACE_IMAGE_COUNT];
+VkImage              p_swapchain_images[TG_VULKAN_SURFACE_IMAGE_COUNT];
+VkImageView          p_swapchain_image_views[TG_VULKAN_SURFACE_IMAGE_COUNT];
 
 
 
@@ -397,7 +397,7 @@ tg_depth_image                tg_vulkan_depth_image_create(const tg_vulkan_depth
 VkFormat                      tg_vulkan_depth_image_convert_format(tg_depth_image_format format);
 void                          tg_vulkan_depth_image_destroy(tg_depth_image* p_depth_image);
 
-void                          tg_deferred_renderer_execute(tg_deferred_renderer_h deferred_renderer_h, VkCommandBuffer command_buffer);// TODO: move everything over and rename functions
+void                          tg_deferred_renderer_execute(tg_deferred_renderer_h h_deferred_renderer, VkCommandBuffer command_buffer);// TODO: move everything over and rename functions
 
 // TODO: should the first variant be removed?
 tg_vulkan_descriptor          tg_vulkan_descriptor_create(u32 binding_count, VkDescriptorSetLayoutBinding* p_bindings);

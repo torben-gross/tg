@@ -910,38 +910,38 @@ void tg_vulkan_descriptor_set_update(VkDescriptorSet descriptor_set, tg_handle h
     {
     case TG_HANDLE_TYPE_COLOR_IMAGE:
     {
-        tg_color_image_h color_image_h = (tg_color_image_h)handle;
-        tg_vulkan_descriptor_set_update_color_image(descriptor_set, color_image_h, dst_binding);
+        tg_color_image_h h_color_image = (tg_color_image_h)handle;
+        tg_vulkan_descriptor_set_update_color_image(descriptor_set, h_color_image, dst_binding);
     } break;
     case TG_HANDLE_TYPE_DEPTH_IMAGE:
     {
-        tg_depth_image_h depth_image_h = (tg_depth_image_h)handle;
-        tg_vulkan_descriptor_set_update_depth_image(descriptor_set, depth_image_h, dst_binding);
+        tg_depth_image_h h_depth_image = (tg_depth_image_h)handle;
+        tg_vulkan_descriptor_set_update_depth_image(descriptor_set, h_depth_image, dst_binding);
     } break;
     case TG_HANDLE_TYPE_RENDER_TARGET:
     {
-        tg_render_target_h render_target_h = (tg_render_target_h)handle;
-        tg_vulkan_descriptor_set_update_render_target(descriptor_set, render_target_h, dst_binding);
+        tg_render_target_h h_render_target = (tg_render_target_h)handle;
+        tg_vulkan_descriptor_set_update_render_target(descriptor_set, h_render_target, dst_binding);
     } break;
     case TG_HANDLE_TYPE_STORAGE_BUFFER:
     {
-        tg_storage_buffer_h storage_buffer_h = (tg_storage_buffer_h)handle;
-        tg_vulkan_descriptor_set_update_storage_buffer(descriptor_set, storage_buffer_h->buffer.buffer, dst_binding);
+        tg_storage_buffer_h h_storage_buffer = (tg_storage_buffer_h)handle;
+        tg_vulkan_descriptor_set_update_storage_buffer(descriptor_set, h_storage_buffer->buffer.buffer, dst_binding);
     } break;
     case TG_HANDLE_TYPE_STORAGE_IMAGE_3D:
     {
-        tg_storage_image_3d_h storage_image_h = (tg_storage_image_3d_h)handle;
-        tg_vulkan_descriptor_set_update_storage_image_3d(descriptor_set, storage_image_h, dst_binding);
+        tg_storage_image_3d_h h_storage_image = (tg_storage_image_3d_h)handle;
+        tg_vulkan_descriptor_set_update_storage_image_3d(descriptor_set, h_storage_image, dst_binding);
     } break;
     case TG_HANDLE_TYPE_TEXTURE_ATLAS:
     {
-        tg_texture_atlas_h texture_atlas_h = (tg_texture_atlas_h)handle;
-        tg_vulkan_descriptor_set_update_texture_atlas(descriptor_set, texture_atlas_h, dst_binding);
+        tg_texture_atlas_h h_texture_atlas = (tg_texture_atlas_h)handle;
+        tg_vulkan_descriptor_set_update_texture_atlas(descriptor_set, h_texture_atlas, dst_binding);
     } break;
     case TG_HANDLE_TYPE_UNIFORM_BUFFER:
     {
-        tg_uniform_buffer_h uniform_buffer_h = (tg_uniform_buffer_h)handle;
-        tg_vulkan_descriptor_set_update_uniform_buffer(descriptor_set, uniform_buffer_h->buffer.buffer, dst_binding);
+        tg_uniform_buffer_h h_uniform_buffer = (tg_uniform_buffer_h)handle;
+        tg_vulkan_descriptor_set_update_uniform_buffer(descriptor_set, h_uniform_buffer->buffer.buffer, dst_binding);
     } break;
     default: TG_ASSERT(TG_FALSE);
     }
@@ -1730,7 +1730,7 @@ b32 tg_vulkan_physical_device_supports_required_queue_families(VkPhysicalDevice 
     return result;
 }
 
-void tg_vulkan_physical_device_find_queue_families(VkPhysicalDevice physical_device, tg_vulkan_queue* p_graphics_queue, tg_vulkan_queue* p_present_queue, tg_vulkan_queue* p_compute_queue)
+void tg_vulkan_physical_device_find_queue_family_indices(VkPhysicalDevice physical_device, u32* p_graphics_queue_index, u32* p_present_queue_index, u32* p_compute_queue_index)
 {
     TG_ASSERT(tg_vulkan_physical_device_supports_required_queue_families(physical_device));
 
@@ -1752,9 +1752,9 @@ void tg_vulkan_physical_device_find_queue_families(VkPhysicalDevice physical_dev
     
         if (supports_graphics_family && supports_present_family && supports_compute_family)
         {
-            p_graphics_queue->index = i;
-            p_present_queue->index = i;
-            p_compute_queue->index = i;
+            *p_graphics_queue_index = i;
+            *p_present_queue_index = i;
+            *p_compute_queue_index = i;
             resolved = TG_TRUE;
             break;
         }
@@ -1773,7 +1773,7 @@ void tg_vulkan_physical_device_find_queue_families(VkPhysicalDevice physical_dev
                 supports_graphics_family |= (p_queue_family_properties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0;
                 if (supports_graphics_family)
                 {
-                    p_graphics_queue->index = i;
+                    *p_graphics_queue_index = i;
                 }
             }
             if (!supports_present_family)
@@ -1783,7 +1783,7 @@ void tg_vulkan_physical_device_find_queue_families(VkPhysicalDevice physical_dev
                 supports_present_family |= spf != 0;
                 if (supports_present_family)
                 {
-                    p_present_queue->index = i;
+                    *p_present_queue_index = i;
                 }
             }
             if (!supports_compute_family)
@@ -1791,7 +1791,7 @@ void tg_vulkan_physical_device_find_queue_families(VkPhysicalDevice physical_dev
                 supports_compute_family |= (p_queue_family_properties[i].queueFlags & VK_QUEUE_COMPUTE_BIT) != 0;
                 if (supports_compute_family)
                 {
-                    p_compute_queue->index = i;
+                    *p_compute_queue_index = i;
                 }
             }
 
@@ -1920,26 +1920,30 @@ VkInstance tg_vulkan_instance_create()
     VkInstance instance = VK_NULL_HANDLE;
 
 #ifdef TG_DEBUG
-    u32 layer_property_count;
-    vkEnumerateInstanceLayerProperties(&layer_property_count, TG_NULL);
-    const u64 layer_properties_size = layer_property_count * sizeof(VkLayerProperties);
-    VkLayerProperties* layer_properties = TG_MEMORY_STACK_ALLOC(layer_properties_size);
-    vkEnumerateInstanceLayerProperties(&layer_property_count, layer_properties);
-
-    for (u32 i = 0; i < TG_VULKAN_VALIDATION_LAYER_COUNT; i++)
+    if (TG_VULKAN_VALIDATION_LAYER_COUNT)
     {
-        b32 layer_found = TG_FALSE;
-        for (u32 j = 0; j < layer_property_count; j++)
+        u32 layer_property_count;
+        vkEnumerateInstanceLayerProperties(&layer_property_count, TG_NULL);
+        const u64 layer_properties_size = layer_property_count * sizeof(VkLayerProperties);
+        VkLayerProperties* p_layer_properties = TG_MEMORY_STACK_ALLOC(layer_properties_size);
+        vkEnumerateInstanceLayerProperties(&layer_property_count, p_layer_properties);
+
+        const char* p_validation_layer_names[TG_VULKAN_VALIDATION_LAYER_COUNT] = TG_VULKAN_VALIDATION_LAYER_NAMES;
+        for (u32 i = 0; i < TG_VULKAN_VALIDATION_LAYER_COUNT; i++)
         {
-            if (strcmp(((char*[TG_VULKAN_VALIDATION_LAYER_COUNT])TG_VULKAN_VALIDATION_LAYER_NAMES)[i], layer_properties[j].layerName) == 0)
+            b32 layer_found = TG_FALSE;
+            for (u32 j = 0; j < layer_property_count; j++)
             {
-                layer_found = TG_TRUE;
-                break;
+                if (tg_string_equal(p_validation_layer_names[i], p_layer_properties[j].layerName))
+                {
+                    layer_found = TG_TRUE;
+                    break;
+                }
             }
+            TG_ASSERT(layer_found);
         }
-        TG_ASSERT(layer_found);
+        TG_MEMORY_STACK_FREE(layer_properties_size);
     }
-    TG_MEMORY_STACK_FREE(layer_properties_size);
 #endif
 
     VkApplicationInfo application_info = { 0 };
@@ -1956,6 +1960,7 @@ VkInstance tg_vulkan_instance_create()
 #else
     const char** pp_enabled_layer_names = TG_NULL;
 #endif
+
 #if TG_VULKAN_INSTANCE_EXTENSION_COUNT
     const char* pp_enabled_extension_names[TG_VULKAN_INSTANCE_EXTENSION_COUNT] = TG_VULKAN_INSTANCE_EXTENSION_NAMES;
 #else
@@ -2025,14 +2030,14 @@ VkPhysicalDevice tg_vulkan_physical_device_create()
     VK_CALL(vkEnumeratePhysicalDevices(instance, &physical_device_count, TG_NULL));
     TG_ASSERT(physical_device_count);
     const u64 physical_devices_size = physical_device_count * sizeof(VkPhysicalDevice);
-    VkPhysicalDevice* physical_devices = TG_MEMORY_STACK_ALLOC(physical_devices_size);
-    VK_CALL(vkEnumeratePhysicalDevices(instance, &physical_device_count, physical_devices));
+    VkPhysicalDevice* p_physical_devices = TG_MEMORY_STACK_ALLOC(physical_devices_size);
+    VK_CALL(vkEnumeratePhysicalDevices(instance, &physical_device_count, p_physical_devices));
 
     u32 best_physical_device_index = 0;
     u32 best_physical_device_rating = 0;
     for (u32 i = 0; i < physical_device_count; i++)
     {
-        const u32 rating = tg_vulkan_physical_device_rate(physical_devices[i]);
+        const u32 rating = tg_vulkan_physical_device_rate(p_physical_devices[i]);
         if (rating > best_physical_device_rating)
         {
             best_physical_device_index = i;
@@ -2041,11 +2046,11 @@ VkPhysicalDevice tg_vulkan_physical_device_create()
     }
     TG_ASSERT(best_physical_device_rating != 0);
 
-    physical_device = physical_devices[best_physical_device_index];
+    physical_device = p_physical_devices[best_physical_device_index];
     TG_ASSERT(physical_device != VK_NULL_HANDLE);
 
     TG_MEMORY_STACK_FREE(physical_devices_size);
-    tg_vulkan_physical_device_find_queue_families(physical_device, &graphics_queue, &present_queue, &compute_queue);
+    tg_vulkan_physical_device_find_queue_family_indices(physical_device, &graphics_queue.index, &present_queue.index, &compute_queue.index);
 
     return physical_device;
 }
@@ -2071,7 +2076,6 @@ VkDevice tg_vulkan_device_create()
         {
             if (p_device_queue_create_infos[j].queueFamilyIndex == p_queue_indices[i])
             {
-                p_device_queue_create_infos[j].queueCount++;
                 found = TG_TRUE;
                 break;
             }
@@ -2190,14 +2194,15 @@ void tg_vulkan_swapchain_create()
     u32 surface_format_count;
     VK_CALL(vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface.surface, &surface_format_count, TG_NULL));
     const u64 surface_formats_size = surface_format_count * sizeof(VkSurfaceFormatKHR);
-    VkSurfaceFormatKHR* surface_formats = TG_MEMORY_STACK_ALLOC(surface_formats_size);
-    VK_CALL(vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface.surface, &surface_format_count, surface_formats));
-    surface.format = surface_formats[0];
+    VkSurfaceFormatKHR* p_surface_formats = TG_MEMORY_STACK_ALLOC(surface_formats_size);
+    VK_CALL(vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface.surface, &surface_format_count, p_surface_formats));
+
+    surface.format = p_surface_formats[0];
     for (u32 i = 0; i < surface_format_count; i++)
     {
-        if (surface_formats[i].format == VK_FORMAT_B8G8R8A8_UNORM && surface_formats[i].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+        if (p_surface_formats[i].format == VK_FORMAT_B8G8R8A8_UNORM && p_surface_formats[i].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
         {
-            surface.format = surface_formats[i];
+            surface.format = p_surface_formats[i];
             break;
         }
     }
@@ -2264,11 +2269,11 @@ void tg_vulkan_swapchain_create()
     VK_CALL(vkGetSwapchainImagesKHR(device, swapchain, &surface_image_count, TG_NULL));
     TG_ASSERT(surface_image_count == TG_VULKAN_SURFACE_IMAGE_COUNT);
 #endif
-    VK_CALL(vkGetSwapchainImagesKHR(device, swapchain, &surface_image_count, swapchain_images));
+    VK_CALL(vkGetSwapchainImagesKHR(device, swapchain, &surface_image_count, p_swapchain_images));
 
     for (u32 i = 0; i < TG_VULKAN_SURFACE_IMAGE_COUNT; i++)
     {
-        swapchain_image_views[i] = tg_vulkan_internal_image_view_create(swapchain_images[i], VK_IMAGE_VIEW_TYPE_2D, surface.format.format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+        p_swapchain_image_views[i] = tg_vulkan_internal_image_view_create(p_swapchain_images[i], VK_IMAGE_VIEW_TYPE_2D, surface.format.format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
     }
 }
 
@@ -2292,9 +2297,6 @@ void tg_graphics_init()
     compute_command_pool = tg_vulkan_command_pool_create(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, compute_queue.index);
     tg_vulkan_swapchain_create();
 
-    VkPhysicalDeviceMemoryProperties physical_device_memory_properties;
-    vkGetPhysicalDeviceMemoryProperties(physical_device, &physical_device_memory_properties);
-
     tg_vulkan_memory_allocator_init(device, physical_device);
 }
 
@@ -2311,7 +2313,7 @@ void tg_graphics_shutdown()
     tg_vulkan_command_pool_destroy(graphics_command_pool);
     for (u32 i = 0; i < TG_VULKAN_SURFACE_IMAGE_COUNT; i++)
     {
-        vkDestroyImageView(device, swapchain_image_views[i], TG_NULL);
+        vkDestroyImageView(device, p_swapchain_image_views[i], TG_NULL);
     }
     vkDestroySwapchainKHR(device, swapchain, TG_NULL);
     vkDestroyDevice(device, TG_NULL);
@@ -2330,7 +2332,7 @@ void tg_graphics_on_window_resize(u32 width, u32 height)
 
     for (u32 i = 0; i < TG_VULKAN_SURFACE_IMAGE_COUNT; i++)
     {
-        vkDestroyImageView(device, swapchain_image_views[i], TG_NULL);
+        vkDestroyImageView(device, p_swapchain_image_views[i], TG_NULL);
     }
     vkDestroySwapchainKHR(device, swapchain, TG_NULL);
     tg_vulkan_swapchain_create();

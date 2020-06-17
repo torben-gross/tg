@@ -8,46 +8,46 @@
 
 
 
-void tg_deferred_renderer_internal_destroy_geometry_pass(tg_deferred_renderer_h deferred_renderer_h)
+void tg_deferred_renderer_internal_destroy_geometry_pass(tg_deferred_renderer_h h_deferred_renderer)
 {
-    tg_vulkan_color_image_destroy(&deferred_renderer_h->geometry_pass.position_attachment);
-    tg_vulkan_color_image_destroy(&deferred_renderer_h->geometry_pass.normal_attachment);
-    tg_vulkan_color_image_destroy(&deferred_renderer_h->geometry_pass.albedo_attachment);
-    tg_vulkan_render_pass_destroy(deferred_renderer_h->geometry_pass.render_pass);
-    tg_vulkan_framebuffer_destroy(deferred_renderer_h->geometry_pass.framebuffer);
-    tg_vulkan_command_buffer_free(graphics_command_pool, deferred_renderer_h->geometry_pass.command_buffer);
+    tg_vulkan_color_image_destroy(&h_deferred_renderer->geometry_pass.position_attachment);
+    tg_vulkan_color_image_destroy(&h_deferred_renderer->geometry_pass.normal_attachment);
+    tg_vulkan_color_image_destroy(&h_deferred_renderer->geometry_pass.albedo_attachment);
+    tg_vulkan_render_pass_destroy(h_deferred_renderer->geometry_pass.render_pass);
+    tg_vulkan_framebuffer_destroy(h_deferred_renderer->geometry_pass.framebuffer);
+    tg_vulkan_command_buffer_free(graphics_command_pool, h_deferred_renderer->geometry_pass.command_buffer);
 }
 
-void tg_deferred_renderer_internal_destroy_shading_pass(tg_deferred_renderer_h deferred_renderer_h)
+void tg_deferred_renderer_internal_destroy_shading_pass(tg_deferred_renderer_h h_deferred_renderer)
 {
-    tg_vulkan_color_image_destroy(&deferred_renderer_h->shading_pass.color_attachment);
-    tg_vulkan_buffer_destroy(&deferred_renderer_h->shading_pass.vbo);
-    tg_vulkan_buffer_destroy(&deferred_renderer_h->shading_pass.ibo);
-    tg_vulkan_semaphore_destroy(deferred_renderer_h->shading_pass.rendering_finished_semaphore);
-    tg_vulkan_render_pass_destroy(deferred_renderer_h->shading_pass.render_pass);
-    tg_vulkan_framebuffer_destroy(deferred_renderer_h->shading_pass.framebuffer);
-    tg_vulkan_descriptor_destroy(&deferred_renderer_h->shading_pass.descriptor);
-    tg_vulkan_pipeline_layout_destroy(deferred_renderer_h->shading_pass.pipeline_layout);
-    tg_vulkan_graphics_pipeline_destroy(deferred_renderer_h->shading_pass.graphics_pipeline);
-    tg_vulkan_command_buffer_free(graphics_command_pool, deferred_renderer_h->shading_pass.command_buffer);
-    tg_vulkan_buffer_destroy(&deferred_renderer_h->shading_pass.point_lights_ubo);
+    tg_vulkan_color_image_destroy(&h_deferred_renderer->shading_pass.color_attachment);
+    tg_vulkan_buffer_destroy(&h_deferred_renderer->shading_pass.vbo);
+    tg_vulkan_buffer_destroy(&h_deferred_renderer->shading_pass.ibo);
+    tg_vulkan_semaphore_destroy(h_deferred_renderer->shading_pass.rendering_finished_semaphore);
+    tg_vulkan_render_pass_destroy(h_deferred_renderer->shading_pass.render_pass);
+    tg_vulkan_framebuffer_destroy(h_deferred_renderer->shading_pass.framebuffer);
+    tg_vulkan_descriptor_destroy(&h_deferred_renderer->shading_pass.descriptor);
+    tg_vulkan_pipeline_layout_destroy(h_deferred_renderer->shading_pass.pipeline_layout);
+    tg_vulkan_graphics_pipeline_destroy(h_deferred_renderer->shading_pass.graphics_pipeline);
+    tg_vulkan_command_buffer_free(graphics_command_pool, h_deferred_renderer->shading_pass.command_buffer);
+    tg_vulkan_buffer_destroy(&h_deferred_renderer->shading_pass.point_lights_ubo);
 }
 
-void tg_deferred_renderer_internal_destroy_tone_mapping_pass(tg_deferred_renderer_h deferred_renderer_h)
+void tg_deferred_renderer_internal_destroy_tone_mapping_pass(tg_deferred_renderer_h h_deferred_renderer)
 {
-    tg_vulkan_compute_pipeline_destroy(deferred_renderer_h->tone_mapping_pass.acquire_exposure_compute_pipeline);
-    tg_vulkan_pipeline_layout_destroy(deferred_renderer_h->tone_mapping_pass.acquire_exposure_pipeline_layout);
-    tg_vulkan_descriptor_destroy(&deferred_renderer_h->tone_mapping_pass.acquire_exposure_descriptor);
-    tg_vulkan_buffer_destroy(&deferred_renderer_h->tone_mapping_pass.exposure_storage_buffer);
-    tg_vulkan_render_pass_destroy(deferred_renderer_h->tone_mapping_pass.render_pass);
-    tg_vulkan_framebuffer_destroy(deferred_renderer_h->tone_mapping_pass.framebuffer);
-    tg_vulkan_descriptor_destroy(&deferred_renderer_h->tone_mapping_pass.descriptor);
-    tg_vulkan_pipeline_layout_destroy(deferred_renderer_h->tone_mapping_pass.pipeline_layout);
-    tg_vulkan_graphics_pipeline_destroy(deferred_renderer_h->tone_mapping_pass.graphics_pipeline);
-    tg_vulkan_command_buffer_free(graphics_command_pool, deferred_renderer_h->tone_mapping_pass.command_buffer);
+    tg_vulkan_compute_pipeline_destroy(h_deferred_renderer->tone_mapping_pass.acquire_exposure_compute_pipeline);
+    tg_vulkan_pipeline_layout_destroy(h_deferred_renderer->tone_mapping_pass.acquire_exposure_pipeline_layout);
+    tg_vulkan_descriptor_destroy(&h_deferred_renderer->tone_mapping_pass.acquire_exposure_descriptor);
+    tg_vulkan_buffer_destroy(&h_deferred_renderer->tone_mapping_pass.exposure_storage_buffer);
+    tg_vulkan_render_pass_destroy(h_deferred_renderer->tone_mapping_pass.render_pass);
+    tg_vulkan_framebuffer_destroy(h_deferred_renderer->tone_mapping_pass.framebuffer);
+    tg_vulkan_descriptor_destroy(&h_deferred_renderer->tone_mapping_pass.descriptor);
+    tg_vulkan_pipeline_layout_destroy(h_deferred_renderer->tone_mapping_pass.pipeline_layout);
+    tg_vulkan_graphics_pipeline_destroy(h_deferred_renderer->tone_mapping_pass.graphics_pipeline);
+    tg_vulkan_command_buffer_free(graphics_command_pool, h_deferred_renderer->tone_mapping_pass.command_buffer);
 }
 
-void tg_deferred_renderer_internal_init_geometry_pass(tg_deferred_renderer_h deferred_renderer_h)
+void tg_deferred_renderer_internal_init_geometry_pass(tg_deferred_renderer_h h_deferred_renderer)
 {
     tg_vulkan_color_image_create_info vulkan_color_image_create_info = { 0 };
     vulkan_color_image_create_info.width = swapchain_extent.width;
@@ -56,19 +56,19 @@ void tg_deferred_renderer_internal_init_geometry_pass(tg_deferred_renderer_h def
     vulkan_color_image_create_info.format = TG_DEFERRED_RENDERER_GEOMETRY_PASS_POSITION_FORMAT;
     vulkan_color_image_create_info.p_vulkan_sampler_create_info = TG_NULL;
 
-    deferred_renderer_h->geometry_pass.position_attachment = tg_vulkan_color_image_create(&vulkan_color_image_create_info);
+    h_deferred_renderer->geometry_pass.position_attachment = tg_vulkan_color_image_create(&vulkan_color_image_create_info);
 
     vulkan_color_image_create_info.format = TG_DEFERRED_RENDERER_GEOMETRY_PASS_NORMAL_FORMAT;
-    deferred_renderer_h->geometry_pass.normal_attachment = tg_vulkan_color_image_create(&vulkan_color_image_create_info);
+    h_deferred_renderer->geometry_pass.normal_attachment = tg_vulkan_color_image_create(&vulkan_color_image_create_info);
 
     vulkan_color_image_create_info.format = TG_DEFERRED_RENDERER_GEOMETRY_PASS_ALBEDO_FORMAT;
-    deferred_renderer_h->geometry_pass.albedo_attachment = tg_vulkan_color_image_create(&vulkan_color_image_create_info);
+    h_deferred_renderer->geometry_pass.albedo_attachment = tg_vulkan_color_image_create(&vulkan_color_image_create_info);
 
     VkCommandBuffer command_buffer = tg_vulkan_command_buffer_allocate(graphics_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     tg_vulkan_command_buffer_begin(command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
-    tg_vulkan_command_buffer_cmd_transition_color_image_layout(command_buffer, &deferred_renderer_h->geometry_pass.position_attachment, 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
-    tg_vulkan_command_buffer_cmd_transition_color_image_layout(command_buffer, &deferred_renderer_h->geometry_pass.normal_attachment, 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
-    tg_vulkan_command_buffer_cmd_transition_color_image_layout(command_buffer, &deferred_renderer_h->geometry_pass.albedo_attachment, 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+    tg_vulkan_command_buffer_cmd_transition_color_image_layout(command_buffer, &h_deferred_renderer->geometry_pass.position_attachment, 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+    tg_vulkan_command_buffer_cmd_transition_color_image_layout(command_buffer, &h_deferred_renderer->geometry_pass.normal_attachment, 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+    tg_vulkan_command_buffer_cmd_transition_color_image_layout(command_buffer, &h_deferred_renderer->geometry_pass.albedo_attachment, 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
     tg_vulkan_command_buffer_end_and_submit(command_buffer, &graphics_queue);
 
     VkAttachmentDescription p_attachment_descriptions[4] = { 0 };
@@ -148,25 +148,25 @@ void tg_deferred_renderer_internal_init_geometry_pass(tg_deferred_renderer_h def
     subpass_dependency.srcAccessMask = 0;
     subpass_dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
-    deferred_renderer_h->geometry_pass.render_pass = tg_vulkan_render_pass_create(TG_DEFERRED_RENDERER_GEOMETRY_PASS_ATTACHMENT_COUNT, p_attachment_descriptions, 1, &subpass_description, 1, &subpass_dependency);
+    h_deferred_renderer->geometry_pass.render_pass = tg_vulkan_render_pass_create(TG_DEFERRED_RENDERER_GEOMETRY_PASS_ATTACHMENT_COUNT, p_attachment_descriptions, 1, &subpass_description, 1, &subpass_dependency);
 
     const VkImageView p_framebuffer_attachments[] = {
-        deferred_renderer_h->geometry_pass.position_attachment.image_view,
-        deferred_renderer_h->geometry_pass.normal_attachment.image_view,
-        deferred_renderer_h->geometry_pass.albedo_attachment.image_view,
-        deferred_renderer_h->camera_h->render_target.depth_attachment.image_view
+        h_deferred_renderer->geometry_pass.position_attachment.image_view,
+        h_deferred_renderer->geometry_pass.normal_attachment.image_view,
+        h_deferred_renderer->geometry_pass.albedo_attachment.image_view,
+        h_deferred_renderer->h_camera->render_target.depth_attachment.image_view
     };
-    deferred_renderer_h->geometry_pass.framebuffer = tg_vulkan_framebuffer_create(deferred_renderer_h->geometry_pass.render_pass, TG_DEFERRED_RENDERER_GEOMETRY_PASS_ATTACHMENT_COUNT, p_framebuffer_attachments, swapchain_extent.width, swapchain_extent.height);
+    h_deferred_renderer->geometry_pass.framebuffer = tg_vulkan_framebuffer_create(h_deferred_renderer->geometry_pass.render_pass, TG_DEFERRED_RENDERER_GEOMETRY_PASS_ATTACHMENT_COUNT, p_framebuffer_attachments, swapchain_extent.width, swapchain_extent.height);
 
-    deferred_renderer_h->geometry_pass.command_buffer = tg_vulkan_command_buffer_allocate(graphics_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+    h_deferred_renderer->geometry_pass.command_buffer = tg_vulkan_command_buffer_allocate(graphics_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 }
 
-void tg_deferred_renderer_internal_init_shading_pass(tg_deferred_renderer_h deferred_renderer_h)
+void tg_deferred_renderer_internal_init_shading_pass(tg_deferred_renderer_h h_deferred_renderer)
 {
-    TG_ASSERT(deferred_renderer_h);
+    TG_ASSERT(h_deferred_renderer);
 
-    deferred_renderer_h->shading_pass.point_lights_ubo = tg_vulkan_buffer_create(sizeof(tg_deferred_renderer_light_setup_uniform_buffer), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-    tg_deferred_renderer_light_setup_uniform_buffer* p_light_setup_uniform_buffer = deferred_renderer_h->shading_pass.point_lights_ubo.memory.p_mapped_device_memory;
+    h_deferred_renderer->shading_pass.point_lights_ubo = tg_vulkan_buffer_create(sizeof(tg_deferred_renderer_light_setup_uniform_buffer), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    tg_deferred_renderer_light_setup_uniform_buffer* p_light_setup_uniform_buffer = h_deferred_renderer->shading_pass.point_lights_ubo.memory.p_mapped_device_memory;
     p_light_setup_uniform_buffer->point_light_count = 0;
 
     tg_vulkan_color_image_create_info vulkan_color_image_create_info = { 0 };
@@ -176,11 +176,11 @@ void tg_deferred_renderer_internal_init_shading_pass(tg_deferred_renderer_h defe
     vulkan_color_image_create_info.format = TG_DEFERRED_RENDERER_SHADING_PASS_COLOR_ATTACHMENT_FORMAT;
     vulkan_color_image_create_info.p_vulkan_sampler_create_info = TG_NULL;
 
-    deferred_renderer_h->shading_pass.color_attachment = tg_vulkan_color_image_create(&vulkan_color_image_create_info);
+    h_deferred_renderer->shading_pass.color_attachment = tg_vulkan_color_image_create(&vulkan_color_image_create_info);
 
     VkCommandBuffer command_buffer = tg_vulkan_command_buffer_allocate(graphics_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     tg_vulkan_command_buffer_begin(command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
-    tg_vulkan_command_buffer_cmd_transition_color_image_layout(command_buffer, &deferred_renderer_h->shading_pass.color_attachment, 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+    tg_vulkan_command_buffer_cmd_transition_color_image_layout(command_buffer, &h_deferred_renderer->shading_pass.color_attachment, 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
     tg_vulkan_command_buffer_end_and_submit(command_buffer, &graphics_queue);
 
     tg_vulkan_buffer staging_buffer = { 0 };
@@ -210,8 +210,8 @@ void tg_deferred_renderer_internal_init_shading_pass(tg_deferred_renderer_h defe
 
     staging_buffer = tg_vulkan_buffer_create(sizeof(p_vertices), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
     memcpy(staging_buffer.memory.p_mapped_device_memory, p_vertices, sizeof(p_vertices));
-    deferred_renderer_h->shading_pass.vbo = tg_vulkan_buffer_create(sizeof(p_vertices), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    tg_vulkan_buffer_copy(sizeof(p_vertices), staging_buffer.buffer, deferred_renderer_h->shading_pass.vbo.buffer);
+    h_deferred_renderer->shading_pass.vbo = tg_vulkan_buffer_create(sizeof(p_vertices), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    tg_vulkan_buffer_copy(sizeof(p_vertices), staging_buffer.buffer, h_deferred_renderer->shading_pass.vbo.buffer);
     tg_vulkan_buffer_destroy(&staging_buffer);
 
     u16 p_indices[6] = { 0 };
@@ -225,11 +225,11 @@ void tg_deferred_renderer_internal_init_shading_pass(tg_deferred_renderer_h defe
 
     staging_buffer = tg_vulkan_buffer_create(sizeof(p_indices), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
     memcpy(staging_buffer.memory.p_mapped_device_memory, p_indices, sizeof(p_indices));
-    deferred_renderer_h->shading_pass.ibo = tg_vulkan_buffer_create(sizeof(p_indices), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    tg_vulkan_buffer_copy(sizeof(p_indices), staging_buffer.buffer, deferred_renderer_h->shading_pass.ibo.buffer);
+    h_deferred_renderer->shading_pass.ibo = tg_vulkan_buffer_create(sizeof(p_indices), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    tg_vulkan_buffer_copy(sizeof(p_indices), staging_buffer.buffer, h_deferred_renderer->shading_pass.ibo.buffer);
     tg_vulkan_buffer_destroy(&staging_buffer);
 
-    deferred_renderer_h->shading_pass.rendering_finished_semaphore = tg_vulkan_semaphore_create();
+    h_deferred_renderer->shading_pass.rendering_finished_semaphore = tg_vulkan_semaphore_create();
 
     VkAttachmentDescription attachment_description = { 0 };
     attachment_description.flags = 0;
@@ -266,8 +266,8 @@ void tg_deferred_renderer_internal_init_shading_pass(tg_deferred_renderer_h defe
     subpass_dependency.srcAccessMask = 0;
     subpass_dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
-    deferred_renderer_h->shading_pass.render_pass = tg_vulkan_render_pass_create(TG_DEFERRED_RENDERER_SHADING_PASS_ATTACHMENT_COUNT, &attachment_description, 1, &subpass_description, 1, &subpass_dependency);
-    deferred_renderer_h->shading_pass.framebuffer = tg_vulkan_framebuffer_create(deferred_renderer_h->shading_pass.render_pass, TG_DEFERRED_RENDERER_SHADING_PASS_ATTACHMENT_COUNT, &deferred_renderer_h->shading_pass.color_attachment.image_view, swapchain_extent.width, swapchain_extent.height);
+    h_deferred_renderer->shading_pass.render_pass = tg_vulkan_render_pass_create(TG_DEFERRED_RENDERER_SHADING_PASS_ATTACHMENT_COUNT, &attachment_description, 1, &subpass_description, 1, &subpass_dependency);
+    h_deferred_renderer->shading_pass.framebuffer = tg_vulkan_framebuffer_create(h_deferred_renderer->shading_pass.render_pass, TG_DEFERRED_RENDERER_SHADING_PASS_ATTACHMENT_COUNT, &h_deferred_renderer->shading_pass.color_attachment.image_view, swapchain_extent.width, swapchain_extent.height);
 
     VkDescriptorSetLayoutBinding p_descriptor_set_layout_bindings[4] = { 0 };
 
@@ -295,10 +295,10 @@ void tg_deferred_renderer_internal_init_shading_pass(tg_deferred_renderer_h defe
     p_descriptor_set_layout_bindings[3].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
     p_descriptor_set_layout_bindings[3].pImmutableSamplers = TG_NULL;
 
-    deferred_renderer_h->shading_pass.descriptor = tg_vulkan_descriptor_create(TG_DEFERRED_RENDERER_GEOMETRY_PASS_COLOR_ATTACHMENT_COUNT + 1, p_descriptor_set_layout_bindings);
-    deferred_renderer_h->shading_pass.vertex_shader = ((tg_vertex_shader_h)tg_assets_get_asset("shaders/shading.vert"))->vulkan_shader;
-    deferred_renderer_h->shading_pass.fragment_shader = ((tg_fragment_shader_h)tg_assets_get_asset("shaders/shading.frag"))->vulkan_shader;
-    deferred_renderer_h->shading_pass.pipeline_layout = tg_vulkan_pipeline_layout_create(1, &deferred_renderer_h->shading_pass.descriptor.descriptor_set_layout, 0, TG_NULL);
+    h_deferred_renderer->shading_pass.descriptor = tg_vulkan_descriptor_create(TG_DEFERRED_RENDERER_GEOMETRY_PASS_COLOR_ATTACHMENT_COUNT + 1, p_descriptor_set_layout_bindings);
+    h_deferred_renderer->shading_pass.vertex_shader = ((tg_vertex_shader_h)tg_assets_get_asset("shaders/shading.vert"))->vulkan_shader;
+    h_deferred_renderer->shading_pass.fragment_shader = ((tg_fragment_shader_h)tg_assets_get_asset("shaders/shading.frag"))->vulkan_shader;
+    h_deferred_renderer->shading_pass.pipeline_layout = tg_vulkan_pipeline_layout_create(1, &h_deferred_renderer->shading_pass.descriptor.descriptor_set_layout, 0, TG_NULL);
 
     VkVertexInputBindingDescription vertex_input_binding_description = { 0 };
     vertex_input_binding_description.binding = 0;
@@ -327,8 +327,8 @@ void tg_deferred_renderer_internal_init_shading_pass(tg_deferred_renderer_h defe
     pipeline_vertex_input_state_create_info.pVertexAttributeDescriptions = p_vertex_input_attribute_descriptions;
 
     tg_vulkan_graphics_pipeline_create_info vulkan_graphics_pipeline_create_info = { 0 };
-    vulkan_graphics_pipeline_create_info.vertex_shader = deferred_renderer_h->shading_pass.vertex_shader;
-    vulkan_graphics_pipeline_create_info.fragment_shader = deferred_renderer_h->shading_pass.fragment_shader;
+    vulkan_graphics_pipeline_create_info.vertex_shader = h_deferred_renderer->shading_pass.vertex_shader;
+    vulkan_graphics_pipeline_create_info.fragment_shader = h_deferred_renderer->shading_pass.fragment_shader;
     vulkan_graphics_pipeline_create_info.cull_mode = VK_CULL_MODE_NONE;
     vulkan_graphics_pipeline_create_info.sample_count = VK_SAMPLE_COUNT_1_BIT;
     vulkan_graphics_pipeline_create_info.depth_test_enable = VK_FALSE;
@@ -336,78 +336,78 @@ void tg_deferred_renderer_internal_init_shading_pass(tg_deferred_renderer_h defe
     vulkan_graphics_pipeline_create_info.attachment_count = 1;
     vulkan_graphics_pipeline_create_info.blend_enable = VK_FALSE;
     vulkan_graphics_pipeline_create_info.p_pipeline_vertex_input_state_create_info = &pipeline_vertex_input_state_create_info;
-    vulkan_graphics_pipeline_create_info.pipeline_layout = deferred_renderer_h->shading_pass.pipeline_layout;
-    vulkan_graphics_pipeline_create_info.render_pass = deferred_renderer_h->shading_pass.render_pass;
+    vulkan_graphics_pipeline_create_info.pipeline_layout = h_deferred_renderer->shading_pass.pipeline_layout;
+    vulkan_graphics_pipeline_create_info.render_pass = h_deferred_renderer->shading_pass.render_pass;
 
-    deferred_renderer_h->shading_pass.graphics_pipeline = tg_vulkan_graphics_pipeline_create(&vulkan_graphics_pipeline_create_info);
+    h_deferred_renderer->shading_pass.graphics_pipeline = tg_vulkan_graphics_pipeline_create(&vulkan_graphics_pipeline_create_info);
 
-    tg_vulkan_descriptor_set_update_color_image(deferred_renderer_h->shading_pass.descriptor.descriptor_set, &deferred_renderer_h->geometry_pass.position_attachment, TG_DEFERRED_RENDERER_GEOMETRY_PASS_POSITION_ATTACHMENT);
-    tg_vulkan_descriptor_set_update_color_image(deferred_renderer_h->shading_pass.descriptor.descriptor_set, &deferred_renderer_h->geometry_pass.normal_attachment, TG_DEFERRED_RENDERER_GEOMETRY_PASS_NORMAL_ATTACHMENT);
-    tg_vulkan_descriptor_set_update_color_image(deferred_renderer_h->shading_pass.descriptor.descriptor_set, &deferred_renderer_h->geometry_pass.albedo_attachment, TG_DEFERRED_RENDERER_GEOMETRY_PASS_ALBEDO_ATTACHMENT);
-    tg_vulkan_descriptor_set_update_uniform_buffer(deferred_renderer_h->shading_pass.descriptor.descriptor_set, deferred_renderer_h->shading_pass.point_lights_ubo.buffer, 3);
+    tg_vulkan_descriptor_set_update_color_image(h_deferred_renderer->shading_pass.descriptor.descriptor_set, &h_deferred_renderer->geometry_pass.position_attachment, TG_DEFERRED_RENDERER_GEOMETRY_PASS_POSITION_ATTACHMENT);
+    tg_vulkan_descriptor_set_update_color_image(h_deferred_renderer->shading_pass.descriptor.descriptor_set, &h_deferred_renderer->geometry_pass.normal_attachment, TG_DEFERRED_RENDERER_GEOMETRY_PASS_NORMAL_ATTACHMENT);
+    tg_vulkan_descriptor_set_update_color_image(h_deferred_renderer->shading_pass.descriptor.descriptor_set, &h_deferred_renderer->geometry_pass.albedo_attachment, TG_DEFERRED_RENDERER_GEOMETRY_PASS_ALBEDO_ATTACHMENT);
+    tg_vulkan_descriptor_set_update_uniform_buffer(h_deferred_renderer->shading_pass.descriptor.descriptor_set, h_deferred_renderer->shading_pass.point_lights_ubo.buffer, 3);
 
-    deferred_renderer_h->shading_pass.command_buffer = tg_vulkan_command_buffer_allocate(graphics_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+    h_deferred_renderer->shading_pass.command_buffer = tg_vulkan_command_buffer_allocate(graphics_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
-    tg_vulkan_command_buffer_begin(deferred_renderer_h->shading_pass.command_buffer, 0, TG_NULL);
+    tg_vulkan_command_buffer_begin(h_deferred_renderer->shading_pass.command_buffer, 0, TG_NULL);
     {
         tg_vulkan_command_buffer_cmd_transition_color_image_layout(
-            deferred_renderer_h->shading_pass.command_buffer,
-            &deferred_renderer_h->geometry_pass.position_attachment,
+            h_deferred_renderer->shading_pass.command_buffer,
+            &h_deferred_renderer->geometry_pass.position_attachment,
             VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
             VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
         );
         tg_vulkan_command_buffer_cmd_transition_color_image_layout(
-            deferred_renderer_h->shading_pass.command_buffer,
-            &deferred_renderer_h->geometry_pass.normal_attachment,
+            h_deferred_renderer->shading_pass.command_buffer,
+            &h_deferred_renderer->geometry_pass.normal_attachment,
             VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
             VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
         );
         tg_vulkan_command_buffer_cmd_transition_color_image_layout(
-            deferred_renderer_h->shading_pass.command_buffer,
-            &deferred_renderer_h->geometry_pass.albedo_attachment,
+            h_deferred_renderer->shading_pass.command_buffer,
+            &h_deferred_renderer->geometry_pass.albedo_attachment,
             VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
             VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
         );
 
-        vkCmdBindPipeline(deferred_renderer_h->shading_pass.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, deferred_renderer_h->shading_pass.graphics_pipeline);
+        vkCmdBindPipeline(h_deferred_renderer->shading_pass.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, h_deferred_renderer->shading_pass.graphics_pipeline);
 
         const VkDeviceSize vertex_buffer_offset = 0;
-        vkCmdBindVertexBuffers(deferred_renderer_h->shading_pass.command_buffer, 0, 1, &deferred_renderer_h->shading_pass.vbo.buffer, &vertex_buffer_offset);
-        vkCmdBindIndexBuffer(deferred_renderer_h->shading_pass.command_buffer, deferred_renderer_h->shading_pass.ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
-        vkCmdBindDescriptorSets(deferred_renderer_h->shading_pass.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, deferred_renderer_h->shading_pass.pipeline_layout, 0, 1, &deferred_renderer_h->shading_pass.descriptor.descriptor_set, 0, TG_NULL);
+        vkCmdBindVertexBuffers(h_deferred_renderer->shading_pass.command_buffer, 0, 1, &h_deferred_renderer->shading_pass.vbo.buffer, &vertex_buffer_offset);
+        vkCmdBindIndexBuffer(h_deferred_renderer->shading_pass.command_buffer, h_deferred_renderer->shading_pass.ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
+        vkCmdBindDescriptorSets(h_deferred_renderer->shading_pass.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, h_deferred_renderer->shading_pass.pipeline_layout, 0, 1, &h_deferred_renderer->shading_pass.descriptor.descriptor_set, 0, TG_NULL);
 
         VkRenderPassBeginInfo render_pass_begin_info = { 0 };
         render_pass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         render_pass_begin_info.pNext = TG_NULL;
-        render_pass_begin_info.renderPass = deferred_renderer_h->shading_pass.render_pass;
-        render_pass_begin_info.framebuffer = deferred_renderer_h->shading_pass.framebuffer;
+        render_pass_begin_info.renderPass = h_deferred_renderer->shading_pass.render_pass;
+        render_pass_begin_info.framebuffer = h_deferred_renderer->shading_pass.framebuffer;
         render_pass_begin_info.renderArea.offset = (VkOffset2D){ 0, 0 };
         render_pass_begin_info.renderArea.extent = swapchain_extent;
         render_pass_begin_info.clearValueCount = 0;
         render_pass_begin_info.pClearValues = TG_NULL;
 
-        vkCmdBeginRenderPass(deferred_renderer_h->shading_pass.command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
-        vkCmdDrawIndexed(deferred_renderer_h->shading_pass.command_buffer, 6, 1, 0, 0, 0);
-        vkCmdEndRenderPass(deferred_renderer_h->shading_pass.command_buffer);
+        vkCmdBeginRenderPass(h_deferred_renderer->shading_pass.command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
+        vkCmdDrawIndexed(h_deferred_renderer->shading_pass.command_buffer, 6, 1, 0, 0, 0);
+        vkCmdEndRenderPass(h_deferred_renderer->shading_pass.command_buffer);
 
         tg_vulkan_command_buffer_cmd_transition_color_image_layout(
-            deferred_renderer_h->shading_pass.command_buffer,
-            &deferred_renderer_h->geometry_pass.position_attachment,
+            h_deferred_renderer->shading_pass.command_buffer,
+            &h_deferred_renderer->geometry_pass.position_attachment,
             VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT
         );
-        tg_vulkan_command_buffer_cmd_clear_color_image(deferred_renderer_h->shading_pass.command_buffer, &deferred_renderer_h->geometry_pass.position_attachment);
+        tg_vulkan_command_buffer_cmd_clear_color_image(h_deferred_renderer->shading_pass.command_buffer, &h_deferred_renderer->geometry_pass.position_attachment);
         tg_vulkan_command_buffer_cmd_transition_color_image_layout(
-            deferred_renderer_h->shading_pass.command_buffer,
-            &deferred_renderer_h->geometry_pass.position_attachment,
+            h_deferred_renderer->shading_pass.command_buffer,
+            &h_deferred_renderer->geometry_pass.position_attachment,
             VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
@@ -415,17 +415,17 @@ void tg_deferred_renderer_internal_init_shading_pass(tg_deferred_renderer_h defe
         );
 
         tg_vulkan_command_buffer_cmd_transition_color_image_layout(
-            deferred_renderer_h->shading_pass.command_buffer,
-            &deferred_renderer_h->geometry_pass.normal_attachment,
+            h_deferred_renderer->shading_pass.command_buffer,
+            &h_deferred_renderer->geometry_pass.normal_attachment,
             VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT
         );
-        tg_vulkan_command_buffer_cmd_clear_color_image(deferred_renderer_h->shading_pass.command_buffer, &deferred_renderer_h->geometry_pass.normal_attachment);
+        tg_vulkan_command_buffer_cmd_clear_color_image(h_deferred_renderer->shading_pass.command_buffer, &h_deferred_renderer->geometry_pass.normal_attachment);
         tg_vulkan_command_buffer_cmd_transition_color_image_layout(
-            deferred_renderer_h->shading_pass.command_buffer,
-            &deferred_renderer_h->geometry_pass.normal_attachment,
+            h_deferred_renderer->shading_pass.command_buffer,
+            &h_deferred_renderer->geometry_pass.normal_attachment,
             VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
@@ -433,33 +433,33 @@ void tg_deferred_renderer_internal_init_shading_pass(tg_deferred_renderer_h defe
         );
 
         tg_vulkan_command_buffer_cmd_transition_color_image_layout(
-            deferred_renderer_h->shading_pass.command_buffer,
-            &deferred_renderer_h->geometry_pass.albedo_attachment,
+            h_deferred_renderer->shading_pass.command_buffer,
+            &h_deferred_renderer->geometry_pass.albedo_attachment,
             VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT
         );
-        tg_vulkan_command_buffer_cmd_clear_color_image(deferred_renderer_h->shading_pass.command_buffer, &deferred_renderer_h->geometry_pass.albedo_attachment);
+        tg_vulkan_command_buffer_cmd_clear_color_image(h_deferred_renderer->shading_pass.command_buffer, &h_deferred_renderer->geometry_pass.albedo_attachment);
         tg_vulkan_command_buffer_cmd_transition_color_image_layout(
-            deferred_renderer_h->shading_pass.command_buffer,
-            &deferred_renderer_h->geometry_pass.albedo_attachment,
+            h_deferred_renderer->shading_pass.command_buffer,
+            &h_deferred_renderer->geometry_pass.albedo_attachment,
             VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
             VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
         );
     }
-    VK_CALL(vkEndCommandBuffer(deferred_renderer_h->shading_pass.command_buffer));
+    VK_CALL(vkEndCommandBuffer(h_deferred_renderer->shading_pass.command_buffer));
 }
 
-void tg_deferred_renderer_internal_init_tone_mapping_pass(tg_deferred_renderer_h deferred_renderer_h)
+void tg_deferred_renderer_internal_init_tone_mapping_pass(tg_deferred_renderer_h h_deferred_renderer)
 {
-    deferred_renderer_h->tone_mapping_pass.acquire_exposure_compute_shader = ((tg_compute_shader_h)tg_assets_get_asset("shaders/acquire_exposure.comp"))->vulkan_shader;
-    deferred_renderer_h->tone_mapping_pass.acquire_exposure_descriptor = tg_vulkan_descriptor_create_for_shader(&deferred_renderer_h->tone_mapping_pass.acquire_exposure_compute_shader);
-    deferred_renderer_h->tone_mapping_pass.acquire_exposure_pipeline_layout = tg_vulkan_pipeline_layout_create(1, &deferred_renderer_h->tone_mapping_pass.acquire_exposure_descriptor.descriptor_set_layout, 0, TG_NULL);
-    deferred_renderer_h->tone_mapping_pass.acquire_exposure_compute_pipeline = tg_vulkan_compute_pipeline_create(deferred_renderer_h->tone_mapping_pass.acquire_exposure_compute_shader.shader_module, deferred_renderer_h->tone_mapping_pass.acquire_exposure_pipeline_layout);
-    deferred_renderer_h->tone_mapping_pass.exposure_storage_buffer = tg_vulkan_buffer_create(sizeof(f32), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    h_deferred_renderer->tone_mapping_pass.acquire_exposure_compute_shader = ((tg_compute_shader_h)tg_assets_get_asset("shaders/acquire_exposure.comp"))->vulkan_shader;
+    h_deferred_renderer->tone_mapping_pass.acquire_exposure_descriptor = tg_vulkan_descriptor_create_for_shader(&h_deferred_renderer->tone_mapping_pass.acquire_exposure_compute_shader);
+    h_deferred_renderer->tone_mapping_pass.acquire_exposure_pipeline_layout = tg_vulkan_pipeline_layout_create(1, &h_deferred_renderer->tone_mapping_pass.acquire_exposure_descriptor.descriptor_set_layout, 0, TG_NULL);
+    h_deferred_renderer->tone_mapping_pass.acquire_exposure_compute_pipeline = tg_vulkan_compute_pipeline_create(h_deferred_renderer->tone_mapping_pass.acquire_exposure_compute_shader.shader_module, h_deferred_renderer->tone_mapping_pass.acquire_exposure_pipeline_layout);
+    h_deferred_renderer->tone_mapping_pass.exposure_storage_buffer = tg_vulkan_buffer_create(sizeof(f32), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
     VkAttachmentDescription attachment_description = { 0 };
     attachment_description.flags = 0;
@@ -496,8 +496,8 @@ void tg_deferred_renderer_internal_init_tone_mapping_pass(tg_deferred_renderer_h
     subpass_dependency.srcAccessMask = 0;
     subpass_dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
-    deferred_renderer_h->tone_mapping_pass.render_pass = tg_vulkan_render_pass_create(TG_DEFERRED_RENDERER_SHADING_PASS_ATTACHMENT_COUNT, &attachment_description, 1, &subpass_description, 1, &subpass_dependency);
-    deferred_renderer_h->tone_mapping_pass.framebuffer = tg_vulkan_framebuffer_create(deferred_renderer_h->tone_mapping_pass.render_pass, TG_DEFERRED_RENDERER_SHADING_PASS_ATTACHMENT_COUNT, &deferred_renderer_h->camera_h->render_target.color_attachment.image_view, swapchain_extent.width, swapchain_extent.height);
+    h_deferred_renderer->tone_mapping_pass.render_pass = tg_vulkan_render_pass_create(TG_DEFERRED_RENDERER_SHADING_PASS_ATTACHMENT_COUNT, &attachment_description, 1, &subpass_description, 1, &subpass_dependency);
+    h_deferred_renderer->tone_mapping_pass.framebuffer = tg_vulkan_framebuffer_create(h_deferred_renderer->tone_mapping_pass.render_pass, TG_DEFERRED_RENDERER_SHADING_PASS_ATTACHMENT_COUNT, &h_deferred_renderer->h_camera->render_target.color_attachment.image_view, swapchain_extent.width, swapchain_extent.height);
 
     VkDescriptorSetLayoutBinding p_adapt_exposure_descriptor_set_layout_bindings[2] = { 0 };
 
@@ -513,10 +513,10 @@ void tg_deferred_renderer_internal_init_tone_mapping_pass(tg_deferred_renderer_h
     p_adapt_exposure_descriptor_set_layout_bindings[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
     p_adapt_exposure_descriptor_set_layout_bindings[1].pImmutableSamplers = TG_NULL;
 
-    deferred_renderer_h->tone_mapping_pass.descriptor = tg_vulkan_descriptor_create(2, p_adapt_exposure_descriptor_set_layout_bindings);
-    deferred_renderer_h->tone_mapping_pass.vertex_shader = ((tg_vertex_shader_h)tg_assets_get_asset("shaders/adapt_exposure.vert"))->vulkan_shader;
-    deferred_renderer_h->tone_mapping_pass.fragment_shader = ((tg_fragment_shader_h)tg_assets_get_asset("shaders/adapt_exposure.frag"))->vulkan_shader;
-    deferred_renderer_h->tone_mapping_pass.pipeline_layout = tg_vulkan_pipeline_layout_create(1, &deferred_renderer_h->tone_mapping_pass.descriptor.descriptor_set_layout, 0, TG_NULL);
+    h_deferred_renderer->tone_mapping_pass.descriptor = tg_vulkan_descriptor_create(2, p_adapt_exposure_descriptor_set_layout_bindings);
+    h_deferred_renderer->tone_mapping_pass.vertex_shader = ((tg_vertex_shader_h)tg_assets_get_asset("shaders/adapt_exposure.vert"))->vulkan_shader;
+    h_deferred_renderer->tone_mapping_pass.fragment_shader = ((tg_fragment_shader_h)tg_assets_get_asset("shaders/adapt_exposure.frag"))->vulkan_shader;
+    h_deferred_renderer->tone_mapping_pass.pipeline_layout = tg_vulkan_pipeline_layout_create(1, &h_deferred_renderer->tone_mapping_pass.descriptor.descriptor_set_layout, 0, TG_NULL);
 
     VkVertexInputBindingDescription vertex_input_binding_description = { 0 };
     vertex_input_binding_description.binding = 0;
@@ -545,8 +545,8 @@ void tg_deferred_renderer_internal_init_tone_mapping_pass(tg_deferred_renderer_h
     pipeline_vertex_input_state_create_info.pVertexAttributeDescriptions = p_vertex_input_attribute_descriptions;
 
     tg_vulkan_graphics_pipeline_create_info exposure_vulkan_graphics_pipeline_create_info = { 0 };
-    exposure_vulkan_graphics_pipeline_create_info.vertex_shader = deferred_renderer_h->tone_mapping_pass.vertex_shader;
-    exposure_vulkan_graphics_pipeline_create_info.fragment_shader = deferred_renderer_h->tone_mapping_pass.fragment_shader;
+    exposure_vulkan_graphics_pipeline_create_info.vertex_shader = h_deferred_renderer->tone_mapping_pass.vertex_shader;
+    exposure_vulkan_graphics_pipeline_create_info.fragment_shader = h_deferred_renderer->tone_mapping_pass.fragment_shader;
     exposure_vulkan_graphics_pipeline_create_info.cull_mode = VK_CULL_MODE_NONE;
     exposure_vulkan_graphics_pipeline_create_info.sample_count = VK_SAMPLE_COUNT_1_BIT;
     exposure_vulkan_graphics_pipeline_create_info.depth_test_enable = VK_FALSE;
@@ -554,122 +554,122 @@ void tg_deferred_renderer_internal_init_tone_mapping_pass(tg_deferred_renderer_h
     exposure_vulkan_graphics_pipeline_create_info.attachment_count = 1;
     exposure_vulkan_graphics_pipeline_create_info.blend_enable = VK_FALSE;
     exposure_vulkan_graphics_pipeline_create_info.p_pipeline_vertex_input_state_create_info = &pipeline_vertex_input_state_create_info;
-    exposure_vulkan_graphics_pipeline_create_info.pipeline_layout = deferred_renderer_h->tone_mapping_pass.pipeline_layout;
-    exposure_vulkan_graphics_pipeline_create_info.render_pass = deferred_renderer_h->tone_mapping_pass.render_pass;
+    exposure_vulkan_graphics_pipeline_create_info.pipeline_layout = h_deferred_renderer->tone_mapping_pass.pipeline_layout;
+    exposure_vulkan_graphics_pipeline_create_info.render_pass = h_deferred_renderer->tone_mapping_pass.render_pass;
 
-    deferred_renderer_h->tone_mapping_pass.graphics_pipeline = tg_vulkan_graphics_pipeline_create(&exposure_vulkan_graphics_pipeline_create_info);
+    h_deferred_renderer->tone_mapping_pass.graphics_pipeline = tg_vulkan_graphics_pipeline_create(&exposure_vulkan_graphics_pipeline_create_info);
 
-    tg_vulkan_descriptor_set_update_color_image(deferred_renderer_h->tone_mapping_pass.acquire_exposure_descriptor.descriptor_set, &deferred_renderer_h->shading_pass.color_attachment, 0);
-    tg_vulkan_descriptor_set_update_storage_buffer(deferred_renderer_h->tone_mapping_pass.acquire_exposure_descriptor.descriptor_set, deferred_renderer_h->tone_mapping_pass.exposure_storage_buffer.buffer, 1);
-    tg_vulkan_descriptor_set_update_color_image(deferred_renderer_h->tone_mapping_pass.descriptor.descriptor_set, &deferred_renderer_h->shading_pass.color_attachment, 0);
-    tg_vulkan_descriptor_set_update_storage_buffer(deferred_renderer_h->tone_mapping_pass.descriptor.descriptor_set, deferred_renderer_h->tone_mapping_pass.exposure_storage_buffer.buffer, 1);
+    tg_vulkan_descriptor_set_update_color_image(h_deferred_renderer->tone_mapping_pass.acquire_exposure_descriptor.descriptor_set, &h_deferred_renderer->shading_pass.color_attachment, 0);
+    tg_vulkan_descriptor_set_update_storage_buffer(h_deferred_renderer->tone_mapping_pass.acquire_exposure_descriptor.descriptor_set, h_deferred_renderer->tone_mapping_pass.exposure_storage_buffer.buffer, 1);
+    tg_vulkan_descriptor_set_update_color_image(h_deferred_renderer->tone_mapping_pass.descriptor.descriptor_set, &h_deferred_renderer->shading_pass.color_attachment, 0);
+    tg_vulkan_descriptor_set_update_storage_buffer(h_deferred_renderer->tone_mapping_pass.descriptor.descriptor_set, h_deferred_renderer->tone_mapping_pass.exposure_storage_buffer.buffer, 1);
 
-    deferred_renderer_h->tone_mapping_pass.command_buffer = tg_vulkan_command_buffer_allocate(graphics_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
-    tg_vulkan_command_buffer_begin(deferred_renderer_h->tone_mapping_pass.command_buffer, 0, TG_NULL);
+    h_deferred_renderer->tone_mapping_pass.command_buffer = tg_vulkan_command_buffer_allocate(graphics_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+    tg_vulkan_command_buffer_begin(h_deferred_renderer->tone_mapping_pass.command_buffer, 0, TG_NULL);
     {
         tg_vulkan_command_buffer_cmd_transition_color_image_layout(
-            deferred_renderer_h->tone_mapping_pass.command_buffer,
-            &deferred_renderer_h->shading_pass.color_attachment,
+            h_deferred_renderer->tone_mapping_pass.command_buffer,
+            &h_deferred_renderer->shading_pass.color_attachment,
             VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
             VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT
         );
 
-        vkCmdBindPipeline(deferred_renderer_h->tone_mapping_pass.command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, deferred_renderer_h->tone_mapping_pass.acquire_exposure_compute_pipeline);
-        vkCmdBindDescriptorSets(deferred_renderer_h->tone_mapping_pass.command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, deferred_renderer_h->tone_mapping_pass.acquire_exposure_pipeline_layout, 0, 1, &deferred_renderer_h->tone_mapping_pass.acquire_exposure_descriptor.descriptor_set, 0, TG_NULL);
-        vkCmdDispatch(deferred_renderer_h->tone_mapping_pass.command_buffer, 1, 1, 1);
+        vkCmdBindPipeline(h_deferred_renderer->tone_mapping_pass.command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, h_deferred_renderer->tone_mapping_pass.acquire_exposure_compute_pipeline);
+        vkCmdBindDescriptorSets(h_deferred_renderer->tone_mapping_pass.command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, h_deferred_renderer->tone_mapping_pass.acquire_exposure_pipeline_layout, 0, 1, &h_deferred_renderer->tone_mapping_pass.acquire_exposure_descriptor.descriptor_set, 0, TG_NULL);
+        vkCmdDispatch(h_deferred_renderer->tone_mapping_pass.command_buffer, 1, 1, 1);
 
         tg_vulkan_command_buffer_cmd_transition_color_image_layout(
-            deferred_renderer_h->tone_mapping_pass.command_buffer,
-            &deferred_renderer_h->shading_pass.color_attachment,
+            h_deferred_renderer->tone_mapping_pass.command_buffer,
+            &h_deferred_renderer->shading_pass.color_attachment,
             VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_SHADER_READ_BIT,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
         );
 
-        vkCmdBindPipeline(deferred_renderer_h->tone_mapping_pass.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, deferred_renderer_h->tone_mapping_pass.graphics_pipeline);
+        vkCmdBindPipeline(h_deferred_renderer->tone_mapping_pass.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, h_deferred_renderer->tone_mapping_pass.graphics_pipeline);
 
         const VkDeviceSize vertex_buffer_offset = 0;
-        vkCmdBindVertexBuffers(deferred_renderer_h->tone_mapping_pass.command_buffer, 0, 1, &deferred_renderer_h->shading_pass.vbo.buffer, &vertex_buffer_offset);
-        vkCmdBindIndexBuffer(deferred_renderer_h->tone_mapping_pass.command_buffer, deferred_renderer_h->shading_pass.ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
-        vkCmdBindDescriptorSets(deferred_renderer_h->tone_mapping_pass.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, deferred_renderer_h->tone_mapping_pass.pipeline_layout, 0, 1, &deferred_renderer_h->tone_mapping_pass.descriptor.descriptor_set, 0, TG_NULL);
+        vkCmdBindVertexBuffers(h_deferred_renderer->tone_mapping_pass.command_buffer, 0, 1, &h_deferred_renderer->shading_pass.vbo.buffer, &vertex_buffer_offset);
+        vkCmdBindIndexBuffer(h_deferred_renderer->tone_mapping_pass.command_buffer, h_deferred_renderer->shading_pass.ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
+        vkCmdBindDescriptorSets(h_deferred_renderer->tone_mapping_pass.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, h_deferred_renderer->tone_mapping_pass.pipeline_layout, 0, 1, &h_deferred_renderer->tone_mapping_pass.descriptor.descriptor_set, 0, TG_NULL);
 
         VkRenderPassBeginInfo exposure_render_pass_begin_info = { 0 };
         exposure_render_pass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         exposure_render_pass_begin_info.pNext = TG_NULL;
-        exposure_render_pass_begin_info.renderPass = deferred_renderer_h->tone_mapping_pass.render_pass;
-        exposure_render_pass_begin_info.framebuffer = deferred_renderer_h->tone_mapping_pass.framebuffer;
+        exposure_render_pass_begin_info.renderPass = h_deferred_renderer->tone_mapping_pass.render_pass;
+        exposure_render_pass_begin_info.framebuffer = h_deferred_renderer->tone_mapping_pass.framebuffer;
         exposure_render_pass_begin_info.renderArea.offset = (VkOffset2D){ 0, 0 };
         exposure_render_pass_begin_info.renderArea.extent = swapchain_extent;
         exposure_render_pass_begin_info.clearValueCount = 0;
         exposure_render_pass_begin_info.pClearValues = TG_NULL;
 
-        vkCmdBeginRenderPass(deferred_renderer_h->tone_mapping_pass.command_buffer, &exposure_render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
-        vkCmdDrawIndexed(deferred_renderer_h->tone_mapping_pass.command_buffer, 6, 1, 0, 0, 0);
-        vkCmdEndRenderPass(deferred_renderer_h->tone_mapping_pass.command_buffer);
+        vkCmdBeginRenderPass(h_deferred_renderer->tone_mapping_pass.command_buffer, &exposure_render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
+        vkCmdDrawIndexed(h_deferred_renderer->tone_mapping_pass.command_buffer, 6, 1, 0, 0, 0);
+        vkCmdEndRenderPass(h_deferred_renderer->tone_mapping_pass.command_buffer);
 
         tg_vulkan_command_buffer_cmd_transition_color_image_layout(
-            deferred_renderer_h->tone_mapping_pass.command_buffer,
-            &deferred_renderer_h->shading_pass.color_attachment,
+            h_deferred_renderer->tone_mapping_pass.command_buffer,
+            &h_deferred_renderer->shading_pass.color_attachment,
             VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
             VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
         );
     }
-    vkEndCommandBuffer(deferred_renderer_h->tone_mapping_pass.command_buffer);
+    vkEndCommandBuffer(h_deferred_renderer->tone_mapping_pass.command_buffer);
 }
 
 
 
-void tg_deferred_renderer_begin(tg_deferred_renderer_h deferred_renderer_h)
+void tg_deferred_renderer_begin(tg_deferred_renderer_h h_deferred_renderer)
 {
-    TG_ASSERT(deferred_renderer_h);
+    TG_ASSERT(h_deferred_renderer);
 
-    tg_vulkan_command_buffer_begin(deferred_renderer_h->geometry_pass.command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, TG_NULL);
-    tg_vulkan_command_buffer_cmd_begin_render_pass(deferred_renderer_h->geometry_pass.command_buffer, deferred_renderer_h->geometry_pass.render_pass, deferred_renderer_h->geometry_pass.framebuffer, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+    tg_vulkan_command_buffer_begin(h_deferred_renderer->geometry_pass.command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, TG_NULL);
+    tg_vulkan_command_buffer_cmd_begin_render_pass(h_deferred_renderer->geometry_pass.command_buffer, h_deferred_renderer->geometry_pass.render_pass, h_deferred_renderer->geometry_pass.framebuffer, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 }
 
-tg_deferred_renderer_h tg_deferred_renderer_create(tg_camera_h camera_h)
+tg_deferred_renderer_h tg_deferred_renderer_create(tg_camera_h h_camera)
 {
-    TG_ASSERT(camera_h);
+    TG_ASSERT(h_camera);
 
-    tg_deferred_renderer_h deferred_renderer_h = TG_MEMORY_ALLOC(sizeof(*deferred_renderer_h));
-    deferred_renderer_h->camera_h = camera_h;
-    tg_deferred_renderer_internal_init_geometry_pass(deferred_renderer_h);
-    tg_deferred_renderer_internal_init_shading_pass(deferred_renderer_h);
-    tg_deferred_renderer_internal_init_tone_mapping_pass(deferred_renderer_h);
-    return deferred_renderer_h;
+    tg_deferred_renderer_h h_deferred_renderer = TG_MEMORY_ALLOC(sizeof(*h_deferred_renderer));
+    h_deferred_renderer->h_camera = h_camera;
+    tg_deferred_renderer_internal_init_geometry_pass(h_deferred_renderer);
+    tg_deferred_renderer_internal_init_shading_pass(h_deferred_renderer);
+    tg_deferred_renderer_internal_init_tone_mapping_pass(h_deferred_renderer);
+    return h_deferred_renderer;
 }
 
-void tg_deferred_renderer_destroy(tg_deferred_renderer_h deferred_renderer_h)
+void tg_deferred_renderer_destroy(tg_deferred_renderer_h h_deferred_renderer)
 {
-    TG_ASSERT(deferred_renderer_h);
+    TG_ASSERT(h_deferred_renderer);
 
-    tg_deferred_renderer_internal_destroy_tone_mapping_pass(deferred_renderer_h);
-    tg_deferred_renderer_internal_destroy_shading_pass(deferred_renderer_h);
-    tg_deferred_renderer_internal_destroy_geometry_pass(deferred_renderer_h);
-    TG_MEMORY_FREE(deferred_renderer_h);
+    tg_deferred_renderer_internal_destroy_tone_mapping_pass(h_deferred_renderer);
+    tg_deferred_renderer_internal_destroy_shading_pass(h_deferred_renderer);
+    tg_deferred_renderer_internal_destroy_geometry_pass(h_deferred_renderer);
+    TG_MEMORY_FREE(h_deferred_renderer);
 }
 
-void tg_deferred_renderer_execute(tg_deferred_renderer_h deferred_renderer_h, VkCommandBuffer command_buffer)
+void tg_deferred_renderer_execute(tg_deferred_renderer_h h_deferred_renderer, VkCommandBuffer command_buffer)
 {
-    TG_ASSERT(deferred_renderer_h && command_buffer);
+    TG_ASSERT(h_deferred_renderer && command_buffer);
 
-    vkCmdExecuteCommands(deferred_renderer_h->geometry_pass.command_buffer, 1, &command_buffer);
+    vkCmdExecuteCommands(h_deferred_renderer->geometry_pass.command_buffer, 1, &command_buffer);
 }
 
-void tg_deferred_renderer_end(tg_deferred_renderer_h deferred_renderer_h)
+void tg_deferred_renderer_end(tg_deferred_renderer_h h_deferred_renderer)
 {
-    TG_ASSERT(deferred_renderer_h);
+    TG_ASSERT(h_deferred_renderer);
 
-    vkCmdEndRenderPass(deferred_renderer_h->geometry_pass.command_buffer);
-    VK_CALL(vkEndCommandBuffer(deferred_renderer_h->geometry_pass.command_buffer));
+    vkCmdEndRenderPass(h_deferred_renderer->geometry_pass.command_buffer);
+    VK_CALL(vkEndCommandBuffer(h_deferred_renderer->geometry_pass.command_buffer));
 
-    tg_vulkan_fence_wait(deferred_renderer_h->camera_h->render_target.fence);
-    tg_vulkan_fence_reset(deferred_renderer_h->camera_h->render_target.fence);
+    tg_vulkan_fence_wait(h_deferred_renderer->h_camera->render_target.fence);
+    tg_vulkan_fence_reset(h_deferred_renderer->h_camera->render_target.fence);
 
     VkSubmitInfo submit_info = { 0 };
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -678,9 +678,9 @@ void tg_deferred_renderer_end(tg_deferred_renderer_h deferred_renderer_h)
     submit_info.pWaitSemaphores = TG_NULL;
     submit_info.pWaitDstStageMask = TG_NULL;
     submit_info.commandBufferCount = 1;
-    submit_info.pCommandBuffers = &deferred_renderer_h->geometry_pass.command_buffer;
+    submit_info.pCommandBuffers = &h_deferred_renderer->geometry_pass.command_buffer;
     submit_info.signalSemaphoreCount = 1;
-    submit_info.pSignalSemaphores = &deferred_renderer_h->shading_pass.rendering_finished_semaphore;
+    submit_info.pSignalSemaphores = &h_deferred_renderer->shading_pass.rendering_finished_semaphore;
 
     VK_CALL(vkQueueSubmit(graphics_queue.queue, 1, &submit_info, VK_NULL_HANDLE));
 
@@ -689,12 +689,12 @@ void tg_deferred_renderer_end(tg_deferred_renderer_h deferred_renderer_h)
     shading_submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     shading_submit_info.pNext = TG_NULL;
     shading_submit_info.waitSemaphoreCount = 1;
-    shading_submit_info.pWaitSemaphores = &deferred_renderer_h->shading_pass.rendering_finished_semaphore;
+    shading_submit_info.pWaitSemaphores = &h_deferred_renderer->shading_pass.rendering_finished_semaphore;
     shading_submit_info.pWaitDstStageMask = p_pipeline_stage_flags;
     shading_submit_info.commandBufferCount = 1;
-    shading_submit_info.pCommandBuffers = &deferred_renderer_h->shading_pass.command_buffer;
+    shading_submit_info.pCommandBuffers = &h_deferred_renderer->shading_pass.command_buffer;
     shading_submit_info.signalSemaphoreCount = 1;
-    shading_submit_info.pSignalSemaphores = &deferred_renderer_h->shading_pass.rendering_finished_semaphore;
+    shading_submit_info.pSignalSemaphores = &h_deferred_renderer->shading_pass.rendering_finished_semaphore;
 
     VK_CALL(vkQueueSubmit(graphics_queue.queue, 1, &shading_submit_info, VK_NULL_HANDLE));
 
@@ -702,17 +702,17 @@ void tg_deferred_renderer_end(tg_deferred_renderer_h deferred_renderer_h)
     tone_mapping_submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     tone_mapping_submit_info.pNext = TG_NULL;
     tone_mapping_submit_info.waitSemaphoreCount = 1;
-    tone_mapping_submit_info.pWaitSemaphores = &deferred_renderer_h->shading_pass.rendering_finished_semaphore;
+    tone_mapping_submit_info.pWaitSemaphores = &h_deferred_renderer->shading_pass.rendering_finished_semaphore;
     tone_mapping_submit_info.pWaitDstStageMask = p_pipeline_stage_flags;
     tone_mapping_submit_info.commandBufferCount = 1;
-    tone_mapping_submit_info.pCommandBuffers = &deferred_renderer_h->tone_mapping_pass.command_buffer;
+    tone_mapping_submit_info.pCommandBuffers = &h_deferred_renderer->tone_mapping_pass.command_buffer;
     tone_mapping_submit_info.signalSemaphoreCount = 0;
     tone_mapping_submit_info.pSignalSemaphores = TG_NULL;
 
-    VK_CALL(vkQueueSubmit(graphics_queue.queue, 1, &tone_mapping_submit_info, deferred_renderer_h->camera_h->render_target.fence));
+    VK_CALL(vkQueueSubmit(graphics_queue.queue, 1, &tone_mapping_submit_info, h_deferred_renderer->h_camera->render_target.fence));
 }
 
-void tg_deferred_renderer_on_window_resize(tg_deferred_renderer_h deferred_renderer_h, u32 width, u32 height)
+void tg_deferred_renderer_on_window_resize(tg_deferred_renderer_h h_deferred_renderer, u32 width, u32 height)
 {
 }
 
