@@ -99,7 +99,7 @@ tg_vulkan_memory_block tg_vulkan_memory_allocator_alloc(VkDeviceSize size, u32 m
         }
     }
 
-    TG_ASSERT(TG_FALSE);
+    TG_INVALID_CODEPATH();
     return (tg_vulkan_memory_block){ 0 };
 }
 

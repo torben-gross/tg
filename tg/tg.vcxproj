@@ -124,7 +124,6 @@
     <ClCompile Include="src\graphics\vulkan\tg_vulkan_material.c" />
     <ClCompile Include="src\graphics\vulkan\tg_vulkan_forward_renderer.c" />
     <ClCompile Include="src\graphics\vulkan\tg_vulkan_memory_allocator.c" />
-    <ClCompile Include="src\graphics\vulkan\tg_vulkan_flat_terrain.c" />
     <ClCompile Include="src\graphics\vulkan\tg_vulkan_texture_atlas.c" />
     <ClCompile Include="src\graphics\vulkan\tg_vulkan_transvoxel_terrain.c" />
     <ClCompile Include="src\tg_assets.c" />
@@ -152,7 +151,6 @@
     <ClInclude Include="src\graphics\vulkan\tg_vulkan_forward_renderer.h" />
     <ClInclude Include="src\graphics\vulkan\tg_vulkan_memory_allocator.h" />
     <ClInclude Include="src\graphics\tg_spirv.h" />
-    <ClInclude Include="src\graphics\vulkan\tg_vulkan_flat_terrain.h" />
     <ClInclude Include="src\graphics\vulkan\tg_vulkan_transvoxel_terrain.h" />
     <ClInclude Include="src\tg_assets.h" />
     <ClInclude Include="src\tg_input.h" />

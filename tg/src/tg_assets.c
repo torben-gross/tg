@@ -20,7 +20,7 @@ typedef struct tg_assets
 } tg_assets;
 
 tg_assets assets = { 0 };
-const char* asset_path = TG_ASSET_PATH;
+const char* p_asset_path = TG_ASSET_PATH;
 
 
 
@@ -151,7 +151,7 @@ void tg_assets_internal_try_load_directory(const char* p_relative_directory)
 
 void tg_assets_init()
 {
-	asset_path = TG_ASSET_PATH;
+	p_asset_path = TG_ASSET_PATH;
 	TG_ASSERT(tg_platform_get_full_directory_size(TG_ASSET_PATH) <= TG_MAX_ASSETS_DIRECTORY_SIZE);
 	tg_assets_internal_try_load_directory(TG_ASSET_PATH);
 }
@@ -177,7 +177,7 @@ void tg_assets_shutdown()
 			}
 			else
 			{
-				TG_ASSERT(TG_FALSE);
+				TG_INVALID_CODEPATH();
 			}
 		}
 	}
@@ -187,7 +187,7 @@ void tg_assets_shutdown()
 
 const char* tg_assets_get_asset_path()
 {
-	return asset_path;
+	return p_asset_path;
 }
 
 tg_handle tg_assets_get_asset(const char* p_filename)

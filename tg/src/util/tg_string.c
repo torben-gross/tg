@@ -121,10 +121,7 @@ void tg_string_format_va(u32 size, char* p_buffer, const char* p_format, va_list
 				}
 			} break;
 
-			default:
-			{
-				TG_ASSERT(TG_FALSE);
-			} break;
+			default: TG_INVALID_CODEPATH(); break;
 			}
 		}
 		else

@@ -15,15 +15,15 @@
 
 
 
-typedef enum tgi_cube_side
+typedef enum tgi_full_resolution_face
 {
-	TGI_CUBE_SIDE_NEGATIVE_X    = 0,
-	TGI_CUBE_SIDE_POSITIVE_X    = 1,
-	TGI_CUBE_SIDE_NEGATIVE_Y    = 2,
-	TGI_CUBE_SIDE_POSITIVE_Y    = 3,
-	TGI_CUBE_SIDE_NEGATIVE_Z    = 4,
-	TGI_CUBE_SIDE_POSITIVE_Z    = 5
-} tgi_cube_side;
+	TGI_FULL_RESOLUTION_FACE_NEGATIVE_X    = 0,
+	TGI_FULL_RESOLUTION_FACE_POSITIVE_X    = 1,
+	TGI_FULL_RESOLUTION_FACE_NEGATIVE_Y    = 2,
+	TGI_FULL_RESOLUTION_FACE_POSITIVE_Y    = 3,
+	TGI_FULL_RESOLUTION_FACE_NEGATIVE_Z    = 4,
+	TGI_FULL_RESOLUTION_FACE_POSITIVE_Z    = 5
+} tgi_full_resolution_face;
 
 typedef enum tgi_axis
 {
@@ -289,23 +289,26 @@ b32 tgi_should_split_node(v3 camera_position, v3i octree_min_coordinates, v3i bl
 	return result;
 }
 
-v3i tgi_transition_face_to_block(v3i pad, u8 low_resolution_lod, i32 x, i32 y, u8 direction)
+v3i tgi_transition_face_to_block(v3i pad, u8 half_resolution_lod, i32 x, i32 y, u8 direction)
 {
-	const u8 high_res_scale = 1 << (low_resolution_lod - 1);
+	TG_ASSERT(half_resolution_lod > 0);
 
-	const i32 x0 = pad.x + high_res_scale * x;
-	const i32 y0 = pad.y + high_res_scale * y;
-	const i32 z0 = pad.z + 0;
-	const i32 z1 = pad.z + high_res_scale * (TG_TRANSVOXEL_VOXELS_PER_BLOCK_SIDE - 1);
+	const u8 full_res_scale = 1 << (half_resolution_lod - 1);
+
+	const i32 x0 = full_res_scale * x;
+	const i32 y0 = full_res_scale * y;
+	const i32 z0 = 0;
+	const i32 z1 = (1 << half_resolution_lod) * (TG_TRANSVOXEL_VOXELS_PER_BLOCK_SIDE - 1);
 
 	switch (direction)
 	{
-	case TGI_CUBE_SIDE_NEGATIVE_X: return (v3i){ z0, x0, y0 };
-	case TGI_CUBE_SIDE_POSITIVE_X: return (v3i){ z1, y0, x0 };
-	case TGI_CUBE_SIDE_NEGATIVE_Y: return (v3i){ y0, z0, x0 };
-	case TGI_CUBE_SIDE_POSITIVE_Y: return (v3i){ x0, z1, y0 };
-	case TGI_CUBE_SIDE_NEGATIVE_Z: return (v3i){ x0, y0, z0 };
-	case TGI_CUBE_SIDE_POSITIVE_Z: return (v3i){ y0, x0, z1 };
+	case TGI_FULL_RESOLUTION_FACE_NEGATIVE_X: return tgm_v3i_add(pad, (v3i){ z0, x0, y0 });
+	case TGI_FULL_RESOLUTION_FACE_POSITIVE_X: return tgm_v3i_add(pad, (v3i){ z1, y0, x0 });
+	case TGI_FULL_RESOLUTION_FACE_NEGATIVE_Y: return tgm_v3i_add(pad, (v3i){ y0, z0, x0 });
+	case TGI_FULL_RESOLUTION_FACE_POSITIVE_Y: return tgm_v3i_add(pad, (v3i){ x0, z1, y0 });
+	case TGI_FULL_RESOLUTION_FACE_NEGATIVE_Z: return tgm_v3i_add(pad, (v3i){ x0, y0, z0 });
+	case TGI_FULL_RESOLUTION_FACE_POSITIVE_Z: return tgm_v3i_add(pad, (v3i){ y0, x0, z1 });
+
 	default: TG_INVALID_CODEPATH(); return (v3i){ 0 };
 	}
 }
@@ -969,7 +972,7 @@ tg_transvoxel_terrain_h tg_transvoxel_terrain_create(tg_camera_h h_camera)
 void tg_transvoxel_terrain_destroy(tg_transvoxel_terrain_h h_terrain)
 {
 	TG_ASSERT(h_terrain);
-	TG_ASSERT(TG_FALSE);
+	TG_INVALID_CODEPATH();
 }
 
 void tg_transvoxel_terrain_update(tg_transvoxel_terrain_h h_terrain)

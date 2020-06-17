@@ -128,7 +128,7 @@ void tg_forward_renderer_draw(tg_forward_renderer_h h_forward_renderer, tg_entit
             return;
         }
     }
-    TG_ASSERT(TG_FALSE);
+    TG_INVALID_CODEPATH();
 }
 
 void tg_forward_renderer_end(tg_forward_renderer_h h_forward_renderer)

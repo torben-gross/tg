@@ -178,7 +178,7 @@ void tg_application_internal_game_3d_create()
     test_deferred.h_ground_mesh = tg_mesh_create(4, p_ground_positions, TG_NULL, p_uvs, TG_NULL, 6, p_indices);
     test_deferred.ground_entity = tg_entity_create(test_deferred.h_ground_mesh, test_deferred.h_water_material);
     tg_entity* p_ground_entity = &test_deferred.ground_entity;
-    tg_list_insert(&test_deferred.entities, &p_ground_entity);
+    //tg_list_insert(&test_deferred.entities, &p_ground_entity);
 
     test_deferred.quad_entity = tg_entity_create(test_deferred.h_quad_mesh, test_deferred.h_custom_material);
     tg_entity* p_quad_entity = &test_deferred.quad_entity;

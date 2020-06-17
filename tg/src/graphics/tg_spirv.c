@@ -679,9 +679,10 @@ void tg_spirv_internal_fill_input_resource(u32 word_count, const u32* p_words, u
                     const b32 is_signed = literal >> 16;
                     switch (component_number)
                     {
-                    case 2: p_resource->format = is_signed ? TG_SPIRV_INPUT_FORMAT_R32G32_SINT : TG_SPIRV_INPUT_FORMAT_R32G32_UINT; break;
-                    case 3: p_resource->format = is_signed ? TG_SPIRV_INPUT_FORMAT_R32G32B32_SINT : TG_SPIRV_INPUT_FORMAT_R32G32B32_UINT; break;
+                    case 2: p_resource->format = is_signed ? TG_SPIRV_INPUT_FORMAT_R32G32_SINT       : TG_SPIRV_INPUT_FORMAT_R32G32_UINT;       break;
+                    case 3: p_resource->format = is_signed ? TG_SPIRV_INPUT_FORMAT_R32G32B32_SINT    : TG_SPIRV_INPUT_FORMAT_R32G32B32_UINT;    break;
                     case 4: p_resource->format = is_signed ? TG_SPIRV_INPUT_FORMAT_R32G32B32A32_SINT : TG_SPIRV_INPUT_FORMAT_R32G32B32A32_UINT; break;
+
                     default: TG_INVALID_CODEPATH(); break;
                     }
                 } break;
@@ -690,9 +691,10 @@ void tg_spirv_internal_fill_input_resource(u32 word_count, const u32* p_words, u
                     TG_ASSERT(literal == 32);
                     switch (component_number)
                     {
-                    case 2: p_resource->format = TG_SPIRV_INPUT_FORMAT_R32G32_SFLOAT; break;
-                    case 3: p_resource->format = TG_SPIRV_INPUT_FORMAT_R32G32B32_SFLOAT; break;
+                    case 2: p_resource->format = TG_SPIRV_INPUT_FORMAT_R32G32_SFLOAT;       break;
+                    case 3: p_resource->format = TG_SPIRV_INPUT_FORMAT_R32G32B32_SFLOAT;    break;
                     case 4: p_resource->format = TG_SPIRV_INPUT_FORMAT_R32G32B32A32_SFLOAT; break;
+
                     default: TG_INVALID_CODEPATH(); break;
                     }
                 } break;
@@ -765,6 +767,7 @@ void tg_spirv_fill_layout(u32 word_count, const u32* p_words, tg_spirv_layout* p
                 case TG_SPIRV_EXECUTION_MODEL_VERTEX:     p_layout->shader_type = TG_SPIRV_SHADER_TYPE_VERTEX;   break;
                 case TG_SPIRV_EXECUTION_MODEL_FRAGMENT:   p_layout->shader_type = TG_SPIRV_SHADER_TYPE_FRAGMENT; break;
                 case TG_SPIRV_EXECUTION_MODEL_GL_COMPUTE: p_layout->shader_type = TG_SPIRV_SHADER_TYPE_COMPUTE;  break;
+
                 default: TG_INVALID_CODEPATH(); break;
                 }
                 const char* p_entry_point_name = (char*)&p_words[processed_word_count + 3];
@@ -813,18 +816,19 @@ void tg_spirv_fill_layout(u32 word_count, const u32* p_words, tg_spirv_layout* p
         p_layout->p_input_resources[i].offset = offset;
         switch (p_layout->p_input_resources[i].format)
         {
-        case TG_SPIRV_INPUT_FORMAT_R32_SFLOAT:          offset += 4; break;
-        case TG_SPIRV_INPUT_FORMAT_R32_SINT:            offset += 4; break;
-        case TG_SPIRV_INPUT_FORMAT_R32_UINT:            offset += 4; break;
-        case TG_SPIRV_INPUT_FORMAT_R32G32_SFLOAT:       offset += 8; break;
-        case TG_SPIRV_INPUT_FORMAT_R32G32_SINT:         offset += 8; break;
-        case TG_SPIRV_INPUT_FORMAT_R32G32_UINT:         offset += 8; break;
+        case TG_SPIRV_INPUT_FORMAT_R32_SFLOAT:          offset +=  4; break;
+        case TG_SPIRV_INPUT_FORMAT_R32_SINT:            offset +=  4; break;
+        case TG_SPIRV_INPUT_FORMAT_R32_UINT:            offset +=  4; break;
+        case TG_SPIRV_INPUT_FORMAT_R32G32_SFLOAT:       offset +=  8; break;
+        case TG_SPIRV_INPUT_FORMAT_R32G32_SINT:         offset +=  8; break;
+        case TG_SPIRV_INPUT_FORMAT_R32G32_UINT:         offset +=  8; break;
         case TG_SPIRV_INPUT_FORMAT_R32G32B32_SFLOAT:    offset += 12; break;
         case TG_SPIRV_INPUT_FORMAT_R32G32B32_SINT:      offset += 12; break;
         case TG_SPIRV_INPUT_FORMAT_R32G32B32_UINT:      offset += 12; break;
         case TG_SPIRV_INPUT_FORMAT_R32G32B32A32_SFLOAT: offset += 16; break;
         case TG_SPIRV_INPUT_FORMAT_R32G32B32A32_SINT:   offset += 16; break;
         case TG_SPIRV_INPUT_FORMAT_R32G32B32A32_UINT:   offset += 16; break;
+
         default: TG_INVALID_CODEPATH(); break;
         }
     }

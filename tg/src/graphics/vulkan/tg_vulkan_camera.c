@@ -419,6 +419,7 @@ void tg_camera_internal_register_entity(tg_camera_h h_camera, tg_vulkan_camera_i
     vulkan_graphics_pipeline_create_info.sample_count = VK_SAMPLE_COUNT_1_BIT;
     vulkan_graphics_pipeline_create_info.depth_test_enable = VK_TRUE;
     vulkan_graphics_pipeline_create_info.depth_write_enable = VK_TRUE;
+
     switch (h_entity_graphics_data_ptr->h_material->material_type)
     {
     case TG_VULKAN_MATERIAL_TYPE_DEFERRED:
@@ -431,10 +432,12 @@ void tg_camera_internal_register_entity(tg_camera_h h_camera, tg_vulkan_camera_i
         vulkan_graphics_pipeline_create_info.attachment_count = 1;
         vulkan_graphics_pipeline_create_info.blend_enable = VK_TRUE;
     } break;
-    default: TG_ASSERT(TG_FALSE);
+    default: TG_INVALID_CODEPATH(); break;
     }
+
     vulkan_graphics_pipeline_create_info.p_pipeline_vertex_input_state_create_info = &pipeline_vertex_input_state_create_info;
     vulkan_graphics_pipeline_create_info.pipeline_layout = p_vulkan_camera_info->pipeline_layout;
+
     switch (h_entity_graphics_data_ptr->h_material->material_type)
     {
     case TG_VULKAN_MATERIAL_TYPE_DEFERRED:
@@ -445,7 +448,7 @@ void tg_camera_internal_register_entity(tg_camera_h h_camera, tg_vulkan_camera_i
     {
         vulkan_graphics_pipeline_create_info.render_pass = h_camera->capture_pass.h_forward_renderer->shading_pass.render_pass;
     } break;
-    default: TG_ASSERT(TG_FALSE);
+    default: TG_INVALID_CODEPATH(); break;
     }
 
     p_vulkan_camera_info->graphics_pipeline = tg_vulkan_graphics_pipeline_create(&vulkan_graphics_pipeline_create_info);
@@ -457,6 +460,7 @@ void tg_camera_internal_register_entity(tg_camera_h h_camera, tg_vulkan_camera_i
     model_descriptor_buffer_info.range = VK_WHOLE_SIZE;
 
     VkDescriptorBufferInfo view_projection_descriptor_buffer_info = { 0 };
+
     switch (h_entity_graphics_data_ptr->h_material->material_type)
     {
     case TG_VULKAN_MATERIAL_TYPE_DEFERRED:
@@ -467,8 +471,9 @@ void tg_camera_internal_register_entity(tg_camera_h h_camera, tg_vulkan_camera_i
     {
         view_projection_descriptor_buffer_info.buffer = h_camera->view_projection_ubo.buffer;
     } break;
-    default: TG_ASSERT(TG_FALSE);
+    default: TG_INVALID_CODEPATH(); break;
     }
+
     view_projection_descriptor_buffer_info.offset = 0;
     view_projection_descriptor_buffer_info.range = VK_WHOLE_SIZE;
 
@@ -502,6 +507,7 @@ void tg_camera_internal_register_entity(tg_camera_h h_camera, tg_vulkan_camera_i
     VkCommandBufferInheritanceInfo command_buffer_inheritance_info = { 0 };
     command_buffer_inheritance_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
     command_buffer_inheritance_info.pNext = TG_NULL;
+
     switch (h_entity_graphics_data_ptr->h_material->material_type)
     {
     case TG_VULKAN_MATERIAL_TYPE_DEFERRED:
@@ -512,9 +518,11 @@ void tg_camera_internal_register_entity(tg_camera_h h_camera, tg_vulkan_camera_i
     {
         command_buffer_inheritance_info.renderPass = h_camera->capture_pass.h_forward_renderer->shading_pass.render_pass;
     } break;
-    default: TG_ASSERT(TG_FALSE);
+    default: TG_INVALID_CODEPATH(); break;
     }
+
     command_buffer_inheritance_info.subpass = 0;
+
     switch (h_entity_graphics_data_ptr->h_material->material_type)
     {
     case TG_VULKAN_MATERIAL_TYPE_DEFERRED:
@@ -525,8 +533,9 @@ void tg_camera_internal_register_entity(tg_camera_h h_camera, tg_vulkan_camera_i
     {
         command_buffer_inheritance_info.framebuffer = h_camera->capture_pass.h_forward_renderer->shading_pass.framebuffer;
     } break;
-    default: TG_ASSERT(TG_FALSE);
+    default: TG_INVALID_CODEPATH(); break;
     }
+
     command_buffer_inheritance_info.occlusionQueryEnable = VK_FALSE;
     command_buffer_inheritance_info.queryFlags = 0;
     command_buffer_inheritance_info.pipelineStatistics = 0;

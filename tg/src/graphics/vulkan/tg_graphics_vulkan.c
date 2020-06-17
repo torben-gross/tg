@@ -414,10 +414,9 @@ VkFormat tg_vulkan_color_image_convert_format(tg_color_image_format format)
     case TG_COLOR_IMAGE_FORMAT_R8G8:                return VK_FORMAT_R8G8_SRGB;
     case TG_COLOR_IMAGE_FORMAT_R8G8B8:              return VK_FORMAT_R8G8B8_SRGB;
     case TG_COLOR_IMAGE_FORMAT_R8G8B8A8:            return VK_FORMAT_R8G8B8A8_SRGB;
-    }
 
-    TG_ASSERT(TG_FALSE);
-    return -1;
+    default: TG_INVALID_CODEPATH(); return -1;
+    }
 }
 
 void tg_vulkan_color_image_destroy(tg_color_image* p_color_image)
@@ -839,10 +838,9 @@ VkFormat tg_vulkan_depth_image_convert_format(tg_depth_image_format format)
     {
     case TG_DEPTH_IMAGE_FORMAT_D16_UNORM:  return VK_FORMAT_D16_UNORM;
     case TG_DEPTH_IMAGE_FORMAT_D32_SFLOAT: return VK_FORMAT_D32_SFLOAT;
-    }
 
-    TG_ASSERT(TG_FALSE);
-    return -1;
+    default: TG_INVALID_CODEPATH(); return -1;
+    }
 }
 
 void tg_vulkan_depth_image_destroy(tg_depth_image* p_depth_image)
@@ -943,7 +941,7 @@ void tg_vulkan_descriptor_set_update(VkDescriptorSet descriptor_set, tg_handle h
         tg_uniform_buffer_h h_uniform_buffer = (tg_uniform_buffer_h)handle;
         tg_vulkan_descriptor_set_update_uniform_buffer(descriptor_set, h_uniform_buffer->buffer.buffer, dst_binding);
     } break;
-    default: TG_ASSERT(TG_FALSE);
+    default: TG_INVALID_CODEPATH(); break;
     }
 }
 
@@ -1417,7 +1415,7 @@ VkDescriptorType tg_vulkan_handle_type_convert_to_descriptor_type(tg_handle_type
     case TG_HANDLE_TYPE_VERTEX_SHADER:            break;
     }
 
-    TG_ASSERT(TG_FALSE);
+    TG_INVALID_CODEPATH();
     return -1;
 }
 
@@ -1429,10 +1427,9 @@ VkFilter tg_vulkan_image_convert_filter(tg_image_filter filter)
     {
     case TG_IMAGE_FILTER_LINEAR:  return VK_FILTER_LINEAR;
     case TG_IMAGE_FILTER_NEAREST: return VK_FILTER_NEAREST;
-    }
 
-    TG_ASSERT(TG_FALSE);
-    return -1;
+    default: TG_INVALID_CODEPATH(); return -1;
+    }
 }
 
 VkSamplerAddressMode tg_vulkan_image_convert_address_mode(tg_image_address_mode address_mode)
@@ -1444,10 +1441,9 @@ VkSamplerAddressMode tg_vulkan_image_convert_address_mode(tg_image_address_mode 
     case TG_IMAGE_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE: return VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
     case TG_IMAGE_ADDRESS_MODE_MIRRORED_REPEAT:      return VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
     case TG_IMAGE_ADDRESS_MODE_REPEAT:               return VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    }
 
-    TG_ASSERT(TG_FALSE);
-    return -1;
+    default: TG_INVALID_CODEPATH(); return -1;
+    }
 }
 
 
@@ -1668,10 +1664,9 @@ VkFormat tg_vulkan_storage_image_convert_format(tg_storage_image_format format)
     case TG_STORAGE_IMAGE_FORMAT_R32G32_SFLOAT:       return VK_FORMAT_R32G32_SFLOAT;
     case TG_STORAGE_IMAGE_FORMAT_R32G32B32_SFLOAT:    return VK_FORMAT_R32G32B32_SFLOAT;
     case TG_STORAGE_IMAGE_FORMAT_R32G32B32A32_SFLOAT: return VK_FORMAT_R32G32B32A32_SFLOAT;
-    }
 
-    TG_ASSERT(TG_FALSE);
-    return -1;
+    default: TG_INVALID_CODEPATH(); return -1;
+    }
 }
 
 

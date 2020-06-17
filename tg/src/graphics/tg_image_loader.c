@@ -179,10 +179,7 @@ void tg_image_internal_convert_format_to_masks(tg_color_image_format format, u32
 		*b_mask = 0x00ff0000;
 		*a_mask = 0xff000000;
 	} break;
-	default:
-	{
-		TG_ASSERT(TG_FALSE);
-	} break;
+	default: TG_INVALID_CODEPATH(); break;
 	}
 }
 
@@ -328,7 +325,7 @@ void tg_image_internal_convert_masks_to_format(u32 r_mask, u32 g_mask, u32 b_mas
 	}
 	else
 	{
-		TG_ASSERT(TG_FALSE);
+		TG_INVALID_CODEPATH();
 	}
 }
 
