@@ -1,6 +1,7 @@
 #include "graphics/tg_spirv.h"
 
 #include "memory/tg_memory.h"
+#include "util/tg_qsort.h"
 #include "util/tg_string.h"
 
 
@@ -510,7 +511,13 @@ typedef enum tg_spirv_op
 
 
 
-void tg_spirv_internal_find_type(u32 word_count, const u32* p_words, u32 id, tg_spirv_op* p_type, u32* p_literal)
+b32 tgi_compare_by_location(const tg_spirv_input_resource* p_v0, const tg_spirv_input_resource* p_v1)
+{
+    const b32 result = p_v0->location < p_v1->location;
+    return result;
+}
+
+void tgi_find_type(u32 word_count, const u32* p_words, u32 id, tg_spirv_op* p_type, u32* p_literal)
 {
     u32 processed_word_count = 0;
     while (processed_word_count < word_count)
@@ -545,7 +552,7 @@ void tg_spirv_internal_find_type(u32 word_count, const u32* p_words, u32 id, tg_
     TG_INVALID_CODEPATH();
 }
 
-void tg_spirv_internal_fill_global_resource(u32 word_count, const u32* p_words, u32 id, tg_spirv_global_resource* p_resource)
+void tgi_fill_global_resource(u32 word_count, const u32* p_words, u32 id, tg_spirv_global_resource* p_resource)
 {
     u32 processed_word_count = 0;
     while (processed_word_count < word_count)
@@ -596,7 +603,7 @@ void tg_spirv_internal_fill_global_resource(u32 word_count, const u32* p_words, 
                 if (storage_class == TG_SPIRV_STORAGE_CLASS_UNIFORM || storage_class == TG_SPIRV_STORAGE_CLASS_UNIFORM_CONSTANT)
                 {
                     const u32 pointed_to_id = p_words[processed_word_count + 3];
-                    tg_spirv_internal_fill_global_resource(word_count, p_words, pointed_to_id, p_resource);
+                    tgi_fill_global_resource(word_count, p_words, pointed_to_id, p_resource);
                 }
                 else
                 {
@@ -610,7 +617,7 @@ void tg_spirv_internal_fill_global_resource(u32 word_count, const u32* p_words, 
     }
 }
 
-void tg_spirv_internal_fill_input_resource(u32 word_count, const u32* p_words, u32 id, tg_spirv_input_resource* p_resource)
+void tgi_fill_input_resource(u32 word_count, const u32* p_words, u32 id, tg_spirv_input_resource* p_resource)
 {
     u32 processed_word_count = 0;
     while (processed_word_count < word_count)
@@ -669,7 +676,7 @@ void tg_spirv_internal_fill_input_resource(u32 word_count, const u32* p_words, u
             {
                 u32 literal;
                 tg_spirv_op component_type;
-                tg_spirv_internal_find_type(word_count, p_words, p_words[processed_word_count + 2], &component_type, &literal);
+                tgi_find_type(word_count, p_words, p_words[processed_word_count + 2], &component_type, &literal);
                 const u32 component_number = p_words[processed_word_count + 3];
                 switch (component_type)
                 {
@@ -711,7 +718,7 @@ void tg_spirv_internal_fill_input_resource(u32 word_count, const u32* p_words, u
                 if (storage_class == TG_SPIRV_STORAGE_CLASS_INPUT)
                 {
                     const u32 pointed_to_id = p_words[processed_word_count + 3];
-                    tg_spirv_internal_fill_input_resource(word_count, p_words, pointed_to_id, p_resource);
+                    tgi_fill_input_resource(word_count, p_words, pointed_to_id, p_resource);
                 }
                 else
                 {
@@ -793,15 +800,15 @@ void tg_spirv_fill_layout(u32 word_count, const u32* p_words, tg_spirv_layout* p
             if (storage_class == TG_SPIRV_STORAGE_CLASS_UNIFORM_CONSTANT || storage_class == TG_SPIRV_STORAGE_CLASS_UNIFORM)
             {
                 TG_ASSERT(p_layout->global_resource_count < TG_SPIRV_MAX_GLOBALS);
-                tg_spirv_internal_fill_global_resource(word_count, p_words, variable_id, &p_layout->p_global_resources[p_layout->global_resource_count]);
-                tg_spirv_internal_fill_global_resource(word_count, p_words, points_to_id, &p_layout->p_global_resources[p_layout->global_resource_count]);
+                tgi_fill_global_resource(word_count, p_words, variable_id, &p_layout->p_global_resources[p_layout->global_resource_count]);
+                tgi_fill_global_resource(word_count, p_words, points_to_id, &p_layout->p_global_resources[p_layout->global_resource_count]);
                 p_layout->global_resource_count++;
             }
             else if (storage_class == TG_SPIRV_STORAGE_CLASS_INPUT && p_layout->shader_type == TG_SPIRV_SHADER_TYPE_VERTEX)
             {
                 TG_ASSERT(p_layout->input_resource_count < TG_SPIRV_MAX_INPUTS);
-                tg_spirv_internal_fill_input_resource(word_count, p_words, variable_id, &p_layout->p_input_resources[p_layout->input_resource_count]);
-                tg_spirv_internal_fill_input_resource(word_count, p_words, points_to_id, &p_layout->p_input_resources[p_layout->input_resource_count]);
+                tgi_fill_input_resource(word_count, p_words, variable_id, &p_layout->p_input_resources[p_layout->input_resource_count]);
+                tgi_fill_input_resource(word_count, p_words, points_to_id, &p_layout->p_input_resources[p_layout->input_resource_count]);
                 p_layout->input_resource_count++;
             }
         }
@@ -809,28 +816,33 @@ void tg_spirv_fill_layout(u32 word_count, const u32* p_words, tg_spirv_layout* p
         processed_word_count += op_word_count;
     }
 
-    // TODO: this must consider alignment rules! this only works as long as there is no 64 bit value in here somewhere
-    u32 offset = 0;
-    for (u8 i = 0; i < p_layout->input_resource_count; i++)
+    if (p_layout->input_resource_count != 0)
     {
-        p_layout->p_input_resources[i].offset = offset;
-        switch (p_layout->p_input_resources[i].format)
-        {
-        case TG_SPIRV_INPUT_FORMAT_R32_SFLOAT:          offset +=  4; break;
-        case TG_SPIRV_INPUT_FORMAT_R32_SINT:            offset +=  4; break;
-        case TG_SPIRV_INPUT_FORMAT_R32_UINT:            offset +=  4; break;
-        case TG_SPIRV_INPUT_FORMAT_R32G32_SFLOAT:       offset +=  8; break;
-        case TG_SPIRV_INPUT_FORMAT_R32G32_SINT:         offset +=  8; break;
-        case TG_SPIRV_INPUT_FORMAT_R32G32_UINT:         offset +=  8; break;
-        case TG_SPIRV_INPUT_FORMAT_R32G32B32_SFLOAT:    offset += 12; break;
-        case TG_SPIRV_INPUT_FORMAT_R32G32B32_SINT:      offset += 12; break;
-        case TG_SPIRV_INPUT_FORMAT_R32G32B32_UINT:      offset += 12; break;
-        case TG_SPIRV_INPUT_FORMAT_R32G32B32A32_SFLOAT: offset += 16; break;
-        case TG_SPIRV_INPUT_FORMAT_R32G32B32A32_SINT:   offset += 16; break;
-        case TG_SPIRV_INPUT_FORMAT_R32G32B32A32_UINT:   offset += 16; break;
+        TG_QSORT_CUSTOM(tg_spirv_input_resource, p_layout->input_resource_count, p_layout->p_input_resources, tgi_compare_by_location);
 
-        default: TG_INVALID_CODEPATH(); break;
+        // TODO: this must consider alignment rules! this only works as long as there is no 64 bit value in here somewhere
+        u32 offset = 0;
+        for (u8 i = 0; i < p_layout->input_resource_count; i++)
+        {
+            p_layout->p_input_resources[i].offset = offset;
+            switch (p_layout->p_input_resources[i].format)
+            {
+            case TG_SPIRV_INPUT_FORMAT_R32_SFLOAT:          offset +=  4; break;
+            case TG_SPIRV_INPUT_FORMAT_R32_SINT:            offset +=  4; break;
+            case TG_SPIRV_INPUT_FORMAT_R32_UINT:            offset +=  4; break;
+            case TG_SPIRV_INPUT_FORMAT_R32G32_SFLOAT:       offset +=  8; break;
+            case TG_SPIRV_INPUT_FORMAT_R32G32_SINT:         offset +=  8; break;
+            case TG_SPIRV_INPUT_FORMAT_R32G32_UINT:         offset +=  8; break;
+            case TG_SPIRV_INPUT_FORMAT_R32G32B32_SFLOAT:    offset += 12; break;
+            case TG_SPIRV_INPUT_FORMAT_R32G32B32_SINT:      offset += 12; break;
+            case TG_SPIRV_INPUT_FORMAT_R32G32B32_UINT:      offset += 12; break;
+            case TG_SPIRV_INPUT_FORMAT_R32G32B32A32_SFLOAT: offset += 16; break;
+            case TG_SPIRV_INPUT_FORMAT_R32G32B32A32_SINT:   offset += 16; break;
+            case TG_SPIRV_INPUT_FORMAT_R32G32B32A32_UINT:   offset += 16; break;
+
+            default: TG_INVALID_CODEPATH(); break;
+            }
         }
+        p_layout->vertex_stride = offset;
     }
-    p_layout->vertex_stride = offset;
 }

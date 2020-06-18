@@ -109,7 +109,20 @@ b32 tg_platform_continue_file_iteration(const char* p_directory, tg_file_iterato
     return TG_TRUE;
 }
 
-void tg_platform_extraxt_file_directory(u64 size, char* p_buffer, const char* p_filename)
+void tg_platform_create_file(const char* p_filename, u32 size, char* p_data, b32 replace_existing)
+{
+    TG_ASSERT(p_filename && size && p_data);
+
+    char p_filename_buffer[MAX_PATH] = { 0 };
+    tg_string_format(MAX_PATH, p_filename_buffer, "%s/%s", tg_assets_get_asset_path(), p_filename);
+
+    HANDLE h_file = CreateFileA(p_filename_buffer, GENERIC_READ | GENERIC_WRITE, 0, TG_NULL, replace_existing ? CREATE_ALWAYS : CREATE_NEW, FILE_ATTRIBUTE_NORMAL, TG_NULL);
+    u32 written_size = 0;
+    WriteFile(h_file, p_data, size, &written_size, TG_NULL);
+    CloseHandle(h_file);
+}
+
+void tg_platform_extract_file_directory(u64 size, char* p_buffer, const char* p_filename)
 {
     u32 character_count = 0;
     const char* p_it = p_filename;
@@ -158,7 +171,7 @@ b32 tg_platform_get_file_properties(const char* p_filename, tg_file_properties* 
     }
 
     char p_relative_directory_buffer[MAX_PATH] = { 0 };
-    tg_platform_extraxt_file_directory(MAX_PATH, p_relative_directory_buffer, p_filename);
+    tg_platform_extract_file_directory(MAX_PATH, p_relative_directory_buffer, p_filename);
 
     char p_directory_buffer[MAX_PATH] = { 0 };
     tg_string_format(MAX_PATH, p_directory_buffer, "%s\\%s", tg_assets_get_asset_path(), p_relative_directory_buffer);
@@ -180,13 +193,18 @@ u64 tg_platform_get_full_directory_size(const char* p_directory)
     tg_file_properties file_properties = { 0 };
     tg_file_iterator_h h_file_iterator = tg_platform_begin_file_iteration(p_directory, &file_properties);
 
+    if (h_file_iterator == TG_NULL)
+    {
+        return 0;
+    }
+
     u64 size = 0;
     do
     {
         if (file_properties.is_directory)
         {
             char p_buffer[TG_MAX_PATH] = { 0 };
-            tg_string_format(TG_MAX_PATH, p_buffer, "%s%c%s", p_directory, tg_platform_get_file_separator(), file_properties.p_filename);
+            tg_string_format(sizeof(p_buffer), p_buffer, "%s%c%s", p_directory, tg_platform_get_file_separator(), file_properties.p_filename);
             size += tg_platform_get_full_directory_size(p_buffer);
         }
         else

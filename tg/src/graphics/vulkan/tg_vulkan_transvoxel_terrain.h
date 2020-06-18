@@ -42,9 +42,10 @@
 
 typedef struct tg_transvoxel_vertex
 {
-	v3    position;
-	v3    normal;
-	v4    extra;
+	v3     primary_position;
+	v3     normal;
+	v3     secondary_position;
+	i32    border_mask;
 } tg_transvoxel_vertex;
 
 // TODO: i want all of this to be an entity and have it multiple meshes
@@ -85,7 +86,7 @@ typedef struct tg_transvoxel_octree
 typedef struct tg_transvoxel_terrain
 {
 	tg_camera_h             h_camera;
-	tg_transvoxel_octree    octree; // TODO: one octree per chunk/block
+	tg_transvoxel_octree    p_octrees[9]; // TODO: one octree per chunk/block
 } tg_transvoxel_terrain;
 
 #endif

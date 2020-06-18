@@ -2,12 +2,18 @@
 
 #ifdef TG_VULKAN
 
+#if defined(TG_DEBUG) || !defined(TG_DISTRIBUTE)
+#define TG_RECOMPILE_SHADERS_ON_STARTUP 1
+#else
+#define TG_RECOMPILE_SHADERS_ON_STARTUP 0
+#endif
+
 #include "memory/tg_memory.h"
 #include "platform/tg_platform.h"
 #include "tg_assets.h"
 #include "util/tg_string.h"
 
-#ifdef TG_DEBUG
+#if TG_RECOMPILE_SHADERS_ON_STARTUP
 void tg_shader_internal_recompile(const char* p_filename)
 {
 	tg_file_properties uncompiled_properties = { 0 };
@@ -36,7 +42,8 @@ void tg_shader_internal_recompile(const char* p_filename)
 			"del /s /q %s.spv",
 			p_filename_buffer
 		);
-		TG_ASSERT(system(p_delete_buffer) != -1);
+		const i32 result0 = system(p_delete_buffer);
+		TG_ASSERT(result0 != -1);
 
 		char p_compile_buffer[38 + 4 + 2 * TG_MAX_PATH] = { 0 };
 		tg_string_format(
@@ -45,7 +52,8 @@ void tg_shader_internal_recompile(const char* p_filename)
 			p_filename_buffer,
 			p_filename_buffer
 		);
-		TG_ASSERT(system(p_compile_buffer) != -1);
+		const i32 result1 = system(p_compile_buffer);
+		TG_ASSERT(result1 != -1);
 	}
 }
 #endif
@@ -65,7 +73,7 @@ tg_compute_shader_h tg_compute_shader_create(const char* p_filename)
 	TG_ASSERT(p_filename);
 
 	TG_ASSERT(tg_assets_get_asset(p_filename) == TG_NULL);
-#ifdef TG_DEBUG
+#if TG_RECOMPILE_SHADERS_ON_STARTUP
 	tg_shader_internal_recompile(p_filename);
 #endif
 
@@ -135,7 +143,7 @@ tg_vertex_shader_h tg_vertex_shader_create(const char* p_filename)
 	TG_ASSERT(p_filename);
 
 	TG_ASSERT(tg_assets_get_asset(p_filename) == TG_NULL);
-#ifdef TG_DEBUG
+#if TG_RECOMPILE_SHADERS_ON_STARTUP
 	tg_shader_internal_recompile(p_filename);
 #endif
 
@@ -168,7 +176,7 @@ tg_fragment_shader_h tg_fragment_shader_create(const char* p_filename)
 	TG_ASSERT(p_filename);
 
 	TG_ASSERT(tg_assets_get_asset(p_filename) == TG_NULL);
-#ifdef TG_DEBUG
+#if TG_RECOMPILE_SHADERS_ON_STARTUP
 	tg_shader_internal_recompile(p_filename);
 #endif
 

@@ -132,6 +132,11 @@ void tg_assets_internal_try_load_directory(const char* p_relative_directory)
 	tg_file_properties file_properties = { 0 };
 	tg_file_iterator_h h_file_iterator = tg_platform_begin_file_iteration(p_relative_directory, &file_properties);
 
+	if (h_file_iterator == TG_NULL)
+	{
+		return;
+	}
+
 	do
 	{
 		if (file_properties.is_directory)

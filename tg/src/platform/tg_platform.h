@@ -63,7 +63,8 @@ i8                    tg_platform_system_time_compare(tg_system_time* p_time0, t
 
 tg_file_iterator_h    tg_platform_begin_file_iteration(const char* p_directory, tg_file_properties* p_properties);
 b32                   tg_platform_continue_file_iteration(const char* p_directory, tg_file_iterator_h h_file_iterator, tg_file_properties* p_properties);
-void                  tg_platform_extraxt_file_directory(u64 size, char* p_buffer, const char* p_filename);
+void                  tg_platform_create_file(const char* p_filename, u32 size, char* p_data, b32 replace_existing);
+void                  tg_platform_extract_file_directory(u64 size, char* p_buffer, const char* p_filename);
 b32                   tg_platform_file_exists(const char* p_filename);
 void                  tg_platform_free_file(char* p_data);
 b32                   tg_platform_get_file_properties(const char* p_filename, tg_file_properties* p_properties);

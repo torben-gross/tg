@@ -9,6 +9,8 @@
 
 #ifndef NDEBUG
 #define TG_DEBUG
+#else
+//#define TG_DISTRIBUTE
 #endif
 
 #if _MSC_VER && !__INTEL_COMPILER

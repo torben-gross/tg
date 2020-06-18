@@ -640,7 +640,11 @@ void tg_camera_capture_transvoxel_terrain(tg_camera_h h_camera, tg_transvoxel_te
 {
     TG_ASSERT(h_camera && h_terrain);
 
-    tgi_capture_transvoxel_terrain(h_camera, &h_terrain->octree.root);
+    for (u32 i = 0; i < 9; i++)
+    {
+        tgi_capture_transvoxel_terrain(h_camera, &h_terrain->p_octrees[i].root);
+        break;
+    }
 }
 
 void tg_camera_clear(tg_camera_h h_camera) // TODO: should this be combined with begin?
