@@ -803,10 +803,10 @@ void tgi_build_transition(v3i octree_min_coordinates, v3i block_offset_in_octree
 						if (!high_resolution_face)
 						{
 							secondary = tgi_get_secondary_position(octree_min_coordinates, block_offset_in_octree, primaryf, normal, lod, scaled_block_stride_in_cells);
-							border_mask = cell_border_mask | ((tgi_get_border_mask(tgm_v3i_sub(p0, cell_position_pad), scaled_block_stride_in_cells) & tgi_get_border_mask(tgm_v3i_sub(p1, cell_position_pad), scaled_block_stride_in_cells)) << 6);
+							border_mask = cell_border_mask | ((tgi_get_border_mask(tgm_v3i_sub(p0, cell_position_pad), scaled_block_stride_in_cells + 1) & tgi_get_border_mask(tgm_v3i_sub(p1, cell_position_pad), scaled_block_stride_in_cells + 1)) << 6);
 						}
 
-						p_cell_vertex_indices[i] = tgi_emit_vertex(primaryf, (v3) { 0 }, secondary, border_mask, p_vertex_count, p_vertex_buffer);
+						p_cell_vertex_indices[i] = tgi_emit_vertex(primaryf, normal, secondary, border_mask, p_vertex_count, p_vertex_buffer);
 
 						if (reuse_direction & 0x8)
 						{
@@ -842,10 +842,10 @@ void tgi_build_transition(v3i octree_min_coordinates, v3i block_offset_in_octree
 						if (!high_resolution_side)
 						{
 							secondary = tgi_get_secondary_position(octree_min_coordinates, block_offset_in_octree, primaryf, normal, lod, scaled_block_stride_in_cells);
-							border_mask = cell_border_mask | (tgi_get_border_mask(tgm_v3i_sub(primary, cell_position_pad), scaled_block_stride_in_cells) << 6);
+							border_mask = cell_border_mask | (tgi_get_border_mask(tgm_v3i_sub(primary, cell_position_pad), scaled_block_stride_in_cells + 1) << 6);
 						}
 
-						p_cell_vertex_indices[i] = tgi_emit_vertex(primaryf, (v3) { 0 }, secondary, border_mask, p_vertex_count, p_vertex_buffer);
+						p_cell_vertex_indices[i] = tgi_emit_vertex(primaryf, normal, secondary, border_mask, p_vertex_count, p_vertex_buffer);
 
 						tgi_reuse_transition_cell* p_reuse_cell = &TGI_REUSE_TRANSITION_CELL_AT(*p_reuse_cells, xp, yp);
 						p_reuse_cell->p_indices[vertex_index_to_reuse_or_create] = p_cell_vertex_indices[i];
