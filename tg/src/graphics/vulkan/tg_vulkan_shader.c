@@ -48,7 +48,7 @@ void tg_shader_internal_recompile(const char* p_filename)
 		char p_compile_buffer[38 + 4 + 2 * TG_MAX_PATH] = { 0 };
 		tg_string_format(
 			sizeof(p_compile_buffer), p_compile_buffer,
-			"C:/VulkanSDK/1.2.131.2/Bin/glslc.exe %s -o %s.spv",
+			"C:/VulkanSDK/1.2.141.2/Bin/glslc.exe %s -o %s.spv",
 			p_filename_buffer,
 			p_filename_buffer
 		);

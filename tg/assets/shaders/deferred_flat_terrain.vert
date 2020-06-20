@@ -29,9 +29,9 @@ vec3 get_transvoxel_position()
 {
 	int cell_border_mask = in_border_mask & 63;
 	int vertex_border_mask = (in_border_mask >> 6) & 63;
-	int m = u_transition_mask & (cell_border_mask & 63);
-	float t = float(m != 0);
-	t *= float((vertex_border_mask & ~u_transition_mask) == 0);
+	int m = u_transition_mask & cell_border_mask;
+	int n = ~u_transition_mask & vertex_border_mask;
+	float t = float(m != 0) * float(n == 0);
 	return mix(in_primary_position, in_secondary_position, t);
 }
 

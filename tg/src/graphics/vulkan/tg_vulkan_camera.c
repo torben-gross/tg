@@ -621,7 +621,7 @@ void tgi_capture_transvoxel_terrain(tg_camera_h h_camera, tg_transvoxel_node* p_
         }
         for (u8 i = 0; i < 6; i++)
         {
-            if (p_node->node.p_transition_entities[i].h_graphics_data_ptr)
+            if ((p_node->node.transition_mask & (1 << i)) && p_node->node.p_transition_entities[i].h_graphics_data_ptr)
             {
                 tg_camera_capture(h_camera, p_node->node.p_transition_entities[i].h_graphics_data_ptr);
             }

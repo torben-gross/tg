@@ -8,6 +8,7 @@
 #define VK_CALL(x)    x
 #endif
 
+#include "math/tg_math.h"
 #include "memory/tg_memory.h"
 
 
@@ -133,7 +134,7 @@ void tg_vulkan_memory_allocator_init(VkDevice device, VkPhysicalDevice physical_
     }
     VkDeviceSize p_allocation_size_per_memory_heap[VK_MAX_MEMORY_HEAPS] = { 0 };
 
-    vulkan_memory.page_size = physical_device_properties.limits.bufferImageGranularity;
+    vulkan_memory.page_size = tgm_u64_max(1024, physical_device_properties.limits.bufferImageGranularity);
 
     const VkDeviceSize heap_size_fraction_denominator = 4;
     for (u32 i = 0; i < physical_device_memory_properties.memoryHeapCount; i++)

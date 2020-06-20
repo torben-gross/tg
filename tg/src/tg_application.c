@@ -188,7 +188,7 @@ void tg_application_internal_game_3d_create()
 
 
     test_deferred.h_terrain = tg_transvoxel_terrain_create(test_deferred.camera_info.h_camera);
-    
+
     /*
     TODO:
 
