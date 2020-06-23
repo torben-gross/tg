@@ -7,7 +7,7 @@
 
 
 
-u32 tg_hashmap_internal_hash_key(const tg_hashmap* p_hashmap, const void* p_key)
+static u32 tgi_hash_key(const tg_hashmap* p_hashmap, const void* p_key)
 {
 	u32 result = 0;
 
@@ -19,7 +19,7 @@ u32 tg_hashmap_internal_hash_key(const tg_hashmap* p_hashmap, const void* p_key)
 	return result;
 }
 
-b32 tg_hashmap_internal_keys_equal(const tg_hashmap* p_hashmap, const void* p_key0, const void* p_key1)
+static b32 tgi_keys_equal(const tg_hashmap* p_hashmap, const void* p_key0, const void* p_key1)
 {
 	b32 result = TG_TRUE;
 
@@ -114,14 +114,14 @@ b32 tg_hashmap_contains(tg_hashmap* p_hashmap, const void* p_key)
 {
 	TG_ASSERT(p_hashmap && p_key);
 
-	const u32 hash = tg_hashmap_internal_hash_key(p_hashmap, p_key);
+	const u32 hash = tgi_hash_key(p_hashmap, p_key);
 	const u32 index = hash % p_hashmap->bucket_count;
 
 	tg_hashmap_bucket* p_bucket = &p_hashmap->p_buckets[index];
 	for (u32 i = 0; i < p_bucket->keys.count; i++)
 	{
 		const void* p_bucket_entry_key = TG_LIST_POINTER_TO(p_bucket->keys, i);
-		const b32 equal = tg_hashmap_internal_keys_equal(p_hashmap, p_key, p_bucket_entry_key);
+		const b32 equal = tgi_keys_equal(p_hashmap, p_key, p_bucket_entry_key);
 		if (equal)
 		{
 			return TG_TRUE;
@@ -144,7 +144,7 @@ void tg_hashmap_insert(tg_hashmap* p_hashmap, const void* p_key, const void* p_v
 {
 	TG_ASSERT(p_hashmap && p_key && p_value);
 
-	const u32 hash = tg_hashmap_internal_hash_key(p_hashmap, p_key);
+	const u32 hash = tgi_hash_key(p_hashmap, p_key);
 	const u32 index = hash % p_hashmap->bucket_count;
 
 	tg_hashmap_bucket* p_bucket = &p_hashmap->p_buckets[index];
@@ -153,7 +153,7 @@ void tg_hashmap_insert(tg_hashmap* p_hashmap, const void* p_key, const void* p_v
 	for (u32 i = 0; i < bucket_element_count; i++)
 	{
 		const void* p_bucket_entry_key = TG_LIST_POINTER_TO(p_bucket->keys, i);
-		const b32 equal = tg_hashmap_internal_keys_equal(p_hashmap, p_key, p_bucket_entry_key);
+		const b32 equal = tgi_keys_equal(p_hashmap, p_key, p_bucket_entry_key);
 		if (equal)
 		{
 			tg_list_replace_at(&p_bucket->values, i, p_value);
@@ -170,7 +170,7 @@ void* tg_hashmap_pointer_to(tg_hashmap* p_hashmap, const void* p_key)
 {
 	TG_ASSERT(p_hashmap && p_key);
 
-	const u32 hash = tg_hashmap_internal_hash_key(p_hashmap, p_key);
+	const u32 hash = tgi_hash_key(p_hashmap, p_key);
 	const u32 index = hash % p_hashmap->bucket_count;
 
 	tg_hashmap_bucket* p_bucket = &p_hashmap->p_buckets[index];
@@ -180,7 +180,7 @@ void* tg_hashmap_pointer_to(tg_hashmap* p_hashmap, const void* p_key)
 	for (u32 i = 0; i < bucket_element_count; i++)
 	{
 		const void* p_bucket_entry_key = TG_LIST_POINTER_TO(p_bucket->keys, i);
-		const b32 equal = tg_hashmap_internal_keys_equal(p_hashmap, p_key, p_bucket_entry_key);
+		const b32 equal = tgi_keys_equal(p_hashmap, p_key, p_bucket_entry_key);
 		if (equal)
 		{
 			p_found_bucket_entry_value = TG_LIST_POINTER_TO(p_bucket->values, i);
@@ -203,7 +203,7 @@ b32 tg_hashmap_try_remove(tg_hashmap* p_hashmap, const void* p_key)
 {
 	TG_ASSERT(p_hashmap && p_key);
 
-	const u32 hash = tg_hashmap_internal_hash_key(p_hashmap, p_key);
+	const u32 hash = tgi_hash_key(p_hashmap, p_key);
 	const u32 index = hash % p_hashmap->bucket_count;
 
 	tg_hashmap_bucket* p_bucket = &p_hashmap->p_buckets[index];
@@ -212,7 +212,7 @@ b32 tg_hashmap_try_remove(tg_hashmap* p_hashmap, const void* p_key)
 	for (u32 i = 0; i < bucket_element_count; i++)
 	{
 		const void* p_bucket_entry_key = TG_LIST_POINTER_TO(p_bucket->keys, i);
-		const b32 equal = tg_hashmap_internal_keys_equal(p_hashmap, p_key, p_bucket_entry_key);
+		const b32 equal = tgi_keys_equal(p_hashmap, p_key, p_bucket_entry_key);
 		if (equal)
 		{
 			p_hashmap->element_count--;
@@ -229,7 +229,7 @@ b32 tg_hashmap_try_remove(tg_hashmap* p_hashmap, const void* p_key)
 
 
 
-u32 tg_string_hashmap_internal_hash_key(const char* p_key)
+static u32 tgi_hash_string(const char* p_key)
 {
 	u32 result = 0;
 
@@ -282,7 +282,7 @@ void tg_string_hashmap_insert(tg_string_hashmap* p_string_hashmap, const char* p
 {
 	TG_ASSERT(p_string_hashmap && p_key && p_value);
 
-	const u32 hash = tg_string_hashmap_internal_hash_key(p_key);
+	const u32 hash = tgi_hash_string(p_key);
 	const u32 index = hash % p_string_hashmap->bucket_count;
 
 	tg_string_hashmap_bucket* p_bucket = &p_string_hashmap->p_buckets[index];
@@ -311,7 +311,7 @@ void* tg_string_hashmap_pointer_to(tg_string_hashmap* p_string_hashmap, const ch
 {
 	TG_ASSERT(p_string_hashmap && p_key);
 
-	const u32 hash = tg_string_hashmap_internal_hash_key(p_key);
+	const u32 hash = tgi_hash_string(p_key);
 	const u32 index = hash % p_string_hashmap->bucket_count;
 
 	tg_string_hashmap_bucket* p_bucket = &p_string_hashmap->p_buckets[index];

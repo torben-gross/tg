@@ -14,7 +14,7 @@
 #include "util/tg_string.h"
 
 #if TG_RECOMPILE_SHADERS_ON_STARTUP
-void tg_shader_internal_recompile(const char* p_filename)
+static void tgi_recompile(const char* p_filename)
 {
 	tg_file_properties uncompiled_properties = { 0 };
 	tg_platform_get_file_properties(p_filename, &uncompiled_properties);
@@ -74,7 +74,7 @@ tg_compute_shader_h tg_compute_shader_create(const char* p_filename)
 
 	TG_ASSERT(tg_assets_get_asset(p_filename) == TG_NULL);
 #if TG_RECOMPILE_SHADERS_ON_STARTUP
-	tg_shader_internal_recompile(p_filename);
+	tgi_recompile(p_filename);
 #endif
 
 	tg_compute_shader_h h_compute_shader = TG_MEMORY_ALLOC(sizeof(*h_compute_shader));
@@ -144,7 +144,7 @@ tg_vertex_shader_h tg_vertex_shader_create(const char* p_filename)
 
 	TG_ASSERT(tg_assets_get_asset(p_filename) == TG_NULL);
 #if TG_RECOMPILE_SHADERS_ON_STARTUP
-	tg_shader_internal_recompile(p_filename);
+	tgi_recompile(p_filename);
 #endif
 
 	tg_vertex_shader_h h_vertex_shader = TG_MEMORY_ALLOC(sizeof(*h_vertex_shader));
@@ -177,7 +177,7 @@ tg_fragment_shader_h tg_fragment_shader_create(const char* p_filename)
 
 	TG_ASSERT(tg_assets_get_asset(p_filename) == TG_NULL);
 #if TG_RECOMPILE_SHADERS_ON_STARTUP
-	tg_shader_internal_recompile(p_filename);
+	tgi_recompile(p_filename);
 #endif
 
 	tg_fragment_shader_h h_fragment_shader = TG_MEMORY_ALLOC(sizeof(*h_fragment_shader));

@@ -6,7 +6,7 @@
 
 
 
-tg_material_h tg_material_internal_create(tg_vulkan_material_type vulkan_material_type, tg_vertex_shader_h h_vertex_shader, tg_fragment_shader_h h_fragment_shader, u32 handle_count, tg_handle* p_handles)
+static tg_material_h tgi_create(tg_vulkan_material_type vulkan_material_type, tg_vertex_shader_h h_vertex_shader, tg_fragment_shader_h h_fragment_shader, u32 handle_count, tg_handle* p_handles)
 {
     tg_material_h h_material = TG_MEMORY_ALLOC(sizeof(*h_material));
 
@@ -51,7 +51,7 @@ tg_material_h tg_material_create_deferred(tg_vertex_shader_h h_vertex_shader, tg
 {
     TG_ASSERT(h_vertex_shader && h_fragment_shader);
 
-    tg_material_h h_material = tg_material_internal_create(TG_VULKAN_MATERIAL_TYPE_DEFERRED, h_vertex_shader, h_fragment_shader, handle_count, p_handles);
+    tg_material_h h_material = tgi_create(TG_VULKAN_MATERIAL_TYPE_DEFERRED, h_vertex_shader, h_fragment_shader, handle_count, p_handles);
     return h_material;
 }
 
@@ -59,7 +59,7 @@ tg_material_h tg_material_create_forward(tg_vertex_shader_h h_vertex_shader, tg_
 {
     TG_ASSERT(h_vertex_shader && h_fragment_shader);
 
-    tg_material_h h_material = tg_material_internal_create(TG_VULKAN_MATERIAL_TYPE_FORWARD, h_vertex_shader, h_fragment_shader, handle_count, p_handles);
+    tg_material_h h_material = tgi_create(TG_VULKAN_MATERIAL_TYPE_FORWARD, h_vertex_shader, h_fragment_shader, handle_count, p_handles);
     return h_material;
 }
 

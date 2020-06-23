@@ -13,7 +13,7 @@ tg_color_image_h tg_color_image_create(const char* p_filename)
 
     u32* p_data = TG_NULL;
     tg_image_load(p_filename, &h_color_image->width, &h_color_image->height, &h_color_image->format, &p_data);
-    tg_image_internal_convert_format(p_data, h_color_image->width, h_color_image->height, h_color_image->format, TG_COLOR_IMAGE_FORMAT_R8G8B8A8);
+    tg_image_convert_format(p_data, h_color_image->width, h_color_image->height, h_color_image->format, TG_COLOR_IMAGE_FORMAT_R8G8B8A8);
     h_color_image->mip_levels = TG_IMAGE_MAX_MIP_LEVELS(h_color_image->width, h_color_image->height);
     const u64 size = (u64)h_color_image->width * (u64)h_color_image->height * sizeof(*p_data);
 

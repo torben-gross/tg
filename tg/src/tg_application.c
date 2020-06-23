@@ -83,10 +83,10 @@ tg_test_deferred test_deferred = { 0 };
 
 
 
-void tg_application_internal_game_3d_create()
+static void tgi_game_3d_create()
 {
     test_deferred.entities = TG_LIST_CREATE(tg_entity*);
-    test_deferred.camera_info.position = (v3){ 0.0f, 0.0f, 0.0f };
+    test_deferred.camera_info.position = (v3){ -100.0f, 0.0f, 60.0f };
     test_deferred.camera_info.pitch = 0.0f;
     test_deferred.camera_info.yaw = 0.0f;
     test_deferred.camera_info.roll = 0.0f;
@@ -225,7 +225,7 @@ void tg_application_internal_game_3d_create()
 
 }
 
-void tg_application_internal_game_3d_update_and_render(f32 delta_ms)
+static void tgi_game_3d_update_and_render(f32 delta_ms)
 {
     if (tg_input_is_key_down(TG_KEY_K))
     {
@@ -337,7 +337,7 @@ void tg_application_internal_game_3d_update_and_render(f32 delta_ms)
     tg_camera_clear(test_deferred.camera_info.h_camera);
 }
 
-void tg_application_internal_game_3d_destroy()
+static void tgi_game_3d_destroy()
 {
     tg_transvoxel_terrain_destroy(test_deferred.h_terrain);
 
@@ -370,8 +370,8 @@ void tg_application_start()
 {
     tg_graphics_init();
     tg_assets_init();
-    tg_application_internal_game_3d_create();
-    //tg_application_internal_game_2d_create();
+    tgi_game_3d_create();
+    //tgi_game_2d_create();
 
 #ifdef TG_DEBUG
     tg_debug_info debug_info = { 0 };
@@ -414,8 +414,8 @@ void tg_application_start()
 
         tg_input_clear();
         tg_platform_handle_events();
-        tg_application_internal_game_3d_update_and_render(delta_ms);
-        //tg_application_internal_game_2d_update_and_render(delta_ms);
+        tgi_game_3d_update_and_render(delta_ms);
+        //tgi_game_2d_update_and_render(delta_ms);
     }
 
     /*--------------------------------------------------------+
@@ -423,8 +423,8 @@ void tg_application_start()
     +--------------------------------------------------------*/
     tg_platform_timer_destroy(h_timer);
     tg_graphics_wait_idle();
-    //tg_application_internal_game_2d_destroy();
-    tg_application_internal_game_3d_destroy();
+    //tgi_game_2d_destroy();
+    tgi_game_3d_destroy();
     tg_assets_shutdown();
     tg_graphics_shutdown();
 }

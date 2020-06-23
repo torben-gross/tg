@@ -40,6 +40,13 @@
 
 
 
+typedef enum tg_transvoxel_flag
+{
+	TG_TRANSVOXEL_FLAG_ACTIVE    = (1 << 0),
+} tg_transvoxel_flag;
+
+
+
 typedef struct tg_transvoxel_vertex
 {
 	v3     primary_position;
@@ -54,6 +61,12 @@ typedef struct tg_transvoxel_block
 	tg_entity                entity;
 	tg_entity                p_transition_entities[6];
 	
+	tg_mesh_h                h_mesh;
+	tg_material_h            h_material;
+	tg_mesh_h                ph_transition_meshes[6];
+	tg_material_h            ph_transition_materials[6];
+	tg_uniform_buffer_h      h_uniform_buffer;
+
 	i32                      transition_mask;
 
 	u16                      vertex_count;
@@ -72,6 +85,7 @@ typedef struct tg_transvoxel_block
 typedef struct tg_transvoxel_node tg_transvoxel_node;
 typedef struct tg_transvoxel_node
 {
+	tg_transvoxel_flag     flags;
 	tg_transvoxel_block    node;
 	tg_transvoxel_node*    pp_children[8];
 } tg_transvoxel_node;

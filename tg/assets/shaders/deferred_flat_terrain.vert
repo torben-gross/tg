@@ -27,6 +27,7 @@ layout(location = 1) out vec3    v_normal;
 
 vec3 get_transvoxel_position()
 {
+return in_primary_position;
 	int cell_border_mask = in_border_mask & 63;
 	int vertex_border_mask = (in_border_mask >> 6) & 63;
 	int m = u_transition_mask & cell_border_mask;

@@ -7,14 +7,14 @@
 
 
 
-void tg_forward_renderer_internal_destroy_shading_pass(tg_forward_renderer_h h_forward_renderer)
+static void tgi_destroy_shading_pass(tg_forward_renderer_h h_forward_renderer)
 {
     tg_vulkan_render_pass_destroy(h_forward_renderer->shading_pass.render_pass);
     tg_vulkan_framebuffer_destroy(h_forward_renderer->shading_pass.framebuffer);
     tg_vulkan_command_buffer_free(graphics_command_pool, h_forward_renderer->shading_pass.command_buffer);
 }
 
-void tg_forward_renderer_internal_init_shading_pass(tg_forward_renderer_h h_forward_renderer)
+static void tgi_init_shading_pass(tg_forward_renderer_h h_forward_renderer)
 {
 
     VkAttachmentDescription p_attachment_descriptions[2] = { 0 };
@@ -103,7 +103,7 @@ tg_forward_renderer_h tg_forward_renderer_create(const tg_camera_h h_camera)
 
     tg_forward_renderer_h h_forward_renderer = TG_MEMORY_ALLOC(sizeof(*h_forward_renderer));
     h_forward_renderer->h_camera = h_camera;
-    tg_forward_renderer_internal_init_shading_pass(h_forward_renderer);
+    tgi_init_shading_pass(h_forward_renderer);
     return h_forward_renderer;
 }
 
@@ -111,7 +111,7 @@ void tg_forward_renderer_destroy(tg_forward_renderer_h h_forward_renderer)
 {
 	TG_ASSERT(h_forward_renderer);
 
-    tg_forward_renderer_internal_destroy_shading_pass(h_forward_renderer);
+    tgi_destroy_shading_pass(h_forward_renderer);
     TG_MEMORY_FREE(h_forward_renderer);
 }
 

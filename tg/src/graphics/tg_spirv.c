@@ -511,13 +511,13 @@ typedef enum tg_spirv_op
 
 
 
-b32 tgi_compare_by_location(const tg_spirv_input_resource* p_v0, const tg_spirv_input_resource* p_v1)
+static b32 tgi_compare_by_location(const tg_spirv_input_resource* p_v0, const tg_spirv_input_resource* p_v1)
 {
     const b32 result = p_v0->location < p_v1->location;
     return result;
 }
 
-void tgi_find_type(u32 word_count, const u32* p_words, u32 id, tg_spirv_op* p_type, u32* p_literal)
+static void tgi_find_type(u32 word_count, const u32* p_words, u32 id, tg_spirv_op* p_type, u32* p_literal)
 {
     u32 processed_word_count = 0;
     while (processed_word_count < word_count)
@@ -552,7 +552,7 @@ void tgi_find_type(u32 word_count, const u32* p_words, u32 id, tg_spirv_op* p_ty
     TG_INVALID_CODEPATH();
 }
 
-void tgi_fill_global_resource(u32 word_count, const u32* p_words, u32 id, tg_spirv_global_resource* p_resource)
+static void tgi_fill_global_resource(u32 word_count, const u32* p_words, u32 id, tg_spirv_global_resource* p_resource)
 {
     u32 processed_word_count = 0;
     while (processed_word_count < word_count)
@@ -617,7 +617,7 @@ void tgi_fill_global_resource(u32 word_count, const u32* p_words, u32 id, tg_spi
     }
 }
 
-void tgi_fill_input_resource(u32 word_count, const u32* p_words, u32 id, tg_spirv_input_resource* p_resource)
+static void tgi_fill_input_resource(u32 word_count, const u32* p_words, u32 id, tg_spirv_input_resource* p_resource)
 {
     u32 processed_word_count = 0;
     while (processed_word_count < word_count)
