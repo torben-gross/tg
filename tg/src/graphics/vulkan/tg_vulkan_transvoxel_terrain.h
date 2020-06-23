@@ -92,7 +92,7 @@ typedef struct tg_transvoxel_node
 
 typedef struct tg_transvoxel_octree
 {
-	void*                 p_compressed_voxel_map;
+	void*                 p_voxel_map;
 	v3i                   min_coordinates;
 	tg_transvoxel_node    root;
 } tg_transvoxel_octree;

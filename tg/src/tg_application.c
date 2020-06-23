@@ -86,7 +86,7 @@ tg_test_deferred test_deferred = { 0 };
 static void tgi_game_3d_create()
 {
     test_deferred.entities = TG_LIST_CREATE(tg_entity*);
-    test_deferred.camera_info.position = (v3){ -100.0f, 0.0f, 60.0f };
+    test_deferred.camera_info.position = (v3){ 0.0f, 0.0f, 0.0f };
     test_deferred.camera_info.pitch = 0.0f;
     test_deferred.camera_info.yaw = 0.0f;
     test_deferred.camera_info.roll = 0.0f;
