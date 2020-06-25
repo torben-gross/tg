@@ -91,7 +91,7 @@ static VkImageView tgi_image_view_create(VkImage image, VkImageViewType view_typ
 
 
 
-static VkDescriptorPool tgi_descriptor_pool_create(VkDescriptorPoolCreateFlags flags, u32 max_sets, u32 pool_size_count, const VkDescriptorPoolSize* pool_sizes)
+static VkDescriptorPool tgi_descriptor_pool_create(VkDescriptorPoolCreateFlags flags, u32 max_sets, u32 pool_size_count, const VkDescriptorPoolSize* p_descriptor_pool_sizes)
 {
     VkDescriptorPool descriptor_pool = VK_NULL_HANDLE;
 
@@ -101,7 +101,7 @@ static VkDescriptorPool tgi_descriptor_pool_create(VkDescriptorPoolCreateFlags f
     descriptor_pool_create_info.flags = flags;
     descriptor_pool_create_info.maxSets = max_sets;
     descriptor_pool_create_info.poolSizeCount = pool_size_count;
-    descriptor_pool_create_info.pPoolSizes = pool_sizes;
+    descriptor_pool_create_info.pPoolSizes = p_descriptor_pool_sizes;
 
     VK_CALL(vkCreateDescriptorPool(device, &descriptor_pool_create_info, TG_NULL, &descriptor_pool));
 
@@ -240,7 +240,7 @@ tg_vulkan_buffer tg_vulkan_buffer_create(VkDeviceSize size, VkBufferUsageFlags b
 
     VkMemoryRequirements memory_requirements = { 0 };
     vkGetBufferMemoryRequirements(device, buffer.buffer, &memory_requirements);
-    buffer.memory = tg_vulkan_memory_allocator_alloc(memory_requirements.size, memory_requirements.memoryTypeBits, memory_property_flags);
+    buffer.memory = tg_vulkan_memory_allocator_alloc(memory_requirements.alignment, memory_requirements.size, memory_requirements.memoryTypeBits, memory_property_flags);
     VK_CALL(vkBindBufferMemory(device, buffer.buffer, buffer.memory.device_memory, buffer.memory.offset));
 
     return buffer;
@@ -299,7 +299,7 @@ tg_color_image tg_vulkan_color_image_create(const tg_vulkan_color_image_create_i
 
     VkMemoryRequirements memory_requirements = { 0 };
     vkGetImageMemoryRequirements(device, color_image.image, &memory_requirements);
-    color_image.memory = tg_vulkan_memory_allocator_alloc(memory_requirements.size, memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    color_image.memory = tg_vulkan_memory_allocator_alloc(memory_requirements.alignment, memory_requirements.size, memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     VK_CALL(vkBindImageMemory(device, color_image.image, color_image.memory.device_memory, color_image.memory.offset));
 
     // TODO: mipmapping
@@ -808,7 +808,7 @@ tg_depth_image tg_vulkan_depth_image_create(const tg_vulkan_depth_image_create_i
 
     VkMemoryRequirements memory_requirements = { 0 };
     vkGetImageMemoryRequirements(device, depth_image.image, &memory_requirements);
-    depth_image.memory = tg_vulkan_memory_allocator_alloc(memory_requirements.size, memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    depth_image.memory = tg_vulkan_memory_allocator_alloc(memory_requirements.alignment, memory_requirements.size, memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     VK_CALL(vkBindImageMemory(device, depth_image.image, depth_image.memory.device_memory, depth_image.memory.offset));
 
     depth_image.image_view = tgi_image_view_create(depth_image.image, VK_IMAGE_VIEW_TYPE_2D, depth_image.format, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
@@ -864,7 +864,7 @@ tg_vulkan_descriptor tg_vulkan_descriptor_create(u32 binding_count, VkDescriptor
         p_descriptor_pool_sizes[i].type = p_bindings[i].descriptorType;
         p_descriptor_pool_sizes[i].descriptorCount = p_bindings[i].descriptorCount;
     }
-    vulkan_descriptor.descriptor_pool = tgi_descriptor_pool_create(0, 1, 1, p_descriptor_pool_sizes);
+    vulkan_descriptor.descriptor_pool = tgi_descriptor_pool_create(0, 1, binding_count, p_descriptor_pool_sizes);
     TG_MEMORY_STACK_FREE(descriptor_pool_sizes_size);
 
     vulkan_descriptor.descriptor_set_layout = tgi_descriptor_set_layout_create(0, binding_count, p_bindings);
@@ -1633,7 +1633,7 @@ tg_storage_image_3d tg_vulkan_storage_image_3d_create(u32 width, u32 height, u32
 
     VkMemoryRequirements memory_requirements = { 0 };
     vkGetImageMemoryRequirements(device, storage_image_3d.image, &memory_requirements);
-    storage_image_3d.memory = tg_vulkan_memory_allocator_alloc(memory_requirements.size, memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    storage_image_3d.memory = tg_vulkan_memory_allocator_alloc(memory_requirements.alignment, memory_requirements.size, memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     VK_CALL(vkBindImageMemory(device, storage_image_3d.image, storage_image_3d.memory.device_memory, storage_image_3d.memory.offset));
 
     storage_image_3d.image_view = tgi_image_view_create(storage_image_3d.image, VK_IMAGE_VIEW_TYPE_3D, storage_image_3d.format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
@@ -2293,6 +2293,67 @@ void tg_graphics_init()
     tgi_swapchain_create();
 
     tg_vulkan_memory_allocator_init(device, physical_device);
+
+
+    //VkDescriptorPoolSize p_descriptor_pool_sizes[2] = { 0 };
+    //p_descriptor_pool_sizes[0].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    //p_descriptor_pool_sizes[0].descriptorCount = 1;
+    //p_descriptor_pool_sizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    //p_descriptor_pool_sizes[1].descriptorCount = 1;
+    //
+    //
+    //
+    //VkDescriptorPool descriptor_pool = VK_NULL_HANDLE;
+    //
+    //VkDescriptorPoolCreateInfo descriptor_pool_create_info = { 0 };
+    //descriptor_pool_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    //descriptor_pool_create_info.pNext = TG_NULL;
+    //descriptor_pool_create_info.flags = 0;
+    //descriptor_pool_create_info.maxSets = 1;
+    //descriptor_pool_create_info.poolSizeCount = 2;
+    //descriptor_pool_create_info.pPoolSizes = p_descriptor_pool_sizes;
+    //
+    //VK_CALL(vkCreateDescriptorPool(device, &descriptor_pool_create_info, TG_NULL, &descriptor_pool));
+    //
+    //
+    //
+    //VkDescriptorSetLayoutBinding p_descriptor_set_layout_bindings[2] = { 0 };
+    //p_descriptor_set_layout_bindings[0].binding = 0;
+    //p_descriptor_set_layout_bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    //p_descriptor_set_layout_bindings[0].descriptorCount = 1;
+    //p_descriptor_set_layout_bindings[0].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    //p_descriptor_set_layout_bindings[0].pImmutableSamplers = TG_NULL;
+    //p_descriptor_set_layout_bindings[1].binding = 1;
+    //p_descriptor_set_layout_bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    //p_descriptor_set_layout_bindings[1].descriptorCount = 1;
+    //p_descriptor_set_layout_bindings[1].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    //p_descriptor_set_layout_bindings[1].pImmutableSamplers = TG_NULL;
+    //
+    //
+    //
+    //VkDescriptorSetLayout descriptor_set_layout = VK_NULL_HANDLE;
+    //
+    //VkDescriptorSetLayoutCreateInfo descriptor_set_layout_create_info = { 0 };
+    //descriptor_set_layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    //descriptor_set_layout_create_info.pNext = TG_NULL;
+    //descriptor_set_layout_create_info.flags = 0;
+    //descriptor_set_layout_create_info.bindingCount = 2;
+    //descriptor_set_layout_create_info.pBindings = p_descriptor_set_layout_bindings;
+    //
+    //VK_CALL(vkCreateDescriptorSetLayout(device, &descriptor_set_layout_create_info, TG_NULL, &descriptor_set_layout));
+    //
+    //
+    //
+    //VkDescriptorSet descriptor_set = VK_NULL_HANDLE;
+    //
+    //VkDescriptorSetAllocateInfo descriptor_set_allocate_info = { 0 };
+    //descriptor_set_allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    //descriptor_set_allocate_info.pNext = TG_NULL;
+    //descriptor_set_allocate_info.descriptorPool = descriptor_pool;
+    //descriptor_set_allocate_info.descriptorSetCount = 1;
+    //descriptor_set_allocate_info.pSetLayouts = &descriptor_set_layout;
+    //
+    //VK_CALL(vkAllocateDescriptorSets(device, &descriptor_set_allocate_info, &descriptor_set));
 }
 
 void tg_graphics_wait_idle()

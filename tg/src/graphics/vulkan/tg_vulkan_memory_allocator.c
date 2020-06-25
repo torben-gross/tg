@@ -48,7 +48,7 @@ static VkDeviceSize tgi_round(VkDeviceSize size)
 
 
 
-tg_vulkan_memory_block tg_vulkan_memory_allocator_alloc(VkDeviceSize size, u32 memory_type_bits, VkMemoryPropertyFlags memory_property_flags)
+tg_vulkan_memory_block tg_vulkan_memory_allocator_alloc(VkDeviceSize alignment, VkDeviceSize size, u32 memory_type_bits, VkMemoryPropertyFlags memory_property_flags)
 {
     TG_ASSERT(memory_type_bits && memory_property_flags);
 
@@ -70,6 +70,15 @@ tg_vulkan_memory_block tg_vulkan_memory_allocator_alloc(VkDeviceSize size, u32 m
                 {
                     if (first_available_page == -1)
                     {
+                        VkDeviceSize multiple = 0;
+                        while (multiple < j * vulkan_memory.page_size)
+                        {
+                            multiple += alignment;
+                        }
+                        if (multiple != j * vulkan_memory.page_size)
+                        {
+                            continue;
+                        }
                         first_available_page = j;
                     }
                     available_page_count++;
