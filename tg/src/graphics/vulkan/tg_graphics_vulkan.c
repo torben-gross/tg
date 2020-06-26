@@ -1395,24 +1395,13 @@ VkDescriptorType tg_vulkan_handle_type_convert_to_descriptor_type(tg_handle_type
 {
     switch (type)
     {
-    case TG_HANDLE_TYPE_CAMERA:                   break;
-    case TG_HANDLE_TYPE_COLOR_IMAGE:              return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    case TG_HANDLE_TYPE_COMPUTE_SHADER:           break;
-    case TG_HANDLE_TYPE_DEPTH_IMAGE:              return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    case TG_HANDLE_TYPE_ENTITY_GRAPHICS_DATA_PTR: break;
-    case TG_HANDLE_TYPE_FRAGMENT_SHADER:          break;
-    case TG_HANDLE_TYPE_MATERIAL:                 break;
-    case TG_HANDLE_TYPE_MESH:                     break;
-    case TG_HANDLE_TYPE_INDEX_BUFFER:             break;
-    case TG_HANDLE_TYPE_DEFERRED_RENDERER:        break;
-    case TG_HANDLE_TYPE_FORWARD_RENDERER:         break;
-    case TG_HANDLE_TYPE_RENDER_TARGET:            return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    case TG_HANDLE_TYPE_STORAGE_BUFFER:           return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    case TG_HANDLE_TYPE_STORAGE_IMAGE_3D:         return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-    case TG_HANDLE_TYPE_TEXTURE_ATLAS:            return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    case TG_HANDLE_TYPE_UNIFORM_BUFFER:           return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    case TG_HANDLE_TYPE_VERTEX_BUFFER:            break;
-    case TG_HANDLE_TYPE_VERTEX_SHADER:            break;
+    case TG_HANDLE_TYPE_COLOR_IMAGE:         return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    case TG_HANDLE_TYPE_DEPTH_IMAGE:         return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    case TG_HANDLE_TYPE_RENDER_TARGET:       return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    case TG_HANDLE_TYPE_STORAGE_BUFFER:      return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    case TG_HANDLE_TYPE_STORAGE_IMAGE_3D:    return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    case TG_HANDLE_TYPE_TEXTURE_ATLAS:       return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    case TG_HANDLE_TYPE_UNIFORM_BUFFER:      return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     }
 
     TG_INVALID_CODEPATH();
@@ -2293,67 +2282,6 @@ void tg_graphics_init()
     tgi_swapchain_create();
 
     tg_vulkan_memory_allocator_init(device, physical_device);
-
-
-    //VkDescriptorPoolSize p_descriptor_pool_sizes[2] = { 0 };
-    //p_descriptor_pool_sizes[0].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    //p_descriptor_pool_sizes[0].descriptorCount = 1;
-    //p_descriptor_pool_sizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    //p_descriptor_pool_sizes[1].descriptorCount = 1;
-    //
-    //
-    //
-    //VkDescriptorPool descriptor_pool = VK_NULL_HANDLE;
-    //
-    //VkDescriptorPoolCreateInfo descriptor_pool_create_info = { 0 };
-    //descriptor_pool_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    //descriptor_pool_create_info.pNext = TG_NULL;
-    //descriptor_pool_create_info.flags = 0;
-    //descriptor_pool_create_info.maxSets = 1;
-    //descriptor_pool_create_info.poolSizeCount = 2;
-    //descriptor_pool_create_info.pPoolSizes = p_descriptor_pool_sizes;
-    //
-    //VK_CALL(vkCreateDescriptorPool(device, &descriptor_pool_create_info, TG_NULL, &descriptor_pool));
-    //
-    //
-    //
-    //VkDescriptorSetLayoutBinding p_descriptor_set_layout_bindings[2] = { 0 };
-    //p_descriptor_set_layout_bindings[0].binding = 0;
-    //p_descriptor_set_layout_bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    //p_descriptor_set_layout_bindings[0].descriptorCount = 1;
-    //p_descriptor_set_layout_bindings[0].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-    //p_descriptor_set_layout_bindings[0].pImmutableSamplers = TG_NULL;
-    //p_descriptor_set_layout_bindings[1].binding = 1;
-    //p_descriptor_set_layout_bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    //p_descriptor_set_layout_bindings[1].descriptorCount = 1;
-    //p_descriptor_set_layout_bindings[1].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-    //p_descriptor_set_layout_bindings[1].pImmutableSamplers = TG_NULL;
-    //
-    //
-    //
-    //VkDescriptorSetLayout descriptor_set_layout = VK_NULL_HANDLE;
-    //
-    //VkDescriptorSetLayoutCreateInfo descriptor_set_layout_create_info = { 0 };
-    //descriptor_set_layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    //descriptor_set_layout_create_info.pNext = TG_NULL;
-    //descriptor_set_layout_create_info.flags = 0;
-    //descriptor_set_layout_create_info.bindingCount = 2;
-    //descriptor_set_layout_create_info.pBindings = p_descriptor_set_layout_bindings;
-    //
-    //VK_CALL(vkCreateDescriptorSetLayout(device, &descriptor_set_layout_create_info, TG_NULL, &descriptor_set_layout));
-    //
-    //
-    //
-    //VkDescriptorSet descriptor_set = VK_NULL_HANDLE;
-    //
-    //VkDescriptorSetAllocateInfo descriptor_set_allocate_info = { 0 };
-    //descriptor_set_allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    //descriptor_set_allocate_info.pNext = TG_NULL;
-    //descriptor_set_allocate_info.descriptorPool = descriptor_pool;
-    //descriptor_set_allocate_info.descriptorSetCount = 1;
-    //descriptor_set_allocate_info.pSetLayouts = &descriptor_set_layout;
-    //
-    //VK_CALL(vkAllocateDescriptorSets(device, &descriptor_set_allocate_info, &descriptor_set));
 }
 
 void tg_graphics_wait_idle()

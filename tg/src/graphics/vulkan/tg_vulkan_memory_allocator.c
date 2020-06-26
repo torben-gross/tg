@@ -70,12 +70,7 @@ tg_vulkan_memory_block tg_vulkan_memory_allocator_alloc(VkDeviceSize alignment, 
                 {
                     if (first_available_page == -1)
                     {
-                        VkDeviceSize multiple = 0;
-                        while (multiple < j * vulkan_memory.page_size)
-                        {
-                            multiple += alignment;
-                        }
-                        if (multiple != j * vulkan_memory.page_size)
+                        if (j * vulkan_memory.page_size % alignment != 0)
                         {
                             continue;
                         }

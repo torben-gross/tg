@@ -19,7 +19,7 @@ tg_color_image_h tg_color_image_create(const char* p_filename)
 
     tg_vulkan_buffer staging_buffer = { 0 };
     staging_buffer = tg_vulkan_buffer_create(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-    memcpy(staging_buffer.memory.p_mapped_device_memory, p_data, (size_t)size);
+    tg_memory_copy(size, p_data, staging_buffer.memory.p_mapped_device_memory);
 
     tg_vulkan_color_image_create_info vulkan_color_image_create_info = { 0 };
     vulkan_color_image_create_info.width = h_color_image->width;

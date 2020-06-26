@@ -78,7 +78,7 @@ static void tgi_init_shading_pass(tg_forward_renderer_h h_forward_renderer)
 
 
 
-void tg_forward_renderer_begin(tg_forward_renderer_h h_forward_renderer)
+void tg_vulkan_forward_renderer_begin(tg_forward_renderer_h h_forward_renderer)
 {
 	TG_ASSERT(h_forward_renderer);
 
@@ -97,7 +97,7 @@ void tg_forward_renderer_begin(tg_forward_renderer_h h_forward_renderer)
     vkCmdBeginRenderPass(h_forward_renderer->shading_pass.command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 }
 
-tg_forward_renderer_h tg_forward_renderer_create(const tg_camera_h h_camera)
+tg_forward_renderer_h tg_vulkan_forward_renderer_create(const tg_camera_h h_camera)
 {
 	TG_ASSERT(h_camera);
 
@@ -107,7 +107,7 @@ tg_forward_renderer_h tg_forward_renderer_create(const tg_camera_h h_camera)
     return h_forward_renderer;
 }
 
-void tg_forward_renderer_destroy(tg_forward_renderer_h h_forward_renderer)
+void tg_vulkan_forward_renderer_destroy(tg_forward_renderer_h h_forward_renderer)
 {
 	TG_ASSERT(h_forward_renderer);
 
@@ -115,23 +115,23 @@ void tg_forward_renderer_destroy(tg_forward_renderer_h h_forward_renderer)
     TG_MEMORY_FREE(h_forward_renderer);
 }
 
-void tg_forward_renderer_draw(tg_forward_renderer_h h_forward_renderer, tg_entity_graphics_data_ptr_h h_entity_graphics_data_ptr)
+void tg_vulkan_forward_renderer_execute(tg_forward_renderer_h h_forward_renderer, tg_render_command_h h_render_command)
 {
-    TG_ASSERT(h_forward_renderer && h_entity_graphics_data_ptr);
+    TG_ASSERT(h_forward_renderer && h_render_command);
 
-    // TODO: DO NOT SEARCH FOR CAMEREA! move renderer somewhere private and use vulkan directly
-    for (u32 i = 0; i < h_entity_graphics_data_ptr->camera_info_count; i++)
+    // TODO: DO NOT SEARCH FOR CAMERA! move renderer somewhere private and use vulkan directly (as in deferred renderer, use VkCommandBuffer as param
+    for (u32 i = 0; i < h_render_command->camera_info_count; i++)
     {
-        if (h_entity_graphics_data_ptr->p_camera_infos[i].h_camera == h_forward_renderer->h_camera)
+        if (h_render_command->p_camera_infos[i].h_camera == h_forward_renderer->h_camera)
         {
-            vkCmdExecuteCommands(h_forward_renderer->shading_pass.command_buffer, 1, &h_entity_graphics_data_ptr->p_camera_infos[i].p_command_buffers[0]);
+            vkCmdExecuteCommands(h_forward_renderer->shading_pass.command_buffer, 1, &h_render_command->p_camera_infos[i].command_buffer);
             return;
         }
     }
     TG_INVALID_CODEPATH();
 }
 
-void tg_forward_renderer_end(tg_forward_renderer_h h_forward_renderer)
+void tg_vulkan_forward_renderer_end(tg_forward_renderer_h h_forward_renderer)
 {
 	TG_ASSERT(h_forward_renderer);
 
@@ -260,7 +260,7 @@ void tg_forward_renderer_end(tg_forward_renderer_h h_forward_renderer)
     VK_CALL(vkQueueSubmit(graphics_queue.queue, 1, &submit_info, h_forward_renderer->h_camera->render_target.fence));
 }
 
-void tg_forward_renderer_on_window_resize(tg_forward_renderer_h h_forward_renderer, u32 width, u32 height)
+void tg_vulkan_forward_renderer_on_window_resize(tg_forward_renderer_h h_forward_renderer, u32 width, u32 height)
 {
 	TG_ASSERT(h_forward_renderer && width && height);
 }

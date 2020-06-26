@@ -91,9 +91,17 @@ void tg_memory_set_all_bits(u64 size, void* p_memory)
 
 #ifdef TG_DEBUG
 
-void* tg_memory_alloc_impl(u64 size, const char* p_filename, u32 line)
+void* tg_memory_alloc_impl(u64 size, const char* p_filename, u32 line, b32 nullify)
 {
-	void* p_memory = tg_platform_memory_alloc((size_t)size);
+	void* p_memory = TG_NULL;
+	if (nullify)
+	{
+		p_memory = tg_platform_memory_alloc_nullify(size);
+	}
+	else
+	{
+		p_memory = tg_platform_memory_alloc(size);
+	}
 	TG_ASSERT(p_memory);
 
 	if (recording_allocations)
@@ -109,9 +117,17 @@ void* tg_memory_alloc_impl(u64 size, const char* p_filename, u32 line)
 	return p_memory;
 }
 
-void* tg_memory_realloc_impl(u64 size, void* p_memory, const char* p_filename, u32 line)
+void* tg_memory_realloc_impl(u64 size, void* p_memory, const char* p_filename, u32 line, b32 nullify)
 {
-	void* p_reallocated_memory = tg_platform_memory_realloc(size, p_memory);
+	void* p_reallocated_memory = TG_NULL;
+	if (nullify)
+	{
+		p_reallocated_memory = tg_platform_memory_realloc_nullify(size, p_memory);
+	}
+	else
+	{
+		p_reallocated_memory = tg_platform_memory_realloc(size, p_memory);
+	}
 	TG_ASSERT(p_reallocated_memory);
 
 	if (recording_allocations)

@@ -338,6 +338,13 @@ void* tg_platform_memory_alloc(u64 size)
     return p_memory;
 }
 
+void* tg_platform_memory_alloc_nullify(u64 size)
+{
+    void* p_memory = HeapAlloc(h_process_heap, HEAP_ZERO_MEMORY, size);
+    TG_ASSERT(p_memory);
+    return p_memory;
+}
+
 void tg_platform_memory_free(void* p_memory)
 {
     const BOOL result = HeapFree(h_process_heap, 0, p_memory);
@@ -351,6 +358,13 @@ void* tg_platform_memory_realloc(u64 size, void* p_memory)
 #else
     void* p_reallocated_memory = HeapReAlloc(h_process_heap, 0, p_memory, size);
 #endif
+    TG_ASSERT(p_reallocated_memory);
+    return p_reallocated_memory;
+}
+
+void* tg_platform_memory_realloc_nullify(u64 size, void* p_memory)
+{
+    void* p_reallocated_memory = HeapReAlloc(h_process_heap, HEAP_ZERO_MEMORY, p_memory, size);
     TG_ASSERT(p_reallocated_memory);
     return p_reallocated_memory;
 }

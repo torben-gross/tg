@@ -6,12 +6,7 @@ layout(location = 1) in vec3    in_normal;
 layout(location = 2) in vec3    in_secondary_position;
 layout(location = 3) in int     in_border_mask;
 
-layout(set = 0, binding = 0) uniform model
-{
-    mat4    u_model;
-};
-
-layout(set = 0, binding = 1) uniform view_projection
+layout(set = 0, binding = 0) uniform view_projection
 {
     mat4    u_view;
     mat4    u_projection;
@@ -37,7 +32,7 @@ vec3 get_transvoxel_position()
 
 void main()
 {
-    gl_Position    = u_projection * u_view * u_model * vec4(get_transvoxel_position(), 1.0);
-	v_position     = (u_model * vec4(in_primary_position, 1.0));
-	v_normal       = (u_model * vec4(in_normal, 0.0)).xyz;
+    gl_Position    = u_projection * u_view * vec4(get_transvoxel_position(), 1.0);
+	v_position     = vec4(in_primary_position, 1.0);
+	v_normal       = vec4(in_normal, 0.0).xyz;
 }

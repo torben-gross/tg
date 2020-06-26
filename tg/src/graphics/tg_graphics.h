@@ -11,12 +11,12 @@ TG_DECLARE_HANDLE(tg_color_image);
 TG_DECLARE_HANDLE(tg_compute_shader);
 TG_DECLARE_HANDLE(tg_deferred_renderer);
 TG_DECLARE_HANDLE(tg_depth_image);
-TG_DECLARE_HANDLE(tg_entity_graphics_data_ptr);
 TG_DECLARE_HANDLE(tg_forward_renderer);
 TG_DECLARE_HANDLE(tg_fragment_shader);
 TG_DECLARE_HANDLE(tg_material);
 TG_DECLARE_HANDLE(tg_mesh);
 TG_DECLARE_HANDLE(tg_index_buffer);
+TG_DECLARE_HANDLE(tg_render_command);
 TG_DECLARE_HANDLE(tg_render_target);
 TG_DECLARE_HANDLE(tg_storage_buffer);
 TG_DECLARE_HANDLE(tg_storage_image_3d);
@@ -57,13 +57,13 @@ typedef enum tg_handle_type
 	TG_HANDLE_TYPE_COLOR_IMAGE,
 	TG_HANDLE_TYPE_COMPUTE_SHADER,
 	TG_HANDLE_TYPE_DEPTH_IMAGE,
-	TG_HANDLE_TYPE_ENTITY_GRAPHICS_DATA_PTR,
 	TG_HANDLE_TYPE_FRAGMENT_SHADER,
 	TG_HANDLE_TYPE_MATERIAL,
 	TG_HANDLE_TYPE_MESH,
 	TG_HANDLE_TYPE_INDEX_BUFFER,
 	TG_HANDLE_TYPE_DEFERRED_RENDERER,
 	TG_HANDLE_TYPE_FORWARD_RENDERER,
+	TG_HANDLE_TYPE_RENDER_COMMAND,
 	TG_HANDLE_TYPE_RENDER_TARGET,
 	TG_HANDLE_TYPE_STORAGE_IMAGE_3D,
 	TG_HANDLE_TYPE_TEXTURE_ATLAS,
@@ -148,14 +148,13 @@ typedef struct tg_vertex
 
 void                             tg_graphics_init();
 void                             tg_graphics_on_window_resize(u32 width, u32 height);
-void                             tg_graphics_wait_idle();
 void                             tg_graphics_shutdown();
+void                             tg_graphics_wait_idle();
 
 
 
 void                             tg_camera_begin(tg_camera_h h_camera);
-void                             tg_camera_capture(tg_camera_h h_camera, tg_entity_graphics_data_ptr_h h_entity_graphics_data_ptr);
-void                             tg_camera_capture_transvoxel_terrain(tg_camera_h h_camera, tg_transvoxel_terrain_h h_terrain);
+void                             tg_camera_capture(tg_camera_h h_camera, tg_render_command_h h_render_command);
 void                             tg_camera_clear(tg_camera_h h_camera);
 tg_camera_h                      tg_camera_create_orthographic(v3 position, f32 pitch, f32 yaw, f32 roll, f32 left, f32 right, f32 bottom, f32 top, f32 far, f32 near);
 tg_camera_h                      tg_camera_create_perspective(v3 position, f32 pitch, f32 yaw, f32 roll, f32 fov_y, f32 near, f32 far);
@@ -182,11 +181,6 @@ tg_compute_shader_h              tg_compute_shader_create(const char* filename);
 void                             tg_compute_shader_dispatch(tg_compute_shader_h h_compute_shader, u32 group_count_x, u32 group_count_y, u32 group_count_z);
 void                             tg_compute_shader_destroy(tg_compute_shader_h h_compute_shader);
 tg_compute_shader_h              tg_compute_shader_get(const char* filename);
-
-tg_entity_graphics_data_ptr_h    tg_entity_graphics_data_ptr_create(tg_mesh_h h_mesh, tg_material_h h_material);
-void                             tg_entity_graphics_data_ptr_destroy(tg_entity_graphics_data_ptr_h h_entity_graphics_data_ptr);
-void                             tg_entity_graphics_data_ptr_set_mesh(tg_entity_graphics_data_ptr_h h_entity_graphics_data_ptr, tg_mesh_h h_mesh, u8 lod);
-void                             tg_entity_graphics_data_ptr_set_model_matrix(tg_entity_graphics_data_ptr_h h_entity_graphics_data_ptr, const m4* p_model_matrix);
 
 tg_depth_image_h                 tg_depth_image_create(const tg_depth_image_create_info* p_depth_image_create_info);
 void                             tg_depth_image_destroy(tg_depth_image_h h_depth_image);
@@ -220,33 +214,12 @@ tg_uniform_buffer_h              tg_uniform_buffer_create(u64 size);
 void*                            tg_uniform_buffer_data(tg_uniform_buffer_h h_uniform_buffer);
 void                             tg_uniform_buffer_destroy(tg_uniform_buffer_h h_uniform_buffer);
 
+tg_render_command_h              tg_render_command_create(tg_mesh_h h_mesh, tg_material_h h_material);
+void                             tg_render_command_destroy(tg_render_command_h h_render_command);
+void                             tg_render_command_register(tg_render_command_h h_render_command, tg_camera_h h_camera);
+
 tg_vertex_shader_h               tg_vertex_shader_create(const char* p_filename);
 void                             tg_vertex_shader_destroy(tg_vertex_shader_h h_vertex_shader);
 tg_vertex_shader_h               tg_vertex_shader_get(const char* p_filename);
-
-
-
-/*------------------------------------------------------------+
-| Deferred Renderer                                           |
-+------------------------------------------------------------*/
-
-void                             tg_deferred_renderer_begin(tg_deferred_renderer_h h_deferred_renderer);
-tg_deferred_renderer_h           tg_deferred_renderer_create(tg_camera_h h_camera);
-void                             tg_deferred_renderer_destroy(tg_deferred_renderer_h h_deferred_renderer);
-void                             tg_deferred_renderer_end(tg_deferred_renderer_h h_deferred_renderer);
-void                             tg_deferred_renderer_on_window_resize(tg_deferred_renderer_h h_deferred_renderer, u32 width, u32 height);
-
-
-
-/*------------------------------------------------------------+
-| Forward Renderer                                            |
-+------------------------------------------------------------*/
-
-void                             tg_forward_renderer_begin(tg_forward_renderer_h h_forward_renderer);
-tg_forward_renderer_h            tg_forward_renderer_create(tg_camera_h h_camera);
-void                             tg_forward_renderer_destroy(tg_forward_renderer_h h_forward_renderer);
-void                             tg_forward_renderer_draw(tg_forward_renderer_h h_forward_renderer, tg_entity_graphics_data_ptr_h h_entity_graphics_data_ptr);
-void                             tg_forward_renderer_end(tg_forward_renderer_h h_forward_renderer);
-void                             tg_forward_renderer_on_window_resize(tg_forward_renderer_h h_forward_renderer, u32 width, u32 height);
 
 #endif

@@ -258,6 +258,7 @@ f32 log10f(f32 v);
 f32 logf(f32 v);
 f64 pow(f64 base, f64 exponent);
 f32 powf(f32 base, f32 exponent);
+f32 roundf(f32 v);
 f32 sinf(f32 v);
 f32 sinhf(f32 v);
 f32 sqrtf(f32 v);
@@ -723,12 +724,24 @@ v3 tgm_v3_max(v3 v0, v3 v1)
 	return result;
 }
 
+f32 tgm_v3_max_elem(v3 v)
+{
+	const f32 result = tgm_f32_max(tgm_f32_max(v.x, v.y), v.z);
+	return result;
+}
+
 v3 tgm_v3_min(v3 v0, v3 v1)
 {
 	v3 result = { 0 };
 	result.x = v0.x < v1.x ? v0.x : v1.x;
 	result.y = v0.y < v1.y ? v0.y : v1.y;
 	result.z = v0.z < v1.z ? v0.z : v1.z;
+	return result;
+}
+
+f32 tgm_v3_min_elem(v3 v)
+{
+	const f32 result = tgm_f32_min(tgm_f32_min(v.x, v.y), v.z);
 	return result;
 }
 
@@ -793,6 +806,33 @@ v3 tgm_v3_subf(v3 v, f32 f)
 	result.x = v.x - f;
 	result.y = v.y - f;
 	result.z = v.z - f;
+	return result;
+}
+
+v3i tgm_v3_to_v3i_ceil(v3 v)
+{
+	v3i result = { 0 };
+	result.x = (i32)ceilf(v.x);
+	result.y = (i32)ceilf(v.y);
+	result.z = (i32)ceilf(v.z);
+	return result;
+}
+
+v3i tgm_v3_to_v3i_floor(v3 v)
+{
+	v3i result = { 0 };
+	result.x = (i32)floorf(v.x);
+	result.y = (i32)floorf(v.y);
+	result.z = (i32)floorf(v.z);
+	return result;
+}
+
+v3i tgm_v3_to_v3i_round(v3 v)
+{
+	v3i result = { 0 };
+	result.x = (i32)roundf(v.x);
+	result.y = (i32)roundf(v.y);
+	result.z = (i32)roundf(v.z);
 	return result;
 }
 
@@ -872,6 +912,36 @@ f32 tgm_v3i_mag(v3i v)
 i32 tgm_v3i_magsqr(v3i v)
 {
 	const i32 result = v.x * v.x + v.y * v.y + v.z * v.z;
+	return result;
+}
+
+v3i tgm_v3i_max(v3i v0, v3i v1)
+{
+	v3i result = { 0 };
+	result.x = v0.x > v1.x ? v0.x : v1.x;
+	result.y = v0.y > v1.y ? v0.y : v1.y;
+	result.z = v0.z > v1.z ? v0.z : v1.z;
+	return result;
+}
+
+i32 tgm_v3i_max_elem(v3i v)
+{
+	const i32 result = tgm_i32_max(tgm_i32_max(v.x, v.y), v.z);
+	return result;
+}
+
+v3i tgm_v3i_min(v3i v0, v3i v1)
+{
+	v3i result = { 0 };
+	result.x = v0.x < v1.x ? v0.x : v1.x;
+	result.y = v0.y < v1.y ? v0.y : v1.y;
+	result.z = v0.z < v1.z ? v0.z : v1.z;
+	return result;
+}
+
+i32 tgm_v3i_min_elem(v3i v)
+{
+	const i32 result = tgm_i32_min(tgm_i32_min(v.x, v.y), v.z);
 	return result;
 }
 
@@ -1000,6 +1070,12 @@ v4 tgm_v4_max(v4 v0, v4 v1)
 	return result;
 }
 
+f32 tgm_v4_max_elem(v4 v)
+{
+	const f32 result = tgm_f32_max(tgm_f32_max(tgm_f32_max(v.x, v.y), v.z), v.w);
+	return result;
+}
+
 v4 tgm_v4_min(v4 v0, v4 v1)
 {
 	v4 result = { 0 };
@@ -1007,6 +1083,12 @@ v4 tgm_v4_min(v4 v0, v4 v1)
 	result.y = v0.y < v1.y ? v0.y : v1.y;
 	result.z = v0.z < v1.z ? v0.z : v1.z;
 	result.w = v0.w < v1.w ? v0.w : v1.w;
+	return result;
+}
+
+f32 tgm_v4_min_elem(v4 v)
+{
+	const f32 result = tgm_f32_min(tgm_f32_min(tgm_f32_min(v.x, v.y), v.z), v.w);
 	return result;
 }
 

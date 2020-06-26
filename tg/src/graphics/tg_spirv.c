@@ -818,7 +818,7 @@ void tg_spirv_fill_layout(u32 word_count, const u32* p_words, tg_spirv_layout* p
 
     if (p_layout->input_resource_count != 0)
     {
-        TG_QSORT_CUSTOM(tg_spirv_input_resource, p_layout->input_resource_count, p_layout->p_input_resources, tgi_compare_by_location);
+        TG_QSORT(tg_spirv_input_resource, p_layout->input_resource_count, p_layout->p_input_resources, tgi_compare_by_location);
 
         // TODO: this must consider alignment rules! this only works as long as there is no 64 bit value in here somewhere
         u32 offset = 0;

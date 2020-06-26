@@ -209,7 +209,7 @@ static void tgi_init_shading_pass(tg_deferred_renderer_h h_deferred_renderer)
     p_vertices[3].uv.y = 1.0f;
 
     staging_buffer = tg_vulkan_buffer_create(sizeof(p_vertices), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-    memcpy(staging_buffer.memory.p_mapped_device_memory, p_vertices, sizeof(p_vertices));
+    tg_memory_copy(sizeof(p_vertices), p_vertices, staging_buffer.memory.p_mapped_device_memory);
     h_deferred_renderer->shading_pass.vbo = tg_vulkan_buffer_create(sizeof(p_vertices), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     tg_vulkan_buffer_copy(sizeof(p_vertices), staging_buffer.buffer, h_deferred_renderer->shading_pass.vbo.buffer);
     tg_vulkan_buffer_destroy(&staging_buffer);
@@ -224,7 +224,7 @@ static void tgi_init_shading_pass(tg_deferred_renderer_h h_deferred_renderer)
     p_indices[5] = 0;
 
     staging_buffer = tg_vulkan_buffer_create(sizeof(p_indices), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-    memcpy(staging_buffer.memory.p_mapped_device_memory, p_indices, sizeof(p_indices));
+    tg_memory_copy(sizeof(p_indices), p_indices, staging_buffer.memory.p_mapped_device_memory);
     h_deferred_renderer->shading_pass.ibo = tg_vulkan_buffer_create(sizeof(p_indices), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     tg_vulkan_buffer_copy(sizeof(p_indices), staging_buffer.buffer, h_deferred_renderer->shading_pass.ibo.buffer);
     tg_vulkan_buffer_destroy(&staging_buffer);
@@ -624,7 +624,7 @@ static void tgi_init_tone_mapping_pass(tg_deferred_renderer_h h_deferred_rendere
 
 
 
-void tg_deferred_renderer_begin(tg_deferred_renderer_h h_deferred_renderer)
+void tg_vulkan_deferred_renderer_begin(tg_deferred_renderer_h h_deferred_renderer)
 {
     TG_ASSERT(h_deferred_renderer);
 
@@ -632,7 +632,7 @@ void tg_deferred_renderer_begin(tg_deferred_renderer_h h_deferred_renderer)
     tg_vulkan_command_buffer_cmd_begin_render_pass(h_deferred_renderer->geometry_pass.command_buffer, h_deferred_renderer->geometry_pass.render_pass, h_deferred_renderer->geometry_pass.framebuffer, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 }
 
-tg_deferred_renderer_h tg_deferred_renderer_create(tg_camera_h h_camera)
+tg_deferred_renderer_h tg_vulkan_deferred_renderer_create(tg_camera_h h_camera)
 {
     TG_ASSERT(h_camera);
 
@@ -644,7 +644,7 @@ tg_deferred_renderer_h tg_deferred_renderer_create(tg_camera_h h_camera)
     return h_deferred_renderer;
 }
 
-void tg_deferred_renderer_destroy(tg_deferred_renderer_h h_deferred_renderer)
+void tg_vulkan_deferred_renderer_destroy(tg_deferred_renderer_h h_deferred_renderer)
 {
     TG_ASSERT(h_deferred_renderer);
 
@@ -654,14 +654,14 @@ void tg_deferred_renderer_destroy(tg_deferred_renderer_h h_deferred_renderer)
     TG_MEMORY_FREE(h_deferred_renderer);
 }
 
-void tg_deferred_renderer_execute(tg_deferred_renderer_h h_deferred_renderer, VkCommandBuffer command_buffer)
+void tg_vulkan_deferred_renderer_execute(tg_deferred_renderer_h h_deferred_renderer, VkCommandBuffer command_buffer)
 {
     TG_ASSERT(h_deferred_renderer && command_buffer);
 
     vkCmdExecuteCommands(h_deferred_renderer->geometry_pass.command_buffer, 1, &command_buffer);
 }
 
-void tg_deferred_renderer_end(tg_deferred_renderer_h h_deferred_renderer)
+void tg_vulkan_deferred_renderer_end(tg_deferred_renderer_h h_deferred_renderer)
 {
     TG_ASSERT(h_deferred_renderer);
 
@@ -712,7 +712,7 @@ void tg_deferred_renderer_end(tg_deferred_renderer_h h_deferred_renderer)
     VK_CALL(vkQueueSubmit(graphics_queue.queue, 1, &tone_mapping_submit_info, h_deferred_renderer->h_camera->render_target.fence));
 }
 
-void tg_deferred_renderer_on_window_resize(tg_deferred_renderer_h h_deferred_renderer, u32 width, u32 height)
+void tg_vulkan_deferred_renderer_on_window_resize(tg_deferred_renderer_h h_deferred_renderer, u32 width, u32 height)
 {
 }
 

@@ -4,30 +4,16 @@
 
 #ifdef TG_VULKAN
 
-#include "graphics/vulkan/tg_vulkan_transvoxel_terrain.h"
 #include "memory/tg_memory.h"
 #include "platform/tg_platform.h"
 #include "tg_assets.h"
 
 
 
-// TODO: this is odd
-void tg_vulkan_camera_info_clear(tg_vulkan_camera_info* p_vulkan_camera_info)
-{
-    TG_ASSERT(p_vulkan_camera_info);
-
-    tg_vulkan_command_buffers_free(graphics_command_pool, TG_VULKAN_MAX_LOD_COUNT, p_vulkan_camera_info->p_command_buffers);
-    tg_vulkan_graphics_pipeline_destroy(p_vulkan_camera_info->graphics_pipeline);
-    tg_vulkan_pipeline_layout_destroy(p_vulkan_camera_info->pipeline_layout);
-    tg_vulkan_descriptor_destroy(&p_vulkan_camera_info->descriptor);
-}
-
-
-
 void tgi_destroy_capture_pass(tg_camera_h h_camera)
 {
-    tg_forward_renderer_destroy(h_camera->capture_pass.h_forward_renderer);
-    tg_deferred_renderer_destroy(h_camera->capture_pass.h_deferred_renderer);
+    tg_vulkan_forward_renderer_destroy(h_camera->capture_pass.h_forward_renderer);
+    tg_vulkan_deferred_renderer_destroy(h_camera->capture_pass.h_deferred_renderer);
 }
 
 void tgi_destroy_clear_pass(tg_camera_h h_camera)
@@ -51,8 +37,8 @@ void tgi_destroy_present_pass(tg_camera_h h_camera)
 
 void tgi_init_capture_pass(tg_camera_h h_camera)
 {
-    h_camera->capture_pass.h_deferred_renderer = tg_deferred_renderer_create(h_camera);
-    h_camera->capture_pass.h_forward_renderer = tg_forward_renderer_create(h_camera);
+    h_camera->capture_pass.h_deferred_renderer = tg_vulkan_deferred_renderer_create(h_camera);
+    h_camera->capture_pass.h_forward_renderer = tg_vulkan_forward_renderer_create(h_camera);
 }
 
 void tgi_init_clear_pass(tg_camera_h h_camera)
@@ -122,7 +108,7 @@ void tgi_init_present_pass(tg_camera_h h_camera)
     p_vertices[3].uv.y = 0.0f;
 
     staging_buffer = tg_vulkan_buffer_create(sizeof(p_vertices), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-    memcpy(staging_buffer.memory.p_mapped_device_memory, p_vertices, sizeof(p_vertices));
+    tg_memory_copy(sizeof(p_vertices), p_vertices, staging_buffer.memory.p_mapped_device_memory);
     h_camera->present_pass.vbo = tg_vulkan_buffer_create(sizeof(p_vertices), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     tg_vulkan_buffer_copy(sizeof(p_vertices), staging_buffer.buffer, h_camera->present_pass.vbo.buffer);
     tg_vulkan_buffer_destroy(&staging_buffer);
@@ -137,7 +123,7 @@ void tgi_init_present_pass(tg_camera_h h_camera)
     p_indices[5] = 0;
 
     staging_buffer = tg_vulkan_buffer_create(sizeof(p_indices), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-    memcpy(staging_buffer.memory.p_mapped_device_memory, p_indices, sizeof(p_indices));
+    tg_memory_copy(sizeof(p_indices), p_indices, staging_buffer.memory.p_mapped_device_memory);
     h_camera->present_pass.ibo = tg_vulkan_buffer_create(sizeof(p_indices), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     tg_vulkan_buffer_copy(sizeof(p_indices), staging_buffer.buffer, h_camera->present_pass.ibo.buffer);
     tg_vulkan_buffer_destroy(&staging_buffer);
@@ -328,6 +314,10 @@ void tgi_init_present_pass(tg_camera_h h_camera)
     }
 }
 
+
+
+
+
 void tgi_init(tg_camera_h h_camera)
 {
     h_camera->type = TG_HANDLE_TYPE_CAMERA;
@@ -347,18 +337,11 @@ void tgi_init(tg_camera_h h_camera)
     vulkan_depth_image_create_info.p_vulkan_sampler_create_info = TG_NULL;
 
     h_camera->render_target = tg_vulkan_render_target_create(&vulkan_color_image_create_info, &vulkan_depth_image_create_info, VK_FENCE_CREATE_SIGNALED_BIT);
-    h_camera->captured_entity_count = 0;
+    h_camera->render_command_count = 0;
 
     tgi_init_capture_pass(h_camera);
     tgi_init_present_pass(h_camera);
     tgi_init_clear_pass(h_camera);
-}
-
-void tgi_register_entity(tg_camera_h h_camera, tg_vulkan_camera_info* p_vulkan_camera_info, tg_entity_graphics_data_ptr_h h_entity_graphics_data_ptr)
-{
-    p_vulkan_camera_info = &h_entity_graphics_data_ptr->p_camera_infos[h_entity_graphics_data_ptr->camera_info_count++];
-
-    p_vulkan_camera_info->h_camera = h_camera;
 
     VkDescriptorSetLayoutBinding p_descriptor_set_layout_bindings[2] = { 0 };
 
@@ -374,107 +357,10 @@ void tgi_register_entity(tg_camera_h h_camera, tg_vulkan_camera_info* p_vulkan_c
     p_descriptor_set_layout_bindings[1].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
     p_descriptor_set_layout_bindings[1].pImmutableSamplers = TG_NULL;
 
-    p_vulkan_camera_info->descriptor = tg_vulkan_descriptor_create(2, p_descriptor_set_layout_bindings);
-    const b32 has_custom_descriptor_set = h_entity_graphics_data_ptr->h_material->descriptor.descriptor_pool != VK_NULL_HANDLE;
-
-    if (has_custom_descriptor_set)
-    {
-        const VkDescriptorSetLayout p_descriptor_set_layouts[2] = { p_vulkan_camera_info->descriptor.descriptor_set_layout, h_entity_graphics_data_ptr->h_material->descriptor.descriptor_set_layout };
-        p_vulkan_camera_info->pipeline_layout = tg_vulkan_pipeline_layout_create(2, p_descriptor_set_layouts, 0, TG_NULL);
-    }
-    else
-    {
-        p_vulkan_camera_info->pipeline_layout = tg_vulkan_pipeline_layout_create(1, &p_vulkan_camera_info->descriptor.descriptor_set_layout, 0, TG_NULL);
-    }
-
-    const tg_spirv_layout* p_layout = &h_entity_graphics_data_ptr->h_material->h_vertex_shader->vulkan_shader.layout;
-
-    VkVertexInputBindingDescription vertex_input_binding_description = { 0 };
-    vertex_input_binding_description.binding = 0;
-    vertex_input_binding_description.stride = p_layout->vertex_stride;
-    vertex_input_binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-    const u64 vertex_input_attribute_descriptions_size = (u64)p_layout->input_resource_count * sizeof(VkVertexInputAttributeDescription);
-    VkVertexInputAttributeDescription* p_vertex_input_attribute_descriptions = TG_MEMORY_STACK_ALLOC(vertex_input_attribute_descriptions_size);
-    for (u8 i = 0; i < p_layout->input_resource_count; i++)
-    {
-        p_vertex_input_attribute_descriptions[i].binding = 0;
-        p_vertex_input_attribute_descriptions[i].location = p_layout->p_input_resources[i].location;
-        p_vertex_input_attribute_descriptions[i].format = p_layout->p_input_resources[i].format;
-        p_vertex_input_attribute_descriptions[i].offset = p_layout->p_input_resources[i].offset;
-    }
-
-    VkPipelineVertexInputStateCreateInfo pipeline_vertex_input_state_create_info = { 0 };
-    pipeline_vertex_input_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    pipeline_vertex_input_state_create_info.pNext = TG_NULL;
-    pipeline_vertex_input_state_create_info.flags = 0;
-    pipeline_vertex_input_state_create_info.vertexBindingDescriptionCount = 1;
-    pipeline_vertex_input_state_create_info.pVertexBindingDescriptions = &vertex_input_binding_description;
-    pipeline_vertex_input_state_create_info.vertexAttributeDescriptionCount = (u32)p_layout->input_resource_count;
-    pipeline_vertex_input_state_create_info.pVertexAttributeDescriptions = p_vertex_input_attribute_descriptions;
-
-    tg_vulkan_graphics_pipeline_create_info vulkan_graphics_pipeline_create_info = { 0 };
-    vulkan_graphics_pipeline_create_info.vertex_shader = h_entity_graphics_data_ptr->h_material->h_vertex_shader->vulkan_shader;
-    vulkan_graphics_pipeline_create_info.fragment_shader = h_entity_graphics_data_ptr->h_material->h_fragment_shader->vulkan_shader;
-    vulkan_graphics_pipeline_create_info.cull_mode = VK_CULL_MODE_BACK_BIT;
-    vulkan_graphics_pipeline_create_info.sample_count = VK_SAMPLE_COUNT_1_BIT;
-    vulkan_graphics_pipeline_create_info.depth_test_enable = VK_TRUE;
-    vulkan_graphics_pipeline_create_info.depth_write_enable = VK_TRUE;
-
-    switch (h_entity_graphics_data_ptr->h_material->material_type)
-    {
-    case TG_VULKAN_MATERIAL_TYPE_DEFERRED:
-    {
-        vulkan_graphics_pipeline_create_info.attachment_count = TG_DEFERRED_RENDERER_GEOMETRY_PASS_COLOR_ATTACHMENT_COUNT;
-        vulkan_graphics_pipeline_create_info.blend_enable = VK_FALSE;
-    } break;
-    case TG_VULKAN_MATERIAL_TYPE_FORWARD:
-    {
-        vulkan_graphics_pipeline_create_info.attachment_count = 1;
-        vulkan_graphics_pipeline_create_info.blend_enable = VK_TRUE;
-    } break;
-    default: TG_INVALID_CODEPATH(); break;
-    }
-
-    vulkan_graphics_pipeline_create_info.p_pipeline_vertex_input_state_create_info = &pipeline_vertex_input_state_create_info;
-    vulkan_graphics_pipeline_create_info.pipeline_layout = p_vulkan_camera_info->pipeline_layout;
-
-    switch (h_entity_graphics_data_ptr->h_material->material_type)
-    {
-    case TG_VULKAN_MATERIAL_TYPE_DEFERRED:
-    {
-        vulkan_graphics_pipeline_create_info.render_pass = h_camera->capture_pass.h_deferred_renderer->geometry_pass.render_pass;
-    } break;
-    case TG_VULKAN_MATERIAL_TYPE_FORWARD:
-    {
-        vulkan_graphics_pipeline_create_info.render_pass = h_camera->capture_pass.h_forward_renderer->shading_pass.render_pass;
-    } break;
-    default: TG_INVALID_CODEPATH(); break;
-    }
-
-    p_vulkan_camera_info->graphics_pipeline = tg_vulkan_graphics_pipeline_create(&vulkan_graphics_pipeline_create_info);
-    TG_MEMORY_STACK_FREE(vertex_input_attribute_descriptions_size);
-
-    VkDescriptorBufferInfo model_descriptor_buffer_info = { 0 };
-    model_descriptor_buffer_info.buffer = h_entity_graphics_data_ptr->model_ubo.buffer;
-    model_descriptor_buffer_info.offset = 0;
-    model_descriptor_buffer_info.range = VK_WHOLE_SIZE;
+    h_camera->descriptor = tg_vulkan_descriptor_create(2, p_descriptor_set_layout_bindings);
 
     VkDescriptorBufferInfo view_projection_descriptor_buffer_info = { 0 };
-
-    switch (h_entity_graphics_data_ptr->h_material->material_type)
-    {
-    case TG_VULKAN_MATERIAL_TYPE_DEFERRED:
-    {
-        view_projection_descriptor_buffer_info.buffer = h_camera->view_projection_ubo.buffer;
-    } break;
-    case TG_VULKAN_MATERIAL_TYPE_FORWARD:
-    {
-        view_projection_descriptor_buffer_info.buffer = h_camera->view_projection_ubo.buffer;
-    } break;
-    default: TG_INVALID_CODEPATH(); break;
-    }
-
+    view_projection_descriptor_buffer_info.buffer = h_camera->view_projection_ubo.buffer;
     view_projection_descriptor_buffer_info.offset = 0;
     view_projection_descriptor_buffer_info.range = VK_WHOLE_SIZE;
 
@@ -482,18 +368,18 @@ void tgi_register_entity(tg_camera_h h_camera, tg_vulkan_camera_info* p_vulkan_c
 
     p_write_descriptor_sets[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     p_write_descriptor_sets[0].pNext = TG_NULL;
-    p_write_descriptor_sets[0].dstSet = p_vulkan_camera_info->descriptor.descriptor_set;
+    p_write_descriptor_sets[0].dstSet = h_camera->descriptor.descriptor_set;
     p_write_descriptor_sets[0].dstBinding = 0;
     p_write_descriptor_sets[0].dstArrayElement = 0;
     p_write_descriptor_sets[0].descriptorCount = 1;
     p_write_descriptor_sets[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     p_write_descriptor_sets[0].pImageInfo = TG_NULL;
-    p_write_descriptor_sets[0].pBufferInfo = &model_descriptor_buffer_info;
+    p_write_descriptor_sets[0].pBufferInfo = &view_projection_descriptor_buffer_info;
     p_write_descriptor_sets[0].pTexelBufferView = TG_NULL;
 
     p_write_descriptor_sets[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     p_write_descriptor_sets[1].pNext = TG_NULL;
-    p_write_descriptor_sets[1].dstSet = p_vulkan_camera_info->descriptor.descriptor_set;
+    p_write_descriptor_sets[1].dstSet = h_camera->descriptor.descriptor_set;
     p_write_descriptor_sets[1].dstBinding = 1;
     p_write_descriptor_sets[1].dstArrayElement = 0;
     p_write_descriptor_sets[1].descriptorCount = 1;
@@ -503,172 +389,6 @@ void tgi_register_entity(tg_camera_h h_camera, tg_vulkan_camera_info* p_vulkan_c
     p_write_descriptor_sets[1].pTexelBufferView = TG_NULL;
 
     tg_vulkan_descriptor_sets_update(2, p_write_descriptor_sets);
-    tg_vulkan_command_buffers_allocate(graphics_command_pool, VK_COMMAND_BUFFER_LEVEL_SECONDARY, TG_VULKAN_MAX_LOD_COUNT, p_vulkan_camera_info->p_command_buffers);
-
-    VkCommandBufferInheritanceInfo command_buffer_inheritance_info = { 0 };
-    command_buffer_inheritance_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
-    command_buffer_inheritance_info.pNext = TG_NULL;
-
-    switch (h_entity_graphics_data_ptr->h_material->material_type)
-    {
-    case TG_VULKAN_MATERIAL_TYPE_DEFERRED:
-    {
-        command_buffer_inheritance_info.renderPass = h_camera->capture_pass.h_deferred_renderer->geometry_pass.render_pass;
-    } break;
-    case TG_VULKAN_MATERIAL_TYPE_FORWARD:
-    {
-        command_buffer_inheritance_info.renderPass = h_camera->capture_pass.h_forward_renderer->shading_pass.render_pass;
-    } break;
-    default: TG_INVALID_CODEPATH(); break;
-    }
-
-    command_buffer_inheritance_info.subpass = 0;
-
-    switch (h_entity_graphics_data_ptr->h_material->material_type)
-    {
-    case TG_VULKAN_MATERIAL_TYPE_DEFERRED:
-    {
-        command_buffer_inheritance_info.framebuffer = h_camera->capture_pass.h_deferred_renderer->geometry_pass.framebuffer;
-    } break;
-    case TG_VULKAN_MATERIAL_TYPE_FORWARD:
-    {
-        command_buffer_inheritance_info.framebuffer = h_camera->capture_pass.h_forward_renderer->shading_pass.framebuffer;
-    } break;
-    default: TG_INVALID_CODEPATH(); break;
-    }
-
-    command_buffer_inheritance_info.occlusionQueryEnable = VK_FALSE;
-    command_buffer_inheritance_info.queryFlags = 0;
-    command_buffer_inheritance_info.pipelineStatistics = 0;
-
-    for (u32 i = 0; i < h_entity_graphics_data_ptr->lod_count; i++)
-    {
-        tg_vulkan_command_buffer_begin(p_vulkan_camera_info->p_command_buffers[i], VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, &command_buffer_inheritance_info);
-        {
-            vkCmdBindPipeline(p_vulkan_camera_info->p_command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, p_vulkan_camera_info->graphics_pipeline);
-
-            const VkDeviceSize vertex_buffer_offset = 0;
-            vkCmdBindVertexBuffers(p_vulkan_camera_info->p_command_buffers[i], 0, 1, &h_entity_graphics_data_ptr->ph_lod_meshes[i]->vbo.buffer, &vertex_buffer_offset);
-            if (h_entity_graphics_data_ptr->ph_lod_meshes[i]->ibo.size != 0)
-            {
-                vkCmdBindIndexBuffer(p_vulkan_camera_info->p_command_buffers[i], h_entity_graphics_data_ptr->ph_lod_meshes[i]->ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
-            }
-
-            const u32 descriptor_set_count = has_custom_descriptor_set ? 2 : 1;
-            VkDescriptorSet p_descriptor_sets[2] = { 0 };
-            {
-                p_descriptor_sets[0] = p_vulkan_camera_info->descriptor.descriptor_set;
-                if (has_custom_descriptor_set)
-                {
-                    p_descriptor_sets[1] = h_entity_graphics_data_ptr->h_material->descriptor.descriptor_set;
-                }
-            }
-            vkCmdBindDescriptorSets(p_vulkan_camera_info->p_command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, p_vulkan_camera_info->pipeline_layout, 0, descriptor_set_count, p_descriptor_sets, 0, TG_NULL);
-
-            if (h_entity_graphics_data_ptr->ph_lod_meshes[i]->index_count != 0)
-            {
-                vkCmdDrawIndexed(p_vulkan_camera_info->p_command_buffers[i], (u32)(h_entity_graphics_data_ptr->ph_lod_meshes[i]->index_count), 1, 0, 0, 0); // TODO: u16
-            }
-            else
-            {
-                vkCmdDraw(p_vulkan_camera_info->p_command_buffers[i], (u32)(h_entity_graphics_data_ptr->ph_lod_meshes[i]->vertex_count), 1, 0, 0);
-            }
-        }
-        VK_CALL(vkEndCommandBuffer(p_vulkan_camera_info->p_command_buffers[i]));
-    }
-}
-
-
-
-void tg_camera_begin(tg_camera_h h_camera)
-{
-    h_camera->captured_entity_count = 0;
-}
-
-void tg_camera_capture(tg_camera_h h_camera, tg_entity_graphics_data_ptr_h h_entity_graphics_data_ptr)
-{
-    TG_ASSERT(h_camera && h_entity_graphics_data_ptr);
-
-    tg_vulkan_camera_info* p_vulkan_camera_info = TG_NULL;
-    for (u32 i = 0; i < h_entity_graphics_data_ptr->camera_info_count; i++)
-    {
-        if (h_entity_graphics_data_ptr->p_camera_infos[i].h_camera == h_camera)
-        {
-            p_vulkan_camera_info = &h_entity_graphics_data_ptr->p_camera_infos[i];
-            break;
-        }
-    }
-    
-    TG_ASSERT(p_vulkan_camera_info || h_entity_graphics_data_ptr->camera_info_count < TG_VULKAN_MAX_CAMERAS_PER_ENTITY);
-    
-    if (!p_vulkan_camera_info)
-    {
-        tgi_register_entity(h_camera, p_vulkan_camera_info, h_entity_graphics_data_ptr);
-    }
-
-    TG_ASSERT(h_camera->captured_entity_count < TG_VULKAN_MAX_ENTITIES_PER_CAMERA);
-
-    h_camera->ph_captured_entities[h_camera->captured_entity_count++] = h_entity_graphics_data_ptr;
-}
-
-// TODO: this should obviously not stay this way!
-static void tgi_capture_transvoxel_terrain(tg_camera_h h_camera, tg_transvoxel_node* p_node)
-{
-    if (p_node->flags & TG_TRANSVOXEL_FLAG_ACTIVE)
-    {
-        if (p_node->node.entity.h_graphics_data_ptr && p_node->node.entity.h_graphics_data_ptr->ph_lod_meshes[0])
-        {
-            tg_camera_capture(h_camera, p_node->node.entity.h_graphics_data_ptr);
-        }
-        for (u8 i = 0; i < 6; i++)
-        {
-            if ((p_node->node.transition_mask & (1 << i)) &&
-                p_node->node.p_transition_entities[i].h_graphics_data_ptr &&
-                p_node->node.p_transition_entities[i].h_graphics_data_ptr->ph_lod_meshes[0])
-            {
-                tg_camera_capture(h_camera, p_node->node.p_transition_entities[i].h_graphics_data_ptr);
-            }
-        }
-    }
-    else
-    {
-        for (u8 i = 0; i < 8; i++)
-        {
-            tgi_capture_transvoxel_terrain(h_camera, p_node->pp_children[i]);
-        }
-    }
-}
-
-void tg_camera_capture_transvoxel_terrain(tg_camera_h h_camera, tg_transvoxel_terrain_h h_terrain)
-{
-    TG_ASSERT(h_camera && h_terrain);
-
-    for (u32 i = 0; i < 9; i++)
-    {
-        tgi_capture_transvoxel_terrain(h_camera, &h_terrain->p_octrees[i].root);
-        break;
-    }
-}
-
-void tg_camera_clear(tg_camera_h h_camera) // TODO: should this be combined with begin?
-{
-    TG_ASSERT(h_camera);
-
-    tg_vulkan_fence_wait(h_camera->render_target.fence);
-    tg_vulkan_fence_reset(h_camera->render_target.fence);
-
-    VkSubmitInfo submit_info = { 0 };
-    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submit_info.pNext = TG_NULL;
-    submit_info.waitSemaphoreCount = 0;
-    submit_info.pWaitSemaphores = TG_NULL;
-    submit_info.pWaitDstStageMask = TG_NULL;
-    submit_info.commandBufferCount = 1;
-    submit_info.pCommandBuffers = &h_camera->clear_pass.command_buffer;
-    submit_info.signalSemaphoreCount = 0;
-    submit_info.pSignalSemaphores = TG_NULL;
-
-    VK_CALL(vkQueueSubmit(graphics_queue.queue, 1, &submit_info, h_camera->render_target.fence));
 }
 
 tg_camera_h tg_camera_create_orthographic(v3 position, f32 pitch, f32 yaw, f32 roll, f32 left, f32 right, f32 bottom, f32 top, f32 far, f32 near)
@@ -700,109 +420,128 @@ void tg_camera_destroy(tg_camera_h h_camera)
     tgi_destroy_clear_pass(h_camera);
     tgi_destroy_present_pass(h_camera);
     tgi_destroy_capture_pass(h_camera);
+    tg_vulkan_descriptor_destroy(&h_camera->descriptor);
     tg_vulkan_render_target_destroy(&h_camera->render_target);
     tg_vulkan_buffer_destroy(&h_camera->view_projection_ubo);
 	TG_MEMORY_FREE(h_camera);
 }
 
+
+
+void tg_camera_begin(tg_camera_h h_camera)
+{
+    TG_ASSERT(h_camera);
+
+    h_camera->render_command_count = 0;
+}
+
+void tg_camera_capture(tg_camera_h h_camera, tg_render_command_h h_render_command)
+{
+    TG_ASSERT(h_camera && h_render_command);
+
+    tg_vulkan_render_command_camera_info* p_camera_info = TG_NULL;
+    for (u32 i = 0; i < h_render_command->camera_info_count; i++)
+    {
+        if (h_render_command->p_camera_infos[i].h_camera == h_camera)
+        {
+            p_camera_info = &h_render_command->p_camera_infos[i];
+            break;
+        }
+    }
+
+    if (!p_camera_info)
+    {
+        tg_render_command_register(h_render_command, h_camera);
+        p_camera_info = &h_render_command->p_camera_infos[h_render_command->camera_info_count - 1];
+    }
+    
+    TG_ASSERT(h_camera->render_command_count < TG_VULKAN_MAX_RENDER_COMMANDS_PER_CAMERA);
+
+    h_camera->ph_render_commands[h_camera->render_command_count++] = h_render_command;
+}
+
 void tg_camera_end(tg_camera_h h_camera)
 {
-    tg_deferred_renderer_begin(h_camera->capture_pass.h_deferred_renderer);
-    for (u32 e = 0; e < h_camera->captured_entity_count; e++)
+    tg_vulkan_deferred_renderer_begin(h_camera->capture_pass.h_deferred_renderer);
+    for (u32 e = 0; e < h_camera->render_command_count; e++)
     {
-        tg_entity_graphics_data_ptr_h h_entity_graphics_data_ptr = h_camera->ph_captured_entities[e];
-        if (h_entity_graphics_data_ptr->h_material->material_type == TG_VULKAN_MATERIAL_TYPE_DEFERRED)
+        tg_render_command_h h_render_command = h_camera->ph_render_commands[e];
+        if (h_render_command->h_material->material_type == TG_VULKAN_MATERIAL_TYPE_DEFERRED)
         {
-            for (u32 c = 0; c < h_entity_graphics_data_ptr->camera_info_count; c++)
+            for (u32 c = 0; c < h_render_command->camera_info_count; c++)
             {
-                tg_vulkan_camera_info* p_vulkan_camera_info = &h_entity_graphics_data_ptr->p_camera_infos[c];
-                if (p_vulkan_camera_info->h_camera == h_camera)
+                tg_vulkan_render_command_camera_info* p_camera_info = &h_render_command->p_camera_infos[c];
+                if (p_camera_info->h_camera == h_camera)
                 {
-                    if (h_entity_graphics_data_ptr->lod_count == 1)
-                    {
-                        tg_deferred_renderer_execute(h_camera->capture_pass.h_deferred_renderer, p_vulkan_camera_info->p_command_buffers[0]);
-                    }
-                    else
-                    {
-                        const tg_bounds* p_bounds = &h_entity_graphics_data_ptr->ph_lod_meshes[0]->bounds;
+                    tg_vulkan_deferred_renderer_execute(h_camera->capture_pass.h_deferred_renderer, p_camera_info->command_buffer);
 
-                        v4 p_points[8] = { 0 };
-                        p_points[0] = (v4){ p_bounds->min.x, p_bounds->min.y, p_bounds->min.z, 1.0f };
-                        p_points[1] = (v4){ p_bounds->min.x, p_bounds->min.y, p_bounds->max.z, 1.0f };
-                        p_points[2] = (v4){ p_bounds->min.x, p_bounds->max.y, p_bounds->min.z, 1.0f };
-                        p_points[3] = (v4){ p_bounds->min.x, p_bounds->max.y, p_bounds->max.z, 1.0f };
-                        p_points[4] = (v4){ p_bounds->max.x, p_bounds->min.y, p_bounds->min.z, 1.0f };
-                        p_points[5] = (v4){ p_bounds->max.x, p_bounds->min.y, p_bounds->max.z, 1.0f };
-                        p_points[6] = (v4){ p_bounds->max.x, p_bounds->max.y, p_bounds->min.z, 1.0f };
-                        p_points[7] = (v4){ p_bounds->max.x, p_bounds->max.y, p_bounds->max.z, 1.0f };
-
-                        v4 p_homogenous_points_clip_space[8] = { 0 };
-                        v3 p_cartesian_points_clip_space[8] = { 0 };
-                        for (u8 i = 0; i < 8; i++)
-                        {
-                            p_homogenous_points_clip_space[i] = tgm_m4_mulv4(TG_ENTITY_GRAPHICS_DATA_PTR_MODEL(h_entity_graphics_data_ptr), p_points[i]);
-                            p_homogenous_points_clip_space[i] = tgm_m4_mulv4(TG_CAMERA_VIEW(h_camera), p_homogenous_points_clip_space[i]);
-                            p_homogenous_points_clip_space[i] = tgm_m4_mulv4(TG_CAMERA_PROJ(h_camera), p_homogenous_points_clip_space[i]);// TODO: SIMD
-                            p_cartesian_points_clip_space[i] = tgm_v4_to_v3(p_homogenous_points_clip_space[i]);
-                        }
-
-                        v3 min = p_cartesian_points_clip_space[0];
-                        v3 max = p_cartesian_points_clip_space[0];
-                        for (u8 i = 1; i < 8; i++)
-                        {
-                            min = tgm_v3_min(min, p_cartesian_points_clip_space[i]);
-                            max = tgm_v3_max(max, p_cartesian_points_clip_space[i]);
-                        }
-
-                        const b32 cull = min.x >= 1.0f || min.y >= 1.0f || max.x <= -1.0f || max.y <= -1.0f || min.z >= 1.0f || max.z <= 0.0f;
-                        if (!cull)
-                        {
-                            const v3 clamp_min = { -1.0f, -1.0f, 0.0f };
-                            const v3 clamp_max = { 1.0f,  1.0f, 0.0f };
-                            const v3 clamped_min = tgm_v3_clamp(min, clamp_min, clamp_max);
-                            const v3 clamped_max = tgm_v3_clamp(max, clamp_min, clamp_max);
-                            const f32 area = (clamped_max.x - clamped_min.x) * (clamped_max.y - clamped_min.y);
-
-                            if (area >= 0.9f)
-                            {
-                                tg_deferred_renderer_execute(h_camera->capture_pass.h_deferred_renderer, p_vulkan_camera_info->p_command_buffers[2]);
-                            }
-                            else
-                            {
-                                tg_deferred_renderer_execute(h_camera->capture_pass.h_deferred_renderer, p_vulkan_camera_info->p_command_buffers[3]);
-                            }
-                        }
-                    }
+                    // TODO: lod
+                    //{
+                    //    const tg_bounds* p_bounds = &h_render_command->ph_lod_meshes[0]->bounds;
+                    //
+                    //    v4 p_points[8] = { 0 };
+                    //    p_points[0] = (v4){ p_bounds->min.x, p_bounds->min.y, p_bounds->min.z, 1.0f };
+                    //    p_points[1] = (v4){ p_bounds->min.x, p_bounds->min.y, p_bounds->max.z, 1.0f };
+                    //    p_points[2] = (v4){ p_bounds->min.x, p_bounds->max.y, p_bounds->min.z, 1.0f };
+                    //    p_points[3] = (v4){ p_bounds->min.x, p_bounds->max.y, p_bounds->max.z, 1.0f };
+                    //    p_points[4] = (v4){ p_bounds->max.x, p_bounds->min.y, p_bounds->min.z, 1.0f };
+                    //    p_points[5] = (v4){ p_bounds->max.x, p_bounds->min.y, p_bounds->max.z, 1.0f };
+                    //    p_points[6] = (v4){ p_bounds->max.x, p_bounds->max.y, p_bounds->min.z, 1.0f };
+                    //    p_points[7] = (v4){ p_bounds->max.x, p_bounds->max.y, p_bounds->max.z, 1.0f };
+                    //
+                    //    v4 p_homogenous_points_clip_space[8] = { 0 };
+                    //    v3 p_cartesian_points_clip_space[8] = { 0 };
+                    //    for (u8 i = 0; i < 8; i++)
+                    //    {
+                    //        p_homogenous_points_clip_space[i] = tgm_m4_mulv4(TG_ENTITY_GRAPHICS_DATA_PTR_MODEL(h_render_command), p_points[i]);
+                    //        p_homogenous_points_clip_space[i] = tgm_m4_mulv4(TG_CAMERA_VIEW(h_primary_camera), p_homogenous_points_clip_space[i]);
+                    //        p_homogenous_points_clip_space[i] = tgm_m4_mulv4(TG_CAMERA_PROJ(h_primary_camera), p_homogenous_points_clip_space[i]);// TODO: SIMD
+                    //        p_cartesian_points_clip_space[i] = tgm_v4_to_v3(p_homogenous_points_clip_space[i]);
+                    //    }
+                    //
+                    //    v3 min = p_cartesian_points_clip_space[0];
+                    //    v3 max = p_cartesian_points_clip_space[0];
+                    //    for (u8 i = 1; i < 8; i++)
+                    //    {
+                    //        min = tgm_v3_min(min, p_cartesian_points_clip_space[i]);
+                    //        max = tgm_v3_max(max, p_cartesian_points_clip_space[i]);
+                    //    }
+                    //
+                    //    const b32 cull = min.x >= 1.0f || min.y >= 1.0f || max.x <= -1.0f || max.y <= -1.0f || min.z >= 1.0f || max.z <= 0.0f;
+                    //    if (!cull)
+                    //    {
+                    //        const v3 clamp_min = { -1.0f, -1.0f, 0.0f };
+                    //        const v3 clamp_max = { 1.0f,  1.0f, 0.0f };
+                    //        const v3 clamped_min = tgm_v3_clamp(min, clamp_min, clamp_max);
+                    //        const v3 clamped_max = tgm_v3_clamp(max, clamp_min, clamp_max);
+                    //        const f32 area = (clamped_max.x - clamped_min.x) * (clamped_max.y - clamped_min.y);
+                    //
+                    //        if (area >= 0.9f)
+                    //        {
+                    //            tg_vulkan_deferred_renderer_execute(h_primary_camera->capture_pass.h_deferred_renderer, p_camera_info->p_command_buffers[2]);
+                    //        }
+                    //        else
+                    //        {
+                    //            tg_vulkan_deferred_renderer_execute(h_primary_camera->capture_pass.h_deferred_renderer, p_camera_info->p_command_buffers[3]);
+                    //        }
+                    //    }
+                    //}
                     break;
                 }
             }
         }
     }
-    tg_deferred_renderer_end(h_camera->capture_pass.h_deferred_renderer);
+    tg_vulkan_deferred_renderer_end(h_camera->capture_pass.h_deferred_renderer);
 
-    tg_forward_renderer_begin(h_camera->capture_pass.h_forward_renderer);
-    for (u32 i = 0; i < h_camera->captured_entity_count; i++)
+    tg_vulkan_forward_renderer_begin(h_camera->capture_pass.h_forward_renderer);
+    for (u32 i = 0; i < h_camera->render_command_count; i++)
     {
-        if (h_camera->ph_captured_entities[i]->h_material->material_type == TG_VULKAN_MATERIAL_TYPE_FORWARD)
+        if (h_camera->ph_render_commands[i]->h_material->material_type == TG_VULKAN_MATERIAL_TYPE_FORWARD)
         {
-            tg_forward_renderer_draw(h_camera->capture_pass.h_forward_renderer, h_camera->ph_captured_entities[i]);
+            tg_vulkan_forward_renderer_execute(h_camera->capture_pass.h_forward_renderer, h_camera->ph_render_commands[i]);
         }
     }
-    tg_forward_renderer_end(h_camera->capture_pass.h_forward_renderer);
-}
-
-v3 tg_camera_get_position(tg_camera_h h_camera)
-{
-    TG_ASSERT(h_camera);
-
-    return h_camera->position;
-}
-
-tg_render_target_h tg_camera_get_render_target(tg_camera_h h_camera)
-{
-    TG_ASSERT(h_camera);
-
-    return &h_camera->render_target;
+    tg_vulkan_forward_renderer_end(h_camera->capture_pass.h_forward_renderer);
 }
 
 void tg_camera_present(tg_camera_h h_camera)
@@ -842,6 +581,43 @@ void tg_camera_present(tg_camera_h h_camera)
     present_info.pResults = TG_NULL;
 
     VK_CALL(vkQueuePresentKHR(present_queue.queue, &present_info));
+}
+
+void tg_camera_clear(tg_camera_h h_camera) // TODO: should this be combined with begin?
+{
+    TG_ASSERT(h_camera);
+
+    tg_vulkan_fence_wait(h_camera->render_target.fence);
+    tg_vulkan_fence_reset(h_camera->render_target.fence);
+
+    VkSubmitInfo submit_info = { 0 };
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.pNext = TG_NULL;
+    submit_info.waitSemaphoreCount = 0;
+    submit_info.pWaitSemaphores = TG_NULL;
+    submit_info.pWaitDstStageMask = TG_NULL;
+    submit_info.commandBufferCount = 1;
+    submit_info.pCommandBuffers = &h_camera->clear_pass.command_buffer;
+    submit_info.signalSemaphoreCount = 0;
+    submit_info.pSignalSemaphores = TG_NULL;
+
+    VK_CALL(vkQueueSubmit(graphics_queue.queue, 1, &submit_info, h_camera->render_target.fence));
+}
+
+
+
+v3 tg_camera_get_position(tg_camera_h h_camera)
+{
+    TG_ASSERT(h_camera);
+
+    return h_camera->position;
+}
+
+tg_render_target_h tg_camera_get_render_target(tg_camera_h h_camera)
+{
+    TG_ASSERT(h_camera);
+
+    return &h_camera->render_target;
 }
 
 void tg_camera_set_orthographic_projection(tg_camera_h h_camera, f32 left, f32 right, f32 bottom, f32 top, f32 far, f32 near)
