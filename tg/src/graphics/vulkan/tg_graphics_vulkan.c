@@ -50,7 +50,7 @@ VkDebugUtilsMessengerEXT    debug_utils_messenger;
 
 
 #ifdef TG_DEBUG
-static VKAPI_ATTR VkBool32 VKAPI_CALL tgi_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity, VkDebugUtilsMessageTypeFlagsEXT message_type, const VkDebugUtilsMessengerCallbackDataEXT* callback_data, void* user_data)
+static VKAPI_ATTR VkBool32 VKAPI_CALL tg__debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity, VkDebugUtilsMessageTypeFlagsEXT message_type, const VkDebugUtilsMessengerCallbackDataEXT* callback_data, void* user_data)
 {
     TG_DEBUG_LOG(callback_data->pMessage);
     return VK_TRUE;
@@ -63,7 +63,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL tgi_debug_callback(VkDebugUtilsMessageSeve
 | General utilities                                           |
 +------------------------------------------------------------*/
 
-static VkImageView tgi_image_view_create(VkImage image, VkImageViewType view_type, VkFormat format, VkImageAspectFlagBits aspect_mask, u32 mip_levels)
+static VkImageView tg__image_view_create(VkImage image, VkImageViewType view_type, VkFormat format, VkImageAspectFlagBits aspect_mask, u32 mip_levels)
 {
     VkImageView image_view = VK_NULL_HANDLE;
 
@@ -91,7 +91,7 @@ static VkImageView tgi_image_view_create(VkImage image, VkImageViewType view_typ
 
 
 
-static VkDescriptorPool tgi_descriptor_pool_create(VkDescriptorPoolCreateFlags flags, u32 max_sets, u32 pool_size_count, const VkDescriptorPoolSize* p_descriptor_pool_sizes)
+static VkDescriptorPool tg__descriptor_pool_create(VkDescriptorPoolCreateFlags flags, u32 max_sets, u32 pool_size_count, const VkDescriptorPoolSize* p_descriptor_pool_sizes)
 {
     VkDescriptorPool descriptor_pool = VK_NULL_HANDLE;
 
@@ -108,14 +108,14 @@ static VkDescriptorPool tgi_descriptor_pool_create(VkDescriptorPoolCreateFlags f
     return descriptor_pool;
 }
 
-static void tgi_descriptor_pool_destroy(VkDescriptorPool descriptor_pool)
+static void tg__descriptor_pool_destroy(VkDescriptorPool descriptor_pool)
 {
     vkDestroyDescriptorPool(device, descriptor_pool, TG_NULL);
 }
 
 
 
-static VkDescriptorSetLayout tgi_descriptor_set_layout_create(VkDescriptorSetLayoutCreateFlags flags, u32 binding_count, const VkDescriptorSetLayoutBinding* p_bindings)
+static VkDescriptorSetLayout tg__descriptor_set_layout_create(VkDescriptorSetLayoutCreateFlags flags, u32 binding_count, const VkDescriptorSetLayoutBinding* p_bindings)
 {
     VkDescriptorSetLayout descriptor_set_layout = VK_NULL_HANDLE;
 
@@ -131,14 +131,14 @@ static VkDescriptorSetLayout tgi_descriptor_set_layout_create(VkDescriptorSetLay
     return descriptor_set_layout;
 }
 
-static void tgi_descriptor_set_layout_destroy(VkDescriptorSetLayout descriptor_set_layout)
+static void tg__descriptor_set_layout_destroy(VkDescriptorSetLayout descriptor_set_layout)
 {
     vkDestroyDescriptorSetLayout(device, descriptor_set_layout, TG_NULL);
 }
 
 
 
-static VkDescriptorSet tgi_descriptor_set_allocate(VkDescriptorPool descriptor_pool, VkDescriptorSetLayout descriptor_set_layout)
+static VkDescriptorSet tg__descriptor_set_allocate(VkDescriptorPool descriptor_pool, VkDescriptorSetLayout descriptor_set_layout)
 {
     VkDescriptorSet descriptor_set = VK_NULL_HANDLE;
 
@@ -154,14 +154,14 @@ static VkDescriptorSet tgi_descriptor_set_allocate(VkDescriptorPool descriptor_p
     return descriptor_set;
 }
 
-static void tgi_descriptor_set_free(VkDescriptorPool descriptor_pool, VkDescriptorSet descriptor_set)
+static void tg__descriptor_set_free(VkDescriptorPool descriptor_pool, VkDescriptorSet descriptor_set)
 {
     VK_CALL(vkFreeDescriptorSets(device, descriptor_pool, 1, &descriptor_set));
 }
 
 
 
-static VkSampler tgi_sampler_create_custom(u32 mip_levels, VkFilter min_filter, VkFilter mag_filter, VkSamplerAddressMode address_mode_u, VkSamplerAddressMode address_mode_v, VkSamplerAddressMode address_mode_w)
+static VkSampler tg__sampler_create_custom(u32 mip_levels, VkFilter min_filter, VkFilter mag_filter, VkSamplerAddressMode address_mode_u, VkSamplerAddressMode address_mode_v, VkSamplerAddressMode address_mode_w)
 {
     VkSampler sampler = VK_NULL_HANDLE;
 
@@ -190,12 +190,12 @@ static VkSampler tgi_sampler_create_custom(u32 mip_levels, VkFilter min_filter, 
     return sampler;
 }
 
-static VkSampler tgi_sampler_create(u32 mip_levels)
+static VkSampler tg__sampler_create(u32 mip_levels)
 {
-    return tgi_sampler_create_custom(mip_levels, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT);
+    return tg__sampler_create_custom(mip_levels, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT);
 }
 
-static void tgi_sampler_destroy(VkSampler sampler)
+static void tg__sampler_destroy(VkSampler sampler)
 {
     vkDestroySampler(device, sampler, TG_NULL);
 }
@@ -380,11 +380,11 @@ tg_color_image tg_vulkan_color_image_create(const tg_vulkan_color_image_create_i
     //tg_vulkan_command_buffer_end_and_submit(command_buffer, &graphics_queue);
     //tg_vulkan_command_buffer_free(graphics_command_pool, command_buffer);
     
-    color_image.image_view = tgi_image_view_create(color_image.image, VK_IMAGE_VIEW_TYPE_2D, color_image.format, VK_IMAGE_ASPECT_COLOR_BIT, color_image.mip_levels);
+    color_image.image_view = tg__image_view_create(color_image.image, VK_IMAGE_VIEW_TYPE_2D, color_image.format, VK_IMAGE_ASPECT_COLOR_BIT, color_image.mip_levels);
 
     if (p_vulkan_color_image_create_info->p_vulkan_sampler_create_info)
     {
-        color_image.sampler = tgi_sampler_create_custom(
+        color_image.sampler = tg__sampler_create_custom(
             color_image.mip_levels,
             p_vulkan_color_image_create_info->p_vulkan_sampler_create_info->min_filter,
             p_vulkan_color_image_create_info->p_vulkan_sampler_create_info->mag_filter,
@@ -395,7 +395,7 @@ tg_color_image tg_vulkan_color_image_create(const tg_vulkan_color_image_create_i
     }
     else
     {
-        color_image.sampler = tgi_sampler_create(color_image.mip_levels);
+        color_image.sampler = tg__sampler_create(color_image.mip_levels);
     }
 
     return color_image;
@@ -811,11 +811,11 @@ tg_depth_image tg_vulkan_depth_image_create(const tg_vulkan_depth_image_create_i
     depth_image.memory = tg_vulkan_memory_allocator_alloc(memory_requirements.alignment, memory_requirements.size, memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     VK_CALL(vkBindImageMemory(device, depth_image.image, depth_image.memory.device_memory, depth_image.memory.offset));
 
-    depth_image.image_view = tgi_image_view_create(depth_image.image, VK_IMAGE_VIEW_TYPE_2D, depth_image.format, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
+    depth_image.image_view = tg__image_view_create(depth_image.image, VK_IMAGE_VIEW_TYPE_2D, depth_image.format, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
 
     if (p_vulkan_depth_image_create_info->p_vulkan_sampler_create_info)
     {
-        depth_image.sampler = tgi_sampler_create_custom(
+        depth_image.sampler = tg__sampler_create_custom(
             1,
             p_vulkan_depth_image_create_info->p_vulkan_sampler_create_info->min_filter,
             p_vulkan_depth_image_create_info->p_vulkan_sampler_create_info->mag_filter,
@@ -826,7 +826,7 @@ tg_depth_image tg_vulkan_depth_image_create(const tg_vulkan_depth_image_create_i
     }
     else
     {
-        depth_image.sampler = tgi_sampler_create(1);
+        depth_image.sampler = tg__sampler_create(1);
     }
 
     return depth_image;
@@ -864,11 +864,11 @@ tg_vulkan_descriptor tg_vulkan_descriptor_create(u32 binding_count, VkDescriptor
         p_descriptor_pool_sizes[i].type = p_bindings[i].descriptorType;
         p_descriptor_pool_sizes[i].descriptorCount = p_bindings[i].descriptorCount;
     }
-    vulkan_descriptor.descriptor_pool = tgi_descriptor_pool_create(0, 1, binding_count, p_descriptor_pool_sizes);
+    vulkan_descriptor.descriptor_pool = tg__descriptor_pool_create(0, 1, binding_count, p_descriptor_pool_sizes);
     TG_MEMORY_STACK_FREE(descriptor_pool_sizes_size);
 
-    vulkan_descriptor.descriptor_set_layout = tgi_descriptor_set_layout_create(0, binding_count, p_bindings);
-    vulkan_descriptor.descriptor_set = tgi_descriptor_set_allocate(vulkan_descriptor.descriptor_pool, vulkan_descriptor.descriptor_set_layout);
+    vulkan_descriptor.descriptor_set_layout = tg__descriptor_set_layout_create(0, binding_count, p_bindings);
+    vulkan_descriptor.descriptor_set = tg__descriptor_set_allocate(vulkan_descriptor.descriptor_pool, vulkan_descriptor.descriptor_set_layout);
 
     return vulkan_descriptor;
 }
@@ -896,8 +896,8 @@ tg_vulkan_descriptor tg_vulkan_descriptor_create_for_shader(const tg_vulkan_shad
 
 void tg_vulkan_descriptor_destroy(tg_vulkan_descriptor* p_vulkan_descriptor)
 {
-    tgi_descriptor_set_layout_destroy(p_vulkan_descriptor->descriptor_set_layout);
-    tgi_descriptor_pool_destroy(p_vulkan_descriptor->descriptor_pool);
+    tg__descriptor_set_layout_destroy(p_vulkan_descriptor->descriptor_set_layout);
+    tg__descriptor_pool_destroy(p_vulkan_descriptor->descriptor_pool);
 }
 
 
@@ -1625,7 +1625,7 @@ tg_storage_image_3d tg_vulkan_storage_image_3d_create(u32 width, u32 height, u32
     storage_image_3d.memory = tg_vulkan_memory_allocator_alloc(memory_requirements.alignment, memory_requirements.size, memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     VK_CALL(vkBindImageMemory(device, storage_image_3d.image, storage_image_3d.memory.device_memory, storage_image_3d.memory.offset));
 
-    storage_image_3d.image_view = tgi_image_view_create(storage_image_3d.image, VK_IMAGE_VIEW_TYPE_3D, storage_image_3d.format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+    storage_image_3d.image_view = tg__image_view_create(storage_image_3d.image, VK_IMAGE_VIEW_TYPE_3D, storage_image_3d.format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
 
     VkCommandBuffer command_buffer = tg_vulkan_command_buffer_allocate(graphics_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     tg_vulkan_command_buffer_begin(command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
@@ -1664,7 +1664,7 @@ VkFormat tg_vulkan_storage_image_convert_format(tg_storage_image_format format)
 | Main utilities                                              |
 +------------------------------------------------------------*/
 
-static VkCommandPool tgi_command_pool_create(VkCommandPoolCreateFlags command_pool_create_flags, u32 queue_family_index)
+static VkCommandPool tg__command_pool_create(VkCommandPoolCreateFlags command_pool_create_flags, u32 queue_family_index)
 {
     VkCommandPool command_pool = VK_NULL_HANDLE;
 
@@ -1679,12 +1679,12 @@ static VkCommandPool tgi_command_pool_create(VkCommandPoolCreateFlags command_po
     return command_pool;
 }
 
-static void tgi_command_pool_destroy(VkCommandPool command_pool)
+static void tg__command_pool_destroy(VkCommandPool command_pool)
 {
     vkDestroyCommandPool(device, command_pool, TG_NULL);
 }
 
-static b32 tgi_physical_device_supports_required_queue_families(VkPhysicalDevice physical_device)
+static b32 tg__physical_device_supports_required_queue_families(VkPhysicalDevice physical_device)
 {
     u32 queue_family_property_count;
     vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_property_count, TG_NULL);
@@ -1714,9 +1714,9 @@ static b32 tgi_physical_device_supports_required_queue_families(VkPhysicalDevice
     return result;
 }
 
-static void tgi_physical_device_find_queue_family_indices(VkPhysicalDevice physical_device, u32* p_graphics_queue_index, u32* p_present_queue_index, u32* p_compute_queue_index)
+static void tg__physical_device_find_queue_family_indices(VkPhysicalDevice physical_device, u32* p_graphics_queue_index, u32* p_present_queue_index, u32* p_compute_queue_index)
 {
-    TG_ASSERT(tgi_physical_device_supports_required_queue_families(physical_device));
+    TG_ASSERT(tg__physical_device_supports_required_queue_families(physical_device));
 
     u32 queue_family_property_count;
     vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_property_count, TG_NULL);
@@ -1791,7 +1791,7 @@ static void tgi_physical_device_find_queue_family_indices(VkPhysicalDevice physi
     TG_MEMORY_STACK_FREE(queue_family_properties_size);
 }
 
-static VkSampleCountFlagBits tgi_physical_device_find_max_sample_count(VkPhysicalDevice physical_device)
+static VkSampleCountFlagBits tg__physical_device_find_max_sample_count(VkPhysicalDevice physical_device)
 {
     VkPhysicalDeviceProperties physical_device_properties;
     vkGetPhysicalDeviceProperties(physical_device, &physical_device_properties);
@@ -1828,7 +1828,7 @@ static VkSampleCountFlagBits tgi_physical_device_find_max_sample_count(VkPhysica
     }
 }
 
-static b32 tgi_physical_device_supports_extension(VkPhysicalDevice physical_device)
+static b32 tg__physical_device_supports_extension(VkPhysicalDevice physical_device)
 {
     u32 device_extension_property_count;
     VK_CALL(vkEnumerateDeviceExtensionProperties(physical_device, TG_NULL, &device_extension_property_count, TG_NULL));
@@ -1855,7 +1855,7 @@ static b32 tgi_physical_device_supports_extension(VkPhysicalDevice physical_devi
     return supports_extensions;
 }
 
-static u32 tgi_physical_device_rate(VkPhysicalDevice physical_device)
+static u32 tg__physical_device_rate(VkPhysicalDevice physical_device)
 {
     u32 rating = 0;
 
@@ -1871,8 +1871,8 @@ static u32 tgi_physical_device_rate(VkPhysicalDevice physical_device)
     u32 physical_device_present_mode_count;
     VK_CALL(vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface.surface, &physical_device_present_mode_count, TG_NULL));
 
-    if (!tgi_physical_device_supports_extension(physical_device) ||
-        !tgi_physical_device_supports_required_queue_families(physical_device) ||
+    if (!tg__physical_device_supports_extension(physical_device) ||
+        !tg__physical_device_supports_required_queue_families(physical_device) ||
         !physical_device_surface_format_count ||
         !physical_device_present_mode_count)
     {
@@ -1890,7 +1890,7 @@ static u32 tgi_physical_device_rate(VkPhysicalDevice physical_device)
     {
         rating += 64;
     }
-    rating += (u32)tgi_physical_device_find_max_sample_count(physical_device);
+    rating += (u32)tg__physical_device_find_max_sample_count(physical_device);
 
     return rating;
 }
@@ -1899,7 +1899,7 @@ static u32 tgi_physical_device_rate(VkPhysicalDevice physical_device)
 
 
 
-static VkInstance tgi_instance_create()
+static VkInstance tg__instance_create()
 {
     VkInstance instance = VK_NULL_HANDLE;
 
@@ -1967,7 +1967,7 @@ static VkInstance tgi_instance_create()
 }
 
 #ifdef TG_DEBUG
-static VkDebugUtilsMessengerEXT tgi_debug_utils_manager_create()
+static VkDebugUtilsMessengerEXT tg__debug_utils_manager_create()
 {
     VkDebugUtilsMessengerEXT debug_utils_messenger = VK_NULL_HANDLE;
 
@@ -1977,7 +1977,7 @@ static VkDebugUtilsMessengerEXT tgi_debug_utils_manager_create()
     debug_utils_messenger_create_info.flags = 0;
     debug_utils_messenger_create_info.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
     debug_utils_messenger_create_info.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-    debug_utils_messenger_create_info.pfnUserCallback = tgi_debug_callback;
+    debug_utils_messenger_create_info.pfnUserCallback = tg__debug_callback;
     debug_utils_messenger_create_info.pUserData = TG_NULL;
 
     PFN_vkCreateDebugUtilsMessengerEXT vkCreateDebugUtilsMessengerEXT = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
@@ -1989,7 +1989,7 @@ static VkDebugUtilsMessengerEXT tgi_debug_utils_manager_create()
 #endif
 
 #ifdef TG_WIN32
-static tg_vulkan_surface tgi_surface_create()
+static tg_vulkan_surface tg__surface_create()
 {
     tg_vulkan_surface vulkan_surface = { 0 };
 
@@ -2006,7 +2006,7 @@ static tg_vulkan_surface tgi_surface_create()
 }
 #endif
 
-static VkPhysicalDevice tgi_physical_device_create()
+static VkPhysicalDevice tg__physical_device_create()
 {
     VkPhysicalDevice physical_device = VK_NULL_HANDLE;
 
@@ -2021,7 +2021,7 @@ static VkPhysicalDevice tgi_physical_device_create()
     u32 best_physical_device_rating = 0;
     for (u32 i = 0; i < physical_device_count; i++)
     {
-        const u32 rating = tgi_physical_device_rate(p_physical_devices[i]);
+        const u32 rating = tg__physical_device_rate(p_physical_devices[i]);
         if (rating > best_physical_device_rating)
         {
             best_physical_device_index = i;
@@ -2034,12 +2034,12 @@ static VkPhysicalDevice tgi_physical_device_create()
     TG_ASSERT(physical_device != VK_NULL_HANDLE);
 
     TG_MEMORY_STACK_FREE(physical_devices_size);
-    tgi_physical_device_find_queue_family_indices(physical_device, &graphics_queue.index, &present_queue.index, &compute_queue.index);
+    tg__physical_device_find_queue_family_indices(physical_device, &graphics_queue.index, &present_queue.index, &compute_queue.index);
 
     return physical_device;
 }
 
-static VkDevice tgi_device_create()
+static VkDevice tg__device_create()
 {
     VkDevice device = VK_NULL_HANDLE;
 
@@ -2161,7 +2161,7 @@ static VkDevice tgi_device_create()
     return device;
 }
 
-static void tgi_queues_create(tg_vulkan_queue* p_graphics_queue, tg_vulkan_queue* p_present_queue, tg_vulkan_queue* p_compute_queue)
+static void tg__queues_create(tg_vulkan_queue* p_graphics_queue, tg_vulkan_queue* p_present_queue, tg_vulkan_queue* p_compute_queue)
 {
     TG_ASSERT(p_graphics_queue && p_present_queue);
 
@@ -2170,7 +2170,7 @@ static void tgi_queues_create(tg_vulkan_queue* p_graphics_queue, tg_vulkan_queue
     vkGetDeviceQueue(device, p_compute_queue->index, 0, &p_compute_queue->queue);
 }
 
-static void tgi_swapchain_create()
+static void tg__swapchain_create()
 {
     VkSurfaceCapabilitiesKHR surface_capabilities;
     VK_CALL(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device, surface.surface, &surface_capabilities));
@@ -2257,7 +2257,7 @@ static void tgi_swapchain_create()
 
     for (u32 i = 0; i < TG_VULKAN_SURFACE_IMAGE_COUNT; i++)
     {
-        p_swapchain_image_views[i] = tgi_image_view_create(p_swapchain_images[i], VK_IMAGE_VIEW_TYPE_2D, surface.format.format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+        p_swapchain_image_views[i] = tg__image_view_create(p_swapchain_images[i], VK_IMAGE_VIEW_TYPE_2D, surface.format.format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
     }
 }
 
@@ -2269,17 +2269,17 @@ static void tgi_swapchain_create()
 
 void tg_graphics_init()
 {
-    instance = tgi_instance_create();
+    instance = tg__instance_create();
 #ifdef TG_DEBUG
-    debug_utils_messenger = tgi_debug_utils_manager_create();
+    debug_utils_messenger = tg__debug_utils_manager_create();
 #endif
-    surface = tgi_surface_create();
-    physical_device = tgi_physical_device_create();
-    device = tgi_device_create();
-    tgi_queues_create(&graphics_queue, &present_queue, &compute_queue);
-    graphics_command_pool = tgi_command_pool_create(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, graphics_queue.index);
-    compute_command_pool = tgi_command_pool_create(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, compute_queue.index);
-    tgi_swapchain_create();
+    surface = tg__surface_create();
+    physical_device = tg__physical_device_create();
+    device = tg__device_create();
+    tg__queues_create(&graphics_queue, &present_queue, &compute_queue);
+    graphics_command_pool = tg__command_pool_create(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, graphics_queue.index);
+    compute_command_pool = tg__command_pool_create(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, compute_queue.index);
+    tg__swapchain_create();
 
     tg_vulkan_memory_allocator_init(device, physical_device);
 }
@@ -2293,8 +2293,8 @@ void tg_graphics_shutdown()
 {
     tg_vulkan_memory_allocator_shutdown(device);
 
-    tgi_command_pool_destroy(compute_command_pool);
-    tgi_command_pool_destroy(graphics_command_pool);
+    tg__command_pool_destroy(compute_command_pool);
+    tg__command_pool_destroy(graphics_command_pool);
     for (u32 i = 0; i < TG_VULKAN_SURFACE_IMAGE_COUNT; i++)
     {
         vkDestroyImageView(device, p_swapchain_image_views[i], TG_NULL);
@@ -2319,7 +2319,7 @@ void tg_graphics_on_window_resize(u32 width, u32 height)
         vkDestroyImageView(device, p_swapchain_image_views[i], TG_NULL);
     }
     vkDestroySwapchainKHR(device, swapchain, TG_NULL);
-    tgi_swapchain_create();
+    tg__swapchain_create();
 }
 
 #endif

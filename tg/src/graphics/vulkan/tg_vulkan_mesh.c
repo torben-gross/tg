@@ -22,7 +22,7 @@ typedef struct tg_normals_compute_shader_uniform_buffer
 
 
 
-static void tgi_recalculate_normal(tg_vertex* p_v0, tg_vertex* p_v1, tg_vertex* p_v2)
+static void tg__recalculate_normal(tg_vertex* p_v0, tg_vertex* p_v1, tg_vertex* p_v2)
 {
     const v3 v01 = tgm_v3_sub(p_v1->position, p_v0->position);
     const v3 v02 = tgm_v3_sub(p_v2->position, p_v0->position);
@@ -33,14 +33,14 @@ static void tgi_recalculate_normal(tg_vertex* p_v0, tg_vertex* p_v1, tg_vertex* 
     p_v2->normal = normal;
 }
 
-static void tgi_recalculate_normals(u32 vertex_count, u32 index_count, const u16* p_indices, tg_vulkan_buffer* p_staging_buffer)
+static void tg__recalculate_normals(u32 vertex_count, u32 index_count, const u16* p_indices, tg_vulkan_buffer* p_staging_buffer)
 {
     if (index_count != 0)
     {
         for (u32 i = 0; i < index_count; i += 3)
         {
             // TODO: these will override normals, that have been set before. this should be interpolated (only relevant if indices exits).
-            tgi_recalculate_normal(
+            tg__recalculate_normal(
                 &((tg_vertex*)p_staging_buffer->memory.p_mapped_device_memory)[p_indices[i + 0]],
                 &((tg_vertex*)p_staging_buffer->memory.p_mapped_device_memory)[p_indices[i + 1]],
                 &((tg_vertex*)p_staging_buffer->memory.p_mapped_device_memory)[p_indices[i + 2]]
@@ -110,7 +110,7 @@ static void tgi_recalculate_normals(u32 vertex_count, u32 index_count, const u16
 #else
         for (u32 i = 0; i < vertex_count; i += 3)
         {
-            tgi_recalculate_normal(
+            tg__recalculate_normal(
                 &((tg_vertex*)p_staging_buffer->p_mapped_device_memory)[i + 0],
                 &((tg_vertex*)p_staging_buffer->p_mapped_device_memory)[i + 1],
                 &((tg_vertex*)p_staging_buffer->p_mapped_device_memory)[i + 2]
@@ -120,7 +120,7 @@ static void tgi_recalculate_normals(u32 vertex_count, u32 index_count, const u16
     }
 }
 
-static void tgi_recalculate_tangent_bitangent(tg_vertex* p_v0, tg_vertex* p_v1, tg_vertex* p_v2)
+static void tg__recalculate_tangent_bitangent(tg_vertex* p_v0, tg_vertex* p_v1, tg_vertex* p_v2)
 {
     const v3 delta_p_01 = tgm_v3_sub(p_v1->position, p_v0->position);
     const v3 delta_p_02 = tgm_v3_sub(p_v2->position, p_v0->position);
@@ -149,25 +149,25 @@ static void tgi_recalculate_tangent_bitangent(tg_vertex* p_v0, tg_vertex* p_v1, 
     p_v2->bitangent = bitangent;
 }
 
-static void tgi_recalculate_tangents_bitangents(u32 vertex_count, u32 index_count, const u16* p_indices, tg_vertex* p_vertices)
+static void tg__recalculate_tangents_bitangents(u32 vertex_count, u32 index_count, const u16* p_indices, tg_vertex* p_vertices)
 {
     if (index_count != 0)
     {
         for (u32 i = 0; i < index_count; i += 3)
         {
-            tgi_recalculate_tangent_bitangent(&p_vertices[p_indices[i + 0]], &p_vertices[p_indices[i + 1]], &p_vertices[p_indices[i + 2]]);
+            tg__recalculate_tangent_bitangent(&p_vertices[p_indices[i + 0]], &p_vertices[p_indices[i + 1]], &p_vertices[p_indices[i + 2]]);
         }
     }
     else
     {
         for (u32 i = 0; i < vertex_count; i += 3)
         {
-            tgi_recalculate_tangent_bitangent(&p_vertices[i + 0], &p_vertices[i + 1], &p_vertices[i + 2]);
+            tg__recalculate_tangent_bitangent(&p_vertices[i + 0], &p_vertices[i + 1], &p_vertices[i + 2]);
         }
     }
 }
 
-static void tgi_recalculate_bitangents(u32 vertex_count, tg_vertex* p_vertices)
+static void tg__recalculate_bitangents(u32 vertex_count, tg_vertex* p_vertices)
 {
     for (u32 i = 0; i < vertex_count; i++)
     {
@@ -231,7 +231,7 @@ tg_mesh_h tg_mesh_create(u32 vertex_count, const v3* p_positions, const v3* p_no
     }
     else
     {
-        tgi_recalculate_normals(vertex_count, index_count, p_indices, &staging_buffer);
+        tg__recalculate_normals(vertex_count, index_count, p_indices, &staging_buffer);
     }
     // tangents, bitangents
     if (p_uvs)
@@ -242,11 +242,11 @@ tg_mesh_h tg_mesh_create(u32 vertex_count, const v3* p_positions, const v3* p_no
             {
                 ((tg_vertex*)staging_buffer.memory.p_mapped_device_memory)[i].tangent = p_tangents[i];
             }
-            tgi_recalculate_bitangents(vertex_count, (tg_vertex*)staging_buffer.memory.p_mapped_device_memory);
+            tg__recalculate_bitangents(vertex_count, (tg_vertex*)staging_buffer.memory.p_mapped_device_memory);
         }
         else
         {
-            tgi_recalculate_tangents_bitangents(vertex_count, index_count, p_indices, (tg_vertex*)staging_buffer.memory.p_mapped_device_memory);
+            tg__recalculate_tangents_bitangents(vertex_count, index_count, p_indices, (tg_vertex*)staging_buffer.memory.p_mapped_device_memory);
         }
     }
     else

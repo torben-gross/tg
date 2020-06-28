@@ -34,7 +34,7 @@ typedef struct tg_file_iterator
 
 
 
-static void tgi_convert_filetime_to_systemtime(const FILETIME* p_file_time, tg_system_time* p_system_time)
+static void tg__convert_filetime_to_systemtime(const FILETIME* p_file_time, tg_system_time* p_system_time)
 {
     SYSTEMTIME systemtime = { 0 };
     FileTimeToSystemTime(p_file_time, &systemtime);
@@ -47,13 +47,13 @@ static void tgi_convert_filetime_to_systemtime(const FILETIME* p_file_time, tg_s
     p_system_time->milliseconds = systemtime.wMilliseconds;
 }
 
-static void tgi_fill_file_properties(const char* p_directory, WIN32_FIND_DATAA* p_find_data, tg_file_properties* p_properties)
+static void tg__fill_file_properties(const char* p_directory, WIN32_FIND_DATAA* p_find_data, tg_file_properties* p_properties)
 {
     p_properties->is_directory = (p_find_data->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
 
-    tgi_convert_filetime_to_systemtime(&p_find_data->ftCreationTime, &p_properties->creation_time);
-    tgi_convert_filetime_to_systemtime(&p_find_data->ftLastAccessTime, &p_properties->last_access_time);
-    tgi_convert_filetime_to_systemtime(&p_find_data->ftLastWriteTime, &p_properties->last_write_time);
+    tg__convert_filetime_to_systemtime(&p_find_data->ftCreationTime, &p_properties->creation_time);
+    tg__convert_filetime_to_systemtime(&p_find_data->ftLastAccessTime, &p_properties->last_access_time);
+    tg__convert_filetime_to_systemtime(&p_find_data->ftLastWriteTime, &p_properties->last_write_time);
 
     LARGE_INTEGER size = { 0 };
     size.LowPart = p_find_data->nFileSizeLow;
@@ -89,7 +89,7 @@ tg_file_iterator_h tg_platform_begin_file_iteration(const char* p_directory, tg_
             return TG_NULL;
         }
     }
-    tgi_fill_file_properties(p_directory, &find_data, p_properties);
+    tg__fill_file_properties(p_directory, &find_data, p_properties);
 
     return h_file_iterator;
 }
@@ -105,7 +105,7 @@ b32 tg_platform_continue_file_iteration(const char* p_directory, tg_file_iterato
         FindClose(h_file_iterator);
         return TG_FALSE;
     }
-    tgi_fill_file_properties(p_directory, &find_data, p_properties);
+    tg__fill_file_properties(p_directory, &find_data, p_properties);
     return TG_TRUE;
 }
 
@@ -177,7 +177,7 @@ b32 tg_platform_get_file_properties(const char* p_filename, tg_file_properties* 
     tg_string_format(MAX_PATH, p_directory_buffer, "%s\\%s", tg_assets_get_asset_path(), p_relative_directory_buffer);
     tg_string_replace_characters(p_directory_buffer, '/', '\\');
 
-    tgi_fill_file_properties(p_directory_buffer, &find_data, p_properties);
+    tg__fill_file_properties(p_directory_buffer, &find_data, p_properties);
     FindClose(handle);
 
     return TG_TRUE;

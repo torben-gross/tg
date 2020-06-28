@@ -126,7 +126,7 @@ typedef struct tg_bitmapv5header
 
 
 
-static void tgi_convert_format_to_masks(tg_color_image_format format, u32* r_mask, u32* g_mask, u32* b_mask, u32* a_mask)
+static void tg__convert_format_to_masks(tg_color_image_format format, u32* r_mask, u32* g_mask, u32* b_mask, u32* a_mask)
 {
 	switch (format)
 	{
@@ -183,7 +183,7 @@ static void tgi_convert_format_to_masks(tg_color_image_format format, u32* r_mas
 	}
 }
 
-static void tgi_convert_masks_to_format(u32 r_mask, u32 g_mask, u32 b_mask, u32 a_mask, tg_color_image_format* format)
+static void tg__convert_masks_to_format(u32 r_mask, u32 g_mask, u32 b_mask, u32 a_mask, tg_color_image_format* format)
 {
 	TG_ASSERT(r_mask | g_mask | b_mask | a_mask);
 
@@ -246,7 +246,7 @@ static void tgi_convert_masks_to_format(u32 r_mask, u32 g_mask, u32 b_mask, u32 
 	}
 }
 
-static void tgi_load_bmp_from_memory(u64 file_size, const char* file_memory, u32* p_width, u32* p_height, tg_color_image_format* p_format, u32** pp_data)
+static void tg__load_bmp_from_memory(u64 file_size, const char* file_memory, u32* p_width, u32* p_height, tg_color_image_format* p_format, u32** pp_data)
 {
 	TG_ASSERT(file_memory && p_width && p_height && p_format && pp_data);
 	TG_ASSERT(file_size >= TG_BMP_MIN_SIZE && *(u16*)file_memory == TG_BMP_IDENTIFIER);
@@ -297,7 +297,7 @@ static void tgi_load_bmp_from_memory(u64 file_size, const char* file_memory, u32
 
 	*p_width = bitmapv5header.width;
 	*p_height = bitmapv5header.height;
-	tgi_convert_masks_to_format(bitmapv5header.r_mask, bitmapv5header.g_mask, bitmapv5header.b_mask, bitmapv5header.a_mask, p_format);
+	tg__convert_masks_to_format(bitmapv5header.r_mask, bitmapv5header.g_mask, bitmapv5header.b_mask, bitmapv5header.a_mask, p_format);
 	const u64 size = (u64)bitmapv5header.width * (u64)bitmapv5header.height * (u64)sizeof(**pp_data);
 	*pp_data = TG_MEMORY_ALLOC(size);
 	tg_memory_copy(size, &file_memory[bitmapfileheader.offset_bits], *pp_data);
@@ -315,7 +315,7 @@ void tg_image_load(const char* p_filename, u32* p_width, u32* p_height, tg_color
 
 	if (size >= 2 && *(u16*)memory == TG_BMP_IDENTIFIER)
 	{
-		tgi_load_bmp_from_memory(size, memory, p_width, p_height, p_format, pp_data);
+		tg__load_bmp_from_memory(size, memory, p_width, p_height, p_format, pp_data);
 	}
 
 	tg_platform_free_file(memory);
@@ -332,13 +332,13 @@ void tg_image_convert_format(u32* p_data, u32 width, u32 height, tg_color_image_
 	u32 old_g_mask = 0;
 	u32 old_b_mask = 0;
 	u32 old_a_mask = 0;
-	tgi_convert_format_to_masks(old_format, &old_r_mask, &old_g_mask, &old_b_mask, &old_a_mask);
+	tg__convert_format_to_masks(old_format, &old_r_mask, &old_g_mask, &old_b_mask, &old_a_mask);
 
 	u32 new_r_mask = 0;
 	u32 new_g_mask = 0;
 	u32 new_b_mask = 0;
 	u32 new_a_mask = 0;
-	tgi_convert_format_to_masks(new_format, &new_r_mask, &new_g_mask, &new_b_mask, &new_a_mask);
+	tg__convert_format_to_masks(new_format, &new_r_mask, &new_g_mask, &new_b_mask, &new_a_mask);
 
 	for (u32 col = 0; col < width; col++)
 	{

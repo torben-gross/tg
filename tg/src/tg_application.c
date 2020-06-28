@@ -6,11 +6,8 @@
 #include "tg_assets.h"
 #include "tg_entity.h"
 #include "tg_input.h"
-#include "tg_marching_cubes.h"
 #include "tg_transvoxel_terrain.h"
 #include "util/tg_list.h"
-#include "util/tg_qsort.h"
-#include "util/tg_rectangle_packer.h"
 #include "util/tg_string.h"
 
 
@@ -68,15 +65,15 @@ tg_sample_scene sample_scene = { 0 };
 
 
 
-static void tgi_render_quad(tg_entity* p_entity, tg_camera_h h_camera)
+static void tg__render_quad(tg_entity* p_entity, tg_camera_h h_camera)
 {
     tg_camera_capture(h_camera, p_entity->p_data);
 }
 
-static void tgi_game_3d_create()
+static void tg__game_3d_create()
 {
     sample_scene.entities = TG_LIST_CREATE(tg_entity*);
-    sample_scene.position = (v3){ 0.0f, 0.0f, 0.0f };
+    sample_scene.position = (v3){ 0.0f, 400.0f, 0.0f };
     sample_scene.pitch = 0.0f;
     sample_scene.yaw = 0.0f;
     sample_scene.roll = 0.0f;
@@ -144,7 +141,7 @@ static void tgi_game_3d_create()
     sample_scene.h_quad_material = tg_material_create_forward(sample_scene.h_quad_vertex_shader, sample_scene.h_quad_fragment_shader, 3, p_custom_handles);
 
     sample_scene.quad_entity.p_data = tg_render_command_create(sample_scene.h_quad_mesh, sample_scene.h_quad_material);
-    sample_scene.quad_entity.p_render_fn = &tgi_render_quad;
+    sample_scene.quad_entity.p_render_fn = &tg__render_quad;
     tg_entity* p_quad_entity = &sample_scene.quad_entity;
     sample_scene.quad_offset_z = -65.0f;
     tg_list_insert(&sample_scene.entities, &p_quad_entity);
@@ -156,7 +153,7 @@ static void tgi_game_3d_create()
     tg_list_insert(&sample_scene.entities, &p_terrain_entity);
 }
 
-static void tgi_game_3d_update_and_render(f32 delta_ms)
+static void tg__game_3d_update_and_render(f32 delta_ms)
 {
     if (tg_input_is_key_down(TG_KEY_K))
     {
@@ -265,7 +262,7 @@ static void tgi_game_3d_update_and_render(f32 delta_ms)
     tg_camera_clear(sample_scene.h_primary_camera);
 }
 
-static void tgi_game_3d_destroy()
+static void tg__game_3d_destroy()
 {
     tg_transvoxel_terrain_destroy(&sample_scene.terrain);
 
@@ -287,7 +284,7 @@ void tg_application_start()
 {
     tg_graphics_init();
     tg_assets_init();
-    tgi_game_3d_create();
+    tg__game_3d_create();
 
 #ifdef TG_DEBUG
     tg_debug_info debug_info = { 0 };
@@ -330,7 +327,7 @@ void tg_application_start()
 
         tg_input_clear();
         tg_platform_handle_events();
-        tgi_game_3d_update_and_render(delta_ms);
+        tg__game_3d_update_and_render(delta_ms);
     }
 
     /*--------------------------------------------------------+
@@ -338,7 +335,7 @@ void tg_application_start()
     +--------------------------------------------------------*/
     tg_platform_timer_destroy(h_timer);
     tg_graphics_wait_idle();
-    tgi_game_3d_destroy();
+    tg__game_3d_destroy();
     tg_assets_shutdown();
     tg_graphics_shutdown();
 }

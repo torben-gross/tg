@@ -10,18 +10,18 @@
 
 
 
-void tgi_destroy_capture_pass(tg_camera_h h_camera)
+void tg__destroy_capture_pass(tg_camera_h h_camera)
 {
     tg_vulkan_forward_renderer_destroy(h_camera->capture_pass.h_forward_renderer);
     tg_vulkan_deferred_renderer_destroy(h_camera->capture_pass.h_deferred_renderer);
 }
 
-void tgi_destroy_clear_pass(tg_camera_h h_camera)
+void tg__destroy_clear_pass(tg_camera_h h_camera)
 {
     tg_vulkan_command_buffer_free(graphics_command_pool, h_camera->clear_pass.command_buffer);
 }
 
-void tgi_destroy_present_pass(tg_camera_h h_camera)
+void tg__destroy_present_pass(tg_camera_h h_camera)
 {
     tg_vulkan_command_buffers_free(graphics_command_pool, TG_VULKAN_SURFACE_IMAGE_COUNT, h_camera->present_pass.p_command_buffers);
     tg_vulkan_graphics_pipeline_destroy(h_camera->present_pass.graphics_pipeline);
@@ -35,13 +35,13 @@ void tgi_destroy_present_pass(tg_camera_h h_camera)
     tg_vulkan_buffer_destroy(&h_camera->present_pass.vbo);
 }
 
-void tgi_init_capture_pass(tg_camera_h h_camera)
+void tg__init_capture_pass(tg_camera_h h_camera)
 {
     h_camera->capture_pass.h_deferred_renderer = tg_vulkan_deferred_renderer_create(h_camera);
     h_camera->capture_pass.h_forward_renderer = tg_vulkan_forward_renderer_create(h_camera);
 }
 
-void tgi_init_clear_pass(tg_camera_h h_camera)
+void tg__init_clear_pass(tg_camera_h h_camera)
 {
     h_camera->clear_pass.command_buffer = tg_vulkan_command_buffer_allocate(graphics_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     tg_vulkan_command_buffer_begin(h_camera->clear_pass.command_buffer, 0, TG_NULL);
@@ -81,7 +81,7 @@ void tgi_init_clear_pass(tg_camera_h h_camera)
     vkEndCommandBuffer(h_camera->clear_pass.command_buffer);
 }
 
-void tgi_init_present_pass(tg_camera_h h_camera)
+void tg__init_present_pass(tg_camera_h h_camera)
 {
     tg_vulkan_buffer staging_buffer = { 0 };
 
@@ -318,7 +318,7 @@ void tgi_init_present_pass(tg_camera_h h_camera)
 
 
 
-void tgi_init(tg_camera_h h_camera)
+void tg__init(tg_camera_h h_camera)
 {
     h_camera->type = TG_HANDLE_TYPE_CAMERA;
     h_camera->view_projection_ubo = tg_vulkan_buffer_create(2 * sizeof(m4), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
@@ -339,9 +339,9 @@ void tgi_init(tg_camera_h h_camera)
     h_camera->render_target = tg_vulkan_render_target_create(&vulkan_color_image_create_info, &vulkan_depth_image_create_info, VK_FENCE_CREATE_SIGNALED_BIT);
     h_camera->render_command_count = 0;
 
-    tgi_init_capture_pass(h_camera);
-    tgi_init_present_pass(h_camera);
-    tgi_init_clear_pass(h_camera);
+    tg__init_capture_pass(h_camera);
+    tg__init_present_pass(h_camera);
+    tg__init_clear_pass(h_camera);
 
     VkDescriptorSetLayoutBinding p_descriptor_set_layout_bindings[2] = { 0 };
 
@@ -396,7 +396,7 @@ tg_camera_h tg_camera_create_orthographic(v3 position, f32 pitch, f32 yaw, f32 r
 	TG_ASSERT(left != right && bottom != top && far != near);
 
 	tg_camera_h h_camera = TG_MEMORY_ALLOC(sizeof(*h_camera));
-    tgi_init(h_camera);
+    tg__init(h_camera);
 	tg_camera_set_view(h_camera, position, pitch, yaw, roll);
 	tg_camera_set_orthographic_projection(h_camera, left, right, bottom, top, far, near);
 	return h_camera;
@@ -407,7 +407,7 @@ tg_camera_h tg_camera_create_perspective(v3 position, f32 pitch, f32 yaw, f32 ro
 	TG_ASSERT(near < 0 && far < 0 && near > far);
 
 	tg_camera_h h_camera = TG_MEMORY_ALLOC(sizeof(*h_camera));
-    tgi_init(h_camera);
+    tg__init(h_camera);
 	tg_camera_set_view(h_camera, position, pitch, yaw, roll);
 	tg_camera_set_perspective_projection(h_camera, fov_y, near, far);
 	return h_camera;
@@ -417,9 +417,9 @@ void tg_camera_destroy(tg_camera_h h_camera)
 {
 	TG_ASSERT(h_camera);
 
-    tgi_destroy_clear_pass(h_camera);
-    tgi_destroy_present_pass(h_camera);
-    tgi_destroy_capture_pass(h_camera);
+    tg__destroy_clear_pass(h_camera);
+    tg__destroy_present_pass(h_camera);
+    tg__destroy_capture_pass(h_camera);
     tg_vulkan_descriptor_destroy(&h_camera->descriptor);
     tg_vulkan_render_target_destroy(&h_camera->render_target);
     tg_vulkan_buffer_destroy(&h_camera->view_projection_ubo);

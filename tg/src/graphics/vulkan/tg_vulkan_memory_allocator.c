@@ -40,7 +40,7 @@ b32                 initialized = TG_FALSE;
 
 
 
-static VkDeviceSize tgi_round(VkDeviceSize size)
+static VkDeviceSize tg__round(VkDeviceSize size)
 {
     const VkDeviceSize result = ((size + vulkan_memory.page_size - 1) / vulkan_memory.page_size) * vulkan_memory.page_size;
     return result;
@@ -52,7 +52,7 @@ tg_vulkan_memory_block tg_vulkan_memory_allocator_alloc(VkDeviceSize alignment, 
 {
     TG_ASSERT(memory_type_bits && memory_property_flags);
 
-    const VkDeviceSize aligned_size = tgi_round(size);
+    const VkDeviceSize aligned_size = tg__round(size);
     const u32 required_page_count = (u32)(aligned_size / vulkan_memory.page_size);
 
     for (u32 i = 0; i < vulkan_memory.pool_count; i++)
@@ -146,7 +146,7 @@ void tg_vulkan_memory_allocator_init(VkDevice device, VkPhysicalDevice physical_
         if (p_memory_types_per_memory_heap[i])
         {
             const VkDeviceSize size_per_allocation = (physical_device_memory_properties.memoryHeaps[i].size / heap_size_fraction_denominator) / p_memory_types_per_memory_heap[i];
-            const VkDeviceSize aligned_size_per_allocation = tgi_round(size_per_allocation);
+            const VkDeviceSize aligned_size_per_allocation = tg__round(size_per_allocation);
             p_allocation_size_per_memory_heap[i] = aligned_size_per_allocation;
         }
     }

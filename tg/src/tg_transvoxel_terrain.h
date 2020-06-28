@@ -60,16 +60,16 @@ typedef struct tg_terrain_entity_node
 
 typedef struct tg_terrain_entity_octree
 {
-	void*                      p_voxel_map;
+	char*                      p_voxel_map;
 	v3i                        min_coordinates;
 	tg_terrain_entity_node*    p_root;
 } tg_terrain_entity_octree;
 
 typedef struct tg_terrain_entity_data
 {
-	tg_entity                   entity;
-	tg_camera_h                 h_camera;
-	tg_terrain_entity_octree    p_octrees[9];
+	tg_entity                    entity;
+	tg_camera_h                  h_camera;
+	tg_terrain_entity_octree*    pp_octrees[9];
 } tg_terrain_entity_data;
 
 

@@ -8,7 +8,7 @@
 
 
 
-static void tgi_destroy_geometry_pass(tg_deferred_renderer_h h_deferred_renderer)
+static void tg__destroy_geometry_pass(tg_deferred_renderer_h h_deferred_renderer)
 {
     tg_vulkan_color_image_destroy(&h_deferred_renderer->geometry_pass.position_attachment);
     tg_vulkan_color_image_destroy(&h_deferred_renderer->geometry_pass.normal_attachment);
@@ -18,7 +18,7 @@ static void tgi_destroy_geometry_pass(tg_deferred_renderer_h h_deferred_renderer
     tg_vulkan_command_buffer_free(graphics_command_pool, h_deferred_renderer->geometry_pass.command_buffer);
 }
 
-static void tgi_destroy_shading_pass(tg_deferred_renderer_h h_deferred_renderer)
+static void tg__destroy_shading_pass(tg_deferred_renderer_h h_deferred_renderer)
 {
     tg_vulkan_color_image_destroy(&h_deferred_renderer->shading_pass.color_attachment);
     tg_vulkan_buffer_destroy(&h_deferred_renderer->shading_pass.vbo);
@@ -33,7 +33,7 @@ static void tgi_destroy_shading_pass(tg_deferred_renderer_h h_deferred_renderer)
     tg_vulkan_buffer_destroy(&h_deferred_renderer->shading_pass.point_lights_ubo);
 }
 
-static void tgi_destroy_tone_mapping_pass(tg_deferred_renderer_h h_deferred_renderer)
+static void tg__destroy_tone_mapping_pass(tg_deferred_renderer_h h_deferred_renderer)
 {
     tg_vulkan_compute_pipeline_destroy(h_deferred_renderer->tone_mapping_pass.acquire_exposure_compute_pipeline);
     tg_vulkan_pipeline_layout_destroy(h_deferred_renderer->tone_mapping_pass.acquire_exposure_pipeline_layout);
@@ -47,7 +47,7 @@ static void tgi_destroy_tone_mapping_pass(tg_deferred_renderer_h h_deferred_rend
     tg_vulkan_command_buffer_free(graphics_command_pool, h_deferred_renderer->tone_mapping_pass.command_buffer);
 }
 
-static void tgi_init_geometry_pass(tg_deferred_renderer_h h_deferred_renderer)
+static void tg__init_geometry_pass(tg_deferred_renderer_h h_deferred_renderer)
 {
     tg_vulkan_color_image_create_info vulkan_color_image_create_info = { 0 };
     vulkan_color_image_create_info.width = swapchain_extent.width;
@@ -161,7 +161,7 @@ static void tgi_init_geometry_pass(tg_deferred_renderer_h h_deferred_renderer)
     h_deferred_renderer->geometry_pass.command_buffer = tg_vulkan_command_buffer_allocate(graphics_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 }
 
-static void tgi_init_shading_pass(tg_deferred_renderer_h h_deferred_renderer)
+static void tg__init_shading_pass(tg_deferred_renderer_h h_deferred_renderer)
 {
     TG_ASSERT(h_deferred_renderer);
 
@@ -453,7 +453,7 @@ static void tgi_init_shading_pass(tg_deferred_renderer_h h_deferred_renderer)
     VK_CALL(vkEndCommandBuffer(h_deferred_renderer->shading_pass.command_buffer));
 }
 
-static void tgi_init_tone_mapping_pass(tg_deferred_renderer_h h_deferred_renderer)
+static void tg__init_tone_mapping_pass(tg_deferred_renderer_h h_deferred_renderer)
 {
     h_deferred_renderer->tone_mapping_pass.acquire_exposure_compute_shader = ((tg_compute_shader_h)tg_assets_get_asset("shaders/acquire_exposure.comp"))->vulkan_shader;
     h_deferred_renderer->tone_mapping_pass.acquire_exposure_descriptor = tg_vulkan_descriptor_create_for_shader(&h_deferred_renderer->tone_mapping_pass.acquire_exposure_compute_shader);
@@ -638,9 +638,9 @@ tg_deferred_renderer_h tg_vulkan_deferred_renderer_create(tg_camera_h h_camera)
 
     tg_deferred_renderer_h h_deferred_renderer = TG_MEMORY_ALLOC(sizeof(*h_deferred_renderer));
     h_deferred_renderer->h_camera = h_camera;
-    tgi_init_geometry_pass(h_deferred_renderer);
-    tgi_init_shading_pass(h_deferred_renderer);
-    tgi_init_tone_mapping_pass(h_deferred_renderer);
+    tg__init_geometry_pass(h_deferred_renderer);
+    tg__init_shading_pass(h_deferred_renderer);
+    tg__init_tone_mapping_pass(h_deferred_renderer);
     return h_deferred_renderer;
 }
 
@@ -648,9 +648,9 @@ void tg_vulkan_deferred_renderer_destroy(tg_deferred_renderer_h h_deferred_rende
 {
     TG_ASSERT(h_deferred_renderer);
 
-    tgi_destroy_tone_mapping_pass(h_deferred_renderer);
-    tgi_destroy_shading_pass(h_deferred_renderer);
-    tgi_destroy_geometry_pass(h_deferred_renderer);
+    tg__destroy_tone_mapping_pass(h_deferred_renderer);
+    tg__destroy_shading_pass(h_deferred_renderer);
+    tg__destroy_geometry_pass(h_deferred_renderer);
     TG_MEMORY_FREE(h_deferred_renderer);
 }
 

@@ -511,13 +511,13 @@ typedef enum tg_spirv_op
 
 
 
-static b32 tgi_compare_by_location(const tg_spirv_input_resource* p_v0, const tg_spirv_input_resource* p_v1)
+static b32 tg__compare_by_location(const tg_spirv_input_resource* p_v0, const tg_spirv_input_resource* p_v1)
 {
     const b32 result = p_v0->location < p_v1->location;
     return result;
 }
 
-static void tgi_find_type(u32 word_count, const u32* p_words, u32 id, tg_spirv_op* p_type, u32* p_literal)
+static void tg__find_type(u32 word_count, const u32* p_words, u32 id, tg_spirv_op* p_type, u32* p_literal)
 {
     u32 processed_word_count = 0;
     while (processed_word_count < word_count)
@@ -552,7 +552,7 @@ static void tgi_find_type(u32 word_count, const u32* p_words, u32 id, tg_spirv_o
     TG_INVALID_CODEPATH();
 }
 
-static void tgi_fill_global_resource(u32 word_count, const u32* p_words, u32 id, tg_spirv_global_resource* p_resource)
+static void tg__fill_global_resource(u32 word_count, const u32* p_words, u32 id, tg_spirv_global_resource* p_resource)
 {
     u32 processed_word_count = 0;
     while (processed_word_count < word_count)
@@ -603,7 +603,7 @@ static void tgi_fill_global_resource(u32 word_count, const u32* p_words, u32 id,
                 if (storage_class == TG_SPIRV_STORAGE_CLASS_UNIFORM || storage_class == TG_SPIRV_STORAGE_CLASS_UNIFORM_CONSTANT)
                 {
                     const u32 pointed_to_id = p_words[processed_word_count + 3];
-                    tgi_fill_global_resource(word_count, p_words, pointed_to_id, p_resource);
+                    tg__fill_global_resource(word_count, p_words, pointed_to_id, p_resource);
                 }
                 else
                 {
@@ -617,7 +617,7 @@ static void tgi_fill_global_resource(u32 word_count, const u32* p_words, u32 id,
     }
 }
 
-static void tgi_fill_input_resource(u32 word_count, const u32* p_words, u32 id, tg_spirv_input_resource* p_resource)
+static void tg__fill_input_resource(u32 word_count, const u32* p_words, u32 id, tg_spirv_input_resource* p_resource)
 {
     u32 processed_word_count = 0;
     while (processed_word_count < word_count)
@@ -676,7 +676,7 @@ static void tgi_fill_input_resource(u32 word_count, const u32* p_words, u32 id, 
             {
                 u32 literal;
                 tg_spirv_op component_type;
-                tgi_find_type(word_count, p_words, p_words[processed_word_count + 2], &component_type, &literal);
+                tg__find_type(word_count, p_words, p_words[processed_word_count + 2], &component_type, &literal);
                 const u32 component_number = p_words[processed_word_count + 3];
                 switch (component_type)
                 {
@@ -718,7 +718,7 @@ static void tgi_fill_input_resource(u32 word_count, const u32* p_words, u32 id, 
                 if (storage_class == TG_SPIRV_STORAGE_CLASS_INPUT)
                 {
                     const u32 pointed_to_id = p_words[processed_word_count + 3];
-                    tgi_fill_input_resource(word_count, p_words, pointed_to_id, p_resource);
+                    tg__fill_input_resource(word_count, p_words, pointed_to_id, p_resource);
                 }
                 else
                 {
@@ -800,15 +800,15 @@ void tg_spirv_fill_layout(u32 word_count, const u32* p_words, tg_spirv_layout* p
             if (storage_class == TG_SPIRV_STORAGE_CLASS_UNIFORM_CONSTANT || storage_class == TG_SPIRV_STORAGE_CLASS_UNIFORM)
             {
                 TG_ASSERT(p_layout->global_resource_count < TG_SPIRV_MAX_GLOBALS);
-                tgi_fill_global_resource(word_count, p_words, variable_id, &p_layout->p_global_resources[p_layout->global_resource_count]);
-                tgi_fill_global_resource(word_count, p_words, points_to_id, &p_layout->p_global_resources[p_layout->global_resource_count]);
+                tg__fill_global_resource(word_count, p_words, variable_id, &p_layout->p_global_resources[p_layout->global_resource_count]);
+                tg__fill_global_resource(word_count, p_words, points_to_id, &p_layout->p_global_resources[p_layout->global_resource_count]);
                 p_layout->global_resource_count++;
             }
             else if (storage_class == TG_SPIRV_STORAGE_CLASS_INPUT && p_layout->shader_type == TG_SPIRV_SHADER_TYPE_VERTEX)
             {
                 TG_ASSERT(p_layout->input_resource_count < TG_SPIRV_MAX_INPUTS);
-                tgi_fill_input_resource(word_count, p_words, variable_id, &p_layout->p_input_resources[p_layout->input_resource_count]);
-                tgi_fill_input_resource(word_count, p_words, points_to_id, &p_layout->p_input_resources[p_layout->input_resource_count]);
+                tg__fill_input_resource(word_count, p_words, variable_id, &p_layout->p_input_resources[p_layout->input_resource_count]);
+                tg__fill_input_resource(word_count, p_words, points_to_id, &p_layout->p_input_resources[p_layout->input_resource_count]);
                 p_layout->input_resource_count++;
             }
         }
@@ -818,7 +818,7 @@ void tg_spirv_fill_layout(u32 word_count, const u32* p_words, tg_spirv_layout* p
 
     if (p_layout->input_resource_count != 0)
     {
-        TG_QSORT(tg_spirv_input_resource, p_layout->input_resource_count, p_layout->p_input_resources, tgi_compare_by_location);
+        TG_QSORT(tg_spirv_input_resource, p_layout->input_resource_count, p_layout->p_input_resources, tg__compare_by_location);
 
         // TODO: this must consider alignment rules! this only works as long as there is no 64 bit value in here somewhere
         u32 offset = 0;
