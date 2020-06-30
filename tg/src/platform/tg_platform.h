@@ -8,9 +8,9 @@
 #endif
 
 #ifdef TG_DEBUG
-#define TG_DEBUG_LOG(x)    tg_platform_debug_log(x)
+#define TG_DEBUG_LOG(x, ...)    tg_platform_debug_log(x, __VA_ARGS__)
 #else
-#define TG_DEBUG_LOG(x)
+#define TG_DEBUG_LOG(x, ...)
 #endif
 
 
@@ -45,7 +45,7 @@ typedef struct tg_file_properties
 
 
 #ifdef TG_DEBUG
-void                  tg_platform_debug_log(const char* p_message);
+void                  tg_platform_debug_log(const char* p_format, ...);
 #endif
 
 void*                 tg_platform_memory_alloc(u64 size);

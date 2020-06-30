@@ -10,6 +10,7 @@
 
 #include "math/tg_math.h"
 #include "memory/tg_memory.h"
+#include "platform/tg_platform.h"
 
 
 
@@ -191,7 +192,10 @@ void tg_vulkan_memory_allocator_shutdown(VkDevice device)
 
     for (u32 i = 0; i < vulkan_memory.pool_count; i++)
     {
-        TG_ASSERT(vulkan_memory.p_pools[i].reserved_page_count == 0);
+        if (vulkan_memory.p_pools[i].reserved_page_count != 0)
+        {
+            TG_DEBUG_LOG("%u unfreed pages in pool #%u in vulkan allocator!", vulkan_memory.p_pools[i].reserved_page_count, i);
+        }
         vkFreeMemory(device, vulkan_memory.p_pools[i].device_memory, TG_NULL);
         TG_MEMORY_FREE(vulkan_memory.p_pools[i].p_pages_reserved);
     }

@@ -288,8 +288,16 @@ tg_mesh_h tg_mesh_create2(u32 vertex_count, u32 vertex_stride, const void* p_ver
     h_mesh->type = TG_HANDLE_TYPE_MESH;
     h_mesh->vertex_count = vertex_count;
     h_mesh->vbo = tg_vulkan_buffer_create(vertex_count * (u64)vertex_stride, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    h_mesh->index_count = index_count;
-    h_mesh->ibo = tg_vulkan_buffer_create(index_count * sizeof(*p_indices), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    if (index_count)
+    {
+        h_mesh->index_count = index_count;
+        h_mesh->ibo = tg_vulkan_buffer_create(index_count * sizeof(*p_indices), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    }
+    else
+    {
+        h_mesh->index_count = 0;
+        h_mesh->ibo = (tg_vulkan_buffer){ 0 };
+    }
 
     const u64 max_size = tgm_u64_max(vertex_count * (u64)vertex_stride, index_count * sizeof(u16));
     tg_vulkan_buffer staging_buffer = tg_vulkan_buffer_create(max_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);

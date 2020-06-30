@@ -318,9 +318,14 @@ void tg_platform_timer_destroy(tg_timer_h h_timer)
 +------------------------------------------------------------*/
 
 #ifdef TG_DEBUG
-void tg_platform_debug_log(const char* p_message)
+void tg_platform_debug_log(const char* p_format, ...)
 {
-    OutputDebugStringA(p_message);
+    char p_buffer[1024] = { 0 };
+    va_list va;
+    tg_variadic_start(va, p_format);
+    tg_string_format_va(sizeof(p_buffer), p_buffer, p_format, va);
+
+    OutputDebugStringA(p_buffer);
     OutputDebugStringA("\n");
 }
 #endif
@@ -588,15 +593,11 @@ int CALLBACK WinMain(_In_ HINSTANCE h_instance, _In_opt_ HINSTANCE h_prev_instan
     if (alloc_count != 0)
     {
         tg_list unfreed_allocations_list = tg_memory_create_unfreed_allocations_list();
-        char buffer[512] = { 0 };
-        TG_DEBUG_LOG("");
-        TG_DEBUG_LOG("MEMORY LEAKS:");
+        TG_DEBUG_LOG("\nMEMORY LEAKS:");
         for (u32 i = 0; i < unfreed_allocations_list.count; i++)
         {
             const tg_memory_allocator_allocation* p_allocation = TG_LIST_POINTER_TO(unfreed_allocations_list, i);
-            tg_string_format(sizeof(buffer), buffer, "\tFilename: %s, Line: %u", p_allocation->p_filename, p_allocation->line);
-            TG_DEBUG_LOG(buffer);
-            memset(buffer, 0, sizeof(buffer));
+            TG_DEBUG_LOG("\tFilename: %s, Line: %u", p_allocation->p_filename, p_allocation->line);
         }
         TG_DEBUG_LOG("");
         tg_list_destroy(&unfreed_allocations_list);

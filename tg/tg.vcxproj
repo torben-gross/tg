@@ -71,8 +71,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>C:\VulkanSDK\1.2.141.2\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>vulkan-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <IgnoreAllDefaultLibraries>
-      </IgnoreAllDefaultLibraries>
+      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
     </Link>
@@ -102,8 +101,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>C:\VulkanSDK\1.2.141.2\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>vulkan-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <IgnoreAllDefaultLibraries>
-      </IgnoreAllDefaultLibraries>
+      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
     </Link>
@@ -162,6 +160,7 @@
     <ClInclude Include="src\tg_entity.h" />
     <ClInclude Include="src\tg_transvoxel_lookup_tables.h" />
     <ClInclude Include="src\tg_transvoxel_terrain.h" />
+    <ClInclude Include="src\tg_variadic.h" />
     <ClInclude Include="src\util\tg_hashmap.h" />
     <ClInclude Include="src\util\tg_list.h" />
     <ClInclude Include="src\util\tg_rectangle_packer.h" />

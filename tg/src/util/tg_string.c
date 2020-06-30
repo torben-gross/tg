@@ -17,13 +17,13 @@ void tg_string_format(u32 size, char* p_buffer, const char* p_format, ...)
 {
 	TG_ASSERT(size && p_buffer && p_format);
 
-	va_list v = TG_NULL;
-	va_start(v, p_format);
-	tg_string_format_va(size, p_buffer, p_format, v);
-	va_end(v);
+	char* p_variadic_arguments = TG_NULL;
+	tg_variadic_start(p_variadic_arguments, p_format);
+	tg_string_format_va(size, p_buffer, p_format, p_variadic_arguments);
+	tg_variadic_end(p_variadic_arguments);
 }
 
-void tg_string_format_va(u32 size, char* p_buffer, const char* p_format, va_list v)
+void tg_string_format_va(u32 size, char* p_buffer, const char* p_format, char* p_variadic_arguments)
 {
 	const char* p_format_position = p_format;
 	char* p_buffer_position = p_buffer;
@@ -38,13 +38,13 @@ void tg_string_format_va(u32 size, char* p_buffer, const char* p_format, va_list
 			{
 			case 'c':
 			{
-				const c = va_arg(v, char);
+				const c = tg_variadic_arg(p_variadic_arguments, char);
 				*p_buffer_position++ = c;
 			} break;
 
 			case 'd': // TODO: this does not generate a proper string! Exponent is missing entirely...
 			{
-				f64 f = va_arg(v, f64);
+				f64 f = tg_variadic_arg(p_variadic_arguments, f64);
 
 				if (f < 0)
 				{
@@ -79,7 +79,7 @@ void tg_string_format_va(u32 size, char* p_buffer, const char* p_format, va_list
 
 			case 'i':
 			{
-				i32 integer = va_arg(v, i32);
+				i32 integer = tg_variadic_arg(p_variadic_arguments, i32);
 
 				if (integer < 0)
 				{
@@ -99,7 +99,7 @@ void tg_string_format_va(u32 size, char* p_buffer, const char* p_format, va_list
 
 			case 's':
 			{
-				const char* s = va_arg(v, const char*);
+				const char* s = tg_variadic_arg(p_variadic_arguments, const char*);
 				while (*s)
 				{
 					*p_buffer_position++ = *s++;
@@ -108,7 +108,7 @@ void tg_string_format_va(u32 size, char* p_buffer, const char* p_format, va_list
 
 			case 'u':
 			{
-				u32 integer = va_arg(v, u32);
+				u32 integer = tg_variadic_arg(p_variadic_arguments, u32);
 
 				const u32 digit_count = tgm_u32_digits(integer);
 				u32 pow = tgm_u32_pow(10, digit_count - 1);

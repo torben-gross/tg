@@ -21,7 +21,6 @@ typedef struct tg_debug_info
 {
     f32     ms_sum;
     u32     fps;
-    char    p_buffer[256];
 } tg_debug_info;
 #endif
 
@@ -73,7 +72,7 @@ static void tg__render_quad(tg_entity* p_entity, tg_camera_h h_camera)
 static void tg__game_3d_create()
 {
     sample_scene.entities = TG_LIST_CREATE(tg_entity*);
-    sample_scene.position = (v3){ 0.0f, 400.0f, 0.0f };
+    sample_scene.position = (v3){ 0.0f, 133.0f, 0.0f };
     sample_scene.pitch = 0.0f;
     sample_scene.yaw = 0.0f;
     sample_scene.roll = 0.0f;
@@ -313,12 +312,8 @@ void tg_application_start()
             {
                 TG_DEBUG_LOG("Low framerate!");
             }
-
-            tg_string_format(sizeof(debug_info.p_buffer), debug_info.p_buffer, "%d ms", debug_info.ms_sum / debug_info.fps);
-            TG_DEBUG_LOG(debug_info.p_buffer);
-
-            tg_string_format(sizeof(debug_info.p_buffer), debug_info.p_buffer, "%u fps", debug_info.fps);
-            TG_DEBUG_LOG(debug_info.p_buffer);
+            TG_DEBUG_LOG("%d ms", debug_info.ms_sum / debug_info.fps);
+            TG_DEBUG_LOG("%u fps", debug_info.fps);
 
             debug_info.ms_sum = 0.0f;
             debug_info.fps = 0;
