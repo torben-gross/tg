@@ -11,14 +11,16 @@
 #include "util/tg_string.h"
 #include <windows.h>
 
+
+
 #ifdef TG_DEBUG
 #define WIN32_CALL(x) TG_ASSERT(x)
 #else
 #define WIN32_CALL(x) x
 #endif
 
-HANDLE    h_process_heap = INVALID_HANDLE_VALUE;
-HWND      h_window = INVALID_HANDLE_VALUE;
+static HANDLE    h_process_heap = INVALID_HANDLE_VALUE;
+static HWND      h_window = INVALID_HANDLE_VALUE;
 
 
 
@@ -314,6 +316,98 @@ void tg_platform_timer_destroy(tg_timer_h h_timer)
 
 
 /*------------------------------------------------------------+
+| Multithreading                                              |
++------------------------------------------------------------*/
+
+#define TG_WORKER_THREAD_COUNT           7
+#define TG_WORK_QUEUE_MAX_ENTRY_COUNT    256
+#define TG_MEMORY_FENCE                  _ReadWriteBarrier(); _mm_mfence()
+
+typedef struct tg_work_queue
+{
+    volatile HANDLE    h_semaphore;
+    tg_work_fn*        pp_work_fns[TG_WORK_QUEUE_MAX_ENTRY_COUNT];
+    volatile void*     pp_user_datas[TG_WORK_QUEUE_MAX_ENTRY_COUNT];
+    volatile u8        current;
+    volatile u8        count;
+    volatile u8        lock;
+} tg_work_queue;
+
+static volatile tg_work_queue work_queue = { 0 };
+
+static b32 tg__work_queue_execute_entry()
+{
+    b32 result = TG_FALSE;
+
+    if (_InterlockedCompareExchange((volatile i32*)&work_queue.lock, 1, 0) == 0)
+    {
+        tg_work_fn* p_work_fn = TG_NULL;
+        volatile void* p_user_data = TG_NULL;
+
+        if (work_queue.count)
+        {
+            result = TG_TRUE;
+
+            p_work_fn = work_queue.pp_work_fns[work_queue.current];
+            p_user_data = work_queue.pp_user_datas[work_queue.current];
+            tgm_u32_incmod(work_queue.current, TG_WORK_QUEUE_MAX_ENTRY_COUNT);
+            work_queue.count--;
+        }
+
+        _InterlockedExchange((volatile i32*)&work_queue.lock, 0);
+
+        if (result)
+        {
+            p_work_fn(p_user_data);
+        }
+    }
+
+    return result;
+}
+
+static u32 WINAPI tg__worker_thread_proc(void* p_param)
+{
+    while (TG_TRUE) // TODO: this could instead check for 'running'
+    {
+        if (!tg__work_queue_execute_entry())
+        {
+            WaitForSingleObjectEx(work_queue.h_semaphore, INFINITE, TG_FALSE);
+        }
+    }
+    return 0;
+}
+
+void tg_platform_work_queue_add_entry(tg_work_fn* p_work_fn, void* p_user_data)
+{
+    TG_ASSERT(p_work_fn);
+
+    while (_InterlockedExchange((volatile i32*)&work_queue.lock, 1) != 0); // TODO: this could potentially block until entire queue is empty!
+    TG_ASSERT(work_queue.count + 1 < TG_WORK_QUEUE_MAX_ENTRY_COUNT);
+
+    u32 entry_index = work_queue.current + work_queue.count;
+    if (entry_index == TG_WORK_QUEUE_MAX_ENTRY_COUNT)
+    {
+        entry_index = 0;
+    }
+    work_queue.pp_work_fns[entry_index] = p_work_fn;
+    work_queue.pp_user_datas[entry_index] = p_user_data;
+    work_queue.count++;
+
+    _InterlockedExchange((volatile i32*)&work_queue.lock, 0);
+    WIN32_CALL(ReleaseSemaphore(work_queue.h_semaphore, 1, TG_NULL));
+}
+
+void tg_platform_work_queue_wait_for_completion()
+{
+    while (work_queue.count)
+    {
+        tg__work_queue_execute_entry();
+    }
+}
+
+
+
+/*------------------------------------------------------------+
 | Platform                                                    |
 +------------------------------------------------------------*/
 
@@ -551,8 +645,21 @@ LRESULT CALLBACK tg_platform_win32_window_proc(HWND h_window, UINT message, WPAR
     return 0;
 }
 
+static void test(volatile void* p_user_data)
+{
+    TG_DEBUG_LOG("HELLO WORLD!");
+}
+
 int CALLBACK WinMain(_In_ HINSTANCE h_instance, _In_opt_ HINSTANCE h_prev_instance, _In_ LPSTR cmd_line, _In_ int show_cmd)
 {
+    work_queue.h_semaphore = CreateSemaphoreEx(TG_NULL, 0, TG_WORKER_THREAD_COUNT, TG_NULL, 0, SEMAPHORE_ALL_ACCESS);
+    for (u8 i = 0; i < TG_WORKER_THREAD_COUNT; i++)
+    {
+        u32 thread_id = 0;
+        HANDLE h_thread = CreateThread(TG_NULL, 0, tg__worker_thread_proc, TG_NULL, 0, &thread_id);
+        WIN32_CALL(CloseHandle(h_thread));
+    }
+
     h_process_heap = GetProcessHeap();
     tg_memory_init();
 
@@ -605,5 +712,8 @@ int CALLBACK WinMain(_In_ HINSTANCE h_instance, _In_opt_ HINSTANCE h_prev_instan
     TG_ASSERT(alloc_count == 0);
 #endif
     tg_memory_shutdown();
+
+    // TODO: use this for killing threads without stdlib?
+    // ExitProcess(0);
     return EXIT_SUCCESS;
 }

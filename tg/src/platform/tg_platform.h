@@ -19,6 +19,8 @@ typedef void* tg_window_h;
 typedef void* tg_file_iterator_h;
 TG_DECLARE_HANDLE(tg_timer);
 
+typedef void tg_work_fn(volatile void* p_user_data);
+
 
 
 typedef struct tg_system_time {
@@ -80,5 +82,8 @@ void                  tg_platform_timer_stop(tg_timer_h h_timer);
 void                  tg_platform_timer_reset(tg_timer_h h_timer);
 f32                   tg_platform_timer_elapsed_milliseconds(tg_timer_h h_timer);
 void                  tg_platform_timer_destroy(tg_timer_h h_timer);
+
+void                  tg_platform_work_queue_add_entry(tg_work_fn* p_work_fn, void* p_user_data);
+void                  tg_platform_work_queue_wait_for_completion();
 
 #endif
