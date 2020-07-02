@@ -6,6 +6,13 @@
 
 
 
+#define TG_MAX_CAMERA_COUNT                    4
+#define TG_MAX_SHADER_ATTACHMENT_COUNT         8
+#define TG_MAX_SHADER_GLOBAL_RESOURCE_COUNT    32
+#define TG_MAX_SHADER_INPUT_COUNT              32
+
+
+
 TG_DECLARE_HANDLE(tg_camera);
 TG_DECLARE_HANDLE(tg_color_image);
 TG_DECLARE_HANDLE(tg_compute_shader);

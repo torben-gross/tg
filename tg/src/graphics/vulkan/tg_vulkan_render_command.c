@@ -24,7 +24,7 @@ void tg_render_command_destroy(tg_render_command_h h_render_command)
 
     for (u32 i = 0; i < h_render_command->camera_info_count; i++)
     {
-        tg_vulkan_command_buffer_free(graphics_command_pool, h_render_command->p_camera_infos[i].command_buffer);
+        tg_vulkan_command_buffer_free(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, h_render_command->p_camera_infos[i].command_buffer);
         tg_vulkan_graphics_pipeline_destroy(h_render_command->p_camera_infos[i].graphics_pipeline);
         tg_vulkan_pipeline_layout_destroy(h_render_command->p_camera_infos[i].pipeline_layout);
     }
@@ -58,8 +58,7 @@ void tg_render_command_register(tg_render_command_h h_render_command, tg_camera_
     vertex_input_binding_description.stride = p_layout->vertex_stride;
     vertex_input_binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-    const u64 vertex_input_attribute_descriptions_size = (u64)p_layout->input_resource_count * sizeof(VkVertexInputAttributeDescription);
-    VkVertexInputAttributeDescription* p_vertex_input_attribute_descriptions = TG_MEMORY_STACK_ALLOC(vertex_input_attribute_descriptions_size);
+    VkVertexInputAttributeDescription p_vertex_input_attribute_descriptions[TG_MAX_SHADER_INPUT_COUNT];
     for (u8 i = 0; i < p_layout->input_resource_count; i++)
     {
         p_vertex_input_attribute_descriptions[i].binding = 0;
@@ -111,9 +110,7 @@ void tg_render_command_register(tg_render_command_h h_render_command, tg_camera_
     }
 
     p_camera_info->graphics_pipeline = tg_vulkan_graphics_pipeline_create(&vulkan_graphics_pipeline_create_info);
-    TG_MEMORY_STACK_FREE(vertex_input_attribute_descriptions_size);
-
-    p_camera_info->command_buffer = tg_vulkan_command_buffer_allocate(graphics_command_pool, VK_COMMAND_BUFFER_LEVEL_SECONDARY);
+    p_camera_info->command_buffer = tg_vulkan_command_buffer_allocate(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_SECONDARY);
 
     VkCommandBufferInheritanceInfo command_buffer_inheritance_info = { 0 };
     command_buffer_inheritance_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;

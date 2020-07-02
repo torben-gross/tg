@@ -22,17 +22,19 @@ typedef struct tg_memory_stack
 
 
 #ifdef TG_DEBUG
-b32                recording_allocations = TG_FALSE;
-tg_hashmap         memory_allocations = { 0 };
+static volatile b32       recording_allocations = TG_FALSE;
+static tg_hashmap         memory_allocations = { 0 };
+static tg_lock            lock;
 #endif
 
-tg_memory_stack    memory_stack = { 0 };
+static tg_memory_stack    memory_stack = { 0 };
 
 
 
 void tg_memory_init()
 {
 #ifdef TG_DEBUG
+	lock = tg_platform_lock_create(TG_LOCK_STATE_LOCKED);
 	memory_allocations = TG_HASHMAP_CREATE(void*, tg_memory_allocator_allocation);
 
 	memory_stack.exhausted_size = 1;
@@ -42,6 +44,7 @@ void tg_memory_init()
 	memory_stack.p_memory[0] = TG_MEMORY_STACK_MAGIC_NUMBER;
 
 	recording_allocations = TG_TRUE;
+	tg_platform_unlock(&lock);
 #else
 	memory_stack.exhausted_size = 0;
 	memory_stack.p_memory = tg_platform_memory_alloc(TG_MEMORY_STACK_SIZE);
@@ -51,6 +54,7 @@ void tg_memory_init()
 void tg_memory_shutdown()
 {
 #ifdef TG_DEBUG
+	while (!tg_platform_lock(&lock));
 	recording_allocations = TG_FALSE;
 	TG_ASSERT(memory_stack.exhausted_size == 1);
 #endif
@@ -60,6 +64,7 @@ void tg_memory_shutdown()
 
 #ifdef TG_DEBUG
 	tg_hashmap_destroy(&memory_allocations);
+	tg_platform_unlock(&lock);
 #endif
 }
 
@@ -94,6 +99,7 @@ void tg_memory_set_all_bits(u64 size, void* p_memory)
 void* tg_memory_alloc_impl(u64 size, const char* p_filename, u32 line, b32 nullify)
 {
 	void* p_memory = TG_NULL;
+
 	if (nullify)
 	{
 		p_memory = tg_platform_memory_alloc_nullify(size);
@@ -104,14 +110,15 @@ void* tg_memory_alloc_impl(u64 size, const char* p_filename, u32 line, b32 nulli
 	}
 	TG_ASSERT(p_memory);
 
-	if (recording_allocations)
+	if (tg_platform_interlocked_compare_exchange((volatile i32*)&recording_allocations, TG_FALSE, TG_TRUE) == TG_TRUE)
 	{
-		recording_allocations = TG_FALSE;
+		while (!tg_platform_lock(&lock));
 		tg_memory_allocator_allocation allocation = { 0 };
 		allocation.line = line;
 		tg_memory_copy(tg_string_length(p_filename) * sizeof(*p_filename), p_filename, allocation.p_filename);
 		tg_hashmap_insert(&memory_allocations, &p_memory, &allocation);
 		recording_allocations = TG_TRUE;
+		tg_platform_unlock(&lock);
 	}
 
 	return p_memory;
@@ -130,31 +137,35 @@ void* tg_memory_realloc_impl(u64 size, void* p_memory, const char* p_filename, u
 	}
 	TG_ASSERT(p_reallocated_memory);
 
-	if (recording_allocations)
+	if (tg_platform_interlocked_compare_exchange((volatile i32*)&recording_allocations, TG_FALSE, TG_TRUE) == TG_TRUE)
 	{
-		recording_allocations = TG_FALSE;
+		while (!tg_platform_lock(&lock));
 		tg_hashmap_remove(&memory_allocations, &p_memory);
 		tg_memory_allocator_allocation allocation = { 0 };
 		allocation.line = line;
 		tg_memory_copy(tg_string_length(p_filename) * sizeof(*p_filename), p_filename, allocation.p_filename);
 		tg_hashmap_insert(&memory_allocations, &p_reallocated_memory, &allocation);
 		recording_allocations = TG_TRUE;
+		tg_platform_unlock(&lock);
 	}
+	tg_platform_unlock(&lock);
 
 	return p_reallocated_memory;
 }
 
 void tg_memory_free_impl(void* p_memory, const char* p_filename, u32 line)
 {
-	if (recording_allocations)
+	if (tg_platform_interlocked_compare_exchange((volatile i32*)&recording_allocations, TG_FALSE, TG_TRUE) == TG_TRUE)
 	{
-		recording_allocations = TG_FALSE;
+		while (!tg_platform_lock(&lock));
 		// TODO: this needs to 'try', because the platform layer calls
 		// 'tg_memory_create_unfreed_allocations_list', which disables recording
 		// temporarily and thus, the hashmap does not contain it.
 		tg_hashmap_try_remove(&memory_allocations, &p_memory);
 		recording_allocations = TG_TRUE;
+		tg_platform_unlock(&lock);
 	}
+	tg_platform_unlock(&lock);
 
 	tg_platform_memory_free(p_memory);
 }
@@ -166,9 +177,11 @@ u32 tg_memory_unfreed_allocation_count()
 
 tg_list tg_memory_create_unfreed_allocations_list()
 {
+	while (!tg_platform_lock(&lock));
 	recording_allocations = TG_FALSE;
 	const tg_list list = tg_hashmap_value_list_create(&memory_allocations);
 	recording_allocations = TG_TRUE;
+	tg_platform_unlock(&lock);
 	return list;
 }
 
@@ -179,6 +192,7 @@ tg_list tg_memory_create_unfreed_allocations_list()
 void* tg_memory_stack_alloc(u64 size)
 {
 #ifdef TG_DEBUG
+	TG_ASSERT(tg_platform_get_current_thread_id() == 0);
 	TG_ASSERT(size && memory_stack.exhausted_size + size + 1 < TG_MEMORY_STACK_SIZE);
 
 	void* memory = &memory_stack.p_memory[memory_stack.exhausted_size];
@@ -197,6 +211,7 @@ void* tg_memory_stack_alloc(u64 size)
 void tg_memory_stack_free(u64 size)
 {
 #ifdef TG_DEBUG
+	TG_ASSERT(tg_platform_get_current_thread_id() == 0);
 	TG_ASSERT(size && memory_stack.exhausted_size - 1 >= size + 1);
 
 	TG_ASSERT(memory_stack.p_memory[memory_stack.exhausted_size - 1] == TG_MEMORY_STACK_MAGIC_NUMBER);

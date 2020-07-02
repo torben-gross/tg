@@ -39,13 +39,17 @@
 #define TG_VULKAN_VALIDATION_LAYER_NAMES      TG_NULL
 #endif
 
-#define TG_VULKAN_QUEUE_COUNT                 3
-
 
 
 #ifdef TG_DEBUG
-VkDebugUtilsMessengerEXT    debug_utils_messenger;
+static VkDebugUtilsMessengerEXT    debug_utils_messenger = VK_NULL_HANDLE;
 #endif
+
+static tg_vulkan_queue             p_queue_buffer[TG_VULKAN_QUEUE_TYPE_COUNT] = { 0 };
+static tg_vulkan_queue*            pp_queues[TG_VULKAN_QUEUE_TYPE_COUNT] = { 0 };
+
+static VkCommandPool               p_graphics_command_pool[TG_WORKER_THREAD_COUNT + 1];
+static VkCommandPool               p_compute_command_pool[TG_WORKER_THREAD_COUNT + 1];
 
 
 
@@ -161,6 +165,20 @@ static void tg__descriptor_set_free(VkDescriptorPool descriptor_pool, VkDescript
 
 
 
+static void tg__queue_release(tg_vulkan_queue* p_queue)
+{
+    tg_platform_unlock(&p_queue->lock);
+}
+
+static tg_vulkan_queue* tg__queue_take(tg_vulkan_queue_type type)
+{
+    tg_vulkan_queue* p_queue = pp_queues[type];
+    while (!tg_platform_lock(&p_queue->lock));
+    return p_queue;
+}
+
+
+
 static VkSampler tg__sampler_create_custom(u32 mip_levels, VkFilter min_filter, VkFilter mag_filter, VkSamplerAddressMode address_mode_u, VkSamplerAddressMode address_mode_v, VkSamplerAddressMode address_mode_w)
 {
     VkSampler sampler = VK_NULL_HANDLE;
@@ -206,7 +224,7 @@ static void tg__sampler_destroy(VkSampler sampler)
 
 void tg_vulkan_buffer_copy(VkDeviceSize size, VkBuffer source, VkBuffer destination)
 {
-    VkCommandBuffer command_buffer = tg_vulkan_command_buffer_allocate(graphics_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+    VkCommandBuffer command_buffer = tg_vulkan_command_buffer_allocate(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     tg_vulkan_command_buffer_begin(command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
 
     VkBufferCopy buffer_copy = { 0 };
@@ -216,8 +234,8 @@ void tg_vulkan_buffer_copy(VkDeviceSize size, VkBuffer source, VkBuffer destinat
 
     vkCmdCopyBuffer(command_buffer, source, destination, 1, &buffer_copy);
 
-    tg_vulkan_command_buffer_end_and_submit(command_buffer, &graphics_queue);
-    tg_vulkan_command_buffer_free(graphics_command_pool, command_buffer);
+    tg_vulkan_command_buffer_end_and_submit(command_buffer, TG_VULKAN_QUEUE_TYPE_GRAPHICS);
+    tg_vulkan_command_buffer_free(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, command_buffer);
 }
 
 tg_vulkan_buffer tg_vulkan_buffer_create(VkDeviceSize size, VkBufferUsageFlags buffer_usage_flags, VkMemoryPropertyFlags memory_property_flags)
@@ -429,14 +447,23 @@ void tg_vulkan_color_image_destroy(tg_color_image* p_color_image)
 
 
 
-VkCommandBuffer tg_vulkan_command_buffer_allocate(VkCommandPool command_pool, VkCommandBufferLevel level)
+VkCommandBuffer tg_vulkan_command_buffer_allocate(tg_vulkan_command_pool_type type, VkCommandBufferLevel level)
 {
     VkCommandBuffer command_buffer = VK_NULL_HANDLE;
 
     VkCommandBufferAllocateInfo command_buffer_allocate_info = { 0 };
     command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     command_buffer_allocate_info.pNext = TG_NULL;
-    command_buffer_allocate_info.commandPool = command_pool;
+
+    const u32 thread_id = tg_platform_get_current_thread_id();
+    switch (type)
+    {
+    case TG_VULKAN_COMMAND_POOL_TYPE_COMPUTE:  command_buffer_allocate_info.commandPool = p_compute_command_pool[thread_id];  break;
+    case TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS: command_buffer_allocate_info.commandPool = p_graphics_command_pool[thread_id]; break;
+
+    default: TG_INVALID_CODEPATH(); break;
+    }
+
     command_buffer_allocate_info.level = level;
     command_buffer_allocate_info.commandBufferCount = 1;
 
@@ -700,7 +727,7 @@ void tg_vulkan_command_buffer_cmd_transition_storage_image_3d_layout(VkCommandBu
     vkCmdPipelineBarrier(command_buffer, src_stage_bits, dst_stage_bits, 0, 0, TG_NULL, 0, TG_NULL, 1, &image_memory_barrier);
 }
 
-void tg_vulkan_command_buffer_end_and_submit(VkCommandBuffer command_buffer, tg_vulkan_queue* p_vulkan_queue)
+void tg_vulkan_command_buffer_end_and_submit(VkCommandBuffer command_buffer, tg_vulkan_queue_type type)
 {
     VK_CALL(vkEndCommandBuffer(command_buffer));
 
@@ -715,29 +742,64 @@ void tg_vulkan_command_buffer_end_and_submit(VkCommandBuffer command_buffer, tg_
     submit_info.signalSemaphoreCount = 0;
     submit_info.pSignalSemaphores = TG_NULL;
 
-    VK_CALL(vkQueueSubmit(p_vulkan_queue->queue, 1, &submit_info, VK_NULL_HANDLE));
-    VK_CALL(vkQueueWaitIdle(p_vulkan_queue->queue)); // TODO: is this necessary?
+    tg_vulkan_queue* p_queue = tg__queue_take(type);
+
+    VK_CALL(vkQueueSubmit(p_queue->queue, 1, &submit_info, VK_NULL_HANDLE));
+    VK_CALL(vkQueueWaitIdle(p_queue->queue)); // TODO: is this necessary?
+
+    tg__queue_release(p_queue);
 }
 
-void tg_vulkan_command_buffer_free(VkCommandPool command_pool, VkCommandBuffer command_buffer)
+void tg_vulkan_command_buffer_free(tg_vulkan_command_pool_type type, VkCommandBuffer command_buffer)
 {
+    VkCommandPool command_pool = VK_NULL_HANDLE;
+
+    const u32 thread_id = tg_platform_get_current_thread_id();
+    switch (type)
+    {
+    case TG_VULKAN_COMMAND_POOL_TYPE_COMPUTE:  command_pool = p_compute_command_pool[thread_id];  break;
+    case TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS: command_pool = p_graphics_command_pool[thread_id]; break;
+
+    default: TG_INVALID_CODEPATH(); break;
+    }
+
     vkFreeCommandBuffers(device, command_pool, 1, &command_buffer);
 }
 
-void tg_vulkan_command_buffers_allocate(VkCommandPool command_pool, VkCommandBufferLevel level, u32 command_buffer_count, VkCommandBuffer* p_command_buffers)
+void tg_vulkan_command_buffers_allocate(tg_vulkan_command_pool_type type, VkCommandBufferLevel level, u32 command_buffer_count, VkCommandBuffer* p_command_buffers)
 {
     VkCommandBufferAllocateInfo command_buffer_allocate_info = { 0 };
     command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     command_buffer_allocate_info.pNext = TG_NULL;
-    command_buffer_allocate_info.commandPool = command_pool;
+
+    const u32 thread_id = tg_platform_get_current_thread_id();
+    switch (type)
+    {
+    case TG_VULKAN_COMMAND_POOL_TYPE_COMPUTE:  command_buffer_allocate_info.commandPool = p_compute_command_pool[thread_id];  break;
+    case TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS: command_buffer_allocate_info.commandPool = p_graphics_command_pool[thread_id]; break;
+
+    default: TG_INVALID_CODEPATH(); break;
+    }
+
     command_buffer_allocate_info.level = level;
     command_buffer_allocate_info.commandBufferCount = command_buffer_count;
 
     VK_CALL(vkAllocateCommandBuffers(device, &command_buffer_allocate_info, p_command_buffers));
 }
 
-void tg_vulkan_command_buffers_free(VkCommandPool command_pool, u32 command_buffer_count, const VkCommandBuffer* p_command_buffers)
+void tg_vulkan_command_buffers_free(tg_vulkan_command_pool_type type, u32 command_buffer_count, const VkCommandBuffer* p_command_buffers)
 {
+    VkCommandPool command_pool = VK_NULL_HANDLE;
+
+    const u32 thread_id = tg_platform_get_current_thread_id();
+    switch (type)
+    {
+    case TG_VULKAN_COMMAND_POOL_TYPE_COMPUTE:  command_pool = p_compute_command_pool[thread_id];  break;
+    case TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS: command_pool = p_graphics_command_pool[thread_id]; break;
+
+    default: TG_INVALID_CODEPATH(); break;
+    }
+
     vkFreeCommandBuffers(device, command_pool, command_buffer_count, p_command_buffers);
 }
 
@@ -855,17 +917,17 @@ void tg_vulkan_depth_image_destroy(tg_depth_image* p_depth_image)
 
 tg_vulkan_descriptor tg_vulkan_descriptor_create(u32 binding_count, VkDescriptorSetLayoutBinding* p_bindings)
 {
+    TG_ASSERT(binding_count <= TG_MAX_SHADER_GLOBAL_RESOURCE_COUNT);
+
     tg_vulkan_descriptor vulkan_descriptor = { 0 };
 
-    const u64 descriptor_pool_sizes_size = binding_count * sizeof(VkDescriptorPoolSize);
-    VkDescriptorPoolSize* p_descriptor_pool_sizes = TG_MEMORY_STACK_ALLOC(descriptor_pool_sizes_size);
+    VkDescriptorPoolSize p_descriptor_pool_sizes[TG_MAX_SHADER_GLOBAL_RESOURCE_COUNT];
     for (u32 i = 0; i < binding_count; i++)
     {
         p_descriptor_pool_sizes[i].type = p_bindings[i].descriptorType;
         p_descriptor_pool_sizes[i].descriptorCount = p_bindings[i].descriptorCount;
     }
     vulkan_descriptor.descriptor_pool = tg__descriptor_pool_create(0, 1, binding_count, p_descriptor_pool_sizes);
-    TG_MEMORY_STACK_FREE(descriptor_pool_sizes_size);
 
     vulkan_descriptor.descriptor_set_layout = tg__descriptor_set_layout_create(0, binding_count, p_bindings);
     vulkan_descriptor.descriptor_set = tg__descriptor_set_allocate(vulkan_descriptor.descriptor_pool, vulkan_descriptor.descriptor_set_layout);
@@ -1329,9 +1391,8 @@ VkPipeline tg_vulkan_graphics_pipeline_create(const tg_vulkan_graphics_pipeline_
     pipeline_depth_stencil_state_create_info.minDepthBounds = 0.0f;
     pipeline_depth_stencil_state_create_info.maxDepthBounds = 0.0f;
 
-    const u64 pipeline_color_blend_attachment_states_size = p_vulkan_graphics_pipeline_create_info->attachment_count * sizeof(VkPipelineColorBlendAttachmentState);
-    VkPipelineColorBlendAttachmentState* p_pipeline_color_blend_attachment_states = TG_MEMORY_STACK_ALLOC(pipeline_color_blend_attachment_states_size);
-
+    TG_ASSERT(p_vulkan_graphics_pipeline_create_info->attachment_count <= TG_MAX_SHADER_ATTACHMENT_COUNT);
+    VkPipelineColorBlendAttachmentState p_pipeline_color_blend_attachment_states[TG_MAX_SHADER_ATTACHMENT_COUNT] = { 0 };
     for (u32 i = 0; i < p_vulkan_graphics_pipeline_create_info->attachment_count; i++)
     {
         p_pipeline_color_blend_attachment_states[i].blendEnable = p_vulkan_graphics_pipeline_create_info->blend_enable;
@@ -1379,7 +1440,6 @@ VkPipeline tg_vulkan_graphics_pipeline_create(const tg_vulkan_graphics_pipeline_
     graphics_pipeline_create_info.basePipelineIndex = -1;
 
     VK_CALL(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &graphics_pipeline_create_info, TG_NULL, &graphics_pipeline));
-    TG_MEMORY_STACK_FREE(pipeline_color_blend_attachment_states_size);
 
     return graphics_pipeline;
 }
@@ -1470,6 +1530,29 @@ void tg_vulkan_pipeline_layout_destroy(VkPipelineLayout pipeline_layout)
 
 
 
+void tg_vulkan_queue_present(VkPresentInfoKHR* p_present_info)
+{
+    tg_vulkan_queue* p_queue = tg__queue_take(TG_VULKAN_QUEUE_TYPE_PRESENT);
+    VK_CALL(vkQueuePresentKHR(p_queue->queue, p_present_info));
+    tg__queue_release(p_queue);
+}
+
+void tg_vulkan_queue_submit(tg_vulkan_queue_type type, u32 submit_count, VkSubmitInfo* p_submit_infos, VkFence fence)
+{
+    tg_vulkan_queue* p_queue = tg__queue_take(type);
+    VK_CALL(vkQueueSubmit(p_queue->queue, submit_count, p_submit_infos, fence));
+    tg__queue_release(p_queue);
+}
+
+void tg_vulkan_queue_wait_idle(tg_vulkan_queue_type type)
+{
+    tg_vulkan_queue* p_queue = tg__queue_take(type);
+    VK_CALL(vkQueueWaitIdle(p_queue->queue));
+    tg__queue_release(p_queue);
+}
+
+
+
 VkRenderPass tg_vulkan_render_pass_create(u32 attachment_count, const VkAttachmentDescription* p_attachments, u32 subpass_count, const VkSubpassDescription* p_subpasses, u32 dependency_count, const VkSubpassDependency* p_dependencies)
 {
     VkRenderPass render_pass = VK_NULL_HANDLE;
@@ -1507,13 +1590,13 @@ tg_render_target tg_vulkan_render_target_create(const tg_vulkan_color_image_crea
     render_target.depth_attachment = tg_vulkan_depth_image_create(p_vulkan_depth_image_create_info);
     render_target.depth_attachment_copy = tg_vulkan_depth_image_create(p_vulkan_depth_image_create_info);
 
-    VkCommandBuffer command_buffer = tg_vulkan_command_buffer_allocate(graphics_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+    VkCommandBuffer command_buffer = tg_vulkan_command_buffer_allocate(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     tg_vulkan_command_buffer_begin(command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
     tg_vulkan_command_buffer_cmd_transition_color_image_layout(command_buffer, &render_target.color_attachment, 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
     tg_vulkan_command_buffer_cmd_transition_color_image_layout(command_buffer, &render_target.color_attachment_copy, 0, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
     tg_vulkan_command_buffer_cmd_transition_depth_image_layout(command_buffer, &render_target.depth_attachment, 0, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT);
     tg_vulkan_command_buffer_cmd_transition_depth_image_layout(command_buffer, &render_target.depth_attachment_copy, 0, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-    tg_vulkan_command_buffer_end_and_submit(command_buffer, &graphics_queue);
+    tg_vulkan_command_buffer_end_and_submit(command_buffer, TG_VULKAN_QUEUE_TYPE_GRAPHICS);
 
     render_target.fence = tg_vulkan_fence_create(fence_create_flags);
 
@@ -1627,11 +1710,11 @@ tg_storage_image_3d tg_vulkan_storage_image_3d_create(u32 width, u32 height, u32
 
     storage_image_3d.image_view = tg__image_view_create(storage_image_3d.image, VK_IMAGE_VIEW_TYPE_3D, storage_image_3d.format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
 
-    VkCommandBuffer command_buffer = tg_vulkan_command_buffer_allocate(graphics_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+    VkCommandBuffer command_buffer = tg_vulkan_command_buffer_allocate(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY); // TODO: let this be a reusable global
     tg_vulkan_command_buffer_begin(command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
     tg_vulkan_command_buffer_cmd_transition_storage_image_3d_layout(command_buffer, &storage_image_3d, 0, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
-    tg_vulkan_command_buffer_end_and_submit(command_buffer, &graphics_queue);
-    tg_vulkan_command_buffer_free(graphics_command_pool, command_buffer);
+    tg_vulkan_command_buffer_end_and_submit(command_buffer, TG_VULKAN_QUEUE_TYPE_GRAPHICS);
+    tg_vulkan_command_buffer_free(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, command_buffer);
 
     return storage_image_3d;
 }
@@ -1664,15 +1747,15 @@ VkFormat tg_vulkan_storage_image_convert_format(tg_storage_image_format format)
 | Main utilities                                              |
 +------------------------------------------------------------*/
 
-static VkCommandPool tg__command_pool_create(VkCommandPoolCreateFlags command_pool_create_flags, u32 queue_family_index)
+static VkCommandPool tg__command_pool_create(VkCommandPoolCreateFlags command_pool_create_flags, tg_vulkan_queue_type type)
 {
-    VkCommandPool command_pool = VK_NULL_HANDLE;
+    VkCommandPool command_pool = { 0 };
 
     VkCommandPoolCreateInfo command_pool_create_info = { 0 };
     command_pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     command_pool_create_info.pNext = TG_NULL;
     command_pool_create_info.flags = command_pool_create_flags;
-    command_pool_create_info.queueFamilyIndex = queue_family_index;
+    command_pool_create_info.queueFamilyIndex = pp_queues[type]->index;
 
     VK_CALL(vkCreateCommandPool(device, &command_pool_create_info, TG_NULL, &command_pool));
 
@@ -2034,7 +2117,7 @@ static VkPhysicalDevice tg__physical_device_create()
     TG_ASSERT(physical_device != VK_NULL_HANDLE);
 
     TG_MEMORY_STACK_FREE(physical_devices_size);
-    tg__physical_device_find_queue_family_indices(physical_device, &graphics_queue.index, &present_queue.index, &compute_queue.index);
+    tg__physical_device_find_queue_family_indices(physical_device, &p_queue_buffer[0].index, &p_queue_buffer[1].index, &p_queue_buffer[2].index);
 
     return physical_device;
 }
@@ -2043,18 +2126,19 @@ static VkDevice tg__device_create()
 {
     VkDevice device = VK_NULL_HANDLE;
 
-    const f32 p_queue_priorities[TG_VULKAN_QUEUE_COUNT] = { 1.0f, 1.0f, 1.0f };
-    VkDeviceQueueCreateInfo p_device_queue_create_infos[TG_VULKAN_QUEUE_COUNT] = { 0 };
+    const f32 p_queue_priorities[TG_VULKAN_QUEUE_TYPE_COUNT] = { 1.0f, 1.0f, 1.0f };
+    VkDeviceQueueCreateInfo p_device_queue_create_infos[TG_VULKAN_QUEUE_TYPE_COUNT] = { 0 };
 
-    for (u8 i = 0; i < TG_VULKAN_QUEUE_COUNT; i++)
+    for (u8 i = 0; i < TG_VULKAN_QUEUE_TYPE_COUNT; i++)
     {
         p_device_queue_create_infos[i].queueFamilyIndex = TG_U32_MAX;
     }
 
-    const u32 p_queue_indices[TG_VULKAN_QUEUE_COUNT] = { graphics_queue.index, present_queue.index, compute_queue.index };
+    u32 p_queue_indices[TG_VULKAN_QUEUE_TYPE_COUNT] = { 0 };
     u32 device_queue_create_info_count = 0;
-    for (u8 i = 0; i < TG_VULKAN_QUEUE_COUNT; i++)
+    for (u8 i = 0; i < TG_VULKAN_QUEUE_TYPE_COUNT; i++)
     {
+        p_queue_indices[i] = p_queue_buffer[i].index;
         b32 found = TG_FALSE;
         for (u8 j = 0; j < device_queue_create_info_count; j++)
         {
@@ -2161,13 +2245,32 @@ static VkDevice tg__device_create()
     return device;
 }
 
-static void tg__queues_create(tg_vulkan_queue* p_graphics_queue, tg_vulkan_queue* p_present_queue, tg_vulkan_queue* p_compute_queue)
+static void tg__queues_create(u32 count)
 {
-    TG_ASSERT(p_graphics_queue && p_present_queue);
+    for (u32 i = 0; i < count; i++)
+    {
+        vkGetDeviceQueue(device, p_queue_buffer[i].index, 0, &p_queue_buffer[i].queue);
 
-    vkGetDeviceQueue(device, p_graphics_queue->index, 0, &p_graphics_queue->queue);
-    vkGetDeviceQueue(device, p_present_queue->index, 0, &p_present_queue->queue);
-    vkGetDeviceQueue(device, p_compute_queue->index, 0, &p_compute_queue->queue);
+        b32 found = TG_FALSE;
+        for (u32 j = 0; j < i; j++)
+        {
+            if (pp_queues[j] == TG_NULL)
+            {
+                break;
+            }
+            if (pp_queues[j]->queue == p_queue_buffer[i].queue)
+            {
+                found = TG_TRUE;
+                pp_queues[i] = pp_queues[j];
+                break;
+            }
+        }
+        if (!found)
+        {
+            p_queue_buffer[i].queue = p_queue_buffer[i].queue;
+            pp_queues[i] = &p_queue_buffer[i];
+        }
+    }
 }
 
 static void tg__swapchain_create()
@@ -2225,7 +2328,7 @@ static void tg__swapchain_create()
     swapchain_create_info.imageArrayLayers = 1;
     swapchain_create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-    TG_ASSERT(graphics_queue.index == present_queue.index && present_queue.index == compute_queue.index);
+    TG_ASSERT(p_queue_buffer[0].index == p_queue_buffer[1].index && p_queue_buffer[1].index == p_queue_buffer[2].index);
     // TODO: this may be relevant to implement as well...
     //const u32 p_queue_family_indices[] = { graphics_queue.index, present_queue.index };
     //if (graphics_queue.index != present_queue.index)
@@ -2276,12 +2379,20 @@ void tg_graphics_init()
     surface = tg__surface_create();
     physical_device = tg__physical_device_create();
     device = tg__device_create();
-    tg__queues_create(&graphics_queue, &present_queue, &compute_queue);
-    graphics_command_pool = tg__command_pool_create(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, graphics_queue.index);
-    compute_command_pool = tg__command_pool_create(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, compute_queue.index);
+    tg__queues_create(TG_VULKAN_QUEUE_TYPE_COUNT);
+    for (u32 i = 0; i < TG_WORKER_THREAD_COUNT + 1; i++)
+    {
+        p_graphics_command_pool[i] = tg__command_pool_create(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, TG_VULKAN_QUEUE_TYPE_GRAPHICS);
+        p_compute_command_pool[i] = tg__command_pool_create(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, TG_VULKAN_QUEUE_TYPE_COMPUTE);
+    }
     tg__swapchain_create();
 
     tg_vulkan_memory_allocator_init(device, physical_device);
+    
+    for (u32 i = 0; i < TG_MAX_CAMERA_COUNT; i++)
+    {
+        p_cameras[i].type = TG_HANDLE_TYPE_INVALID;
+    }
 }
 
 void tg_graphics_wait_idle()
@@ -2293,8 +2404,11 @@ void tg_graphics_shutdown()
 {
     tg_vulkan_memory_allocator_shutdown(device);
 
-    tg__command_pool_destroy(compute_command_pool);
-    tg__command_pool_destroy(graphics_command_pool);
+    for (u32 i = 0; i < TG_WORKER_THREAD_COUNT + 1; i++)
+    {
+        tg__command_pool_destroy(p_compute_command_pool[i]);
+        tg__command_pool_destroy(p_graphics_command_pool[i]);
+    }
     for (u32 i = 0; i < TG_VULKAN_SURFACE_IMAGE_COUNT; i++)
     {
         vkDestroyImageView(device, p_swapchain_image_views[i], TG_NULL);

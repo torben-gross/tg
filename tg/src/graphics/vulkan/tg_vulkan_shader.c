@@ -85,7 +85,7 @@ tg_compute_shader_h tg_compute_shader_create(const char* p_filename)
 	h_compute_shader->pipeline_layout = tg_vulkan_pipeline_layout_create(1, &h_compute_shader->descriptor.descriptor_set_layout, 0, TG_NULL);
 	h_compute_shader->compute_pipeline = tg_vulkan_compute_pipeline_create(h_compute_shader->vulkan_shader.shader_module, h_compute_shader->pipeline_layout);
 	// TODO: global command buffer in tg_graphics_vulkan.c
-	h_compute_shader->command_buffer = tg_vulkan_command_buffer_allocate(compute_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+	h_compute_shader->command_buffer = tg_vulkan_command_buffer_allocate(TG_VULKAN_COMMAND_POOL_TYPE_COMPUTE, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
 	return h_compute_shader;
 }
@@ -112,15 +112,15 @@ void tg_compute_shader_dispatch(tg_compute_shader_h h_compute_shader, u32 group_
 		submit_info.signalSemaphoreCount = 0;
 		submit_info.pSignalSemaphores = TG_NULL;
 	}
-	VK_CALL(vkQueueSubmit(compute_queue.queue, 1, &submit_info, TG_NULL));
-	VK_CALL(vkQueueWaitIdle(compute_queue.queue));
+	tg_vulkan_queue_submit(TG_VULKAN_QUEUE_TYPE_COMPUTE, 1, &submit_info, VK_NULL_HANDLE);
+	tg_vulkan_queue_wait_idle(TG_VULKAN_QUEUE_TYPE_COMPUTE);
 }
 
 void tg_compute_shader_destroy(tg_compute_shader_h h_compute_shader)
 {
 	TG_ASSERT(h_compute_shader);
 
-	tg_vulkan_command_buffer_free(compute_command_pool, h_compute_shader->command_buffer);
+	tg_vulkan_command_buffer_free(TG_VULKAN_COMMAND_POOL_TYPE_COMPUTE, h_compute_shader->command_buffer);
 	tg_vulkan_compute_pipeline_destroy(h_compute_shader->compute_pipeline);
 	tg_vulkan_pipeline_layout_destroy(h_compute_shader->pipeline_layout);
 	tg_vulkan_descriptor_destroy(&h_compute_shader->descriptor);

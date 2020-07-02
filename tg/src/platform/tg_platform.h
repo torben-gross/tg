@@ -3,12 +3,16 @@
 
 #include "tg_common.h"
 
+
+
+#define TG_WORKER_THREAD_COUNT    7
+
 #ifdef TG_WIN32
-#define TG_MAX_PATH        260
+#define TG_MAX_PATH               260
 #endif
 
 #ifdef TG_DEBUG
-#define TG_DEBUG_LOG(x, ...)    tg_platform_debug_log(x, __VA_ARGS__)
+#define TG_DEBUG_LOG(x, ...)      tg_platform_debug_log(x, __VA_ARGS__)
 #else
 #define TG_DEBUG_LOG(x, ...)
 #endif
@@ -19,9 +23,19 @@ typedef void* tg_window_h;
 typedef void* tg_file_iterator_h;
 TG_DECLARE_HANDLE(tg_timer);
 
+#ifdef TG_WIN32
+typedef i32 tg_lock;
+#endif
+
 typedef void tg_work_fn(volatile void* p_user_data);
 
 
+
+typedef enum tg_lock_state
+{
+    TG_LOCK_STATE_FREE      = 0,
+    TG_LOCK_STATE_LOCKED    = 1
+} tg_lock_state;
 
 typedef struct tg_system_time {
     u16    year;
@@ -83,7 +97,12 @@ void                  tg_platform_timer_reset(tg_timer_h h_timer);
 f32                   tg_platform_timer_elapsed_milliseconds(tg_timer_h h_timer);
 void                  tg_platform_timer_destroy(tg_timer_h h_timer);
 
-void                  tg_platform_work_queue_add_entry(tg_work_fn* p_work_fn, void* p_user_data);
-void                  tg_platform_work_queue_wait_for_completion();
+i32                   tg_platform_interlocked_compare_exchange(volatile i32* p_destination, i32 exchange, i32 comperand);
+u32                   tg_platform_get_current_thread_id();
+tg_lock               tg_platform_lock_create(tg_lock_state initial_state);
+b32                   tg_platform_lock(volatile tg_lock* p_lock);
+void                  tg_platform_unlock(volatile tg_lock* p_lock);
+void                  tg_platform_work_queue_add_entry(tg_work_fn* p_work_fn, volatile void* p_user_data);
+void                  tg_platform_work_queue_wait_for_completion(u32 thread_id);
 
 #endif

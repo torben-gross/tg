@@ -7,6 +7,7 @@
 
 #include "graphics/tg_spirv.h"
 #include "graphics/vulkan/tg_vulkan_memory_allocator.h"
+#include "platform/tg_platform.h"
 #include <vulkan/vulkan.h>
 #undef near
 #undef far
@@ -52,7 +53,6 @@
 
 
 
-#define TG_VULKAN_MAX_CAMERAS_PER_RENDER_COMMAND                     4
 #define TG_VULKAN_MAX_RENDER_COMMANDS_PER_CAMERA                     65536
 #define TG_VULKAN_MAX_LOD_COUNT                                      8
 
@@ -63,11 +63,26 @@
 
 
 
+typedef enum tg_vulkan_command_pool_type
+{
+    TG_VULKAN_COMMAND_POOL_TYPE_COMPUTE,
+    TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS
+} tg_vulkan_command_pool_type;
+
 typedef enum tg_vulkan_material_type
 {
     TG_VULKAN_MATERIAL_TYPE_DEFERRED,
     TG_VULKAN_MATERIAL_TYPE_FORWARD
 } tg_vulkan_material_type;
+
+typedef enum tg_vulkan_queue_type
+{
+    TG_VULKAN_QUEUE_TYPE_COMPUTE,
+    TG_VULKAN_QUEUE_TYPE_GRAPHICS,
+    TG_VULKAN_QUEUE_TYPE_PRESENT,
+
+    TG_VULKAN_QUEUE_TYPE_COUNT
+} tg_vulkan_queue_type;
 
 
 
@@ -116,6 +131,7 @@ typedef struct tg_vulkan_image_extent
 
 typedef struct tg_vulkan_queue
 {
+    tg_lock    lock;
     u32        index;
     VkQueue    queue;
 } tg_vulkan_queue;
@@ -224,7 +240,7 @@ typedef struct tg_render_command
     tg_mesh_h                               h_mesh;
     tg_material_h                           h_material;
     u32                                     camera_info_count;
-    tg_vulkan_render_command_camera_info    p_camera_infos[TG_VULKAN_MAX_CAMERAS_PER_RENDER_COMMAND];
+    tg_vulkan_render_command_camera_info    p_camera_infos[TG_MAX_CAMERA_COUNT];
 } tg_render_command;
 
 typedef struct tg_render_target
@@ -341,11 +357,6 @@ VkInstance           instance;
 tg_vulkan_surface    surface;
 VkPhysicalDevice     physical_device;
 VkDevice             device;
-tg_vulkan_queue      graphics_queue;
-tg_vulkan_queue      present_queue;
-tg_vulkan_queue      compute_queue;
-VkCommandPool        graphics_command_pool;
-VkCommandPool        compute_command_pool;
 
 
 
@@ -353,6 +364,10 @@ VkSwapchainKHR       swapchain;
 VkExtent2D           swapchain_extent;
 VkImage              p_swapchain_images[TG_VULKAN_SURFACE_IMAGE_COUNT];
 VkImageView          p_swapchain_image_views[TG_VULKAN_SURFACE_IMAGE_COUNT];
+
+
+
+tg_camera            p_cameras[TG_MAX_CAMERA_COUNT];
 
 
 
@@ -365,7 +380,7 @@ tg_color_image                tg_vulkan_color_image_create(const tg_vulkan_color
 VkFormat                      tg_vulkan_color_image_convert_format(tg_color_image_format format);
 void                          tg_vulkan_color_image_destroy(tg_color_image* p_color_image);
 
-VkCommandBuffer               tg_vulkan_command_buffer_allocate(VkCommandPool command_pool, VkCommandBufferLevel level);
+VkCommandBuffer               tg_vulkan_command_buffer_allocate(tg_vulkan_command_pool_type type, VkCommandBufferLevel level);
 void                          tg_vulkan_command_buffer_begin(VkCommandBuffer command_buffer, VkCommandBufferUsageFlags usage_flags, const VkCommandBufferInheritanceInfo* p_inheritance_info);
 void                          tg_vulkan_command_buffer_cmd_begin_render_pass(VkCommandBuffer command_buffer, VkRenderPass render_pass, VkFramebuffer framebuffer, VkSubpassContents subpass_contents);
 void                          tg_vulkan_command_buffer_cmd_blit_color_image(VkCommandBuffer command_buffer, tg_color_image* p_source, tg_color_image* p_destination, const VkImageBlit* p_region);
@@ -381,10 +396,10 @@ void                          tg_vulkan_command_buffer_cmd_copy_storage_image_3d
 void                          tg_vulkan_command_buffer_cmd_transition_color_image_layout(VkCommandBuffer command_buffer, tg_color_image* p_color_image, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits);
 void                          tg_vulkan_command_buffer_cmd_transition_depth_image_layout(VkCommandBuffer command_buffer, tg_depth_image* p_depth_image, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits);
 void                          tg_vulkan_command_buffer_cmd_transition_storage_image_3d_layout(VkCommandBuffer command_buffer, tg_storage_image_3d* p_storage_image_3d, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits);
-void                          tg_vulkan_command_buffer_end_and_submit(VkCommandBuffer command_buffer, tg_vulkan_queue* p_vulkan_queue);
-void                          tg_vulkan_command_buffer_free(VkCommandPool command_pool, VkCommandBuffer command_buffer);
-void                          tg_vulkan_command_buffers_allocate(VkCommandPool command_pool, VkCommandBufferLevel level, u32 command_buffer_count, VkCommandBuffer* p_command_buffers);
-void                          tg_vulkan_command_buffers_free(VkCommandPool command_pool, u32 command_buffer_count, const VkCommandBuffer* p_command_buffers);
+void                          tg_vulkan_command_buffer_end_and_submit(VkCommandBuffer command_buffer, tg_vulkan_queue_type type);
+void                          tg_vulkan_command_buffer_free(tg_vulkan_command_pool_type type, VkCommandBuffer command_buffer); // TODO: save command pool in command buffers?
+void                          tg_vulkan_command_buffers_allocate(tg_vulkan_command_pool_type type, VkCommandBufferLevel level, u32 command_buffer_count, VkCommandBuffer* p_command_buffers);
+void                          tg_vulkan_command_buffers_free(tg_vulkan_command_pool_type type, u32 command_buffer_count, const VkCommandBuffer* p_command_buffers);
 
 VkPipeline                    tg_vulkan_compute_pipeline_create(VkShaderModule shader_module, VkPipelineLayout pipeline_layout);
 void                          tg_vulkan_compute_pipeline_destroy(VkPipeline compute_pipeline);
@@ -447,6 +462,10 @@ VkPhysicalDeviceProperties    tg_vulkan_physical_device_get_properties();
 
 VkPipelineLayout              tg_vulkan_pipeline_layout_create(u32 descriptor_set_layout_count, const VkDescriptorSetLayout* p_descriptor_set_layouts, u32 push_constant_range_count, const VkPushConstantRange* p_push_constant_ranges);
 void                          tg_vulkan_pipeline_layout_destroy(VkPipelineLayout pipeline_layout);
+
+void                          tg_vulkan_queue_present(VkPresentInfoKHR* p_present_info);
+void                          tg_vulkan_queue_submit(tg_vulkan_queue_type type, u32 submit_count, VkSubmitInfo* p_submit_infos, VkFence fence);
+void                          tg_vulkan_queue_wait_idle(tg_vulkan_queue_type type);
 
 VkRenderPass                  tg_vulkan_render_pass_create(u32 attachment_count, const VkAttachmentDescription* p_attachments, u32 subpass_count, const VkSubpassDescription* p_subpasses, u32 dependency_count, const VkSubpassDependency* p_dependencies);
 void                          tg_vulkan_render_pass_destroy(VkRenderPass render_pass);

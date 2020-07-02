@@ -11,7 +11,7 @@ static void tg__destroy_shading_pass(tg_forward_renderer_h h_forward_renderer)
 {
     tg_vulkan_render_pass_destroy(h_forward_renderer->shading_pass.render_pass);
     tg_vulkan_framebuffer_destroy(h_forward_renderer->shading_pass.framebuffer);
-    tg_vulkan_command_buffer_free(graphics_command_pool, h_forward_renderer->shading_pass.command_buffer);
+    tg_vulkan_command_buffer_free(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, h_forward_renderer->shading_pass.command_buffer);
 }
 
 static void tg__init_shading_pass(tg_forward_renderer_h h_forward_renderer)
@@ -73,7 +73,7 @@ static void tg__init_shading_pass(tg_forward_renderer_h h_forward_renderer)
         h_forward_renderer->h_camera->render_target.depth_attachment.image_view
     };
     h_forward_renderer->shading_pass.framebuffer = tg_vulkan_framebuffer_create(h_forward_renderer->shading_pass.render_pass, 2, p_image_views, swapchain_extent.width, swapchain_extent.height);
-    h_forward_renderer->shading_pass.command_buffer = tg_vulkan_command_buffer_allocate(graphics_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+    h_forward_renderer->shading_pass.command_buffer = tg_vulkan_command_buffer_allocate(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 }
 
 
@@ -257,7 +257,7 @@ void tg_vulkan_forward_renderer_end(tg_forward_renderer_h h_forward_renderer)
     submit_info.signalSemaphoreCount = 0;
     submit_info.pSignalSemaphores = TG_NULL;
 
-    VK_CALL(vkQueueSubmit(graphics_queue.queue, 1, &submit_info, h_forward_renderer->h_camera->render_target.fence));
+    tg_vulkan_queue_submit(TG_VULKAN_QUEUE_TYPE_GRAPHICS, 1, &submit_info, h_forward_renderer->h_camera->render_target.fence);
 }
 
 void tg_vulkan_forward_renderer_on_window_resize(tg_forward_renderer_h h_forward_renderer, u32 width, u32 height)

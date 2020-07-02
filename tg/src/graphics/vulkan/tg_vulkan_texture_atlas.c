@@ -40,7 +40,7 @@ tg_texture_atlas_h tg_texture_atlas_create_from_images(u32 image_count, tg_color
 	vulkan_color_image_create_info.p_vulkan_sampler_create_info = TG_NULL;
 
 	h_texture_atlas->color_image = tg_vulkan_color_image_create(&vulkan_color_image_create_info);
-	VkCommandBuffer command_buffer = tg_vulkan_command_buffer_allocate(graphics_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+	VkCommandBuffer command_buffer = tg_vulkan_command_buffer_allocate(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
 	tg_vulkan_command_buffer_begin(command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
 	{
@@ -72,7 +72,7 @@ tg_texture_atlas_h tg_texture_atlas_create_from_images(u32 image_count, tg_color
 		}
 		tg_vulkan_command_buffer_cmd_transition_color_image_layout(command_buffer, &h_texture_atlas->color_image, 0, 0, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, TG_VULKAN_COLOR_IMAGE_LAYOUT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
 	}
-	tg_vulkan_command_buffer_end_and_submit(command_buffer, &graphics_queue);
+	tg_vulkan_command_buffer_end_and_submit(command_buffer, TG_VULKAN_QUEUE_TYPE_GRAPHICS);
 
 	for (u32 i = 0; i < image_count; i++)
 	{

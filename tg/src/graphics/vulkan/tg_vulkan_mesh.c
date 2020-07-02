@@ -79,7 +79,7 @@ static void tg__recalculate_normals(u32 vertex_count, u32 index_count, const u16
         descriptor = tg_vulkan_descriptor_create(2, p_descriptor_set_layout_bindings);
         pipeline_layout = tg_vulkan_pipeline_layout_create(1, &descriptor.descriptor_set_layout, 0, TG_NULL);
         pipeline = tg_vulkan_compute_pipeline_create(shader_module, pipeline_layout);
-        command_buffer = tg_vulkan_command_buffer_allocate(compute_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+        command_buffer = tg_vulkan_command_buffer_allocate(TG_VULKAN_COMMAND_POOL_TYPE_COMPUTE, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
         uniform_buffer = tg_vulkan_buffer_create(sizeof(tg_normals_compute_shader_uniform_buffer), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
         ((tg_normals_compute_shader_uniform_buffer*)uniform_buffer.memory.p_mapped_device_memory)->vertex_float_count = sizeof(tg_vertex) / sizeof(f32);
@@ -98,12 +98,12 @@ static void tg__recalculate_normals(u32 vertex_count, u32 index_count, const u16
             vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_layout, 0, 1, &descriptor.descriptor_set, 0, TG_NULL);
             vkCmdDispatch(command_buffer, vertex_count, 1, 1);
         }
-        tg_vulkan_command_buffer_end_and_submit(command_buffer, &compute_queue);
+        tg_vulkan_command_buffer_end_and_submit(command_buffer, TG_VULKAN_QUEUE_TYPE_COMPUTE);
 
 
 
         tg_vulkan_buffer_destroy(&uniform_buffer);
-        tg_vulkan_command_buffer_free(compute_command_pool, command_buffer);
+        tg_vulkan_command_buffer_free(TG_VULKAN_COMMAND_POOL_TYPE_COMPUTE, command_buffer);
         tg_vulkan_graphics_pipeline_destroy(pipeline);
         tg_vulkan_pipeline_layout_destroy(pipeline_layout);
         tg_vulkan_descriptor_destroy(&descriptor);

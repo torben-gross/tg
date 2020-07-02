@@ -319,42 +319,52 @@ void tg_platform_timer_destroy(tg_timer_h h_timer)
 | Multithreading                                              |
 +------------------------------------------------------------*/
 
-#define TG_WORKER_THREAD_COUNT           7
-#define TG_WORK_QUEUE_MAX_ENTRY_COUNT    256
-#define TG_MEMORY_FENCE                  _ReadWriteBarrier(); _mm_mfence()
+#define TG_WORK_QUEUE_MAX_ENTRY_COUNT    1024
+#define TG_MEMORY_FENCE                  _ReadWriteBarrier(); _mm_mfence() // TODO: do i ever use this?
 
 typedef struct tg_work_queue
 {
-    volatile HANDLE    h_semaphore;
-    tg_work_fn*        pp_work_fns[TG_WORK_QUEUE_MAX_ENTRY_COUNT];
-    volatile void*     pp_user_datas[TG_WORK_QUEUE_MAX_ENTRY_COUNT];
-    volatile u8        current;
-    volatile u8        count;
-    volatile u8        lock;
+    volatile HANDLE     h_semaphore;
+    tg_work_fn*         pp_work_fns[TG_WORK_QUEUE_MAX_ENTRY_COUNT];
+    volatile void*      pp_user_datas[TG_WORK_QUEUE_MAX_ENTRY_COUNT];
+    volatile u32        current;
+    volatile u32        count;
+    volatile tg_lock    lock;
 } tg_work_queue;
 
 static volatile tg_work_queue work_queue = { 0 };
-
+static volatile u32 p_thread_ids[TG_WORKER_THREAD_COUNT + 1] = { 0 };
+static volatile u32 in = 0;
+static volatile u32 out = 0;
 static b32 tg__work_queue_execute_entry()
 {
     b32 result = TG_FALSE;
 
-    if (_InterlockedCompareExchange((volatile i32*)&work_queue.lock, 1, 0) == 0)
+    if (_InterlockedCompareExchange(&work_queue.lock, 1, 0) == 0)
     {
         tg_work_fn* p_work_fn = TG_NULL;
         volatile void* p_user_data = TG_NULL;
 
         if (work_queue.count)
         {
+            _InterlockedIncrement(&out);
             result = TG_TRUE;
 
+            if (work_queue.count > 100)
+            {
+                int bh = 0;
+            }
             p_work_fn = work_queue.pp_work_fns[work_queue.current];
             p_user_data = work_queue.pp_user_datas[work_queue.current];
-            tgm_u32_incmod(work_queue.current, TG_WORK_QUEUE_MAX_ENTRY_COUNT);
+
+            work_queue.pp_work_fns[work_queue.current] = TG_NULL;
+            work_queue.pp_user_datas[work_queue.current] = TG_NULL;
+            
+            work_queue.current = tgm_u32_incmod(work_queue.current, TG_WORK_QUEUE_MAX_ENTRY_COUNT);
             work_queue.count--;
         }
 
-        _InterlockedExchange((volatile i32*)&work_queue.lock, 0);
+        _InterlockedExchange(&work_queue.lock, 0);
 
         if (result)
         {
@@ -377,11 +387,51 @@ static u32 WINAPI tg__worker_thread_proc(void* p_param)
     return 0;
 }
 
-void tg_platform_work_queue_add_entry(tg_work_fn* p_work_fn, void* p_user_data)
+i32 tg_platform_interlocked_compare_exchange(volatile i32* p_destination, i32 exchange, i32 comperand)
+{
+    const i32 result = _InterlockedCompareExchange(p_destination, exchange, comperand);
+    return result;
+}
+
+u32 tg_platform_get_current_thread_id()
+{
+    u32 result = 0;
+
+    const u32 thread_id = GetThreadId(GetCurrentThread());
+    for (u32 i = 0; i < TG_WORKER_THREAD_COUNT + 1; i++)
+    {
+        if (p_thread_ids[i] == thread_id)
+        {
+            result = i;
+            break;
+        }
+    }
+
+    return result;
+}
+
+tg_lock tg_platform_lock_create(tg_lock_state initial_state)
+{ 
+    return initial_state;
+}
+
+b32 tg_platform_lock(volatile tg_lock* p_lock)
+{
+    const b32 result = _InterlockedCompareExchange(p_lock, 1, 0) == 0;
+    return result;
+}
+
+void tg_platform_unlock(volatile tg_lock* p_lock)
+{
+    _InterlockedExchange(p_lock, 0);
+}
+
+void tg_platform_work_queue_add_entry(tg_work_fn* p_work_fn, volatile void* p_user_data)
 {
     TG_ASSERT(p_work_fn);
+    _InterlockedIncrement(&in);
 
-    while (_InterlockedExchange((volatile i32*)&work_queue.lock, 1) != 0); // TODO: this could potentially block until entire queue is empty!
+    while (_InterlockedCompareExchange(&work_queue.lock, 1, 0) != 0); // TODO: this could potentially block until entire queue is empty!
     TG_ASSERT(work_queue.count + 1 < TG_WORK_QUEUE_MAX_ENTRY_COUNT);
 
     u32 entry_index = work_queue.current + work_queue.count;
@@ -393,18 +443,17 @@ void tg_platform_work_queue_add_entry(tg_work_fn* p_work_fn, void* p_user_data)
     work_queue.pp_user_datas[entry_index] = p_user_data;
     work_queue.count++;
 
-    _InterlockedExchange((volatile i32*)&work_queue.lock, 0);
-    WIN32_CALL(ReleaseSemaphore(work_queue.h_semaphore, 1, TG_NULL));
+    _InterlockedExchange(&work_queue.lock, 0);
+    ReleaseSemaphore(work_queue.h_semaphore, 1, TG_NULL);
 }
 
-void tg_platform_work_queue_wait_for_completion()
+void tg_platform_work_queue_wait_for_completion(u32 thread_id)
 {
     while (work_queue.count)
     {
-        tg__work_queue_execute_entry();
+        tg__work_queue_execute_entry(thread_id);
     }
 }
-
 
 
 /*------------------------------------------------------------+
@@ -645,18 +694,17 @@ LRESULT CALLBACK tg_platform_win32_window_proc(HWND h_window, UINT message, WPAR
     return 0;
 }
 
-static void test(volatile void* p_user_data)
-{
-    TG_DEBUG_LOG("HELLO WORLD!");
-}
-
 int CALLBACK WinMain(_In_ HINSTANCE h_instance, _In_opt_ HINSTANCE h_prev_instance, _In_ LPSTR cmd_line, _In_ int show_cmd)
 {
     work_queue.h_semaphore = CreateSemaphoreEx(TG_NULL, 0, TG_WORKER_THREAD_COUNT, TG_NULL, 0, SEMAPHORE_ALL_ACCESS);
+    work_queue.lock = tg_platform_lock_create(TG_LOCK_STATE_FREE);
+
+    p_thread_ids[0] = GetThreadId(GetCurrentThread());
     for (u8 i = 0; i < TG_WORKER_THREAD_COUNT; i++)
     {
         u32 thread_id = 0;
         HANDLE h_thread = CreateThread(TG_NULL, 0, tg__worker_thread_proc, TG_NULL, 0, &thread_id);
+        p_thread_ids[i + 1] = thread_id;
         WIN32_CALL(CloseHandle(h_thread));
     }
 

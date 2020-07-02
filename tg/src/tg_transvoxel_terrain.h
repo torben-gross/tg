@@ -1,6 +1,7 @@
 #ifndef TG_TRANSVOXEL_TERRAIN_H
 #define TG_TRANSVOXEL_TERRAIN_H
 
+#include "platform/tg_platform.h"
 #include "tg_entity.h"
 
 
@@ -51,11 +52,27 @@ typedef struct tg_terrain_block
 } tg_terrain_block;
 
 typedef struct tg_terrain_entity_node tg_terrain_entity_node;
+typedef struct tg_build_node_user_data
+{
+	tg_terrain_entity_node*    p_node;
+	v3                         camera_position;
+	v3i                        octree_min_coordinates;
+	v3i                        block_offset_in_octree;
+	u8                         lod;
+	const i8*                  p_voxel_map;
+} tg_build_node_user_data;
+
+typedef struct tg_terrain_entity_node tg_terrain_entity_node;
 typedef struct tg_terrain_entity_node
 {
-	u32                        flags;
-	tg_terrain_block           block;
-	tg_terrain_entity_node*    pp_children[8];
+	struct worker_thread_info
+	{
+		tg_lock                             lock;
+		volatile tg_build_node_user_data    user_data; // TODO: this is aweful!
+	};
+	u32                                     flags;
+	tg_terrain_block                        block;
+	tg_terrain_entity_node*                 pp_children[8];
 } tg_terrain_entity_node;
 
 typedef struct tg_terrain_entity_octree

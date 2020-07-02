@@ -18,12 +18,12 @@ void tg__destroy_capture_pass(tg_camera_h h_camera)
 
 void tg__destroy_clear_pass(tg_camera_h h_camera)
 {
-    tg_vulkan_command_buffer_free(graphics_command_pool, h_camera->clear_pass.command_buffer);
+    tg_vulkan_command_buffer_free(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, h_camera->clear_pass.command_buffer);
 }
 
 void tg__destroy_present_pass(tg_camera_h h_camera)
 {
-    tg_vulkan_command_buffers_free(graphics_command_pool, TG_VULKAN_SURFACE_IMAGE_COUNT, h_camera->present_pass.p_command_buffers);
+    tg_vulkan_command_buffers_free(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, TG_VULKAN_SURFACE_IMAGE_COUNT, h_camera->present_pass.p_command_buffers);
     tg_vulkan_graphics_pipeline_destroy(h_camera->present_pass.graphics_pipeline);
     tg_vulkan_pipeline_layout_destroy(h_camera->present_pass.pipeline_layout);
     tg_vulkan_descriptor_destroy(&h_camera->present_pass.descriptor);
@@ -43,7 +43,7 @@ void tg__init_capture_pass(tg_camera_h h_camera)
 
 void tg__init_clear_pass(tg_camera_h h_camera)
 {
-    h_camera->clear_pass.command_buffer = tg_vulkan_command_buffer_allocate(graphics_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+    h_camera->clear_pass.command_buffer = tg_vulkan_command_buffer_allocate(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     tg_vulkan_command_buffer_begin(h_camera->clear_pass.command_buffer, 0, TG_NULL);
 
     tg_vulkan_command_buffer_cmd_transition_color_image_layout(
@@ -219,7 +219,8 @@ void tg__init_present_pass(tg_camera_h h_camera)
     vulkan_graphics_pipeline_create_info.render_pass = h_camera->present_pass.render_pass;
 
     h_camera->present_pass.graphics_pipeline = tg_vulkan_graphics_pipeline_create(&vulkan_graphics_pipeline_create_info);
-    tg_vulkan_command_buffers_allocate(graphics_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, TG_VULKAN_SURFACE_IMAGE_COUNT, h_camera->present_pass.p_command_buffers);
+
+    tg_vulkan_command_buffers_allocate(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY, TG_VULKAN_SURFACE_IMAGE_COUNT, h_camera->present_pass.p_command_buffers);
 
     const VkDeviceSize vertex_buffer_offset = 0;
 
@@ -318,10 +319,21 @@ void tg__init_present_pass(tg_camera_h h_camera)
 
 
 
-void tg__init(tg_camera_h h_camera)
+tg_camera* tg__init_available()
 {
-    h_camera->type = TG_HANDLE_TYPE_CAMERA;
-    h_camera->view_projection_ubo = tg_vulkan_buffer_create(2 * sizeof(m4), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    tg_camera* p_camera = TG_NULL;
+    for (u32 i = 0; i < TG_MAX_CAMERA_COUNT; i++)
+    {
+        if (p_cameras[i].type == TG_HANDLE_TYPE_INVALID)
+        {
+            p_camera = &p_cameras[i];
+            break;
+        }
+    }
+    TG_ASSERT(p_camera);
+
+    p_camera->type = TG_HANDLE_TYPE_CAMERA;
+    p_camera->view_projection_ubo = tg_vulkan_buffer_create(2 * sizeof(m4), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
     tg_vulkan_color_image_create_info vulkan_color_image_create_info = { 0 };
     vulkan_color_image_create_info.width = swapchain_extent.width;
@@ -336,12 +348,12 @@ void tg__init(tg_camera_h h_camera)
     vulkan_depth_image_create_info.format = VK_FORMAT_D32_SFLOAT;
     vulkan_depth_image_create_info.p_vulkan_sampler_create_info = TG_NULL;
 
-    h_camera->render_target = tg_vulkan_render_target_create(&vulkan_color_image_create_info, &vulkan_depth_image_create_info, VK_FENCE_CREATE_SIGNALED_BIT);
-    h_camera->render_command_count = 0;
+    p_camera->render_target = tg_vulkan_render_target_create(&vulkan_color_image_create_info, &vulkan_depth_image_create_info, VK_FENCE_CREATE_SIGNALED_BIT);
+    p_camera->render_command_count = 0;
 
-    tg__init_capture_pass(h_camera);
-    tg__init_present_pass(h_camera);
-    tg__init_clear_pass(h_camera);
+    tg__init_capture_pass(p_camera);
+    tg__init_present_pass(p_camera);
+    tg__init_clear_pass(p_camera);
 
     VkDescriptorSetLayoutBinding p_descriptor_set_layout_bindings[2] = { 0 };
 
@@ -357,10 +369,10 @@ void tg__init(tg_camera_h h_camera)
     p_descriptor_set_layout_bindings[1].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
     p_descriptor_set_layout_bindings[1].pImmutableSamplers = TG_NULL;
 
-    h_camera->descriptor = tg_vulkan_descriptor_create(2, p_descriptor_set_layout_bindings);
+    p_camera->descriptor = tg_vulkan_descriptor_create(2, p_descriptor_set_layout_bindings);
 
     VkDescriptorBufferInfo view_projection_descriptor_buffer_info = { 0 };
-    view_projection_descriptor_buffer_info.buffer = h_camera->view_projection_ubo.buffer;
+    view_projection_descriptor_buffer_info.buffer = p_camera->view_projection_ubo.buffer;
     view_projection_descriptor_buffer_info.offset = 0;
     view_projection_descriptor_buffer_info.range = VK_WHOLE_SIZE;
 
@@ -368,7 +380,7 @@ void tg__init(tg_camera_h h_camera)
 
     p_write_descriptor_sets[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     p_write_descriptor_sets[0].pNext = TG_NULL;
-    p_write_descriptor_sets[0].dstSet = h_camera->descriptor.descriptor_set;
+    p_write_descriptor_sets[0].dstSet = p_camera->descriptor.descriptor_set;
     p_write_descriptor_sets[0].dstBinding = 0;
     p_write_descriptor_sets[0].dstArrayElement = 0;
     p_write_descriptor_sets[0].descriptorCount = 1;
@@ -379,7 +391,7 @@ void tg__init(tg_camera_h h_camera)
 
     p_write_descriptor_sets[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     p_write_descriptor_sets[1].pNext = TG_NULL;
-    p_write_descriptor_sets[1].dstSet = h_camera->descriptor.descriptor_set;
+    p_write_descriptor_sets[1].dstSet = p_camera->descriptor.descriptor_set;
     p_write_descriptor_sets[1].dstBinding = 1;
     p_write_descriptor_sets[1].dstArrayElement = 0;
     p_write_descriptor_sets[1].descriptorCount = 1;
@@ -389,14 +401,15 @@ void tg__init(tg_camera_h h_camera)
     p_write_descriptor_sets[1].pTexelBufferView = TG_NULL;
 
     tg_vulkan_descriptor_sets_update(2, p_write_descriptor_sets);
+
+    return p_camera;
 }
 
 tg_camera_h tg_camera_create_orthographic(v3 position, f32 pitch, f32 yaw, f32 roll, f32 left, f32 right, f32 bottom, f32 top, f32 far, f32 near)
 {
 	TG_ASSERT(left != right && bottom != top && far != near);
 
-	tg_camera_h h_camera = TG_MEMORY_ALLOC(sizeof(*h_camera));
-    tg__init(h_camera);
+	tg_camera_h h_camera = tg__init_available();
 	tg_camera_set_view(h_camera, position, pitch, yaw, roll);
 	tg_camera_set_orthographic_projection(h_camera, left, right, bottom, top, far, near);
 	return h_camera;
@@ -406,8 +419,7 @@ tg_camera_h tg_camera_create_perspective(v3 position, f32 pitch, f32 yaw, f32 ro
 {
 	TG_ASSERT(near < 0 && far < 0 && near > far);
 
-	tg_camera_h h_camera = TG_MEMORY_ALLOC(sizeof(*h_camera));
-    tg__init(h_camera);
+    tg_camera_h h_camera = tg__init_available();
 	tg_camera_set_view(h_camera, position, pitch, yaw, roll);
 	tg_camera_set_perspective_projection(h_camera, fov_y, near, far);
 	return h_camera;
@@ -423,7 +435,7 @@ void tg_camera_destroy(tg_camera_h h_camera)
     tg_vulkan_descriptor_destroy(&h_camera->descriptor);
     tg_vulkan_render_target_destroy(&h_camera->render_target);
     tg_vulkan_buffer_destroy(&h_camera->view_projection_ubo);
-	TG_MEMORY_FREE(h_camera);
+    h_camera->type = TG_HANDLE_TYPE_INVALID;
 }
 
 
@@ -449,8 +461,10 @@ void tg_camera_capture(tg_camera_h h_camera, tg_render_command_h h_render_comman
         }
     }
 
+    // TODO: get rid of this entirely!
     if (!p_camera_info)
     {
+        return;
         tg_render_command_register(h_render_command, h_camera);
         p_camera_info = &h_render_command->p_camera_infos[h_render_command->camera_info_count - 1];
     }
@@ -568,7 +582,7 @@ void tg_camera_present(tg_camera_h h_camera)
     draw_submit_info.signalSemaphoreCount = 1;
     draw_submit_info.pSignalSemaphores = &h_camera->present_pass.semaphore;
 
-    VK_CALL(vkQueueSubmit(graphics_queue.queue, 1, &draw_submit_info, h_camera->render_target.fence));
+    tg_vulkan_queue_submit(TG_VULKAN_QUEUE_TYPE_GRAPHICS, 1, &draw_submit_info, h_camera->render_target.fence);
 
     VkPresentInfoKHR present_info = { 0 };
     present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -580,7 +594,7 @@ void tg_camera_present(tg_camera_h h_camera)
     present_info.pImageIndices = &current_image;
     present_info.pResults = TG_NULL;
 
-    VK_CALL(vkQueuePresentKHR(present_queue.queue, &present_info));
+    tg_vulkan_queue_present(&present_info);
 }
 
 void tg_camera_clear(tg_camera_h h_camera) // TODO: should this be combined with begin?
@@ -601,7 +615,7 @@ void tg_camera_clear(tg_camera_h h_camera) // TODO: should this be combined with
     submit_info.signalSemaphoreCount = 0;
     submit_info.pSignalSemaphores = TG_NULL;
 
-    VK_CALL(vkQueueSubmit(graphics_queue.queue, 1, &submit_info, h_camera->render_target.fence));
+    tg_vulkan_queue_submit(TG_VULKAN_QUEUE_TYPE_GRAPHICS, 1, &submit_info, h_camera->render_target.fence);
 }
 
 
