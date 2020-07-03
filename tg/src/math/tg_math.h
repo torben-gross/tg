@@ -289,7 +289,10 @@ u64    tgm_u64_min(u64 v0, u64 v1);
 | Vectors                                                     |
 +------------------------------------------------------------*/
 
+v2     tgm_v2_add(v2 v0, v2 v1);
+v2     tgm_v2_divf(v2 v, f32 f);
 v2     tgm_v2_max(v2 v0, v2 v1);
+v2     tgm_v2_mulf(v2 v, f32 f);
 v2     tgm_v2_min(v2 v0, v2 v1);
 v2     tgm_v2_sub(v2 v0, v2 v1);
 

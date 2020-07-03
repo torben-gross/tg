@@ -181,7 +181,8 @@ tg_mesh_h tg_mesh_create(u32 vertex_count, const v3* p_positions, const v3* p_no
 {
 	TG_ASSERT(vertex_count && p_positions && ((index_count && index_count % 3 == 0) || (vertex_count && vertex_count % 3 == 0)));
 
-	tg_mesh_h h_mesh = TG_MEMORY_ALLOC(sizeof(*h_mesh));
+    tg_mesh_h h_mesh = TG_NULL;
+    TG_VULKAN_TAKE_HANDLE(p_meshes, h_mesh);
     h_mesh->type = TG_HANDLE_TYPE_MESH;
     h_mesh->vertex_count = vertex_count;
     h_mesh->index_count = index_count;
@@ -284,7 +285,8 @@ tg_mesh_h tg_mesh_create2(u32 vertex_count, u32 vertex_stride, const void* p_ver
 {
     TG_ASSERT(vertex_count && p_vertices && (vertex_count % 3 == 0 || (index_count && index_count % 3 == 0)));
 
-    tg_mesh_h h_mesh = TG_MEMORY_ALLOC(sizeof(*h_mesh));
+    tg_mesh_h h_mesh = TG_NULL;
+    TG_VULKAN_TAKE_HANDLE(p_meshes, h_mesh);
     h_mesh->type = TG_HANDLE_TYPE_MESH;
     h_mesh->vertex_count = vertex_count;
     h_mesh->vbo = tg_vulkan_buffer_create(vertex_count * (u64)vertex_stride, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
@@ -326,7 +328,8 @@ tg_mesh_h tg_mesh_create2(u32 vertex_count, u32 vertex_stride, const void* p_ver
 
 tg_mesh_h tg_mesh_create_empty(u32 vertex_capacity, u32 index_capacity)
 {
-    tg_mesh_h h_mesh = TG_MEMORY_ALLOC(sizeof(*h_mesh));
+    tg_mesh_h h_mesh = TG_NULL;
+    TG_VULKAN_TAKE_HANDLE(p_meshes, h_mesh);
     h_mesh->type = TG_HANDLE_TYPE_MESH;
 
     h_mesh->vertex_count = 0;
@@ -347,6 +350,138 @@ tg_mesh_h tg_mesh_create_empty(u32 vertex_capacity, u32 index_capacity)
     return h_mesh;
 }
 
+tg_mesh_h tg_mesh_create_sphere(f32 radius, u32 sector_count, u32 stack_count)
+{
+    const u32 unique_vertex_count = (sector_count + 1) * (stack_count + 1);
+    v3* p_unique_positions = TG_MEMORY_STACK_ALLOC(unique_vertex_count * sizeof(*p_unique_positions));
+    v2* p_unique_uvs = TG_MEMORY_STACK_ALLOC(unique_vertex_count * sizeof(*p_unique_uvs));
+
+    const f32 sector_step = 2.0f * (f32)TGM_PI / sector_count;
+    const f32 stack_step = (f32)TGM_PI / stack_count;
+
+    u32 it = 0;
+    for (u32 i = 0; i < stack_count + 1; i++)
+    {
+        TG_ASSERT(it < unique_vertex_count);
+
+        const f32 stack_angle = (f32)TGM_PI / 2.0f - (f32)i * stack_step;
+        const f32 y = radius * tgm_f32_sin(stack_angle);
+        const f32 xz = radius * tgm_f32_cos(stack_angle);
+
+        for (u32 j = 0; j < sector_count + 1; j++)
+        {
+            const f32 sector_angle = (f32)j * sector_step;
+            
+            p_unique_positions[it].x = xz * tgm_f32_cos(sector_angle);
+            p_unique_positions[it].y = y;
+            p_unique_positions[it].z = -xz * tgm_f32_sin(sector_angle);
+            p_unique_uvs[it].x = (f32)j / sector_count;
+            p_unique_uvs[it].y = (f32)i / stack_count;
+
+            it++;
+        }
+    }
+
+    const u32 max_vertex_count = 4 * unique_vertex_count;
+    const u32 max_index_count = 6 * unique_vertex_count;
+    v3* p_positions = TG_MEMORY_STACK_ALLOC((u64)max_vertex_count * sizeof(*p_positions));
+    v2* p_uvs = TG_MEMORY_STACK_ALLOC((u64)max_vertex_count * sizeof(*p_uvs));
+    u16* p_indices = TG_MEMORY_STACK_ALLOC((u64)max_index_count * sizeof(*p_indices));
+
+    u32 vertex_count = 0;
+    u32 index_count = 0;
+    for (u32 i = 0; i < stack_count; i++)
+    {
+        for (u32 j = 0; j < sector_count; j++)
+        {
+            const u32 i0 = j + (sector_count + 1) * i;
+            const u32 i1 = j + (sector_count + 1) * (i + 1);
+
+            // v0 - v3
+            // |     |
+            // v1 - v2
+
+            const v3 vert0 = p_unique_positions[i0    ];
+            const v3 vert1 = p_unique_positions[i1    ];
+            const v3 vert2 = p_unique_positions[i1 + 1];
+            const v3 vert3 = p_unique_positions[i0 + 1];
+
+            const v2 uv0 = p_unique_uvs[i0    ];
+            const v2 uv1 = p_unique_uvs[i1    ];
+            const v2 uv2 = p_unique_uvs[i1 + 1];
+            const v2 uv3 = p_unique_uvs[i0 + 1];
+
+            if (i == 0)
+            {
+                p_positions[vertex_count    ] = vert0;
+                p_positions[vertex_count + 1] = vert1;
+                p_positions[vertex_count + 2] = vert2;
+
+                p_uvs[vertex_count    ] = tgm_v2_divf(tgm_v2_add(uv0, uv3), 2.0f);
+                p_uvs[vertex_count + 1] = uv1;
+                p_uvs[vertex_count + 2] = uv2;
+
+                p_indices[index_count    ] = vertex_count;
+                p_indices[index_count + 1] = vertex_count + 1;
+                p_indices[index_count + 2] = vertex_count + 2;
+
+                vertex_count += 3;
+                index_count  += 3;
+            }
+            else if (i == stack_count - 1)
+            {
+                p_positions[vertex_count    ] = vert0;
+                p_positions[vertex_count + 1] = vert1;
+                p_positions[vertex_count + 2] = vert3;
+
+                p_uvs[vertex_count    ] = uv0;
+                p_uvs[vertex_count + 1] = uv1;
+                p_uvs[vertex_count + 2] = tgm_v2_divf(tgm_v2_add(uv1, uv2), 2.0f);
+
+                p_indices[index_count    ] = vertex_count;
+                p_indices[index_count + 1] = vertex_count + 1;
+                p_indices[index_count + 2] = vertex_count + 2;
+
+                vertex_count += 3;
+                index_count  += 3;
+            }
+            else
+            {
+                p_positions[vertex_count    ] = vert0;
+                p_positions[vertex_count + 1] = vert1;
+                p_positions[vertex_count + 2] = vert2;
+                p_positions[vertex_count + 3] = vert3;
+
+                p_uvs[vertex_count    ] = uv0;
+                p_uvs[vertex_count + 1] = uv1;
+                p_uvs[vertex_count + 2] = uv2;
+                p_uvs[vertex_count + 3] = uv3;
+
+                p_indices[index_count    ] = vertex_count;
+                p_indices[index_count + 1] = vertex_count + 1;
+                p_indices[index_count + 2] = vertex_count + 2;
+                p_indices[index_count + 3] = vertex_count + 2;
+                p_indices[index_count + 4] = vertex_count + 3;
+                p_indices[index_count + 5] = vertex_count;
+
+                vertex_count += 4;
+                index_count  += 6;
+            }
+        }
+    }
+
+    tg_mesh_h h_mesh = tg_mesh_create(vertex_count, p_positions, TG_NULL, p_uvs, TG_NULL, index_count, p_indices);
+
+    TG_MEMORY_STACK_FREE((u64)max_index_count * sizeof(*p_indices));
+    TG_MEMORY_STACK_FREE((u64)max_vertex_count * sizeof(*p_uvs));
+    TG_MEMORY_STACK_FREE((u64)max_vertex_count * sizeof(*p_positions));
+
+    TG_MEMORY_STACK_FREE(unique_vertex_count * sizeof(*p_unique_uvs));
+    TG_MEMORY_STACK_FREE(unique_vertex_count * sizeof(*p_unique_positions));
+
+    return h_mesh;
+}
+
 void tg_mesh_destroy(tg_mesh_h h_mesh)
 {
     TG_ASSERT(h_mesh);
@@ -356,7 +491,7 @@ void tg_mesh_destroy(tg_mesh_h h_mesh)
         tg_vulkan_buffer_destroy(&h_mesh->ibo);
     }
     tg_vulkan_buffer_destroy(&h_mesh->vbo);
-	TG_MEMORY_FREE(h_mesh);
+    TG_VULKAN_RELEASE_HANDLE(h_mesh);
 }
 
 void tg_mesh_update2(tg_mesh_h h_mesh, u32 vertex_count, u32 vertex_stride, const void* p_vertices, u32 index_count, const u16* p_indices)

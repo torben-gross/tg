@@ -322,15 +322,7 @@ void tg__init_present_pass(tg_camera_h h_camera)
 tg_camera* tg__init_available()
 {
     tg_camera* p_camera = TG_NULL;
-    for (u32 i = 0; i < TG_MAX_CAMERA_COUNT; i++)
-    {
-        if (p_cameras[i].type == TG_HANDLE_TYPE_INVALID)
-        {
-            p_camera = &p_cameras[i];
-            break;
-        }
-    }
-    TG_ASSERT(p_camera);
+    TG_VULKAN_TAKE_HANDLE(p_cameras, p_camera);
 
     p_camera->type = TG_HANDLE_TYPE_CAMERA;
     p_camera->view_projection_ubo = tg_vulkan_buffer_create(2 * sizeof(m4), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
@@ -435,7 +427,7 @@ void tg_camera_destroy(tg_camera_h h_camera)
     tg_vulkan_descriptor_destroy(&h_camera->descriptor);
     tg_vulkan_render_target_destroy(&h_camera->render_target);
     tg_vulkan_buffer_destroy(&h_camera->view_projection_ubo);
-    h_camera->type = TG_HANDLE_TYPE_INVALID;
+    TG_VULKAN_RELEASE_HANDLE(h_camera);
 }
 
 
@@ -461,15 +453,11 @@ void tg_camera_capture(tg_camera_h h_camera, tg_render_command_h h_render_comman
         }
     }
 
-    // TODO: get rid of this entirely!
-    if (!p_camera_info)
-    {
-        return;
-        tg_render_command_register(h_render_command, h_camera);
-        p_camera_info = &h_render_command->p_camera_infos[h_render_command->camera_info_count - 1];
-    }
-    
-    TG_ASSERT(h_camera->render_command_count < TG_VULKAN_MAX_RENDER_COMMANDS_PER_CAMERA);
+    // TODO: this crashes, when a render command is created before the camera. that way,
+    // the camera info is not set up for that specific camera. think of threading in
+    // this case!
+    TG_ASSERT(p_camera_info);
+    TG_ASSERT(h_camera->render_command_count < TG_MAX_RENDER_COMMANDS);
 
     h_camera->ph_render_commands[h_camera->render_command_count++] = h_render_command;
 }

@@ -39,10 +39,7 @@
 
 typedef struct tg_terrain_block
 {
-	tg_material_h          h_material;
-
 	u32                    transition_mask;
-	tg_uniform_buffer_h    h_transition_uniform_buffer;
 	
 	tg_mesh_h              h_block_mesh;
 	tg_render_command_h    h_block_render_command;
@@ -52,27 +49,11 @@ typedef struct tg_terrain_block
 } tg_terrain_block;
 
 typedef struct tg_terrain_entity_node tg_terrain_entity_node;
-typedef struct tg_build_node_user_data
-{
-	tg_terrain_entity_node*    p_node;
-	v3                         camera_position;
-	v3i                        octree_min_coordinates;
-	v3i                        block_offset_in_octree;
-	u8                         lod;
-	const i8*                  p_voxel_map;
-} tg_build_node_user_data;
-
-typedef struct tg_terrain_entity_node tg_terrain_entity_node;
 typedef struct tg_terrain_entity_node
 {
-	struct worker_thread_info
-	{
-		tg_lock                             lock;
-		volatile tg_build_node_user_data    user_data; // TODO: this is aweful!
-	};
-	u32                                     flags;
-	tg_terrain_block                        block;
-	tg_terrain_entity_node*                 pp_children[8];
+	u32                        flags;
+	tg_terrain_block           block;
+	tg_terrain_entity_node*    pp_children[8];
 } tg_terrain_entity_node;
 
 typedef struct tg_terrain_entity_octree
@@ -86,6 +67,7 @@ typedef struct tg_terrain_entity_data
 {
 	tg_entity                    entity;
 	tg_camera_h                  h_camera;
+	tg_material_h                h_material;
 	tg_terrain_entity_octree*    pp_octrees[9];
 } tg_terrain_entity_data;
 

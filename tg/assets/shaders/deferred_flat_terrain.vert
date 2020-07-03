@@ -10,11 +10,6 @@ layout(set = 0, binding = 0) uniform view_projection
     mat4    u_projection;
 };
 
-layout(set = 1, binding = 0) uniform transition_mask
-{
-	int    u_transition_mask;
-};
-
 layout(location = 0) out vec4    v_position;
 layout(location = 1) out vec3    v_normal;
 

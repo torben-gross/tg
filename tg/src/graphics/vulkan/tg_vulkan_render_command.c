@@ -10,11 +10,22 @@ tg_render_command_h tg_render_command_create(tg_mesh_h h_mesh, tg_material_h h_m
 {
 	TG_ASSERT(h_mesh && h_material);
 
-	tg_render_command_h h_render_command = TG_MEMORY_ALLOC(sizeof(*h_render_command));
+    tg_render_command_h h_render_command = TG_NULL;
+    TG_VULKAN_TAKE_HANDLE(p_render_commands, h_render_command);
+
 	h_render_command->type = TG_HANDLE_TYPE_RENDER_COMMAND;
 	h_render_command->h_mesh = h_mesh;
 	h_render_command->h_material = h_material;
 	h_render_command->camera_info_count = 0;
+
+    for (u32 i = 0; i < TG_MAX_CAMERAS; i++)
+    {
+        if (p_cameras[i].type != TG_HANDLE_TYPE_INVALID)
+        {
+            tg_render_command_register(h_render_command, &p_cameras[i]);
+        }
+    }
+
 	return h_render_command;
 }
 
@@ -28,7 +39,7 @@ void tg_render_command_destroy(tg_render_command_h h_render_command)
         tg_vulkan_graphics_pipeline_destroy(h_render_command->p_camera_infos[i].graphics_pipeline);
         tg_vulkan_pipeline_layout_destroy(h_render_command->p_camera_infos[i].pipeline_layout);
     }
-	TG_MEMORY_FREE(h_render_command);
+    TG_VULKAN_RELEASE_HANDLE(h_render_command);
 }
 
 void tg_render_command_register(tg_render_command_h h_render_command, tg_camera_h h_camera)

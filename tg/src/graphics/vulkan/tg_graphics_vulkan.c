@@ -2389,7 +2389,7 @@ void tg_graphics_init()
 
     tg_vulkan_memory_allocator_init(device, physical_device);
     
-    for (u32 i = 0; i < TG_MAX_CAMERA_COUNT; i++)
+    for (u32 i = 0; i < TG_MAX_CAMERAS; i++)
     {
         p_cameras[i].type = TG_HANDLE_TYPE_INVALID;
     }

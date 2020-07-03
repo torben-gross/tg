@@ -8,7 +8,8 @@
 
 static tg_material_h tg__create(tg_vulkan_material_type vulkan_material_type, tg_vertex_shader_h h_vertex_shader, tg_fragment_shader_h h_fragment_shader, u32 handle_count, tg_handle* p_handles)
 {
-    tg_material_h h_material = TG_MEMORY_ALLOC(sizeof(*h_material));
+    tg_material_h h_material = TG_NULL;
+    TG_VULKAN_TAKE_HANDLE(p_materials, h_material);
 
     h_material->type = TG_HANDLE_TYPE_MATERIAL;
     h_material->material_type = vulkan_material_type;
@@ -66,7 +67,7 @@ void tg_material_destroy(tg_material_h h_material)
     TG_ASSERT(h_material);
 
     tg_vulkan_descriptor_destroy(&h_material->descriptor);
-	TG_MEMORY_FREE(h_material);
+    TG_VULKAN_RELEASE_HANDLE(h_material);
 }
 
 b32 tg_material_is_deferred(tg_material_h h_material)

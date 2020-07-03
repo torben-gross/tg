@@ -6,7 +6,16 @@
 
 
 
-#define TG_MAX_CAMERA_COUNT                    4
+#define TG_MAX_CAMERAS                    4
+#define TG_MAX_COMPUTE_SHADERS            16
+#define TG_MAX_FRAGMENT_SHADERS           32
+#define TG_MAX_MATERIALS                  512
+#define TG_MAX_MESHES                     65536
+#define TG_MAX_RENDER_COMMANDS            65536
+#define TG_MAX_STORAGE_BUFFERS            32
+#define TG_MAX_UNIFORM_BUFFERS            32
+#define TG_MAX_VERTEX_SHADERS             32
+
 #define TG_MAX_SHADER_ATTACHMENT_COUNT         8
 #define TG_MAX_SHADER_GLOBAL_RESOURCE_COUNT    32
 #define TG_MAX_SHADER_INPUT_COUNT              32
@@ -205,6 +214,7 @@ b32                              tg_material_is_forward(tg_material_h h_material
 tg_mesh_h                        tg_mesh_create(u32 vertex_count, const v3* p_positions, const v3* p_normals, const v2* p_uvs, const v3* p_tangents, u32 index_count, const u16* p_indices);
 tg_mesh_h                        tg_mesh_create2(u32 vertex_count, u32 vertex_stride, const void* p_vertices, u32 index_count, const u16* p_indices);
 tg_mesh_h                        tg_mesh_create_empty(u32 vertex_capacity, u32 index_capacity);
+tg_mesh_h                        tg_mesh_create_sphere(f32 radius, u32 sector_count, u32 stack_count);
 void                             tg_mesh_destroy(tg_mesh_h h_mesh);
 void                             tg_mesh_update(tg_mesh_h h_mesh, u32 vertex_count, const v3* p_positions, const v3* p_normals, const v2* p_uvs, const v3* p_tangents, u32 index_count, const u16* p_indices);
 void                             tg_mesh_update2(tg_mesh_h h_mesh, u32 vertex_count, u32 vertex_stride, const void* p_vertices, u32 index_count, const u16* p_indices); // TODO: this needs to set a flag or a time, so that the camera knows, that it needs a reset

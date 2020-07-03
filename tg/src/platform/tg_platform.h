@@ -103,6 +103,6 @@ tg_lock               tg_platform_lock_create(tg_lock_state initial_state);
 b32                   tg_platform_lock(volatile tg_lock* p_lock);
 void                  tg_platform_unlock(volatile tg_lock* p_lock);
 void                  tg_platform_work_queue_add_entry(tg_work_fn* p_work_fn, volatile void* p_user_data);
-void                  tg_platform_work_queue_wait_for_completion(u32 thread_id);
+void                  tg_platform_work_queue_wait_for_completion();
 
 #endif

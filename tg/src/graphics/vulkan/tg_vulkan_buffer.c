@@ -10,7 +10,9 @@ tg_storage_buffer_h tg_storage_buffer_create(u64 size, b32 visible)
 {
 	TG_ASSERT(size > 0);
 	
-	tg_storage_buffer_h h_storage_buffer = TG_MEMORY_ALLOC(sizeof(*h_storage_buffer));
+	tg_storage_buffer_h h_storage_buffer = TG_NULL;
+	TG_VULKAN_TAKE_HANDLE(p_storage_buffers, h_storage_buffer);
+
 	h_storage_buffer->type = TG_HANDLE_TYPE_STORAGE_BUFFER;
 	h_storage_buffer->buffer = tg_vulkan_buffer_create(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, visible ? VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT : VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
@@ -36,7 +38,7 @@ void tg_storage_buffer_destroy(tg_storage_buffer_h h_storage_buffer)
 	TG_ASSERT(h_storage_buffer);
 
 	tg_vulkan_buffer_destroy(&h_storage_buffer->buffer);
-	TG_MEMORY_FREE(h_storage_buffer);
+	TG_VULKAN_RELEASE_HANDLE(h_storage_buffer);
 }
 
 
@@ -45,7 +47,9 @@ tg_uniform_buffer_h tg_uniform_buffer_create(u64 size)
 {
 	TG_ASSERT(size);
 
-	tg_uniform_buffer_h h_uniform_buffer = TG_MEMORY_ALLOC(sizeof(*h_uniform_buffer));
+	tg_uniform_buffer_h h_uniform_buffer = TG_NULL;
+	TG_VULKAN_TAKE_HANDLE(p_uniform_buffers, h_uniform_buffer);
+
 	h_uniform_buffer->type = TG_HANDLE_TYPE_UNIFORM_BUFFER;
 	h_uniform_buffer->buffer = tg_vulkan_buffer_create(size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
@@ -64,7 +68,7 @@ void tg_uniform_buffer_destroy(tg_uniform_buffer_h h_uniform_buffer)
 	TG_ASSERT(h_uniform_buffer);
 
 	tg_vulkan_buffer_destroy(&h_uniform_buffer->buffer);
-	TG_MEMORY_FREE(h_uniform_buffer);
+	TG_VULKAN_RELEASE_HANDLE(h_uniform_buffer);
 }
 
 #endif

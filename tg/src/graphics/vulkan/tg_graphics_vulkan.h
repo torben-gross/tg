@@ -53,13 +53,26 @@
 
 
 
-#define TG_VULKAN_MAX_RENDER_COMMANDS_PER_CAMERA                     65536
 #define TG_VULKAN_MAX_LOD_COUNT                                      8
 
 
 
 #define TG_CAMERA_VIEW(h_camera)                                     (((m4*)h_camera->view_projection_ubo.memory.p_mapped_device_memory)[0])
 #define TG_CAMERA_PROJ(h_camera)                                     (((m4*)h_camera->view_projection_ubo.memory.p_mapped_device_memory)[1])
+
+#define TG_VULKAN_TAKE_HANDLE(p_array, p_result)                                   \
+    const u32 array_element_count = sizeof(p_array) / sizeof(*p_array);            \
+    for (u32 handle_index = 0; handle_index < array_element_count; handle_index++) \
+    {                                                                              \
+        if (p_array[handle_index].type == TG_HANDLE_TYPE_INVALID)                  \
+        {                                                                          \
+            p_result = &p_array[handle_index];                                     \
+            break;                                                                 \
+        }                                                                          \
+    }                                                                              \
+    TG_ASSERT(p_result)
+
+#define TG_VULKAN_RELEASE_HANDLE(handle)                             TG_ASSERT(handle && handle->type != TG_HANDLE_TYPE_INVALID); handle->type = TG_HANDLE_TYPE_INVALID
 
 
 
@@ -240,7 +253,7 @@ typedef struct tg_render_command
     tg_mesh_h                               h_mesh;
     tg_material_h                           h_material;
     u32                                     camera_info_count;
-    tg_vulkan_render_command_camera_info    p_camera_infos[TG_MAX_CAMERA_COUNT];
+    tg_vulkan_render_command_camera_info    p_camera_infos[TG_MAX_CAMERAS];
 } tg_render_command;
 
 typedef struct tg_render_target
@@ -262,7 +275,7 @@ typedef struct tg_camera
     tg_vulkan_descriptor          descriptor;
 
     u32                           render_command_count;
-    tg_render_command_h           ph_render_commands[TG_VULKAN_MAX_RENDER_COMMANDS_PER_CAMERA];
+    tg_render_command_h           ph_render_commands[TG_MAX_RENDER_COMMANDS];
     struct
     {
         tg_deferred_renderer_h    h_deferred_renderer;
@@ -353,21 +366,29 @@ typedef struct tg_vertex_shader
 
 
 
-VkInstance           instance;
-tg_vulkan_surface    surface;
-VkPhysicalDevice     physical_device;
-VkDevice             device;
+VkInstance            instance;
+tg_vulkan_surface     surface;
+VkPhysicalDevice      physical_device;
+VkDevice              device;
 
 
 
-VkSwapchainKHR       swapchain;
-VkExtent2D           swapchain_extent;
-VkImage              p_swapchain_images[TG_VULKAN_SURFACE_IMAGE_COUNT];
-VkImageView          p_swapchain_image_views[TG_VULKAN_SURFACE_IMAGE_COUNT];
+VkSwapchainKHR        swapchain;
+VkExtent2D            swapchain_extent;
+VkImage               p_swapchain_images[TG_VULKAN_SURFACE_IMAGE_COUNT];
+VkImageView           p_swapchain_image_views[TG_VULKAN_SURFACE_IMAGE_COUNT];
 
 
 
-tg_camera            p_cameras[TG_MAX_CAMERA_COUNT];
+tg_camera             p_cameras[TG_MAX_CAMERAS];
+tg_compute_shader     p_compute_shaders[TG_MAX_COMPUTE_SHADERS];
+tg_fragment_shader    p_fragment_shaders[TG_MAX_FRAGMENT_SHADERS];
+tg_material           p_materials[TG_MAX_MATERIALS];
+tg_mesh               p_meshes[TG_MAX_MESHES];
+tg_render_command     p_render_commands[TG_MAX_RENDER_COMMANDS];
+tg_storage_buffer     p_storage_buffers[TG_MAX_STORAGE_BUFFERS];
+tg_uniform_buffer     p_uniform_buffers[TG_MAX_UNIFORM_BUFFERS];
+tg_vertex_shader      p_vertex_shaders[TG_MAX_VERTEX_SHADERS];
 
 
 

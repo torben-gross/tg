@@ -47,7 +47,7 @@ typedef struct tg_transition_cell_data
 // just with different vertex locations. We combined those classes for this table so
 // that the class index ranges from 0 to 15.
 
-const u8 p_regular_cell_class[256] =
+static const u8 p_regular_cell_class[256] =
 {
 	0x00, 0x01, 0x01, 0x03, 0x01, 0x03, 0x02, 0x04, 0x01, 0x02, 0x03, 0x04, 0x03, 0x04, 0x04, 0x03,
 	0x01, 0x03, 0x02, 0x04, 0x02, 0x04, 0x06, 0x0C, 0x02, 0x05, 0x05, 0x0B, 0x05, 0x0A, 0x07, 0x04,
@@ -72,7 +72,7 @@ const u8 p_regular_cell_class[256] =
 // The regularCellData table holds the triangulation data for all 16 distinct classes to
 // which a case can be mapped by the regularCellClass table.
 
-const tg_regular_cell_data p_regular_cell_data[16] =
+static const tg_regular_cell_data p_regular_cell_data[16] =
 {
 	{ 0x00 },
 	{ 0x31, { 0, 1, 2 } },
@@ -99,7 +99,7 @@ const tg_regular_cell_data p_regular_cell_data[16] =
 // The low byte contains the indexes for the two endpoints of the edge on which the vertex lies,
 // as numbered in Figure 3.7. The high byte contains the vertex reuse data shown in Figure 3.8.
 
-const u16 p_regular_vertex_data[256][12] =
+static const u16 p_regular_vertex_data[256][12] =
 {
 	{ 0 },
 	{ 0x6201, 0x5102, 0x3304 },
@@ -368,7 +368,7 @@ const u16 p_regular_vertex_data[256][12] =
 // The high bit is set in the cases for which the inverse state of the voxel data maps to
 // the equivalence class, meaning that the winding order of each triangle should be reversed.
 
-const u8 p_transition_cell_class[512] =
+static const u8 p_transition_cell_class[512] =
 {
 	0x00, 0x01, 0x02, 0x84, 0x01, 0x05, 0x04, 0x04, 0x02, 0x87, 0x09, 0x8C, 0x84, 0x0B, 0x05, 0x05,
 	0x01, 0x08, 0x07, 0x8D, 0x05, 0x0F, 0x8B, 0x0B, 0x04, 0x0D, 0x0C, 0x1C, 0x04, 0x8B, 0x85, 0x85,
@@ -410,7 +410,7 @@ const u8 p_transition_cell_class[512] =
 // which a case can be mapped by the transitionCellClass table. The class index should be ANDed
 // with 0x7F before using it to look up triangulation data in this table.
 
-const tg_transition_cell_data p_transition_cell_data[56] =
+static const tg_transition_cell_data p_transition_cell_data[56] =
 {
 	{ 0x00 },
 	{ 0x42, { 0, 1, 3, 1, 2, 3 } },
@@ -475,7 +475,7 @@ const tg_transition_cell_data p_transition_cell_data[56] =
 // The transitionCornerData table contains the transition cell corner reuse data
 // shown in Figure 4.18.
 
-const u8 p_transition_corner_data[13] =
+static const u8 p_transition_corner_data[13] =
 {
 	0x30, 0x21, 0x20, 0x12, 0x40, 0x82, 0x10, 0x81, 0x80, 0x37, 0x27, 0x17, 0x87
 };
@@ -488,7 +488,7 @@ const u8 p_transition_corner_data[13] =
 // contains the indexes for the two endpoints of the edge on which the vertex lies, as numbered
 // in Figure 4.16. The high byte contains the vertex reuse data shown in Figure 4.17.
 
-const u16 p_transition_vertex_data[512][12] =
+static const u16 p_transition_vertex_data[512][12] =
 {
 	{ 0 },
 	{ 0x2301, 0x1503, 0x199B, 0x289A },

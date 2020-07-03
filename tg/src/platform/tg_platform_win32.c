@@ -447,11 +447,11 @@ void tg_platform_work_queue_add_entry(tg_work_fn* p_work_fn, volatile void* p_us
     ReleaseSemaphore(work_queue.h_semaphore, 1, TG_NULL);
 }
 
-void tg_platform_work_queue_wait_for_completion(u32 thread_id)
+void tg_platform_work_queue_wait_for_completion()
 {
     while (work_queue.count)
     {
-        tg__work_queue_execute_entry(thread_id);
+        tg__work_queue_execute_entry(tg_platform_get_current_thread_id());
     }
 }
 
