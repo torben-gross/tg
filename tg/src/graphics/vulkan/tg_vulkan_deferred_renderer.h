@@ -13,6 +13,7 @@ typedef struct tg_deferred_renderer
         tg_color_image                  position_attachment;
         tg_color_image                  normal_attachment;
         tg_color_image                  albedo_attachment;
+        tg_color_image                  metallic_roughness_ao_attachment;
         VkRenderPass                    render_pass;
         VkFramebuffer                   framebuffer;
         VkCommandBuffer                 command_buffer;
@@ -31,6 +32,7 @@ typedef struct tg_deferred_renderer
         VkPipelineLayout                pipeline_layout;
         VkPipeline                      graphics_pipeline;
         VkCommandBuffer                 command_buffer;
+        tg_vulkan_buffer                camera_ubo;
         tg_vulkan_buffer                point_lights_ubo;
     } shading_pass;
     struct

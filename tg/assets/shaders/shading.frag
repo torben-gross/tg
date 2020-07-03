@@ -3,11 +3,17 @@
 
 layout(location = 0) in vec2    v_uv;
 
-layout(set = 0, binding = 0) uniform    sampler2D positions;
-layout(set = 0, binding = 1) uniform    sampler2D normals;
-layout(set = 0, binding = 2) uniform    sampler2D albedos;
+layout(set = 0, binding = 0) uniform    sampler2D position;
+layout(set = 0, binding = 1) uniform    sampler2D normal;
+layout(set = 0, binding = 2) uniform    sampler2D albedo;
+layout(set = 0, binding = 3) uniform    sampler2D metallic_roughness_ao;
 
-layout(set = 0, binding = 3) uniform light_setup
+layout(set = 0, binding = 4) uniform camera
+{
+    vec3    camera_position;
+};
+
+layout(set = 0, binding = 5) uniform light_setup
 {
     uint         directional_light_count;
     uint         point_light_count;
@@ -22,8 +28,11 @@ layout(location = 0) out vec4 out_color;
 void main()
 {
     // geometry
-    vec3 position = texture(positions, v_uv).xyz;
-    vec3 normal = texture(normals, v_uv).xyz;
+    vec3 position = texture(position, v_uv).xyz;
+    vec3 normal = texture(normal, v_uv).xyz;
+    float metallic = texture(metallic_roughness_ao, v_uv).x;
+    float roughness = texture(metallic_roughness_ao, v_uv).y;
+    float ao = texture(metallic_roughness_ao, v_uv).z;
 
     if (dot(normal, normal) < 0.5) // sky
     {
@@ -32,7 +41,7 @@ void main()
     else // geometry
     {
         normal = normalize(normal);
-        vec4 albedo = texture(albedos, v_uv);
+        vec4 albedo = texture(albedo, v_uv);
 
         // ambient
         float ambient_strength = 0.16;

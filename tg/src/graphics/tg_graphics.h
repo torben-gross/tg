@@ -13,7 +13,7 @@
 #define TG_MAX_MESHES                     65536
 #define TG_MAX_RENDER_COMMANDS            65536
 #define TG_MAX_STORAGE_BUFFERS            32
-#define TG_MAX_UNIFORM_BUFFERS            32
+#define TG_MAX_UNIFORM_BUFFERS            256
 #define TG_MAX_VERTEX_SHADERS             32
 
 #define TG_MAX_SHADER_ATTACHMENT_COUNT         8
