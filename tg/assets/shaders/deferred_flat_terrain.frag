@@ -23,6 +23,8 @@ void main()
     //}
 
     out_albedo      = vec4(0.3f, 0.6f, 0.1f, 1.0);
+    out_metallic_roughness_ao = vec4(0.2, 0.8, 1.0, 1.0);
+    
     if (d < 0.7)
     {
         //out_albedo = vec4(0.7, 0.5, 0.5, 1.0);
@@ -30,8 +32,7 @@ void main()
     }
     else if (d > 0.9 && v_position.y > 128.0)
     {
-        out_albedo = vec4(0.8, 0.8, 0.9, 1.0);
+        out_albedo = vec4(2.0, 2.0, 2.5, 1.0);
+        out_metallic_roughness_ao.y = 0.4;
     }
-
-    out_metallic_roughness_ao = vec4(0.2, 0.8, 1.0, 1.0);
 }

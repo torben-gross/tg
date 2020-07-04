@@ -18,7 +18,7 @@ static tg_material_h tg__create(tg_vulkan_material_type vulkan_material_type, tg
 
     if (handle_count != 0)
     {
-        VkDescriptorSetLayoutBinding p_descriptor_set_layout_bindings[TG_MAX_SHADER_GLOBAL_RESOURCE_COUNT] = { 0 };
+        VkDescriptorSetLayoutBinding p_descriptor_set_layout_bindings[TG_MAX_SHADER_GLOBAL_RESOURCES] = { 0 };
         for (u32 i = 0; i < handle_count; i++)
         {
             p_descriptor_set_layout_bindings[i].binding = i;

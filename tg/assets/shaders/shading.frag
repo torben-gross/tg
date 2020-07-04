@@ -17,10 +17,10 @@ layout(set = 0, binding = 5) uniform light_setup
 {
     uint         directional_light_count;
     uint         point_light_count;
-    vec4[512]    directional_light_positions_radii;
-    vec3[512]    directional_light_colors;
-    vec4[512]    point_light_positions_radii;
-    vec3[512]    point_light_colors;
+    vec4[512]    p_directional_light_directions;
+    vec4[512]    p_directional_light_colors;
+    vec4[512]    p_point_light_positions;
+    vec4[512]    p_point_light_colors;
 };
 
 layout(location = 0) out vec4 out_color;
@@ -74,13 +74,10 @@ void main()
     float metallic  = texture(metallic_roughness_ao, v_uv).x;
     float roughness = texture(metallic_roughness_ao, v_uv).y;
     float ao        = texture(metallic_roughness_ao, v_uv).z;
-    
-    vec3 light_position = vec3(0.0, 200.0, 0.0);
-    vec3 light_color    = 3.0 * vec3(0.992, 0.369, 0.325);
 
     if (dot(normal, normal) < 0.5) // sky
     {
-        out_color = 0.7 * vec4(light_color, 1.0);
+        out_color = 0.7 * p_directional_light_colors[0];
     }
     else
     {
@@ -88,18 +85,14 @@ void main()
         vec3 v = normalize(camera_position - position);
 
         vec3 lo = vec3(0.0);
-        // for (int i = 0; i < light_count; i++)
-        // {
-            // TODO: this is for point lights only
-            // vec3 l = normalize(light_position - position);
-            vec3 l = normalize(vec3(0.2, 1.0, 0.8));
+
+        for (int i = 0; i < directional_light_count; i++)
+        {
+            vec3 l = normalize(-p_directional_light_directions[i].xyz);
             vec3 h = normalize(v + l);
             
-            // TODO: this is for distance based point lights
-            // float distance    = length(light_position - position);
-            // float attenuation = 1.0 / (distance * distance);
             float attenuation = 1.0;
-            vec3  radiance    = light_color * attenuation;
+            vec3  radiance    = p_directional_light_colors[i].xyz * attenuation;
 
             vec3 f0 = mix(vec3(0.04), albedo, metallic);
 
@@ -116,7 +109,33 @@ void main()
         
             float ndl = max(dot(n, l), 0.0);
             lo += (k_diffuse * albedo / pi + specular) * radiance * ndl;
-        // }
+        }
+
+        for (int i = 0; i < point_light_count; i++)
+        {
+            vec3 l = normalize(p_point_light_positions[i].xyz - position);
+            vec3 h = normalize(v + l);
+            
+            float distance    = length(p_point_light_positions[i].xyz - position);
+            float attenuation = 1.0 / (distance * distance);
+            vec3  radiance    = p_point_light_colors[i].xyz * attenuation;
+
+            vec3 f0 = mix(vec3(0.04), albedo, metallic);
+
+            float ndf = distribution_ggx(n, h, roughness);
+            float g   = geometry_smith(n, v, l, roughness);
+            vec3  f   = fresnel_schlick(max(dot(h, v), 0.0), f0);
+
+            vec3  numerator   = ndf * g * f;
+            float denominator = 4.0 * max(dot(n, v), 0.0) * max(dot(n, l), 0.0);
+            vec3  specular    = numerator / max(denominator, 0.001);
+
+            vec3 k_specular = f;
+            vec3 k_diffuse = (vec3(1.0) - k_specular) * (1.0 - metallic);
+        
+            float ndl = max(dot(n, l), 0.0);
+            lo += (k_diffuse * albedo / pi + specular) * radiance * ndl;
+        }
 
         vec3 ambient = vec3(0.03) * albedo * ao;
         vec3 color   = ambient + lo;

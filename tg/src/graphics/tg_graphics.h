@@ -16,9 +16,12 @@
 #define TG_MAX_UNIFORM_BUFFERS            256
 #define TG_MAX_VERTEX_SHADERS             32
 
-#define TG_MAX_SHADER_ATTACHMENT_COUNT         8
-#define TG_MAX_SHADER_GLOBAL_RESOURCE_COUNT    32
-#define TG_MAX_SHADER_INPUT_COUNT              32
+#define TG_MAX_SHADER_ATTACHMENTS         8
+#define TG_MAX_SHADER_GLOBAL_RESOURCES    32
+#define TG_MAX_SHADER_INPUTS              32
+
+#define TG_MAX_DIRECTIONAL_LIGHTS         512
+#define TG_MAX_POINT_LIGHTS               512
 
 
 
@@ -29,6 +32,7 @@ TG_DECLARE_HANDLE(tg_deferred_renderer);
 TG_DECLARE_HANDLE(tg_depth_image);
 TG_DECLARE_HANDLE(tg_forward_renderer);
 TG_DECLARE_HANDLE(tg_fragment_shader);
+TG_DECLARE_HANDLE(tg_light_setup);
 TG_DECLARE_HANDLE(tg_material);
 TG_DECLARE_HANDLE(tg_mesh);
 TG_DECLARE_HANDLE(tg_index_buffer);
@@ -169,16 +173,18 @@ void                             tg_graphics_wait_idle();
 
 
 
-void                             tg_camera_begin(tg_camera_h h_camera);
-void                             tg_camera_capture(tg_camera_h h_camera, tg_render_command_h h_render_command);
-void                             tg_camera_clear(tg_camera_h h_camera);
 tg_camera_h                      tg_camera_create_orthographic(v3 position, f32 pitch, f32 yaw, f32 roll, f32 left, f32 right, f32 bottom, f32 top, f32 far, f32 near);
 tg_camera_h                      tg_camera_create_perspective(v3 position, f32 pitch, f32 yaw, f32 roll, f32 fov_y, f32 near, f32 far);
 void                             tg_camera_destroy(tg_camera_h h_camera);
+void                             tg_camera_begin(tg_camera_h h_camera);
+void                             tg_camera_push_directional_light(tg_camera_h h_camera, v3 direction, v3 color);
+void                             tg_camera_push_point_light(tg_camera_h h_camera, v3 position, v3 color);
+void                             tg_camera_execute(tg_camera_h h_camera, tg_render_command_h h_render_command);
 void                             tg_camera_end(tg_camera_h h_camera);
+void                             tg_camera_present(tg_camera_h p_camera);
+void                             tg_camera_clear(tg_camera_h h_camera);
 v3                               tg_camera_get_position(tg_camera_h h_camera);
 tg_render_target_h               tg_camera_get_render_target(tg_camera_h p_camera);
-void                             tg_camera_present(tg_camera_h p_camera);
 void                             tg_camera_set_orthographic_projection(tg_camera_h p_camera, f32 left, f32 right, f32 bottom, f32 top, f32 far, f32 near);
 void                             tg_camera_set_perspective_projection(tg_camera_h p_camera, f32 fov_y, f32 near, f32 far);
 void                             tg_camera_set_view(tg_camera_h p_camera, v3 position, f32 pitch, f32 yaw, f32 roll);

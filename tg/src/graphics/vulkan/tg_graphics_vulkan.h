@@ -27,34 +27,6 @@
 
 
 
-
-
-#define TG_DEFERRED_RENDERER_GEOMETRY_PASS_COLOR_ATTACHMENT_COUNT              4 // TODO: enum! also, pull into renderer
-#define TG_DEFERRED_RENDERER_GEOMETRY_PASS_DEPTH_ATTACHMENT_COUNT              1
-#define TG_DEFERRED_RENDERER_GEOMETRY_PASS_ATTACHMENT_COUNT                    (TG_DEFERRED_RENDERER_GEOMETRY_PASS_COLOR_ATTACHMENT_COUNT + TG_DEFERRED_RENDERER_GEOMETRY_PASS_DEPTH_ATTACHMENT_COUNT)
-
-#define TG_DEFERRED_RENDERER_GEOMETRY_PASS_POSITION_FORMAT                     VK_FORMAT_R16G16B16A16_SFLOAT
-#define TG_DEFERRED_RENDERER_GEOMETRY_PASS_POSITION_ATTACHMENT                 0
-#define TG_DEFERRED_RENDERER_GEOMETRY_PASS_NORMAL_FORMAT                       VK_FORMAT_R16G16B16A16_SFLOAT
-#define TG_DEFERRED_RENDERER_GEOMETRY_PASS_NORMAL_ATTACHMENT                   1
-#define TG_DEFERRED_RENDERER_GEOMETRY_PASS_ALBEDO_FORMAT                       VK_FORMAT_R16G16B16A16_SFLOAT
-#define TG_DEFERRED_RENDERER_GEOMETRY_PASS_ALBEDO_ATTACHMENT                   2
-#define TG_DEFERRED_RENDERER_GEOMETRY_PASS_METALLIC_ROUGHNESS_AO_FORMAT        VK_FORMAT_R16G16B16A16_SFLOAT
-#define TG_DEFERRED_RENDERER_GEOMETRY_PASS_METALLIC_ROUGHNESS_AO_ATTACHMENT    3
-#define TG_DEFERRED_RENDERER_GEOMETRY_PASS_DEPTH_FORMAT                        VK_FORMAT_D32_SFLOAT
-#define TG_DEFERRED_RENDERER_GEOMETRY_PASS_DEPTH_ATTACHMENT                    4
-
-
-#define TG_DEFERRED_RENDERER_SHADING_PASS_COLOR_ATTACHMENT_COUNT               1
-#define TG_DEFERRED_RENDERER_SHADING_PASS_DEPTH_ATTACHMENT_COUNT               0
-#define TG_DEFERRED_RENDERER_SHADING_PASS_ATTACHMENT_COUNT                     (TG_DEFERRED_RENDERER_SHADING_PASS_COLOR_ATTACHMENT_COUNT + TG_DEFERRED_RENDERER_SHADING_PASS_DEPTH_ATTACHMENT_COUNT)
-
-#define TG_DEFERRED_RENDERER_SHADING_PASS_COLOR_ATTACHMENT_FORMAT              VK_FORMAT_B8G8R8A8_UNORM
-#define TG_DEFERRED_RENDERER_SHADING_PASS_MAX_DIRECTIONAL_LIGHTS               512
-#define TG_DEFERRED_RENDERER_SHADING_PASS_MAX_POINT_LIGHTS                     512
-
-
-
 #define TG_VULKAN_MAX_LOD_COUNT     8
 
 
@@ -188,21 +160,6 @@ typedef struct tg_vulkan_surface
     VkSurfaceKHR          surface;
     VkSurfaceFormatKHR    format;
 } tg_vulkan_surface;
-
-
-
-typedef struct tg_deferred_renderer_light_setup_uniform_buffer
-{
-    u32    directional_light_count;
-    u32    point_light_count;
-    u32    padding[2];
-
-    v4     directional_light_positions_radii[TG_DEFERRED_RENDERER_SHADING_PASS_MAX_DIRECTIONAL_LIGHTS];
-    v4     directional_light_colors[TG_DEFERRED_RENDERER_SHADING_PASS_MAX_DIRECTIONAL_LIGHTS];
-
-    v4     point_light_positions_radii[TG_DEFERRED_RENDERER_SHADING_PASS_MAX_POINT_LIGHTS];
-    v4     point_light_colors[TG_DEFERRED_RENDERER_SHADING_PASS_MAX_POINT_LIGHTS];
-} tg_deferred_renderer_light_setup_uniform_buffer;
 
 
 
@@ -431,11 +388,14 @@ tg_depth_image                tg_vulkan_depth_image_create(const tg_vulkan_depth
 VkFormat                      tg_vulkan_depth_image_convert_format(tg_depth_image_format format);
 void                          tg_vulkan_depth_image_destroy(tg_depth_image* p_depth_image);
 
-void                          tg_vulkan_deferred_renderer_begin(tg_deferred_renderer_h h_deferred_renderer);
 tg_deferred_renderer_h        tg_vulkan_deferred_renderer_create(tg_camera_h h_camera);
 void                          tg_vulkan_deferred_renderer_destroy(tg_deferred_renderer_h h_deferred_renderer);
-void                          tg_vulkan_deferred_renderer_end(tg_deferred_renderer_h h_deferred_renderer);
+void                          tg_vulkan_deferred_renderer_begin(tg_deferred_renderer_h h_deferred_renderer);
+void                          tg_vulkan_deferred_renderer_push_directional_light(tg_deferred_renderer_h h_deferred_renderer, v3 direction, v3 color);
+void                          tg_vulkan_deferred_renderer_push_point_light(tg_deferred_renderer_h h_deferred_renderer, v3 position, v3 color);
 void                          tg_vulkan_deferred_renderer_execute(tg_deferred_renderer_h h_deferred_renderer, VkCommandBuffer command_buffer);
+void                          tg_vulkan_deferred_renderer_end(tg_deferred_renderer_h h_deferred_renderer);
+void                          tg_vulkan_deferred_renderer_pop_all_lights(tg_deferred_renderer_h h_deferred_renderer);
 void                          tg_vulkan_deferred_renderer_on_window_resize(tg_deferred_renderer_h h_deferred_renderer, u32 width, u32 height);
 
 // TODO: should the first variant be removed?

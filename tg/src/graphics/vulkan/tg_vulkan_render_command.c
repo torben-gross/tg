@@ -69,7 +69,7 @@ void tg_render_command_register(tg_render_command_h h_render_command, tg_camera_
     vertex_input_binding_description.stride = p_layout->vertex_stride;
     vertex_input_binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-    VkVertexInputAttributeDescription p_vertex_input_attribute_descriptions[TG_MAX_SHADER_INPUT_COUNT];
+    VkVertexInputAttributeDescription p_vertex_input_attribute_descriptions[TG_MAX_SHADER_INPUTS];
     for (u8 i = 0; i < p_layout->input_resource_count; i++)
     {
         p_vertex_input_attribute_descriptions[i].binding = 0;
@@ -99,7 +99,7 @@ void tg_render_command_register(tg_render_command_h h_render_command, tg_camera_
     {
     case TG_VULKAN_MATERIAL_TYPE_DEFERRED:
     {
-        vulkan_graphics_pipeline_create_info.attachment_count = TG_DEFERRED_RENDERER_GEOMETRY_PASS_COLOR_ATTACHMENT_COUNT;
+        vulkan_graphics_pipeline_create_info.attachment_count = TG_DEFERRED_GEOMETRY_COLOR_ATTACHMENT_COUNT;
         vulkan_graphics_pipeline_create_info.blend_enable = VK_FALSE;
     } break;
     case TG_VULKAN_MATERIAL_TYPE_FORWARD:

@@ -5,15 +5,22 @@
 
 #ifdef TG_VULKAN
 
+typedef enum tg_deferred_geometry_color_attachment
+{
+    TG_DEFERRED_GEOMETRY_COLOR_ATTACHMENT_POSITION,
+    TG_DEFERRED_GEOMETRY_COLOR_ATTACHMENT_NORMAL,
+    TG_DEFERRED_GEOMETRY_COLOR_ATTACHMENT_ALBEDO,
+    TG_DEFERRED_GEOMETRY_COLOR_ATTACHMENT_METALLIC_ROUGHNESS_AO,
+
+    TG_DEFERRED_GEOMETRY_COLOR_ATTACHMENT_COUNT
+} tg_deferred_geometry_color_attachment;
+
 typedef struct tg_deferred_renderer
 {
     tg_camera_h                         h_camera;
     struct
     {
-        tg_color_image                  position_attachment;
-        tg_color_image                  normal_attachment;
-        tg_color_image                  albedo_attachment;
-        tg_color_image                  metallic_roughness_ao_attachment;
+        tg_color_image                  p_color_attachments[TG_DEFERRED_GEOMETRY_COLOR_ATTACHMENT_COUNT];
         VkRenderPass                    render_pass;
         VkFramebuffer                   framebuffer;
         VkCommandBuffer                 command_buffer;
@@ -33,7 +40,7 @@ typedef struct tg_deferred_renderer
         VkPipeline                      graphics_pipeline;
         VkCommandBuffer                 command_buffer;
         tg_vulkan_buffer                camera_ubo;
-        tg_vulkan_buffer                point_lights_ubo;
+        tg_vulkan_buffer                lighting_ubo;
     } shading_pass;
     struct
     {

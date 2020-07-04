@@ -836,13 +836,13 @@ static void tg__render_impl(tg_terrain_entity_node* p_node, tg_camera_h h_camera
 	{
 		if (p_node->block.h_block_render_command)
 		{
-			tg_camera_capture(h_camera, p_node->block.h_block_render_command);
+			tg_camera_execute(h_camera, p_node->block.h_block_render_command);
 		}
 		for (u8 i = 0; i < 6; i++)
 		{
 			if ((p_node->block.transition_mask & (1 << i)) && p_node->block.ph_transition_render_commands[i])
 			{
-				tg_camera_capture(h_camera, p_node->block.ph_transition_render_commands[i]);
+				tg_camera_execute(h_camera, p_node->block.ph_transition_render_commands[i]);
 			}
 		}
 	}

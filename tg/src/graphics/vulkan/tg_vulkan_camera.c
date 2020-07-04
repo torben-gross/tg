@@ -10,31 +10,6 @@
 
 
 
-void tg__destroy_capture_pass(tg_camera_h h_camera)
-{
-    tg_vulkan_forward_renderer_destroy(h_camera->capture_pass.h_forward_renderer);
-    tg_vulkan_deferred_renderer_destroy(h_camera->capture_pass.h_deferred_renderer);
-}
-
-void tg__destroy_clear_pass(tg_camera_h h_camera)
-{
-    tg_vulkan_command_buffer_free(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, h_camera->clear_pass.command_buffer);
-}
-
-void tg__destroy_present_pass(tg_camera_h h_camera)
-{
-    tg_vulkan_command_buffers_free(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, TG_VULKAN_SURFACE_IMAGE_COUNT, h_camera->present_pass.p_command_buffers);
-    tg_vulkan_graphics_pipeline_destroy(h_camera->present_pass.graphics_pipeline);
-    tg_vulkan_pipeline_layout_destroy(h_camera->present_pass.pipeline_layout);
-    tg_vulkan_descriptor_destroy(&h_camera->present_pass.descriptor);
-    tg_vulkan_framebuffers_destroy(TG_VULKAN_SURFACE_IMAGE_COUNT, h_camera->present_pass.p_framebuffers);
-    tg_vulkan_render_pass_destroy(h_camera->present_pass.render_pass);
-    tg_vulkan_semaphore_destroy(h_camera->present_pass.semaphore);
-    tg_vulkan_semaphore_destroy(h_camera->present_pass.image_acquired_semaphore);
-    tg_vulkan_buffer_destroy(&h_camera->present_pass.ibo);
-    tg_vulkan_buffer_destroy(&h_camera->present_pass.vbo);
-}
-
 void tg__init_capture_pass(tg_camera_h h_camera)
 {
     h_camera->capture_pass.h_deferred_renderer = tg_vulkan_deferred_renderer_create(h_camera);
@@ -315,10 +290,6 @@ void tg__init_present_pass(tg_camera_h h_camera)
     }
 }
 
-
-
-
-
 tg_camera* tg__init_available()
 {
     tg_camera* p_camera = TG_NULL;
@@ -397,6 +368,35 @@ tg_camera* tg__init_available()
     return p_camera;
 }
 
+void tg__destroy_capture_pass(tg_camera_h h_camera)
+{
+    tg_vulkan_forward_renderer_destroy(h_camera->capture_pass.h_forward_renderer);
+    tg_vulkan_deferred_renderer_destroy(h_camera->capture_pass.h_deferred_renderer);
+}
+
+void tg__destroy_clear_pass(tg_camera_h h_camera)
+{
+    tg_vulkan_command_buffer_free(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, h_camera->clear_pass.command_buffer);
+}
+
+void tg__destroy_present_pass(tg_camera_h h_camera)
+{
+    tg_vulkan_command_buffers_free(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, TG_VULKAN_SURFACE_IMAGE_COUNT, h_camera->present_pass.p_command_buffers);
+    tg_vulkan_graphics_pipeline_destroy(h_camera->present_pass.graphics_pipeline);
+    tg_vulkan_pipeline_layout_destroy(h_camera->present_pass.pipeline_layout);
+    tg_vulkan_descriptor_destroy(&h_camera->present_pass.descriptor);
+    tg_vulkan_framebuffers_destroy(TG_VULKAN_SURFACE_IMAGE_COUNT, h_camera->present_pass.p_framebuffers);
+    tg_vulkan_render_pass_destroy(h_camera->present_pass.render_pass);
+    tg_vulkan_semaphore_destroy(h_camera->present_pass.semaphore);
+    tg_vulkan_semaphore_destroy(h_camera->present_pass.image_acquired_semaphore);
+    tg_vulkan_buffer_destroy(&h_camera->present_pass.ibo);
+    tg_vulkan_buffer_destroy(&h_camera->present_pass.vbo);
+}
+
+
+
+
+
 tg_camera_h tg_camera_create_orthographic(v3 position, f32 pitch, f32 yaw, f32 roll, f32 left, f32 right, f32 bottom, f32 top, f32 far, f32 near)
 {
 	TG_ASSERT(left != right && bottom != top && far != near);
@@ -439,7 +439,19 @@ void tg_camera_begin(tg_camera_h h_camera)
     h_camera->render_command_count = 0;
 }
 
-void tg_camera_capture(tg_camera_h h_camera, tg_render_command_h h_render_command)
+void tg_camera_push_directional_light(tg_camera_h h_camera, v3 direction, v3 color)
+{
+    // TODO: forward renderer
+    tg_vulkan_deferred_renderer_push_directional_light(h_camera->capture_pass.h_deferred_renderer, direction, color);
+}
+
+void tg_camera_push_point_light(tg_camera_h h_camera, v3 position, v3 color)
+{
+    // TODO: forward renderer
+    tg_vulkan_deferred_renderer_push_point_light(h_camera->capture_pass.h_deferred_renderer, position, color);
+}
+
+void tg_camera_execute(tg_camera_h h_camera, tg_render_command_h h_render_command)
 {
     TG_ASSERT(h_camera && h_render_command);
 
@@ -604,6 +616,9 @@ void tg_camera_clear(tg_camera_h h_camera) // TODO: should this be combined with
     submit_info.pSignalSemaphores = TG_NULL;
 
     tg_vulkan_queue_submit(TG_VULKAN_QUEUE_TYPE_GRAPHICS, 1, &submit_info, h_camera->render_target.fence);
+
+    // TODO: forward renderer
+    tg_vulkan_deferred_renderer_pop_all_lights(h_camera->capture_pass.h_deferred_renderer);
 }
 
 

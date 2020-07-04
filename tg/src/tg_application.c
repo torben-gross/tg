@@ -45,7 +45,7 @@ typedef struct tg_pbr_material
 static void tg__render_pbr_sphere(tg_entity* p_entity, tg_camera_h h_camera)
 {
     tg_pbr_sphere* p_pbr = p_entity->p_data;
-    tg_camera_capture(h_camera, p_pbr->h_render_command);
+    tg_camera_execute(h_camera, p_pbr->h_render_command);
 }
 
 typedef struct tg_sample_scene
@@ -81,6 +81,7 @@ typedef struct tg_sample_scene
     tg_entity                   p_pbr_entities[49];
     tg_pbr_sphere               p_pbr_datas[49];
     tg_entity                   terrain;
+    f32                         light_timer;
 } tg_sample_scene;
 
 
@@ -92,7 +93,7 @@ tg_sample_scene sample_scene = { 0 };
 
 static void tg__render_quad(tg_entity* p_entity, tg_camera_h h_camera)
 {
-    tg_camera_capture(h_camera, p_entity->p_data);
+    tg_camera_execute(h_camera, p_entity->p_data);
 }
 
 static void tg__game_3d_create()
@@ -296,7 +297,21 @@ static void tg__game_3d_update_and_render(f32 delta_ms)
 
     sample_scene.terrain.p_update_fn(&sample_scene.terrain, delta_ms);
 
+
+    sample_scene.light_timer += delta_ms;
+    while (sample_scene.light_timer > 5000.0f)
+    {
+        sample_scene.light_timer -= 5000.0f;
+    }
+    const f32 lx = tgm_f32_sin(sample_scene.light_timer / 5000.0f * 2.0f * (f32)TGM_PI);
+    const f32 lz = tgm_f32_cos(sample_scene.light_timer / 5000.0f * 2.0f * (f32)TGM_PI);
+
+
+    const v3 c = tgm_v3_mulf((v3){ 0.992f, 0.369f, 0.325f }, 3.0f);
+    const v3 d = tgm_v3_normalized((v3){ -0.2f, -1.0f, -0.8f });
+
     tg_camera_begin(sample_scene.h_secondary_camera);
+    tg_camera_push_directional_light(sample_scene.h_secondary_camera, d, (v3){ 4.0f, 4.0f, 10.0f });
     tg_entity** pp_entities = TG_LIST_POINTER_TO(sample_scene.entities, 0);
     for (u32 i = 0; i < sample_scene.entities.count; i++)
     {
@@ -304,11 +319,14 @@ static void tg__game_3d_update_and_render(f32 delta_ms)
     }
     for (u32 i = 0; i < 49; i++)
     {
-        tg_camera_capture(sample_scene.h_secondary_camera, sample_scene.p_pbr_datas[i].h_render_command);
+        tg_camera_execute(sample_scene.h_secondary_camera, sample_scene.p_pbr_datas[i].h_render_command);
     }
     tg_camera_end(sample_scene.h_secondary_camera);
 
     tg_camera_begin(sample_scene.h_primary_camera);
+    tg_camera_push_directional_light(sample_scene.h_primary_camera, d, c);
+    tg_camera_push_directional_light(sample_scene.h_primary_camera, tgm_v3_normalized((v3){ lx, -0.8f, lz }), (v3) { 2.0f, 2.0f, 5.0f });
+    tg_camera_push_point_light(sample_scene.h_primary_camera, (v3){ 124.0f, 146.0f, 115.0f }, (v3){ 30.0f, 0.0f, 0.0f });
     pp_entities = TG_LIST_POINTER_TO(sample_scene.entities, 0);
     for (u32 i = 0; i < sample_scene.entities.count; i++)
     {
@@ -316,7 +334,7 @@ static void tg__game_3d_update_and_render(f32 delta_ms)
     }
     for (u32 i = 0; i < 49; i++)
     {
-        tg_camera_capture(sample_scene.h_primary_camera, sample_scene.p_pbr_datas[i].h_render_command);
+        tg_camera_execute(sample_scene.h_primary_camera, sample_scene.p_pbr_datas[i].h_render_command);
     }
     tg_camera_end(sample_scene.h_primary_camera);
 

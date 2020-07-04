@@ -917,11 +917,11 @@ void tg_vulkan_depth_image_destroy(tg_depth_image* p_depth_image)
 
 tg_vulkan_descriptor tg_vulkan_descriptor_create(u32 binding_count, VkDescriptorSetLayoutBinding* p_bindings)
 {
-    TG_ASSERT(binding_count <= TG_MAX_SHADER_GLOBAL_RESOURCE_COUNT);
+    TG_ASSERT(binding_count <= TG_MAX_SHADER_GLOBAL_RESOURCES);
 
     tg_vulkan_descriptor vulkan_descriptor = { 0 };
 
-    VkDescriptorPoolSize p_descriptor_pool_sizes[TG_MAX_SHADER_GLOBAL_RESOURCE_COUNT];
+    VkDescriptorPoolSize p_descriptor_pool_sizes[TG_MAX_SHADER_GLOBAL_RESOURCES];
     for (u32 i = 0; i < binding_count; i++)
     {
         p_descriptor_pool_sizes[i].type = p_bindings[i].descriptorType;
@@ -1391,8 +1391,8 @@ VkPipeline tg_vulkan_graphics_pipeline_create(const tg_vulkan_graphics_pipeline_
     pipeline_depth_stencil_state_create_info.minDepthBounds = 0.0f;
     pipeline_depth_stencil_state_create_info.maxDepthBounds = 0.0f;
 
-    TG_ASSERT(p_vulkan_graphics_pipeline_create_info->attachment_count <= TG_MAX_SHADER_ATTACHMENT_COUNT);
-    VkPipelineColorBlendAttachmentState p_pipeline_color_blend_attachment_states[TG_MAX_SHADER_ATTACHMENT_COUNT] = { 0 };
+    TG_ASSERT(p_vulkan_graphics_pipeline_create_info->attachment_count <= TG_MAX_SHADER_ATTACHMENTS);
+    VkPipelineColorBlendAttachmentState p_pipeline_color_blend_attachment_states[TG_MAX_SHADER_ATTACHMENTS] = { 0 };
     for (u32 i = 0; i < p_vulkan_graphics_pipeline_create_info->attachment_count; i++)
     {
         p_pipeline_color_blend_attachment_states[i].blendEnable = p_vulkan_graphics_pipeline_create_info->blend_enable;
