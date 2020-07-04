@@ -198,8 +198,8 @@ static void tg__game_3d_create()
             *((m4*)tg_uniform_buffer_data(h_sphere_model_ubo)) = tgm_m4_translate(sphere_translation);
             tg_uniform_buffer_h h_pbr_material_ubo = tg_uniform_buffer_create(sizeof(tg_pbr_material));
             ((tg_pbr_material*)tg_uniform_buffer_data(h_pbr_material_ubo))->albedo = (v4){ 1.0f, 1.0f, 1.0f, 1.0f };
-            ((tg_pbr_material*)tg_uniform_buffer_data(h_pbr_material_ubo))->metallic = (f32)x / 7.0f;
-            ((tg_pbr_material*)tg_uniform_buffer_data(h_pbr_material_ubo))->roughness = (f32)y / 6.0f;
+            ((tg_pbr_material*)tg_uniform_buffer_data(h_pbr_material_ubo))->metallic = (f32)x / 6.0f;
+            ((tg_pbr_material*)tg_uniform_buffer_data(h_pbr_material_ubo))->roughness = ((f32)y + 0.1f) / 6.5f;
             ((tg_pbr_material*)tg_uniform_buffer_data(h_pbr_material_ubo))->ao = 1.0f;
             tg_handle p_pbr_handles[2] = { h_sphere_model_ubo, h_pbr_material_ubo };
             sample_scene.p_pbr_datas[i].h_material = tg_material_create_deferred(h_white_vertex_shader, h_white_fragment_shader, 2, p_pbr_handles);
