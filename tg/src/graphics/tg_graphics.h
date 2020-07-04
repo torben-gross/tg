@@ -142,13 +142,6 @@ typedef struct tg_depth_image_create_info
 	tg_image_address_mode    address_mode_w;
 } tg_depth_image_create_info;
 
-typedef struct tg_point_light
-{
-	v3    position;
-	v3    color;
-	f32   radius;
-} tg_point_light;
-
 typedef struct tg_bounds // TODO: this should be part of physics
 {
 	v3    min;

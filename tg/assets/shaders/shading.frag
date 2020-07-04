@@ -75,9 +75,10 @@ void main()
     float roughness = texture(metallic_roughness_ao, v_uv).y;
     float ao        = texture(metallic_roughness_ao, v_uv).z;
 
+    vec4 sky_color = 0.7 * p_directional_light_colors[0];
     if (dot(normal, normal) < 0.5) // sky
     {
-        out_color = 0.7 * p_directional_light_colors[0];
+        out_color = sky_color;
     }
     else
     {
@@ -105,7 +106,7 @@ void main()
             vec3  specular    = numerator / max(denominator, 0.001);
 
             vec3 k_specular = f;
-            vec3 k_diffuse = (vec3(1.0) - k_specular) * (1.0 - metallic);
+            vec3 k_diffuse  = (vec3(1.0) - k_specular) * (1.0 - metallic);
         
             float ndl = max(dot(n, l), 0.0);
             lo += (k_diffuse * albedo / pi + specular) * radiance * ndl;
@@ -131,17 +132,21 @@ void main()
             vec3  specular    = numerator / max(denominator, 0.001);
 
             vec3 k_specular = f;
-            vec3 k_diffuse = (vec3(1.0) - k_specular) * (1.0 - metallic);
+            vec3 k_diffuse  = (vec3(1.0) - k_specular) * (1.0 - metallic);
         
             float ndl = max(dot(n, l), 0.0);
             lo += (k_diffuse * albedo / pi + specular) * radiance * ndl;
         }
 
-        vec3 ambient = vec3(0.03) * albedo * ao;
+        vec3 ambient = vec3(0.01) * albedo * ao;
         vec3 color   = ambient + lo;
 
         color = color / (color + vec3(1.0));
         color = pow(color, vec3(1.0 / 2.2));
+
+        vec3  d = camera_position - position;
+        float t = clamp(sqrt(dot(d, d)) / 256.0f, 0.0, 1.0);
+        color   = mix(color, sky_color.xyz, t);
 
         out_color = vec4(color, 1.0);
     }

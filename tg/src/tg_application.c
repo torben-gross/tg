@@ -111,16 +111,6 @@ static void tg__game_3d_create()
     sample_scene.h_primary_camera = tg_camera_create_perspective(sample_scene.position, sample_scene.pitch, sample_scene.yaw, sample_scene.roll, sample_scene.fov_y_in_radians, sample_scene.near, sample_scene.far);
     sample_scene.h_secondary_camera = tg_camera_create_perspective(sample_scene.position, sample_scene.pitch, sample_scene.yaw, sample_scene.roll, sample_scene.fov_y_in_radians, sample_scene.near, sample_scene.far);
 
-    tg_point_light p_point_lights[TG_POINT_LIGHT_COUNT] = { 0 };
-    tg_random random = { 0 };
-    tgm_random_init(&random, 13031995);
-    for (u32 i = 0; i < TG_POINT_LIGHT_COUNT; i++)
-    {
-        p_point_lights[i].position = (v3){ tgm_random_next_f32(&random) * 100.0f, tgm_random_next_f32(&random) * 50.0f, -tgm_random_next_f32(&random) * 100.0f };
-        p_point_lights[i].color = (v3){ tgm_random_next_f32(&random), tgm_random_next_f32(&random), tgm_random_next_f32(&random) };
-        p_point_lights[i].radius = tgm_random_next_f32(&random) * 50.0f;
-    }
-
     tg_color_image_create_info color_image_create_info = { 0 };
     tg_platform_get_window_size(&color_image_create_info.width, &color_image_create_info.height);
     color_image_create_info.mip_levels = 1;
@@ -195,7 +185,7 @@ static void tg__game_3d_create()
             sample_scene.p_pbr_datas[i].h_vertex_shader = h_white_vertex_shader;
             sample_scene.p_pbr_datas[i].h_fragment_shader = h_white_fragment_shader;
             tg_uniform_buffer_h h_sphere_model_ubo = tg_uniform_buffer_create(sizeof(m4));
-            const v3 sphere_translation = { 128.0f - 7.0f + (f32)x * 2.0f, 143.0f + (f32)y * 2.0f, 128.0f - 16.0f };
+            const v3 sphere_translation = { 128.0f - 7.0f + (f32)x * 2.0f, 143.0f + (f32)y * 2.0f, 112.0f };
             *((m4*)tg_uniform_buffer_data(h_sphere_model_ubo)) = tgm_m4_translate(sphere_translation);
             tg_uniform_buffer_h h_pbr_material_ubo = tg_uniform_buffer_create(sizeof(tg_pbr_material));
             ((tg_pbr_material*)tg_uniform_buffer_data(h_pbr_material_ubo))->albedo = (v4){ 1.0f, 1.0f, 1.0f, 1.0f };
@@ -299,19 +289,25 @@ static void tg__game_3d_update_and_render(f32 delta_ms)
 
 
     sample_scene.light_timer += delta_ms;
-    while (sample_scene.light_timer > 5000.0f)
+    while (sample_scene.light_timer > 32000.0f)
     {
-        sample_scene.light_timer -= 5000.0f;
+        sample_scene.light_timer -= 32000.0f;
     }
-    const f32 lx = tgm_f32_sin(sample_scene.light_timer / 5000.0f * 2.0f * (f32)TGM_PI);
-    const f32 lz = tgm_f32_cos(sample_scene.light_timer / 5000.0f * 2.0f * (f32)TGM_PI);
+    const f32 lx0 = tgm_f32_sin(sample_scene.light_timer / 32000.0f * 2.0f * (f32)TGM_PI);
+    const f32 ly0 = tgm_f32_sin(sample_scene.light_timer / 32000.0f * 2.0f * (f32)TGM_PI) * 0.5f - 0.5f;
+    const f32 lz0 = tgm_f32_cos(sample_scene.light_timer / 32000.0f * 2.0f * (f32)TGM_PI);
+    const f32 lx1 = 127.0f + 5.0f * tgm_f32_cos(sample_scene.light_timer / 4000.0f * 2.0f * (f32)TGM_PI);
+    const f32 ly1 = 149.0f + 5.0f * tgm_f32_sin(sample_scene.light_timer / 4000.0f * 2.0f * (f32)TGM_PI);
+    const f32 lz1 = 112.0f + 2.0f;
 
 
-    const v3 c = tgm_v3_mulf((v3){ 0.992f, 0.369f, 0.325f }, 3.0f);
-    const v3 d = tgm_v3_normalized((v3){ -0.2f, -1.0f, -0.8f });
+    const v3 d0 = tgm_v3_normalized((v3){ lx0, ly0, lz0 });
+    const v3 c0d = tgm_v3_mulf((v3){ 0.529f, 0.808f, 0.922f }, 2.0f);
+    const v3 c0n = tgm_v3_mulf((v3){ 0.992f, 0.369f, 0.325f }, 2.0f);
+    const v3 c0 = tgm_v3_lerp(c0n, c0d, -d0.y);
 
     tg_camera_begin(sample_scene.h_secondary_camera);
-    tg_camera_push_directional_light(sample_scene.h_secondary_camera, d, (v3){ 4.0f, 4.0f, 10.0f });
+    tg_camera_push_directional_light(sample_scene.h_secondary_camera, d0, (v3){ 4.0f, 4.0f, 10.0f });
     tg_entity** pp_entities = TG_LIST_POINTER_TO(sample_scene.entities, 0);
     for (u32 i = 0; i < sample_scene.entities.count; i++)
     {
@@ -324,9 +320,8 @@ static void tg__game_3d_update_and_render(f32 delta_ms)
     tg_camera_end(sample_scene.h_secondary_camera);
 
     tg_camera_begin(sample_scene.h_primary_camera);
-    tg_camera_push_directional_light(sample_scene.h_primary_camera, d, c);
-    tg_camera_push_directional_light(sample_scene.h_primary_camera, tgm_v3_normalized((v3){ lx, -0.8f, lz }), (v3) { 2.0f, 2.0f, 5.0f });
-    tg_camera_push_point_light(sample_scene.h_primary_camera, (v3){ 124.0f, 146.0f, 115.0f }, (v3){ 30.0f, 0.0f, 0.0f });
+    tg_camera_push_directional_light(sample_scene.h_primary_camera, d0, c0);
+    tg_camera_push_point_light(sample_scene.h_primary_camera, (v3){ lx1, ly1, lz1 }, (v3){ 8.0f, 8.0f, 16.0f });
     pp_entities = TG_LIST_POINTER_TO(sample_scene.entities, 0);
     for (u32 i = 0; i < sample_scene.entities.count; i++)
     {
