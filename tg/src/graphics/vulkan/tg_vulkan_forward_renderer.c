@@ -3,7 +3,6 @@
 #ifdef TG_VULKAN
 
 #include "memory/tg_memory.h"
-#include "tg_entity.h"
 
 
 

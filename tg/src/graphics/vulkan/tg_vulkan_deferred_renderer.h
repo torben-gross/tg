@@ -20,18 +20,6 @@ typedef struct tg_deferred_renderer
     tg_camera_h                         h_camera;
     struct
     {
-        tg_depth_image                  shadow_map;
-        VkRenderPass                    render_pass;
-        tg_vulkan_framebuffer           framebuffer;
-        tg_vulkan_shader                vertex_shader;
-        tg_vulkan_shader                fragment_shader;
-        VkPipelineLayout                pipeline_layout;
-        VkPipeline                      graphics_pipeline;
-        VkCommandBuffer                 command_buffer;
-        tg_vulkan_buffer                lightspace_ubo;
-    } shadow_pass;
-    struct
-    {
         tg_color_image                  p_color_attachments[TG_DEFERRED_GEOMETRY_COLOR_ATTACHMENT_COUNT];
         VkRenderPass                    render_pass;
         tg_vulkan_framebuffer           framebuffer;

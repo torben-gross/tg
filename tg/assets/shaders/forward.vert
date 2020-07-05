@@ -7,15 +7,15 @@ layout(location = 2) in vec2    in_uv;
 layout(location = 3) in vec3    in_tangent;
 layout(location = 4) in vec3    in_bitangent;
 
-layout(set = 0, binding = 0) uniform view_projection
+layout(set = 0, binding = 0) uniform model
+{
+    mat4    u_model;
+};
+
+layout(set = 0, binding = 1) uniform view_projection
 {
     mat4    u_view;
     mat4    u_projection;
-};
-
-layout(set = 0, binding = 1) uniform model
-{
-    mat4    u_model;
 };
 
 layout(location = 0) out vec4    v_position;

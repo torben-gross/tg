@@ -6,22 +6,23 @@
 
 
 
-#define TG_MAX_CAMERAS                    4
-#define TG_MAX_COMPUTE_SHADERS            16
-#define TG_MAX_FRAGMENT_SHADERS           32
-#define TG_MAX_MATERIALS                  512
-#define TG_MAX_MESHES                     65536
-#define TG_MAX_RENDER_COMMANDS            65536
-#define TG_MAX_STORAGE_BUFFERS            32
-#define TG_MAX_UNIFORM_BUFFERS            256
-#define TG_MAX_VERTEX_SHADERS             32
+#define TG_MAX_CAMERAS                         4
+#define TG_MAX_COMPUTE_SHADERS                 16
+#define TG_MAX_FRAGMENT_SHADERS                32
+#define TG_MAX_MATERIALS                       512
+#define TG_MAX_MESHES                          65536
+#define TG_MAX_RENDER_COMMANDS                 65536
+#define TG_MAX_STORAGE_BUFFERS                 32
+#define TG_MAX_UNIFORM_BUFFERS                 256
+#define TG_MAX_VERTEX_SHADERS                  32
 
-#define TG_MAX_SHADER_ATTACHMENTS         8
-#define TG_MAX_SHADER_GLOBAL_RESOURCES    32
-#define TG_MAX_SHADER_INPUTS              32
+#define TG_MAX_SHADER_ATTACHMENTS              8
+#define TG_MAX_SHADER_GLOBAL_RESOURCES         32
+#define TG_MAX_SHADER_INPUTS                   32
+#define TG_SHADER_RESERVED_BINDINGS            2
 
-#define TG_MAX_DIRECTIONAL_LIGHTS         512
-#define TG_MAX_POINT_LIGHTS               512
+#define TG_MAX_DIRECTIONAL_LIGHTS              512
+#define TG_MAX_POINT_LIGHTS                    512
 
 
 
@@ -230,8 +231,9 @@ tg_uniform_buffer_h              tg_uniform_buffer_create(u64 size);
 void*                            tg_uniform_buffer_data(tg_uniform_buffer_h h_uniform_buffer);
 void                             tg_uniform_buffer_destroy(tg_uniform_buffer_h h_uniform_buffer);
 
-tg_render_command_h              tg_render_command_create(tg_mesh_h h_mesh, tg_material_h h_material, u32 global_resource_count, tg_handle* p_global_resources);
+tg_render_command_h              tg_render_command_create(tg_mesh_h h_mesh, tg_material_h h_material, v3 position, u32 global_resource_count, tg_handle* p_global_resources);
 void                             tg_render_command_destroy(tg_render_command_h h_render_command);
+void                             tg_render_command_set_position(tg_render_command_h h_render_command, v3 position);
 
 tg_vertex_shader_h               tg_vertex_shader_create(const char* p_filename);
 void                             tg_vertex_shader_destroy(tg_vertex_shader_h h_vertex_shader);

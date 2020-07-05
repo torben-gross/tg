@@ -3,14 +3,14 @@
 
 layout(location = 0) in vec3 in_position;
 
-layout(set = 0, binding = 0) uniform lightspace_matrix
-{
-    mat4 u_lightspace_matrix;
-};
-
-layout(set = 1, binding = 0) uniform model
+layout(set = 0, binding = 0) uniform model
 {
     mat4 u_model;
+};
+
+layout(set = 0, binding = 1) uniform lightspace_matrix
+{
+    mat4 u_lightspace_matrix;
 };
 
 void main()

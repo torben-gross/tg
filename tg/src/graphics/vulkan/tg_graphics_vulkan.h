@@ -207,6 +207,7 @@ typedef struct tg_vulkan_render_command_camera_info
     tg_camera_h               h_camera;
     tg_vulkan_pipeline        graphics_pipeline;
     VkCommandBuffer           command_buffer;
+    tg_vulkan_pipeline        shadow_graphics_pipeline;
     VkCommandBuffer           shadow_command_buffer;
 } tg_vulkan_render_command_camera_info;
 
@@ -215,6 +216,7 @@ typedef struct tg_render_command
     tg_handle_type                          type;
     tg_mesh_h                               h_mesh;
     tg_material_h                           h_material;
+    tg_vulkan_buffer                        model_ubo;
     u32                                     camera_info_count;
     tg_vulkan_render_command_camera_info    p_camera_infos[TG_MAX_CAMERAS];
 } tg_render_command;
@@ -238,6 +240,15 @@ typedef struct tg_camera
 
     u32                           render_command_count;
     tg_render_command_h           ph_render_commands[TG_MAX_RENDER_COMMANDS];
+    struct
+    {
+        tg_depth_image                  shadow_map;
+        VkRenderPass                    render_pass;
+        tg_vulkan_framebuffer           framebuffer;
+        tg_vulkan_pipeline              graphics_pipeline;
+        VkCommandBuffer                 command_buffer;
+        tg_vulkan_buffer                lightspace_ubo;
+    } shadow_pass;
     struct
     {
         tg_deferred_renderer_h    h_deferred_renderer;
@@ -434,6 +445,7 @@ VkPhysicalDeviceProperties    tg_vulkan_physical_device_get_properties();
 
 tg_vulkan_pipeline            tg_vulkan_pipeline_create_compute(const tg_vulkan_shader* p_compute_shader);
 tg_vulkan_pipeline            tg_vulkan_pipeline_create_graphics(const tg_vulkan_graphics_pipeline_create_info* p_create_info);
+tg_vulkan_pipeline            tg_vulkan_pipeline_create_graphics2(const tg_vulkan_graphics_pipeline_create_info* p_create_info, VkVertexInputBindingDescription vertex_bindings, u32 vertex_attrib_count, VkVertexInputAttributeDescription* p_vertex_attribs);
 void                          tg_vulkan_pipeline_destroy(tg_vulkan_pipeline* p_pipeline);
 
 void                          tg_vulkan_queue_present(VkPresentInfoKHR* p_present_info);

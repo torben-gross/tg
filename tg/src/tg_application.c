@@ -4,16 +4,11 @@
 #include "memory/tg_memory.h"
 #include "platform/tg_platform.h"
 #include "tg_assets.h"
-#include "tg_entity.h"
 #include "tg_input.h"
 #include "tg_marching_cubes.h"
 #include "tg_transvoxel_terrain.h"
 #include "util/tg_list.h"
 #include "util/tg_string.h"
-
-
-
-#define TG_POINT_LIGHT_COUNT    64
 
 
 
@@ -27,9 +22,7 @@ typedef struct tg_debug_info
 
 typedef struct tg_pbr_sphere
 {
-    tg_mesh_h               h_mesh;
-    tg_vertex_shader_h      h_vertex_shader;
-    tg_fragment_shader_h    h_fragment_shader;
+    tg_uniform_buffer_h     h_ubo;
     tg_material_h           h_material;
     tg_render_command_h     h_render_command;
 } tg_pbr_sphere;
@@ -42,15 +35,9 @@ typedef struct tg_pbr_material
     f32    ao;
 } tg_pbr_material;
 
-static void tg__render_pbr_sphere(tg_entity* p_entity, tg_camera_h h_camera)
-{
-    tg_pbr_sphere* p_pbr = p_entity->p_data;
-    tg_camera_execute(h_camera, p_pbr->h_render_command);
-}
-
 typedef struct tg_sample_scene
 {
-    tg_list                     entities;
+    tg_list                     render_commands;
     struct camera_info
     {
         tg_camera_h             h_primary_camera;
@@ -68,19 +55,16 @@ typedef struct tg_sample_scene
     };
     struct quad
     {
-        tg_entity               quad_entity;
         tg_mesh_h               h_quad_mesh;
         tg_uniform_buffer_h     h_quad_color_ubo;
-        tg_uniform_buffer_h     h_quad_model_ubo;
-        tg_vertex_shader_h      h_quad_vertex_shader;
-        tg_fragment_shader_h    h_quad_fragment_shader;
         tg_material_h           h_quad_material;
+        tg_render_command_h     h_quad_render_command;
         f32                     quad_offset_z;
         f32                     quad_delta_time_sum_looped;
     };
-    tg_entity                   p_pbr_entities[49];
-    tg_pbr_sphere               p_pbr_datas[49];
-    tg_entity                   terrain;
+    tg_mesh_h                   h_pbr_sphere_mesh;
+    tg_pbr_sphere               p_pbr_spheres[49];
+    tg_terrain                  terrain;
     f32                         light_timer;
 } tg_sample_scene;
 
@@ -91,14 +75,9 @@ tg_sample_scene sample_scene = { 0 };
 
 
 
-static void tg__render_quad(tg_entity* p_entity, tg_camera_h h_camera)
-{
-    tg_camera_execute(h_camera, p_entity->p_data);
-}
-
 static void tg__game_3d_create()
 {
-    sample_scene.entities = TG_LIST_CREATE(tg_entity*);
+    sample_scene.render_commands = TG_LIST_CREATE(tg_render_command_h);
     sample_scene.position = (v3){ 128.0f, 150.0f, 128.0f };
     sample_scene.pitch = 0.0f;
     sample_scene.yaw = 0.0f;
@@ -149,52 +128,36 @@ static void tg__game_3d_create()
     sample_scene.h_quad_mesh = tg_mesh_create(4, p_quad_positions, TG_NULL, p_uvs, TG_NULL, 6, p_indices);
     sample_scene.h_quad_color_ubo = tg_uniform_buffer_create(sizeof(v3));
     *((v3*)tg_uniform_buffer_data(sample_scene.h_quad_color_ubo)) = (v3){ 1.0f, 0.0f, 0.0f };
-    sample_scene.h_quad_vertex_shader = tg_vertex_shader_get("shaders/forward.vert");
-    sample_scene.h_quad_fragment_shader = tg_fragment_shader_get("shaders/forward_custom.frag");
-    sample_scene.h_quad_model_ubo = tg_uniform_buffer_create(sizeof(m4));
-    const v3 quad_translation = { 0.0f, 133.0f, 0.0f };
-    *((m4*)tg_uniform_buffer_data(sample_scene.h_quad_model_ubo)) = tgm_m4_translate(quad_translation);
-    tg_handle p_custom_handles[3] = { sample_scene.h_quad_model_ubo, sample_scene.h_quad_color_ubo, tg_camera_get_render_target(sample_scene.h_secondary_camera) };
-    sample_scene.h_quad_material = tg_material_create_forward(sample_scene.h_quad_vertex_shader, sample_scene.h_quad_fragment_shader);
+    tg_handle p_custom_handles[2] = { sample_scene.h_quad_color_ubo, tg_camera_get_render_target(sample_scene.h_secondary_camera) };
+    sample_scene.h_quad_material = tg_material_create_forward(tg_vertex_shader_get("shaders/forward.vert"), tg_fragment_shader_get("shaders/forward_custom.frag"));
 
-    sample_scene.quad_entity.p_data = tg_render_command_create(sample_scene.h_quad_mesh, sample_scene.h_quad_material, 3, p_custom_handles);
-    sample_scene.quad_entity.p_render_fn = &tg__render_quad;
-    tg_entity* p_quad_entity = &sample_scene.quad_entity;
+    sample_scene.h_quad_render_command = tg_render_command_create(sample_scene.h_quad_mesh, sample_scene.h_quad_material, (v3){ 0.0f, 133.0f, 0.0f }, 2, p_custom_handles);
     sample_scene.quad_offset_z = -65.0f;
-    tg_list_insert(&sample_scene.entities, &p_quad_entity);
+    tg_list_insert(&sample_scene.render_commands, &sample_scene.h_quad_render_command);
 
 
 
-    sample_scene.terrain = tg_transvoxel_terrain_create(sample_scene.h_primary_camera);
-    tg_entity* p_terrain_entity = &sample_scene.terrain;
-    tg_list_insert(&sample_scene.entities, &p_terrain_entity);
+    sample_scene.terrain = tg_terrain_create(sample_scene.h_primary_camera);
 
 
 
-    tg_vertex_shader_h h_white_vertex_shader = tg_vertex_shader_get("shaders/deferred_pbr.vert");
-    tg_fragment_shader_h h_white_fragment_shader = tg_fragment_shader_get("shaders/deferred_pbr.frag");
-    tg_mesh_h h_sphere_mesh = tg_mesh_create_sphere(0.5f, 32, 16);
+    sample_scene.h_pbr_sphere_mesh = tg_mesh_create_sphere(0.5f, 128, 64);
     for (u32 y = 0; y < 7; y++)
     {
         for (u32 x = 0; x < 7; x++)
         {
-            const u32 i = y * 7 + x;
-            sample_scene.p_pbr_entities[i].p_render_fn = tg__render_pbr_sphere;
-            sample_scene.p_pbr_entities[i].p_data = &sample_scene.p_pbr_datas[i];
 
-            sample_scene.p_pbr_datas[i].h_vertex_shader = h_white_vertex_shader;
-            sample_scene.p_pbr_datas[i].h_fragment_shader = h_white_fragment_shader;
-            tg_uniform_buffer_h h_sphere_model_ubo = tg_uniform_buffer_create(sizeof(m4));
+            const u32 i = y * 7 + x;
+            
             const v3 sphere_translation = { 128.0f - 7.0f + (f32)x * 2.0f, 143.0f + (f32)y * 2.0f, 112.0f };
-            *((m4*)tg_uniform_buffer_data(h_sphere_model_ubo)) = tgm_m4_translate(sphere_translation);
-            tg_uniform_buffer_h h_pbr_material_ubo = tg_uniform_buffer_create(sizeof(tg_pbr_material));
-            ((tg_pbr_material*)tg_uniform_buffer_data(h_pbr_material_ubo))->albedo = (v4){ 1.0f, 1.0f, 1.0f, 1.0f };
-            ((tg_pbr_material*)tg_uniform_buffer_data(h_pbr_material_ubo))->metallic = (f32)x / 6.0f;
-            ((tg_pbr_material*)tg_uniform_buffer_data(h_pbr_material_ubo))->roughness = ((f32)y + 0.1f) / 6.5f;
-            ((tg_pbr_material*)tg_uniform_buffer_data(h_pbr_material_ubo))->ao = 1.0f;
-            tg_handle p_pbr_handles[2] = { h_sphere_model_ubo, h_pbr_material_ubo };
-            sample_scene.p_pbr_datas[i].h_material = tg_material_create_deferred(h_white_vertex_shader, h_white_fragment_shader);
-            sample_scene.p_pbr_datas[i].h_render_command = tg_render_command_create(h_sphere_mesh, sample_scene.p_pbr_datas[i].h_material, 2, p_pbr_handles);
+            sample_scene.p_pbr_spheres[i].h_ubo = tg_uniform_buffer_create(sizeof(tg_pbr_material));
+            ((tg_pbr_material*)tg_uniform_buffer_data(sample_scene.p_pbr_spheres[i].h_ubo))->albedo = (v4){ 1.0f, 1.0f, 1.0f, 1.0f };
+            ((tg_pbr_material*)tg_uniform_buffer_data(sample_scene.p_pbr_spheres[i].h_ubo))->metallic = (f32)x / 6.0f;
+            ((tg_pbr_material*)tg_uniform_buffer_data(sample_scene.p_pbr_spheres[i].h_ubo))->roughness = ((f32)y + 0.1f) / 6.5f;
+            ((tg_pbr_material*)tg_uniform_buffer_data(sample_scene.p_pbr_spheres[i].h_ubo))->ao = 1.0f;
+            sample_scene.p_pbr_spheres[i].h_material = tg_material_create_deferred(tg_vertex_shader_get("shaders/deferred_pbr.vert"), tg_fragment_shader_get("shaders/deferred_pbr.frag"));
+            sample_scene.p_pbr_spheres[i].h_render_command = tg_render_command_create(sample_scene.h_pbr_sphere_mesh, sample_scene.p_pbr_spheres[i].h_material, sphere_translation, 1, &sample_scene.p_pbr_spheres[i].h_ubo);
+            tg_list_insert(&sample_scene.render_commands, &sample_scene.p_pbr_spheres[i].h_render_command);
         }
     }
 }
@@ -210,7 +173,7 @@ static void tg__game_3d_update_and_render(f32 delta_ms)
         sample_scene.quad_offset_z -= 0.01f * delta_ms;
     }
     v3 quad_offset_translation_z = { 0.0f, 133.0f, sample_scene.quad_offset_z };
-    *((m4*)tg_uniform_buffer_data(sample_scene.h_quad_model_ubo)) = tgm_m4_translate(quad_offset_translation_z);
+    tg_render_command_set_position(sample_scene.h_quad_render_command, quad_offset_translation_z);
 
     sample_scene.quad_delta_time_sum_looped += delta_ms;
     if (sample_scene.quad_delta_time_sum_looped >= 10000.0f)
@@ -285,7 +248,7 @@ static void tg__game_3d_update_and_render(f32 delta_ms)
         tg_camera_set_perspective_projection(sample_scene.h_secondary_camera, sample_scene.fov_y_in_radians, sample_scene.near, sample_scene.far);
     }
 
-    sample_scene.terrain.p_update_fn(&sample_scene.terrain, delta_ms);
+    tg_terrain_update(&sample_scene.terrain, delta_ms);
 
 
     sample_scene.light_timer += delta_ms;
@@ -308,28 +271,22 @@ static void tg__game_3d_update_and_render(f32 delta_ms)
 
     tg_camera_begin(sample_scene.h_secondary_camera);
     tg_camera_push_directional_light(sample_scene.h_secondary_camera, d0, (v3){ 4.0f, 4.0f, 10.0f });
-    tg_entity** pp_entities = TG_LIST_POINTER_TO(sample_scene.entities, 0);
-    for (u32 i = 0; i < sample_scene.entities.count; i++)
+    tg_terrain_render(&sample_scene.terrain, sample_scene.h_secondary_camera);
+    tg_render_command_h* ph_render_commands = TG_LIST_POINTER_TO(sample_scene.render_commands, 0);
+    for (u32 i = 0; i < sample_scene.render_commands.count; i++)
     {
-        pp_entities[i]->p_render_fn(pp_entities[i], sample_scene.h_secondary_camera);
-    }
-    for (u32 i = 0; i < 49; i++)
-    {
-        tg_camera_execute(sample_scene.h_secondary_camera, sample_scene.p_pbr_datas[i].h_render_command);
+        tg_camera_execute(sample_scene.h_secondary_camera, ph_render_commands[i]);
     }
     tg_camera_end(sample_scene.h_secondary_camera);
 
     tg_camera_begin(sample_scene.h_primary_camera);
     tg_camera_push_directional_light(sample_scene.h_primary_camera, d0, c0);
     tg_camera_push_point_light(sample_scene.h_primary_camera, (v3){ lx1, ly1, lz1 }, (v3){ 8.0f, 8.0f, 16.0f });
-    pp_entities = TG_LIST_POINTER_TO(sample_scene.entities, 0);
-    for (u32 i = 0; i < sample_scene.entities.count; i++)
+    tg_terrain_render(&sample_scene.terrain, sample_scene.h_primary_camera);
+    ph_render_commands = TG_LIST_POINTER_TO(sample_scene.render_commands, 0);
+    for (u32 i = 0; i < sample_scene.render_commands.count; i++)
     {
-        pp_entities[i]->p_render_fn(pp_entities[i], sample_scene.h_primary_camera);
-    }
-    for (u32 i = 0; i < 49; i++)
-    {
-        tg_camera_execute(sample_scene.h_primary_camera, sample_scene.p_pbr_datas[i].h_render_command);
+        tg_camera_execute(sample_scene.h_primary_camera, ph_render_commands[i]);
     }
     tg_camera_end(sample_scene.h_primary_camera);
 
@@ -340,18 +297,16 @@ static void tg__game_3d_update_and_render(f32 delta_ms)
 
 static void tg__game_3d_destroy()
 {
-    tg_transvoxel_terrain_destroy(&sample_scene.terrain);
+    tg_terrain_destroy(&sample_scene.terrain);
 
-    tg_render_command_destroy(sample_scene.quad_entity.p_data);
-    tg_uniform_buffer_destroy(sample_scene.h_quad_model_ubo);
-    tg_mesh_destroy(sample_scene.h_quad_mesh);
-
-    tg_uniform_buffer_destroy(sample_scene.h_quad_color_ubo);
+    tg_render_command_destroy(sample_scene.h_quad_render_command);
     tg_material_destroy(sample_scene.h_quad_material);
+    tg_uniform_buffer_destroy(sample_scene.h_quad_color_ubo);
+    tg_mesh_destroy(sample_scene.h_quad_mesh);
 
     tg_camera_destroy(sample_scene.h_secondary_camera);
     tg_camera_destroy(sample_scene.h_primary_camera);
-    tg_list_destroy(&sample_scene.entities);
+    tg_list_destroy(&sample_scene.render_commands);
 }
 
 

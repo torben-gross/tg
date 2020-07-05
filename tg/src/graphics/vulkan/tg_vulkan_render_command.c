@@ -63,10 +63,11 @@ static void tg__register(tg_render_command_h h_render_command, tg_camera_h h_cam
     default: TG_INVALID_CODEPATH(); break;
     }
 
-    tg_vulkan_descriptor_set_update_uniform_buffer(p_camera_info->graphics_pipeline.descriptor_set, p_camera_info->h_camera->view_projection_ubo.buffer, 0);
+    tg_vulkan_descriptor_set_update_uniform_buffer(p_camera_info->graphics_pipeline.descriptor_set, h_render_command->model_ubo.buffer, 0);
+    tg_vulkan_descriptor_set_update_uniform_buffer(p_camera_info->graphics_pipeline.descriptor_set, p_camera_info->h_camera->view_projection_ubo.buffer, 1);
     for (u32 i = 0; i < global_resource_count; i++)
     {
-        const u32 binding = i + 1; // NOTE(torben): binding = 0 is reserved for internal usage
+        const u32 binding = i + TG_SHADER_RESERVED_BINDINGS;
         tg_vulkan_descriptor_set_update(p_camera_info->graphics_pipeline.descriptor_set, p_global_resources[i], binding);
     }
 
@@ -99,55 +100,71 @@ static void tg__register(tg_render_command_h h_render_command, tg_camera_h h_cam
 
 
 
+    tg_vulkan_graphics_pipeline_create_info pipeline_create_info = { 0 };
+    pipeline_create_info.vertex_shader = tg_vertex_shader_get("shaders/shadow.vert")->vulkan_shader;
+    pipeline_create_info.fragment_shader = tg_fragment_shader_get("shaders/shadow.frag")->vulkan_shader;
+    pipeline_create_info.cull_mode = VK_CULL_MODE_BACK_BIT;
+    pipeline_create_info.sample_count = 1;
+    pipeline_create_info.depth_test_enable = TG_TRUE;
+    pipeline_create_info.depth_write_enable = TG_TRUE;
+    pipeline_create_info.blend_enable = TG_FALSE;
+    pipeline_create_info.render_pass = h_camera->shadow_pass.render_pass;
 
+    VkVertexInputBindingDescription vertex_input_binding_description = { 0 };
+    vertex_input_binding_description.binding = 0;
+    vertex_input_binding_description.stride = h_render_command->h_material->h_vertex_shader->vulkan_shader.spirv_layout.vertex_stride;
+    vertex_input_binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-    // TODO: shadows
-    //if (h_render_command->h_material->material_type == TG_VULKAN_MATERIAL_TYPE_DEFERRED) // TODO: forward
-    //{
-    //    VkCommandBufferInheritanceInfo shadow_command_buffer_inheritance_info = { 0 };
-    //    shadow_command_buffer_inheritance_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
-    //    shadow_command_buffer_inheritance_info.pNext = TG_NULL;
-    //    shadow_command_buffer_inheritance_info.renderPass = h_camera->capture_pass.h_deferred_renderer->shadow_pass.render_pass;
-    //    shadow_command_buffer_inheritance_info.subpass = 0;
-    //    shadow_command_buffer_inheritance_info.framebuffer = h_camera->capture_pass.h_deferred_renderer->shadow_pass.framebuffer.framebuffer;
-    //    shadow_command_buffer_inheritance_info.occlusionQueryEnable = VK_FALSE;
-    //    shadow_command_buffer_inheritance_info.queryFlags = 0;
-    //    shadow_command_buffer_inheritance_info.pipelineStatistics = 0;
-    //
-    //    p_camera_info->shadow_command_buffer = tg_vulkan_command_buffer_allocate(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_SECONDARY);
-    //    tg_vulkan_command_buffer_begin(p_camera_info->shadow_command_buffer, VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, &shadow_command_buffer_inheritance_info);
-    //    {
-    //        vkCmdBindPipeline(p_camera_info->shadow_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_camera_info->graphics_pipeline);
-    //
-    //        const VkDeviceSize vertex_buffer_offset = 0;
-    //        vkCmdBindVertexBuffers(p_camera_info->shadow_command_buffer, 0, 1, &h_render_command->h_mesh->vbo.buffer, &vertex_buffer_offset);
-    //        if (h_render_command->h_mesh->ibo.size != 0)
-    //        {
-    //            vkCmdBindIndexBuffer(p_camera_info->shadow_command_buffer, h_render_command->h_mesh->ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
-    //        }
-    //
-    //        VkDescriptorSet p_descriptor_sets[2] = { 0 };
-    //        p_descriptor_sets[0] = h_camera->capture_pass.h_deferred_renderer->shadow_pass.descriptor.descriptor_set;
-    //        p_descriptor_sets[1] = h_render_command->h_material->descriptor.descriptor_set;
-    //        
-    //        vkCmdBindDescriptorSets(p_camera_info->shadow_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_camera_info->pipeline_layout, 0, 2, p_descriptor_sets, 0, TG_NULL);
-    //
-    //        if (h_render_command->h_mesh->index_count != 0)
-    //        {
-    //            vkCmdDrawIndexed(p_camera_info->shadow_command_buffer, (u32)(h_render_command->h_mesh->index_count), 1, 0, 0, 0); // TODO: u16
-    //        }
-    //        else
-    //        {
-    //            vkCmdDraw(p_camera_info->shadow_command_buffer, (u32)(h_render_command->h_mesh->vertex_count), 1, 0, 0);
-    //        }
-    //    }
-    //    VK_CALL(vkEndCommandBuffer(p_camera_info->shadow_command_buffer));
-    //}
+    VkVertexInputAttributeDescription vertex_input_attribute_description = { 0 };
+    vertex_input_attribute_description.location = 0;
+    vertex_input_attribute_description.binding = 0;
+    vertex_input_attribute_description.format = VK_FORMAT_R32G32B32_SFLOAT;
+    vertex_input_attribute_description.offset = 0;
+
+    p_camera_info->shadow_graphics_pipeline = tg_vulkan_pipeline_create_graphics2(&pipeline_create_info, vertex_input_binding_description, 1, &vertex_input_attribute_description);
+    h_camera->shadow_pass.command_buffer = tg_vulkan_command_buffer_allocate(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+    tg_vulkan_descriptor_set_update_uniform_buffer(p_camera_info->shadow_graphics_pipeline.descriptor_set, h_render_command->model_ubo.buffer, 0);
+    tg_vulkan_descriptor_set_update_uniform_buffer(p_camera_info->shadow_graphics_pipeline.descriptor_set, h_camera->shadow_pass.lightspace_ubo.buffer, 1);
+
+    VkCommandBufferInheritanceInfo shadow_command_buffer_inheritance_info = { 0 };
+    shadow_command_buffer_inheritance_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
+    shadow_command_buffer_inheritance_info.pNext = TG_NULL;
+    shadow_command_buffer_inheritance_info.renderPass = h_camera->shadow_pass.render_pass;
+    shadow_command_buffer_inheritance_info.subpass = 0;
+    shadow_command_buffer_inheritance_info.framebuffer = h_camera->shadow_pass.framebuffer.framebuffer;
+    shadow_command_buffer_inheritance_info.occlusionQueryEnable = VK_FALSE;
+    shadow_command_buffer_inheritance_info.queryFlags = 0;
+    shadow_command_buffer_inheritance_info.pipelineStatistics = 0;
+        
+    p_camera_info->shadow_command_buffer = tg_vulkan_command_buffer_allocate(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_SECONDARY);
+    tg_vulkan_command_buffer_begin(p_camera_info->shadow_command_buffer, VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, &shadow_command_buffer_inheritance_info);
+    {
+        vkCmdBindPipeline(p_camera_info->shadow_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_camera_info->shadow_graphics_pipeline.pipeline);
+
+        const VkDeviceSize vertex_buffer_offset = 0;
+        vkCmdBindVertexBuffers(p_camera_info->shadow_command_buffer, 0, 1, &h_render_command->h_mesh->vbo.buffer, &vertex_buffer_offset);
+        if (h_render_command->h_mesh->ibo.size != 0)
+        {
+            vkCmdBindIndexBuffer(p_camera_info->shadow_command_buffer, h_render_command->h_mesh->ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
+        }
+
+        vkCmdBindDescriptorSets(p_camera_info->shadow_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_camera_info->shadow_graphics_pipeline.pipeline_layout, 0, 1, &p_camera_info->shadow_graphics_pipeline.descriptor_set, 0, TG_NULL);
+
+        if (h_render_command->h_mesh->index_count != 0)
+        {
+            vkCmdDrawIndexed(p_camera_info->shadow_command_buffer, (u32)(h_render_command->h_mesh->index_count), 1, 0, 0, 0); // TODO: u16
+        }
+        else
+        {
+            vkCmdDraw(p_camera_info->shadow_command_buffer, (u32)(h_render_command->h_mesh->vertex_count), 1, 0, 0);
+        }
+    }
+    VK_CALL(vkEndCommandBuffer(p_camera_info->shadow_command_buffer));
 }
 
 
 
-tg_render_command_h tg_render_command_create(tg_mesh_h h_mesh, tg_material_h h_material, u32 global_resource_count, tg_handle* p_global_resources)
+tg_render_command_h tg_render_command_create(tg_mesh_h h_mesh, tg_material_h h_material, v3 position, u32 global_resource_count, tg_handle* p_global_resources)
 {
 	TG_ASSERT(h_mesh && h_material);
 
@@ -157,8 +174,10 @@ tg_render_command_h tg_render_command_create(tg_mesh_h h_mesh, tg_material_h h_m
 	h_render_command->type = TG_HANDLE_TYPE_RENDER_COMMAND;
 	h_render_command->h_mesh = h_mesh;
 	h_render_command->h_material = h_material;
-	h_render_command->camera_info_count = 0;
+    h_render_command->model_ubo = tg_vulkan_buffer_create(sizeof(m4), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    *((m4*)h_render_command->model_ubo.memory.p_mapped_device_memory) = tgm_m4_translate(position);
 
+	h_render_command->camera_info_count = 0;
     for (u32 i = 0; i < TG_MAX_CAMERAS; i++)
     {
         if (p_cameras[i].type != TG_HANDLE_TYPE_INVALID)
@@ -180,7 +199,13 @@ void tg_render_command_destroy(tg_render_command_h h_render_command)
         tg_vulkan_command_buffer_free(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, h_render_command->p_camera_infos[i].command_buffer);
         tg_vulkan_pipeline_destroy(&h_render_command->p_camera_infos[i].graphics_pipeline);
     }
+    tg_vulkan_buffer_destroy(&h_render_command->model_ubo);
     TG_VULKAN_RELEASE_HANDLE(h_render_command);
+}
+
+void tg_render_command_set_position(tg_render_command_h h_render_command, v3 position)
+{
+    *((m4*)h_render_command->model_ubo.memory.p_mapped_device_memory) = tgm_m4_translate(position);
 }
 
 #endif
