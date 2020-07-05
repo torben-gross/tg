@@ -13,7 +13,7 @@ layout(set = 0, binding = 0) uniform view_projection
     mat4    u_projection;
 };
 
-layout(set = 1, binding = 0) uniform model
+layout(set = 0, binding = 1) uniform model
 {
     mat4     u_model;
 };

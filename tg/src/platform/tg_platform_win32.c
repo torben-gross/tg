@@ -463,8 +463,8 @@ void tg_platform_work_queue_wait_for_completion()
 #ifdef TG_DEBUG
 void tg_platform_debug_log(const char* p_format, ...)
 {
-    char p_buffer[1024] = { 0 };
-    va_list va;
+    char p_buffer[2048] = { 0 };
+    va_list va = TG_NULL;
     tg_variadic_start(va, p_format);
     tg_string_format_va(sizeof(p_buffer), p_buffer, p_format, va);
 

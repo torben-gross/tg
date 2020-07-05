@@ -11,7 +11,7 @@ typedef struct tg_forward_renderer
     struct
     {
         VkRenderPass             render_pass;
-        VkFramebuffer            framebuffer;
+        tg_vulkan_framebuffer    framebuffer;
         VkCommandBuffer          command_buffer;
     } shading_pass;
 } tg_forward_renderer;

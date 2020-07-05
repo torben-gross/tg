@@ -73,13 +73,6 @@ typedef enum tg_vulkan_queue_type
 
 
 
-typedef struct tg_vulkan_descriptor
-{
-    VkDescriptorPool         descriptor_pool;
-    VkDescriptorSetLayout    descriptor_set_layout;
-    VkDescriptorSet          descriptor_set;
-} tg_vulkan_descriptor;
-
 typedef struct tg_vulkan_buffer
 {
     u64                       size;
@@ -89,9 +82,16 @@ typedef struct tg_vulkan_buffer
 
 typedef struct tg_vulkan_shader
 {
-    tg_spirv_layout    layout;
+    tg_spirv_layout    spirv_layout;
     VkShaderModule     shader_module;
 } tg_vulkan_shader;
+
+typedef struct tg_vulkan_framebuffer
+{
+    u32              width;
+    u32              height;
+    VkFramebuffer    framebuffer;
+} tg_vulkan_framebuffer;
 
 typedef struct tg_vulkan_graphics_pipeline_create_info
 {
@@ -101,10 +101,7 @@ typedef struct tg_vulkan_graphics_pipeline_create_info
     VkSampleCountFlagBits                    sample_count;
     VkBool32                                 depth_test_enable;
     VkBool32                                 depth_write_enable;
-    u32                                      attachment_count;
     VkBool32                                 blend_enable;
-    VkPipelineVertexInputStateCreateInfo*    p_pipeline_vertex_input_state_create_info;
-    VkPipelineLayout                         pipeline_layout;
     VkRenderPass                             render_pass;
 } tg_vulkan_graphics_pipeline_create_info;
 
@@ -115,6 +112,15 @@ typedef struct tg_vulkan_image_extent
     f32    right;
     f32    top;
 } tg_vulkan_image_extent;
+
+typedef struct tg_vulkan_pipeline
+{
+    VkDescriptorPool         descriptor_pool;
+    VkDescriptorSetLayout    descriptor_set_layout;
+    VkDescriptorSet          descriptor_set;
+    VkPipelineLayout         pipeline_layout;
+    VkPipeline               pipeline;
+} tg_vulkan_pipeline;
 
 typedef struct tg_vulkan_queue
 {
@@ -180,9 +186,7 @@ typedef struct tg_compute_shader
 {
     tg_handle_type              type;
     tg_vulkan_shader            vulkan_shader;
-    tg_vulkan_descriptor        descriptor;
-    VkPipelineLayout            pipeline_layout;
-    VkPipeline                  compute_pipeline;
+    tg_vulkan_pipeline          compute_pipeline;
     VkCommandBuffer             command_buffer;
 } tg_compute_shader;
 
@@ -201,9 +205,9 @@ typedef struct tg_depth_image
 typedef struct tg_vulkan_render_command_camera_info
 {
     tg_camera_h               h_camera;
-    VkPipelineLayout          pipeline_layout;
-    VkPipeline                graphics_pipeline;
+    tg_vulkan_pipeline        graphics_pipeline;
     VkCommandBuffer           command_buffer;
+    VkCommandBuffer           shadow_command_buffer;
 } tg_vulkan_render_command_camera_info;
 
 typedef struct tg_render_command
@@ -231,7 +235,6 @@ typedef struct tg_camera
     v3                            position;
     tg_vulkan_buffer              view_projection_ubo;
     tg_render_target              render_target;
-    tg_vulkan_descriptor          descriptor;
 
     u32                           render_command_count;
     tg_render_command_h           ph_render_commands[TG_MAX_RENDER_COMMANDS];
@@ -247,12 +250,10 @@ typedef struct tg_camera
         VkSemaphore               image_acquired_semaphore;
         VkSemaphore               semaphore;
         VkRenderPass              render_pass;
-        VkFramebuffer             p_framebuffers[TG_VULKAN_SURFACE_IMAGE_COUNT];
-        tg_vulkan_descriptor      descriptor;
+        tg_vulkan_framebuffer     p_framebuffers[TG_VULKAN_SURFACE_IMAGE_COUNT];
         tg_vulkan_shader          vertex_shader;
         tg_vulkan_shader          fragment_shader;
-        VkPipelineLayout          pipeline_layout;
-        VkPipeline                graphics_pipeline;
+        tg_vulkan_pipeline        graphics_pipeline;
         VkCommandBuffer           p_command_buffers[TG_VULKAN_SURFACE_IMAGE_COUNT];
     } present_pass;
     struct
@@ -273,7 +274,6 @@ typedef struct tg_material
     tg_vulkan_material_type    material_type;
     tg_vertex_shader_h         h_vertex_shader;
     tg_fragment_shader_h       h_fragment_shader;
-    tg_vulkan_descriptor       descriptor;
 } tg_material;
 
 typedef struct tg_mesh
@@ -362,7 +362,7 @@ void                          tg_vulkan_color_image_destroy(tg_color_image* p_co
 
 VkCommandBuffer               tg_vulkan_command_buffer_allocate(tg_vulkan_command_pool_type type, VkCommandBufferLevel level);
 void                          tg_vulkan_command_buffer_begin(VkCommandBuffer command_buffer, VkCommandBufferUsageFlags usage_flags, const VkCommandBufferInheritanceInfo* p_inheritance_info);
-void                          tg_vulkan_command_buffer_cmd_begin_render_pass(VkCommandBuffer command_buffer, VkRenderPass render_pass, VkFramebuffer framebuffer, VkSubpassContents subpass_contents);
+void                          tg_vulkan_command_buffer_cmd_begin_render_pass(VkCommandBuffer command_buffer, VkRenderPass render_pass, tg_vulkan_framebuffer* p_framebuffer, VkSubpassContents subpass_contents);
 void                          tg_vulkan_command_buffer_cmd_blit_color_image(VkCommandBuffer command_buffer, tg_color_image* p_source, tg_color_image* p_destination, const VkImageBlit* p_region);
 void                          tg_vulkan_command_buffer_cmd_blit_depth_image(VkCommandBuffer command_buffer, tg_depth_image* p_source, tg_depth_image* p_destination, const VkImageBlit* p_region);
 void                          tg_vulkan_command_buffer_cmd_clear_color_image(VkCommandBuffer command_buffer, tg_color_image* p_color_image);
@@ -381,9 +381,6 @@ void                          tg_vulkan_command_buffer_free(tg_vulkan_command_po
 void                          tg_vulkan_command_buffers_allocate(tg_vulkan_command_pool_type type, VkCommandBufferLevel level, u32 command_buffer_count, VkCommandBuffer* p_command_buffers);
 void                          tg_vulkan_command_buffers_free(tg_vulkan_command_pool_type type, u32 command_buffer_count, const VkCommandBuffer* p_command_buffers);
 
-VkPipeline                    tg_vulkan_compute_pipeline_create(VkShaderModule shader_module, VkPipelineLayout pipeline_layout);
-void                          tg_vulkan_compute_pipeline_destroy(VkPipeline compute_pipeline);
-
 tg_depth_image                tg_vulkan_depth_image_create(const tg_vulkan_depth_image_create_info* p_vulkan_depth_image_create_info);
 VkFormat                      tg_vulkan_depth_image_convert_format(tg_depth_image_format format);
 void                          tg_vulkan_depth_image_destroy(tg_depth_image* p_depth_image);
@@ -397,11 +394,6 @@ void                          tg_vulkan_deferred_renderer_execute(tg_deferred_re
 void                          tg_vulkan_deferred_renderer_end(tg_deferred_renderer_h h_deferred_renderer);
 void                          tg_vulkan_deferred_renderer_pop_all_lights(tg_deferred_renderer_h h_deferred_renderer);
 void                          tg_vulkan_deferred_renderer_on_window_resize(tg_deferred_renderer_h h_deferred_renderer, u32 width, u32 height);
-
-// TODO: should the first variant be removed?
-tg_vulkan_descriptor          tg_vulkan_descriptor_create(u32 binding_count, VkDescriptorSetLayoutBinding* p_bindings);
-tg_vulkan_descriptor          tg_vulkan_descriptor_create_for_shader(const tg_vulkan_shader* p_vulkan_shader);
-void                          tg_vulkan_descriptor_destroy(tg_vulkan_descriptor* p_vulkan_descriptor);
 
 void                          tg_vulkan_descriptor_set_update(VkDescriptorSet descriptor_set, tg_handle shader_input_element_handle, u32 dst_binding);
 void                          tg_vulkan_descriptor_set_update_color_image(VkDescriptorSet descriptor_set, tg_color_image* p_color_image, u32 dst_binding);
@@ -429,12 +421,9 @@ void                          tg_vulkan_forward_renderer_end(tg_forward_renderer
 void                          tg_vulkan_forward_renderer_execute(tg_forward_renderer_h h_forward_renderer, tg_render_command_h h_render_command);
 void                          tg_vulkan_forward_renderer_on_window_resize(tg_forward_renderer_h h_forward_renderer, u32 width, u32 height);
 
-VkFramebuffer                 tg_vulkan_framebuffer_create(VkRenderPass render_pass, u32 attachment_count, const VkImageView* p_attachments, u32 width, u32 height);
-void                          tg_vulkan_framebuffer_destroy(VkFramebuffer framebuffer);
-void                          tg_vulkan_framebuffers_destroy(u32 count, VkFramebuffer* p_framebuffers);
-
-VkPipeline                    tg_vulkan_graphics_pipeline_create(const tg_vulkan_graphics_pipeline_create_info* p_vulkan_graphics_pipeline_create_info);
-void                          tg_vulkan_graphics_pipeline_destroy(VkPipeline graphics_pipeline);
+tg_vulkan_framebuffer         tg_vulkan_framebuffer_create(VkRenderPass render_pass, u32 attachment_count, const VkImageView* p_attachments, u32 width, u32 height);
+void                          tg_vulkan_framebuffer_destroy(tg_vulkan_framebuffer* p_framebuffer);
+void                          tg_vulkan_framebuffers_destroy(u32 count, tg_vulkan_framebuffer* p_framebuffers);
 
 VkDescriptorType              tg_vulkan_handle_type_convert_to_descriptor_type(tg_handle_type type);
 
@@ -443,8 +432,9 @@ VkSamplerAddressMode          tg_vulkan_image_convert_address_mode(tg_image_addr
 
 VkPhysicalDeviceProperties    tg_vulkan_physical_device_get_properties();
 
-VkPipelineLayout              tg_vulkan_pipeline_layout_create(u32 descriptor_set_layout_count, const VkDescriptorSetLayout* p_descriptor_set_layouts, u32 push_constant_range_count, const VkPushConstantRange* p_push_constant_ranges);
-void                          tg_vulkan_pipeline_layout_destroy(VkPipelineLayout pipeline_layout);
+tg_vulkan_pipeline            tg_vulkan_pipeline_create_compute(const tg_vulkan_shader* p_compute_shader);
+tg_vulkan_pipeline            tg_vulkan_pipeline_create_graphics(const tg_vulkan_graphics_pipeline_create_info* p_create_info);
+void                          tg_vulkan_pipeline_destroy(tg_vulkan_pipeline* p_pipeline);
 
 void                          tg_vulkan_queue_present(VkPresentInfoKHR* p_present_info);
 void                          tg_vulkan_queue_submit(tg_vulkan_queue_type type, u32 submit_count, VkSubmitInfo* p_submit_infos, VkFence fence);

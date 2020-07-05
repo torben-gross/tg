@@ -1463,22 +1463,22 @@ m4 tgm_m4_inverse(m4 m)
 		m.m02 * (m.m10 * m1323 - m.m11 * m0323 + m.m13 * m0123) -
 		m.m03 * (m.m10 * m1223 - m.m11 * m0223 + m.m12 * m0123));
 
-	result.m00 = det * (m.m11 * m2323 - m.m12 * m1323 + m.m13 * m1223);
+	result.m00 = det *  (m.m11 * m2323 - m.m12 * m1323 + m.m13 * m1223);
 	result.m01 = det * -(m.m01 * m2323 - m.m02 * m1323 + m.m03 * m1223);
-	result.m02 = det * (m.m01 * m2313 - m.m02 * m1313 + m.m03 * m1213);
+	result.m02 = det *  (m.m01 * m2313 - m.m02 * m1313 + m.m03 * m1213);
 	result.m03 = det * -(m.m01 * m2312 - m.m02 * m1312 + m.m03 * m1212);
 	result.m10 = det * -(m.m10 * m2323 - m.m12 * m0323 + m.m13 * m0223);
-	result.m11 = det * (m.m00 * m2323 - m.m02 * m0323 + m.m03 * m0223);
+	result.m11 = det *  (m.m00 * m2323 - m.m02 * m0323 + m.m03 * m0223);
 	result.m12 = det * -(m.m00 * m2313 - m.m02 * m0313 + m.m03 * m0213);
-	result.m13 = det * (m.m00 * m2312 - m.m02 * m0312 + m.m03 * m0212);
-	result.m20 = det * (m.m10 * m1323 - m.m11 * m0323 + m.m13 * m0123);
+	result.m13 = det *  (m.m00 * m2312 - m.m02 * m0312 + m.m03 * m0212);
+	result.m20 = det *  (m.m10 * m1323 - m.m11 * m0323 + m.m13 * m0123);
 	result.m21 = det * -(m.m00 * m1323 - m.m01 * m0323 + m.m03 * m0123);
-	result.m22 = det * (m.m00 * m1313 - m.m01 * m0313 + m.m03 * m0113);
+	result.m22 = det *  (m.m00 * m1313 - m.m01 * m0313 + m.m03 * m0113);
 	result.m23 = det * -(m.m00 * m1312 - m.m01 * m0312 + m.m03 * m0112);
 	result.m30 = det * -(m.m10 * m1223 - m.m11 * m0223 + m.m12 * m0123);
-	result.m31 = det * (m.m00 * m1223 - m.m01 * m0223 + m.m02 * m0123);
+	result.m31 = det *  (m.m00 * m1223 - m.m01 * m0223 + m.m02 * m0123);
 	result.m32 = det * -(m.m00 * m1213 - m.m01 * m0213 + m.m02 * m0113);
-	result.m33 = det * (m.m00 * m1212 - m.m01 * m0212 + m.m02 * m0112);
+	result.m33 = det *  (m.m00 * m1212 - m.m01 * m0212 + m.m02 * m0112);
 
 	return result;
 }

@@ -10,7 +10,7 @@
 static void tg__destroy_shading_pass(tg_forward_renderer_h h_forward_renderer)
 {
     tg_vulkan_render_pass_destroy(h_forward_renderer->shading_pass.render_pass);
-    tg_vulkan_framebuffer_destroy(h_forward_renderer->shading_pass.framebuffer);
+    tg_vulkan_framebuffer_destroy(&h_forward_renderer->shading_pass.framebuffer);
     tg_vulkan_command_buffer_free(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, h_forward_renderer->shading_pass.command_buffer);
 }
 
@@ -83,18 +83,7 @@ void tg_vulkan_forward_renderer_begin(tg_forward_renderer_h h_forward_renderer)
 	TG_ASSERT(h_forward_renderer);
 
     tg_vulkan_command_buffer_begin(h_forward_renderer->shading_pass.command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, TG_NULL);
-
-    VkRenderPassBeginInfo render_pass_begin_info = { 0 };
-    render_pass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    render_pass_begin_info.pNext = TG_NULL;
-    render_pass_begin_info.renderPass = h_forward_renderer->shading_pass.render_pass;
-    render_pass_begin_info.framebuffer = h_forward_renderer->shading_pass.framebuffer;
-    render_pass_begin_info.renderArea.offset = (VkOffset2D){ 0, 0 };
-    render_pass_begin_info.renderArea.extent = swapchain_extent;
-    render_pass_begin_info.clearValueCount = 0;
-    render_pass_begin_info.pClearValues = TG_NULL;
-
-    vkCmdBeginRenderPass(h_forward_renderer->shading_pass.command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+    tg_vulkan_command_buffer_cmd_begin_render_pass(h_forward_renderer->shading_pass.command_buffer, h_forward_renderer->shading_pass.render_pass, &h_forward_renderer->shading_pass.framebuffer, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 }
 
 tg_forward_renderer_h tg_vulkan_forward_renderer_create(const tg_camera_h h_camera)

@@ -8,12 +8,12 @@ layout(location = 3) in mat3    v_tbn; // TODO: this will be needed for normal m
 
 layout(location = 0) out vec4    out_color;
 
-layout(set = 1, binding = 1) uniform color
+layout(set = 0, binding = 2) uniform color
 {
 	vec3    u_color;
 };
 
-layout(set = 1, binding = 2) uniform sampler2D test_icon;
+layout(set = 0, binding = 3) uniform sampler2D test_icon;
 
 void main()
 {

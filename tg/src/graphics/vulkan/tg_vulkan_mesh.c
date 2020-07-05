@@ -51,16 +51,14 @@ static void tg__recalculate_normals(u32 vertex_count, u32 index_count, const u16
     {
 #if 1
         // TODO: most of this can be created only once instead of per mesh
-        VkShaderModule shader_module = VK_NULL_HANDLE;
-        tg_vulkan_descriptor descriptor = { 0 };
-        VkPipelineLayout pipeline_layout = VK_NULL_HANDLE;
-        VkPipeline pipeline = VK_NULL_HANDLE;
+        tg_vulkan_shader compute_shader = { 0 };
+        tg_vulkan_pipeline compute_pipeline = { 0 };
         VkCommandBuffer command_buffer = VK_NULL_HANDLE;
         tg_vulkan_buffer uniform_buffer = { 0 };
 
 
 
-        shader_module = ((tg_compute_shader_h)tg_assets_get_asset("shaders/normals_vbo.comp"))->vulkan_shader.shader_module;
+        compute_shader = ((tg_compute_shader_h)tg_assets_get_asset("shaders/normals_vbo.comp"))->vulkan_shader;
 
         VkDescriptorSetLayoutBinding p_descriptor_set_layout_bindings[2] = { 0 };
 
@@ -76,9 +74,7 @@ static void tg__recalculate_normals(u32 vertex_count, u32 index_count, const u16
         p_descriptor_set_layout_bindings[1].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
         p_descriptor_set_layout_bindings[1].pImmutableSamplers = TG_NULL;
 
-        descriptor = tg_vulkan_descriptor_create(2, p_descriptor_set_layout_bindings);
-        pipeline_layout = tg_vulkan_pipeline_layout_create(1, &descriptor.descriptor_set_layout, 0, TG_NULL);
-        pipeline = tg_vulkan_compute_pipeline_create(shader_module, pipeline_layout);
+        compute_pipeline = tg_vulkan_pipeline_create_compute(&compute_shader);
         command_buffer = tg_vulkan_command_buffer_allocate(TG_VULKAN_COMMAND_POOL_TYPE_COMPUTE, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
         uniform_buffer = tg_vulkan_buffer_create(sizeof(tg_normals_compute_shader_uniform_buffer), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
@@ -89,13 +85,13 @@ static void tg__recalculate_normals(u32 vertex_count, u32 index_count, const u16
         ((tg_normals_compute_shader_uniform_buffer*)uniform_buffer.memory.p_mapped_device_memory)->offset_floats_tangent = offsetof(tg_vertex, tangent) / sizeof(f32);
         ((tg_normals_compute_shader_uniform_buffer*)uniform_buffer.memory.p_mapped_device_memory)->offset_floats_bitangent = offsetof(tg_vertex, bitangent) / sizeof(f32);
 
-        tg_vulkan_descriptor_set_update_storage_buffer(descriptor.descriptor_set, p_staging_buffer->buffer, 0);
-        tg_vulkan_descriptor_set_update_uniform_buffer(descriptor.descriptor_set, uniform_buffer.buffer, 1);
+        tg_vulkan_descriptor_set_update_storage_buffer(compute_pipeline.descriptor_set, p_staging_buffer->buffer, 0);
+        tg_vulkan_descriptor_set_update_uniform_buffer(compute_pipeline.descriptor_set, uniform_buffer.buffer, 1);
 
         tg_vulkan_command_buffer_begin(command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
         {
-            vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
-            vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_layout, 0, 1, &descriptor.descriptor_set, 0, TG_NULL);
+            vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute_pipeline.pipeline);
+            vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute_pipeline.pipeline_layout, 0, 1, &compute_pipeline.descriptor_set, 0, TG_NULL);
             vkCmdDispatch(command_buffer, vertex_count, 1, 1);
         }
         tg_vulkan_command_buffer_end_and_submit(command_buffer, TG_VULKAN_QUEUE_TYPE_COMPUTE);
@@ -104,9 +100,7 @@ static void tg__recalculate_normals(u32 vertex_count, u32 index_count, const u16
 
         tg_vulkan_buffer_destroy(&uniform_buffer);
         tg_vulkan_command_buffer_free(TG_VULKAN_COMMAND_POOL_TYPE_COMPUTE, command_buffer);
-        tg_vulkan_graphics_pipeline_destroy(pipeline);
-        tg_vulkan_pipeline_layout_destroy(pipeline_layout);
-        tg_vulkan_descriptor_destroy(&descriptor);
+        tg_vulkan_pipeline_destroy(&compute_pipeline);
 #else
         for (u32 i = 0; i < vertex_count; i += 3)
         {

@@ -204,8 +204,8 @@ tg_fragment_shader_h             tg_fragment_shader_create(const char* p_filenam
 void                             tg_fragment_shader_destroy(tg_fragment_shader_h h_fragment_shader);
 tg_fragment_shader_h             tg_fragment_shader_get(const char* p_filename);
 
-tg_material_h                    tg_material_create_deferred(tg_vertex_shader_h h_vertex_shader, tg_fragment_shader_h h_fragment_shader, u32 handle_count, tg_handle* p_handles);
-tg_material_h                    tg_material_create_forward(tg_vertex_shader_h h_vertex_shader, tg_fragment_shader_h h_fragment_shader, u32 handle_count, tg_handle* p_handles);
+tg_material_h                    tg_material_create_deferred(tg_vertex_shader_h h_vertex_shader, tg_fragment_shader_h h_fragment_shader);
+tg_material_h                    tg_material_create_forward(tg_vertex_shader_h h_vertex_shader, tg_fragment_shader_h h_fragment_shader);
 void                             tg_material_destroy(tg_material_h h_material);
 b32                              tg_material_is_deferred(tg_material_h h_material);
 b32                              tg_material_is_forward(tg_material_h h_material);
@@ -230,9 +230,8 @@ tg_uniform_buffer_h              tg_uniform_buffer_create(u64 size);
 void*                            tg_uniform_buffer_data(tg_uniform_buffer_h h_uniform_buffer);
 void                             tg_uniform_buffer_destroy(tg_uniform_buffer_h h_uniform_buffer);
 
-tg_render_command_h              tg_render_command_create(tg_mesh_h h_mesh, tg_material_h h_material);
+tg_render_command_h              tg_render_command_create(tg_mesh_h h_mesh, tg_material_h h_material, u32 global_resource_count, tg_handle* p_global_resources);
 void                             tg_render_command_destroy(tg_render_command_h h_render_command);
-void                             tg_render_command_register(tg_render_command_h h_render_command, tg_camera_h h_camera);
 
 tg_vertex_shader_h               tg_vertex_shader_create(const char* p_filename);
 void                             tg_vertex_shader_destroy(tg_vertex_shader_h h_vertex_shader);

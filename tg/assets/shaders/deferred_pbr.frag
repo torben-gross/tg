@@ -6,7 +6,7 @@ layout(location = 1) in vec3    v_normal;
 layout(location = 2) in vec2    v_uv;
 layout(location = 3) in mat3    v_tbn; // TODO: this will be needed for normal mapping
 
-layout(set = 1, binding = 1) uniform material
+layout(set = 0, binding = 2) uniform material
 {
     vec4     albedo;
     float    metallic;

@@ -20,9 +20,21 @@ typedef struct tg_deferred_renderer
     tg_camera_h                         h_camera;
     struct
     {
+        tg_depth_image                  shadow_map;
+        VkRenderPass                    render_pass;
+        tg_vulkan_framebuffer           framebuffer;
+        tg_vulkan_shader                vertex_shader;
+        tg_vulkan_shader                fragment_shader;
+        VkPipelineLayout                pipeline_layout;
+        VkPipeline                      graphics_pipeline;
+        VkCommandBuffer                 command_buffer;
+        tg_vulkan_buffer                lightspace_ubo;
+    } shadow_pass;
+    struct
+    {
         tg_color_image                  p_color_attachments[TG_DEFERRED_GEOMETRY_COLOR_ATTACHMENT_COUNT];
         VkRenderPass                    render_pass;
-        VkFramebuffer                   framebuffer;
+        tg_vulkan_framebuffer           framebuffer;
         VkCommandBuffer                 command_buffer;
     } geometry_pass;
     struct
@@ -32,12 +44,10 @@ typedef struct tg_deferred_renderer
         tg_vulkan_buffer                ibo;
         VkSemaphore                     rendering_finished_semaphore;
         VkRenderPass                    render_pass;
-        VkFramebuffer                   framebuffer;
-        tg_vulkan_descriptor            descriptor;
+        tg_vulkan_framebuffer           framebuffer;
         tg_vulkan_shader                vertex_shader;
         tg_vulkan_shader                fragment_shader;
-        VkPipelineLayout                pipeline_layout;
-        VkPipeline                      graphics_pipeline;
+        tg_vulkan_pipeline              graphics_pipeline;
         VkCommandBuffer                 command_buffer;
         tg_vulkan_buffer                camera_ubo;
         tg_vulkan_buffer                lighting_ubo;
@@ -45,17 +55,13 @@ typedef struct tg_deferred_renderer
     struct
     {
         tg_vulkan_shader                acquire_exposure_compute_shader;
-        tg_vulkan_descriptor            acquire_exposure_descriptor;
-        VkPipelineLayout                acquire_exposure_pipeline_layout;
-        VkPipeline                      acquire_exposure_compute_pipeline;
+        tg_vulkan_pipeline              acquire_exposure_compute_pipeline;
         tg_vulkan_buffer                exposure_storage_buffer;
         VkRenderPass                    render_pass;
-        VkFramebuffer                   framebuffer;
-        tg_vulkan_descriptor            descriptor;
+        tg_vulkan_framebuffer           framebuffer;
         tg_vulkan_shader                vertex_shader;
         tg_vulkan_shader                fragment_shader;
-        VkPipelineLayout                pipeline_layout;
-        VkPipeline                      graphics_pipeline;
+        tg_vulkan_pipeline              graphics_pipeline;
         VkCommandBuffer                 command_buffer;
     } tone_mapping_pass;
 } tg_deferred_renderer;

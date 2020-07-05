@@ -140,45 +140,8 @@ void tg__init_present_pass(tg_camera_h h_camera)
         h_camera->present_pass.p_framebuffers[i] = tg_vulkan_framebuffer_create(h_camera->present_pass.render_pass, 1, &p_swapchain_image_views[i], swapchain_extent.width, swapchain_extent.height);
     }
 
-    VkDescriptorSetLayoutBinding descriptor_set_layout_binding = { 0 };
-    descriptor_set_layout_binding.binding = 0;
-    descriptor_set_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    descriptor_set_layout_binding.descriptorCount = 1;
-    descriptor_set_layout_binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-    descriptor_set_layout_binding.pImmutableSamplers = TG_NULL;
-
-    h_camera->present_pass.descriptor = tg_vulkan_descriptor_create(1, &descriptor_set_layout_binding);
-
     h_camera->present_pass.vertex_shader = ((tg_vertex_shader_h)tg_assets_get_asset("shaders/present.vert"))->vulkan_shader;
     h_camera->present_pass.fragment_shader = ((tg_fragment_shader_h)tg_assets_get_asset("shaders/present.frag"))->vulkan_shader;
-
-    h_camera->present_pass.pipeline_layout = tg_vulkan_pipeline_layout_create(1, &h_camera->present_pass.descriptor.descriptor_set_layout, 0, TG_NULL);
-
-    VkVertexInputBindingDescription vertex_input_binding_description = { 0 };
-    vertex_input_binding_description.binding = 0;
-    vertex_input_binding_description.stride = sizeof(tg_vulkan_screen_vertex);
-    vertex_input_binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-    VkVertexInputAttributeDescription p_vertex_input_attribute_descriptions[2] = { 0 };
-
-    p_vertex_input_attribute_descriptions[0].binding = 0;
-    p_vertex_input_attribute_descriptions[0].location = 0;
-    p_vertex_input_attribute_descriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
-    p_vertex_input_attribute_descriptions[0].offset = offsetof(tg_vulkan_screen_vertex, position);
-
-    p_vertex_input_attribute_descriptions[1].binding = 0;
-    p_vertex_input_attribute_descriptions[1].location = 1;
-    p_vertex_input_attribute_descriptions[1].format = VK_FORMAT_R32G32_SFLOAT;
-    p_vertex_input_attribute_descriptions[1].offset = offsetof(tg_vulkan_screen_vertex, uv);
-
-    VkPipelineVertexInputStateCreateInfo pipeline_vertex_input_state_create_info = { 0 };
-    pipeline_vertex_input_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    pipeline_vertex_input_state_create_info.pNext = TG_NULL;
-    pipeline_vertex_input_state_create_info.flags = 0;
-    pipeline_vertex_input_state_create_info.vertexBindingDescriptionCount = 1;
-    pipeline_vertex_input_state_create_info.pVertexBindingDescriptions = &vertex_input_binding_description;
-    pipeline_vertex_input_state_create_info.vertexAttributeDescriptionCount = 2;
-    pipeline_vertex_input_state_create_info.pVertexAttributeDescriptions = p_vertex_input_attribute_descriptions;
 
     tg_vulkan_graphics_pipeline_create_info vulkan_graphics_pipeline_create_info = { 0 };
     vulkan_graphics_pipeline_create_info.vertex_shader = h_camera->present_pass.vertex_shader;
@@ -187,13 +150,10 @@ void tg__init_present_pass(tg_camera_h h_camera)
     vulkan_graphics_pipeline_create_info.sample_count = VK_SAMPLE_COUNT_1_BIT;
     vulkan_graphics_pipeline_create_info.depth_test_enable = VK_FALSE;
     vulkan_graphics_pipeline_create_info.depth_write_enable = VK_FALSE;
-    vulkan_graphics_pipeline_create_info.attachment_count = 1;
     vulkan_graphics_pipeline_create_info.blend_enable = VK_FALSE;
-    vulkan_graphics_pipeline_create_info.p_pipeline_vertex_input_state_create_info = &pipeline_vertex_input_state_create_info;
-    vulkan_graphics_pipeline_create_info.pipeline_layout = h_camera->present_pass.pipeline_layout;
     vulkan_graphics_pipeline_create_info.render_pass = h_camera->present_pass.render_pass;
 
-    h_camera->present_pass.graphics_pipeline = tg_vulkan_graphics_pipeline_create(&vulkan_graphics_pipeline_create_info);
+    h_camera->present_pass.graphics_pipeline = tg_vulkan_pipeline_create_graphics(&vulkan_graphics_pipeline_create_info);
 
     tg_vulkan_command_buffers_allocate(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY, TG_VULKAN_SURFACE_IMAGE_COUNT, h_camera->present_pass.p_command_buffers);
 
@@ -207,7 +167,7 @@ void tg__init_present_pass(tg_camera_h h_camera)
     VkWriteDescriptorSet write_descriptor_set = { 0 };
     write_descriptor_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     write_descriptor_set.pNext = TG_NULL;
-    write_descriptor_set.dstSet = h_camera->present_pass.descriptor.descriptor_set;
+    write_descriptor_set.dstSet = h_camera->present_pass.graphics_pipeline.descriptor_set;
     write_descriptor_set.dstBinding = 0;
     write_descriptor_set.dstArrayElement = 0;
     write_descriptor_set.descriptorCount = 1;
@@ -230,22 +190,12 @@ void tg__init_present_pass(tg_camera_h h_camera)
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT
         );
-        vkCmdBindPipeline(h_camera->present_pass.p_command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, h_camera->present_pass.graphics_pipeline);
+        vkCmdBindPipeline(h_camera->present_pass.p_command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, h_camera->present_pass.graphics_pipeline.pipeline);
         vkCmdBindVertexBuffers(h_camera->present_pass.p_command_buffers[i], 0, 1, &h_camera->present_pass.vbo.buffer, &vertex_buffer_offset);
         vkCmdBindIndexBuffer(h_camera->present_pass.p_command_buffers[i], h_camera->present_pass.ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
-        vkCmdBindDescriptorSets(h_camera->present_pass.p_command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, h_camera->present_pass.pipeline_layout, 0, 1, &h_camera->present_pass.descriptor.descriptor_set, 0, TG_NULL);
+        vkCmdBindDescriptorSets(h_camera->present_pass.p_command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, h_camera->present_pass.graphics_pipeline.pipeline_layout, 0, 1, &h_camera->present_pass.graphics_pipeline.descriptor_set, 0, TG_NULL);
 
-        VkRenderPassBeginInfo render_pass_begin_info = { 0 };
-        render_pass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        render_pass_begin_info.pNext = TG_NULL;
-        render_pass_begin_info.renderPass = h_camera->present_pass.render_pass;
-        render_pass_begin_info.framebuffer = h_camera->present_pass.p_framebuffers[i];
-        render_pass_begin_info.renderArea.offset = (VkOffset2D){ 0, 0 };
-        render_pass_begin_info.renderArea.extent = swapchain_extent;
-        render_pass_begin_info.clearValueCount = 0;
-        render_pass_begin_info.pClearValues = TG_NULL;
-
-        vkCmdBeginRenderPass(h_camera->present_pass.p_command_buffers[i], &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
+        tg_vulkan_command_buffer_cmd_begin_render_pass(h_camera->present_pass.p_command_buffers[i], h_camera->present_pass.render_pass, &h_camera->present_pass.p_framebuffers[i], VK_SUBPASS_CONTENTS_INLINE);
         vkCmdDrawIndexed(h_camera->present_pass.p_command_buffers[i], 6, 1, 0, 0, 0);
         vkCmdEndRenderPass(h_camera->present_pass.p_command_buffers[i]);
 
@@ -318,53 +268,6 @@ tg_camera* tg__init_available()
     tg__init_present_pass(p_camera);
     tg__init_clear_pass(p_camera);
 
-    VkDescriptorSetLayoutBinding p_descriptor_set_layout_bindings[2] = { 0 };
-
-    p_descriptor_set_layout_bindings[0].binding = 0;
-    p_descriptor_set_layout_bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    p_descriptor_set_layout_bindings[0].descriptorCount = 1;
-    p_descriptor_set_layout_bindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-    p_descriptor_set_layout_bindings[0].pImmutableSamplers = TG_NULL;
-
-    p_descriptor_set_layout_bindings[1].binding = 1;
-    p_descriptor_set_layout_bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    p_descriptor_set_layout_bindings[1].descriptorCount = 1;
-    p_descriptor_set_layout_bindings[1].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-    p_descriptor_set_layout_bindings[1].pImmutableSamplers = TG_NULL;
-
-    p_camera->descriptor = tg_vulkan_descriptor_create(2, p_descriptor_set_layout_bindings);
-
-    VkDescriptorBufferInfo view_projection_descriptor_buffer_info = { 0 };
-    view_projection_descriptor_buffer_info.buffer = p_camera->view_projection_ubo.buffer;
-    view_projection_descriptor_buffer_info.offset = 0;
-    view_projection_descriptor_buffer_info.range = VK_WHOLE_SIZE;
-
-    VkWriteDescriptorSet p_write_descriptor_sets[2] = { 0 };
-
-    p_write_descriptor_sets[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    p_write_descriptor_sets[0].pNext = TG_NULL;
-    p_write_descriptor_sets[0].dstSet = p_camera->descriptor.descriptor_set;
-    p_write_descriptor_sets[0].dstBinding = 0;
-    p_write_descriptor_sets[0].dstArrayElement = 0;
-    p_write_descriptor_sets[0].descriptorCount = 1;
-    p_write_descriptor_sets[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    p_write_descriptor_sets[0].pImageInfo = TG_NULL;
-    p_write_descriptor_sets[0].pBufferInfo = &view_projection_descriptor_buffer_info;
-    p_write_descriptor_sets[0].pTexelBufferView = TG_NULL;
-
-    p_write_descriptor_sets[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    p_write_descriptor_sets[1].pNext = TG_NULL;
-    p_write_descriptor_sets[1].dstSet = p_camera->descriptor.descriptor_set;
-    p_write_descriptor_sets[1].dstBinding = 1;
-    p_write_descriptor_sets[1].dstArrayElement = 0;
-    p_write_descriptor_sets[1].descriptorCount = 1;
-    p_write_descriptor_sets[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    p_write_descriptor_sets[1].pImageInfo = TG_NULL;
-    p_write_descriptor_sets[1].pBufferInfo = &view_projection_descriptor_buffer_info;
-    p_write_descriptor_sets[1].pTexelBufferView = TG_NULL;
-
-    tg_vulkan_descriptor_sets_update(2, p_write_descriptor_sets);
-
     return p_camera;
 }
 
@@ -382,9 +285,7 @@ void tg__destroy_clear_pass(tg_camera_h h_camera)
 void tg__destroy_present_pass(tg_camera_h h_camera)
 {
     tg_vulkan_command_buffers_free(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, TG_VULKAN_SURFACE_IMAGE_COUNT, h_camera->present_pass.p_command_buffers);
-    tg_vulkan_graphics_pipeline_destroy(h_camera->present_pass.graphics_pipeline);
-    tg_vulkan_pipeline_layout_destroy(h_camera->present_pass.pipeline_layout);
-    tg_vulkan_descriptor_destroy(&h_camera->present_pass.descriptor);
+    tg_vulkan_pipeline_destroy(&h_camera->present_pass.graphics_pipeline);
     tg_vulkan_framebuffers_destroy(TG_VULKAN_SURFACE_IMAGE_COUNT, h_camera->present_pass.p_framebuffers);
     tg_vulkan_render_pass_destroy(h_camera->present_pass.render_pass);
     tg_vulkan_semaphore_destroy(h_camera->present_pass.semaphore);
@@ -424,7 +325,6 @@ void tg_camera_destroy(tg_camera_h h_camera)
     tg__destroy_clear_pass(h_camera);
     tg__destroy_present_pass(h_camera);
     tg__destroy_capture_pass(h_camera);
-    tg_vulkan_descriptor_destroy(&h_camera->descriptor);
     tg_vulkan_render_target_destroy(&h_camera->render_target);
     tg_vulkan_buffer_destroy(&h_camera->view_projection_ubo);
     TG_VULKAN_RELEASE_HANDLE(h_camera);

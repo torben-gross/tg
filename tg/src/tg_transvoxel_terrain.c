@@ -577,7 +577,7 @@ static void tg__build_node(tg_terrain_entity_data* p_terrain, tg_terrain_entity_
 	if (vertex_count)
 	{
 		p_block->h_block_mesh = tg_mesh_create2(vertex_count, sizeof(tg_transvoxel_vertex), p_vertex_buffer, 0, TG_NULL);
-		p_block->h_block_render_command = tg_render_command_create(p_block->h_block_mesh, p_terrain->h_material);
+		p_block->h_block_render_command = tg_render_command_create(p_block->h_block_mesh, p_terrain->h_material, 0, TG_NULL);
 	}
 
 	if (lod > 0)
@@ -590,7 +590,7 @@ static void tg__build_node(tg_terrain_entity_data* p_terrain, tg_terrain_entity_
 			if (vertex_count)
 			{
 				p_block->ph_transition_meshes[i] = tg_mesh_create2(vertex_count, sizeof(tg_transvoxel_vertex), p_vertex_buffer, 0, TG_NULL);
-				p_block->ph_transition_render_commands[i] = tg_render_command_create(p_block->ph_transition_meshes[i], p_terrain->h_material);
+				p_block->ph_transition_render_commands[i] = tg_render_command_create(p_block->ph_transition_meshes[i], p_terrain->h_material, 0, TG_NULL);
 			}
 		}
 	}
@@ -884,7 +884,7 @@ tg_entity tg_transvoxel_terrain_create(tg_camera_h h_camera)
 
 	tg_terrain_entity_data* p_data = entity.p_data;
 	p_data->h_camera = h_camera;
-	p_data->h_material = tg_material_create_deferred(tg_vertex_shader_get("shaders/deferred_flat_terrain.vert"), tg_fragment_shader_get("shaders/deferred_flat_terrain.frag"), 0, TG_NULL);
+	p_data->h_material = tg_material_create_deferred(tg_vertex_shader_get("shaders/deferred_flat_terrain.vert"), tg_fragment_shader_get("shaders/deferred_flat_terrain.frag"));
 
 	for (i8 z = -TG_TRANSVOXEL_VIEW_DISTANCE_IN_OCTREES; z < TG_TRANSVOXEL_VIEW_DISTANCE_IN_OCTREES + 1; z++)
 	{
