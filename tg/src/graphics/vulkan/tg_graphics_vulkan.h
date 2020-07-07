@@ -95,14 +95,15 @@ typedef struct tg_vulkan_framebuffer
 
 typedef struct tg_vulkan_graphics_pipeline_create_info
 {
-    tg_vulkan_shader                         vertex_shader;
-    tg_vulkan_shader                         fragment_shader;
+    const tg_vulkan_shader*                  p_vertex_shader;
+    const tg_vulkan_shader*                  p_fragment_shader;
     VkCullModeFlagBits                       cull_mode;
     VkSampleCountFlagBits                    sample_count;
     VkBool32                                 depth_test_enable;
     VkBool32                                 depth_write_enable;
     VkBool32                                 blend_enable;
     VkRenderPass                             render_pass;
+    v2                                       viewport_size;
 } tg_vulkan_graphics_pipeline_create_info;
 
 typedef struct tg_vulkan_image_extent
@@ -262,8 +263,6 @@ typedef struct tg_camera
         VkSemaphore               semaphore;
         VkRenderPass              render_pass;
         tg_vulkan_framebuffer     p_framebuffers[TG_VULKAN_SURFACE_IMAGE_COUNT];
-        tg_vulkan_shader          vertex_shader;
-        tg_vulkan_shader          fragment_shader;
         tg_vulkan_pipeline        graphics_pipeline;
         VkCommandBuffer           p_command_buffers[TG_VULKAN_SURFACE_IMAGE_COUNT];
     } present_pass;
@@ -396,7 +395,7 @@ tg_depth_image                tg_vulkan_depth_image_create(const tg_vulkan_depth
 VkFormat                      tg_vulkan_depth_image_convert_format(tg_depth_image_format format);
 void                          tg_vulkan_depth_image_destroy(tg_depth_image* p_depth_image);
 
-tg_deferred_renderer_h        tg_vulkan_deferred_renderer_create(tg_camera_h h_camera);
+tg_deferred_renderer_h        tg_vulkan_deferred_renderer_create(tg_camera_h h_camera, tg_depth_image* p_depth_image);
 void                          tg_vulkan_deferred_renderer_destroy(tg_deferred_renderer_h h_deferred_renderer);
 void                          tg_vulkan_deferred_renderer_begin(tg_deferred_renderer_h h_deferred_renderer);
 void                          tg_vulkan_deferred_renderer_push_directional_light(tg_deferred_renderer_h h_deferred_renderer, v3 direction, v3 color);

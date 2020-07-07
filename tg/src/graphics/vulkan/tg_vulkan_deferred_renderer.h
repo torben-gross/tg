@@ -33,8 +33,6 @@ typedef struct tg_deferred_renderer
         VkSemaphore                     rendering_finished_semaphore;
         VkRenderPass                    render_pass;
         tg_vulkan_framebuffer           framebuffer;
-        tg_vulkan_shader                vertex_shader;
-        tg_vulkan_shader                fragment_shader;
         tg_vulkan_pipeline              graphics_pipeline;
         VkCommandBuffer                 command_buffer;
         tg_vulkan_buffer                camera_ubo;
@@ -47,8 +45,6 @@ typedef struct tg_deferred_renderer
         tg_vulkan_buffer                exposure_storage_buffer;
         VkRenderPass                    render_pass;
         tg_vulkan_framebuffer           framebuffer;
-        tg_vulkan_shader                vertex_shader;
-        tg_vulkan_shader                fragment_shader;
         tg_vulkan_pipeline              graphics_pipeline;
         VkCommandBuffer                 command_buffer;
     } tone_mapping_pass;

@@ -131,7 +131,7 @@ static void tg__init_geometry_pass(tg_deferred_renderer_h h_deferred_renderer)
     h_deferred_renderer->geometry_pass.command_buffer = tg_vulkan_command_buffer_allocate(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 }
 
-static void tg__init_shading_pass(tg_deferred_renderer_h h_deferred_renderer)
+static void tg__init_shading_pass(tg_deferred_renderer_h h_deferred_renderer, tg_depth_image* p_depth_image)
 {
     TG_ASSERT(h_deferred_renderer);
 
@@ -236,18 +236,18 @@ static void tg__init_shading_pass(tg_deferred_renderer_h h_deferred_renderer)
 
     h_deferred_renderer->shading_pass.render_pass = tg_vulkan_render_pass_create(TG_SHADING_ATTACHMENT_COUNT, &attachment_description, 1, &subpass_description, 1, &subpass_dependency);
     h_deferred_renderer->shading_pass.framebuffer = tg_vulkan_framebuffer_create(h_deferred_renderer->shading_pass.render_pass, TG_SHADING_ATTACHMENT_COUNT, &h_deferred_renderer->shading_pass.color_attachment.image_view, swapchain_extent.width, swapchain_extent.height);
-    h_deferred_renderer->shading_pass.vertex_shader = ((tg_vertex_shader_h)tg_assets_get_asset("shaders/shading.vert"))->vulkan_shader;
-    h_deferred_renderer->shading_pass.fragment_shader = ((tg_fragment_shader_h)tg_assets_get_asset("shaders/shading.frag"))->vulkan_shader;
 
     tg_vulkan_graphics_pipeline_create_info vulkan_graphics_pipeline_create_info = { 0 };
-    vulkan_graphics_pipeline_create_info.vertex_shader = h_deferred_renderer->shading_pass.vertex_shader;
-    vulkan_graphics_pipeline_create_info.fragment_shader = h_deferred_renderer->shading_pass.fragment_shader;
+    vulkan_graphics_pipeline_create_info.p_vertex_shader = &((tg_vertex_shader_h)tg_assets_get_asset("shaders/shading.vert"))->vulkan_shader;
+    vulkan_graphics_pipeline_create_info.p_fragment_shader = &((tg_fragment_shader_h)tg_assets_get_asset("shaders/shading.frag"))->vulkan_shader;
     vulkan_graphics_pipeline_create_info.cull_mode = VK_CULL_MODE_NONE;
     vulkan_graphics_pipeline_create_info.sample_count = VK_SAMPLE_COUNT_1_BIT;
     vulkan_graphics_pipeline_create_info.depth_test_enable = VK_FALSE;
     vulkan_graphics_pipeline_create_info.depth_write_enable = VK_FALSE;
     vulkan_graphics_pipeline_create_info.blend_enable = VK_FALSE;
     vulkan_graphics_pipeline_create_info.render_pass = h_deferred_renderer->shading_pass.render_pass;
+    vulkan_graphics_pipeline_create_info.viewport_size.x = (f32)h_deferred_renderer->shading_pass.framebuffer.width;
+    vulkan_graphics_pipeline_create_info.viewport_size.y = (f32)h_deferred_renderer->shading_pass.framebuffer.height;
 
     h_deferred_renderer->shading_pass.graphics_pipeline = tg_vulkan_pipeline_create_graphics(&vulkan_graphics_pipeline_create_info);
 
@@ -258,6 +258,8 @@ static void tg__init_shading_pass(tg_deferred_renderer_h h_deferred_renderer)
 
     tg_vulkan_descriptor_set_update_uniform_buffer(h_deferred_renderer->shading_pass.graphics_pipeline.descriptor_set, h_deferred_renderer->shading_pass.camera_ubo.buffer, TG_DEFERRED_GEOMETRY_COLOR_ATTACHMENT_COUNT);
     tg_vulkan_descriptor_set_update_uniform_buffer(h_deferred_renderer->shading_pass.graphics_pipeline.descriptor_set, h_deferred_renderer->shading_pass.lighting_ubo.buffer, TG_DEFERRED_GEOMETRY_COLOR_ATTACHMENT_COUNT + 1);
+    tg_vulkan_descriptor_set_update_uniform_buffer(h_deferred_renderer->shading_pass.graphics_pipeline.descriptor_set, h_deferred_renderer->h_camera->shadow_pass.lightspace_ubo.buffer, TG_DEFERRED_GEOMETRY_COLOR_ATTACHMENT_COUNT + 2);
+    tg_vulkan_descriptor_set_update_depth_image(h_deferred_renderer->shading_pass.graphics_pipeline.descriptor_set, p_depth_image, TG_DEFERRED_GEOMETRY_COLOR_ATTACHMENT_COUNT + 3);
 
     h_deferred_renderer->shading_pass.command_buffer = tg_vulkan_command_buffer_allocate(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
@@ -274,6 +276,14 @@ static void tg__init_shading_pass(tg_deferred_renderer_h h_deferred_renderer)
                 VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
             );
         }
+        tg_vulkan_command_buffer_cmd_transition_depth_image_layout(
+            h_deferred_renderer->shading_pass.command_buffer,
+            p_depth_image,
+            VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
+            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
+        );
 
         vkCmdBindPipeline(h_deferred_renderer->shading_pass.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, h_deferred_renderer->shading_pass.graphics_pipeline.pipeline);
 
@@ -306,6 +316,14 @@ static void tg__init_shading_pass(tg_deferred_renderer_h h_deferred_renderer)
                 VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
             );
         }
+        tg_vulkan_command_buffer_cmd_transition_depth_image_layout(
+            h_deferred_renderer->shading_pass.command_buffer,
+            p_depth_image,
+            VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT
+        );
     }
     VK_CALL(vkEndCommandBuffer(h_deferred_renderer->shading_pass.command_buffer));
 }
@@ -354,18 +372,17 @@ static void tg__init_tone_mapping_pass(tg_deferred_renderer_h h_deferred_rendere
     h_deferred_renderer->tone_mapping_pass.render_pass = tg_vulkan_render_pass_create(TG_SHADING_ATTACHMENT_COUNT, &attachment_description, 1, &subpass_description, 1, &subpass_dependency);
     h_deferred_renderer->tone_mapping_pass.framebuffer = tg_vulkan_framebuffer_create(h_deferred_renderer->tone_mapping_pass.render_pass, TG_SHADING_ATTACHMENT_COUNT, &h_deferred_renderer->h_camera->render_target.color_attachment.image_view, swapchain_extent.width, swapchain_extent.height);
 
-    h_deferred_renderer->tone_mapping_pass.vertex_shader = ((tg_vertex_shader_h)tg_assets_get_asset("shaders/adapt_exposure.vert"))->vulkan_shader;
-    h_deferred_renderer->tone_mapping_pass.fragment_shader = ((tg_fragment_shader_h)tg_assets_get_asset("shaders/adapt_exposure.frag"))->vulkan_shader;
-
     tg_vulkan_graphics_pipeline_create_info exposure_vulkan_graphics_pipeline_create_info = { 0 };
-    exposure_vulkan_graphics_pipeline_create_info.vertex_shader = h_deferred_renderer->tone_mapping_pass.vertex_shader;
-    exposure_vulkan_graphics_pipeline_create_info.fragment_shader = h_deferred_renderer->tone_mapping_pass.fragment_shader;
+    exposure_vulkan_graphics_pipeline_create_info.p_vertex_shader = &((tg_vertex_shader_h)tg_assets_get_asset("shaders/adapt_exposure.vert"))->vulkan_shader;
+    exposure_vulkan_graphics_pipeline_create_info.p_fragment_shader = &((tg_fragment_shader_h)tg_assets_get_asset("shaders/adapt_exposure.frag"))->vulkan_shader;
     exposure_vulkan_graphics_pipeline_create_info.cull_mode = VK_CULL_MODE_NONE;
     exposure_vulkan_graphics_pipeline_create_info.sample_count = VK_SAMPLE_COUNT_1_BIT;
     exposure_vulkan_graphics_pipeline_create_info.depth_test_enable = VK_FALSE;
     exposure_vulkan_graphics_pipeline_create_info.depth_write_enable = VK_FALSE;
     exposure_vulkan_graphics_pipeline_create_info.blend_enable = VK_FALSE;
     exposure_vulkan_graphics_pipeline_create_info.render_pass = h_deferred_renderer->tone_mapping_pass.render_pass;
+    exposure_vulkan_graphics_pipeline_create_info.viewport_size.x = (f32)h_deferred_renderer->tone_mapping_pass.framebuffer.width;
+    exposure_vulkan_graphics_pipeline_create_info.viewport_size.y = (f32)h_deferred_renderer->tone_mapping_pass.framebuffer.height;
 
     h_deferred_renderer->tone_mapping_pass.graphics_pipeline = tg_vulkan_pipeline_create_graphics(&exposure_vulkan_graphics_pipeline_create_info);
 
@@ -460,14 +477,14 @@ static void tg__destroy_tone_mapping_pass(tg_deferred_renderer_h h_deferred_rend
 
 
 
-tg_deferred_renderer_h tg_vulkan_deferred_renderer_create(tg_camera_h h_camera)
+tg_deferred_renderer_h tg_vulkan_deferred_renderer_create(tg_camera_h h_camera, tg_depth_image* p_depth_image)
 {
     TG_ASSERT(h_camera);
 
     tg_deferred_renderer_h h_deferred_renderer = TG_MEMORY_ALLOC(sizeof(*h_deferred_renderer));
     h_deferred_renderer->h_camera = h_camera;
     tg__init_geometry_pass(h_deferred_renderer);
-    tg__init_shading_pass(h_deferred_renderer);
+    tg__init_shading_pass(h_deferred_renderer, p_depth_image);
     tg__init_tone_mapping_pass(h_deferred_renderer);
     return h_deferred_renderer;
 }

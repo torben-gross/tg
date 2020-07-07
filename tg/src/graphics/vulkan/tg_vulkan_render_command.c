@@ -16,8 +16,8 @@ static void tg__register(tg_render_command_h h_render_command, tg_camera_h h_cam
     p_camera_info->h_camera = h_camera;
 
     tg_vulkan_graphics_pipeline_create_info vulkan_graphics_pipeline_create_info = { 0 };
-    vulkan_graphics_pipeline_create_info.vertex_shader = h_render_command->h_material->h_vertex_shader->vulkan_shader;
-    vulkan_graphics_pipeline_create_info.fragment_shader = h_render_command->h_material->h_fragment_shader->vulkan_shader;
+    vulkan_graphics_pipeline_create_info.p_vertex_shader = &h_render_command->h_material->h_vertex_shader->vulkan_shader;
+    vulkan_graphics_pipeline_create_info.p_fragment_shader = &h_render_command->h_material->h_fragment_shader->vulkan_shader;
     vulkan_graphics_pipeline_create_info.cull_mode = VK_CULL_MODE_BACK_BIT;
     vulkan_graphics_pipeline_create_info.sample_count = VK_SAMPLE_COUNT_1_BIT;
     vulkan_graphics_pipeline_create_info.depth_test_enable = VK_TRUE;
@@ -29,11 +29,15 @@ static void tg__register(tg_render_command_h h_render_command, tg_camera_h h_cam
     {
         vulkan_graphics_pipeline_create_info.blend_enable = VK_FALSE;
         vulkan_graphics_pipeline_create_info.render_pass = h_camera->capture_pass.h_deferred_renderer->geometry_pass.render_pass;
+        vulkan_graphics_pipeline_create_info.viewport_size.x = (f32)h_camera->capture_pass.h_deferred_renderer->geometry_pass.framebuffer.width;
+        vulkan_graphics_pipeline_create_info.viewport_size.y = (f32)h_camera->capture_pass.h_deferred_renderer->geometry_pass.framebuffer.height;
     } break;
     case TG_VULKAN_MATERIAL_TYPE_FORWARD:
     {
         vulkan_graphics_pipeline_create_info.blend_enable = VK_TRUE;
         vulkan_graphics_pipeline_create_info.render_pass = h_camera->capture_pass.h_forward_renderer->shading_pass.render_pass;
+        vulkan_graphics_pipeline_create_info.viewport_size.x = (f32)h_camera->capture_pass.h_forward_renderer->shading_pass.framebuffer.width;
+        vulkan_graphics_pipeline_create_info.viewport_size.y = (f32)h_camera->capture_pass.h_forward_renderer->shading_pass.framebuffer.height;
     } break;
     default: TG_INVALID_CODEPATH(); break;
     }
@@ -100,15 +104,18 @@ static void tg__register(tg_render_command_h h_render_command, tg_camera_h h_cam
 
 
 
+
     tg_vulkan_graphics_pipeline_create_info pipeline_create_info = { 0 };
-    pipeline_create_info.vertex_shader = tg_vertex_shader_get("shaders/shadow.vert")->vulkan_shader;
-    pipeline_create_info.fragment_shader = tg_fragment_shader_get("shaders/shadow.frag")->vulkan_shader;
+    pipeline_create_info.p_vertex_shader = &tg_vertex_shader_get("shaders/shadow.vert")->vulkan_shader;
+    pipeline_create_info.p_fragment_shader = &tg_fragment_shader_get("shaders/shadow.frag")->vulkan_shader;
     pipeline_create_info.cull_mode = VK_CULL_MODE_BACK_BIT;
     pipeline_create_info.sample_count = 1;
     pipeline_create_info.depth_test_enable = TG_TRUE;
     pipeline_create_info.depth_write_enable = TG_TRUE;
     pipeline_create_info.blend_enable = TG_FALSE;
     pipeline_create_info.render_pass = h_camera->shadow_pass.render_pass;
+    pipeline_create_info.viewport_size.x = (f32)h_camera->shadow_pass.framebuffer.width;
+    pipeline_create_info.viewport_size.y = (f32)h_camera->shadow_pass.framebuffer.height;
 
     VkVertexInputBindingDescription vertex_input_binding_description = { 0 };
     vertex_input_binding_description.binding = 0;

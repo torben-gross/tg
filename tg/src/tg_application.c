@@ -156,7 +156,14 @@ static void tg__game_3d_create()
             ((tg_pbr_material*)tg_uniform_buffer_data(sample_scene.p_pbr_spheres[i].h_ubo))->roughness = ((f32)y + 0.1f) / 6.5f;
             ((tg_pbr_material*)tg_uniform_buffer_data(sample_scene.p_pbr_spheres[i].h_ubo))->ao = 1.0f;
             sample_scene.p_pbr_spheres[i].h_material = tg_material_create_deferred(tg_vertex_shader_get("shaders/deferred_pbr.vert"), tg_fragment_shader_get("shaders/deferred_pbr.frag"));
-            sample_scene.p_pbr_spheres[i].h_render_command = tg_render_command_create(sample_scene.h_pbr_sphere_mesh, sample_scene.p_pbr_spheres[i].h_material, sphere_translation, 1, &sample_scene.p_pbr_spheres[i].h_ubo);
+            if (x == 6 && y == 0)
+            {
+                sample_scene.p_pbr_spheres[i].h_render_command = tg_render_command_create(tg_mesh_create_sphere(3.0f, 128, 64), sample_scene.p_pbr_spheres[i].h_material, sphere_translation, 1, &sample_scene.p_pbr_spheres[i].h_ubo);
+            }
+            else
+            {
+                sample_scene.p_pbr_spheres[i].h_render_command = tg_render_command_create(sample_scene.h_pbr_sphere_mesh, sample_scene.p_pbr_spheres[i].h_material, sphere_translation, 1, &sample_scene.p_pbr_spheres[i].h_ubo);
+            }
             tg_list_insert(&sample_scene.render_commands, &sample_scene.p_pbr_spheres[i].h_render_command);
         }
     }
@@ -247,6 +254,7 @@ static void tg__game_3d_update_and_render(f32 delta_ms)
         tg_camera_set_perspective_projection(sample_scene.h_primary_camera, sample_scene.fov_y_in_radians, sample_scene.near, sample_scene.far);
         tg_camera_set_perspective_projection(sample_scene.h_secondary_camera, sample_scene.fov_y_in_radians, sample_scene.near, sample_scene.far);
     }
+    //tg_camera_set_orthographic_projection(sample_scene.h_primary_camera, -16.0f, 16.0f, -9.0f, 9.0f, -320.0f, -1.0f);
 
     tg_terrain_update(&sample_scene.terrain, delta_ms);
 

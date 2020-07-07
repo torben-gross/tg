@@ -95,25 +95,25 @@ static VkImageView tg__image_view_create(VkImage image, VkImageViewType view_typ
 
 
 
-void tg__pipeline_init(tg_vulkan_pipeline* p_pipeline, u32 shader_count, const tg_vulkan_shader* p_shaders)
+void tg__pipeline_init(tg_vulkan_pipeline* p_pipeline, u32 shader_count, const tg_vulkan_shader* const* pp_shaders)
 {
     u32 global_resource_count = 0;
     tg_spirv_global_resource p_global_resources[TG_MAX_SHADER_GLOBAL_RESOURCES] = { 0 };
     VkShaderStageFlags p_shader_stages[TG_MAX_SHADER_GLOBAL_RESOURCES] = { 0 };
     for (u32 i = 0; i < shader_count; i++)
     {
-        for (u32 j = 0; j < p_shaders[i].spirv_layout.global_resource_count; j++)
+        for (u32 j = 0; j < pp_shaders[i]->spirv_layout.global_resource_count; j++)
         {
-            TG_ASSERT(p_shaders[i].spirv_layout.p_global_resources[j].descriptor_set == 0);
+            TG_ASSERT(pp_shaders[i]->spirv_layout.p_global_resources[j].descriptor_set == 0);
             b32 found = TG_FALSE;
             for (u32 k = 0; k < global_resource_count; k++)
             {
-                const b32 same_set = p_global_resources[k].descriptor_set == p_shaders[i].spirv_layout.p_global_resources[j].descriptor_set;
-                const b32 same_binding = p_global_resources[k].binding == p_shaders[i].spirv_layout.p_global_resources[j].binding;
+                const b32 same_set = p_global_resources[k].descriptor_set == pp_shaders[i]->spirv_layout.p_global_resources[j].descriptor_set;
+                const b32 same_binding = p_global_resources[k].binding == pp_shaders[i]->spirv_layout.p_global_resources[j].binding;
                 if (same_set && same_binding)
                 {
-                    TG_ASSERT(p_global_resources[k].type == p_shaders[i].spirv_layout.p_global_resources[j].type);
-                    p_shader_stages[k] |= (VkShaderStageFlags)p_shaders[i].spirv_layout.shader_type;
+                    TG_ASSERT(p_global_resources[k].type == pp_shaders[i]->spirv_layout.p_global_resources[j].type);
+                    p_shader_stages[k] |= (VkShaderStageFlags)pp_shaders[i]->spirv_layout.shader_type;
                     found = TG_TRUE;
                     break;
                 }
@@ -121,10 +121,10 @@ void tg__pipeline_init(tg_vulkan_pipeline* p_pipeline, u32 shader_count, const t
             if (!found)
             {
                 TG_ASSERT(global_resource_count + 1 < TG_MAX_SHADER_GLOBAL_RESOURCES);
-                p_global_resources[global_resource_count].type = p_shaders[i].spirv_layout.p_global_resources[j].type;
-                p_global_resources[global_resource_count].descriptor_set = p_shaders[i].spirv_layout.p_global_resources[j].descriptor_set;
-                p_global_resources[global_resource_count].binding = p_shaders[i].spirv_layout.p_global_resources[j].binding;
-                p_shader_stages[global_resource_count] = (VkShaderStageFlags)p_shaders[i].spirv_layout.shader_type;
+                p_global_resources[global_resource_count].type = pp_shaders[i]->spirv_layout.p_global_resources[j].type;
+                p_global_resources[global_resource_count].descriptor_set = pp_shaders[i]->spirv_layout.p_global_resources[j].descriptor_set;
+                p_global_resources[global_resource_count].binding = pp_shaders[i]->spirv_layout.p_global_resources[j].binding;
+                p_shader_stages[global_resource_count] = (VkShaderStageFlags)pp_shaders[i]->spirv_layout.shader_type;
                 global_resource_count++;
             }
         }
@@ -1301,7 +1301,7 @@ tg_vulkan_pipeline tg_vulkan_pipeline_create_compute(const tg_vulkan_shader* p_c
 {
     tg_vulkan_pipeline compute_pipeline = { 0 };
 
-    tg__pipeline_init(&compute_pipeline, 1, p_compute_shader);
+    tg__pipeline_init(&compute_pipeline, 1, &p_compute_shader);
 
     VkPipelineShaderStageCreateInfo pipeline_shader_stage_create_info = { 0 };
     pipeline_shader_stage_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -1332,18 +1332,18 @@ tg_vulkan_pipeline tg_vulkan_pipeline_create_graphics(const tg_vulkan_graphics_p
 
     VkVertexInputBindingDescription vertex_input_binding_description = { 0 };
     vertex_input_binding_description.binding = 0;
-    vertex_input_binding_description.stride = p_create_info->vertex_shader.spirv_layout.vertex_stride;
+    vertex_input_binding_description.stride = p_create_info->p_vertex_shader->spirv_layout.vertex_stride;
     vertex_input_binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
     VkVertexInputAttributeDescription p_vertex_input_attribute_descriptions[TG_MAX_SHADER_INPUTS] = { 0 };
-    for (u8 i = 0; i < p_create_info->vertex_shader.spirv_layout.input_resource_count; i++)
+    for (u8 i = 0; i < p_create_info->p_vertex_shader->spirv_layout.input_resource_count; i++)
     {
         p_vertex_input_attribute_descriptions[i].binding = 0;
-        p_vertex_input_attribute_descriptions[i].location = p_create_info->vertex_shader.spirv_layout.p_input_resources[i].location;
-        p_vertex_input_attribute_descriptions[i].format = p_create_info->vertex_shader.spirv_layout.p_input_resources[i].format;
-        p_vertex_input_attribute_descriptions[i].offset = p_create_info->vertex_shader.spirv_layout.p_input_resources[i].offset;
+        p_vertex_input_attribute_descriptions[i].location = p_create_info->p_vertex_shader->spirv_layout.p_input_resources[i].location;
+        p_vertex_input_attribute_descriptions[i].format = p_create_info->p_vertex_shader->spirv_layout.p_input_resources[i].format;
+        p_vertex_input_attribute_descriptions[i].offset = p_create_info->p_vertex_shader->spirv_layout.p_input_resources[i].offset;
     }
-    graphics_pipeline = tg_vulkan_pipeline_create_graphics2(p_create_info, vertex_input_binding_description, p_create_info->vertex_shader.spirv_layout.input_resource_count, p_vertex_input_attribute_descriptions);
+    graphics_pipeline = tg_vulkan_pipeline_create_graphics2(p_create_info, vertex_input_binding_description, p_create_info->p_vertex_shader->spirv_layout.input_resource_count, p_vertex_input_attribute_descriptions);
 
     return graphics_pipeline;
 }
@@ -1352,7 +1352,7 @@ tg_vulkan_pipeline tg_vulkan_pipeline_create_graphics2(const tg_vulkan_graphics_
 {
     tg_vulkan_pipeline graphics_pipeline = { 0 };
 
-    tg__pipeline_init(&graphics_pipeline, 2, &p_create_info->vertex_shader);
+    tg__pipeline_init(&graphics_pipeline, 2, &p_create_info->p_vertex_shader);
 
     VkPipelineShaderStageCreateInfo p_pipeline_shader_stage_create_infos[2] = { 0 };
 
@@ -1360,16 +1360,16 @@ tg_vulkan_pipeline tg_vulkan_pipeline_create_graphics2(const tg_vulkan_graphics_
     p_pipeline_shader_stage_create_infos[0].pNext = TG_NULL;
     p_pipeline_shader_stage_create_infos[0].flags = 0;
     p_pipeline_shader_stage_create_infos[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
-    p_pipeline_shader_stage_create_infos[0].module = p_create_info->vertex_shader.shader_module;
-    p_pipeline_shader_stage_create_infos[0].pName = p_create_info->vertex_shader.spirv_layout.p_entry_point_name;
+    p_pipeline_shader_stage_create_infos[0].module = p_create_info->p_vertex_shader->shader_module;
+    p_pipeline_shader_stage_create_infos[0].pName = p_create_info->p_vertex_shader->spirv_layout.p_entry_point_name;
     p_pipeline_shader_stage_create_infos[0].pSpecializationInfo = TG_NULL;
 
     p_pipeline_shader_stage_create_infos[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     p_pipeline_shader_stage_create_infos[1].pNext = TG_NULL;
     p_pipeline_shader_stage_create_infos[1].flags = 0;
     p_pipeline_shader_stage_create_infos[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-    p_pipeline_shader_stage_create_infos[1].module = p_create_info->fragment_shader.shader_module;
-    p_pipeline_shader_stage_create_infos[1].pName = p_create_info->fragment_shader.spirv_layout.p_entry_point_name;
+    p_pipeline_shader_stage_create_infos[1].module = p_create_info->p_fragment_shader->shader_module;
+    p_pipeline_shader_stage_create_infos[1].pName = p_create_info->p_fragment_shader->spirv_layout.p_entry_point_name;
     p_pipeline_shader_stage_create_infos[1].pSpecializationInfo = TG_NULL;
 
     VkPipelineInputAssemblyStateCreateInfo pipeline_input_assembly_state_create_info = { 0 };
@@ -1382,8 +1382,8 @@ tg_vulkan_pipeline tg_vulkan_pipeline_create_graphics2(const tg_vulkan_graphics_
     VkViewport viewport = { 0 };
     viewport.x = 0.0f;
     viewport.y = 0.0f;
-    viewport.width = (f32)swapchain_extent.width;
-    viewport.height = (f32)swapchain_extent.height;
+    viewport.width = p_create_info->viewport_size.x;
+    viewport.height = p_create_info->viewport_size.y;
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
 
@@ -1452,10 +1452,10 @@ tg_vulkan_pipeline tg_vulkan_pipeline_create_graphics2(const tg_vulkan_graphics_
     pipeline_depth_stencil_state_create_info.minDepthBounds = 0.0f;
     pipeline_depth_stencil_state_create_info.maxDepthBounds = 0.0f;
 
-    TG_ASSERT(p_create_info->fragment_shader.spirv_layout.output_resource_count <= TG_MAX_SHADER_ATTACHMENTS);
+    TG_ASSERT(p_create_info->p_fragment_shader->spirv_layout.output_resource_count <= TG_MAX_SHADER_ATTACHMENTS);
 
     VkPipelineColorBlendAttachmentState p_pipeline_color_blend_attachment_states[TG_MAX_SHADER_ATTACHMENTS] = { 0 };
-    for (u32 i = 0; i < p_create_info->fragment_shader.spirv_layout.output_resource_count; i++)
+    for (u32 i = 0; i < p_create_info->p_fragment_shader->spirv_layout.output_resource_count; i++)
     {
         p_pipeline_color_blend_attachment_states[i].blendEnable = p_create_info->blend_enable;
         p_pipeline_color_blend_attachment_states[i].srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
@@ -1473,7 +1473,7 @@ tg_vulkan_pipeline tg_vulkan_pipeline_create_graphics2(const tg_vulkan_graphics_
     pipeline_color_blend_state_create_info.flags = 0;
     pipeline_color_blend_state_create_info.logicOpEnable = VK_FALSE;
     pipeline_color_blend_state_create_info.logicOp = VK_LOGIC_OP_COPY;
-    pipeline_color_blend_state_create_info.attachmentCount = p_create_info->fragment_shader.spirv_layout.output_resource_count;
+    pipeline_color_blend_state_create_info.attachmentCount = p_create_info->p_fragment_shader->spirv_layout.output_resource_count;
     pipeline_color_blend_state_create_info.pAttachments = p_pipeline_color_blend_attachment_states;
     pipeline_color_blend_state_create_info.blendConstants[0] = 0.0f;
     pipeline_color_blend_state_create_info.blendConstants[1] = 0.0f;
