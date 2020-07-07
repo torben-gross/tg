@@ -38,7 +38,26 @@ layout(location = 0) out vec4 out_color;
 
 
 
-float pi = 3.14159265358979323846;
+const float pi = 3.14159265358979323846;
+const float shadow_sample_count = 4;
+const vec2 shadow_poisson_disk[16] = vec2[]( 
+    vec2( -0.94201624,  -0.39906216 ), 
+    vec2(  0.94558609,  -0.76890725 ), 
+    vec2( -0.094184101, -0.92938870 ), 
+    vec2(  0.34495938,   0.29387760 ), 
+    vec2( -0.91588581,   0.45771432 ), 
+    vec2( -0.81544232,  -0.87912464 ), 
+    vec2( -0.38277543,   0.27676845 ), 
+    vec2(  0.97484398,   0.75648379 ), 
+    vec2(  0.44323325,  -0.97511554 ), 
+    vec2(  0.53742981,  -0.47373420 ), 
+    vec2( -0.26496911,  -0.41893023 ), 
+    vec2(  0.79197514,   0.19090188 ), 
+    vec2( -0.24188840,   0.99706507 ), 
+    vec2( -0.81409955,   0.91437590 ), 
+    vec2(  0.19984126,   0.78641367 ), 
+    vec2(  0.14383161,  -0.14100790 ) 
+);
 
 
 
@@ -77,7 +96,13 @@ vec3 fresnel_schlick(float cos_theta, vec3 f0)
     return f0 + (1.0 - f0) * pow(1.0 - cos_theta, 5.0);
 }
 
-float shadow_mapping(vec4 position_lightspace)
+float random(vec3 seed, int i){
+    vec4 seed4 = vec4(seed, float(i));
+    float dot_product = dot(seed4, vec4(12.9898, 78.233, 45.164, 94.673));
+    return fract(sin(dot_product) * 43758.5453);
+}
+
+float shadow_mapping(vec3 position, vec4 position_lightspace)
 {
     vec3 proj = position_lightspace.xyz / position_lightspace.w;
     float shadow = 1.0;
@@ -88,15 +113,13 @@ float shadow_mapping(vec4 position_lightspace)
         {
             vec2 proj2 = proj.xy * 0.5 + 0.5;
             float current = proj.z;
-            for (int x = -1; x <= 1; x++)
+            for (int i = 0; i < shadow_sample_count; i++)
             {
-                for (int y = -1; y <= 1; y++)
-                {
-                    float pcf_depth = texture(u_shadow_map, proj2 + vec2(float(x), float(y)) * 0.0009765625).x;
-                    shadow += current - bias < pcf_depth ? 1.0 : 0.0;
-                }
-            }
-            shadow /= 9;
+		        int index = int(16.0 * random(floor(position.xyz * 1000.0), i)) % 16;
+                float pcf_depth = texture(u_shadow_map, proj2 + vec2(shadow_poisson_disk[index]) / 512.0).x; // 1.0 / 1024.0 = 0.0009765625
+                shadow += current - bias < pcf_depth ? 1.0 : 0.0;
+	        }
+            shadow = clamp(shadow / float(shadow_sample_count), 0.0, 1.0);
         }
     }
     return shadow;
@@ -176,7 +199,7 @@ void main()
         }
 
         vec3 ambient = vec3(0.01) * albedo * ao;
-        vec3 color   = ambient + shadow_mapping(position_lightspace) * lo;
+        vec3 color   = ambient + shadow_mapping(position, position_lightspace) * lo;
 
         color = color / (color + vec3(1.0));
         color = pow(color, vec3(1.0 / 2.2));

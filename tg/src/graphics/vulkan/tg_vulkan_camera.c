@@ -10,8 +10,8 @@
 
 
 
-#define TG_SHADOW_MAP_WIDTH     2048
-#define TG_SHADOW_MAP_HEIGHT    2048
+#define TG_SHADOW_MAP_WIDTH     1024
+#define TG_SHADOW_MAP_HEIGHT    1024
 
 
 
