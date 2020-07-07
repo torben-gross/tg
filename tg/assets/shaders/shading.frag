@@ -81,13 +81,23 @@ float shadow_mapping(vec4 position_lightspace)
 {
     vec3 proj = position_lightspace.xyz / position_lightspace.w;
     float shadow = 1.0;
-    if (proj.x > -1.0 && proj.x < 1.0 && proj.y > -1.0 && proj.y < 1.0)
+    if (proj.z > 0.0 && proj.z < 1.0)
     {
-        vec2 proj2 = proj.xy * 0.5 + 0.5;
-        float closest = texture(u_shadow_map, proj2.xy).x;
-        float current = proj.z;
-        float bias = 0.005;
-        shadow = current - bias < closest ? 1.0 : 0.0;
+        float bias = 0.01;
+        if (proj.x > -1.0 && proj.x < 1.0 - bias && proj.y > -1.0 + bias && proj.y < 1.0)
+        {
+            vec2 proj2 = proj.xy * 0.5 + 0.5;
+            float current = proj.z;
+            for (int x = -1; x <= 1; x++)
+            {
+                for (int y = -1; y <= 1; y++)
+                {
+                    float pcf_depth = texture(u_shadow_map, proj2 + vec2(float(x), float(y)) * 0.0009765625).x;
+                    shadow += current - bias < pcf_depth ? 1.0 : 0.0;
+                }
+            }
+            shadow /= 9;
+        }
     }
     return shadow;
 }
@@ -173,20 +183,8 @@ void main()
 
         vec3  d = u_camera_position - position;
         float t = clamp(sqrt(dot(d, d)) / 256.0f, 0.0, 1.0);
-        //color   = mix(color, sky_color.xyz, t);
+        color   = mix(color, sky_color.xyz, t);
 
         out_color = vec4(color, 1.0);
-
-
-        
-        //vec3 proj = position_lightspace.xyz / position_lightspace.w;
-        //vec2 proj2 = proj.xy * vec2(0.5) + vec2(0.5);
-        //if (proj2.x >= 0.0 && proj2.x <= 1.0 && proj2.y >= 0.0 && proj2.y <= 1.0)
-        //{
-        //    float a = 0.0;
-        //    a = texture(u_shadow_map, proj2.xy).x;
-        //    a = proj.z;
-        //    out_color = vec4(a, 0.0, 0.0, 1.0);
-        //}
     }
 }

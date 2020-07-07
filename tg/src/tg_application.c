@@ -272,7 +272,8 @@ static void tg__game_3d_update_and_render(f32 delta_ms)
     const f32 lz1 = 112.0f + 2.0f;
 
 
-    const v3 d0 = tgm_v3_normalized((v3){ lx0, ly0, lz0 });
+    //const v3 d0 = tgm_v3_normalized((v3){ lx0, ly0, lz0 });
+    const v3 d0 = tgm_v3_normalized((v3){ 0.3f, -1.0f, -0.2f });
     const v3 c0d = tgm_v3_mulf((v3){ 0.529f, 0.808f, 0.922f }, 2.0f);
     const v3 c0n = tgm_v3_mulf((v3){ 0.992f, 0.369f, 0.325f }, 2.0f);
     const v3 c0 = tgm_v3_lerp(c0n, c0d, -d0.y);

@@ -35,7 +35,7 @@ typedef struct tg_light_setup
 static void tg__init_geometry_pass(tg_deferred_renderer_h h_deferred_renderer)
 {
     const VkFormat p_color_attachment_formats[TG_DEFERRED_GEOMETRY_COLOR_ATTACHMENT_COUNT] = {
-        VK_FORMAT_R16G16B16A16_SFLOAT,
+        VK_FORMAT_R32G32B32A32_SFLOAT,
         VK_FORMAT_R16G16B16A16_SFLOAT,
         VK_FORMAT_R16G16B16A16_SFLOAT,
         VK_FORMAT_R16G16B16A16_SFLOAT
