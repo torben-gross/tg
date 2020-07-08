@@ -46,56 +46,6 @@ typedef struct tg_transvoxel_vertex
 
 
 
-static void tg__compress_voxel_map(const i8* p_voxel_map, u32* p_size, void* p_compressed_voxel_map_buffer)
-{
-	*p_size = 4;
-	u32 counter = 0;
-	i8 current_value = p_voxel_map[0];
-	
-	for (u16 z = 0; z < TG_VOXEL_MAP_STRIDE; z++)
-	{
-		for (u16 y = 0; y < TG_VOXEL_MAP_STRIDE; y++)
-		{
-			for (u16 x = 0; x < TG_VOXEL_MAP_STRIDE; x++)
-			{
-				if (TG_VOXEL_MAP_AT(p_voxel_map, x, y, z) != current_value)
-				{
-					*((u32*)&((u8*)p_compressed_voxel_map_buffer)[*p_size]) = counter;
-					((i8*)p_compressed_voxel_map_buffer)[*p_size + 4] = current_value;
-					*p_size += 5;
-
-					counter = 0;
-					current_value = TG_VOXEL_MAP_AT(p_voxel_map, x, y, z);
-				}
-				counter++;
-			}
-		}
-	}
-
-	*((u32*)p_compressed_voxel_map_buffer) = *p_size;
-}
-
-static void tg__decompress_voxel_map(const void* p_compressed_voxel_map, i8* p_voxel_map_buffer)
-{
-	const u32 size = *(u32*)p_compressed_voxel_map;
-
-	u32 processed_bytes = 4;
-	u32 i = 0;
-	do
-	{
-		const u32 counter = *((u32*)&((u8*)p_compressed_voxel_map)[processed_bytes]);
-		const i8 current_value = ((i8*)p_compressed_voxel_map)[processed_bytes + 4];
-
-		const u32 end = i + counter;
-		for (; i < end; i++)
-		{
-			p_voxel_map_buffer[i] = current_value;
-		}
-
-		processed_bytes += 5;
-	} while (processed_bytes < size);
-}
-
 static void tg__fill_voxel_map(v3i octree_min_coordinates, i8* p_voxel_map_buffer)
 {
 	for (i32 z = 0; z < TG_VOXEL_MAP_STRIDE; z++)
@@ -129,6 +79,63 @@ static void tg__fill_voxel_map(v3i octree_min_coordinates, i8* p_voxel_map_buffe
 				TG_VOXEL_MAP_AT(p_voxel_map_buffer, x, y, z) = f2;
 			}
 		}
+	}
+}
+
+static void tg__compress_voxel_map(const i8* p_voxel_map, u32* p_size, void* p_compressed_voxel_map_buffer)
+{
+	*p_size = 4;
+
+	u32 counter = 0;
+	i8 current_value = p_voxel_map[0];
+	const u32 entry_size = sizeof(counter) + sizeof(current_value);
+
+	const i8* p_itvm = p_voxel_map;
+	const i8* p_itvm_end = &p_itvm[TG_VOXEL_MAP_VOXELS];
+	i8* p_itcvm = &((i8*)p_compressed_voxel_map_buffer)[*p_size];
+
+	while (p_itvm < p_itvm_end)
+	{
+		if (*p_itvm != current_value)
+		{
+			*(u32*)p_itcvm = counter;
+			p_itcvm[sizeof(counter)] = current_value;
+			p_itcvm = &p_itcvm[entry_size];
+			*p_size += entry_size;
+
+			counter = 0;
+			current_value = *p_itvm;
+		}
+		counter++;
+		p_itvm++;
+	}
+
+	*(u32*)p_itcvm = counter;
+	p_itcvm[sizeof(counter)] = current_value;
+	p_itcvm = &p_itcvm[entry_size];
+	*p_size += entry_size;
+
+	*((u32*)p_compressed_voxel_map_buffer) = *p_size;
+}
+
+static void tg__decompress_voxel_map(const void* p_compressed_voxel_map, i8* p_voxel_map_buffer)
+{
+	const u32 size = *(u32*)p_compressed_voxel_map;
+	const u32 entry_size = sizeof(u32) + sizeof(i8);
+
+	const i8* p_itcvm = &((i8*)p_compressed_voxel_map)[sizeof(size)];
+	const i8* p_itcvm_end = &((i8*)p_compressed_voxel_map)[size];
+	i8* p_itvm = p_voxel_map_buffer;
+
+	while (p_itcvm < p_itcvm_end)
+	{
+		const u32 counter = *(u32*)p_itcvm;
+		const i8 current_value = p_itcvm[sizeof(counter)];
+		for (u32 i = 0; i < counter; i++)
+		{
+			*p_itvm++ = current_value;
+		}
+		p_itcvm = &p_itcvm[entry_size];
 	}
 }
 
@@ -291,7 +298,11 @@ static void tg__build_block(v3i octree_min_coordinates, v3i block_offset_in_octr
 				{
 					continue;
 				}
-
+				
+				if (lod == 0 && block_offset_in_octree.z == 240 && block_offset_in_octree.x == 96 && position.z + 1 == TG_CELLS_PER_BLOCK_SIDE && position.x == 2)
+				{
+					int bh = 0;
+				}
 				const v3i cell_position_pad = tgm_v3i_add(octree_min_coordinates, block_offset_in_octree);
 				const v3i cell_position_base = tgm_v3i_add(cell_position_pad, tgm_v3i_muli(position, lod_scale));
 				p_corner_positions[0] = tgm_v3i_add(cell_position_base, (v3i) {         0,         0,         0 });

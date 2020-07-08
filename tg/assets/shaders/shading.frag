@@ -40,23 +40,23 @@ layout(location = 0) out vec4 out_color;
 
 const float pi = 3.14159265358979323846;
 const float shadow_sample_count = 4;
-const vec2 shadow_poisson_disk[16] = vec2[]( 
-    vec2( -0.94201624,  -0.39906216 ), 
-    vec2(  0.94558609,  -0.76890725 ), 
-    vec2( -0.094184101, -0.92938870 ), 
-    vec2(  0.34495938,   0.29387760 ), 
-    vec2( -0.91588581,   0.45771432 ), 
-    vec2( -0.81544232,  -0.87912464 ), 
-    vec2( -0.38277543,   0.27676845 ), 
-    vec2(  0.97484398,   0.75648379 ), 
-    vec2(  0.44323325,  -0.97511554 ), 
-    vec2(  0.53742981,  -0.47373420 ), 
-    vec2( -0.26496911,  -0.41893023 ), 
-    vec2(  0.79197514,   0.19090188 ), 
-    vec2( -0.24188840,   0.99706507 ), 
-    vec2( -0.81409955,   0.91437590 ), 
-    vec2(  0.19984126,   0.78641367 ), 
-    vec2(  0.14383161,  -0.14100790 ) 
+const vec2 shadow_poisson_disk[16] = vec2[](
+    vec2(-0.94201624,  -0.39906216),
+    vec2( 0.94558609,  -0.76890725),
+    vec2(-0.094184101, -0.92938870),
+    vec2( 0.34495938,   0.29387760),
+    vec2(-0.91588581,   0.45771432),
+    vec2(-0.81544232,  -0.87912464),
+    vec2(-0.38277543,   0.27676845),
+    vec2( 0.97484398,   0.75648379),
+    vec2( 0.44323325,  -0.97511554),
+    vec2( 0.53742981,  -0.47373420),
+    vec2(-0.26496911,  -0.41893023),
+    vec2( 0.79197514,   0.19090188),
+    vec2(-0.24188840,   0.99706507),
+    vec2(-0.81409955,   0.91437590),
+    vec2( 0.19984126,   0.78641367),
+    vec2( 0.14383161,  -0.14100790)
 );
 
 
@@ -104,24 +104,25 @@ float random(vec3 seed, int i){
 
 float shadow_mapping(vec3 position, vec4 position_lightspace)
 {
-    vec3 proj = position_lightspace.xyz / position_lightspace.w;
     float shadow = 1.0;
-    if (proj.z > 0.0 && proj.z < 1.0)
+
+    vec3 proj = (position_lightspace.xyz / vec3(position_lightspace.w)) * vec3(0.5, 0.5, 1.0) + vec3(0.5, 0.5, 0.0);
+    if (proj.x > 0.0 && proj.x < 1.0 &&
+        proj.y > 0.0 && proj.y < 1.0 &&
+        proj.z > 0.0 && proj.z < 1.0
+    )
     {
         float bias = 0.025;
-        if (proj.x > -1.0 && proj.x < 1.0 - bias && proj.y > -1.0 + bias && proj.y < 1.0)
+        for (int i = 0; i < shadow_sample_count; i++)
         {
-            vec2 proj2 = proj.xy * 0.5 + 0.5;
-            float current = proj.z;
-            for (int i = 0; i < shadow_sample_count; i++)
-            {
-		        int index = int(16.0 * random(floor(position.xyz * 1000.0), i)) % 16;
-                float pcf_depth = texture(u_shadow_map, proj2 + vec2(shadow_poisson_disk[index]) / 512.0).x; // 1.0 / 1024.0 = 0.0009765625
-                shadow += current - bias < pcf_depth ? 1.0 : 0.0;
-	        }
-            shadow = clamp(shadow / float(shadow_sample_count), 0.0, 1.0);
-        }
+		    int index = int(16.0 * random(floor(position.xyz * 1024.0), i)) % 16;
+            vec2 uv = clamp(proj.xy + shadow_poisson_disk[index] / vec2(1024.0), vec2(0.0), vec2(1.0));
+            float pcf_depth = texture(u_shadow_map, uv).x;
+            shadow += proj.z - bias < pcf_depth ? 1.0 : 0.0;
+	    }
+        shadow = clamp(shadow / float(shadow_sample_count), 0.0, 1.0);
     }
+
     return shadow;
 }
 

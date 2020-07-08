@@ -10,16 +10,15 @@
 
 
 
-#define TG_SHADOW_MAP_WIDTH     1024
-#define TG_SHADOW_MAP_HEIGHT    1024
+#define TG_SHADOW_MAP_SIZE    2048
 
 
 
 static void tg__init_shadow_pass(tg_camera_h h_camera)
 {
     tg_vulkan_depth_image_create_info depth_image_create_info = { 0 };
-    depth_image_create_info.width = TG_SHADOW_MAP_WIDTH;
-    depth_image_create_info.height = TG_SHADOW_MAP_HEIGHT;
+    depth_image_create_info.width = TG_SHADOW_MAP_SIZE;
+    depth_image_create_info.height = TG_SHADOW_MAP_SIZE;
     depth_image_create_info.format = VK_FORMAT_D32_SFLOAT;
     depth_image_create_info.p_vulkan_sampler_create_info = TG_NULL;
 
@@ -67,7 +66,7 @@ static void tg__init_shadow_pass(tg_camera_h h_camera)
     subpass_dependency.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
     h_camera->shadow_pass.render_pass = tg_vulkan_render_pass_create(1, &attachment_description, 1, &subpass_description, 1, &subpass_dependency);
-    h_camera->shadow_pass.framebuffer = tg_vulkan_framebuffer_create(h_camera->shadow_pass.render_pass, 1, &h_camera->shadow_pass.shadow_map.image_view, TG_SHADOW_MAP_WIDTH, TG_SHADOW_MAP_HEIGHT);
+    h_camera->shadow_pass.framebuffer = tg_vulkan_framebuffer_create(h_camera->shadow_pass.render_pass, 1, &h_camera->shadow_pass.shadow_map.image_view, TG_SHADOW_MAP_SIZE, TG_SHADOW_MAP_SIZE);
     h_camera->shadow_pass.lightspace_ubo = tg_vulkan_buffer_create(sizeof(m4), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 }
 
@@ -455,7 +454,7 @@ void tg_camera_end(tg_camera_h h_camera)
     const v4 lbf_c = { -1.0f,  1.0f,  1.0f,  1.0f };
 
     const m4 ivp = tgm_m4_inverse(tgm_m4_mul(TG_CAMERA_PROJ(h_camera), TG_CAMERA_VIEW(h_camera)));
-    const f32 percentile = 0.025f;
+    const f32 percentile = 0.02f;
 
     const v4 rtn_w = tgm_m4_mulv4(ivp, rtn_c);
     const v4 lbf_w = tgm_m4_mulv4(ivp, lbf_c);
@@ -463,11 +462,11 @@ void tg_camera_end(tg_camera_h h_camera)
 
     const v4 p0 = rtn_w;
     const v4 p1 = tgm_v4_add(p0, tgm_v4_mulf(rtn2lbf_w, percentile));
-    const v4 c = tgm_v4_divf(tgm_v4_add(p0, p1), 2.0f);
+    const v3 c = tgm_v4_to_v3(tgm_v4_divf(tgm_v4_add(p0, p1), 2.0f));
     const f32 d = tgm_v3_mag(tgm_v4_to_v3(tgm_v4_sub(p1, p0)));
     const f32 dh = d / 2.0f;
 
-    const m4 t = tgm_m4_translate(tgm_v3_neg(tgm_v4_to_v3(c)));
+    const m4 t = tgm_m4_translate(tgm_v3_neg(c));
     const m4 r = tgm_m4_inverse(tgm_m4_euler(-(f32)TGM_PI * 0.4f, -(f32)TGM_PI * 0.4f, 0.0f));
     const m4 v = tgm_m4_mul(r, t);
     const m4 p = tgm_m4_orthographic(-dh, dh, -dh, dh, -dh, dh);

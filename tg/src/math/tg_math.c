@@ -463,6 +463,12 @@ f32 tgm_f32_min(f32 v0, f32 v1)
 	return result;
 }
 
+f32 tgm_f32_round(f32 v)
+{
+	const f32 result = (f32)tgm_f32_round_to_i32(v);
+	return result;
+}
+
 i32 tgm_f32_round_to_i32(f32 v)
 {
 	const i32 result = v >= 0.0f ? (i32)(v + 0.5f) : (i32)(-(tgm_f32_abs(v) + 0.5f));
@@ -718,6 +724,15 @@ b32 tgm_v3_equal(v3 v0, v3 v1)
 	return result;
 }
 
+v3 tgm_v3_floor(v3 v)
+{
+	v3 result = { 0 };
+	result.x = floorf(v.x);
+	result.y = floorf(v.y);
+	result.z = floorf(v.z);
+	return result;
+}
+
 v3 tgm_v3_lerp(v3 v0, v3 v1, f32 t)
 {
 	v3 result = { 0 };
@@ -804,6 +819,15 @@ v3 tgm_v3_normalized(v3 v)
 	result.x = v.x / magnitude;
 	result.y = v.y / magnitude;
 	result.z = v.z / magnitude;
+	return result;
+}
+
+v3 tgm_v3_round(v3 v)
+{
+	v3 result = { 0 };
+	result.x = roundf(v.x);
+	result.y = roundf(v.y);
+	result.z = roundf(v.z);
 	return result;
 }
 
