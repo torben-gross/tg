@@ -83,7 +83,7 @@ static void tg__game_3d_create()
     sample_scene.yaw = 0.0f;
     sample_scene.roll = 0.0f;
     sample_scene.fov_y_in_radians = TGM_TO_RADIANS(70.0f);
-    sample_scene.aspect = tg_platform_get_window_aspect_ratio(&sample_scene.aspect);
+    sample_scene.aspect = tg_platform_get_window_aspect_ratio();
     sample_scene.near = -0.1f;
     sample_scene.far = -1000.0f;
     tg_input_get_mouse_position(&sample_scene.last_mouse_x, &sample_scene.last_mouse_y);

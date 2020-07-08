@@ -47,11 +47,12 @@
 #define TG_TRUE                         1
 #define TG_FALSE                        0
 
+#define TG_F32_MAX                      3.402823466e+38f
+#define TG_F32_MIN                      (-TG_F32_MAX)
 #define TG_F32_MIN_POSITIVE             1.175494351e-38f
-#define TG_F32_MAX_POSITIVE             3.402823466e+38f
 #define TG_F32_EPSILON                  1.192092896e-07f
-#define TG_F64_MIN_POSITIVE             2.2250738585072014e-308
 #define TG_F64_MAX_POSITIVE             1.7976931348623158e+308
+#define TG_F64_MIN_POSITIVE             2.2250738585072014e-308
 #define TG_F64_EPSILON                  2.2204460492503131e-016
 
 #define TG_I8_MIN                       (-127i8 - 1)

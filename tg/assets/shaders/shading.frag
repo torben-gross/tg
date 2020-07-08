@@ -108,7 +108,7 @@ float shadow_mapping(vec3 position, vec4 position_lightspace)
     float shadow = 1.0;
     if (proj.z > 0.0 && proj.z < 1.0)
     {
-        float bias = 0.01;
+        float bias = 0.025;
         if (proj.x > -1.0 && proj.x < 1.0 - bias && proj.y > -1.0 + bias && proj.y < 1.0)
         {
             vec2 proj2 = proj.xy * 0.5 + 0.5;

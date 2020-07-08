@@ -18,9 +18,9 @@ TODO: Support other clipping setups via macros!
 #define TGM_PI                     3.14159265358979323846
 #define TGM_TO_DEGREES(radians)    (radians * (360.0f / ((f32)TGM_PI * 2.0f)))
 #define TGM_TO_RADIANS(degrees)    (degrees * (((f32)TGM_PI * 2.0f) / 360.0f))
-#define TGM_SQRT(v)                tgm_f32_sqrt((f32)(v))
 
 #define V2(f)                      ((v2) { (f), (f) })
+#define V2I(i)                     ((v2i){ (i), (i) })
 #define V3(f)                      ((v3) { (f), (f), (f) })
 #define V3I(i)                     ((v3i){ (i), (i), (i) })
 #define V4(f)                      ((v4) { (f), (f), (f), (f) })
@@ -40,20 +40,6 @@ typedef struct v2
 	};
 } v2;
 
-typedef struct v3
-{
-	union
-	{
-		struct
-		{
-			f32    x;
-			f32    y;
-			f32    z;
-		};
-		f32        p_data[3];
-	};
-} v3;
-
 typedef struct v2i
 {
 	union
@@ -67,17 +53,47 @@ typedef struct v2i
 	};
 } v2i;
 
+typedef struct v3
+{
+	union
+	{
+		struct
+		{
+			f32            x;
+			union
+			{
+				struct
+				{
+					f32    y;
+					f32    z;
+				};
+				v2         yz;
+			};
+		};
+		v2                 xy;
+		f32                p_data[3];
+	};
+} v3;
+
 typedef struct v3i
 {
 	union
 	{
 		struct
 		{
-			i32    x;
-			i32    y;
-			i32    z;
+			i32            x;
+			union
+			{
+				struct
+				{
+					i32    y;
+					i32    z;
+				};
+				v2i        yz;
+			};
 		};
-		i32        p_data[3];
+		v2i                xy;
+		i32                p_data[3];
 	};
 } v3i;
 
@@ -87,12 +103,29 @@ typedef struct v4
 	{
 		struct
 		{
-			f32    x;
-			f32    y;
-			f32    z;
-			f32    w;
+			f32                    x;
+			union
+			{
+				struct
+				{
+					f32            y;
+					union
+					{
+						struct
+						{
+							f32    z;
+							f32    w;
+						};
+						v2         zw;
+					};
+				};
+				v3                 yz;
+				v3                 yzw;
+			};
 		};
-		f32        p_data[4];
+		v3                         xyz;
+		v2                         xy;
+		f32                        p_data[4];
 	};
 } v4;
 
@@ -113,6 +146,11 @@ typedef struct m2
 
 			f32    m01;
 			f32    m11;
+		};
+		struct
+		{
+			v2     col0;
+			v2     col1;
 		};
 		f32        p_data[4];
 	};
@@ -142,6 +180,12 @@ typedef struct m3
 			f32    m02;
 			f32    m12;
 			f32    m22;
+		};
+		struct
+		{
+			v3     col0;
+			v3     col1;
+			v3     col2;
 		};
 		f32        p_data[9];
 
@@ -184,6 +228,13 @@ typedef struct m4
 			f32    m13;
 			f32    m23;
 			f32    m33;
+		};
+		struct
+		{
+			v4     col0;
+			v4     col1;
+			v4     col2;
+			v4     col3;
 		};
 		f32        p_data[16];
 	};

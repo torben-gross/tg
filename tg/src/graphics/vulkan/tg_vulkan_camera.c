@@ -450,12 +450,30 @@ void tg_camera_end(tg_camera_h h_camera)
     tg_vulkan_command_buffer_begin(h_camera->shadow_pass.command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, TG_NULL);
     tg_vulkan_command_buffer_cmd_begin_render_pass(h_camera->shadow_pass.command_buffer, h_camera->shadow_pass.render_pass, &h_camera->shadow_pass.framebuffer, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 
-    // TODO: decide, which lights cast shadows!
-    const m4 light_projection = tgm_m4_orthographic(-10.0f, 10.0f, -10.0f, 10.0f, -64.0f, -1.0f);
-    const m4 inverse_rotation = tgm_m4_inverse(tgm_m4_euler(-(f32)TGM_PI * 0.4f, -(f32)TGM_PI * 0.4f, 0.0f));
-    const m4 inverse_translation = tgm_m4_translate(tgm_v3_neg((v3){ 128.0f - 4.0f, 143.0f + 20.0f, 112.0f + 2.0f }));
-    const m4 lightspace = tgm_m4_mul(light_projection, tgm_m4_mul(inverse_rotation, inverse_translation));
-    *((m4*)h_camera->shadow_pass.lightspace_ubo.memory.p_mapped_device_memory) = lightspace;
+    // TODO: decide, which lights cast/receive shadows!
+    const v4 rtn_c = {  1.0f, -1.0f,  0.0f,  1.0f };
+    const v4 lbf_c = { -1.0f,  1.0f,  1.0f,  1.0f };
+
+    const m4 ivp = tgm_m4_inverse(tgm_m4_mul(TG_CAMERA_PROJ(h_camera), TG_CAMERA_VIEW(h_camera)));
+    const f32 percentile = 0.025f;
+
+    const v4 rtn_w = tgm_m4_mulv4(ivp, rtn_c);
+    const v4 lbf_w = tgm_m4_mulv4(ivp, lbf_c);
+    const v4 rtn2lbf_w = tgm_v4_sub(lbf_w, rtn_w);
+
+    const v4 p0 = rtn_w;
+    const v4 p1 = tgm_v4_add(p0, tgm_v4_mulf(rtn2lbf_w, percentile));
+    const v4 c = tgm_v4_divf(tgm_v4_add(p0, p1), 2.0f);
+    const f32 d = tgm_v3_mag(tgm_v4_to_v3(tgm_v4_sub(p1, p0)));
+    const f32 dh = d / 2.0f;
+
+    const m4 t = tgm_m4_translate(tgm_v3_neg(tgm_v4_to_v3(c)));
+    const m4 r = tgm_m4_inverse(tgm_m4_euler(-(f32)TGM_PI * 0.4f, -(f32)TGM_PI * 0.4f, 0.0f));
+    const m4 v = tgm_m4_mul(r, t);
+    const m4 p = tgm_m4_orthographic(-dh, dh, -dh, dh, -dh, dh);
+    const m4 vp = tgm_m4_mul(p, v);
+
+    *((m4*)h_camera->shadow_pass.lightspace_ubo.memory.p_mapped_device_memory) = vp;
 
     for (u32 i = 0; i < h_camera->render_command_count; i++)
     {
@@ -489,15 +507,6 @@ void tg_camera_end(tg_camera_h h_camera)
     submit_info.pSignalSemaphores = TG_NULL;
 
     tg_vulkan_queue_submit(TG_VULKAN_QUEUE_TYPE_GRAPHICS, 1, &submit_info, VK_NULL_HANDLE);
-
-
-
-
-
-
-
-
-
 
     tg_vulkan_deferred_renderer_begin(h_camera->capture_pass.h_deferred_renderer);
     for (u32 i = 0; i < h_camera->render_command_count; i++)

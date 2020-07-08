@@ -929,7 +929,7 @@ b32 tgm_v3i_equal(v3i v0, v3i v1)
 
 f32 tgm_v3i_mag(v3i v)
 {
-	const f32 result = TGM_SQRT(v.x * v.x + v.y * v.y + v.z * v.z);
+	const f32 result = tgm_f32_sqrt((f32)(v.x * v.x + v.y * v.y + v.z * v.z));
 	return result;
 }
 
