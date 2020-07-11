@@ -552,6 +552,34 @@ static void tg__find_type(u32 word_count, const u32* p_words, u32 id, tg_spirv_o
     TG_INVALID_CODEPATH();
 }
 
+static void tg__fill_array_length(u32 word_count, const u32* p_words, u32 id, tg_spirv_global_resource* p_resource)
+{
+    u32 processed_word_count = 0;
+    while (processed_word_count < word_count)
+    {
+        const u32 opcode = p_words[processed_word_count];
+        const tg_spirv_op op = opcode & 0xffff;
+        const u16 op_word_count = opcode >> 16;
+
+        switch (op)
+        {
+        case TG_SPIRV_OP_CONSTANT:
+        {
+            const u32 target_id = p_words[processed_word_count + 2];
+            if (target_id == id)
+            {
+                p_resource->array_element_count = p_words[processed_word_count + 3];
+                return;
+            }
+        } break;
+        }
+
+        processed_word_count += op_word_count;
+    }
+
+    TG_INVALID_CODEPATH();
+}
+
 static void tg__fill_global_resource(u32 word_count, const u32* p_words, u32 id, tg_spirv_global_resource* p_resource)
 {
     u32 processed_word_count = 0;
@@ -592,6 +620,17 @@ static void tg__fill_global_resource(u32 word_count, const u32* p_words, u32 id,
             if (target_id == id && p_resource->type == TG_SPIRV_GLOBAL_RESOURCE_TYPE_INVALID)
             {
                 p_resource->type = TG_SPIRV_GLOBAL_RESOURCE_TYPE_COMBINED_IMAGE_SAMPLER;
+            }
+        } break;
+        case TG_SPIRV_OP_TYPE_ARRAY:
+        {
+            const u32 target_id = p_words[processed_word_count + 1];
+            if (target_id == id)
+            {
+                const u32 element_type_id = p_words[processed_word_count + 2];
+                const u32 length_id = p_words[processed_word_count + 3];
+                tg__fill_array_length(word_count, p_words, length_id, p_resource);
+                tg__fill_global_resource(word_count, p_words, element_type_id, p_resource);
             }
         } break;
         case TG_SPIRV_OP_TYPE_POINTER:

@@ -49,6 +49,7 @@ typedef enum tg_spirv_shader_type
 typedef struct tg_spirv_global_resource
 {
     tg_spirv_global_resource_type    type;
+    u32                              array_element_count; // 0 if this is not an array
     u32                              descriptor_set;
     u32                              binding;
 } tg_spirv_global_resource;

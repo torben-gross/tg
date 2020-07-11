@@ -302,9 +302,7 @@ typedef struct tg_renderer
         tg_vulkan_framebuffer    framebuffer;
         tg_vulkan_pipeline       graphics_pipeline;
         VkCommandBuffer          command_buffer;
-        tg_vulkan_buffer         camera_ubo;
-        tg_vulkan_buffer         lighting_ubo;
-        tg_vulkan_buffer         shadows_ubo;
+        tg_vulkan_buffer         shading_info_ubo;
     } shading_pass;
 
     struct
@@ -446,7 +444,7 @@ void                          tg_vulkan_descriptor_set_update(VkDescriptorSet de
 void                          tg_vulkan_descriptor_set_update_color_image(VkDescriptorSet descriptor_set, tg_color_image* p_color_image, u32 dst_binding);
 void                          tg_vulkan_descriptor_set_update_color_image_array(VkDescriptorSet descriptor_set, tg_color_image* p_color_image, u32 dst_binding, u32 array_index);
 void                          tg_vulkan_descriptor_set_update_depth_image(VkDescriptorSet descriptor_set, tg_depth_image* p_depth_image, u32 dst_binding);
-void                          tg_vulkan_descriptor_set_update_depth_image_array(VkDescriptorSet descriptor_set, tg_color_image* p_depth_image, u32 dst_binding, u32 array_index);
+void                          tg_vulkan_descriptor_set_update_depth_image_array(VkDescriptorSet descriptor_set, tg_depth_image* p_depth_image, u32 dst_binding, u32 array_index);
 void                          tg_vulkan_descriptor_set_update_render_target(VkDescriptorSet descriptor_set, tg_render_target* p_render_target, u32 dst_binding);
 void                          tg_vulkan_descriptor_set_update_storage_buffer(VkDescriptorSet descriptor_set, VkBuffer buffer, u32 dst_binding);
 void                          tg_vulkan_descriptor_set_update_storage_buffer_array(VkDescriptorSet descriptor_set, VkBuffer buffer, u32 dst_binding, u32 array_index);

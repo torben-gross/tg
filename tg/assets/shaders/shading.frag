@@ -1,5 +1,12 @@
 #version 450
-#extension GL_ARB_separate_shader_objects : enable
+
+#define TG_CASCADED_SHADOW_MAPS      3
+#define TG_MAX_DIRECTIONAL_LIGHTS    512
+#define TG_MAX_POINT_LIGHTS          512
+#define TG_SHADOW_SAMPLE_COUNT       4
+#define TG_PI                        3.14159265358979323846
+
+
 
 layout(location = 0) in vec2    v_uv;
 
@@ -10,44 +17,20 @@ layout(set = 0, binding = 1) uniform    sampler2D u_normal;
 layout(set = 0, binding = 2) uniform    sampler2D u_albedo;
 layout(set = 0, binding = 3) uniform    sampler2D u_metallic_roughness_ao;
 
-layout(set = 0, binding = 4) uniform camera
+layout(set = 0, binding = 4) uniform render_info
 {
-    vec3    u_camera_position;
+    vec3                                       u_camera_position;
+    uint                                       u_directional_light_count;
+    uint                                       u_point_light_count;
+    vec4[TG_MAX_DIRECTIONAL_LIGHTS]            u_directional_light_directions;
+    vec4[TG_MAX_DIRECTIONAL_LIGHTS]            u_directional_light_colors;
+    vec4[TG_MAX_POINT_LIGHTS]                  u_point_light_positions;
+    vec4[TG_MAX_POINT_LIGHTS]                  u_point_light_colors;
+    mat4[TG_CASCADED_SHADOW_MAPS]              u_lightspace_matrices;
+    vec4[(TG_CASCADED_SHADOW_MAPS + 3) / 4]    u_shadow_distances;
 };
 
-layout(set = 0, binding = 5) uniform light_setup
-{
-    uint         u_directional_light_count;
-    uint         u_point_light_count;
-    vec4[512]    u_directional_light_directions;
-    vec4[512]    u_directional_light_colors;
-    vec4[512]    u_point_light_positions;
-    vec4[512]    u_point_light_colors;
-};
-
-layout(set = 0, binding = 6) uniform shadows
-{
-    vec4[1] u_shadow_distances;
-};
-
-layout(set = 0, binding = 7) uniform lightspace_matrix0
-{
-    mat4 u_lightspace_matrix0;
-};
-
-layout(set = 0, binding = 8) uniform lightspace_matrix1
-{
-    mat4 u_lightspace_matrix1;
-};
-
-layout(set = 0, binding = 9) uniform lightspace_matrix2
-{
-    mat4 u_lightspace_matrix2;
-};
-
-layout(set = 0, binding = 10) uniform    sampler2D u_shadow_map0;
-layout(set = 0, binding = 11) uniform    sampler2D u_shadow_map1;
-layout(set = 0, binding = 12) uniform    sampler2D u_shadow_map2;
+layout(set = 0, binding = 5) uniform sampler2D[TG_CASCADED_SHADOW_MAPS] u_shadow_maps;
 
 
 
@@ -55,8 +38,6 @@ layout(location = 0) out vec4 out_color;
 
 
 
-const float pi = 3.14159265358979323846;
-const float shadow_sample_count = 4;
 const vec2 shadow_poisson_disk[16] = vec2[](
     vec2(-0.94201624,  -0.39906216),
     vec2( 0.94558609,  -0.76890725),
@@ -84,7 +65,7 @@ float distribution_ggx(vec3 n, vec3 h, float roughness)
     float a_sqr   = a * a;
     float ndh     = max(dot(n, h), 0.0);
     float denom = (ndh * ndh * (a_sqr - 1.0) + 1.0);
-    denom       = pi * denom * denom;
+    denom       = TG_PI * denom * denom;
 	
     return a_sqr / denom;
 }
@@ -131,27 +112,27 @@ float shadow_mapping(vec3 position, vec4 position_lightspace)
     {
         float bias = 0.025;
 
-        //for (int i = 0; i < shadow_sample_count; i++)
+        //for (int i = 0; i < TG_SHADOW_SAMPLE_COUNT; i++)
         //{
 		//    int index = int(16.0 * random(floor(position.xyz * 1024.0), i)) % 16;
         //    vec2 uv = clamp(proj.xy + shadow_poisson_disk[index] / vec2(1024.0), vec2(0.0), vec2(1.0));
         //    float pcf_depth = texture(u_shadow_map0, uv).x;
         //    shadow += proj.z - bias < pcf_depth ? 1.0 : 0.0;
 	    //}
-        //shadow = clamp(shadow / float(shadow_sample_count), 0.0, 1.0);
+        //shadow = clamp(shadow / float(TG_SHADOW_SAMPLE_COUNT), 0.0, 1.0);
         
         float d = distance(position, u_camera_position);
         if (d >= u_shadow_distances[0].x && d < u_shadow_distances[0].y)
         {
-            return proj.z - bias < texture(u_shadow_map0, proj.xy).x ? 1.0 : 0.0;
+            return proj.z - bias < texture(u_shadow_maps[0], proj.xy).x ? 1.0 : 0.0;
         }
         else if (d >= u_shadow_distances[0].y && d < u_shadow_distances[0].z)
         {
-            return proj.z - bias < texture(u_shadow_map1, proj.xy).x ? 1.0 : 0.0;
+            return proj.z - bias < texture(u_shadow_maps[1], proj.xy).x ? 1.0 : 0.0;
         }
         else if (d >= u_shadow_distances[0].z)
         {
-            if (proj.z - bias < texture(u_shadow_map2, proj.xy).x)
+            if (proj.z - bias < texture(u_shadow_maps[2], proj.xy).x)
             {
                 return 1.0;
             }
@@ -182,15 +163,15 @@ void main()
     float d = distance(position, u_camera_position);
     if (d >= u_shadow_distances[0].x && d < u_shadow_distances[0].y)
     {
-        position_lightspace = u_lightspace_matrix0 * texture(u_position, v_uv);
+        position_lightspace = u_lightspace_matrices[0] * texture(u_position, v_uv);
     }
     else if (d >= u_shadow_distances[0].y && d < u_shadow_distances[0].z)
     {
-        position_lightspace = u_lightspace_matrix1 * texture(u_position, v_uv);
+        position_lightspace = u_lightspace_matrices[1] * texture(u_position, v_uv);
     }
     else
     {
-        position_lightspace = u_lightspace_matrix2 * texture(u_position, v_uv);
+        position_lightspace = u_lightspace_matrices[2] * texture(u_position, v_uv);
     }
 
     vec4 sky_color = 0.7 * u_directional_light_colors[0];
@@ -228,7 +209,7 @@ void main()
         
             float ndl = max(dot(n, l), 0.0);
             float shadow = i == 0 ? shadow_mapping(position, position_lightspace) : 1.0;
-            lo += (k_diffuse * albedo / pi + specular) * radiance * ndl * shadow;
+            lo += (k_diffuse * albedo / TG_PI + specular) * radiance * ndl * shadow;
         }
 
         for (int i = 0; i < u_point_light_count; i++)
@@ -254,7 +235,7 @@ void main()
             vec3 k_diffuse  = (vec3(1.0) - k_specular) * (1.0 - metallic);
         
             float ndl = max(dot(n, l), 0.0);
-            lo += (k_diffuse * albedo / pi + specular) * radiance * ndl;
+            lo += (k_diffuse * albedo / TG_PI + specular) * radiance * ndl;
         }
 
         vec3 ambient = vec3(0.01) * albedo * ao;

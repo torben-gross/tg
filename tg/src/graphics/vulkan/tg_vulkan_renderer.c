@@ -20,18 +20,18 @@
 
 
 
-typedef struct tg_light_setup
+typedef struct tg_shading_info
 {
+    v3     camera_position;
     u32    directional_light_count;
-    u32    point_light_count;
-    u32    padding[2];
-
+    u32    point_light_count; u32 pad[3];
     v4     p_directional_light_directions[TG_MAX_DIRECTIONAL_LIGHTS];
     v4     p_directional_light_colors[TG_MAX_DIRECTIONAL_LIGHTS];
-
     v4     p_point_light_positions[TG_MAX_POINT_LIGHTS];
     v4     p_point_light_colors[TG_MAX_POINT_LIGHTS];
-} tg_light_setup;
+    m4     p_lightspace_matrices[TG_CASCADED_SHADOW_MAPS];
+    v4     p_shadow_distances[(TG_CASCADED_SHADOW_MAPS + 3) / 4]; // because of padding in the shader, this must at least be a vec4 in the shader
+} tg_shading_info;
 
 
 
@@ -205,15 +205,10 @@ static void tg__init_shading_pass(tg_renderer_h h_renderer)
 {
     TG_ASSERT(h_renderer);
 
-    h_renderer->shading_pass.camera_ubo = tg_vulkan_buffer_create(sizeof(v3), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-    *((v3*)h_renderer->shading_pass.camera_ubo.memory.p_mapped_device_memory) = h_renderer->p_camera->position;
-
-    h_renderer->shading_pass.lighting_ubo = tg_vulkan_buffer_create(sizeof(tg_light_setup), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-    tg_light_setup* p_light_setup_uniform_buffer = h_renderer->shading_pass.lighting_ubo.memory.p_mapped_device_memory;
-    p_light_setup_uniform_buffer->directional_light_count = 0;
-    p_light_setup_uniform_buffer->point_light_count = 0;
-
-    h_renderer->shading_pass.shadows_ubo = tg_vulkan_buffer_create((TG_CASCADED_SHADOW_MAPS + 1) * sizeof(f32), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+    h_renderer->shading_pass.shading_info_ubo = tg_vulkan_buffer_create(sizeof(tg_shading_info), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+    tg_shading_info* p_shading_info = h_renderer->shading_pass.shading_info_ubo.memory.p_mapped_device_memory;
+    p_shading_info->directional_light_count = 0;
+    p_shading_info->point_light_count = 0;
 
     tg_vulkan_color_image_create_info vulkan_color_image_create_info = { 0 };
     vulkan_color_image_create_info.width = swapchain_extent.width;
@@ -328,13 +323,10 @@ static void tg__init_shading_pass(tg_renderer_h h_renderer)
         tg_vulkan_descriptor_set_update_color_image(h_renderer->shading_pass.graphics_pipeline.descriptor_set, &h_renderer->geometry_pass.p_color_attachments[i], i);
     }
 
-    tg_vulkan_descriptor_set_update_uniform_buffer(h_renderer->shading_pass.graphics_pipeline.descriptor_set, h_renderer->shading_pass.camera_ubo.buffer, TG_DEFERRED_GEOMETRY_COLOR_ATTACHMENT_COUNT);
-    tg_vulkan_descriptor_set_update_uniform_buffer(h_renderer->shading_pass.graphics_pipeline.descriptor_set, h_renderer->shading_pass.lighting_ubo.buffer, TG_DEFERRED_GEOMETRY_COLOR_ATTACHMENT_COUNT + 1);
-    tg_vulkan_descriptor_set_update_uniform_buffer(h_renderer->shading_pass.graphics_pipeline.descriptor_set, h_renderer->shading_pass.shadows_ubo.buffer, TG_DEFERRED_GEOMETRY_COLOR_ATTACHMENT_COUNT + 2);
+    tg_vulkan_descriptor_set_update_uniform_buffer(h_renderer->shading_pass.graphics_pipeline.descriptor_set, h_renderer->shading_pass.shading_info_ubo.buffer, TG_DEFERRED_GEOMETRY_COLOR_ATTACHMENT_COUNT);
     for (u32 i = 0; i < TG_CASCADED_SHADOW_MAPS; i++)
     {
-        tg_vulkan_descriptor_set_update_uniform_buffer(h_renderer->shading_pass.graphics_pipeline.descriptor_set, h_renderer->shadow_pass.p_lightspace_ubos[i].buffer, TG_DEFERRED_GEOMETRY_COLOR_ATTACHMENT_COUNT + 3 + i);
-        tg_vulkan_descriptor_set_update_depth_image(h_renderer->shading_pass.graphics_pipeline.descriptor_set, &h_renderer->shadow_pass.p_shadow_maps[i], TG_DEFERRED_GEOMETRY_COLOR_ATTACHMENT_COUNT + 3 + TG_CASCADED_SHADOW_MAPS + i);
+        tg_vulkan_descriptor_set_update_depth_image_array(h_renderer->shading_pass.graphics_pipeline.descriptor_set, &h_renderer->shadow_pass.p_shadow_maps[i], TG_DEFERRED_GEOMETRY_COLOR_ATTACHMENT_COUNT + 1, i);
     }
 
     h_renderer->shading_pass.command_buffer = tg_vulkan_command_buffer_allocate(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
@@ -890,7 +882,7 @@ void tg_renderer_push_directional_light(tg_renderer_h h_renderer, v3 direction, 
     TG_ASSERT(h_renderer && tgm_v3_mag(direction) && tgm_v3_mag(color));
 
     // TODO: forward renderer
-    tg_light_setup* p_light_setup = (tg_light_setup*)h_renderer->shading_pass.lighting_ubo.memory.p_mapped_device_memory;
+    tg_shading_info* p_light_setup = (tg_shading_info*)h_renderer->shading_pass.shading_info_ubo.memory.p_mapped_device_memory;
 
     p_light_setup->p_directional_light_directions[p_light_setup->directional_light_count].x = direction.x;
     p_light_setup->p_directional_light_directions[p_light_setup->directional_light_count].y = direction.y;
@@ -910,7 +902,7 @@ void tg_renderer_push_point_light(tg_renderer_h h_renderer, v3 position, v3 colo
     TG_ASSERT(h_renderer && tgm_v3_mag(color));
 
     // TODO: forward renderer
-    tg_light_setup* p_light_setup = (tg_light_setup*)h_renderer->shading_pass.lighting_ubo.memory.p_mapped_device_memory;
+    tg_shading_info* p_light_setup = (tg_shading_info*)h_renderer->shading_pass.shading_info_ubo.memory.p_mapped_device_memory;
 
     p_light_setup->p_point_light_positions[p_light_setup->point_light_count].x = position.x;
     p_light_setup->p_point_light_positions[p_light_setup->point_light_count].y = position.y;
@@ -981,6 +973,9 @@ void tg_renderer_end(tg_renderer_h h_renderer)
     default: TG_INVALID_CODEPATH(); break;
     }
 
+    tg_shading_info* p_shading_info = (tg_shading_info*)h_renderer->shading_pass.shading_info_ubo.memory.p_mapped_device_memory;
+    p_shading_info->camera_position = h_renderer->p_camera->position;
+
     if (h_renderer->shadow_pass.enabled)
     {
         tg_vulkan_command_buffer_begin(h_renderer->shadow_pass.command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, TG_NULL);
@@ -1016,8 +1011,13 @@ void tg_renderer_end(tg_renderer_h h_renderer)
             const f32 d = tgm_v3_mag(v04);
             const f32 d0 = d * p_percentiles[i];
             const f32 d1 = d * p_percentiles[i + 1];
-            ((f32*)h_renderer->shading_pass.shadows_ubo.memory.p_mapped_device_memory)[i] = d0;
-            ((f32*)h_renderer->shading_pass.shadows_ubo.memory.p_mapped_device_memory)[i + 1] = d1;
+
+            const u32 major0 = i / 4;
+            const u32 minor0 = i % 4;
+            const u32 major1 = (i + 1) / 4;
+            const u32 minor1 = (i + 1) % 4;
+            p_shading_info->p_shadow_distances[major0].p_data[minor0] = d0;
+            p_shading_info->p_shadow_distances[major1].p_data[minor1] = d1;
 
             for (u8 i = 0; i < 4; i++)
             {
@@ -1057,7 +1057,12 @@ void tg_renderer_end(tg_renderer_h h_renderer)
             vkCmdEndRenderPass(h_renderer->shadow_pass.command_buffer);
         }
 
-        tg_vulkan_buffer_flush_mapped_memory(&h_renderer->shading_pass.shadows_ubo);
+        for (u32 i = 0; i < TG_CASCADED_SHADOW_MAPS; i++)
+        {
+            p_shading_info->p_lightspace_matrices[i] = *(m4*)h_renderer->shadow_pass.p_lightspace_ubos[i].memory.p_mapped_device_memory;
+        }
+
+        tg_vulkan_buffer_flush_mapped_memory(&h_renderer->shading_pass.shading_info_ubo);
         VK_CALL(vkEndCommandBuffer(h_renderer->shadow_pass.command_buffer));
 
         VkSubmitInfo submit_info = { 0 };
@@ -1072,6 +1077,10 @@ void tg_renderer_end(tg_renderer_h h_renderer)
         submit_info.pSignalSemaphores = TG_NULL;
 
         tg_vulkan_queue_submit(TG_VULKAN_QUEUE_TYPE_GRAPHICS, 1, &submit_info, VK_NULL_HANDLE);
+    }
+    else
+    {
+        tg_vulkan_buffer_flush_mapped_memory(&h_renderer->shading_pass.shading_info_ubo);
     }
 
     tg_vulkan_command_buffer_begin(h_renderer->geometry_pass.command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, TG_NULL);
@@ -1151,8 +1160,6 @@ void tg_renderer_end(tg_renderer_h h_renderer)
     tg_vulkan_fence_wait(h_renderer->render_target.fence);
     tg_vulkan_fence_reset(h_renderer->render_target.fence);
 
-    tg_vulkan_buffer_flush_mapped_memory(&h_renderer->shading_pass.lighting_ubo);
-
     VkSubmitInfo submit_info = { 0 };
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.pNext = TG_NULL;
@@ -1165,8 +1172,6 @@ void tg_renderer_end(tg_renderer_h h_renderer)
     submit_info.pSignalSemaphores = &h_renderer->shading_pass.rendering_finished_semaphore;
 
     tg_vulkan_queue_submit(TG_VULKAN_QUEUE_TYPE_GRAPHICS, 1, &submit_info, VK_NULL_HANDLE);
-
-    *((v3*)h_renderer->shading_pass.camera_ubo.memory.p_mapped_device_memory) = h_renderer->p_camera->position;
 
     const VkPipelineStageFlags p_pipeline_stage_flags[1] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
     VkSubmitInfo shading_submit_info = { 0 };
@@ -1400,7 +1405,7 @@ void tg_renderer_clear(tg_renderer_h h_renderer)
     tg_vulkan_queue_submit(TG_VULKAN_QUEUE_TYPE_GRAPHICS, 1, &submit_info, h_renderer->render_target.fence);
 
     // TODO: forward renderer
-    tg_light_setup* p_light_setup = (tg_light_setup*)h_renderer->shading_pass.lighting_ubo.memory.p_mapped_device_memory;
+    tg_shading_info* p_light_setup = (tg_shading_info*)h_renderer->shading_pass.shading_info_ubo.memory.p_mapped_device_memory;
 
     p_light_setup->directional_light_count = 0;
     p_light_setup->point_light_count = 0;

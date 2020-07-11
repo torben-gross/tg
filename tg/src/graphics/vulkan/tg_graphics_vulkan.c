@@ -121,9 +121,7 @@ void tg__pipeline_init(tg_vulkan_pipeline* p_pipeline, u32 shader_count, const t
             if (!found)
             {
                 TG_ASSERT(global_resource_count + 1 < TG_MAX_SHADER_GLOBAL_RESOURCES);
-                p_global_resources[global_resource_count].type = pp_shaders[i]->spirv_layout.p_global_resources[j].type;
-                p_global_resources[global_resource_count].descriptor_set = pp_shaders[i]->spirv_layout.p_global_resources[j].descriptor_set;
-                p_global_resources[global_resource_count].binding = pp_shaders[i]->spirv_layout.p_global_resources[j].binding;
+                p_global_resources[global_resource_count] = pp_shaders[i]->spirv_layout.p_global_resources[j];
                 p_shader_stages[global_resource_count] = (VkShaderStageFlags)pp_shaders[i]->spirv_layout.shader_type;
                 global_resource_count++;
             }
@@ -137,7 +135,7 @@ void tg__pipeline_init(tg_vulkan_pipeline* p_pipeline, u32 shader_count, const t
         {
             p_descriptor_set_layout_bindings[i].binding = p_global_resources[i].binding;
             p_descriptor_set_layout_bindings[i].descriptorType = (VkDescriptorType)p_global_resources[i].type;
-            p_descriptor_set_layout_bindings[i].descriptorCount = 1; // TODO: arrays
+            p_descriptor_set_layout_bindings[i].descriptorCount = tgm_u32_max(1, p_global_resources[i].array_element_count);
             p_descriptor_set_layout_bindings[i].stageFlags = p_shader_stages[i];
             p_descriptor_set_layout_bindings[i].pImmutableSamplers = TG_NULL;
         }
@@ -1023,7 +1021,7 @@ void tg_vulkan_descriptor_set_update_depth_image(VkDescriptorSet descriptor_set,
     vkUpdateDescriptorSets(device, 1, &write_descriptor_set, 0, TG_NULL);
 }
 
-void tg_vulkan_descriptor_set_update_depth_image_array(VkDescriptorSet descriptor_set, tg_color_image* p_depth_image, u32 dst_binding, u32 array_index)
+void tg_vulkan_descriptor_set_update_depth_image_array(VkDescriptorSet descriptor_set, tg_depth_image* p_depth_image, u32 dst_binding, u32 array_index)
 {
     VkDescriptorImageInfo descriptor_image_info = { 0 };
     descriptor_image_info.sampler = p_depth_image->sampler;
@@ -1404,7 +1402,7 @@ tg_vulkan_pipeline tg_vulkan_pipeline_create_graphics2(const tg_vulkan_graphics_
     pipeline_rasterization_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     pipeline_rasterization_state_create_info.pNext = TG_NULL;
     pipeline_rasterization_state_create_info.flags = 0;
-    pipeline_rasterization_state_create_info.depthClampEnable = VK_TRUE; // TODO: optional
+    pipeline_rasterization_state_create_info.depthClampEnable = VK_TRUE; // TODO: make this optional
     pipeline_rasterization_state_create_info.rasterizerDiscardEnable = VK_FALSE;
     pipeline_rasterization_state_create_info.polygonMode = VK_POLYGON_MODE_FILL;
     pipeline_rasterization_state_create_info.cullMode = p_create_info->cull_mode;
