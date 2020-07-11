@@ -3,7 +3,7 @@
 
 
 /*------------------------------------------------------------+
-| Noise                                                       |
+| Miscellaneous                                               |
 +------------------------------------------------------------*/
 
 const i8 p_gradient_table[12][3] = {
@@ -202,15 +202,6 @@ f32 tgm_noise(f32 x, f32 y, f32 z) // see: http://staffwww.itn.liu.se/~stegu/sim
 
 #undef TGM_SIMPLEX_NOISE_FASTFLOOR
 
-
-
-
-/*------------------------------------------------------------+
-| Random                                                      |
-+------------------------------------------------------------*/
-
-
-
 void tgm_random_init(tg_random* p_random, u32 seed)
 {
 	TG_ASSERT(p_random && seed);
@@ -236,6 +227,95 @@ u32 tgm_random_next_u32(tg_random* p_random)
 	result ^= result << 5;
 	p_random->state = result;
 	return result;
+}
+
+void tg__enclosing_sphere(u32 contained_point_count, const v3* p_contained_points, u32 boundary_point_count, v3* p_boundary_points, v3* p_center, f32* p_radius)
+{
+	if (contained_point_count == 0 || boundary_point_count == 4)
+	{
+		switch (boundary_point_count)
+		{
+		case 0:
+		{
+			*p_center = (v3){ 0.0f, 0.0f, 0.0f };
+			*p_radius = -1.0f;
+		} break;
+		case 1:
+		{
+			*p_center = p_boundary_points[0];
+			*p_radius = 0.0f;
+		} break;
+		case 2:
+		{
+			const v3 half_span = tgm_v3_divf(tgm_v3_sub(p_boundary_points[1], p_boundary_points[0]), 2.0f);
+			*p_center = tgm_v3_add(p_boundary_points[0], half_span);
+			*p_radius = tgm_v3_mag(half_span);
+		} break;
+		case 3:
+		{
+			const v3 v20 = tgm_v3_sub(p_boundary_points[0], p_boundary_points[2]);
+			const v3 v21 = tgm_v3_sub(p_boundary_points[1], p_boundary_points[2]);
+			const v3 cross = tgm_v3_cross(v20, v21);
+
+			*p_center = tgm_v3_add(
+				p_boundary_points[2],
+				tgm_v3_divf(
+					tgm_v3_cross(
+						tgm_v3_sub(
+							tgm_v3_mulf(v21, tgm_v3_magsqr(v20)),
+							tgm_v3_mulf(v20, tgm_v3_magsqr(v21))
+						),
+						cross),
+					2.0f * tgm_v3_magsqr(cross)
+				)
+			);
+			*p_radius = tgm_v3_mag(tgm_v3_sub(*p_center, p_boundary_points[0]));
+		} break;
+		case 4:
+		{
+			m4 m = { 0 };
+			m.col0.xyz = p_boundary_points[0]; m.m30 = 1.0f;
+			m.col1.xyz = p_boundary_points[1]; m.m31 = 1.0f;
+			m.col2.xyz = p_boundary_points[2]; m.m32 = 1.0f;
+			m.col3.xyz = p_boundary_points[3]; m.m33 = 1.0f;
+
+			m4 d = m;
+
+			d.m00 = tgm_v3_magsqr(p_boundary_points[0]); d.m01 = tgm_v3_magsqr(p_boundary_points[1]); d.m02 = tgm_v3_magsqr(p_boundary_points[2]); d.m03 = tgm_v3_magsqr(p_boundary_points[3]);
+			p_center->x = tgm_m4_determinant(d);
+
+			d.m10 = m.m00; d.m11 = m.m01; d.m12 = m.m02; d.m13 = m.m03;
+			p_center->y = -tgm_m4_determinant(d);
+
+			d.m20 = m.m10; d.m21 = m.m11; d.m22 = m.m12; d.m23 = m.m13;
+			p_center->z = tgm_m4_determinant(d);
+
+			*p_center = tgm_v3_divf(*p_center, 2.0f * tgm_m4_determinant(m));
+			*p_radius = tgm_v3_mag(tgm_v3_sub(*p_center, p_boundary_points[0]));
+		} break;
+		default: TG_INVALID_CODEPATH(); break;
+		}
+	}
+	else
+	{
+		tg__enclosing_sphere(contained_point_count - 1, &p_contained_points[1], boundary_point_count, p_boundary_points, p_center, p_radius);
+
+		const b32 contains = tgm_v3_magsqr(tgm_v3_sub(p_contained_points[0], *p_center)) * 0.99f <= *p_radius * *p_radius;
+		if (!contains)
+		{
+			TG_ASSERT(boundary_point_count < 4);
+			p_boundary_points[boundary_point_count] = p_contained_points[0];
+			tg__enclosing_sphere(contained_point_count - 1, &p_contained_points[1], boundary_point_count + 1, p_boundary_points, p_center, p_radius);
+		}
+	}
+}
+
+void tgm_enclosing_sphere(u32 contained_point_count, const v3* p_contained_points, v3* p_center, f32* p_radius)
+{
+	TG_ASSERT(contained_point_count && p_contained_points && p_center && p_radius);
+
+	v3 p_boundary_points[4] = { 0 };
+	tg__enclosing_sphere(contained_point_count, p_contained_points, 0, p_boundary_points, p_center, p_radius);
 }
 
 

@@ -89,6 +89,7 @@ static void tg__game_3d_create()
     tg_input_get_mouse_position(&sample_scene.last_mouse_x, &sample_scene.last_mouse_y);
     sample_scene.h_primary_camera = tg_camera_create_perspective(sample_scene.position, sample_scene.pitch, sample_scene.yaw, sample_scene.roll, sample_scene.fov_y_in_radians, sample_scene.near, sample_scene.far);
     sample_scene.h_secondary_camera = tg_camera_create_perspective(sample_scene.position, sample_scene.pitch, sample_scene.yaw, sample_scene.roll, sample_scene.fov_y_in_radians, sample_scene.near, sample_scene.far);
+    tg_camera_enable_shadows(sample_scene.h_secondary_camera, TG_FALSE);
 
     tg_color_image_create_info color_image_create_info = { 0 };
     tg_platform_get_window_size(&color_image_create_info.width, &color_image_create_info.height);

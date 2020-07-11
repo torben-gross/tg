@@ -37,6 +37,7 @@ typedef struct tg_deferred_renderer
         VkCommandBuffer                 command_buffer;
         tg_vulkan_buffer                camera_ubo;
         tg_vulkan_buffer                lighting_ubo;
+        tg_vulkan_buffer                shadows_ubo;
     } shading_pass;
     struct
     {
@@ -49,6 +50,19 @@ typedef struct tg_deferred_renderer
         VkCommandBuffer                 command_buffer;
     } tone_mapping_pass;
 } tg_deferred_renderer;
+
+typedef struct tg_light_setup
+{
+    u32    directional_light_count;
+    u32    point_light_count;
+    u32    padding[2];
+
+    v4     p_directional_light_directions[TG_MAX_DIRECTIONAL_LIGHTS];
+    v4     p_directional_light_colors[TG_MAX_DIRECTIONAL_LIGHTS];
+
+    v4     p_point_light_positions[TG_MAX_POINT_LIGHTS];
+    v4     p_point_light_colors[TG_MAX_POINT_LIGHTS];
+} tg_light_setup;
 
 #endif
 

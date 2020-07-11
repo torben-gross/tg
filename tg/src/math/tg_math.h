@@ -248,21 +248,14 @@ typedef struct tg_random
 
 
 /*------------------------------------------------------------+
-| Noise                                                       |
+| Miscellaneous                                               |
 +------------------------------------------------------------*/
 
-f32    tgm_noise(f32 x, f32 y, f32 z);
-
-
-
-/*------------------------------------------------------------+
-| Random                                                      |
-+------------------------------------------------------------*/
-
-// TODO: Unity uses Marsaglia's Xorshift 128, this is the basic variation.
-void    tgm_random_init(tg_random* p_random, u32 seed);
+f32     tgm_noise(f32 x, f32 y, f32 z);
+void    tgm_random_init(tg_random* p_random, u32 seed); // TODO: Unity uses Marsaglia's Xorshift 128, this is the basic variation
 f32     tgm_random_next_f32(tg_random* p_random);
 u32     tgm_random_next_u32(tg_random* p_random);
+void    tgm_enclosing_sphere(u32 contained_point_count, const v3* p_contained_points, v3* p_center, f32* p_radius);
 
 
 

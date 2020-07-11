@@ -6,23 +6,26 @@
 
 
 
-#define TG_MAX_CAMERAS                         4
-#define TG_MAX_COMPUTE_SHADERS                 16
-#define TG_MAX_FRAGMENT_SHADERS                32
-#define TG_MAX_MATERIALS                       512
-#define TG_MAX_MESHES                          65536
-#define TG_MAX_RENDER_COMMANDS                 65536
-#define TG_MAX_STORAGE_BUFFERS                 32
-#define TG_MAX_UNIFORM_BUFFERS                 256
-#define TG_MAX_VERTEX_SHADERS                  32
+#define TG_MAX_CAMERAS                    4
+#define TG_MAX_COMPUTE_SHADERS            16
+#define TG_MAX_FRAGMENT_SHADERS           32
+#define TG_MAX_MATERIALS                  512
+#define TG_MAX_MESHES                     65536
+#define TG_MAX_RENDER_COMMANDS            65536
+#define TG_MAX_STORAGE_BUFFERS            32
+#define TG_MAX_UNIFORM_BUFFERS            256
+#define TG_MAX_VERTEX_SHADERS             32
 
-#define TG_MAX_SHADER_ATTACHMENTS              8
-#define TG_MAX_SHADER_GLOBAL_RESOURCES         32
-#define TG_MAX_SHADER_INPUTS                   32
-#define TG_SHADER_RESERVED_BINDINGS            2
+#define TG_MAX_SHADER_ATTACHMENTS         8
+#define TG_MAX_SHADER_GLOBAL_RESOURCES    32
+#define TG_MAX_SHADER_INPUTS              32
+#define TG_SHADER_RESERVED_BINDINGS       2
 
-#define TG_MAX_DIRECTIONAL_LIGHTS              512
-#define TG_MAX_POINT_LIGHTS                    512
+#define TG_CASCADED_SHADOW_MAPS           3
+#define TG_CASCADED_SHADOW_MAP_SIZE       1024
+
+#define TG_MAX_DIRECTIONAL_LIGHTS         512
+#define TG_MAX_POINT_LIGHTS               512
 
 
 
@@ -33,7 +36,6 @@ TG_DECLARE_HANDLE(tg_deferred_renderer);
 TG_DECLARE_HANDLE(tg_depth_image);
 TG_DECLARE_HANDLE(tg_forward_renderer);
 TG_DECLARE_HANDLE(tg_fragment_shader);
-TG_DECLARE_HANDLE(tg_light_setup);
 TG_DECLARE_HANDLE(tg_material);
 TG_DECLARE_HANDLE(tg_mesh);
 TG_DECLARE_HANDLE(tg_index_buffer);
@@ -170,6 +172,7 @@ void                             tg_graphics_wait_idle();
 tg_camera_h                      tg_camera_create_orthographic(v3 position, f32 pitch, f32 yaw, f32 roll, f32 left, f32 right, f32 bottom, f32 top, f32 far, f32 near);
 tg_camera_h                      tg_camera_create_perspective(v3 position, f32 pitch, f32 yaw, f32 roll, f32 fov_y, f32 near, f32 far);
 void                             tg_camera_destroy(tg_camera_h h_camera);
+void                             tg_camera_enable_shadows(tg_camera_h h_camera, b32 enable);
 void                             tg_camera_begin(tg_camera_h h_camera);
 void                             tg_camera_push_directional_light(tg_camera_h h_camera, v3 direction, v3 color);
 void                             tg_camera_push_point_light(tg_camera_h h_camera, v3 position, v3 color);

@@ -1404,7 +1404,7 @@ tg_vulkan_pipeline tg_vulkan_pipeline_create_graphics2(const tg_vulkan_graphics_
     pipeline_rasterization_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     pipeline_rasterization_state_create_info.pNext = TG_NULL;
     pipeline_rasterization_state_create_info.flags = 0;
-    pipeline_rasterization_state_create_info.depthClampEnable = VK_FALSE;
+    pipeline_rasterization_state_create_info.depthClampEnable = VK_TRUE; // TODO: optional
     pipeline_rasterization_state_create_info.rasterizerDiscardEnable = VK_FALSE;
     pipeline_rasterization_state_create_info.polygonMode = VK_POLYGON_MODE_FILL;
     pipeline_rasterization_state_create_info.cullMode = p_create_info->cull_mode;

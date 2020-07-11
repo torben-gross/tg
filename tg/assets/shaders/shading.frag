@@ -25,12 +25,29 @@ layout(set = 0, binding = 5) uniform light_setup
     vec4[512]    u_point_light_colors;
 };
 
-layout(set = 0, binding = 6) uniform lightspace_matrix
+layout(set = 0, binding = 6) uniform shadows
 {
-    mat4 u_lightspace_matrix;
+    vec4[1] u_shadow_distances;
 };
 
-layout(set = 0, binding = 7) uniform    sampler2D u_shadow_map;
+layout(set = 0, binding = 7) uniform lightspace_matrix0
+{
+    mat4 u_lightspace_matrix0;
+};
+
+layout(set = 0, binding = 8) uniform lightspace_matrix1
+{
+    mat4 u_lightspace_matrix1;
+};
+
+layout(set = 0, binding = 9) uniform lightspace_matrix2
+{
+    mat4 u_lightspace_matrix2;
+};
+
+layout(set = 0, binding = 10) uniform    sampler2D u_shadow_map0;
+layout(set = 0, binding = 11) uniform    sampler2D u_shadow_map1;
+layout(set = 0, binding = 12) uniform    sampler2D u_shadow_map2;
 
 
 
@@ -113,14 +130,40 @@ float shadow_mapping(vec3 position, vec4 position_lightspace)
     )
     {
         float bias = 0.025;
-        for (int i = 0; i < shadow_sample_count; i++)
+
+        //for (int i = 0; i < shadow_sample_count; i++)
+        //{
+		//    int index = int(16.0 * random(floor(position.xyz * 1024.0), i)) % 16;
+        //    vec2 uv = clamp(proj.xy + shadow_poisson_disk[index] / vec2(1024.0), vec2(0.0), vec2(1.0));
+        //    float pcf_depth = texture(u_shadow_map0, uv).x;
+        //    shadow += proj.z - bias < pcf_depth ? 1.0 : 0.0;
+	    //}
+        //shadow = clamp(shadow / float(shadow_sample_count), 0.0, 1.0);
+        
+        float d = distance(position, u_camera_position);
+        if (d >= u_shadow_distances[0].x && d < u_shadow_distances[0].y)
         {
-		    int index = int(16.0 * random(floor(position.xyz * 1024.0), i)) % 16;
-            vec2 uv = clamp(proj.xy + shadow_poisson_disk[index] / vec2(1024.0), vec2(0.0), vec2(1.0));
-            float pcf_depth = texture(u_shadow_map, uv).x;
-            shadow += proj.z - bias < pcf_depth ? 1.0 : 0.0;
-	    }
-        shadow = clamp(shadow / float(shadow_sample_count), 0.0, 1.0);
+            return proj.z - bias < texture(u_shadow_map0, proj.xy).x ? 1.0 : 0.0;
+        }
+        else if (d >= u_shadow_distances[0].y && d < u_shadow_distances[0].z)
+        {
+            return proj.z - bias < texture(u_shadow_map1, proj.xy).x ? 1.0 : 0.0;
+        }
+        else if (d >= u_shadow_distances[0].z)
+        {
+            if (proj.z - bias < texture(u_shadow_map2, proj.xy).x)
+            {
+                return 1.0;
+            }
+            else
+            {
+                return 0.0f;//(d - u_shadow_distances[0].z) / (u_shadow_distances[0].w - u_shadow_distances[0].z);
+            }
+        }
+        else
+        {
+            return 1.0;
+        }
     }
 
     return shadow;
@@ -134,7 +177,21 @@ void main()
     float metallic            = texture(u_metallic_roughness_ao, v_uv).x;
     float roughness           = texture(u_metallic_roughness_ao, v_uv).y;
     float ao                  = texture(u_metallic_roughness_ao, v_uv).z;
-    vec4  position_lightspace = u_lightspace_matrix * texture(u_position, v_uv);
+    vec4  position_lightspace;
+    
+    float d = distance(position, u_camera_position);
+    if (d >= u_shadow_distances[0].x && d < u_shadow_distances[0].y)
+    {
+        position_lightspace = u_lightspace_matrix0 * texture(u_position, v_uv);
+    }
+    else if (d >= u_shadow_distances[0].y && d < u_shadow_distances[0].z)
+    {
+        position_lightspace = u_lightspace_matrix1 * texture(u_position, v_uv);
+    }
+    else
+    {
+        position_lightspace = u_lightspace_matrix2 * texture(u_position, v_uv);
+    }
 
     vec4 sky_color = 0.7 * u_directional_light_colors[0];
     if (dot(normal, normal) < 0.5) // sky
@@ -170,7 +227,8 @@ void main()
             vec3 k_diffuse  = (vec3(1.0) - k_specular) * (1.0 - metallic);
         
             float ndl = max(dot(n, l), 0.0);
-            lo += (k_diffuse * albedo / pi + specular) * radiance * ndl;
+            float shadow = i == 0 ? shadow_mapping(position, position_lightspace) : 1.0;
+            lo += (k_diffuse * albedo / pi + specular) * radiance * ndl * shadow;
         }
 
         for (int i = 0; i < u_point_light_count; i++)
@@ -200,7 +258,7 @@ void main()
         }
 
         vec3 ambient = vec3(0.01) * albedo * ao;
-        vec3 color   = ambient + shadow_mapping(position, position_lightspace) * lo;
+        vec3 color   = ambient + lo;
 
         color = color / (color + vec3(1.0));
         color = pow(color, vec3(1.0 / 2.2));

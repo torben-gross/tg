@@ -10,23 +10,27 @@
 
 
 
-#define TG_SHADOW_MAP_SIZE    2048
-
-
-
 static void tg__init_shadow_pass(tg_camera_h h_camera)
 {
+    h_camera->shadow_pass.enabled = TG_TRUE;
+
     tg_vulkan_depth_image_create_info depth_image_create_info = { 0 };
-    depth_image_create_info.width = TG_SHADOW_MAP_SIZE;
-    depth_image_create_info.height = TG_SHADOW_MAP_SIZE;
+    depth_image_create_info.width = TG_CASCADED_SHADOW_MAP_SIZE;
+    depth_image_create_info.height = TG_CASCADED_SHADOW_MAP_SIZE;
     depth_image_create_info.format = VK_FORMAT_D32_SFLOAT;
     depth_image_create_info.p_vulkan_sampler_create_info = TG_NULL;
 
-    h_camera->shadow_pass.shadow_map = tg_vulkan_depth_image_create(&depth_image_create_info);
+    for (u32 i = 0; i < TG_CASCADED_SHADOW_MAPS; i++)
+    {
+        h_camera->shadow_pass.p_shadow_maps[i] = tg_vulkan_depth_image_create(&depth_image_create_info);
+    }
 
     VkCommandBuffer command_buffer = tg_vulkan_command_buffer_allocate(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY); // TODO: global! also for other ones in this file!
     tg_vulkan_command_buffer_begin(command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
-    tg_vulkan_command_buffer_cmd_transition_depth_image_layout(command_buffer, &h_camera->shadow_pass.shadow_map, 0, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT);
+    for (u32 i = 0; i < TG_CASCADED_SHADOW_MAPS; i++)
+    {
+        tg_vulkan_command_buffer_cmd_transition_depth_image_layout(command_buffer, &h_camera->shadow_pass.p_shadow_maps[i], 0, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT);
+    }
     tg_vulkan_command_buffer_end_and_submit(command_buffer, TG_VULKAN_QUEUE_TYPE_GRAPHICS);
     tg_vulkan_command_buffer_free(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, command_buffer);
 
@@ -66,8 +70,11 @@ static void tg__init_shadow_pass(tg_camera_h h_camera)
     subpass_dependency.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
     h_camera->shadow_pass.render_pass = tg_vulkan_render_pass_create(1, &attachment_description, 1, &subpass_description, 1, &subpass_dependency);
-    h_camera->shadow_pass.framebuffer = tg_vulkan_framebuffer_create(h_camera->shadow_pass.render_pass, 1, &h_camera->shadow_pass.shadow_map.image_view, TG_SHADOW_MAP_SIZE, TG_SHADOW_MAP_SIZE);
-    h_camera->shadow_pass.lightspace_ubo = tg_vulkan_buffer_create(sizeof(m4), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    for (u32 i = 0; i < TG_CASCADED_SHADOW_MAPS; i++)
+    {
+        h_camera->shadow_pass.p_framebuffers[i] = tg_vulkan_framebuffer_create(h_camera->shadow_pass.render_pass, 1, &h_camera->shadow_pass.p_shadow_maps[i].image_view, TG_CASCADED_SHADOW_MAP_SIZE, TG_CASCADED_SHADOW_MAP_SIZE);
+        h_camera->shadow_pass.p_lightspace_ubos[i] = tg_vulkan_buffer_create(sizeof(m4), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    }
 }
 
 static void tg__init_clear_pass(tg_camera_h h_camera)
@@ -107,21 +114,24 @@ static void tg__init_clear_pass(tg_camera_h h_camera)
         VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT
     );
 
-    tg_vulkan_command_buffer_cmd_transition_depth_image_layout(
-        h_camera->clear_pass.command_buffer,
-        &h_camera->shadow_pass.shadow_map,
-        VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
-        VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT
-    );
-    tg_vulkan_command_buffer_cmd_clear_depth_image(h_camera->clear_pass.command_buffer, &h_camera->shadow_pass.shadow_map);
-    tg_vulkan_command_buffer_cmd_transition_depth_image_layout(
-        h_camera->clear_pass.command_buffer,
-        &h_camera->shadow_pass.shadow_map,
-        VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-        VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT
-    );
+    for (u32 i = 0; i < TG_CASCADED_SHADOW_MAPS; i++)
+    {
+        tg_vulkan_command_buffer_cmd_transition_depth_image_layout(
+            h_camera->clear_pass.command_buffer,
+            &h_camera->shadow_pass.p_shadow_maps[i],
+            VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
+            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT
+        );
+        tg_vulkan_command_buffer_cmd_clear_depth_image(h_camera->clear_pass.command_buffer, &h_camera->shadow_pass.p_shadow_maps[i]);
+        tg_vulkan_command_buffer_cmd_transition_depth_image_layout(
+            h_camera->clear_pass.command_buffer,
+            &h_camera->shadow_pass.p_shadow_maps[i],
+            VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+            VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT
+        );
+    }
 
     vkEndCommandBuffer(h_camera->clear_pass.command_buffer);
 }
@@ -335,7 +345,7 @@ static tg_camera* tg__init_available()
 
     tg__init_shadow_pass(p_camera);
     
-    p_camera->capture_pass.h_deferred_renderer = tg_vulkan_deferred_renderer_create(p_camera, &p_camera->shadow_pass.shadow_map);
+    p_camera->capture_pass.h_deferred_renderer = tg_vulkan_deferred_renderer_create(p_camera);
     p_camera->capture_pass.h_forward_renderer = tg_vulkan_forward_renderer_create(p_camera);
 
     tg__init_present_pass(p_camera);
@@ -402,6 +412,13 @@ void tg_camera_destroy(tg_camera_h h_camera)
 
 
 
+void tg_camera_enable_shadows(tg_camera_h h_camera, b32 enable)
+{
+    TG_ASSERT(h_camera);
+
+    h_camera->shadow_pass.enabled = enable;
+}
+
 void tg_camera_begin(tg_camera_h h_camera)
 {
     TG_ASSERT(h_camera);
@@ -446,66 +463,108 @@ void tg_camera_execute(tg_camera_h h_camera, tg_render_command_h h_render_comman
 
 void tg_camera_end(tg_camera_h h_camera)
 {
-    tg_vulkan_command_buffer_begin(h_camera->shadow_pass.command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, TG_NULL);
-    tg_vulkan_command_buffer_cmd_begin_render_pass(h_camera->shadow_pass.command_buffer, h_camera->shadow_pass.render_pass, &h_camera->shadow_pass.framebuffer, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
-
-    // TODO: decide, which lights cast/receive shadows!
-    const v4 rtn_c = {  1.0f, -1.0f,  0.0f,  1.0f };
-    const v4 lbf_c = { -1.0f,  1.0f,  1.0f,  1.0f };
-
-    const m4 ivp = tgm_m4_inverse(tgm_m4_mul(TG_CAMERA_PROJ(h_camera), TG_CAMERA_VIEW(h_camera)));
-    const f32 percentile = 0.02f;
-
-    const v4 rtn_w = tgm_m4_mulv4(ivp, rtn_c);
-    const v4 lbf_w = tgm_m4_mulv4(ivp, lbf_c);
-    const v4 rtn2lbf_w = tgm_v4_sub(lbf_w, rtn_w);
-
-    const v4 p0 = rtn_w;
-    const v4 p1 = tgm_v4_add(p0, tgm_v4_mulf(rtn2lbf_w, percentile));
-    const v3 c = tgm_v4_to_v3(tgm_v4_divf(tgm_v4_add(p0, p1), 2.0f));
-    const f32 d = tgm_v3_mag(tgm_v4_to_v3(tgm_v4_sub(p1, p0)));
-    const f32 dh = d / 2.0f;
-
-    const m4 t = tgm_m4_translate(tgm_v3_neg(c));
-    const m4 r = tgm_m4_inverse(tgm_m4_euler(-(f32)TGM_PI * 0.4f, -(f32)TGM_PI * 0.4f, 0.0f));
-    const m4 v = tgm_m4_mul(r, t);
-    const m4 p = tgm_m4_orthographic(-dh, dh, -dh, dh, -dh, dh);
-    const m4 vp = tgm_m4_mul(p, v);
-
-    *((m4*)h_camera->shadow_pass.lightspace_ubo.memory.p_mapped_device_memory) = vp;
-
-    for (u32 i = 0; i < h_camera->render_command_count; i++)
+    if (h_camera->shadow_pass.enabled)
     {
-        tg_render_command_h h_render_command = h_camera->ph_render_commands[i];
-        if (h_render_command->h_material->material_type == TG_VULKAN_MATERIAL_TYPE_DEFERRED)
+        tg_vulkan_command_buffer_begin(h_camera->shadow_pass.command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, TG_NULL);
+
+        const f32 p_percentiles[TG_CASCADED_SHADOW_MAPS + 1] = { 0.0f, 0.003f, 0.01f, 0.04f };
+
+        for (u32 i = 0; i < TG_CASCADED_SHADOW_MAPS; i++)
         {
-            for (u32 j = 0; j < h_render_command->camera_info_count; j++)
+            tg_vulkan_command_buffer_cmd_begin_render_pass(h_camera->shadow_pass.command_buffer, h_camera->shadow_pass.render_pass, &h_camera->shadow_pass.p_framebuffers[i], VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+
+            // TODO: decide, which lights cast/receive shadows!
+
+            // penumbra
+
+            const v4 p_corners[8] = {
+                { -1.0f,  1.0f,  0.0f,  1.0f },
+                {  1.0f,  1.0f,  0.0f,  1.0f },
+                { -1.0f, -1.0f,  0.0f,  1.0f },
+                {  1.0f, -1.0f,  0.0f,  1.0f },
+                { -1.0f,  1.0f,  1.0f,  1.0f },
+                {  1.0f,  1.0f,  1.0f,  1.0f },
+                { -1.0f, -1.0f,  1.0f,  1.0f },
+                {  1.0f, -1.0f,  1.0f,  1.0f }
+            };
+
+            const m4 ivp = tgm_m4_inverse(tgm_m4_mul(TG_CAMERA_PROJ(h_camera), TG_CAMERA_VIEW(h_camera)));
+            v3 p_corners_ws[8] = { 0 };
+            for (u8 i = 0; i < 8; i++)
             {
-                tg_vulkan_render_command_camera_info* p_camera_info = &h_render_command->p_camera_infos[j];
-                if (p_camera_info->h_camera == h_camera)
+                p_corners_ws[i] = tgm_v4_to_v3(tgm_m4_mulv4(ivp, p_corners[i]));
+            }
+
+            const v3 v04 = tgm_v3_sub(p_corners_ws[4], p_corners_ws[0]);
+            const f32 d = tgm_v3_mag(v04);
+            const f32 d0 = d * p_percentiles[i];
+            const f32 d1 = d * p_percentiles[i + 1];
+
+            for (u8 i = 0; i < 4; i++)
+            {
+                const v3 ndir = tgm_v3_normalized(tgm_v3_sub(p_corners_ws[i + 4], p_corners_ws[i]));
+                p_corners_ws[i + 4] = tgm_v3_add(p_corners_ws[i], tgm_v3_mulf(ndir, d1));
+                p_corners_ws[i] = tgm_v3_add(p_corners_ws[i], tgm_v3_mulf(ndir, d0));
+            }
+
+            v3 center; f32 radius;
+            tgm_enclosing_sphere(8, p_corners_ws, &center, &radius);
+
+            const m4 t = tgm_m4_translate(tgm_v3_neg(center));
+            const m4 r = tgm_m4_inverse(tgm_m4_euler(-(f32)TGM_PI * 0.4f, -(f32)TGM_PI * 0.4f, 0.0f));
+            const m4 v = tgm_m4_mul(r, t);
+            const m4 p = tgm_m4_orthographic(-radius, radius, -radius, radius, -radius, radius);
+            const m4 vp = tgm_m4_mul(p, v);
+
+            *((m4*)h_camera->shadow_pass.p_lightspace_ubos[i].memory.p_mapped_device_memory) = vp;
+
+            for (u32 j = 0; j < h_camera->render_command_count; j++)
+            {
+                tg_render_command_h h_render_command = h_camera->ph_render_commands[j];
+                if (h_render_command->h_material->material_type == TG_VULKAN_MATERIAL_TYPE_DEFERRED)
                 {
-                    vkCmdExecuteCommands(h_camera->shadow_pass.command_buffer, 1, &p_camera_info->shadow_command_buffer);
-                    break;
+                    for (u32 k = 0; k < h_render_command->camera_info_count; k++)
+                    {
+                        tg_vulkan_render_command_camera_info* p_camera_info = &h_render_command->p_camera_infos[k];
+                        if (p_camera_info->h_camera == h_camera)
+                        {
+                            vkCmdExecuteCommands(h_camera->shadow_pass.command_buffer, 1, &p_camera_info->p_shadow_command_buffers[i]);
+                            break;
+                        }
+                    }
                 }
             }
+
+            vkCmdEndRenderPass(h_camera->shadow_pass.command_buffer);
         }
+
+        // TODO: save in camera
+        const f32 near = -0.1f;
+        const f32 far = -1000.0f;
+        const f32 d = tgm_f32_abs(far - near);
+
+        // TODO: this is aweful
+        for (u32 i = 0; i < TG_CASCADED_SHADOW_MAPS + 1; i++)
+        {
+            ((f32*)h_camera->capture_pass.h_deferred_renderer->shading_pass.shadows_ubo.memory.p_mapped_device_memory)[i] = tgm_f32_abs(near) + d * p_percentiles[i];
+        }
+        tg_vulkan_buffer_flush_mapped_memory(&h_camera->capture_pass.h_deferred_renderer->shading_pass.shadows_ubo);
+
+        VK_CALL(vkEndCommandBuffer(h_camera->shadow_pass.command_buffer));
+
+        VkSubmitInfo submit_info = { 0 };
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.pNext = TG_NULL;
+        submit_info.waitSemaphoreCount = 0;
+        submit_info.pWaitSemaphores = TG_NULL;
+        submit_info.pWaitDstStageMask = TG_NULL;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &h_camera->shadow_pass.command_buffer;
+        submit_info.signalSemaphoreCount = 0;
+        submit_info.pSignalSemaphores = TG_NULL;
+
+        tg_vulkan_queue_submit(TG_VULKAN_QUEUE_TYPE_GRAPHICS, 1, &submit_info, VK_NULL_HANDLE);
     }
-
-    vkCmdEndRenderPass(h_camera->shadow_pass.command_buffer);
-    VK_CALL(vkEndCommandBuffer(h_camera->shadow_pass.command_buffer));
-
-    VkSubmitInfo submit_info = { 0 };
-    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submit_info.pNext = TG_NULL;
-    submit_info.waitSemaphoreCount = 0;
-    submit_info.pWaitSemaphores = TG_NULL;
-    submit_info.pWaitDstStageMask = TG_NULL;
-    submit_info.commandBufferCount = 1;
-    submit_info.pCommandBuffers = &h_camera->shadow_pass.command_buffer;
-    submit_info.signalSemaphoreCount = 0;
-    submit_info.pSignalSemaphores = TG_NULL;
-
-    tg_vulkan_queue_submit(TG_VULKAN_QUEUE_TYPE_GRAPHICS, 1, &submit_info, VK_NULL_HANDLE);
 
     tg_vulkan_deferred_renderer_begin(h_camera->capture_pass.h_deferred_renderer);
     for (u32 i = 0; i < h_camera->render_command_count; i++)

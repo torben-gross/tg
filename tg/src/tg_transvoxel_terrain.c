@@ -299,10 +299,6 @@ static void tg__build_block(v3i octree_min_coordinates, v3i block_offset_in_octr
 					continue;
 				}
 				
-				if (lod == 0 && block_offset_in_octree.z == 240 && block_offset_in_octree.x == 96 && position.z + 1 == TG_CELLS_PER_BLOCK_SIDE && position.x == 2)
-				{
-					int bh = 0;
-				}
 				const v3i cell_position_pad = tgm_v3i_add(octree_min_coordinates, block_offset_in_octree);
 				const v3i cell_position_base = tgm_v3i_add(cell_position_pad, tgm_v3i_muli(position, lod_scale));
 				p_corner_positions[0] = tgm_v3i_add(cell_position_base, (v3i) {         0,         0,         0 });
