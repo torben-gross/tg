@@ -6,12 +6,12 @@
 
 
 
-#define TG_MAX_CAMERAS                    4
 #define TG_MAX_COMPUTE_SHADERS            16
 #define TG_MAX_FRAGMENT_SHADERS           32
 #define TG_MAX_MATERIALS                  512
 #define TG_MAX_MESHES                     65536
 #define TG_MAX_RENDER_COMMANDS            65536
+#define TG_MAX_RENDERERS                  4
 #define TG_MAX_STORAGE_BUFFERS            32
 #define TG_MAX_UNIFORM_BUFFERS            256
 #define TG_MAX_VERTEX_SHADERS             32
@@ -29,7 +29,6 @@
 
 
 
-TG_DECLARE_HANDLE(tg_camera);
 TG_DECLARE_HANDLE(tg_color_image);
 TG_DECLARE_HANDLE(tg_compute_shader);
 TG_DECLARE_HANDLE(tg_deferred_renderer);
@@ -41,6 +40,7 @@ TG_DECLARE_HANDLE(tg_mesh);
 TG_DECLARE_HANDLE(tg_index_buffer);
 TG_DECLARE_HANDLE(tg_render_command);
 TG_DECLARE_HANDLE(tg_render_target);
+TG_DECLARE_HANDLE(tg_renderer);
 TG_DECLARE_HANDLE(tg_storage_buffer);
 TG_DECLARE_HANDLE(tg_storage_image_3d);
 TG_DECLARE_HANDLE(tg_transvoxel_terrain);
@@ -52,6 +52,12 @@ TG_DECLARE_HANDLE(tg_vertex_shader);
 typedef void* tg_handle;
 
 
+
+typedef enum tg_camera_type
+{
+	TG_CAMERA_TYPE_ORTHOGRAPHIC,
+	TG_CAMERA_TYPE_PERSPECTIVE
+} tg_camera_type;
 
 typedef enum tg_color_image_format
 {
@@ -75,7 +81,6 @@ typedef enum tg_depth_image_format
 typedef enum tg_handle_type
 {
 	TG_HANDLE_TYPE_INVALID = 0,
-	TG_HANDLE_TYPE_CAMERA,
 	TG_HANDLE_TYPE_STORAGE_BUFFER,
 	TG_HANDLE_TYPE_COLOR_IMAGE,
 	TG_HANDLE_TYPE_COMPUTE_SHADER,
@@ -88,6 +93,7 @@ typedef enum tg_handle_type
 	TG_HANDLE_TYPE_FORWARD_RENDERER,
 	TG_HANDLE_TYPE_RENDER_COMMAND,
 	TG_HANDLE_TYPE_RENDER_TARGET,
+	TG_HANDLE_TYPE_RENDERER,
 	TG_HANDLE_TYPE_STORAGE_IMAGE_3D,
 	TG_HANDLE_TYPE_TEXTURE_ATLAS,
 	TG_HANDLE_TYPE_UNIFORM_BUFFER,
@@ -119,6 +125,34 @@ typedef enum tg_storage_image_format
 } tg_storage_image_format;
 
 
+
+typedef struct tg_camera
+{
+	tg_camera_type    type;
+	v3                position;
+	f32               pitch;
+	f32               yaw;
+	f32               roll;
+	union
+	{
+		struct
+		{
+			f32       left;
+			f32       right;
+			f32       bottom;
+			f32       top;
+			f32       far;
+			f32       near;
+		} orthographic;
+		struct
+		{
+			f32       fov_y_in_radians;
+			f32       aspect;
+			f32       near;
+			f32       far;
+		} perspective;
+	};
+} tg_camera;
 
 typedef struct tg_color_image_create_info
 {
@@ -169,31 +203,9 @@ void                             tg_graphics_wait_idle();
 
 
 
-tg_camera_h                      tg_camera_create_orthographic(v3 position, f32 pitch, f32 yaw, f32 roll, f32 left, f32 right, f32 bottom, f32 top, f32 far, f32 near);
-tg_camera_h                      tg_camera_create_perspective(v3 position, f32 pitch, f32 yaw, f32 roll, f32 fov_y, f32 near, f32 far);
-void                             tg_camera_destroy(tg_camera_h h_camera);
-void                             tg_camera_enable_shadows(tg_camera_h h_camera, b32 enable);
-void                             tg_camera_begin(tg_camera_h h_camera);
-void                             tg_camera_push_directional_light(tg_camera_h h_camera, v3 direction, v3 color);
-void                             tg_camera_push_point_light(tg_camera_h h_camera, v3 position, v3 color);
-void                             tg_camera_execute(tg_camera_h h_camera, tg_render_command_h h_render_command);
-void                             tg_camera_end(tg_camera_h h_camera);
-void                             tg_camera_present(tg_camera_h p_camera);
-void                             tg_camera_clear(tg_camera_h h_camera);
-v3                               tg_camera_get_position(tg_camera_h h_camera);
-tg_render_target_h               tg_camera_get_render_target(tg_camera_h p_camera);
-void                             tg_camera_set_orthographic_projection(tg_camera_h p_camera, f32 left, f32 right, f32 bottom, f32 top, f32 far, f32 near);
-void                             tg_camera_set_perspective_projection(tg_camera_h p_camera, f32 fov_y, f32 near, f32 far);
-void                             tg_camera_set_view(tg_camera_h p_camera, v3 position, f32 pitch, f32 yaw, f32 roll);
-
 tg_color_image_h                 tg_color_image_create(const char* p_filename);
 tg_color_image_h                 tg_color_image_create_empty(const tg_color_image_create_info* p_color_image_create_info);
 void                             tg_color_image_destroy(tg_color_image_h h_color_image);
-
-tg_storage_buffer_h              tg_storage_buffer_create(u64 size, b32 visible);
-u64                              tg_storage_buffer_size(tg_storage_buffer_h h_storage_buffer);
-void*                            tg_storage_buffer_data(tg_storage_buffer_h h_storage_buffer);
-void                             tg_storage_buffer_destroy(tg_storage_buffer_h h_storage_buffer);
 
 void                             tg_compute_shader_bind_input(tg_compute_shader_h h_compute_shader, u32 first_handle_index, u32 handle_count, tg_handle* p_handles);
 tg_compute_shader_h              tg_compute_shader_create(const char* filename);
@@ -221,6 +233,23 @@ tg_mesh_h                        tg_mesh_create_sphere(f32 radius, u32 sector_co
 void                             tg_mesh_destroy(tg_mesh_h h_mesh);
 void                             tg_mesh_update(tg_mesh_h h_mesh, u32 vertex_count, const v3* p_positions, const v3* p_normals, const v2* p_uvs, const v3* p_tangents, u32 index_count, const u16* p_indices);
 void                             tg_mesh_update2(tg_mesh_h h_mesh, u32 vertex_count, u32 vertex_stride, const void* p_vertices, u32 index_count, const u16* p_indices); // TODO: this needs to set a flag or a time, so that the camera knows, that it needs a reset
+
+tg_renderer_h                    tg_renderer_create(tg_camera* p_camera);
+void                             tg_renderer_destroy(tg_renderer_h h_renderer);
+void                             tg_renderer_enable_shadows(tg_renderer_h h_renderer, b32 enable);
+void                             tg_renderer_begin(tg_renderer_h h_renderer);
+void                             tg_renderer_push_directional_light(tg_renderer_h h_renderer, v3 direction, v3 color);
+void                             tg_renderer_push_point_light(tg_renderer_h h_renderer, v3 position, v3 color);
+void                             tg_renderer_execute(tg_renderer_h h_renderer, tg_render_command_h h_render_command);
+void                             tg_renderer_end(tg_renderer_h h_renderer);
+void                             tg_renderer_present(tg_renderer_h h_renderer);
+void                             tg_renderer_clear(tg_renderer_h h_renderer);
+tg_render_target_h               tg_renderer_get_render_target(tg_renderer_h h_renderer);
+
+tg_storage_buffer_h              tg_storage_buffer_create(u64 size, b32 visible);
+u64                              tg_storage_buffer_size(tg_storage_buffer_h h_storage_buffer);
+void*                            tg_storage_buffer_data(tg_storage_buffer_h h_storage_buffer);
+void                             tg_storage_buffer_destroy(tg_storage_buffer_h h_storage_buffer);
 
 void                             tg_storage_image_3d_copy_to_storage_buffer(tg_storage_image_3d_h h_storage_image_3d, tg_storage_buffer_h h_storage_buffer);
 void                             tg_storage_image_3d_clear(tg_storage_image_3d_h h_storage_image_3d);

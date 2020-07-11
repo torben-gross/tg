@@ -34,16 +34,16 @@ typedef struct tg_terrain_octree
 
 typedef struct tg_terrain
 {
-	tg_camera_h           h_camera;
+	tg_camera*            p_camera;
 	tg_material_h         h_material;
 	tg_terrain_octree*    pp_octrees[9];
 } tg_terrain;
 
 
 
-tg_terrain    tg_terrain_create(tg_camera_h h_camera);
+tg_terrain    tg_terrain_create(tg_camera* p_camera);
 void          tg_terrain_destroy(tg_terrain* p_terrain);
 void          tg_terrain_update(tg_terrain* p_terrain, f32 delta_ms);
-void          tg_terrain_render(tg_terrain* p_terrain, tg_camera_h h_camera);
+void          tg_terrain_render(tg_terrain* p_terrain, tg_renderer_h h_renderer);
 
 #endif

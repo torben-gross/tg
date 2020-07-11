@@ -2168,7 +2168,7 @@ static VkDevice tg__device_create()
     physical_device_features.logicOp = VK_FALSE;
     physical_device_features.multiDrawIndirect = VK_FALSE;
     physical_device_features.drawIndirectFirstInstance = VK_FALSE;
-    physical_device_features.depthClamp = VK_FALSE;
+    physical_device_features.depthClamp = VK_TRUE;
     physical_device_features.depthBiasClamp = VK_FALSE;
     physical_device_features.fillModeNonSolid = VK_FALSE;
     physical_device_features.depthBounds = VK_FALSE;
@@ -2383,11 +2383,6 @@ void tg_graphics_init()
     tg__swapchain_create();
 
     tg_vulkan_memory_allocator_init(device, physical_device);
-    
-    for (u32 i = 0; i < TG_MAX_CAMERAS; i++)
-    {
-        p_cameras[i].type = TG_HANDLE_TYPE_INVALID;
-    }
 }
 
 void tg_graphics_wait_idle()

@@ -38,21 +38,11 @@ typedef struct tg_pbr_material
 typedef struct tg_sample_scene
 {
     tg_list                     render_commands;
-    struct camera_info
-    {
-        tg_camera_h             h_primary_camera;
-        tg_camera_h             h_secondary_camera;
-        v3                      position;
-        f32                     pitch;
-        f32                     yaw;
-        f32                     roll;
-        f32                     fov_y_in_radians;
-        f32                     aspect;
-        f32                     near;
-        f32                     far;
-        u32                     last_mouse_x;
-        u32                     last_mouse_y;
-    };
+    tg_camera                   camera;
+    tg_renderer_h               h_main_renderer;
+    tg_renderer_h               h_secondary_renderer;
+    u32                         last_mouse_x;
+    u32                         last_mouse_y;
     struct quad
     {
         tg_mesh_h               h_quad_mesh;
@@ -78,18 +68,19 @@ tg_sample_scene sample_scene = { 0 };
 static void tg__game_3d_create()
 {
     sample_scene.render_commands = TG_LIST_CREATE(tg_render_command_h);
-    sample_scene.position = (v3){ 128.0f, 150.0f, 128.0f };
-    sample_scene.pitch = 0.0f;
-    sample_scene.yaw = 0.0f;
-    sample_scene.roll = 0.0f;
-    sample_scene.fov_y_in_radians = TGM_TO_RADIANS(70.0f);
-    sample_scene.aspect = tg_platform_get_window_aspect_ratio();
-    sample_scene.near = -0.1f;
-    sample_scene.far = -1000.0f;
+    sample_scene.camera.type = TG_CAMERA_TYPE_PERSPECTIVE;
+    sample_scene.camera.position = (v3){ 128.0f, 150.0f, 128.0f };
+    sample_scene.camera.pitch = 0.0f;
+    sample_scene.camera.yaw = 0.0f;
+    sample_scene.camera.roll = 0.0f;
+    sample_scene.camera.perspective.fov_y_in_radians = TGM_TO_RADIANS(70.0f);
+    sample_scene.camera.perspective.aspect = tg_platform_get_window_aspect_ratio();
+    sample_scene.camera.perspective.near = -0.1f;
+    sample_scene.camera.perspective.far = -1000.0f;
     tg_input_get_mouse_position(&sample_scene.last_mouse_x, &sample_scene.last_mouse_y);
-    sample_scene.h_primary_camera = tg_camera_create_perspective(sample_scene.position, sample_scene.pitch, sample_scene.yaw, sample_scene.roll, sample_scene.fov_y_in_radians, sample_scene.near, sample_scene.far);
-    sample_scene.h_secondary_camera = tg_camera_create_perspective(sample_scene.position, sample_scene.pitch, sample_scene.yaw, sample_scene.roll, sample_scene.fov_y_in_radians, sample_scene.near, sample_scene.far);
-    tg_camera_enable_shadows(sample_scene.h_secondary_camera, TG_FALSE);
+    sample_scene.h_main_renderer = tg_renderer_create(&sample_scene.camera);
+    sample_scene.h_secondary_renderer = tg_renderer_create(&sample_scene.camera);
+    tg_renderer_enable_shadows(sample_scene.h_secondary_renderer, TG_FALSE);
 
     tg_color_image_create_info color_image_create_info = { 0 };
     tg_platform_get_window_size(&color_image_create_info.width, &color_image_create_info.height);
@@ -129,7 +120,7 @@ static void tg__game_3d_create()
     sample_scene.h_quad_mesh = tg_mesh_create(4, p_quad_positions, TG_NULL, p_uvs, TG_NULL, 6, p_indices);
     sample_scene.h_quad_color_ubo = tg_uniform_buffer_create(sizeof(v3));
     *((v3*)tg_uniform_buffer_data(sample_scene.h_quad_color_ubo)) = (v3){ 1.0f, 0.0f, 0.0f };
-    tg_handle p_custom_handles[2] = { sample_scene.h_quad_color_ubo, tg_camera_get_render_target(sample_scene.h_secondary_camera) };
+    tg_handle p_custom_handles[2] = { sample_scene.h_quad_color_ubo, tg_renderer_get_render_target(sample_scene.h_secondary_renderer) };
     sample_scene.h_quad_material = tg_material_create_forward(tg_vertex_shader_get("shaders/forward.vert"), tg_fragment_shader_get("shaders/forward_custom.frag"));
 
     sample_scene.h_quad_render_command = tg_render_command_create(sample_scene.h_quad_mesh, sample_scene.h_quad_material, (v3){ 0.0f, 133.0f, 0.0f }, 2, p_custom_handles);
@@ -138,7 +129,7 @@ static void tg__game_3d_create()
 
 
 
-    sample_scene.terrain = tg_terrain_create(sample_scene.h_primary_camera);
+    sample_scene.terrain = tg_terrain_create(&sample_scene.camera);
 
 
 
@@ -201,12 +192,12 @@ static void tg__game_3d_update_and_render(f32 delta_ms)
     tg_input_get_mouse_position(&mouse_x, &mouse_y);
     if (tg_input_is_mouse_button_down(TG_BUTTON_LEFT))
     {
-        sample_scene.yaw += 0.064f * (f32)((i32)sample_scene.last_mouse_x - (i32)mouse_x);
-        sample_scene.pitch += 0.064f * (f32)((i32)sample_scene.last_mouse_y - (i32)mouse_y);
+        sample_scene.camera.yaw += TGM_TO_RADIANS(0.064f * (f32)((i32)sample_scene.last_mouse_x - (i32)mouse_x));
+        sample_scene.camera.pitch += TGM_TO_RADIANS(0.064f * (f32)((i32)sample_scene.last_mouse_y - (i32)mouse_y));
     }
-    const m4 camera_rotation = tgm_m4_euler(TGM_TO_RADIANS(sample_scene.pitch), TGM_TO_RADIANS(sample_scene.yaw), TGM_TO_RADIANS(sample_scene.roll));
+    const m4 camera_rotation = tgm_m4_euler(sample_scene.camera.pitch, sample_scene.camera.yaw, sample_scene.camera.roll);
 
-    const v4 right = { camera_rotation.m00, camera_rotation.m10, camera_rotation.m20, camera_rotation.m30 };
+    const v4 right = { camera_rotation.m00, camera_rotation.m10, camera_rotation.m20, camera_rotation.m30 }; // TODO: make these camera functions
     const v4 up = { 0.0f, 1.0f, 0.0f, 0.0f };
     const v4 forward = { -camera_rotation.m02, -camera_rotation.m12, -camera_rotation.m22, -camera_rotation.m32 };
 
@@ -241,21 +232,16 @@ static void tg__game_3d_update_and_render(f32 delta_ms)
         const f32 camera_base_speed = tg_input_is_key_down(TG_KEY_SHIFT) ? 0.1f : 0.01f;
         const f32 camera_speed = camera_base_speed * delta_ms;
         velocity = tgm_v3_mulf(tgm_v3_normalized(velocity), camera_speed);
-        sample_scene.position = tgm_v3_add(sample_scene.position, velocity);
+        sample_scene.camera.position = tgm_v3_add(sample_scene.camera.position, velocity);
     }
 
-    tg_camera_set_view(sample_scene.h_primary_camera, sample_scene.position, TGM_TO_RADIANS(sample_scene.pitch), TGM_TO_RADIANS(sample_scene.yaw), TGM_TO_RADIANS(sample_scene.roll));
-    tg_camera_set_view(sample_scene.h_secondary_camera, sample_scene.position, TGM_TO_RADIANS(sample_scene.pitch), TGM_TO_RADIANS(sample_scene.yaw), TGM_TO_RADIANS(sample_scene.roll));
     sample_scene.last_mouse_x = mouse_x;
     sample_scene.last_mouse_y = mouse_y;
 
     if (tg_input_get_mouse_wheel_detents(TG_FALSE))
     {
-        sample_scene.fov_y_in_radians -= 0.1f * tg_input_get_mouse_wheel_detents(TG_TRUE);
-        tg_camera_set_perspective_projection(sample_scene.h_primary_camera, sample_scene.fov_y_in_radians, sample_scene.near, sample_scene.far);
-        tg_camera_set_perspective_projection(sample_scene.h_secondary_camera, sample_scene.fov_y_in_radians, sample_scene.near, sample_scene.far);
+        sample_scene.camera.perspective.fov_y_in_radians -= 0.1f * tg_input_get_mouse_wheel_detents(TG_TRUE);
     }
-    //tg_camera_set_orthographic_projection(sample_scene.h_primary_camera, -16.0f, 16.0f, -9.0f, 9.0f, -320.0f, -1.0f);
 
     tg_terrain_update(&sample_scene.terrain, delta_ms);
 
@@ -279,30 +265,30 @@ static void tg__game_3d_update_and_render(f32 delta_ms)
     const v3 c0n = tgm_v3_mulf((v3){ 0.992f, 0.369f, 0.325f }, 2.0f);
     const v3 c0 = tgm_v3_lerp(c0n, c0d, -d0.y);
 
-    tg_camera_begin(sample_scene.h_secondary_camera);
-    tg_camera_push_directional_light(sample_scene.h_secondary_camera, d0, (v3){ 4.0f, 4.0f, 10.0f });
-    tg_terrain_render(&sample_scene.terrain, sample_scene.h_secondary_camera);
+    tg_renderer_begin(sample_scene.h_secondary_renderer);
+    tg_renderer_push_directional_light(sample_scene.h_secondary_renderer, d0, (v3){ 4.0f, 4.0f, 10.0f });
+    tg_terrain_render(&sample_scene.terrain, sample_scene.h_secondary_renderer);
     tg_render_command_h* ph_render_commands = TG_LIST_POINTER_TO(sample_scene.render_commands, 0);
     for (u32 i = 0; i < sample_scene.render_commands.count; i++)
     {
-        tg_camera_execute(sample_scene.h_secondary_camera, ph_render_commands[i]);
+        tg_renderer_execute(sample_scene.h_secondary_renderer, ph_render_commands[i]);
     }
-    tg_camera_end(sample_scene.h_secondary_camera);
+    tg_renderer_end(sample_scene.h_secondary_renderer);
 
-    tg_camera_begin(sample_scene.h_primary_camera);
-    tg_camera_push_directional_light(sample_scene.h_primary_camera, d0, c0);
-    tg_camera_push_point_light(sample_scene.h_primary_camera, (v3){ lx1, ly1, lz1 }, (v3){ 8.0f, 8.0f, 16.0f });
-    tg_terrain_render(&sample_scene.terrain, sample_scene.h_primary_camera);
+    tg_renderer_begin(sample_scene.h_main_renderer);
+    tg_renderer_push_directional_light(sample_scene.h_main_renderer, d0, c0);
+    tg_renderer_push_point_light(sample_scene.h_main_renderer, (v3){ lx1, ly1, lz1 }, (v3){ 8.0f, 8.0f, 16.0f });
+    tg_terrain_render(&sample_scene.terrain, sample_scene.h_main_renderer);
     ph_render_commands = TG_LIST_POINTER_TO(sample_scene.render_commands, 0);
     for (u32 i = 0; i < sample_scene.render_commands.count; i++)
     {
-        tg_camera_execute(sample_scene.h_primary_camera, ph_render_commands[i]);
+        tg_renderer_execute(sample_scene.h_main_renderer, ph_render_commands[i]);
     }
-    tg_camera_end(sample_scene.h_primary_camera);
+    tg_renderer_end(sample_scene.h_main_renderer);
 
-    tg_camera_present(sample_scene.h_primary_camera);
-    tg_camera_clear(sample_scene.h_secondary_camera);
-    tg_camera_clear(sample_scene.h_primary_camera);
+    tg_renderer_present(sample_scene.h_main_renderer);
+    tg_renderer_clear(sample_scene.h_secondary_renderer);
+    tg_renderer_clear(sample_scene.h_main_renderer);
 }
 
 static void tg__game_3d_destroy()
@@ -314,8 +300,8 @@ static void tg__game_3d_destroy()
     tg_uniform_buffer_destroy(sample_scene.h_quad_color_ubo);
     tg_mesh_destroy(sample_scene.h_quad_mesh);
 
-    tg_camera_destroy(sample_scene.h_secondary_camera);
-    tg_camera_destroy(sample_scene.h_primary_camera);
+    tg_renderer_destroy(sample_scene.h_secondary_renderer);
+    tg_renderer_destroy(sample_scene.h_main_renderer);
     tg_list_destroy(&sample_scene.render_commands);
 }
 
