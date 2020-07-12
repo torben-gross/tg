@@ -100,50 +100,105 @@ float random(vec3 seed, int i){
     return fract(sin(dot_product) * 43758.5453);
 }
 
-float shadow_mapping(vec3 position, vec4 position_lightspace)
+float shadow_mapping()
 {
     float shadow = 1.0;
 
-    vec3 proj = (position_lightspace.xyz / vec3(position_lightspace.w)) * vec3(0.5, 0.5, 1.0) + vec3(0.5, 0.5, 0.0);
-    if (proj.x > 0.0 && proj.x < 1.0 &&
-        proj.y > 0.0 && proj.y < 1.0 &&
-        proj.z > 0.0 && proj.z < 1.0
-    )
-    {
-        float bias = 0.025;
+    vec3  position = texture(u_position, v_uv).xyz;
+    float d = distance(position, u_camera_position);
 
-        //for (int i = 0; i < TG_SHADOW_SAMPLE_COUNT; i++)
-        //{
-		//    int index = int(16.0 * random(floor(position.xyz * 1024.0), i)) % 16;
-        //    vec2 uv = clamp(proj.xy + shadow_poisson_disk[index] / vec2(1024.0), vec2(0.0), vec2(1.0));
-        //    float pcf_depth = texture(u_shadow_map0, uv).x;
-        //    shadow += proj.z - bias < pcf_depth ? 1.0 : 0.0;
-	    //}
-        //shadow = clamp(shadow / float(TG_SHADOW_SAMPLE_COUNT), 0.0, 1.0);
+    int shadow_map_index = -1;
+    int secondary = -1;
+    float t = 0.0;
+    for (int i = 0; i < TG_CASCADED_SHADOW_MAPS; i++)
+    {
+        int major0 = i / 4;
+        int minor0 = i % 4;
+        int major1 = (i + 1) / 4;
+        int minor1 = (i + 1) % 4;
         
-        float d = distance(position, u_camera_position);
-        if (d >= u_shadow_distances[0].x && d < u_shadow_distances[0].y)
+        float f0 = u_shadow_distances[major0][minor0];
+        float f1 = u_shadow_distances[major1][minor1];
+
+        if (f0 < d && d < f1)
         {
-            return proj.z - bias < texture(u_shadow_maps[0], proj.xy).x ? 1.0 : 0.0;
-        }
-        else if (d >= u_shadow_distances[0].y && d < u_shadow_distances[0].z)
-        {
-            return proj.z - bias < texture(u_shadow_maps[1], proj.xy).x ? 1.0 : 0.0;
-        }
-        else if (d >= u_shadow_distances[0].z)
-        {
-            if (proj.z - bias < texture(u_shadow_maps[2], proj.xy).x)
+            shadow_map_index = i;
+            if (d - f0 <= 0.4) // TODO: the 0.4 is quite hard coded!
             {
-                return 1.0;
+                secondary = i - 1;
+                t = (1.0 - (d - f0) / 0.4) * 0.5;
             }
-            else
+            else if (f1 - d <= 0.4)
             {
-                return 0.0f;//(d - u_shadow_distances[0].z) / (u_shadow_distances[0].w - u_shadow_distances[0].z);
+                secondary = i + 1;
+                t = (1.0 - (f1 - d) / 0.4) * 0.5;
             }
+            break;
         }
-        else
+    }
+
+    if (shadow_map_index != -1)
+    {
+        vec4  position_lightspace = u_lightspace_matrices[shadow_map_index] * texture(u_position, v_uv);
+
+        vec3 proj = (position_lightspace.xyz / vec3(position_lightspace.w)) * vec3(0.5, 0.5, 1.0) + vec3(0.5, 0.5, 0.0);
+        if (proj.x > 0.0 && proj.x < 1.0 &&
+            proj.y > 0.0 && proj.y < 1.0 &&
+            proj.z > 0.0 && proj.z < 1.0
+        )
         {
-            return 1.0;
+            float bias = 0.025;
+
+            //float depth = 0.0;
+            //for (int y = -1; y <= 1; y++)
+            //{
+            //    for (int x = -1; x <= 1; x++)
+            //    {
+            //        vec2 offset = vec2(x, y) / 1024.0;
+            //        vec2 uv = clamp(vec2(proj.xy + offset), 0.0, 1.0);
+            //        depth += texture(u_shadow_maps[shadow_map_index], uv).x;
+            //    }
+            //}
+            //depth = clamp(depth / 9.0, 0.0, 1.0);
+            //shadow = proj.z - bias < depth ? 1.0 : 0.0;
+
+
+
+            for (int i = 0; i < TG_SHADOW_SAMPLE_COUNT; i++)
+            {
+		        int index = int(16.0 * random(floor(position * 1024.0), i)) % 16;
+                vec2 uv = clamp(proj.xy + shadow_poisson_disk[index] / vec2(1024.0), vec2(0.0), vec2(1.0));
+                float depth = texture(u_shadow_maps[shadow_map_index], uv).x;
+                shadow += proj.z - bias < depth ? 1.0 : 0.0;
+	        }
+            shadow = clamp(shadow / float(TG_SHADOW_SAMPLE_COUNT), 0.0, 1.0);
+            
+            if (secondary != -1)
+            {
+                vec4 secondary_position_lightspace = u_lightspace_matrices[secondary] * texture(u_position, v_uv);
+                vec3 secondary_proj = (secondary_position_lightspace.xyz / vec3(secondary_position_lightspace.w)) * vec3(0.5, 0.5, 1.0) + vec3(0.5, 0.5, 0.0);
+                float secondary_shadow = 1.0;
+                for (int i = 0; i < TG_SHADOW_SAMPLE_COUNT; i++)
+                {
+		            int index = int(16.0 * random(floor(position * 1024.0), i)) % 16;
+                    vec2 uv = clamp(secondary_proj.xy + shadow_poisson_disk[index] / vec2(1024.0), vec2(0.0), vec2(1.0));
+                    float depth = texture(u_shadow_maps[secondary], uv).x;
+                    secondary_shadow += secondary_proj.z - bias < depth ? 1.0 : 0.0;
+	            }
+                secondary_shadow = clamp(secondary_shadow / float(TG_SHADOW_SAMPLE_COUNT), 0.0, 1.0);
+                shadow = (1.0 - t) * shadow + t * secondary_shadow;
+            }
+
+
+
+            //shadow = proj.z - bias < texture(u_shadow_maps[shadow_map_index], proj.xy).x ? 1.0 : 0.0;
+            //if (secondary != -1)
+            //{
+            //    vec4 secondary_position_lightspace = u_lightspace_matrices[secondary] * texture(u_position, v_uv);
+            //    vec3 secondary_proj = (secondary_position_lightspace.xyz / vec3(secondary_position_lightspace.w)) * vec3(0.5, 0.5, 1.0) + vec3(0.5, 0.5, 0.0);
+            //    float secondary_shadow = secondary_proj.z - bias < texture(u_shadow_maps[secondary], secondary_proj.xy).x ? 1.0 : 0.0;
+            //    shadow = (1.0 - t) * shadow + t * secondary_shadow;
+            //}
         }
     }
 
@@ -158,21 +213,6 @@ void main()
     float metallic            = texture(u_metallic_roughness_ao, v_uv).x;
     float roughness           = texture(u_metallic_roughness_ao, v_uv).y;
     float ao                  = texture(u_metallic_roughness_ao, v_uv).z;
-    vec4  position_lightspace;
-    
-    float d = distance(position, u_camera_position);
-    if (d >= u_shadow_distances[0].x && d < u_shadow_distances[0].y)
-    {
-        position_lightspace = u_lightspace_matrices[0] * texture(u_position, v_uv);
-    }
-    else if (d >= u_shadow_distances[0].y && d < u_shadow_distances[0].z)
-    {
-        position_lightspace = u_lightspace_matrices[1] * texture(u_position, v_uv);
-    }
-    else
-    {
-        position_lightspace = u_lightspace_matrices[2] * texture(u_position, v_uv);
-    }
 
     vec4 sky_color = 0.7 * u_directional_light_colors[0];
     if (dot(normal, normal) < 0.5) // sky
@@ -208,7 +248,7 @@ void main()
             vec3 k_diffuse  = (vec3(1.0) - k_specular) * (1.0 - metallic);
         
             float ndl = max(dot(n, l), 0.0);
-            float shadow = i == 0 ? shadow_mapping(position, position_lightspace) : 1.0;
+            float shadow = i == 0 ? shadow_mapping() : 1.0;
             lo += (k_diffuse * albedo / TG_PI + specular) * radiance * ndl * shadow;
         }
 

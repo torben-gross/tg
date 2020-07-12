@@ -980,15 +980,13 @@ void tg_renderer_end(tg_renderer_h h_renderer)
     {
         tg_vulkan_command_buffer_begin(h_renderer->shadow_pass.command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, TG_NULL);
 
-        const f32 p_percentiles[TG_CASCADED_SHADOW_MAPS + 1] = { 0.0f, 0.003f, 0.01f, 0.04f };
+        const f32 p_percentiles[TG_CASCADED_SHADOW_MAPS + 1] = { 0.0f, 0.003f, 0.01f, 0.03f };
 
         for (u32 i = 0; i < TG_CASCADED_SHADOW_MAPS; i++)
         {
             tg_vulkan_command_buffer_cmd_begin_render_pass(h_renderer->shadow_pass.command_buffer, h_renderer->shadow_pass.render_pass, &h_renderer->shadow_pass.p_framebuffers[i], VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 
             // TODO: decide, which lights cast/receive shadows!
-            // TODO: penumbra
-
             const v4 p_corners[8] = {
                 { -1.0f,  1.0f,  0.0f,  1.0f },
                 {  1.0f,  1.0f,  0.0f,  1.0f },
