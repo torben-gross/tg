@@ -24,6 +24,8 @@
 #define TG_CASCADED_SHADOW_MAPS           3
 #define TG_CASCADED_SHADOW_MAP_SIZE       1024
 
+#define TG_SSAO_MAP_SIZE                  512
+
 #define TG_MAX_DIRECTIONAL_LIGHTS         512
 #define TG_MAX_POINT_LIGHTS               512
 

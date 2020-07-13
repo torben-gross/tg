@@ -80,6 +80,7 @@ static void tg__game_3d_create()
     tg_input_get_mouse_position(&sample_scene.last_mouse_x, &sample_scene.last_mouse_y);
     sample_scene.h_main_renderer = tg_renderer_create(&sample_scene.camera);
     sample_scene.h_secondary_renderer = tg_renderer_create(&sample_scene.camera);
+    tg_renderer_enable_shadows(sample_scene.h_main_renderer, TG_FALSE);
     tg_renderer_enable_shadows(sample_scene.h_secondary_renderer, TG_FALSE);
 
     tg_color_image_create_info color_image_create_info = { 0 };

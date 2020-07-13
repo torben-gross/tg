@@ -269,6 +269,8 @@ typedef struct tg_renderer
     const tg_camera*             p_camera;
     tg_vulkan_buffer             view_projection_ubo;
     tg_render_target             render_target;
+    tg_vulkan_buffer             screen_quad_vbo;
+    tg_vulkan_buffer             screen_quad_ibo;
 
     u32                          render_command_count;
     tg_render_command_h          ph_render_commands[TG_MAX_RENDER_COMMANDS];
@@ -294,9 +296,24 @@ typedef struct tg_renderer
 
     struct
     {
+        tg_color_image           ssao_attachment;
+        VkRenderPass             ssao_render_pass;
+        tg_vulkan_framebuffer    ssao_framebuffer;
+        tg_vulkan_pipeline       ssao_graphics_pipeline;
+        tg_color_image           ssao_noise_image;
+        tg_vulkan_buffer         ssao_ubo;
+
+        tg_color_image           blur_attachment;
+        VkRenderPass             blur_render_pass;
+        tg_vulkan_framebuffer    blur_framebuffer;
+        tg_vulkan_pipeline       blur_graphics_pipeline;
+
+        VkCommandBuffer          command_buffer;
+    } ssao_pass;
+
+    struct
+    {
         tg_color_image           color_attachment;
-        tg_vulkan_buffer         vbo;
-        tg_vulkan_buffer         ibo;
         VkSemaphore              rendering_finished_semaphore;
         VkRenderPass             render_pass;
         tg_vulkan_framebuffer    framebuffer;

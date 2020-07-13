@@ -8,14 +8,14 @@
 
 
 
-layout(location = 0) in vec2    v_uv;
+layout(location = 0) in vec2 v_uv;
 
 
 
-layout(set = 0, binding = 0) uniform    sampler2D u_position;
-layout(set = 0, binding = 1) uniform    sampler2D u_normal;
-layout(set = 0, binding = 2) uniform    sampler2D u_albedo;
-layout(set = 0, binding = 3) uniform    sampler2D u_metallic_roughness_ao;
+layout(set = 0, binding = 0) uniform sampler2D u_position;
+layout(set = 0, binding = 1) uniform sampler2D u_normal;
+layout(set = 0, binding = 2) uniform sampler2D u_albedo;
+layout(set = 0, binding = 3) uniform sampler2D u_metallic_roughness_ao;
 
 layout(set = 0, binding = 4) uniform render_info
 {
@@ -31,6 +31,7 @@ layout(set = 0, binding = 4) uniform render_info
 };
 
 layout(set = 0, binding = 5) uniform sampler2D[TG_CASCADED_SHADOW_MAPS] u_shadow_maps;
+layout(set = 0, binding = 6) uniform sampler2D u_ssao;
 
 
 
@@ -139,7 +140,7 @@ float shadow_mapping()
 
     if (shadow_map_index != -1)
     {
-        vec4  position_lightspace = u_lightspace_matrices[shadow_map_index] * texture(u_position, v_uv);
+        vec4 position_lightspace = u_lightspace_matrices[shadow_map_index] * texture(u_position, v_uv);
 
         vec3 proj = (position_lightspace.xyz / vec3(position_lightspace.w)) * vec3(0.5, 0.5, 1.0) + vec3(0.5, 0.5, 0.0);
         if (proj.x > 0.0 && proj.x < 1.0 &&
@@ -212,7 +213,7 @@ void main()
     vec3  albedo              = texture(u_albedo, v_uv).xyz;
     float metallic            = texture(u_metallic_roughness_ao, v_uv).x;
     float roughness           = texture(u_metallic_roughness_ao, v_uv).y;
-    float ao                  = texture(u_metallic_roughness_ao, v_uv).z;
+    float ao                  = texture(u_ssao, v_uv).x * texture(u_metallic_roughness_ao, v_uv).z;
 
     vec4 sky_color = 0.7 * u_directional_light_colors[0];
     if (dot(normal, normal) < 0.5) // sky
