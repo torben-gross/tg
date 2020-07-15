@@ -18,5 +18,5 @@ void main()
             result += texture(u_ssao, clamp(v_uv + offset, 0.0, 1.0)).x;
         }
     }
-    out_color.x = result / 16.0;
+    out_color.x = clamp(result / 16.0, 0.0, 1.0);
 }

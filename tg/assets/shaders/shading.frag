@@ -213,7 +213,8 @@ void main()
     vec3  albedo              = texture(u_albedo, v_uv).xyz;
     float metallic            = texture(u_metallic_roughness_ao, v_uv).x;
     float roughness           = texture(u_metallic_roughness_ao, v_uv).y;
-    float ao                  = texture(u_ssao, v_uv).x * texture(u_metallic_roughness_ao, v_uv).z;
+    //float ao                  = texture(u_ssao, v_uv).x * texture(u_metallic_roughness_ao, v_uv).z;
+    float ao                  = texture(u_metallic_roughness_ao, v_uv).z;
 
     vec4 sky_color = 0.7 * u_directional_light_colors[0];
     if (dot(normal, normal) < 0.5) // sky
@@ -285,9 +286,9 @@ void main()
         color = color / (color + vec3(1.0));
         color = pow(color, vec3(1.0 / 2.2));
 
-        vec3  d = u_camera_position - position;
-        float t = clamp(sqrt(dot(d, d)) / 256.0f, 0.0, 1.0);
-        color   = mix(color, sky_color.xyz, t);
+        //vec3  d = u_camera_position - position;
+        //float t = clamp(sqrt(dot(d, d)) / 256.0f, 0.0, 1.0);
+        //color   = mix(color, sky_color.xyz, t);
 
         out_color = vec4(color, 1.0);
     }

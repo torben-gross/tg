@@ -7,6 +7,7 @@
 
 #include "memory/tg_memory.h"
 #include "tg_assets.h"
+#include "util/tg_string.h"
 
 
 
@@ -88,28 +89,28 @@ static void tg__recalculate_normals(u32 vertex_count, u32 index_count, const u16
         tg_vulkan_descriptor_set_update_storage_buffer(compute_pipeline.descriptor_set, p_staging_buffer->buffer, 0);
         tg_vulkan_descriptor_set_update_uniform_buffer(compute_pipeline.descriptor_set, uniform_buffer.buffer, 1);
 
-        tg_vulkan_command_buffer_begin(command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
-        {
-            vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute_pipeline.pipeline);
-            vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute_pipeline.pipeline_layout, 0, 1, &compute_pipeline.descriptor_set, 0, TG_NULL);
-            vkCmdDispatch(command_buffer, vertex_count, 1, 1);
-        }
-        tg_vulkan_command_buffer_end_and_submit(command_buffer, TG_VULKAN_QUEUE_TYPE_COMPUTE);
+    tg_vulkan_command_buffer_begin(command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
+    {
+        vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute_pipeline.pipeline);
+        vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute_pipeline.pipeline_layout, 0, 1, &compute_pipeline.descriptor_set, 0, TG_NULL);
+        vkCmdDispatch(command_buffer, vertex_count, 1, 1);
+    }
+    tg_vulkan_command_buffer_end_and_submit(command_buffer, TG_VULKAN_QUEUE_TYPE_COMPUTE);
 
 
 
-        tg_vulkan_buffer_destroy(&uniform_buffer);
-        tg_vulkan_command_buffer_free(TG_VULKAN_COMMAND_POOL_TYPE_COMPUTE, command_buffer);
-        tg_vulkan_pipeline_destroy(&compute_pipeline);
+    tg_vulkan_buffer_destroy(&uniform_buffer);
+    tg_vulkan_command_buffer_free(TG_VULKAN_COMMAND_POOL_TYPE_COMPUTE, command_buffer);
+    tg_vulkan_pipeline_destroy(&compute_pipeline);
 #else
-        for (u32 i = 0; i < vertex_count; i += 3)
-        {
-            tg__recalculate_normal(
-                &((tg_vertex*)p_staging_buffer->p_mapped_device_memory)[i + 0],
-                &((tg_vertex*)p_staging_buffer->p_mapped_device_memory)[i + 1],
-                &((tg_vertex*)p_staging_buffer->p_mapped_device_memory)[i + 2]
-            );
-        }
+    for (u32 i = 0; i < vertex_count; i += 3)
+    {
+        tg__recalculate_normal(
+            &((tg_vertex*)p_staging_buffer->memory.p_mapped_device_memory)[i + 0],
+            &((tg_vertex*)p_staging_buffer->memory.p_mapped_device_memory)[i + 1],
+            &((tg_vertex*)p_staging_buffer->memory.p_mapped_device_memory)[i + 2]
+        );
+    }
 #endif
     }
 }
@@ -167,6 +168,54 @@ static void tg__recalculate_bitangents(u32 vertex_count, tg_vertex* p_vertices)
     {
         p_vertices[i].bitangent = tgm_v3_normalized(tgm_v3_cross(p_vertices[i].normal, p_vertices[i].tangent));
     }
+}
+
+static const char* tg__skip_line(const char* p_iterator, const char* const p_eof)
+{
+    while (p_iterator < p_eof && *p_iterator != '\n' && *p_iterator != '\r')
+    {
+        p_iterator++;
+    }
+    if (*p_iterator == '\r')
+    {
+        p_iterator++;
+    }
+    if (*p_iterator == '\n')
+    {
+        p_iterator++;
+    }
+
+    return p_iterator;
+}
+
+static const char* tg__skip_token(const char* p_iterator)
+{
+    while (*p_iterator != '\n' && *p_iterator != '\r' && *p_iterator != ' ')
+    {
+        p_iterator++;
+    }
+
+    return p_iterator;
+}
+
+static const char* tg__skip_spaces(const char* p_iterator, const char* const p_eof)
+{
+    while (p_iterator < p_eof && *p_iterator == ' ')
+    {
+        p_iterator++;
+    }
+
+    return p_iterator;
+}
+
+static const char* tg__skip_whitespace(const char* p_iterator, const char* const p_eof)
+{
+    while (p_iterator < p_eof && (*p_iterator == '\n' || *p_iterator == '\r' || *p_iterator == ' '))
+    {
+        p_iterator++;
+    }
+
+    return p_iterator;
 }
 
 
@@ -472,6 +521,191 @@ tg_mesh_h tg_mesh_create_sphere(f32 radius, u32 sector_count, u32 stack_count)
 
     TG_MEMORY_STACK_FREE(unique_vertex_count * sizeof(*p_unique_uvs));
     TG_MEMORY_STACK_FREE(unique_vertex_count * sizeof(*p_unique_positions));
+
+    return h_mesh;
+}
+
+tg_mesh_h tg_mesh_load(const char* p_filename)
+{
+    TG_ASSERT(p_filename);
+
+    tg_mesh_h h_mesh = TG_NULL;
+
+    u32 size = 0; char* p_data = TG_NULL;
+    tg_platform_read_file(p_filename, &size, &p_data);
+
+    const char* p_extension = tg_string_extract_filename_extension(p_filename);
+    if (tg_string_equal(p_extension, "obj"))
+    {
+        const char* p_it = p_data;
+        const char* const p_eof = p_data + size;
+
+        u32 unique_vertex_count = 0;
+        u32 unique_uv_count = 0;
+        u32 unique_normal_count = 0;
+        u32 total_triangle_count = 0;
+
+        while (p_it < p_eof)
+        {
+            p_it = tg__skip_whitespace(p_it, p_eof);
+
+            if (*p_it == 'v')
+            {
+                if (p_it[1] == 't')
+                {
+                    unique_uv_count++;
+                }
+                else if (p_it[1] == 'n')
+                {
+                    unique_normal_count++;
+                }
+                else
+                {
+                    unique_vertex_count++;
+                }
+            }
+            else if (*p_it == 'f')
+            {
+                total_triangle_count++;
+            }
+            
+            p_it = tg__skip_line(p_it, p_eof);
+        }
+
+        v3* p_unique_positions = TG_MEMORY_STACK_ALLOC(unique_vertex_count * sizeof(v3));
+        v3* p_unique_normals = TG_MEMORY_STACK_ALLOC(unique_normal_count * sizeof(v3));
+        v2* p_unique_uvs = TG_MEMORY_STACK_ALLOC(unique_uv_count * sizeof(v2));
+
+        v3i* p_triangle_positions = TG_MEMORY_STACK_ALLOC(total_triangle_count * sizeof(v3i));
+        v3i* p_triangle_normals = TG_MEMORY_STACK_ALLOC(total_triangle_count * sizeof(v3i));
+        v3i* p_triangle_uvs = TG_MEMORY_STACK_ALLOC(total_triangle_count * sizeof(v3i));
+
+        unique_vertex_count = 0;
+        unique_uv_count = 0;
+        unique_normal_count = 0;
+        total_triangle_count = 0;
+
+        p_it = p_data;
+        while (p_it < p_eof)
+        {
+            p_it = tg__skip_whitespace(p_it, p_eof);
+
+            if (*p_it == 'v')
+            {
+                if (p_it[1] == 't')
+                {
+                    p_it = tg__skip_whitespace(tg__skip_token(p_it), p_eof);
+                    p_unique_uvs[unique_uv_count].x = tg_string_to_f32(p_it); p_it = tg__skip_whitespace(tg__skip_token(p_it), p_eof);
+                    p_unique_uvs[unique_uv_count].y = tg_string_to_f32(p_it); p_it = tg__skip_whitespace(tg__skip_token(p_it), p_eof);
+                    unique_uv_count++;
+                }
+                else if (p_it[1] == 'n')
+                {
+                    p_it = tg__skip_whitespace(tg__skip_token(p_it), p_eof);
+                    p_unique_normals[unique_normal_count].x = tg_string_to_f32(p_it); p_it = tg__skip_whitespace(tg__skip_token(p_it), p_eof);
+                    p_unique_normals[unique_normal_count].y = tg_string_to_f32(p_it); p_it = tg__skip_whitespace(tg__skip_token(p_it), p_eof);
+                    p_unique_normals[unique_normal_count].z = tg_string_to_f32(p_it); p_it = tg__skip_whitespace(tg__skip_token(p_it), p_eof);
+                    unique_normal_count++;
+                }
+                else
+                {
+                    p_it = tg__skip_whitespace(tg__skip_token(p_it), p_eof);
+                    p_unique_positions[unique_vertex_count].x = tg_string_to_f32(p_it); p_it = tg__skip_whitespace(tg__skip_token(p_it), p_eof);
+                    p_unique_positions[unique_vertex_count].y = tg_string_to_f32(p_it); p_it = tg__skip_whitespace(tg__skip_token(p_it), p_eof);
+                    p_unique_positions[unique_vertex_count].z = tg_string_to_f32(p_it); p_it = tg__skip_whitespace(tg__skip_token(p_it), p_eof);
+                    unique_vertex_count++;
+                }
+            }
+            else if (*p_it == 'f')
+            {
+                p_it = tg__skip_whitespace(tg__skip_token(p_it), p_eof);
+
+                for (u8 i = 0; i < 3; i++)
+                {
+                    p_triangle_positions[total_triangle_count].p_data[i] = tg_string_to_i32(p_it);
+                    TG_ASSERT(p_triangle_positions[total_triangle_count].p_data[i] >= 0);
+                    while (*p_it++ != '/');
+                    p_it = tg__skip_spaces(p_it, p_eof);
+
+                    if (*p_it != '/')
+                    {
+                        p_triangle_uvs[total_triangle_count].p_data[i] = tg_string_to_i32(p_it);
+                        TG_ASSERT(p_triangle_uvs[total_triangle_count].p_data[i] >= 0);
+                        while (*p_it >= '0' && *p_it <= '9')
+                        {
+                            p_it++;
+                        }
+                        p_it = tg__skip_spaces(p_it, p_eof);
+                    }
+                    else
+                    {
+                        p_triangle_uvs[total_triangle_count].p_data[i] = -1;
+                    }
+
+                    if (*p_it == '/')
+                    {
+                        p_it++;
+                        p_it = tg__skip_spaces(p_it, p_eof);
+                        p_triangle_normals[total_triangle_count].p_data[i] = tg_string_to_i32(p_it);
+                        TG_ASSERT(p_triangle_normals[total_triangle_count].p_data[i] >= 0);
+                        p_it = tg__skip_token(p_it);
+                    }
+                    else
+                    {
+                        p_triangle_normals[total_triangle_count].p_data[i] = -1;
+                    }
+                    p_it = tg__skip_spaces(p_it, p_eof);
+                }
+
+#ifdef TG_DEBUG
+                p_it = tg__skip_spaces(p_it, p_eof);
+                TG_ASSERT(*p_it == '\n' || *p_it == '\r'); // TODO: only triangulated meshes are currently supported!
+#endif
+
+                total_triangle_count++;
+            }
+            else
+            {
+                p_it = tg__skip_line(p_it, p_eof);
+            }
+        }
+
+        v3* p_positions = TG_MEMORY_STACK_ALLOC(3 * (u64)total_triangle_count * sizeof(v3));
+        v3* p_normals = TG_MEMORY_STACK_ALLOC(3 * (u64)total_triangle_count * sizeof(v3));
+        v2* p_uvs = TG_MEMORY_STACK_ALLOC(3 * (u64)total_triangle_count * sizeof(v2));
+
+        for (u32 i = 0; i < total_triangle_count; i++)
+        {
+            p_positions[3 * i + 0] = p_unique_positions[p_triangle_positions[i].p_data[0] - 1];
+            p_positions[3 * i + 1] = p_unique_positions[p_triangle_positions[i].p_data[1] - 1];
+            p_positions[3 * i + 2] = p_unique_positions[p_triangle_positions[i].p_data[2] - 1];
+            p_normals[3 * i + 0] = p_triangle_normals[i].p_data[0] - 1 == -1 ? (v3){ 0.0f, 0.0f, 0.0f } : p_unique_normals[p_triangle_normals[i].p_data[0] - 1];
+            p_normals[3 * i + 1] = p_triangle_normals[i].p_data[1] - 1 == -1 ? (v3){ 0.0f, 0.0f, 0.0f } : p_unique_normals[p_triangle_normals[i].p_data[1] - 1];
+            p_normals[3 * i + 2] = p_triangle_normals[i].p_data[2] - 1 == -1 ? (v3){ 0.0f, 0.0f, 0.0f } : p_unique_normals[p_triangle_normals[i].p_data[2] - 1];
+            p_uvs[3 * i + 0] = p_triangle_uvs[i].p_data[0] - 1 == -1 ? (v2){ 0.0f, 0.0f } : p_unique_uvs[p_triangle_uvs[i].p_data[0] - 1];
+            p_uvs[3 * i + 1] = p_triangle_uvs[i].p_data[1] - 1 == -1 ? (v2){ 0.0f, 0.0f } : p_unique_uvs[p_triangle_uvs[i].p_data[1] - 1];
+            p_uvs[3 * i + 2] = p_triangle_uvs[i].p_data[2] - 1 == -1 ? (v2){ 0.0f, 0.0f } : p_unique_uvs[p_triangle_uvs[i].p_data[2] - 1];
+        }
+
+        for (u32 i = 0; i < 3 * total_triangle_count; i++) // TODO: this must go
+        {
+            p_positions[i] = tgm_v3_mulf(p_positions[i], 0.03f);
+        }
+
+        h_mesh = tg_mesh_create(3 * total_triangle_count, p_positions, p_normals, p_uvs, TG_NULL, 0, TG_NULL);
+
+        TG_MEMORY_STACK_FREE(3 * (u64)total_triangle_count * sizeof(v2));
+        TG_MEMORY_STACK_FREE(3 * (u64)total_triangle_count * sizeof(v3));
+        TG_MEMORY_STACK_FREE(3 * (u64)total_triangle_count * sizeof(v3));
+
+        TG_MEMORY_STACK_FREE(total_triangle_count * sizeof(v3i));
+        TG_MEMORY_STACK_FREE(total_triangle_count * sizeof(v3i));
+        TG_MEMORY_STACK_FREE(total_triangle_count * sizeof(v3i));
+
+        TG_MEMORY_STACK_FREE(unique_uv_count * sizeof(v2));
+        TG_MEMORY_STACK_FREE(unique_normal_count * sizeof(v3));
+        TG_MEMORY_STACK_FREE(unique_vertex_count * sizeof(v3));
+    }
 
     return h_mesh;
 }

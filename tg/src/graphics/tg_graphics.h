@@ -40,6 +40,7 @@ TG_DECLARE_HANDLE(tg_fragment_shader);
 TG_DECLARE_HANDLE(tg_material);
 TG_DECLARE_HANDLE(tg_mesh);
 TG_DECLARE_HANDLE(tg_index_buffer);
+TG_DECLARE_HANDLE(tg_light_probe);
 TG_DECLARE_HANDLE(tg_render_command);
 TG_DECLARE_HANDLE(tg_render_target);
 TG_DECLARE_HANDLE(tg_renderer);
@@ -232,9 +233,13 @@ tg_mesh_h                        tg_mesh_create(u32 vertex_count, const v3* p_po
 tg_mesh_h                        tg_mesh_create2(u32 vertex_count, u32 vertex_stride, const void* p_vertices, u32 index_count, const u16* p_indices);
 tg_mesh_h                        tg_mesh_create_empty(u32 vertex_capacity, u32 index_capacity);
 tg_mesh_h                        tg_mesh_create_sphere(f32 radius, u32 sector_count, u32 stack_count);
+tg_mesh_h                        tg_mesh_load(const char* p_filename);
 void                             tg_mesh_destroy(tg_mesh_h h_mesh);
 void                             tg_mesh_update(tg_mesh_h h_mesh, u32 vertex_count, const v3* p_positions, const v3* p_normals, const v2* p_uvs, const v3* p_tangents, u32 index_count, const u16* p_indices);
 void                             tg_mesh_update2(tg_mesh_h h_mesh, u32 vertex_count, u32 vertex_stride, const void* p_vertices, u32 index_count, const u16* p_indices); // TODO: this needs to set a flag or a time, so that the camera knows, that it needs a reset
+
+tg_light_probe_h                 tg_light_probe_create(v3 position);
+void                             tg_light_probe_destroy(tg_light_probe_h h_light_probe);
 
 tg_renderer_h                    tg_renderer_create(tg_camera* p_camera);
 void                             tg_renderer_destroy(tg_renderer_h h_renderer);

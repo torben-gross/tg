@@ -13,6 +13,20 @@ b32 tg_string_equal(const char* p_s0, const char* p_s1)
 	return result;
 }
 
+const char* tg_string_extract_filename_extension(const char* p_filename)
+{
+	const char* p_it = &p_filename[tg_string_length(p_filename) - 1];
+	while (*p_it != '.')
+	{
+		if (p_it-- == p_filename)
+		{
+			break;
+		}
+	}
+	p_it++;
+	return p_it;
+}
+
 void tg_string_format(u32 size, char* p_buffer, const char* p_format, ...)
 {
 	TG_ASSERT(size && p_buffer && p_format);
@@ -25,6 +39,8 @@ void tg_string_format(u32 size, char* p_buffer, const char* p_format, ...)
 
 void tg_string_format_va(u32 size, char* p_buffer, const char* p_format, char* p_variadic_arguments)
 {
+	TG_ASSERT(size && p_buffer && p_format);
+
 	const char* p_format_position = p_format;
 	char* p_buffer_position = p_buffer;
 	while (*p_format_position != '\0')
@@ -134,6 +150,8 @@ void tg_string_format_va(u32 size, char* p_buffer, const char* p_format, char* p
 
 u32 tg_string_length(const char* p_string)
 {
+	TG_ASSERT(p_string);
+
 	const char* p_it = p_string;
 	while (*p_it)
 	{
@@ -145,6 +163,8 @@ u32 tg_string_length(const char* p_string)
 
 void tg_string_replace_characters(char* p_string, char replace, char with)
 {
+	TG_ASSERT(p_string);
+
 	char* p_it = p_string;
 	do
 	{
@@ -153,4 +173,63 @@ void tg_string_replace_characters(char* p_string, char replace, char with)
 			*p_it = with;
 		}
 	} while (*++p_it != '\0');
+}
+
+f32 tg_string_to_f32(const char* p_string) // TODO: this does not work with exponents!
+{
+	TG_ASSERT(p_string);
+	TG_ASSERT(*p_string == '-' || *p_string >= '0' && *p_string <= '9');
+
+	f32 sign = 1.0f;
+	f32 decimal = 0.0f;
+	f32 integral = 0.0f;
+
+	if (*p_string == '-')
+	{
+		sign = -1.0f;
+		p_string++;
+	}
+	while (*p_string >= '0' && *p_string <= '9')
+	{
+		decimal *= 10.0f;
+		decimal += (f32)(*p_string - '0');
+		p_string++;
+	}
+	if (*p_string++ == '.')
+	{
+		f32 f = 10.0f;
+		while (*p_string >= '0' && *p_string <= '9')
+		{
+			integral += (f32)(*p_string - '0') / f;
+			f *= 10.0f;
+			p_string++;
+		}
+	}
+
+	const f32 result = sign * (decimal + integral);
+	return result;
+}
+
+i32 tg_string_to_i32(const char* p_string)
+{
+	TG_ASSERT(p_string);
+	TG_ASSERT(*p_string == '-' || *p_string >= '0' && *p_string <= '9');
+
+	i32 sign = 1;
+	i32 decimal = 0;
+
+	if (*p_string == '-')
+	{
+		sign = -1;
+		p_string++;
+	}
+	while (*p_string >= '0' && *p_string <= '9')
+	{
+		decimal *= 10;
+		decimal += (i32)(*p_string - '0');
+		p_string++;
+	}
+
+	const i32 result = sign * decimal;
+	return result;
 }

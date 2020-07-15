@@ -586,6 +586,7 @@ static void tg__init_shading_pass(tg_renderer_h h_renderer)
         vkCmdDrawIndexed(h_renderer->shading_pass.command_buffer, 6, 1, 0, 0, 0);
         vkCmdEndRenderPass(h_renderer->shading_pass.command_buffer);
 
+        // TODO: skydome!!! then remove the clearing of all color images
         for (u32 i = 0; i < TG_DEFERRED_GEOMETRY_COLOR_ATTACHMENT_COUNT; i++)
         {
             tg_vulkan_command_buffer_cmd_transition_color_image_layout(
@@ -801,22 +802,6 @@ static void tg__init_clear_pass(tg_renderer_h h_renderer)
 {
     h_renderer->clear_pass.command_buffer = tg_vulkan_command_buffer_allocate(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     tg_vulkan_command_buffer_begin(h_renderer->clear_pass.command_buffer, 0, TG_NULL);
-
-    tg_vulkan_command_buffer_cmd_transition_color_image_layout(
-        h_renderer->clear_pass.command_buffer,
-        &h_renderer->render_target.color_attachment,
-        VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
-        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT
-    );
-    tg_vulkan_command_buffer_cmd_clear_color_image(h_renderer->clear_pass.command_buffer, &h_renderer->render_target.color_attachment);
-    tg_vulkan_command_buffer_cmd_transition_color_image_layout(
-        h_renderer->clear_pass.command_buffer,
-        &h_renderer->render_target.color_attachment,
-        VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-        VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
-    );
 
     tg_vulkan_command_buffer_cmd_transition_depth_image_layout(
         h_renderer->clear_pass.command_buffer,

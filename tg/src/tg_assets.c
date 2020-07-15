@@ -24,20 +24,6 @@ const char* p_asset_path = TG_ASSET_PATH;
 
 
 
-static const char* tg__extract_filename_extension(const char* p_filename)
-{
-	const char* p_it = &p_filename[tg_string_length(p_filename) - 1];
-	while (*p_it != '.')
-	{
-		if (p_it-- == p_filename)
-		{
-			break;
-		}
-	}
-	p_it++;
-	return p_it;
-}
-
 static u32 tg__hash(const char* p_filename)
 {
 	const char* p_it = &p_filename[tg_string_length(p_filename) - 1];
@@ -79,7 +65,7 @@ static void tg__try_load(const tg_file_properties* p_properties)
 	char p_filename_buffer[TG_MAX_PATH] = { 0 };
 	tg_string_format(TG_MAX_PATH, p_filename_buffer, "%s%c%s", p_properties->p_relative_directory, tg_platform_get_file_separator(), p_properties->p_filename);
 
-	const char* p_file_extension = tg__extract_filename_extension(p_properties->p_filename);
+	const char* p_file_extension = tg_string_extract_filename_extension(p_properties->p_filename);
 
 	const u32 hash = tg__hash(p_properties->p_filename);
 	u32 index = hash % TG_MAX_ASSET_COUNT;
@@ -165,7 +151,7 @@ void tg_assets_shutdown()
 	{
 		if (assets.p_handles[i])
 		{
-			const char* p_file_extension = tg__extract_filename_extension(assets.p_properties[i].p_filename);
+			const char* p_file_extension = tg_string_extract_filename_extension(assets.p_properties[i].p_filename);
 			if (tg_string_equal(p_file_extension, "comp"))
 			{
 				tg_compute_shader_destroy(assets.p_handles[i]);

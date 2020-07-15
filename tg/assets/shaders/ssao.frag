@@ -44,7 +44,7 @@ void main()
         float range_check = smoothstep(0.0, 1.0, TG_RADIUS / abs(position_viewspace.z - depth));
         occlusion += (depth >= kernel_sample.z + TG_BIAS ? 1.0 : 0.0) * range_check;
     }
-    occlusion = 1.0 - (occlusion / TG_KERNEL_SIZE);
+    occlusion = clamp(1.0 - (occlusion / TG_KERNEL_SIZE), 0.0, 1.0);
 
     out_color.x = occlusion;
 }

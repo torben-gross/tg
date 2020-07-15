@@ -80,7 +80,7 @@ static void tg__game_3d_create()
     tg_input_get_mouse_position(&sample_scene.last_mouse_x, &sample_scene.last_mouse_y);
     sample_scene.h_main_renderer = tg_renderer_create(&sample_scene.camera);
     sample_scene.h_secondary_renderer = tg_renderer_create(&sample_scene.camera);
-    tg_renderer_enable_shadows(sample_scene.h_main_renderer, TG_FALSE);
+    tg_renderer_enable_shadows(sample_scene.h_main_renderer, TG_TRUE);
     tg_renderer_enable_shadows(sample_scene.h_secondary_renderer, TG_FALSE);
 
     tg_color_image_create_info color_image_create_info = { 0 };
@@ -129,6 +129,18 @@ static void tg__game_3d_create()
     tg_list_insert(&sample_scene.render_commands, &sample_scene.h_quad_render_command);
 
 
+
+    tg_mesh_h h_sponza_mesh = tg_mesh_load("meshes/sponza.obj");
+
+    tg_uniform_buffer_h h_sponza_ubo = tg_uniform_buffer_create(sizeof(tg_pbr_material));
+    ((tg_pbr_material*)tg_uniform_buffer_data(h_sponza_ubo))->albedo = (v4){ 1.0f, 1.0f, 1.0f, 1.0f };
+    ((tg_pbr_material*)tg_uniform_buffer_data(h_sponza_ubo))->metallic = 0.1f;
+    ((tg_pbr_material*)tg_uniform_buffer_data(h_sponza_ubo))->roughness = 0.4f;
+    ((tg_pbr_material*)tg_uniform_buffer_data(h_sponza_ubo))->ao = 1.0f;
+    tg_material_h h_sponza_material = tg_material_create_deferred(tg_vertex_shader_get("shaders/deferred_pbr.vert"), tg_fragment_shader_get("shaders/deferred_pbr.frag"));
+
+    tg_render_command_h h_render_command = tg_render_command_create(h_sponza_mesh, h_sponza_material, (v3){ 128.0f, 140.0f, 128.0f }, 1, & h_sponza_ubo);
+    tg_list_insert(&sample_scene.render_commands, &h_render_command);
 
     sample_scene.terrain = tg_terrain_create(&sample_scene.camera);
 
