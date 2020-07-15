@@ -11,6 +11,7 @@
 #define TG_MAX_MATERIALS                  512
 #define TG_MAX_MESHES                     65536
 #define TG_MAX_RENDER_COMMANDS            65536
+#define TG_MAX_RAYTRACERS                 2
 #define TG_MAX_RENDERERS                  4
 #define TG_MAX_STORAGE_BUFFERS            32
 #define TG_MAX_UNIFORM_BUFFERS            256
@@ -33,23 +34,18 @@
 
 TG_DECLARE_HANDLE(tg_color_image);
 TG_DECLARE_HANDLE(tg_compute_shader);
-TG_DECLARE_HANDLE(tg_deferred_renderer);
 TG_DECLARE_HANDLE(tg_depth_image);
-TG_DECLARE_HANDLE(tg_forward_renderer);
 TG_DECLARE_HANDLE(tg_fragment_shader);
 TG_DECLARE_HANDLE(tg_material);
 TG_DECLARE_HANDLE(tg_mesh);
-TG_DECLARE_HANDLE(tg_index_buffer);
-TG_DECLARE_HANDLE(tg_light_probe);
+TG_DECLARE_HANDLE(tg_raytracer);
 TG_DECLARE_HANDLE(tg_render_command);
 TG_DECLARE_HANDLE(tg_render_target);
 TG_DECLARE_HANDLE(tg_renderer);
 TG_DECLARE_HANDLE(tg_storage_buffer);
 TG_DECLARE_HANDLE(tg_storage_image_3d);
-TG_DECLARE_HANDLE(tg_transvoxel_terrain);
 TG_DECLARE_HANDLE(tg_texture_atlas);
 TG_DECLARE_HANDLE(tg_uniform_buffer);
-TG_DECLARE_HANDLE(tg_vertex_buffer);
 TG_DECLARE_HANDLE(tg_vertex_shader);
 
 typedef void* tg_handle;
@@ -92,8 +88,7 @@ typedef enum tg_handle_type
 	TG_HANDLE_TYPE_MATERIAL,
 	TG_HANDLE_TYPE_MESH,
 	TG_HANDLE_TYPE_INDEX_BUFFER,
-	TG_HANDLE_TYPE_DEFERRED_RENDERER,
-	TG_HANDLE_TYPE_FORWARD_RENDERER,
+	TG_HANDLE_TYPE_RAYTRACER,
 	TG_HANDLE_TYPE_RENDER_COMMAND,
 	TG_HANDLE_TYPE_RENDER_TARGET,
 	TG_HANDLE_TYPE_RENDERER,
@@ -238,12 +233,27 @@ void                             tg_mesh_destroy(tg_mesh_h h_mesh);
 void                             tg_mesh_update(tg_mesh_h h_mesh, u32 vertex_count, const v3* p_positions, const v3* p_normals, const v2* p_uvs, const v3* p_tangents, u32 index_count, const u16* p_indices);
 void                             tg_mesh_update2(tg_mesh_h h_mesh, u32 vertex_count, u32 vertex_stride, const void* p_vertices, u32 index_count, const u16* p_indices); // TODO: this needs to set a flag or a time, so that the camera knows, that it needs a reset
 
-tg_light_probe_h                 tg_light_probe_create(v3 position);
-void                             tg_light_probe_destroy(tg_light_probe_h h_light_probe);
+tg_raytracer_h                   tg_raytracer_create(tg_camera* p_camera);
+void                             tg_raytracer_begin(tg_raytracer_h h_raytracer);
+void                             tg_raytracer_push_directional_light(tg_raytracer_h h_raytracer, v3 direction, v3 color);
+void                             tg_raytracer_push_point_light(tg_raytracer_h h_raytracer, v3 position, v3 color);
+void                             tg_raytracer_push_sphere(tg_raytracer_h h_raytracer, v3 center, f32 radius);
+void                             tg_raytracer_end(tg_raytracer_h h_raytracer);
+void                             tg_raytracer_present(tg_raytracer_h h_raytracer);
+void                             tg_raytracer_get_render_target(tg_raytracer_h h_raytracer);
+void                             tg_raytracer_destroy(tg_raytracer_h h_raytracer);
+
+tg_render_command_h              tg_render_command_create(tg_mesh_h h_mesh, tg_material_h h_material, v3 position, u32 global_resource_count, tg_handle* p_global_resources);
+void                             tg_render_command_destroy(tg_render_command_h h_render_command);
+void                             tg_render_command_set_position(tg_render_command_h h_render_command, v3 position);
 
 tg_renderer_h                    tg_renderer_create(tg_camera* p_camera);
 void                             tg_renderer_destroy(tg_renderer_h h_renderer);
 void                             tg_renderer_enable_shadows(tg_renderer_h h_renderer, b32 enable);
+void                             tg_renderer_bake_begin(tg_renderer_h h_renderer);
+void                             tg_renderer_bake_push_probe(tg_renderer_h h_renderer, f32 x, f32 y, f32 z);
+void                             tg_renderer_bake_push_static(tg_renderer_h h_renderer, tg_render_command_h h_render_command);
+void                             tg_renderer_bake_end(tg_renderer_h h_renderer);
 void                             tg_renderer_begin(tg_renderer_h h_renderer);
 void                             tg_renderer_push_directional_light(tg_renderer_h h_renderer, v3 direction, v3 color);
 void                             tg_renderer_push_point_light(tg_renderer_h h_renderer, v3 position, v3 color);
@@ -269,10 +279,6 @@ void                             tg_texture_atlas_destroy(tg_texture_atlas_h h_t
 tg_uniform_buffer_h              tg_uniform_buffer_create(u64 size);
 void*                            tg_uniform_buffer_data(tg_uniform_buffer_h h_uniform_buffer);
 void                             tg_uniform_buffer_destroy(tg_uniform_buffer_h h_uniform_buffer);
-
-tg_render_command_h              tg_render_command_create(tg_mesh_h h_mesh, tg_material_h h_material, v3 position, u32 global_resource_count, tg_handle* p_global_resources);
-void                             tg_render_command_destroy(tg_render_command_h h_render_command);
-void                             tg_render_command_set_position(tg_render_command_h h_render_command, v3 position);
 
 tg_vertex_shader_h               tg_vertex_shader_create(const char* p_filename);
 void                             tg_vertex_shader_destroy(tg_vertex_shader_h h_vertex_shader);

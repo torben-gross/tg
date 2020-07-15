@@ -106,7 +106,7 @@ tg_vulkan_memory_block tg_vulkan_memory_allocator_alloc(VkDeviceSize alignment, 
     }
 
     TG_INVALID_CODEPATH();
-    return (tg_vulkan_memory_block){ 0 };
+    return (tg_vulkan_memory_block) { 0 };
 }
 
 void tg_vulkan_memory_allocator_free(tg_vulkan_memory_block* p_memory)

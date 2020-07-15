@@ -237,7 +237,7 @@ void tg__enclosing_sphere(u32 contained_point_count, const v3* p_contained_point
 		{
 		case 0:
 		{
-			*p_center = (v3){ 0.0f, 0.0f, 0.0f };
+			*p_center = (v3) { 0.0f, 0.0f, 0.0f };
 			*p_radius = -1.0f;
 		} break;
 		case 1:

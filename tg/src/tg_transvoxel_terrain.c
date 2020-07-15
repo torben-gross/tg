@@ -216,7 +216,7 @@ static v3 tg__normalized_not_null(v3 v)
 	if (magsqr != 0.0f)
 	{
 		const f32 mag = tgm_f32_sqrt(magsqr);
-		result = (v3){ v.x / mag, v.y / mag, v.z / mag };
+		result = (v3) { v.x / mag, v.y / mag, v.z / mag };
 	}
 	return result;
 }
@@ -234,14 +234,14 @@ static v3i tg__transition_face_to_block(v3i pad, u8 half_resolution_lod, i32 x, 
 
 	switch (direction)
 	{
-	case TG_FULL_RESOLUTION_FACE_NEGATIVE_X: return tgm_v3i_add(pad, (v3i){ z0, x0, y0 });
-	case TG_FULL_RESOLUTION_FACE_POSITIVE_X: return tgm_v3i_add(pad, (v3i){ z1, y0, x0 });
-	case TG_FULL_RESOLUTION_FACE_NEGATIVE_Y: return tgm_v3i_add(pad, (v3i){ y0, z0, x0 });
-	case TG_FULL_RESOLUTION_FACE_POSITIVE_Y: return tgm_v3i_add(pad, (v3i){ x0, z1, y0 });
-	case TG_FULL_RESOLUTION_FACE_NEGATIVE_Z: return tgm_v3i_add(pad, (v3i){ x0, y0, z0 });
-	case TG_FULL_RESOLUTION_FACE_POSITIVE_Z: return tgm_v3i_add(pad, (v3i){ y0, x0, z1 });
+	case TG_FULL_RESOLUTION_FACE_NEGATIVE_X: return tgm_v3i_add(pad, (v3i) { z0, x0, y0 });
+	case TG_FULL_RESOLUTION_FACE_POSITIVE_X: return tgm_v3i_add(pad, (v3i) { z1, y0, x0 });
+	case TG_FULL_RESOLUTION_FACE_NEGATIVE_Y: return tgm_v3i_add(pad, (v3i) { y0, z0, x0 });
+	case TG_FULL_RESOLUTION_FACE_POSITIVE_Y: return tgm_v3i_add(pad, (v3i) { x0, z1, y0 });
+	case TG_FULL_RESOLUTION_FACE_NEGATIVE_Z: return tgm_v3i_add(pad, (v3i) { x0, y0, z0 });
+	case TG_FULL_RESOLUTION_FACE_POSITIVE_Z: return tgm_v3i_add(pad, (v3i) { y0, x0, z1 });
 
-	default: TG_INVALID_CODEPATH(); return (v3i){ 0 };
+	default: TG_INVALID_CODEPATH(); return (v3i ){ 0 };
 	}
 }
 
@@ -264,14 +264,14 @@ static void tg__build_block(v3i octree_min_coordinates, v3i block_offset_in_octr
 			for (position.x = 0; position.x < TG_CELLS_PER_BLOCK_SIDE; position.x++)
 			{
 				const v3i sample_position_pad = tgm_v3i_add(block_offset_in_octree, tgm_v3i_muli(position, lod_scale));
-				p_sample_positions[0] = tgm_v3i_add(sample_position_pad, (v3i){         0,         0,         0 });
-				p_sample_positions[1] = tgm_v3i_add(sample_position_pad, (v3i){ lod_scale,         0,         0 });
-				p_sample_positions[2] = tgm_v3i_add(sample_position_pad, (v3i){         0, lod_scale,         0 });
-				p_sample_positions[3] = tgm_v3i_add(sample_position_pad, (v3i){ lod_scale, lod_scale,         0 });
-				p_sample_positions[4] = tgm_v3i_add(sample_position_pad, (v3i){         0,         0, lod_scale });
-				p_sample_positions[5] = tgm_v3i_add(sample_position_pad, (v3i){ lod_scale,         0, lod_scale });
-				p_sample_positions[6] = tgm_v3i_add(sample_position_pad, (v3i){         0, lod_scale, lod_scale });
-				p_sample_positions[7] = tgm_v3i_add(sample_position_pad, (v3i){ lod_scale, lod_scale, lod_scale });
+				p_sample_positions[0] = tgm_v3i_add(sample_position_pad, (v3i) {         0,         0,         0 });
+				p_sample_positions[1] = tgm_v3i_add(sample_position_pad, (v3i) { lod_scale,         0,         0 });
+				p_sample_positions[2] = tgm_v3i_add(sample_position_pad, (v3i) {         0, lod_scale,         0 });
+				p_sample_positions[3] = tgm_v3i_add(sample_position_pad, (v3i) { lod_scale, lod_scale,         0 });
+				p_sample_positions[4] = tgm_v3i_add(sample_position_pad, (v3i) {         0,         0, lod_scale });
+				p_sample_positions[5] = tgm_v3i_add(sample_position_pad, (v3i) { lod_scale,         0, lod_scale });
+				p_sample_positions[6] = tgm_v3i_add(sample_position_pad, (v3i) {         0, lod_scale, lod_scale });
+				p_sample_positions[7] = tgm_v3i_add(sample_position_pad, (v3i) { lod_scale, lod_scale, lod_scale });
 
 				p_cell_samples[0] = TG_VOXEL_MAP_AT_V3I(p_voxel_map, p_sample_positions[0]);
 				p_cell_samples[1] = TG_VOXEL_MAP_AT_V3I(p_voxel_map, p_sample_positions[1]);
@@ -653,7 +653,7 @@ static void tg__build_nodes_recursively(tg_terrain* p_terrain, tg_terrain_octree
 
 static void tg__build_octree(tg_terrain* p_terrain, tg_terrain_octree* p_octree, i32 x, i32 y, i32 z)
 {
-	p_octree->min_coordinates = (v3i){
+	p_octree->min_coordinates = (v3i) {
 		x * TG_OCTREE_STRIDE_IN_CELLS,
 		y * TG_OCTREE_STRIDE_IN_CELLS,
 		z * TG_OCTREE_STRIDE_IN_CELLS

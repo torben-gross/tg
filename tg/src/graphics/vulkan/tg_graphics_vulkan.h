@@ -155,6 +155,18 @@ typedef struct tg_vulkan_color_image_create_info
     tg_vulkan_sampler_create_info*    p_vulkan_sampler_create_info;
 } tg_vulkan_color_image_create_info;
 
+typedef struct tg_vulkan_cube_map
+{
+    u32                       width;
+    u32                       height;
+    u32                       depth;
+    VkFormat                  format;
+    VkImage                   image;
+    tg_vulkan_memory_block    memory;
+    VkImageView               image_view;
+    VkSampler                 sampler;
+} tg_vulkan_cube_map;
+
 typedef struct tg_vulkan_depth_image_create_info
 {
     u32                               width;
@@ -168,6 +180,17 @@ typedef struct tg_vulkan_screen_vertex
     v2    position;
     v2    uv;
 } tg_vulkan_screen_vertex;
+
+typedef struct tg_vulkan_storage_image
+{
+    u32                       width;
+    u32                       height;
+    VkFormat                  format;
+    VkImage                   image;
+    tg_vulkan_memory_block    memory;
+    VkImageView               image_view;
+    VkSampler                 sampler;
+} tg_vulkan_storage_image;
 
 typedef struct tg_vulkan_surface
 {
@@ -263,6 +286,34 @@ typedef struct tg_mesh
     tg_vulkan_buffer    ibo;
 } tg_mesh;
 
+typedef struct tg_raytracer
+{
+    tg_handle_type               type;
+
+    tg_camera*                   p_camera;
+    VkSemaphore                  semaphore;
+    VkFence                      fence;
+    tg_vulkan_storage_image      storage_image; // TODO: this is a storage image, can every image also be a storage image? also, this should be a render target
+    tg_vulkan_buffer             screen_quad_vbo;
+    tg_vulkan_buffer             screen_quad_ibo;
+
+    struct
+    {
+        tg_vulkan_pipeline       compute_pipeline;
+        VkCommandBuffer          command_buffer;
+        tg_vulkan_buffer         ubo;
+    } raytrace_pass;
+
+    struct
+    {
+        VkSemaphore              image_acquired_semaphore;
+        VkRenderPass             render_pass;
+        tg_vulkan_framebuffer    p_framebuffers[TG_VULKAN_SURFACE_IMAGE_COUNT];
+        tg_vulkan_pipeline       graphics_pipeline;
+        VkCommandBuffer          p_command_buffers[TG_VULKAN_SURFACE_IMAGE_COUNT];
+    } present_pass;
+} tg_raytracer;
+
 typedef struct tg_renderer
 {
     tg_handle_type               type;
@@ -314,7 +365,7 @@ typedef struct tg_renderer
     struct
     {
         tg_color_image           color_attachment;
-        VkSemaphore              rendering_finished_semaphore;
+        VkSemaphore              rendering_finished_semaphore; // TODO: only one needed
         VkRenderPass             render_pass;
         tg_vulkan_framebuffer    framebuffer;
         tg_vulkan_pipeline       graphics_pipeline;
@@ -342,8 +393,6 @@ typedef struct tg_renderer
 
     struct
     {
-        tg_vulkan_buffer         vbo;
-        tg_vulkan_buffer         ibo;
         VkSemaphore              image_acquired_semaphore;
         VkSemaphore              semaphore;
         VkRenderPass             render_pass;
@@ -356,6 +405,10 @@ typedef struct tg_renderer
     {
         VkCommandBuffer          command_buffer;
     } clear_pass;
+
+    v3                           probe_position;
+    tg_vulkan_cube_map           probe;
+    tg_render_command_h          h_probe_raytracing_target;
 } tg_renderer;
 
 typedef struct tg_storage_buffer
@@ -416,6 +469,7 @@ tg_fragment_shader    p_fragment_shaders[TG_MAX_FRAGMENT_SHADERS];
 tg_material           p_materials[TG_MAX_MATERIALS];
 tg_mesh               p_meshes[TG_MAX_MESHES];
 tg_render_command     p_render_commands[TG_MAX_RENDER_COMMANDS];
+tg_raytracer          p_raytracers[TG_MAX_RAYTRACERS];
 tg_renderer           p_renderers[TG_MAX_RENDERERS];
 tg_storage_buffer     p_storage_buffers[TG_MAX_STORAGE_BUFFERS];
 tg_uniform_buffer     p_uniform_buffers[TG_MAX_UNIFORM_BUFFERS];
@@ -431,6 +485,9 @@ void                          tg_vulkan_buffer_flush_mapped_memory(tg_vulkan_buf
 tg_color_image                tg_vulkan_color_image_create(const tg_vulkan_color_image_create_info* p_vulkan_color_image_create_info);
 VkFormat                      tg_vulkan_color_image_convert_format(tg_color_image_format format);
 void                          tg_vulkan_color_image_destroy(tg_color_image* p_color_image);
+
+tg_vulkan_cube_map            tg_vulkan_cube_map_create(u32 width, u32 height, u32 depth, VkFormat format, tg_vulkan_sampler_create_info* p_vulkan_sampler_create_info);
+void                          tg_vulkan_cube_map_destroy(tg_vulkan_cube_map* p_cube_map);
 
 VkCommandBuffer               tg_vulkan_command_buffer_allocate(tg_vulkan_command_pool_type type, VkCommandBufferLevel level);
 void                          tg_vulkan_command_buffer_begin(VkCommandBuffer command_buffer, VkCommandBufferUsageFlags usage_flags, const VkCommandBufferInheritanceInfo* p_inheritance_info);
@@ -510,6 +567,9 @@ void                          tg_vulkan_shader_destroy(tg_vulkan_shader* p_vulka
 
 tg_storage_image_3d           tg_vulkan_storage_image_3d_create(u32 width, u32 height, u32 depth, VkFormat format);
 void                          tg_vulkan_storage_image_3d_destroy(tg_storage_image_3d* p_storage_image_3d);
+
+tg_vulkan_storage_image       tg_vulkan_storage_image_create(u32 width, u32 height, VkFormat format, tg_vulkan_sampler_create_info* p_sampler_create_info);
+void                          tg_vulkan_storage_image_destroy(tg_vulkan_storage_image* p_vulkan_storage_image);
 
 VkFormat                      tg_vulkan_storage_image_convert_format(tg_storage_image_format format);
 

@@ -119,6 +119,7 @@
     <ClCompile Include="src\graphics\vulkan\tg_vulkan_buffer.c" />
     <ClCompile Include="src\graphics\vulkan\tg_vulkan_material.c" />
     <ClCompile Include="src\graphics\vulkan\tg_vulkan_memory_allocator.c" />
+    <ClCompile Include="src\graphics\vulkan\tg_vulkan_raytracer.c" />
     <ClCompile Include="src\graphics\vulkan\tg_vulkan_renderer.c" />
     <ClCompile Include="src\graphics\vulkan\tg_vulkan_render_command.c" />
     <ClCompile Include="src\graphics\vulkan\tg_vulkan_texture_atlas.c" />

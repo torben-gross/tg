@@ -1,8 +1,8 @@
 #version 450
 
 #define TG_KERNEL_SIZE    8
-#define TG_RADIUS         1.0 // TODO: uniform
-#define TG_BIAS           0.0
+#define TG_RADIUS         0.5 // TODO: uniform
+#define TG_BIAS           0.001
 
 layout(location = 0) in vec2 v_uv;
 

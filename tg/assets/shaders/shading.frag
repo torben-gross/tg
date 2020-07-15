@@ -95,7 +95,8 @@ vec3 fresnel_schlick(float cos_theta, vec3 f0)
     return f0 + (1.0 - f0) * pow(1.0 - cos_theta, 5.0);
 }
 
-float random(vec3 seed, int i){
+float random(vec3 seed, int i)
+{
     vec4 seed4 = vec4(seed, float(i));
     float dot_product = dot(seed4, vec4(12.9898, 78.233, 45.164, 94.673));
     return fract(sin(dot_product) * 43758.5453);
@@ -148,47 +149,47 @@ float shadow_mapping()
             proj.z > 0.0 && proj.z < 1.0
         )
         {
-            float bias = 0.025;
+            float bias = 0.001;
 
-            //float depth = 0.0;
-            //for (int y = -1; y <= 1; y++)
-            //{
-            //    for (int x = -1; x <= 1; x++)
-            //    {
-            //        vec2 offset = vec2(x, y) / 1024.0;
-            //        vec2 uv = clamp(vec2(proj.xy + offset), 0.0, 1.0);
-            //        depth += texture(u_shadow_maps[shadow_map_index], uv).x;
-            //    }
-            //}
-            //depth = clamp(depth / 9.0, 0.0, 1.0);
-            //shadow = proj.z - bias < depth ? 1.0 : 0.0;
-
-
-
-            for (int i = 0; i < TG_SHADOW_SAMPLE_COUNT; i++)
+            float depth = 0.0;
+            for (int y = -1; y <= 1; y++)
             {
-		        int index = int(16.0 * random(floor(position * 1024.0), i)) % 16;
-                vec2 uv = clamp(proj.xy + shadow_poisson_disk[index] / vec2(1024.0), vec2(0.0), vec2(1.0));
-                float depth = texture(u_shadow_maps[shadow_map_index], uv).x;
-                shadow += proj.z - bias < depth ? 1.0 : 0.0;
-	        }
-            shadow = clamp(shadow / float(TG_SHADOW_SAMPLE_COUNT), 0.0, 1.0);
-            
-            if (secondary != -1)
-            {
-                vec4 secondary_position_lightspace = u_lightspace_matrices[secondary] * texture(u_position, v_uv);
-                vec3 secondary_proj = (secondary_position_lightspace.xyz / vec3(secondary_position_lightspace.w)) * vec3(0.5, 0.5, 1.0) + vec3(0.5, 0.5, 0.0);
-                float secondary_shadow = 1.0;
-                for (int i = 0; i < TG_SHADOW_SAMPLE_COUNT; i++)
+                for (int x = -1; x <= 1; x++)
                 {
-		            int index = int(16.0 * random(floor(position * 1024.0), i)) % 16;
-                    vec2 uv = clamp(secondary_proj.xy + shadow_poisson_disk[index] / vec2(1024.0), vec2(0.0), vec2(1.0));
-                    float depth = texture(u_shadow_maps[secondary], uv).x;
-                    secondary_shadow += secondary_proj.z - bias < depth ? 1.0 : 0.0;
-	            }
-                secondary_shadow = clamp(secondary_shadow / float(TG_SHADOW_SAMPLE_COUNT), 0.0, 1.0);
-                shadow = (1.0 - t) * shadow + t * secondary_shadow;
+                    vec2 offset = vec2(x, y) / 1024.0;
+                    vec2 uv = clamp(vec2(proj.xy + offset), 0.0, 1.0);
+                    depth += texture(u_shadow_maps[shadow_map_index], uv).x;
+                }
             }
+            depth = clamp(depth / 9.0, 0.0, 1.0);
+            shadow = proj.z - bias < depth ? 1.0 : 0.0;
+
+
+
+            //for (int i = 0; i < TG_SHADOW_SAMPLE_COUNT; i++)
+            //{
+		    //    int index = int(16.0 * random(floor(position * 1024.0), i)) % 16;
+            //    vec2 uv = clamp(proj.xy + shadow_poisson_disk[index] / vec2(1024.0), vec2(0.0), vec2(1.0));
+            //    float depth = texture(u_shadow_maps[shadow_map_index], uv).x;
+            //    shadow += proj.z - bias < depth ? 1.0 : 0.0;
+	        //}
+            //shadow = clamp(shadow / float(TG_SHADOW_SAMPLE_COUNT), 0.0, 1.0);
+            //
+            //if (secondary != -1)
+            //{
+            //    vec4 secondary_position_lightspace = u_lightspace_matrices[secondary] * texture(u_position, v_uv);
+            //    vec3 secondary_proj = (secondary_position_lightspace.xyz / vec3(secondary_position_lightspace.w)) * vec3(0.5, 0.5, 1.0) + vec3(0.5, 0.5, 0.0);
+            //    float secondary_shadow = 1.0;
+            //    for (int i = 0; i < TG_SHADOW_SAMPLE_COUNT; i++)
+            //    {
+		    //        int index = int(16.0 * random(floor(position * 1024.0), i)) % 16;
+            //        vec2 uv = clamp(secondary_proj.xy + shadow_poisson_disk[index] / vec2(1024.0), vec2(0.0), vec2(1.0));
+            //        float depth = texture(u_shadow_maps[secondary], uv).x;
+            //        secondary_shadow += secondary_proj.z - bias < depth ? 1.0 : 0.0;
+	        //    }
+            //    secondary_shadow = clamp(secondary_shadow / float(TG_SHADOW_SAMPLE_COUNT), 0.0, 1.0);
+            //    shadow = (1.0 - t) * shadow + t * secondary_shadow;
+            //}
 
 
 
@@ -213,8 +214,7 @@ void main()
     vec3  albedo              = texture(u_albedo, v_uv).xyz;
     float metallic            = texture(u_metallic_roughness_ao, v_uv).x;
     float roughness           = texture(u_metallic_roughness_ao, v_uv).y;
-    //float ao                  = texture(u_ssao, v_uv).x * texture(u_metallic_roughness_ao, v_uv).z;
-    float ao                  = texture(u_metallic_roughness_ao, v_uv).z;
+    float ao                  = texture(u_ssao, v_uv).x * texture(u_metallic_roughness_ao, v_uv).z;
 
     vec4 sky_color = 0.7 * u_directional_light_colors[0];
     if (dot(normal, normal) < 0.5) // sky
@@ -281,6 +281,7 @@ void main()
         }
 
         vec3 ambient = vec3(0.01) * albedo * ao;
+        ambient = vec3(0.0);
         vec3 color   = ambient + lo;
 
         color = color / (color + vec3(1.0));

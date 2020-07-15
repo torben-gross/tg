@@ -845,49 +845,6 @@ static void tg__init_present_pass(tg_renderer_h h_renderer)
 {
     tg_vulkan_buffer staging_buffer = { 0 };
 
-    tg_vulkan_screen_vertex p_vertices[4] = { 0 };
-
-    p_vertices[0].position.x = -1.0f;
-    p_vertices[0].position.y = 1.0f;
-    p_vertices[0].uv.x = 0.0f;
-    p_vertices[0].uv.y = 1.0f;
-
-    p_vertices[1].position.x = 1.0f;
-    p_vertices[1].position.y = 1.0f;
-    p_vertices[1].uv.x = 1.0f;
-    p_vertices[1].uv.y = 1.0f;
-
-    p_vertices[2].position.x = 1.0f;
-    p_vertices[2].position.y = -1.0f;
-    p_vertices[2].uv.x = 1.0f;
-    p_vertices[2].uv.y = 0.0f;
-
-    p_vertices[3].position.x = -1.0f;
-    p_vertices[3].position.y = -1.0f;
-    p_vertices[3].uv.x = 0.0f;
-    p_vertices[3].uv.y = 0.0f;
-
-    staging_buffer = tg_vulkan_buffer_create(sizeof(p_vertices), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-    tg_memory_copy(sizeof(p_vertices), p_vertices, staging_buffer.memory.p_mapped_device_memory);
-    h_renderer->present_pass.vbo = tg_vulkan_buffer_create(sizeof(p_vertices), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    tg_vulkan_buffer_copy(sizeof(p_vertices), staging_buffer.buffer, h_renderer->present_pass.vbo.buffer);
-    tg_vulkan_buffer_destroy(&staging_buffer);
-
-    u16 p_indices[6] = { 0 };
-
-    p_indices[0] = 0;
-    p_indices[1] = 1;
-    p_indices[2] = 2;
-    p_indices[3] = 2;
-    p_indices[4] = 3;
-    p_indices[5] = 0;
-
-    staging_buffer = tg_vulkan_buffer_create(sizeof(p_indices), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-    tg_memory_copy(sizeof(p_indices), p_indices, staging_buffer.memory.p_mapped_device_memory);
-    h_renderer->present_pass.ibo = tg_vulkan_buffer_create(sizeof(p_indices), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    tg_vulkan_buffer_copy(sizeof(p_indices), staging_buffer.buffer, h_renderer->present_pass.ibo.buffer);
-    tg_vulkan_buffer_destroy(&staging_buffer);
-
     h_renderer->present_pass.image_acquired_semaphore = tg_vulkan_semaphore_create();
     h_renderer->present_pass.semaphore = tg_vulkan_semaphore_create();
 
@@ -975,8 +932,8 @@ static void tg__init_present_pass(tg_renderer_h h_renderer)
             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT
         );
         vkCmdBindPipeline(h_renderer->present_pass.p_command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, h_renderer->present_pass.graphics_pipeline.pipeline);
-        vkCmdBindVertexBuffers(h_renderer->present_pass.p_command_buffers[i], 0, 1, &h_renderer->present_pass.vbo.buffer, &vertex_buffer_offset);
-        vkCmdBindIndexBuffer(h_renderer->present_pass.p_command_buffers[i], h_renderer->present_pass.ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
+        vkCmdBindVertexBuffers(h_renderer->present_pass.p_command_buffers[i], 0, 1, &h_renderer->screen_quad_vbo.buffer, &vertex_buffer_offset);
+        vkCmdBindIndexBuffer(h_renderer->present_pass.p_command_buffers[i], h_renderer->screen_quad_ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
         vkCmdBindDescriptorSets(h_renderer->present_pass.p_command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, h_renderer->present_pass.graphics_pipeline.pipeline_layout, 0, 1, &h_renderer->present_pass.graphics_pipeline.descriptor_set, 0, TG_NULL);
 
         tg_vulkan_command_buffer_cmd_begin_render_pass(h_renderer->present_pass.p_command_buffers[i], h_renderer->present_pass.render_pass, &h_renderer->present_pass.p_framebuffers[i], VK_SUBPASS_CONTENTS_INLINE);
@@ -1051,13 +1008,13 @@ tg_renderer_h tg_renderer_create(tg_camera* p_camera)
     vulkan_depth_image_create_info.p_vulkan_sampler_create_info = TG_NULL;
 
     tg_vulkan_screen_vertex p_vertices[4] = { 0 };
-    p_vertices[0].position = (v2){ -1.0f, -1.0f };
+    p_vertices[0].position = (v2){ -1.0f,  1.0f };
     p_vertices[0].uv       = (v2){  0.0f,  0.0f };
-    p_vertices[1].position = (v2){  1.0f, -1.0f };
+    p_vertices[1].position = (v2){  1.0f,  1.0f };
     p_vertices[1].uv       = (v2){  1.0f,  0.0f };
-    p_vertices[2].position = (v2){  1.0f,  1.0f };
+    p_vertices[2].position = (v2){  1.0f, -1.0f };
     p_vertices[2].uv       = (v2){  1.0f,  1.0f };
-    p_vertices[3].position = (v2){ -1.0f,  1.0f };
+    p_vertices[3].position = (v2){ -1.0f, -1.0f };
     p_vertices[3].uv       = (v2){  0.0f,  1.0f };
 
     const u16 p_indices[6] = { 0, 1, 2, 2, 3, 0 };
@@ -1104,6 +1061,26 @@ void tg_renderer_enable_shadows(tg_renderer_h h_renderer, b32 enable)
     TG_ASSERT(h_renderer);
 
     h_renderer->shadow_pass.enabled = enable;
+}
+
+void tg_renderer_bake_begin(tg_renderer_h h_renderer)
+{
+}
+
+void tg_renderer_bake_push_probe(tg_renderer_h h_renderer, f32 x, f32 y, f32 z)
+{
+    h_renderer->probe_position = (v3) { x, y, z };
+    h_renderer->probe = tg_vulkan_cube_map_create(256, 256, 256, VK_FORMAT_R32G32B32A32_SFLOAT, TG_NULL);
+}
+
+void tg_renderer_bake_push_static(tg_renderer_h h_renderer, tg_render_command_h h_render_command)
+{
+    h_renderer->h_probe_raytracing_target = h_render_command;
+}
+
+void tg_renderer_bake_end(tg_renderer_h h_renderer)
+{
+
 }
 
 void tg_renderer_begin(tg_renderer_h h_renderer)
@@ -1218,7 +1195,7 @@ void tg_renderer_end(tg_renderer_h h_renderer)
     {
         tg_vulkan_command_buffer_begin(h_renderer->shadow_pass.command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, TG_NULL);
 
-        const f32 p_percentiles[TG_CASCADED_SHADOW_MAPS + 1] = { 0.0f, 0.003f, 0.01f, 0.03f };
+        const f32 p_percentiles[TG_CASCADED_SHADOW_MAPS + 1] = { 0.0f, 0.003f, 0.01f, 0.06f };
 
         for (u32 i = 0; i < TG_CASCADED_SHADOW_MAPS; i++)
         {
@@ -1338,14 +1315,14 @@ void tg_renderer_end(tg_renderer_h h_renderer)
                     //    const tg_bounds* p_bounds = &h_render_command->ph_lod_meshes[0]->bounds;
                     //
                     //    v4 p_points[8] = { 0 };
-                    //    p_points[0] = (v4){ p_bounds->min.x, p_bounds->min.y, p_bounds->min.z, 1.0f };
-                    //    p_points[1] = (v4){ p_bounds->min.x, p_bounds->min.y, p_bounds->max.z, 1.0f };
-                    //    p_points[2] = (v4){ p_bounds->min.x, p_bounds->max.y, p_bounds->min.z, 1.0f };
-                    //    p_points[3] = (v4){ p_bounds->min.x, p_bounds->max.y, p_bounds->max.z, 1.0f };
-                    //    p_points[4] = (v4){ p_bounds->max.x, p_bounds->min.y, p_bounds->min.z, 1.0f };
-                    //    p_points[5] = (v4){ p_bounds->max.x, p_bounds->min.y, p_bounds->max.z, 1.0f };
-                    //    p_points[6] = (v4){ p_bounds->max.x, p_bounds->max.y, p_bounds->min.z, 1.0f };
-                    //    p_points[7] = (v4){ p_bounds->max.x, p_bounds->max.y, p_bounds->max.z, 1.0f };
+                    //    p_points[0] = (v4) { p_bounds->min.x, p_bounds->min.y, p_bounds->min.z, 1.0f };
+                    //    p_points[1] = (v4) { p_bounds->min.x, p_bounds->min.y, p_bounds->max.z, 1.0f };
+                    //    p_points[2] = (v4) { p_bounds->min.x, p_bounds->max.y, p_bounds->min.z, 1.0f };
+                    //    p_points[3] = (v4) { p_bounds->min.x, p_bounds->max.y, p_bounds->max.z, 1.0f };
+                    //    p_points[4] = (v4) { p_bounds->max.x, p_bounds->min.y, p_bounds->min.z, 1.0f };
+                    //    p_points[5] = (v4) { p_bounds->max.x, p_bounds->min.y, p_bounds->max.z, 1.0f };
+                    //    p_points[6] = (v4) { p_bounds->max.x, p_bounds->max.y, p_bounds->min.z, 1.0f };
+                    //    p_points[7] = (v4) { p_bounds->max.x, p_bounds->max.y, p_bounds->max.z, 1.0f };
                     //
                     //    v4 p_homogenous_points_clip_space[8] = { 0 };
                     //    v3 p_cartesian_points_clip_space[8] = { 0 };
@@ -1393,7 +1370,7 @@ void tg_renderer_end(tg_renderer_h h_renderer)
     vkCmdEndRenderPass(h_renderer->geometry_pass.command_buffer);
     VK_CALL(vkEndCommandBuffer(h_renderer->geometry_pass.command_buffer));
 
-    tg_vulkan_fence_wait(h_renderer->render_target.fence);
+    tg_vulkan_fence_wait(h_renderer->render_target.fence); // TODO: isn't this wrong? this means that some buffers are potentially updates too early
     tg_vulkan_fence_reset(h_renderer->render_target.fence);
 
     VkSubmitInfo submit_info = { 0 };

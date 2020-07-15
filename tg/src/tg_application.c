@@ -69,7 +69,7 @@ static void tg__game_3d_create()
 {
     sample_scene.render_commands = TG_LIST_CREATE(tg_render_command_h);
     sample_scene.camera.type = TG_CAMERA_TYPE_PERSPECTIVE;
-    sample_scene.camera.position = (v3){ 128.0f, 150.0f, 128.0f };
+    sample_scene.camera.position = (v3) { 128.0f, 150.0f, 128.0f };
     sample_scene.camera.pitch = 0.0f;
     sample_scene.camera.yaw = 0.0f;
     sample_scene.camera.roll = 0.0f;
@@ -120,11 +120,11 @@ static void tg__game_3d_create()
 
     sample_scene.h_quad_mesh = tg_mesh_create(4, p_quad_positions, TG_NULL, p_uvs, TG_NULL, 6, p_indices);
     sample_scene.h_quad_color_ubo = tg_uniform_buffer_create(sizeof(v3));
-    *((v3*)tg_uniform_buffer_data(sample_scene.h_quad_color_ubo)) = (v3){ 1.0f, 0.0f, 0.0f };
+    *((v3*)tg_uniform_buffer_data(sample_scene.h_quad_color_ubo)) = (v3) { 1.0f, 0.0f, 0.0f };
     tg_handle p_custom_handles[2] = { sample_scene.h_quad_color_ubo, tg_renderer_get_render_target(sample_scene.h_secondary_renderer) };
     sample_scene.h_quad_material = tg_material_create_forward(tg_vertex_shader_get("shaders/forward.vert"), tg_fragment_shader_get("shaders/forward_custom.frag"));
 
-    sample_scene.h_quad_render_command = tg_render_command_create(sample_scene.h_quad_mesh, sample_scene.h_quad_material, (v3){ 0.0f, 133.0f, 0.0f }, 2, p_custom_handles);
+    sample_scene.h_quad_render_command = tg_render_command_create(sample_scene.h_quad_mesh, sample_scene.h_quad_material, (v3) { 0.0f, 133.0f, 0.0f }, 2, p_custom_handles);
     sample_scene.quad_offset_z = -65.0f;
     tg_list_insert(&sample_scene.render_commands, &sample_scene.h_quad_render_command);
 
@@ -133,14 +133,14 @@ static void tg__game_3d_create()
     tg_mesh_h h_sponza_mesh = tg_mesh_load("meshes/sponza.obj");
 
     tg_uniform_buffer_h h_sponza_ubo = tg_uniform_buffer_create(sizeof(tg_pbr_material));
-    ((tg_pbr_material*)tg_uniform_buffer_data(h_sponza_ubo))->albedo = (v4){ 1.0f, 1.0f, 1.0f, 1.0f };
+    ((tg_pbr_material*)tg_uniform_buffer_data(h_sponza_ubo))->albedo = (v4) { 1.0f, 1.0f, 1.0f, 1.0f };
     ((tg_pbr_material*)tg_uniform_buffer_data(h_sponza_ubo))->metallic = 0.1f;
     ((tg_pbr_material*)tg_uniform_buffer_data(h_sponza_ubo))->roughness = 0.4f;
     ((tg_pbr_material*)tg_uniform_buffer_data(h_sponza_ubo))->ao = 1.0f;
     tg_material_h h_sponza_material = tg_material_create_deferred(tg_vertex_shader_get("shaders/deferred_pbr.vert"), tg_fragment_shader_get("shaders/deferred_pbr.frag"));
 
-    tg_render_command_h h_render_command = tg_render_command_create(h_sponza_mesh, h_sponza_material, (v3){ 128.0f, 140.0f, 128.0f }, 1, & h_sponza_ubo);
-    tg_list_insert(&sample_scene.render_commands, &h_render_command);
+    tg_render_command_h h_sponza_render_command = tg_render_command_create(h_sponza_mesh, h_sponza_material, (v3) { 128.0f, 140.0f, 128.0f }, 1, & h_sponza_ubo);
+    tg_list_insert(&sample_scene.render_commands, &h_sponza_render_command);
 
     sample_scene.terrain = tg_terrain_create(&sample_scene.camera);
 
@@ -156,7 +156,7 @@ static void tg__game_3d_create()
             
             const v3 sphere_translation = { 128.0f - 7.0f + (f32)x * 2.0f, 143.0f + (f32)y * 2.0f, 112.0f };
             sample_scene.p_pbr_spheres[i].h_ubo = tg_uniform_buffer_create(sizeof(tg_pbr_material));
-            ((tg_pbr_material*)tg_uniform_buffer_data(sample_scene.p_pbr_spheres[i].h_ubo))->albedo = (v4){ 1.0f, 1.0f, 1.0f, 1.0f };
+            ((tg_pbr_material*)tg_uniform_buffer_data(sample_scene.p_pbr_spheres[i].h_ubo))->albedo = (v4) { 1.0f, 1.0f, 1.0f, 1.0f };
             ((tg_pbr_material*)tg_uniform_buffer_data(sample_scene.p_pbr_spheres[i].h_ubo))->metallic = (f32)x / 6.0f;
             ((tg_pbr_material*)tg_uniform_buffer_data(sample_scene.p_pbr_spheres[i].h_ubo))->roughness = ((f32)y + 0.1f) / 6.5f;
             ((tg_pbr_material*)tg_uniform_buffer_data(sample_scene.p_pbr_spheres[i].h_ubo))->ao = 1.0f;
@@ -172,6 +172,12 @@ static void tg__game_3d_create()
             tg_list_insert(&sample_scene.render_commands, &sample_scene.p_pbr_spheres[i].h_render_command);
         }
     }
+
+    // TODO: implement :)
+    tg_renderer_bake_begin(sample_scene.h_main_renderer);
+    tg_renderer_bake_push_probe(sample_scene.h_main_renderer, 128.0f, 145.0f, 128.0f);
+    tg_renderer_bake_push_static(sample_scene.h_main_renderer, h_sponza_render_command);
+    tg_renderer_bake_end(sample_scene.h_main_renderer);
 }
 
 static void tg__game_3d_update_and_render(f32 delta_ms)
@@ -196,7 +202,7 @@ static void tg__game_3d_update_and_render(f32 delta_ms)
     const f32 noise_x = tgm_noise(sint, 0.1f, 0.1f) + 0.5f;
     const f32 noise_y = tgm_noise(0.1f, sint, 0.1f) + 0.5f;
     const f32 noise_z = tgm_noise(0.1f, 0.1f, sint) + 0.5f;
-    *((v3*)tg_uniform_buffer_data(sample_scene.h_quad_color_ubo)) = (v3){ noise_x, noise_y, noise_z };
+    *((v3*)tg_uniform_buffer_data(sample_scene.h_quad_color_ubo)) = (v3) { noise_x, noise_y, noise_z };
 
 
 
@@ -272,14 +278,15 @@ static void tg__game_3d_update_and_render(f32 delta_ms)
     const f32 lz1 = 112.0f + 2.0f;
 
 
-    //const v3 d0 = tgm_v3_normalized((v3){ lx0, ly0, lz0 });
-    const v3 d0 = tgm_v3_normalized((v3){ 0.3f, -1.0f, -0.2f });
-    const v3 c0d = tgm_v3_mulf((v3){ 0.529f, 0.808f, 0.922f }, 2.0f);
-    const v3 c0n = tgm_v3_mulf((v3){ 0.992f, 0.369f, 0.325f }, 2.0f);
-    const v3 c0 = tgm_v3_lerp(c0n, c0d, -d0.y);
+    //const v3 d0 = tgm_v3_normalized((v3) { lx0, ly0, lz0 });
+    const v3 d0 = tgm_v3_normalized((v3) { 0.3f, -1.0f, -0.2f });
+    const v3 c0d = tgm_v3_mulf((v3) { 0.529f, 0.808f, 0.922f }, 2.0f);
+    const v3 c0n = tgm_v3_mulf((v3) { 0.992f, 0.369f, 0.325f }, 2.0f);
+    //const v3 c0 = tgm_v3_lerp(c0n, c0d, -d0.y);
+    const v3 c0 = { 4.0f, 4.0f, 4.0f };
 
     tg_renderer_begin(sample_scene.h_secondary_renderer);
-    tg_renderer_push_directional_light(sample_scene.h_secondary_renderer, d0, (v3){ 4.0f, 4.0f, 10.0f });
+    tg_renderer_push_directional_light(sample_scene.h_secondary_renderer, d0, (v3) { 4.0f, 4.0f, 10.0f });
     tg_terrain_render(&sample_scene.terrain, sample_scene.h_secondary_renderer);
     tg_render_command_h* ph_render_commands = TG_LIST_POINTER_TO(sample_scene.render_commands, 0);
     for (u32 i = 0; i < sample_scene.render_commands.count; i++)
@@ -290,7 +297,7 @@ static void tg__game_3d_update_and_render(f32 delta_ms)
 
     tg_renderer_begin(sample_scene.h_main_renderer);
     tg_renderer_push_directional_light(sample_scene.h_main_renderer, d0, c0);
-    tg_renderer_push_point_light(sample_scene.h_main_renderer, (v3){ lx1, ly1, lz1 }, (v3){ 8.0f, 8.0f, 16.0f });
+    //tg_renderer_push_point_light(sample_scene.h_main_renderer, (v3) { lx1, ly1, lz1 }, (v3){ 8.0f, 8.0f, 16.0f });
     tg_terrain_render(&sample_scene.terrain, sample_scene.h_main_renderer);
     ph_render_commands = TG_LIST_POINTER_TO(sample_scene.render_commands, 0);
     for (u32 i = 0; i < sample_scene.render_commands.count; i++)
@@ -320,11 +327,47 @@ static void tg__game_3d_destroy()
 
 
 
+typedef struct tg_raytracer_scene
+{
+    tg_camera         camera;
+    tg_raytracer_h    h_raytracer;
+} tg_raytracer_scene;
+
+tg_raytracer_scene raytrace_scene;
+
+static void tg__raytracer_test_create()
+{
+    raytrace_scene.camera.position = (v3) { 0.0f, 0.0f, 0.0f };
+    raytrace_scene.camera.pitch = 0.0f;
+    raytrace_scene.camera.yaw = 0.0f;
+    raytrace_scene.camera.roll = 0.0f;
+    raytrace_scene.camera.perspective.fov_y_in_radians = TGM_TO_RADIANS(70.0f);
+    raytrace_scene.camera.perspective.aspect = tg_platform_get_window_aspect_ratio();
+    raytrace_scene.camera.perspective.near = -0.1f;
+    raytrace_scene.camera.perspective.far = -1000.0f;
+
+    raytrace_scene.h_raytracer = tg_raytracer_create(&raytrace_scene.camera);
+}
+
+static void tg__raytracer_test_update_and_render(f32 delta_ms)
+{
+    tg_raytracer_begin(raytrace_scene.h_raytracer);
+    tg_raytracer_push_directional_light(raytrace_scene.h_raytracer, tgm_v3_normalized((v3) { 0.3f, -1.0f, -0.2f }), (v3) { 1.0f, 2.0f, 3.0f });
+    tg_raytracer_push_sphere(raytrace_scene.h_raytracer, (v3) { 0.0f, 0.0f, -3.0f }, 1.0f);
+    tg_raytracer_push_sphere(raytrace_scene.h_raytracer, (v3) { 2.0f, 1.0f, -5.0f }, 1.0f);
+    tg_raytracer_push_sphere(raytrace_scene.h_raytracer, (v3) { -2.0f, 1.0f, -8.0f }, 1.0f);
+    tg_raytracer_end(raytrace_scene.h_raytracer);
+    tg_raytracer_present(raytrace_scene.h_raytracer);
+}
+
+
+
 void tg_application_start()
 {
     tg_graphics_init();
     tg_assets_init();
-    tg__game_3d_create();
+    //tg__game_3d_create();
+    tg__raytracer_test_create();
 
 #ifdef TG_DEBUG
     tg_debug_info debug_info = { 0 };
@@ -363,7 +406,8 @@ void tg_application_start()
 
         tg_input_clear();
         tg_platform_handle_events();
-        tg__game_3d_update_and_render(delta_ms);
+        tg__raytracer_test_update_and_render(delta_ms);
+        //tg__game_3d_update_and_render(delta_ms);
     }
 
     /*--------------------------------------------------------+

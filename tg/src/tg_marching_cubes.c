@@ -34,14 +34,14 @@ u32 tg_marching_cubes_create_mesh(v3i voxel_map_size, const i8* p_voxel_map, v3 
 			for (position.x = 0; position.x < voxel_map_size.x - 1; position.x++)
 			{
 				const v3 position_pad = tgm_v3_sub(tgm_v3_mul(tgm_v3i_to_v3(position), scale), center);
-				p_positions[0] = tgm_v3_add(position_pad, (v3){    0.0f,    0.0f,    0.0f });
-				p_positions[1] = tgm_v3_add(position_pad, (v3){ scale.x,    0.0f,    0.0f });
-				p_positions[2] = tgm_v3_add(position_pad, (v3){    0.0f, scale.y,    0.0f });
-				p_positions[3] = tgm_v3_add(position_pad, (v3){ scale.x, scale.y,    0.0f });
-				p_positions[4] = tgm_v3_add(position_pad, (v3){    0.0f,    0.0f, scale.z });
-				p_positions[5] = tgm_v3_add(position_pad, (v3){ scale.x,    0.0f, scale.z });
-				p_positions[6] = tgm_v3_add(position_pad, (v3){    0.0f, scale.y, scale.z });
-				p_positions[7] = tgm_v3_add(position_pad, (v3){ scale.x, scale.y, scale.z });
+				p_positions[0] = tgm_v3_add(position_pad, (v3) {    0.0f,    0.0f,    0.0f });
+				p_positions[1] = tgm_v3_add(position_pad, (v3) { scale.x,    0.0f,    0.0f });
+				p_positions[2] = tgm_v3_add(position_pad, (v3) {    0.0f, scale.y,    0.0f });
+				p_positions[3] = tgm_v3_add(position_pad, (v3) { scale.x, scale.y,    0.0f });
+				p_positions[4] = tgm_v3_add(position_pad, (v3) {    0.0f,    0.0f, scale.z });
+				p_positions[5] = tgm_v3_add(position_pad, (v3) { scale.x,    0.0f, scale.z });
+				p_positions[6] = tgm_v3_add(position_pad, (v3) {    0.0f, scale.y, scale.z });
+				p_positions[7] = tgm_v3_add(position_pad, (v3) { scale.x, scale.y, scale.z });
 
 				p_samples[0] = TG_VOXEL_MAP_AT(p_voxel_map, voxel_map_size, position.x    , position.y    , position.z    );
 				p_samples[1] = TG_VOXEL_MAP_AT(p_voxel_map, voxel_map_size, position.x + 1, position.y    , position.z    );

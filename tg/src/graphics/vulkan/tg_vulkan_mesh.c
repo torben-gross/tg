@@ -238,8 +238,8 @@ tg_mesh_h tg_mesh_create(u32 vertex_count, const v3* p_positions, const v3* p_no
     staging_buffer = tg_vulkan_buffer_create(vbo_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
     // bounds
-    h_mesh->bounds.min = (v3){ p_positions[0].x, p_positions[0].y, p_positions[0].z };
-    h_mesh->bounds.max = (v3){ p_positions[0].x, p_positions[0].y, p_positions[0].z };
+    h_mesh->bounds.min = (v3) { p_positions[0].x, p_positions[0].y, p_positions[0].z };
+    h_mesh->bounds.max = (v3) { p_positions[0].x, p_positions[0].y, p_positions[0].z };
     for (u32 i = 1; i < vertex_count; i++)
     {
         h_mesh->bounds.min = tgm_v3_min(h_mesh->bounds.min, p_positions[i]);
@@ -262,7 +262,7 @@ tg_mesh_h tg_mesh_create(u32 vertex_count, const v3* p_positions, const v3* p_no
     {
         for (u32 i = 0; i < vertex_count; i++)
         {
-            ((tg_vertex*)staging_buffer.memory.p_mapped_device_memory)[i].uv = (v2){ 0.0f, 0.0f };
+            ((tg_vertex*)staging_buffer.memory.p_mapped_device_memory)[i].uv = (v2) { 0.0f, 0.0f };
         }
     }
     // normals
@@ -297,8 +297,8 @@ tg_mesh_h tg_mesh_create(u32 vertex_count, const v3* p_positions, const v3* p_no
     {
         for (u32 i = 0; i < vertex_count; i++)
         {
-            ((tg_vertex*)staging_buffer.memory.p_mapped_device_memory)[i].tangent = (v3){ 0.0f, 0.0f, 0.0f };
-            ((tg_vertex*)staging_buffer.memory.p_mapped_device_memory)[i].bitangent = (v3){ 0.0f, 0.0f, 0.0f };
+            ((tg_vertex*)staging_buffer.memory.p_mapped_device_memory)[i].tangent = (v3) { 0.0f, 0.0f, 0.0f };
+            ((tg_vertex*)staging_buffer.memory.p_mapped_device_memory)[i].bitangent = (v3) { 0.0f, 0.0f, 0.0f };
         }
     }
 
@@ -318,7 +318,7 @@ tg_mesh_h tg_mesh_create(u32 vertex_count, const v3* p_positions, const v3* p_no
     {
         h_mesh->ibo.size = 0;
         h_mesh->ibo.buffer = VK_NULL_HANDLE;
-        h_mesh->ibo.memory = (tg_vulkan_memory_block){ 0 };
+        h_mesh->ibo.memory = (tg_vulkan_memory_block) { 0 };
     }
 
     return h_mesh;
@@ -341,7 +341,7 @@ tg_mesh_h tg_mesh_create2(u32 vertex_count, u32 vertex_stride, const void* p_ver
     else
     {
         h_mesh->index_count = 0;
-        h_mesh->ibo = (tg_vulkan_buffer){ 0 };
+        h_mesh->ibo = (tg_vulkan_buffer) { 0 };
     }
 
     const u64 max_size = tgm_u64_max(vertex_count * (u64)vertex_stride, index_count * sizeof(u16));
@@ -361,7 +361,7 @@ tg_mesh_h tg_mesh_create2(u32 vertex_count, u32 vertex_stride, const void* p_ver
     {
         h_mesh->ibo.size = 0;
         h_mesh->ibo.buffer = VK_NULL_HANDLE;
-        h_mesh->ibo.memory = (tg_vulkan_memory_block){ 0 };
+        h_mesh->ibo.memory = (tg_vulkan_memory_block) { 0 };
     }
 
     tg_vulkan_buffer_destroy(&staging_buffer);
@@ -387,7 +387,7 @@ tg_mesh_h tg_mesh_create_empty(u32 vertex_capacity, u32 index_capacity)
     {
         h_mesh->ibo.size = 0;
         h_mesh->ibo.buffer = VK_NULL_HANDLE;
-        h_mesh->ibo.memory = (tg_vulkan_memory_block){ 0 };
+        h_mesh->ibo.memory = (tg_vulkan_memory_block) { 0 };
     }
 
     return h_mesh;
@@ -679,12 +679,12 @@ tg_mesh_h tg_mesh_load(const char* p_filename)
             p_positions[3 * i + 0] = p_unique_positions[p_triangle_positions[i].p_data[0] - 1];
             p_positions[3 * i + 1] = p_unique_positions[p_triangle_positions[i].p_data[1] - 1];
             p_positions[3 * i + 2] = p_unique_positions[p_triangle_positions[i].p_data[2] - 1];
-            p_normals[3 * i + 0] = p_triangle_normals[i].p_data[0] - 1 == -1 ? (v3){ 0.0f, 0.0f, 0.0f } : p_unique_normals[p_triangle_normals[i].p_data[0] - 1];
-            p_normals[3 * i + 1] = p_triangle_normals[i].p_data[1] - 1 == -1 ? (v3){ 0.0f, 0.0f, 0.0f } : p_unique_normals[p_triangle_normals[i].p_data[1] - 1];
-            p_normals[3 * i + 2] = p_triangle_normals[i].p_data[2] - 1 == -1 ? (v3){ 0.0f, 0.0f, 0.0f } : p_unique_normals[p_triangle_normals[i].p_data[2] - 1];
-            p_uvs[3 * i + 0] = p_triangle_uvs[i].p_data[0] - 1 == -1 ? (v2){ 0.0f, 0.0f } : p_unique_uvs[p_triangle_uvs[i].p_data[0] - 1];
-            p_uvs[3 * i + 1] = p_triangle_uvs[i].p_data[1] - 1 == -1 ? (v2){ 0.0f, 0.0f } : p_unique_uvs[p_triangle_uvs[i].p_data[1] - 1];
-            p_uvs[3 * i + 2] = p_triangle_uvs[i].p_data[2] - 1 == -1 ? (v2){ 0.0f, 0.0f } : p_unique_uvs[p_triangle_uvs[i].p_data[2] - 1];
+            p_normals[3 * i + 0] = p_triangle_normals[i].p_data[0] - 1 == -1 ? (v3) { 0.0f, 0.0f, 0.0f } : p_unique_normals[p_triangle_normals[i].p_data[0] - 1];
+            p_normals[3 * i + 1] = p_triangle_normals[i].p_data[1] - 1 == -1 ? (v3) { 0.0f, 0.0f, 0.0f } : p_unique_normals[p_triangle_normals[i].p_data[1] - 1];
+            p_normals[3 * i + 2] = p_triangle_normals[i].p_data[2] - 1 == -1 ? (v3) { 0.0f, 0.0f, 0.0f } : p_unique_normals[p_triangle_normals[i].p_data[2] - 1];
+            p_uvs[3 * i + 0] = p_triangle_uvs[i].p_data[0] - 1 == -1 ? (v2) { 0.0f, 0.0f } : p_unique_uvs[p_triangle_uvs[i].p_data[0] - 1];
+            p_uvs[3 * i + 1] = p_triangle_uvs[i].p_data[1] - 1 == -1 ? (v2) { 0.0f, 0.0f } : p_unique_uvs[p_triangle_uvs[i].p_data[1] - 1];
+            p_uvs[3 * i + 2] = p_triangle_uvs[i].p_data[2] - 1 == -1 ? (v2) { 0.0f, 0.0f } : p_unique_uvs[p_triangle_uvs[i].p_data[2] - 1];
         }
 
         for (u32 i = 0; i < 3 * total_triangle_count; i++) // TODO: this must go

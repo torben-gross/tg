@@ -478,6 +478,66 @@ void tg_vulkan_color_image_destroy(tg_color_image* p_color_image)
 
 
 
+tg_vulkan_cube_map tg_vulkan_cube_map_create(u32 width, u32 height, u32 depth, VkFormat format, tg_vulkan_sampler_create_info* p_vulkan_sampler_create_info)
+{
+    tg_vulkan_cube_map cube_map = { 0 };
+    cube_map.width = width;
+    cube_map.height = height;
+    cube_map.depth = depth;
+    cube_map.format = format;
+
+    VkImageCreateInfo image_create_info = { 0 };
+    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_create_info.pNext = TG_NULL;
+    image_create_info.flags = 0;
+    image_create_info.imageType = VK_IMAGE_TYPE_3D;
+    image_create_info.format = format;
+    image_create_info.extent.width = width;
+    image_create_info.extent.height = height;
+    image_create_info.extent.depth = depth;
+    image_create_info.mipLevels = 1;
+    image_create_info.arrayLayers = 1;
+    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
+    image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+    image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    image_create_info.queueFamilyIndexCount = 0;
+    image_create_info.pQueueFamilyIndices = TG_NULL;
+    image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+    VK_CALL(vkCreateImage(device, &image_create_info, TG_NULL, &cube_map.image));
+
+    VkMemoryRequirements memory_requirements = { 0 };
+    vkGetImageMemoryRequirements(device, cube_map.image, &memory_requirements);
+    cube_map.memory = tg_vulkan_memory_allocator_alloc(memory_requirements.alignment, memory_requirements.size, memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    VK_CALL(vkBindImageMemory(device, cube_map.image, cube_map.memory.device_memory, cube_map.memory.offset));
+
+    TG_INVALID_CODEPATH(); // TODO: six layered image view?
+    cube_map.image_view = tg__image_view_create(cube_map.image, VK_IMAGE_VIEW_TYPE_3D, cube_map.format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+
+    if (p_vulkan_sampler_create_info)
+    {
+        // TODO: mip levels, also above and below, once respectively
+        cube_map.sampler = tg__sampler_create_custom(
+            1,
+            p_vulkan_sampler_create_info->min_filter, p_vulkan_sampler_create_info->mag_filter,
+            p_vulkan_sampler_create_info->address_mode_u, p_vulkan_sampler_create_info->address_mode_v, p_vulkan_sampler_create_info->address_mode_w
+        );
+    }
+    else
+    {
+        cube_map.sampler = tg__sampler_create(1);
+    }
+
+    return cube_map;
+}
+
+void tg_vulkan_cube_map_destroy(tg_vulkan_cube_map* p_cube_map)
+{
+}
+
+
+
 VkCommandBuffer tg_vulkan_command_buffer_allocate(tg_vulkan_command_pool_type type, VkCommandBufferLevel level)
 {
     VkCommandBuffer command_buffer = VK_NULL_HANDLE;
@@ -521,8 +581,8 @@ void tg_vulkan_command_buffer_cmd_begin_render_pass(VkCommandBuffer command_buff
     render_pass_begin_info.pNext = TG_NULL;
     render_pass_begin_info.renderPass = render_pass;
     render_pass_begin_info.framebuffer = p_framebuffer->framebuffer;
-    render_pass_begin_info.renderArea.offset = (VkOffset2D){ 0, 0 };
-    render_pass_begin_info.renderArea.extent = (VkExtent2D){ p_framebuffer->width, p_framebuffer->height };
+    render_pass_begin_info.renderArea.offset = (VkOffset2D) { 0, 0 };
+    render_pass_begin_info.renderArea.extent = (VkExtent2D) { p_framebuffer->width, p_framebuffer->height };
     render_pass_begin_info.clearValueCount = 0;
     render_pass_begin_info.pClearValues = TG_NULL;
 
@@ -1386,7 +1446,7 @@ tg_vulkan_pipeline tg_vulkan_pipeline_create_graphics2(const tg_vulkan_graphics_
     viewport.maxDepth = 1.0f;
 
     VkRect2D scissors = { 0 };
-    scissors.offset = (VkOffset2D){ 0, 0 };
+    scissors.offset = (VkOffset2D) { 0, 0 };
     scissors.extent = swapchain_extent;
 
     VkPipelineViewportStateCreateInfo pipeline_viewport_state_create_info = { 0 };
@@ -1717,6 +1777,66 @@ void tg_vulkan_storage_image_3d_destroy(tg_storage_image_3d* p_storage_image_3d)
     vkDestroyImageView(device, p_storage_image_3d->image_view, TG_NULL);
     tg_vulkan_memory_allocator_free(&p_storage_image_3d->memory);
     vkDestroyImage(device, p_storage_image_3d->image, TG_NULL);
+}
+
+tg_vulkan_storage_image tg_vulkan_storage_image_create(u32 width, u32 height, VkFormat format, tg_vulkan_sampler_create_info* p_sampler_create_info)
+{
+    tg_vulkan_storage_image image = { 0 };
+
+    image.width = width;
+    image.height = height;
+    image.format = format;
+
+    VkImageCreateInfo image_create_info = { 0 };
+    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_create_info.pNext = TG_NULL;
+    image_create_info.flags = 0;
+    image_create_info.imageType = VK_IMAGE_TYPE_2D;
+    image_create_info.format = format;
+    image_create_info.extent.width = width;
+    image_create_info.extent.height = height;
+    image_create_info.extent.depth = 1;
+    image_create_info.mipLevels = 1; // TODO: mip levels, also below in sampler
+    image_create_info.arrayLayers = 1;
+    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
+    image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+    image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
+    image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    image_create_info.queueFamilyIndexCount = 0;
+    image_create_info.pQueueFamilyIndices = TG_NULL;
+    image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+    VK_CALL(vkCreateImage(device, &image_create_info, TG_NULL, &image.image));
+
+    VkMemoryRequirements memory_requirements = { 0 };
+    vkGetImageMemoryRequirements(device, image.image, &memory_requirements);
+    image.memory = tg_vulkan_memory_allocator_alloc(memory_requirements.alignment, memory_requirements.size, memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    VK_CALL(vkBindImageMemory(device, image.image, image.memory.device_memory, image.memory.offset));
+
+    image.image_view = tg__image_view_create(image.image, VK_IMAGE_VIEW_TYPE_2D, format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+
+    if (p_sampler_create_info)
+    {
+        image.sampler = tg__sampler_create_custom(
+            1,
+            p_sampler_create_info->min_filter,
+            p_sampler_create_info->mag_filter,
+            p_sampler_create_info->address_mode_u,
+            p_sampler_create_info->address_mode_v,
+            p_sampler_create_info->address_mode_w
+        );
+    }
+    else
+    {
+        image.sampler = tg__sampler_create(1);
+    }
+
+    return image;
+}
+
+void tg_vulkan_storage_image_destroy(tg_vulkan_storage_image* p_vulkan_storage_image)
+{
+
 }
 
 

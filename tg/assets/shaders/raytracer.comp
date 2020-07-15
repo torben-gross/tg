@@ -1,0 +1,60 @@
+#version 450
+
+layout(local_size_x = 1, local_size_y = 1) in;
+
+layout(set = 0, binding = 0) uniform render_info
+{
+    vec4         u_camera_position;
+    vec4         u_ray00;
+    vec4         u_ray01;
+    vec4         u_ray10;
+    vec4         u_ray11;
+    uint         u_directional_light_count;
+    uint         u_point_light_count;
+    uint         u_sphere_count;
+    vec4[512]    u_directional_light_directions;
+    vec4[512]    u_directional_light_colors;
+    vec4[512]    u_point_light_positions;
+    vec4[512]    u_point_light_colors;
+    vec4[512]    u_sphere_centers_radii;
+};
+
+layout(set = 0, binding = 1, rgba32f) uniform image2D u_render_target;
+
+float intersect(vec3 ray_origin, vec3 ray_direction, vec3 sphere_center, float sphere_radius)
+{
+    vec3 oc = ray_origin - sphere_center;
+    float a = dot(ray_direction, ray_direction);
+    float b = 2.0 * dot(oc, ray_direction);
+    float c = dot(oc, oc) - sphere_radius * sphere_radius;
+    float discriminant = b * b - 4 * a * c;
+    if(discriminant < 0)
+    {
+        return -1.0;
+    }
+    else
+    {
+        return (-b - sqrt(discriminant)) / (2.0 * a);
+    }
+}
+
+void main()
+{
+    float x = float(gl_GlobalInvocationID.x) / float(gl_NumWorkGroups.x);
+    float y = float(gl_GlobalInvocationID.y) / float(gl_NumWorkGroups.y);
+
+    vec4 q0 = mix(u_ray00, u_ray10, y);
+    vec4 q1 = mix(u_ray01, u_ray11, y);
+    vec4 ray = mix(q0, q1, x);
+
+    vec4 color = vec4(ray.xyz, 1.0);
+    for (int i = 0; i < u_sphere_count; i++)
+    {
+        if (intersect(u_camera_position.xyz, ray.xyz, u_sphere_centers_radii[i].xyz, u_sphere_centers_radii[i].w) != -1)
+        {
+            color = vec4(0.5, 0.2, 0.9, 1.0);
+        }
+    }
+
+    imageStore(u_render_target, ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y), color);
+}
