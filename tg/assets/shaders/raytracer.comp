@@ -1,5 +1,7 @@
 #version 450
 
+#define TG_F32_MAX 3.402823466e+38
+
 layout(local_size_x = 1, local_size_y = 1) in;
 
 layout(set = 0, binding = 0) uniform render_info
@@ -30,7 +32,7 @@ float intersect(vec3 ray_origin, vec3 ray_direction, vec3 sphere_center, float s
     float discriminant = b * b - 4 * a * c;
     if(discriminant < 0)
     {
-        return -1.0;
+        return TG_F32_MAX;
     }
     else
     {
@@ -40,20 +42,54 @@ float intersect(vec3 ray_origin, vec3 ray_direction, vec3 sphere_center, float s
 
 void main()
 {
+    vec3 colors[5] = vec3[](
+        vec3(1.0, 0.2, 0.3),
+        vec3(0.4, 0.3, 0.2),
+        vec3(0.4, 0.1, 1.0),
+        vec3(1.0, 8.0, 0.2),
+        vec3(1.0, 0.2, 1.0)
+    );
     float x = float(gl_GlobalInvocationID.x) / float(gl_NumWorkGroups.x);
     float y = float(gl_GlobalInvocationID.y) / float(gl_NumWorkGroups.y);
 
     vec4 q0 = mix(u_ray00, u_ray10, y);
     vec4 q1 = mix(u_ray01, u_ray11, y);
-    vec4 ray = mix(q0, q1, x);
+    vec3 ray = normalize(mix(q0, q1, x).xyz);
+    vec3 light_dir = normalize(u_directional_light_directions[0].xyz);
 
-    vec4 color = vec4(ray.xyz, 1.0);
-    for (int i = 0; i < u_sphere_count; i++)
+    float best_result;
+    vec4 color = vec4(0.0);
+    vec3 ray_dir = normalize(ray);
+    vec3 ray_origin = u_camera_position.xyz;
+    for (int i = 0; i < 8; i++)
     {
-        if (intersect(u_camera_position.xyz, ray.xyz, u_sphere_centers_radii[i].xyz, u_sphere_centers_radii[i].w) != -1)
+        best_result = TG_F32_MAX;
+        vec3 next_ray_dir = ray_dir;
+        vec3 next_ray_origin = ray_origin;
+        for (int j = 0; j < u_sphere_count; j++)
         {
-            color = vec4(0.5, 0.2, 0.9, 1.0);
+            vec3 sphere_center = u_sphere_centers_radii[j].xyz;
+            float sphere_radius = u_sphere_centers_radii[j].w;
+
+            float result = intersect(ray_origin, ray_dir, sphere_center, sphere_radius);
+            if (result >= 0.0 && result < best_result)
+            {
+                best_result = result;
+                next_ray_origin = ray_origin + result * ray_dir;
+                vec3 normal = normalize(next_ray_origin - sphere_center);
+                vec3 light_reflect_dir = normalize(reflect(light_dir, normal));
+
+                float ambient = 0.1f;
+                float diffuse = max(0.0, dot(normal, -light_dir));
+                float specular = pow(max(dot(ray_dir, -light_reflect_dir), 0.0), 16);
+                vec3 l = ambient * colors[j] + diffuse * colors[j] + specular * colors[j];
+                
+                color = vec4(l, 1.0);
+                next_ray_dir = normalize(reflect(ray_dir, normal));
+            }
         }
+        ray_dir = next_ray_dir;
+        ray_origin = next_ray_origin;
     }
 
     imageStore(u_render_target, ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y), color);

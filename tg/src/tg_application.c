@@ -330,6 +330,8 @@ static void tg__game_3d_destroy()
 typedef struct tg_raytracer_scene
 {
     tg_camera         camera;
+    u32               last_mouse_x;
+    u32               last_mouse_y;
     tg_raytracer_h    h_raytracer;
 } tg_raytracer_scene;
 
@@ -345,17 +347,30 @@ static void tg__raytracer_test_create()
     raytrace_scene.camera.perspective.aspect = tg_platform_get_window_aspect_ratio();
     raytrace_scene.camera.perspective.near = -0.1f;
     raytrace_scene.camera.perspective.far = -1000.0f;
+    tg_input_get_mouse_position(&raytrace_scene.last_mouse_x, &raytrace_scene.last_mouse_y);
 
     raytrace_scene.h_raytracer = tg_raytracer_create(&raytrace_scene.camera);
 }
 
 static void tg__raytracer_test_update_and_render(f32 delta_ms)
 {
+    u32 mouse_x = 0;
+    u32 mouse_y = 0;
+    tg_input_get_mouse_position(&mouse_x, &mouse_y);
+    if (tg_input_is_mouse_button_down(TG_BUTTON_LEFT))
+    {
+        raytrace_scene.camera.yaw += TGM_TO_RADIANS(0.064f * (f32)((i32)raytrace_scene.last_mouse_x - (i32)mouse_x));
+        raytrace_scene.camera.pitch += TGM_TO_RADIANS(0.064f * (f32)((i32)raytrace_scene.last_mouse_y - (i32)mouse_y));
+    }
+    raytrace_scene.last_mouse_x = mouse_x;
+    raytrace_scene.last_mouse_y = mouse_y;
+
     tg_raytracer_begin(raytrace_scene.h_raytracer);
-    tg_raytracer_push_directional_light(raytrace_scene.h_raytracer, tgm_v3_normalized((v3) { 0.3f, -1.0f, -0.2f }), (v3) { 1.0f, 2.0f, 3.0f });
+    tg_raytracer_push_directional_light(raytrace_scene.h_raytracer, tgm_v3_normalized((v3) { 0.3f, -0.2f, -0.5f }), (v3) { 1.0f, 2.0f, 3.0f });
     tg_raytracer_push_sphere(raytrace_scene.h_raytracer, (v3) { 0.0f, 0.0f, -3.0f }, 1.0f);
     tg_raytracer_push_sphere(raytrace_scene.h_raytracer, (v3) { 2.0f, 1.0f, -5.0f }, 1.0f);
-    tg_raytracer_push_sphere(raytrace_scene.h_raytracer, (v3) { -2.0f, 1.0f, -8.0f }, 1.0f);
+    tg_raytracer_push_sphere(raytrace_scene.h_raytracer, (v3) { -2.5f, 0.8f, -3.0f }, 1.0f);
+    tg_raytracer_push_sphere(raytrace_scene.h_raytracer, (v3) { -1.0f, -2.0f, -2.0f }, 1.0f);
     tg_raytracer_end(raytrace_scene.h_raytracer);
     tg_raytracer_present(raytrace_scene.h_raytracer);
 }

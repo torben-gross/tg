@@ -885,7 +885,7 @@ static void tg__init_present_pass(tg_renderer_h h_renderer)
     tg_vulkan_graphics_pipeline_create_info vulkan_graphics_pipeline_create_info = { 0 };
     vulkan_graphics_pipeline_create_info.p_vertex_shader = &((tg_vertex_shader_h)tg_assets_get_asset("shaders/screen_quad.vert"))->vulkan_shader;
     vulkan_graphics_pipeline_create_info.p_fragment_shader = &((tg_fragment_shader_h)tg_assets_get_asset("shaders/present.frag"))->vulkan_shader;
-    vulkan_graphics_pipeline_create_info.cull_mode = VK_CULL_MODE_BACK_BIT;
+    vulkan_graphics_pipeline_create_info.cull_mode = VK_CULL_MODE_NONE;
     vulkan_graphics_pipeline_create_info.sample_count = VK_SAMPLE_COUNT_1_BIT;
     vulkan_graphics_pipeline_create_info.depth_test_enable = VK_FALSE;
     vulkan_graphics_pipeline_create_info.depth_write_enable = VK_FALSE;
