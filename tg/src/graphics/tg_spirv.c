@@ -1,5 +1,6 @@
 #include "graphics/tg_spirv.h"
 
+#include "graphics/tg_graphics.h"
 #include "memory/tg_memory.h"
 #include "util/tg_qsort.h"
 #include "util/tg_string.h"
@@ -511,9 +512,9 @@ typedef enum tg_spirv_op
 
 
 
-static b32 tg__compare_by_location(const tg_spirv_inout_resource* p_v0, const tg_spirv_inout_resource* p_v1)
+static i32 tg__compare_by_location(const tg_spirv_inout_resource* p_v0, const tg_spirv_inout_resource* p_v1, void* p_user_data)
 {
-    const b32 result = p_v0->location < p_v1->location;
+    const i32 result = p_v0->location - p_v1->location;
     return result;
 }
 
@@ -685,33 +686,33 @@ static void tg__fill_inout_resource(u32 word_count, const u32* p_words, u32 id, 
         case TG_SPIRV_OP_TYPE_INT:
         {
             const u32 target_id = p_words[processed_word_count + 1];
-            if (target_id == id && p_resource->format == TG_SPIRV_INOUT_FORMAT_INVALID)
+            if (target_id == id && p_resource->format == TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_INVALID)
             {
                 TG_ASSERT(p_words[processed_word_count + 2] == 32);
                 const b32 is_signed = p_words[processed_word_count + 3];
                 if (is_signed)
                 {
-                    p_resource->format = TG_SPIRV_INOUT_FORMAT_R32_SINT;
+                    p_resource->format = TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32_SINT;
                 }
                 else
                 {
-                    p_resource->format = TG_SPIRV_INOUT_FORMAT_R32_UINT;
+                    p_resource->format = TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32_UINT;
                 }
             }
         } break;
         case TG_SPIRV_OP_TYPE_FLOAT:
         {
             const u32 target_id = p_words[processed_word_count + 1];
-            if (target_id == id && p_resource->format == TG_SPIRV_INOUT_FORMAT_INVALID)
+            if (target_id == id && p_resource->format == TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_INVALID)
             {
                 TG_ASSERT(p_words[processed_word_count + 2] == 32);
-                p_resource->format = TG_SPIRV_INOUT_FORMAT_R32_SFLOAT;
+                p_resource->format = TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32_SFLOAT;
             }
         } break;
         case TG_SPIRV_OP_TYPE_VECTOR:
         {
             const u32 target_id = p_words[processed_word_count + 1];
-            if (target_id == id && p_resource->format == TG_SPIRV_INOUT_FORMAT_INVALID)
+            if (target_id == id && p_resource->format == TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_INVALID)
             {
                 u32 literal;
                 tg_spirv_op component_type;
@@ -725,9 +726,9 @@ static void tg__fill_inout_resource(u32 word_count, const u32* p_words, u32 id, 
                     const b32 is_signed = literal >> 16;
                     switch (component_number)
                     {
-                    case 2: p_resource->format = is_signed ? TG_SPIRV_INOUT_FORMAT_R32G32_SINT       : TG_SPIRV_INOUT_FORMAT_R32G32_UINT;       break;
-                    case 3: p_resource->format = is_signed ? TG_SPIRV_INOUT_FORMAT_R32G32B32_SINT    : TG_SPIRV_INOUT_FORMAT_R32G32B32_UINT;    break;
-                    case 4: p_resource->format = is_signed ? TG_SPIRV_INOUT_FORMAT_R32G32B32A32_SINT : TG_SPIRV_INOUT_FORMAT_R32G32B32A32_UINT; break;
+                    case 2: p_resource->format = is_signed ? TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32_SINT       : TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32_UINT;       break;
+                    case 3: p_resource->format = is_signed ? TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32B32_SINT    : TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32B32_UINT;    break;
+                    case 4: p_resource->format = is_signed ? TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32B32A32_SINT : TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32B32A32_UINT; break;
 
                     default: TG_INVALID_CODEPATH(); break;
                     }
@@ -737,9 +738,9 @@ static void tg__fill_inout_resource(u32 word_count, const u32* p_words, u32 id, 
                     TG_ASSERT(literal == 32);
                     switch (component_number)
                     {
-                    case 2: p_resource->format = TG_SPIRV_INOUT_FORMAT_R32G32_SFLOAT;       break;
-                    case 3: p_resource->format = TG_SPIRV_INOUT_FORMAT_R32G32B32_SFLOAT;    break;
-                    case 4: p_resource->format = TG_SPIRV_INOUT_FORMAT_R32G32B32A32_SFLOAT; break;
+                    case 2: p_resource->format = TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32_SFLOAT;       break;
+                    case 3: p_resource->format = TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32B32_SFLOAT;    break;
+                    case 4: p_resource->format = TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32B32A32_SFLOAT; break;
 
                     default: TG_INVALID_CODEPATH(); break;
                     }
@@ -838,21 +839,21 @@ void tg_spirv_fill_layout(u32 word_count, const u32* p_words, tg_spirv_layout* p
 
             if (storage_class == TG_SPIRV_STORAGE_CLASS_UNIFORM_CONSTANT || storage_class == TG_SPIRV_STORAGE_CLASS_UNIFORM)
             {
-                TG_ASSERT(p_layout->global_resource_count < TG_SPIRV_MAX_GLOBALS);
+                TG_ASSERT(p_layout->global_resource_count < TG_MAX_SHADER_GLOBAL_RESOURCES);
                 tg__fill_global_resource(word_count, p_words, variable_id, &p_layout->p_global_resources[p_layout->global_resource_count]);
                 tg__fill_global_resource(word_count, p_words, points_to_id, &p_layout->p_global_resources[p_layout->global_resource_count]);
                 p_layout->global_resource_count++;
             }
             else if (storage_class == TG_SPIRV_STORAGE_CLASS_INPUT && p_layout->shader_type == TG_SPIRV_SHADER_TYPE_VERTEX)
             {
-                TG_ASSERT(p_layout->input_resource_count < TG_SPIRV_MAX_INPUTS);
+                TG_ASSERT(p_layout->input_resource_count < TG_MAX_SHADER_INPUTS);
                 tg__fill_inout_resource(word_count, p_words, variable_id, &p_layout->p_input_resources[p_layout->input_resource_count]);
                 tg__fill_inout_resource(word_count, p_words, points_to_id, &p_layout->p_input_resources[p_layout->input_resource_count]);
                 p_layout->input_resource_count++;
             }
             else if (storage_class == TG_SPIRV_STORAGE_CLASS_OUTPUT && p_layout->shader_type == TG_SPIRV_SHADER_TYPE_FRAGMENT)
             {
-                TG_ASSERT(p_layout->output_resource_count < TG_SPIRV_MAX_OUTPUTS);
+                TG_ASSERT(p_layout->output_resource_count < TG_MAX_SHADER_INPUTS);
                 tg__fill_inout_resource(word_count, p_words, variable_id, &p_layout->p_output_resources[p_layout->output_resource_count]);
                 tg__fill_inout_resource(word_count, p_words, points_to_id, &p_layout->p_output_resources[p_layout->output_resource_count]);
                 p_layout->output_resource_count++;
@@ -864,30 +865,14 @@ void tg_spirv_fill_layout(u32 word_count, const u32* p_words, tg_spirv_layout* p
 
     if (p_layout->input_resource_count != 0)
     {
-        TG_QSORT(tg_spirv_inout_resource, p_layout->input_resource_count, p_layout->p_input_resources, tg__compare_by_location);
+        TG_QSORT(p_layout->input_resource_count, p_layout->p_input_resources, tg__compare_by_location, TG_NULL);
 
         // TODO: this must consider alignment rules! this only works as long as there is no 64 bit value in here somewhere
         u32 offset = 0;
         for (u8 i = 0; i < p_layout->input_resource_count; i++)
         {
             p_layout->p_input_resources[i].offset = offset;
-            switch (p_layout->p_input_resources[i].format)
-            {
-            case TG_SPIRV_INOUT_FORMAT_R32_SFLOAT:          offset +=  4; break;
-            case TG_SPIRV_INOUT_FORMAT_R32_SINT:            offset +=  4; break;
-            case TG_SPIRV_INOUT_FORMAT_R32_UINT:            offset +=  4; break;
-            case TG_SPIRV_INOUT_FORMAT_R32G32_SFLOAT:       offset +=  8; break;
-            case TG_SPIRV_INOUT_FORMAT_R32G32_SINT:         offset +=  8; break;
-            case TG_SPIRV_INOUT_FORMAT_R32G32_UINT:         offset +=  8; break;
-            case TG_SPIRV_INOUT_FORMAT_R32G32B32_SFLOAT:    offset += 12; break;
-            case TG_SPIRV_INOUT_FORMAT_R32G32B32_SINT:      offset += 12; break;
-            case TG_SPIRV_INOUT_FORMAT_R32G32B32_UINT:      offset += 12; break;
-            case TG_SPIRV_INOUT_FORMAT_R32G32B32A32_SFLOAT: offset += 16; break;
-            case TG_SPIRV_INOUT_FORMAT_R32G32B32A32_SINT:   offset += 16; break;
-            case TG_SPIRV_INOUT_FORMAT_R32G32B32A32_UINT:   offset += 16; break;
-
-            default: TG_INVALID_CODEPATH(); break;
-            }
+            offset += tg_vertex_input_attribute_format_get_size(p_layout->p_input_resources[i].format);
         }
         p_layout->vertex_stride = offset;
     }

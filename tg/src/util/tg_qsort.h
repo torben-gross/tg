@@ -3,10 +3,10 @@
 
 #include "tg_common.h"
 
-#define TG_QSORT(type, count, p_elements, p_compare_fn)    tg_qsort_impl(sizeof(type), count, p_elements, p_compare_fn)
+#define TG_QSORT(count, p_elements, p_compare_fn, p_user_data)    tg_qsort_impl(sizeof(*(p_elements)), count, p_elements, p_compare_fn, p_user_data)
 
-typedef b32 tg_qsort_compare_fn(const void* p_v0, const void* p_v1);
+typedef i32 tg_qsort_compare_fn(const void* p_v0, const void* p_v1, void* p_user_data);
 
-void tg_qsort_impl(u32 element_size, u32 element_count, void* p_elements, tg_qsort_compare_fn* p_compare_fn);
+void tg_qsort_impl(u32 element_size, u32 element_count, void* p_elements, tg_qsort_compare_fn* p_compare_fn, void* p_user_data);
 
 #endif

@@ -24,6 +24,17 @@ typedef struct tg_raytracer_ubo
     v4     u_sphere_centers_radii[512];
 } tg_raytracer_ubo;
 
+typedef struct tg_raytracer_vertices
+{
+    u32    u_vertex_count;
+    u32    u_vertex_float_count;
+    u32    u_offset_floats_position;
+    u32    u_offset_floats_normal;
+    u32    u_offset_floats_uv;
+    u32    u_offset_floats_tangent;
+    u32    u_offset_floats_bitangent;
+} tg_raytracer_vertices;
+
 
 
 tg_raytracer_h tg_raytracer_create(tg_camera* p_camera)
@@ -39,13 +50,13 @@ tg_raytracer_h tg_raytracer_create(tg_camera* p_camera)
 
     tg_vulkan_screen_vertex p_vertices[4] = { 0 };
     p_vertices[0].position = (v2){ -1.0f,  1.0f };
-    p_vertices[0].uv       = (v2){  0.0f,  0.0f };
+    p_vertices[0].uv       = (v2){  0.0f,  1.0f };
     p_vertices[1].position = (v2){  1.0f,  1.0f };
-    p_vertices[1].uv       = (v2){  1.0f,  0.0f };
+    p_vertices[1].uv       = (v2){  1.0f,  1.0f };
     p_vertices[2].position = (v2){  1.0f, -1.0f };
-    p_vertices[2].uv       = (v2){  1.0f,  1.0f };
+    p_vertices[2].uv       = (v2){  1.0f,  0.0f };
     p_vertices[3].position = (v2){ -1.0f, -1.0f };
-    p_vertices[3].uv       = (v2){  0.0f,  1.0f };
+    p_vertices[3].uv       = (v2){  0.0f,  0.0f };
 
     const u16 p_indices[6] = { 0, 1, 2, 2, 3, 0 };
 
@@ -65,11 +76,24 @@ tg_raytracer_h tg_raytracer_create(tg_camera* p_camera)
     h_raytracer->raytrace_pass.command_buffer = tg_vulkan_command_buffer_allocate(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     h_raytracer->raytrace_pass.ubo = tg_vulkan_buffer_create(sizeof(tg_raytracer_ubo), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 
+    tg_mesh_h h_mesh = tg_mesh_load("meshes/sponza.obj", V3(0.01f));
+
+    staging_buffer = tg_vulkan_buffer_create(h_mesh->vertex_count * sizeof(tg_vertex), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    tg_vulkan_buffer_copy(h_mesh->vertex_count * sizeof(tg_vertex), h_mesh->vbo.buffer, staging_buffer.buffer);
+
+    tg_vulkan_buffer ubo = tg_vulkan_buffer_create(sizeof(tg_raytracer_vertices), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    ((tg_raytracer_vertices*)ubo.memory.p_mapped_device_memory)->u_vertex_count            = h_mesh->vertex_count;
+    ((tg_raytracer_vertices*)ubo.memory.p_mapped_device_memory)->u_vertex_float_count      = sizeof(tg_vertex) / sizeof(f32);
+    ((tg_raytracer_vertices*)ubo.memory.p_mapped_device_memory)->u_offset_floats_position  = offsetof(tg_vertex, position) / sizeof(f32);
+    ((tg_raytracer_vertices*)ubo.memory.p_mapped_device_memory)->u_offset_floats_normal    = offsetof(tg_vertex, normal) / sizeof(f32);
+    ((tg_raytracer_vertices*)ubo.memory.p_mapped_device_memory)->u_offset_floats_uv        = offsetof(tg_vertex, uv) / sizeof(f32);
+    ((tg_raytracer_vertices*)ubo.memory.p_mapped_device_memory)->u_offset_floats_tangent   = offsetof(tg_vertex, tangent) / sizeof(f32);
+    ((tg_raytracer_vertices*)ubo.memory.p_mapped_device_memory)->u_offset_floats_bitangent = offsetof(tg_vertex, bitangent) / sizeof(f32);
+
     VkDescriptorBufferInfo descriptor_buffer_info = { 0 };
     descriptor_buffer_info.buffer = h_raytracer->raytrace_pass.ubo.buffer;
     descriptor_buffer_info.offset = 0;
     descriptor_buffer_info.range = VK_WHOLE_SIZE;
-
     VkWriteDescriptorSet write_descriptor_set = { 0 };
     write_descriptor_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     write_descriptor_set.pNext = TG_NULL;
@@ -81,20 +105,29 @@ tg_raytracer_h tg_raytracer_create(tg_camera* p_camera)
     write_descriptor_set.pImageInfo = TG_NULL;
     write_descriptor_set.pBufferInfo = &descriptor_buffer_info;
     write_descriptor_set.pTexelBufferView = TG_NULL;
-
     tg_vulkan_descriptor_sets_update(1, &write_descriptor_set); // TODO: update color image
 
     VkDescriptorImageInfo descriptor_image_info = { 0 };
     descriptor_image_info.sampler = h_raytracer->storage_image.sampler;
     descriptor_image_info.imageView = h_raytracer->storage_image.image_view;
     descriptor_image_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-
     write_descriptor_set.dstBinding = 1;
     write_descriptor_set.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
     write_descriptor_set.pImageInfo = &descriptor_image_info;
     write_descriptor_set.pBufferInfo = TG_NULL;
-
     tg_vulkan_descriptor_sets_update(1, &write_descriptor_set); // TODO: update color image
+
+    descriptor_buffer_info.buffer = ubo.buffer;
+    write_descriptor_set.dstBinding = 2;
+    write_descriptor_set.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    write_descriptor_set.pImageInfo = TG_NULL;
+    write_descriptor_set.pBufferInfo = &descriptor_buffer_info;
+    tg_vulkan_descriptor_sets_update(1, &write_descriptor_set);
+
+    descriptor_buffer_info.buffer = staging_buffer.buffer;
+    write_descriptor_set.dstBinding = 3;
+    write_descriptor_set.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    tg_vulkan_descriptor_sets_update(1, &write_descriptor_set);
 
     h_raytracer->present_pass.image_acquired_semaphore = tg_vulkan_semaphore_create();
 
@@ -181,7 +214,7 @@ tg_raytracer_h tg_raytracer_create(tg_camera* p_camera)
     tg_vulkan_command_buffer_begin(h_raytracer->raytrace_pass.command_buffer, 0, TG_NULL);
     vkCmdBindPipeline(h_raytracer->raytrace_pass.command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, h_raytracer->raytrace_pass.compute_pipeline.pipeline);
     vkCmdBindDescriptorSets(h_raytracer->raytrace_pass.command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, h_raytracer->raytrace_pass.compute_pipeline.pipeline_layout, 0, 1, &h_raytracer->raytrace_pass.compute_pipeline.descriptor_set, 0, TG_NULL);
-    vkCmdDispatch(h_raytracer->raytrace_pass.command_buffer, swapchain_extent.width, swapchain_extent.height, 1);
+    vkCmdDispatch(h_raytracer->raytrace_pass.command_buffer, swapchain_extent.width / 32, swapchain_extent.height / 32, 1);
     vkEndCommandBuffer(h_raytracer->raytrace_pass.command_buffer);
 
     for (u32 i = 0; i < TG_VULKAN_SURFACE_IMAGE_COUNT; i++)
@@ -301,8 +334,8 @@ void tg_raytracer_end(tg_raytracer_h h_raytracer)
     const m4 inv_view_proj = tgm_m4_inverse(tgm_m4_mul(proj, view));
 
     v4 ray00 = { -1.0f,  1.0f,  1.0f,  1.0f };
-    v4 ray01 = {  1.0f,  1.0f,  1.0f,  1.0f };
-    v4 ray10 = { -1.0f, -1.0f,  1.0f,  1.0f };
+    v4 ray01 = { -1.0f, -1.0f,  1.0f,  1.0f };
+    v4 ray10 = {  1.0f,  1.0f,  1.0f,  1.0f };
     v4 ray11 = {  1.0f, -1.0f,  1.0f,  1.0f };
 
     ray00 = tgm_m4_mulv4(inv_view_proj, ray00);

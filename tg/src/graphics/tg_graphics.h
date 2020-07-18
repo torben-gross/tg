@@ -122,7 +122,30 @@ typedef enum tg_storage_image_format
 	TG_STORAGE_IMAGE_FORMAT_R32G32B32A32_SFLOAT
 } tg_storage_image_format;
 
+typedef enum tg_vertex_input_attribute_format
+{
+	TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_INVALID                = 0,
+	TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32_SFLOAT             = 100,
+	TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32_SINT               = 99,
+	TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32_UINT               = 98,
+	TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32_SFLOAT          = 103,
+	TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32_SINT            = 102,
+	TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32_UINT            = 101,
+	TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32B32_SFLOAT       = 106,
+	TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32B32_SINT         = 105,
+	TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32B32_UINT         = 104,
+	TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32B32A32_SFLOAT    = 109,
+	TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32B32A32_SINT      = 108,
+	TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32B32A32_UINT      = 107
+} tg_vertex_input_attribute_format;
 
+
+
+typedef struct tg_bounds // TODO: this should be part of physics
+{
+	v3    min;
+	v3    max;
+} tg_bounds;
 
 typedef struct tg_camera
 {
@@ -177,11 +200,42 @@ typedef struct tg_depth_image_create_info
 	tg_image_address_mode    address_mode_w;
 } tg_depth_image_create_info;
 
-typedef struct tg_bounds // TODO: this should be part of physics
+typedef struct tg_kd_node tg_kd_node;
+typedef struct tg_kd_node
 {
-	v3    min;
-	v3    max;
-} tg_bounds;
+	union
+	{
+		u32                flags; // 000 := leaf, 001 := x-axis, 010 := y-axis, 100 := z-axis
+		struct
+		{
+			f32            split_position;
+			tg_kd_node*    pp_children[2];
+		} node;
+		struct
+		{
+			u32            vertex_count;
+			v3*            p_vertex_positions;
+		} leaf;
+	};
+} tg_kd_node;
+
+typedef struct tg_kd_tree
+{
+	tg_bounds     bounds;
+	tg_kd_node    root;
+} tg_kd_tree;
+
+// TODO: was this format used by the kd-tree in the end?
+//                +---+----------+-------------+
+// inner nodes -> | s | exponent | mantissa    |
+//                | 1 | 8        | 23          |
+//                +---+---+------+-------------+
+// both        -> | flags |                    |
+//                | 2     |                    |
+//                +-------+--------------------+
+// leaves      -> |       | number of vertices |
+//                |       | 30                 |
+//                +-------+--------------------+
 
 typedef struct tg_vertex
 {
@@ -198,6 +252,11 @@ void                             tg_graphics_init();
 void                             tg_graphics_on_window_resize(u32 width, u32 height);
 void                             tg_graphics_shutdown();
 void                             tg_graphics_wait_idle();
+
+
+
+u32                              tg_vertex_input_attribute_format_get_alignment(tg_vertex_input_attribute_format format);
+u32                              tg_vertex_input_attribute_format_get_size(tg_vertex_input_attribute_format format);
 
 
 
@@ -218,6 +277,9 @@ tg_fragment_shader_h             tg_fragment_shader_create(const char* p_filenam
 void                             tg_fragment_shader_destroy(tg_fragment_shader_h h_fragment_shader);
 tg_fragment_shader_h             tg_fragment_shader_get(const char* p_filename);
 
+tg_kd_tree*                      tg_kd_tree_create(const tg_mesh_h h_mesh);
+void                             tg_kd_tree_destroy(tg_kd_tree* p_kd_tree);
+
 tg_material_h                    tg_material_create_deferred(tg_vertex_shader_h h_vertex_shader, tg_fragment_shader_h h_fragment_shader);
 tg_material_h                    tg_material_create_forward(tg_vertex_shader_h h_vertex_shader, tg_fragment_shader_h h_fragment_shader);
 void                             tg_material_destroy(tg_material_h h_material);
@@ -225,13 +287,13 @@ b32                              tg_material_is_deferred(tg_material_h h_materia
 b32                              tg_material_is_forward(tg_material_h h_material);
 
 tg_mesh_h                        tg_mesh_create(u32 vertex_count, const v3* p_positions, const v3* p_normals, const v2* p_uvs, const v3* p_tangents, u32 index_count, const u16* p_indices);
-tg_mesh_h                        tg_mesh_create2(u32 vertex_count, u32 vertex_stride, const void* p_vertices, u32 index_count, const u16* p_indices);
+tg_mesh_h                        tg_mesh_create2(u32 vertex_count, u32 vertex_input_attribute_count, const tg_vertex_input_attribute_format* p_vertex_input_attribute_formats, const void* p_vertices, u32 index_count, const u16* p_indices);
 tg_mesh_h                        tg_mesh_create_empty(u32 vertex_capacity, u32 index_capacity);
 tg_mesh_h                        tg_mesh_create_sphere(f32 radius, u32 sector_count, u32 stack_count);
-tg_mesh_h                        tg_mesh_load(const char* p_filename);
+tg_mesh_h                        tg_mesh_load(const char* p_filename, v3 scale);
 void                             tg_mesh_destroy(tg_mesh_h h_mesh);
 void                             tg_mesh_update(tg_mesh_h h_mesh, u32 vertex_count, const v3* p_positions, const v3* p_normals, const v2* p_uvs, const v3* p_tangents, u32 index_count, const u16* p_indices);
-void                             tg_mesh_update2(tg_mesh_h h_mesh, u32 vertex_count, u32 vertex_stride, const void* p_vertices, u32 index_count, const u16* p_indices); // TODO: this needs to set a flag or a time, so that the camera knows, that it needs a reset
+void                             tg_mesh_update2(tg_mesh_h h_mesh, u32 vertex_count, u32 vertex_stride, const void* p_vertices, u32 index_count, const u16* p_indices); // TODO: this needs to set a flag or a time, so that the terrain knows, that it needs a reset
 
 tg_raytracer_h                   tg_raytracer_create(tg_camera* p_camera);
 void                             tg_raytracer_begin(tg_raytracer_h h_raytracer);

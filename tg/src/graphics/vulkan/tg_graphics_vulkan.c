@@ -253,6 +253,105 @@ static void tg__sampler_destroy(VkSampler sampler)
 
 
 
+void tg_vulkan_convert_vkresult_to_string(char* p_buffer, VkResult result)
+{
+    switch (result)
+    {
+    case VK_SUCCESS:                                            { const char p_string[] = "VK_SUCCESS";                                            tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_NOT_READY:                                          { const char p_string[] = "VK_NOT_READY";                                          tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_TIMEOUT:                                            { const char p_string[] = "VK_TIMEOUT";                                            tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_EVENT_SET:                                          { const char p_string[] = "VK_EVENT_SET";                                          tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_EVENT_RESET:                                        { const char p_string[] = "VK_EVENT_RESET";                                        tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_INCOMPLETE:                                         { const char p_string[] = "VK_INCOMPLETE";                                         tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_OUT_OF_HOST_MEMORY:                           { const char p_string[] = "VK_ERROR_OUT_OF_HOST_MEMORY";                           tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_OUT_OF_DEVICE_MEMORY:                         { const char p_string[] = "VK_ERROR_OUT_OF_DEVICE_MEMORY";                         tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_INITIALIZATION_FAILED:                        { const char p_string[] = "VK_ERROR_INITIALIZATION_FAILED";                        tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_DEVICE_LOST:                                  { const char p_string[] = "VK_ERROR_DEVICE_LOST";                                  tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_MEMORY_MAP_FAILED:                            { const char p_string[] = "VK_ERROR_MEMORY_MAP_FAILED";                            tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_LAYER_NOT_PRESENT:                            { const char p_string[] = "VK_ERROR_LAYER_NOT_PRESENT";                            tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_EXTENSION_NOT_PRESENT:                        { const char p_string[] = "VK_ERROR_EXTENSION_NOT_PRESENT";                        tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_FEATURE_NOT_PRESENT:                          { const char p_string[] = "VK_ERROR_FEATURE_NOT_PRESENT";                          tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_INCOMPATIBLE_DRIVER:                          { const char p_string[] = "VK_ERROR_INCOMPATIBLE_DRIVER";                          tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_TOO_MANY_OBJECTS:                             { const char p_string[] = "VK_ERROR_TOO_MANY_OBJECTS";                             tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_FORMAT_NOT_SUPPORTED:                         { const char p_string[] = "VK_ERROR_FORMAT_NOT_SUPPORTED";                         tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_FRAGMENTED_POOL:                              { const char p_string[] = "VK_ERROR_FRAGMENTED_POOL";                              tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_UNKNOWN:                                      { const char p_string[] = "VK_ERROR_UNKNOWN";                                      tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_OUT_OF_POOL_MEMORY:                           { const char p_string[] = "VK_ERROR_OUT_OF_POOL_MEMORY";                           tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_INVALID_EXTERNAL_HANDLE:                      { const char p_string[] = "VK_ERROR_INVALID_EXTERNAL_HANDLE";                      tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_FRAGMENTATION:                                { const char p_string[] = "VK_ERROR_FRAGMENTATION";                                tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_INVALID_OPAQUE_CAPTURE_ADDRESS:               { const char p_string[] = "VK_ERROR_INVALID_OPAQUE_CAPTURE_ADDRESS";               tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_SURFACE_LOST_KHR:                             { const char p_string[] = "VK_ERROR_SURFACE_LOST_KHR";                             tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_NATIVE_WINDOW_IN_USE_KHR:                     { const char p_string[] = "VK_ERROR_NATIVE_WINDOW_IN_USE_KHR";                     tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_SUBOPTIMAL_KHR:                                     { const char p_string[] = "VK_SUBOPTIMAL_KHR";                                     tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_OUT_OF_DATE_KHR:                              { const char p_string[] = "VK_ERROR_OUT_OF_DATE_KHR";                              tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_INCOMPATIBLE_DISPLAY_KHR:                     { const char p_string[] = "VK_ERROR_INCOMPATIBLE_DISPLAY_KHR";                     tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_VALIDATION_FAILED_EXT:                        { const char p_string[] = "VK_ERROR_VALIDATION_FAILED_EXT";                        tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_INVALID_SHADER_NV:                            { const char p_string[] = "VK_ERROR_INVALID_SHADER_NV";                            tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_INCOMPATIBLE_VERSION_KHR:                     { const char p_string[] = "VK_ERROR_INCOMPATIBLE_VERSION_KHR";                     tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_INVALID_DRM_FORMAT_MODIFIER_PLANE_LAYOUT_EXT: { const char p_string[] = "VK_ERROR_INVALID_DRM_FORMAT_MODIFIER_PLANE_LAYOUT_EXT"; tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_NOT_PERMITTED_EXT:                            { const char p_string[] = "VK_ERROR_NOT_PERMITTED_EXT";                            tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT:          { const char p_string[] = "VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT";          tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_THREAD_IDLE_KHR:                                    { const char p_string[] = "VK_THREAD_IDLE_KHR";                                    tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_THREAD_DONE_KHR:                                    { const char p_string[] = "VK_THREAD_DONE_KHR";                                    tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_OPERATION_DEFERRED_KHR:                             { const char p_string[] = "VK_OPERATION_DEFERRED_KHR";                             tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_OPERATION_NOT_DEFERRED_KHR:                         { const char p_string[] = "VK_OPERATION_NOT_DEFERRED_KHR";                         tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_PIPELINE_COMPILE_REQUIRED_EXT:                      { const char p_string[] = "VK_PIPELINE_COMPILE_REQUIRED_EXT";                      tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    default: TG_INVALID_CODEPATH(); break;
+    }
+}
+
+u32 tg_vertex_input_attribute_format_get_alignment(tg_vertex_input_attribute_format format)
+{
+    u32 result = 0;
+
+    switch (format)
+    {
+    case TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32_SFLOAT:          result = 4; break;
+    case TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32_SINT:            result = 4; break;
+    case TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32_UINT:            result = 4; break;
+    case TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32_SFLOAT:       result = 4; break;
+    case TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32_SINT:         result = 4; break;
+    case TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32_UINT:         result = 4; break;
+    case TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32B32_SFLOAT:    result = 4; break;
+    case TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32B32_SINT:      result = 4; break;
+    case TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32B32_UINT:      result = 4; break;
+    case TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32B32A32_SFLOAT: result = 4; break;
+    case TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32B32A32_SINT:   result = 4; break;
+    case TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32B32A32_UINT:   result = 4; break;
+
+    default: TG_INVALID_CODEPATH(); break;
+    }
+
+    return result;
+}
+
+u32 tg_vertex_input_attribute_format_get_size(tg_vertex_input_attribute_format format)
+{
+    u32 result = 0;
+
+    switch (format)
+    {
+    case TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32_SFLOAT:          result = 4; break;
+    case TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32_SINT:            result = 4; break;
+    case TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32_UINT:            result = 4; break;
+    case TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32_SFLOAT:       result = 8; break;
+    case TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32_SINT:         result = 8; break;
+    case TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32_UINT:         result = 8; break;
+    case TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32B32_SFLOAT:    result = 12; break;
+    case TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32B32_SINT:      result = 12; break;
+    case TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32B32_UINT:      result = 12; break;
+    case TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32B32A32_SFLOAT: result = 16; break;
+    case TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32B32A32_SINT:   result = 16; break;
+    case TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32B32A32_UINT:   result = 16; break;
+
+    default: TG_INVALID_CODEPATH(); break;
+    }
+
+    return result;
+}
+
+
+
 void tg_vulkan_buffer_copy(VkDeviceSize size, VkBuffer source, VkBuffer destination)
 {
     VkCommandBuffer command_buffer = tg_vulkan_command_buffer_allocate(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);

@@ -671,7 +671,7 @@ static void tg__init_tone_mapping_pass(tg_renderer_h h_renderer)
     h_renderer->tone_mapping_pass.framebuffer = tg_vulkan_framebuffer_create(h_renderer->tone_mapping_pass.render_pass, TG_SHADING_ATTACHMENT_COUNT, &h_renderer->render_target.color_attachment.image_view, swapchain_extent.width, swapchain_extent.height);
 
     tg_vulkan_graphics_pipeline_create_info exposure_vulkan_graphics_pipeline_create_info = { 0 };
-    exposure_vulkan_graphics_pipeline_create_info.p_vertex_shader = &((tg_vertex_shader_h)tg_assets_get_asset("shaders/adapt_exposure.vert"))->vulkan_shader;
+    exposure_vulkan_graphics_pipeline_create_info.p_vertex_shader = &((tg_vertex_shader_h)tg_assets_get_asset("shaders/screen_quad.vert"))->vulkan_shader;
     exposure_vulkan_graphics_pipeline_create_info.p_fragment_shader = &((tg_fragment_shader_h)tg_assets_get_asset("shaders/adapt_exposure.frag"))->vulkan_shader;
     exposure_vulkan_graphics_pipeline_create_info.cull_mode = VK_CULL_MODE_NONE;
     exposure_vulkan_graphics_pipeline_create_info.sample_count = VK_SAMPLE_COUNT_1_BIT;
@@ -1009,13 +1009,13 @@ tg_renderer_h tg_renderer_create(tg_camera* p_camera)
 
     tg_vulkan_screen_vertex p_vertices[4] = { 0 };
     p_vertices[0].position = (v2){ -1.0f,  1.0f };
-    p_vertices[0].uv       = (v2){  0.0f,  0.0f };
+    p_vertices[0].uv       = (v2){  0.0f,  1.0f };
     p_vertices[1].position = (v2){  1.0f,  1.0f };
-    p_vertices[1].uv       = (v2){  1.0f,  0.0f };
+    p_vertices[1].uv       = (v2){  1.0f,  1.0f };
     p_vertices[2].position = (v2){  1.0f, -1.0f };
-    p_vertices[2].uv       = (v2){  1.0f,  1.0f };
+    p_vertices[2].uv       = (v2){  1.0f,  0.0f };
     p_vertices[3].position = (v2){ -1.0f, -1.0f };
-    p_vertices[3].uv       = (v2){  0.0f,  1.0f };
+    p_vertices[3].uv       = (v2){  0.0f,  0.0f };
 
     const u16 p_indices[6] = { 0, 1, 2, 2, 3, 0 };
 
@@ -1482,10 +1482,10 @@ void tg_renderer_end(tg_renderer_h h_renderer)
     color_image_blit.srcSubresource.baseArrayLayer = 0;
     color_image_blit.srcSubresource.layerCount = 1;
     color_image_blit.srcOffsets[0].x = 0;
-    color_image_blit.srcOffsets[0].y = h_renderer->render_target.color_attachment.height;
+    color_image_blit.srcOffsets[0].y = 0;
     color_image_blit.srcOffsets[0].z = 0;
     color_image_blit.srcOffsets[1].x = h_renderer->render_target.color_attachment.width;
-    color_image_blit.srcOffsets[1].y = 0;
+    color_image_blit.srcOffsets[1].y = h_renderer->render_target.color_attachment.height;
     color_image_blit.srcOffsets[1].z = 1;
     color_image_blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     color_image_blit.dstSubresource.mipLevel = 0;
@@ -1506,10 +1506,10 @@ void tg_renderer_end(tg_renderer_h h_renderer)
     depth_image_blit.srcSubresource.baseArrayLayer = 0;
     depth_image_blit.srcSubresource.layerCount = 1;
     depth_image_blit.srcOffsets[0].x = 0;
-    depth_image_blit.srcOffsets[0].y = h_renderer->render_target.depth_attachment.height;
+    depth_image_blit.srcOffsets[0].y = 0;
     depth_image_blit.srcOffsets[0].z = 0;
     depth_image_blit.srcOffsets[1].x = h_renderer->render_target.depth_attachment.width;
-    depth_image_blit.srcOffsets[1].y = 0;
+    depth_image_blit.srcOffsets[1].y = h_renderer->render_target.depth_attachment.height;
     depth_image_blit.srcOffsets[1].z = 1;
     depth_image_blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
     depth_image_blit.dstSubresource.mipLevel = 0;

@@ -217,7 +217,7 @@ void main()
     float ao                  = texture(u_ssao, v_uv).x * texture(u_metallic_roughness_ao, v_uv).z;
 
     vec4 sky_color = 0.7 * u_directional_light_colors[0];
-    if (dot(normal, normal) < 0.5) // sky
+    if (dot(normal, normal) < 0.5) // TODO: sky
     {
         out_color = sky_color;
     }

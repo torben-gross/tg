@@ -43,7 +43,7 @@ typedef struct tg_terrain
 
 tg_terrain    tg_terrain_create(tg_camera* p_camera);
 void          tg_terrain_destroy(tg_terrain* p_terrain);
-void          tg_terrain_update(tg_terrain* p_terrain, f32 delta_ms);
+void          tg_terrain_update(tg_terrain* p_terrain, f32 dt);
 void          tg_terrain_render(tg_terrain* p_terrain, tg_renderer_h h_renderer);
 
 #endif

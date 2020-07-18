@@ -10,7 +10,7 @@
 #include "util/tg_list.h"
 #include "util/tg_string.h"
 
-
+#define TG_RAYTRACER 0
 
 #ifdef TG_DEBUG
 typedef struct tg_debug_info
@@ -80,7 +80,7 @@ static void tg__game_3d_create()
     tg_input_get_mouse_position(&sample_scene.last_mouse_x, &sample_scene.last_mouse_y);
     sample_scene.h_main_renderer = tg_renderer_create(&sample_scene.camera);
     sample_scene.h_secondary_renderer = tg_renderer_create(&sample_scene.camera);
-    tg_renderer_enable_shadows(sample_scene.h_main_renderer, TG_TRUE);
+    tg_renderer_enable_shadows(sample_scene.h_main_renderer, TG_FALSE);
     tg_renderer_enable_shadows(sample_scene.h_secondary_renderer, TG_FALSE);
 
     tg_color_image_create_info color_image_create_info = { 0 };
@@ -128,9 +128,8 @@ static void tg__game_3d_create()
     sample_scene.quad_offset_z = -65.0f;
     tg_list_insert(&sample_scene.render_commands, &sample_scene.h_quad_render_command);
 
-
-
-    tg_mesh_h h_sponza_mesh = tg_mesh_load("meshes/sponza.obj");
+    tg_mesh_h h_sponza_mesh = tg_mesh_load("meshes/sponza.obj", V3(0.01f));
+    tg_kd_tree* p_sponza_kd_tree = tg_kd_tree_create(h_sponza_mesh);
 
     tg_uniform_buffer_h h_sponza_ubo = tg_uniform_buffer_create(sizeof(tg_pbr_material));
     ((tg_pbr_material*)tg_uniform_buffer_data(h_sponza_ubo))->albedo = (v4) { 1.0f, 1.0f, 1.0f, 1.0f };
@@ -174,26 +173,26 @@ static void tg__game_3d_create()
     }
 
     // TODO: implement :)
-    tg_renderer_bake_begin(sample_scene.h_main_renderer);
-    tg_renderer_bake_push_probe(sample_scene.h_main_renderer, 128.0f, 145.0f, 128.0f);
-    tg_renderer_bake_push_static(sample_scene.h_main_renderer, h_sponza_render_command);
-    tg_renderer_bake_end(sample_scene.h_main_renderer);
+    // tg_renderer_bake_begin(sample_scene.h_main_renderer);
+    // tg_renderer_bake_push_probe(sample_scene.h_main_renderer, 128.0f, 145.0f, 128.0f);
+    // tg_renderer_bake_push_static(sample_scene.h_main_renderer, h_sponza_render_command);
+    // tg_renderer_bake_end(sample_scene.h_main_renderer);
 }
 
-static void tg__game_3d_update_and_render(f32 delta_ms)
+static void tg__game_3d_update_and_render(f32 dt)
 {
     if (tg_input_is_key_down(TG_KEY_K))
     {
-        sample_scene.quad_offset_z += 0.01f * delta_ms;
+        sample_scene.quad_offset_z += 0.01f * dt;
     }
     if (tg_input_is_key_down(TG_KEY_L))
     {
-        sample_scene.quad_offset_z -= 0.01f * delta_ms;
+        sample_scene.quad_offset_z -= 0.01f * dt;
     }
     v3 quad_offset_translation_z = { 0.0f, 133.0f, sample_scene.quad_offset_z };
     tg_render_command_set_position(sample_scene.h_quad_render_command, quad_offset_translation_z);
 
-    sample_scene.quad_delta_time_sum_looped += delta_ms;
+    sample_scene.quad_delta_time_sum_looped += dt;
     if (sample_scene.quad_delta_time_sum_looped >= 10000.0f)
     {
         sample_scene.quad_delta_time_sum_looped -= 10000.0f;
@@ -249,7 +248,7 @@ static void tg__game_3d_update_and_render(f32 delta_ms)
     if (tgm_v3_magsqr(velocity) != 0.0f)
     {
         const f32 camera_base_speed = tg_input_is_key_down(TG_KEY_SHIFT) ? 0.1f : 0.01f;
-        const f32 camera_speed = camera_base_speed * delta_ms;
+        const f32 camera_speed = camera_base_speed * dt;
         velocity = tgm_v3_mulf(tgm_v3_normalized(velocity), camera_speed);
         sample_scene.camera.position = tgm_v3_add(sample_scene.camera.position, velocity);
     }
@@ -262,10 +261,10 @@ static void tg__game_3d_update_and_render(f32 delta_ms)
         sample_scene.camera.perspective.fov_y_in_radians -= 0.1f * tg_input_get_mouse_wheel_detents(TG_TRUE);
     }
 
-    tg_terrain_update(&sample_scene.terrain, delta_ms);
+    tg_terrain_update(&sample_scene.terrain, dt);
 
 
-    sample_scene.light_timer += delta_ms;
+    sample_scene.light_timer += dt;
     while (sample_scene.light_timer > 32000.0f)
     {
         sample_scene.light_timer -= 32000.0f;
@@ -352,7 +351,7 @@ static void tg__raytracer_test_create()
     raytrace_scene.h_raytracer = tg_raytracer_create(&raytrace_scene.camera);
 }
 
-static void tg__raytracer_test_update_and_render(f32 delta_ms)
+static void tg__raytracer_test_update_and_render(f32 dt)
 {
     u32 mouse_x = 0;
     u32 mouse_y = 0;
@@ -381,8 +380,11 @@ void tg_application_start()
 {
     tg_graphics_init();
     tg_assets_init();
-    //tg__game_3d_create();
+#if TG_RAYTRACER == 0
+    tg__game_3d_create();
+#else
     tg__raytracer_test_create();
+#endif
 
 #ifdef TG_DEBUG
     tg_debug_info debug_info = { 0 };
@@ -398,12 +400,12 @@ void tg_application_start()
     while (running)
     {
         tg_platform_timer_stop(h_timer);
-        const f32 delta_ms = tg_platform_timer_elapsed_milliseconds(h_timer);
+        const f32 dt = tg_platform_timer_elapsed_milliseconds(h_timer);
         tg_platform_timer_reset(h_timer);
         tg_platform_timer_start(h_timer);
 
 #ifdef TG_DEBUG
-        debug_info.ms_sum += delta_ms;
+        debug_info.ms_sum += dt;
         debug_info.fps++;
         if (debug_info.ms_sum > 1000.0f)
         {
@@ -421,8 +423,11 @@ void tg_application_start()
 
         tg_input_clear();
         tg_platform_handle_events();
-        tg__raytracer_test_update_and_render(delta_ms);
-        //tg__game_3d_update_and_render(delta_ms);
+#if TG_RAYTRACER == 0
+        tg__game_3d_update_and_render(dt);
+#else
+        tg__raytracer_test_update_and_render(dt);
+#endif
     }
 
     /*--------------------------------------------------------+

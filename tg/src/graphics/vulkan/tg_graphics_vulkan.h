@@ -15,7 +15,17 @@
 #undef max
 
 #ifdef TG_DEBUG
-#define VK_CALL(x) TG_ASSERT(x == VK_SUCCESS)
+#define VK_CALL_NAME2(x, y) x ## y
+#define VK_CALL_NAME(x, y) VK_CALL_NAME2(x, y)
+#define VK_CALL(x) \
+    const VkResult VK_CALL_NAME(vk_call_result, __LINE__) = (x); \
+    if (VK_CALL_NAME(vk_call_result, __LINE__) != VK_SUCCESS) \
+    { \
+        char p_buffer[1024] = { 0 }; \
+        tg_vulkan_convert_vkresult_to_string(p_buffer, VK_CALL_NAME(vk_call_result, __LINE__)); \
+        TG_DEBUG_LOG("VkResult: %s", p_buffer); \
+    } \
+    if (VK_CALL_NAME(vk_call_result, __LINE__) != VK_SUCCESS) TG_INVALID_CODEPATH();
 #else
 #define VK_CALL(x) x
 #endif
@@ -280,17 +290,19 @@ typedef struct tg_mesh
 {
     tg_handle_type      type;
     tg_bounds           bounds;
+    u32                 vertex_input_attribute_count;
+    VkFormat            p_vertex_input_attribute_formats[TG_MAX_SHADER_INPUTS];
     u32                 vertex_count;
-    tg_vulkan_buffer    vbo;
     u32                 index_count;
+    tg_vulkan_buffer    vbo;
     tg_vulkan_buffer    ibo;
+    v3*                 p_vertex_positions;
 } tg_mesh;
 
 typedef struct tg_raytracer
 {
     tg_handle_type               type;
-
-    tg_camera*                   p_camera;
+    const tg_camera*             p_camera;
     VkSemaphore                  semaphore;
     VkFence                      fence;
     tg_vulkan_storage_image      storage_image; // TODO: this is a storage image, can every image also be a storage image? also, this should be a render target
@@ -474,6 +486,10 @@ tg_renderer           p_renderers[TG_MAX_RENDERERS];
 tg_storage_buffer     p_storage_buffers[TG_MAX_STORAGE_BUFFERS];
 tg_uniform_buffer     p_uniform_buffers[TG_MAX_UNIFORM_BUFFERS];
 tg_vertex_shader      p_vertex_shaders[TG_MAX_VERTEX_SHADERS];
+
+
+
+void                          tg_vulkan_convert_vkresult_to_string(char* p_buffer, VkResult result);
 
 
 

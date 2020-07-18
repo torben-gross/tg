@@ -592,7 +592,8 @@ static void tg__build_node(tg_terrain* p_terrain, tg_terrain_octree* p_octree, t
 
 	if (vertex_count)
 	{
-		p_block->h_block_mesh = tg_mesh_create2(vertex_count, sizeof(tg_transvoxel_vertex), p_vertex_buffer, 0, TG_NULL);
+		const tg_vertex_input_attribute_format p_formats[2] = { TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32B32_SFLOAT, TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32B32_SFLOAT };
+		p_block->h_block_mesh = tg_mesh_create2(vertex_count, 2, p_formats, p_vertex_buffer, 0, TG_NULL);
 		p_block->h_block_render_command = tg_render_command_create(p_block->h_block_mesh, p_terrain->h_material, V3(0), 0, TG_NULL);
 	}
 
@@ -605,7 +606,8 @@ static void tg__build_node(tg_terrain* p_terrain, tg_terrain_octree* p_octree, t
 
 			if (vertex_count)
 			{
-				p_block->ph_transition_meshes[i] = tg_mesh_create2(vertex_count, sizeof(tg_transvoxel_vertex), p_vertex_buffer, 0, TG_NULL);
+				const tg_vertex_input_attribute_format p_formats[2] = { TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32B32_SFLOAT, TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32B32_SFLOAT };
+				p_block->ph_transition_meshes[i] = tg_mesh_create2(vertex_count, 2, p_formats, p_vertex_buffer, 0, TG_NULL);
 				p_block->ph_transition_render_commands[i] = tg_render_command_create(p_block->ph_transition_meshes[i], p_terrain->h_material, V3(0), 0, TG_NULL);
 			}
 		}
@@ -842,7 +844,7 @@ void tg_terrain_destroy(tg_terrain* p_terrain)
 	}
 }
 
-void tg_terrain_update(tg_terrain* p_terrain, f32 delta_ms)
+void tg_terrain_update(tg_terrain* p_terrain, f32 dt)
 {
 	TG_ASSERT(p_terrain);
 

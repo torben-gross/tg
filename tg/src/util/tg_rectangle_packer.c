@@ -4,9 +4,9 @@
 #include "util/tg_list.h"
 #include "util/tg_qsort.h"
 
-static b32 tg__compare(const tg_rectangle_packer_rect* p_r0, const tg_rectangle_packer_rect* p_r1)
+static i32 tg__compare(const tg_rectangle_packer_rect* p_r0, const tg_rectangle_packer_rect* p_r1, void* p_user_data)
 {
-    const b32 result = p_r0->height > p_r1->height;
+    const i32 result = p_r0->height - p_r1->height;
     return result;
 }
 
@@ -27,7 +27,7 @@ void tg_rectangle_packer_pack(u32 rect_count, tg_rectangle_packer_rect* p_rects,
         max_width = tgm_u32_max(max_width, p_rects[i].width);
     }
 
-    TG_QSORT(tg_rectangle_packer_rect, rect_count, p_rects, tg__compare);
+    TG_QSORT(rect_count, p_rects, tg__compare, TG_NULL);
 
     tg_list spaces = TG_LIST_CREATE__CAPACITY(tg_rectangle_packer_rect, rect_count * rect_count);
 

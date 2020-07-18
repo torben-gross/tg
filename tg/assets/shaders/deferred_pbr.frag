@@ -21,10 +21,10 @@ layout(location = 3) out vec4    out_metallic_roughness_ao;
 
 void main()
 {
-    out_position                = v_position;
-    out_normal                  = vec4(normalize(v_normal), 1.0);
-    out_albedo                  = albedo;
-    out_metallic_roughness_ao.x = metallic;
-    out_metallic_roughness_ao.y = roughness;
-    out_metallic_roughness_ao.z = ao;
+    out_position                   = v_position;
+    out_normal                     = vec4(normalize(v_normal), 1.0);
+    out_albedo                     = albedo;
+    out_metallic_roughness_ao.x    = metallic;
+    out_metallic_roughness_ao.y    = roughness;
+    out_metallic_roughness_ao.z    = ao;
 }
