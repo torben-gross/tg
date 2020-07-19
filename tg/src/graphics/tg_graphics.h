@@ -203,9 +203,9 @@ typedef struct tg_depth_image_create_info
 typedef struct tg_kd_node tg_kd_node;
 typedef struct tg_kd_node
 {
+	u32                    flags; // 000 := leaf, 001 := x-axis, 010 := y-axis, 100 := z-axis
 	union
 	{
-		u32                flags; // 000 := leaf, 001 := x-axis, 010 := y-axis, 100 := z-axis
 		struct
 		{
 			f32            split_position;

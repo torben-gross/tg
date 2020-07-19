@@ -14,8 +14,8 @@ TODO: Support other clipping setups via macros!
 #define TG_MATH
 
 #include "tg_common.h"
-
 #define TGM_PI                     3.14159265358979323846
+#define TG_GOLDEN_RATIO            1.61803401f
 #define TGM_TO_DEGREES(radians)    (radians * (360.0f / ((f32)TGM_PI * 2.0f)))
 #define TGM_TO_RADIANS(degrees)    (degrees * (((f32)TGM_PI * 2.0f) / 360.0f))
 
