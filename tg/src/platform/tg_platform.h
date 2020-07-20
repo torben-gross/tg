@@ -9,6 +9,7 @@
 
 #ifdef TG_WIN32
 #define TG_MAX_PATH               260
+#define TG_FILE_SEPERATOR         '\\'
 #endif
 
 #ifdef TG_DEBUG
@@ -37,7 +38,10 @@ typedef enum tg_lock_state
     TG_LOCK_STATE_LOCKED    = 1
 } tg_lock_state;
 
-typedef struct tg_system_time {
+
+
+typedef struct tg_system_time
+{
     u16    year;
     u16    month;
     u16    day;
@@ -64,31 +68,29 @@ typedef struct tg_file_properties
 void                  tg_platform_debug_log(const char* p_format, ...);
 #endif
 
+void                  tg_platform_handle_events();
+
 void*                 tg_platform_memory_alloc(u64 size);
 void*                 tg_platform_memory_alloc_nullify(u64 size);
-void                  tg_platform_memory_free(void* p_memory);
 void*                 tg_platform_memory_realloc(u64 size, void* p_memory);
 void*                 tg_platform_memory_realloc_nullify(u64 size, void* p_memory);
+void                  tg_platform_memory_free(void* p_memory);
 
 void                  tg_platform_get_mouse_position(u32* p_x, u32* p_y);
 void                  tg_platform_get_screen_size(u32* p_width, u32* p_height);
-f32                   tg_platform_get_window_aspect_ratio();
 tg_window_h           tg_platform_get_window_handle();
 void                  tg_platform_get_window_size(u32* p_width, u32* p_height);
-void                  tg_platform_handle_events();
+f32                   tg_platform_get_window_aspect_ratio();
 
-i8                    tg_platform_system_time_compare(tg_system_time* p_time0, tg_system_time* p_time1);
-
-tg_file_iterator_h    tg_platform_begin_file_iteration(const char* p_directory, tg_file_properties* p_properties);
-b32                   tg_platform_continue_file_iteration(const char* p_directory, tg_file_iterator_h h_file_iterator, tg_file_properties* p_properties);
-void                  tg_platform_create_file(const char* p_filename, u32 size, char* p_data, b32 replace_existing);
-void                  tg_platform_extract_file_directory(u64 size, char* p_buffer, const char* p_filename);
 b32                   tg_platform_file_exists(const char* p_filename);
-void                  tg_platform_free_file(char* p_data);
-b32                   tg_platform_get_file_properties(const char* p_filename, tg_file_properties* p_properties);
-char                  tg_platform_get_file_separator();
-u64                   tg_platform_get_full_directory_size(const char* p_directory);
-void                  tg_platform_read_file(const char* p_filename, u32* p_size, char** pp_data);
+void                  tg_platform_file_read(const char* p_filename, u64 buffer_size, char* p_buffer);
+void                  tg_platform_file_create(const char* p_filename, u32 size, char* p_data, b32 replace_existing);
+b32                   tg_platform_file_get_properties(const char* p_filename, tg_file_properties* p_properties);
+void                  tg_platform_file_extract_directory(u64 size, char* p_buffer, const char* p_filename);
+tg_file_iterator_h    tg_platform_directory_begin_iteration(const char* p_directory, tg_file_properties* p_properties);
+b32                   tg_platform_directory_continue_iteration(tg_file_iterator_h h_file_iterator, const char* p_directory, tg_file_properties* p_properties);
+u64                   tg_platform_directory_get_size(const char* p_directory);
+i8                    tg_platform_system_time_compare(tg_system_time* p_time0, tg_system_time* p_time1);
 
 tg_timer_h            tg_platform_timer_create();
 void                  tg_platform_timer_start(tg_timer_h h_timer);

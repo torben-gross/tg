@@ -209,7 +209,7 @@ typedef struct tg_kd_node
 		struct
 		{
 			f32            split_position;
-			tg_kd_node*    pp_children[2];
+			u32            p_child_index_offsets[2];
 		} node;
 		struct
 		{
@@ -222,20 +222,9 @@ typedef struct tg_kd_node
 typedef struct tg_kd_tree
 {
 	tg_bounds     bounds;
-	tg_kd_node    root;
+	u32           node_count;
+	tg_kd_node    p_nodes[0];
 } tg_kd_tree;
-
-// TODO: was this format used by the kd-tree in the end?
-//                +---+----------+-------------+
-// inner nodes -> | s | exponent | mantissa    |
-//                | 1 | 8        | 23          |
-//                +---+---+------+-------------+
-// both        -> | flags |                    |
-//                | 2     |                    |
-//                +-------+--------------------+
-// leaves      -> |       | number of vertices |
-//                |       | 30                 |
-//                +-------+--------------------+
 
 typedef struct tg_vertex
 {

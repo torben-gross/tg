@@ -675,17 +675,18 @@ static void tg__build_octree(tg_terrain* p_terrain, tg_terrain_octree* p_octree,
 		void* p_compressed_voxel_map_buffer = TG_MEMORY_STACK_ALLOC(voxel_map_size);
 		tg__compress_voxel_map(p_octree->p_voxel_map, &compressed_voxel_map_size, p_compressed_voxel_map_buffer);
 
-		tg_platform_create_file(p_filename_buffer, compressed_voxel_map_size, p_compressed_voxel_map_buffer, TG_FALSE);
+		tg_platform_file_create(p_filename_buffer, compressed_voxel_map_size, p_compressed_voxel_map_buffer, TG_FALSE);
 
 		TG_MEMORY_STACK_FREE(voxel_map_size);
 	}
 	else
 	{
-		u32 size = 0;
-		char* p_file_data = TG_NULL;
-		tg_platform_read_file(p_filename_buffer, &size, &p_file_data);
+		tg_file_properties file_properties = { 0 };
+		tg_platform_file_get_properties(p_filename_buffer, &file_properties);
+		char* p_file_data = TG_MEMORY_STACK_ALLOC(file_properties.size);
+		tg_platform_file_read(p_filename_buffer, file_properties.size, p_file_data);
 		tg__decompress_voxel_map(p_file_data, p_octree->p_voxel_map);
-		tg_platform_free_file(p_file_data);
+		TG_MEMORY_STACK_FREE(file_properties.size);
 	}
 
 	p_octree->p_root = TG_MEMORY_ALLOC_NULLIFY(sizeof(*p_octree->p_root));

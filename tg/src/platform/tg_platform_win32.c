@@ -19,20 +19,21 @@
 #define WIN32_CALL(x) x
 #endif
 
+
+
+typedef struct tg_timer
+{
+    b32              running;
+    LONGLONG         counter_elapsed;
+    LARGE_INTEGER    performance_frequency;
+    LARGE_INTEGER    start_performance_counter;
+    LARGE_INTEGER    end_performance_counter;
+} tg_timer;
+
+
+
 static HANDLE    h_process_heap = INVALID_HANDLE_VALUE;
 static HWND      h_window = INVALID_HANDLE_VALUE;
-
-
-
-/*------------------------------------------------------------+
-| File IO                                                     |
-+------------------------------------------------------------*/
-
-typedef struct tg_file_iterator
-{
-    HANDLE    handle;
-    char      p_directory[MAX_PATH];
-} tg_file_iterator;
 
 
 
@@ -68,50 +69,153 @@ static void tg__fill_file_properties(const char* p_directory, WIN32_FIND_DATAA* 
 
 
 
-tg_file_iterator_h tg_platform_begin_file_iteration(const char* p_directory, tg_file_properties* p_properties)
+
+
+#ifdef TG_DEBUG
+void tg_platform_debug_log(const char* p_format, ...)
 {
-    TG_ASSERT(p_directory && p_properties);
+    char p_buffer[2048] = { 0 };
+    va_list va = TG_NULL;
+    tg_variadic_start(va, p_format);
+    tg_string_format_va(sizeof(p_buffer), p_buffer, p_format, va);
+
+    OutputDebugStringA(p_buffer);
+}
+#endif
+
+
+
+
+void tg_platform_handle_events()
+{
+    MSG msg = { 0 };
+    while (PeekMessageA(&msg, TG_NULL, 0, 0, PM_REMOVE))
+    {
+        TranslateMessage(&msg);
+        DispatchMessageA(&msg);
+    }
+}
+
+
+
+void* tg_platform_memory_alloc(u64 size)
+{
+#ifdef TG_DEBUG
+    void* p_memory = HeapAlloc(h_process_heap, HEAP_ZERO_MEMORY, size);
+#else
+    void* p_memory = HeapAlloc(h_process_heap, 0, size);
+#endif
+    TG_ASSERT(p_memory);
+    return p_memory;
+}
+
+void* tg_platform_memory_alloc_nullify(u64 size)
+{
+    void* p_memory = HeapAlloc(h_process_heap, HEAP_ZERO_MEMORY, size);
+    TG_ASSERT(p_memory);
+    return p_memory;
+}
+
+void* tg_platform_memory_realloc(u64 size, void* p_memory)
+{
+#ifdef TG_DEBUG
+    void* p_reallocated_memory = HeapReAlloc(h_process_heap, HEAP_ZERO_MEMORY, p_memory, size);
+#else
+    void* p_reallocated_memory = HeapReAlloc(h_process_heap, 0, p_memory, size);
+#endif
+    TG_ASSERT(p_reallocated_memory);
+    return p_reallocated_memory;
+}
+
+void* tg_platform_memory_realloc_nullify(u64 size, void* p_memory)
+{
+    void* p_reallocated_memory = HeapReAlloc(h_process_heap, HEAP_ZERO_MEMORY, p_memory, size);
+    TG_ASSERT(p_reallocated_memory);
+    return p_reallocated_memory;
+}
+
+void tg_platform_memory_free(void* p_memory)
+{
+    const BOOL result = HeapFree(h_process_heap, 0, p_memory);
+    TG_ASSERT(result);
+}
+
+
+
+void tg_platform_get_mouse_position(u32* p_x, u32* p_y)
+{
+    POINT point = { 0 };
+    WIN32_CALL(GetCursorPos(&point));
+    WIN32_CALL(ScreenToClient(h_window, &point));
+    u32 width;
+    u32 height;
+    tg_platform_get_window_size(&width, &height);
+    *p_x = (u32)tgm_i32_clamp(point.x, 0, width - 1);
+    *p_y = (u32)tgm_i32_clamp(point.y, 0, height - 1);
+}
+
+void tg_platform_get_screen_size(u32* p_width, u32* p_height)
+{
+    RECT rect;
+    WIN32_CALL(GetWindowRect(GetDesktopWindow(), &rect));
+    *p_width = rect.right - rect.left;
+    *p_height = rect.bottom - rect.top;
+}
+
+tg_window_h tg_platform_get_window_handle()
+{
+    return h_window;
+}
+
+void tg_platform_get_window_size(u32* p_width, u32* p_height)
+{
+    RECT rect;
+    WIN32_CALL(GetWindowRect(h_window, &rect));
+    *p_width = rect.right - rect.left;
+    *p_height = rect.bottom - rect.top;
+}
+
+f32  tg_platform_get_window_aspect_ratio()
+{
+    u32 width;
+    u32 height;
+    tg_platform_get_window_size(&width, &height);
+    return (f32)width / (f32)height;
+}
+
+
+
+b32 tg_platform_file_exists(const char* p_filename)
+{
+    TG_ASSERT(p_filename);
 
     char p_filename_buffer[MAX_PATH] = { 0 };
-    u32 dir_length = tg_string_length(p_directory);
-    TG_ASSERT(dir_length <= MAX_PATH - 3);
+    tg_string_format(sizeof(p_filename_buffer), p_filename_buffer, "%s/%s", tg_assets_get_asset_path(), p_filename);
 
-    tg_string_format(dir_length, p_filename_buffer, "%s%s", p_directory, "\\*");
-
-    WIN32_FIND_DATAA find_data = { 0 };
-    tg_file_iterator_h h_file_iterator = FindFirstFileA(p_filename_buffer, &find_data);
-    TG_ASSERT(h_file_iterator != INVALID_HANDLE_VALUE);
-
-    while (find_data.cFileName[0] == '.' && (find_data.cFileName[1] == '\0' || find_data.cFileName[1] == '.'))
-    {
-        if (!FindNextFileA(h_file_iterator, &find_data))
-        {
-            TG_ASSERT(GetLastError() == ERROR_NO_MORE_FILES);
-            FindClose(h_file_iterator);
-            return TG_NULL;
-        }
-    }
-    tg__fill_file_properties(p_directory, &find_data, p_properties);
-
-    return h_file_iterator;
+    const u32 result = GetFileAttributesA(p_filename_buffer) != INVALID_FILE_ATTRIBUTES;
+    return result;
 }
 
-b32 tg_platform_continue_file_iteration(const char* p_directory, tg_file_iterator_h h_file_iterator, tg_file_properties* p_properties)
+void tg_platform_file_read(const char* p_filename, u64 buffer_size, char* p_buffer)
 {
-    TG_ASSERT(h_file_iterator && p_properties);
+    TG_ASSERT(p_filename && buffer_size && p_buffer);
 
-    WIN32_FIND_DATAA find_data = { 0 };
-    if (!FindNextFileA(h_file_iterator, &find_data))
-    {
-        TG_ASSERT(GetLastError() == ERROR_NO_MORE_FILES);
-        FindClose(h_file_iterator);
-        return TG_FALSE;
-    }
-    tg__fill_file_properties(p_directory, &find_data, p_properties);
-    return TG_TRUE;
+    char p_filename_buffer[MAX_PATH] = { 0 };
+    tg_string_format(sizeof(p_filename_buffer), p_filename_buffer, "%s/%s", tg_assets_get_asset_path(), p_filename);
+
+    HANDLE h_file = CreateFileA(p_filename_buffer, GENERIC_READ | GENERIC_WRITE, 0, TG_NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, TG_NULL);
+    TG_ASSERT(h_file != INVALID_HANDLE_VALUE);
+    TG_ASSERT(GetLastError() != ERROR_FILE_NOT_FOUND);
+
+    const u32 size = GetFileSize(h_file, TG_NULL);
+    TG_ASSERT(buffer_size >= size);
+    u32 number_of_bytes_read = 0;
+    ReadFile(h_file, p_buffer, size, &number_of_bytes_read, TG_NULL);
+
+    CloseHandle(h_file);
 }
 
-void tg_platform_create_file(const char* p_filename, u32 size, char* p_data, b32 replace_existing)
+void tg_platform_file_create(const char* p_filename, u32 size, char* p_data, b32 replace_existing)
 {
     TG_ASSERT(p_filename && size && p_data);
 
@@ -124,7 +228,32 @@ void tg_platform_create_file(const char* p_filename, u32 size, char* p_data, b32
     CloseHandle(h_file);
 }
 
-void tg_platform_extract_file_directory(u64 size, char* p_buffer, const char* p_filename)
+b32 tg_platform_file_get_properties(const char* p_filename, tg_file_properties* p_properties)
+{
+    char p_filename_buffer[MAX_PATH] = { 0 };
+    tg_string_format(sizeof(p_filename_buffer), p_filename_buffer, "%s/%s", tg_assets_get_asset_path(), p_filename);
+
+    WIN32_FIND_DATAA find_data = { 0 };
+    HANDLE handle = FindFirstFileA(p_filename_buffer, &find_data);
+    if (handle == INVALID_HANDLE_VALUE)
+    {
+        return TG_FALSE;
+    }
+
+    char p_relative_directory_buffer[MAX_PATH] = { 0 };
+    tg_platform_file_extract_directory(MAX_PATH, p_relative_directory_buffer, p_filename);
+
+    char p_directory_buffer[MAX_PATH] = { 0 };
+    tg_string_format(MAX_PATH, p_directory_buffer, "%s\\%s", tg_assets_get_asset_path(), p_relative_directory_buffer);
+    tg_string_replace_characters(p_directory_buffer, '/', '\\');
+
+    tg__fill_file_properties(p_directory_buffer, &find_data, p_properties);
+    FindClose(handle);
+
+    return TG_TRUE;
+}
+
+void tg_platform_file_extract_directory(u64 size, char* p_buffer, const char* p_filename)
 {
     u32 character_count = 0;
     const char* p_it = p_filename;
@@ -142,58 +271,53 @@ void tg_platform_extract_file_directory(u64 size, char* p_buffer, const char* p_
     p_buffer[character_count] = '\0';
 }
 
-b32 tg_platform_file_exists(const char* p_filename)
+tg_file_iterator_h tg_platform_directory_begin_iteration(const char* p_directory, tg_file_properties* p_properties)
 {
-    TG_ASSERT(p_filename);
+    TG_ASSERT(p_directory && p_properties);
 
     char p_filename_buffer[MAX_PATH] = { 0 };
-    tg_string_format(sizeof(p_filename_buffer), p_filename_buffer, "%s/%s", tg_assets_get_asset_path(), p_filename);
+    u32 dir_length = tg_string_length(p_directory);
+    TG_ASSERT(dir_length <= MAX_PATH - 3);
 
-    const u32 result = GetFileAttributesA(p_filename_buffer) != INVALID_FILE_ATTRIBUTES;
-    return result;
-}
-
-void tg_platform_free_file(char* p_data)
-{
-    TG_ASSERT(p_data);
-
-    TG_MEMORY_FREE(p_data);
-}
-
-b32 tg_platform_get_file_properties(const char* p_filename, tg_file_properties* p_properties)
-{
-    char p_filename_buffer[MAX_PATH] = { 0 };
-    tg_string_format(sizeof(p_filename_buffer), p_filename_buffer, "%s/%s", tg_assets_get_asset_path(), p_filename);
+    tg_string_format(dir_length, p_filename_buffer, "%s%s", p_directory, "\\*");
 
     WIN32_FIND_DATAA find_data = { 0 };
-    HANDLE handle = FindFirstFileA(p_filename_buffer, &find_data);
-    if (handle == INVALID_HANDLE_VALUE)
+    HANDLE h_file_iterator = FindFirstFileA(p_filename_buffer, &find_data);
+    TG_ASSERT(h_file_iterator != INVALID_HANDLE_VALUE);
+
+    while (find_data.cFileName[0] == '.' && (find_data.cFileName[1] == '\0' || find_data.cFileName[1] == '.'))
     {
+        if (!FindNextFileA(h_file_iterator, &find_data))
+        {
+            TG_ASSERT(GetLastError() == ERROR_NO_MORE_FILES);
+            FindClose(h_file_iterator);
+            return TG_NULL;
+        }
+    }
+    tg__fill_file_properties(p_directory, &find_data, p_properties);
+
+    return h_file_iterator;
+}
+
+b32 tg_platform_directory_continue_iteration(tg_file_iterator_h h_file_iterator, const char* p_directory, tg_file_properties* p_properties)
+{
+    TG_ASSERT(h_file_iterator && p_properties);
+
+    WIN32_FIND_DATAA find_data = { 0 };
+    if (!FindNextFileA(h_file_iterator, &find_data))
+    {
+        TG_ASSERT(GetLastError() == ERROR_NO_MORE_FILES);
+        FindClose(h_file_iterator);
         return TG_FALSE;
     }
-
-    char p_relative_directory_buffer[MAX_PATH] = { 0 };
-    tg_platform_extract_file_directory(MAX_PATH, p_relative_directory_buffer, p_filename);
-
-    char p_directory_buffer[MAX_PATH] = { 0 };
-    tg_string_format(MAX_PATH, p_directory_buffer, "%s\\%s", tg_assets_get_asset_path(), p_relative_directory_buffer);
-    tg_string_replace_characters(p_directory_buffer, '/', '\\');
-
-    tg__fill_file_properties(p_directory_buffer, &find_data, p_properties);
-    FindClose(handle);
-
+    tg__fill_file_properties(p_directory, &find_data, p_properties);
     return TG_TRUE;
 }
 
-char tg_platform_get_file_separator()
-{
-    return '\\';
-}
-
-u64 tg_platform_get_full_directory_size(const char* p_directory)
+u64 tg_platform_directory_get_size(const char* p_directory)
 {
     tg_file_properties file_properties = { 0 };
-    tg_file_iterator_h h_file_iterator = tg_platform_begin_file_iteration(p_directory, &file_properties);
+    tg_file_iterator_h h_file_iterator = tg_platform_directory_begin_iteration(p_directory, &file_properties);
 
     if (h_file_iterator == TG_NULL)
     {
@@ -206,51 +330,84 @@ u64 tg_platform_get_full_directory_size(const char* p_directory)
         if (file_properties.is_directory)
         {
             char p_buffer[TG_MAX_PATH] = { 0 };
-            tg_string_format(sizeof(p_buffer), p_buffer, "%s%c%s", p_directory, tg_platform_get_file_separator(), file_properties.p_filename);
-            size += tg_platform_get_full_directory_size(p_buffer);
+            tg_string_format(sizeof(p_buffer), p_buffer, "%s%c%s", p_directory, TG_FILE_SEPERATOR, file_properties.p_filename);
+            size += tg_platform_directory_get_size(p_buffer);
         }
         else
         {
             size += file_properties.size;
         }
-    } while (tg_platform_continue_file_iteration(p_directory, h_file_iterator, &file_properties));
+    } while (tg_platform_directory_continue_iteration(h_file_iterator, p_directory, &file_properties));
     return size;
 }
 
-void tg_platform_read_file(const char* p_filename, u32* p_size, char** pp_data)
+i8 tg_platform_system_time_compare(tg_system_time* p_time0, tg_system_time* p_time1)
 {
-    TG_ASSERT(p_filename && p_size && pp_data);
+    if (p_time0->year < p_time1->year)
+    {
+        return -1;
+    }
+    else if (p_time0->year > p_time1->year)
+    {
+        return 1;
+    }
 
-    char p_filename_buffer[MAX_PATH] = { 0 };
-    tg_string_format(sizeof(p_filename_buffer), p_filename_buffer, "%s/%s", tg_assets_get_asset_path(), p_filename);
+    if (p_time0->month < p_time1->month)
+    {
+        return -1;
+    }
+    else if (p_time0->month > p_time1->month)
+    {
+        return 1;
+    }
 
-    HANDLE h_file = CreateFileA(p_filename_buffer, GENERIC_READ | GENERIC_WRITE, 0, TG_NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, TG_NULL);
-    TG_ASSERT(h_file != INVALID_HANDLE_VALUE);
-    TG_ASSERT(GetLastError() != ERROR_FILE_NOT_FOUND);
+    if (p_time0->day < p_time1->day)
+    {
+        return -1;
+    }
+    else if (p_time0->day > p_time1->day)
+    {
+        return 1;
+    }
 
-    *p_size = GetFileSize(h_file, TG_NULL);
+    if (p_time0->hour < p_time1->hour)
+    {
+        return -1;
+    }
+    else if (p_time0->hour > p_time1->hour)
+    {
+        return 1;
+    }
 
-    *pp_data = TG_MEMORY_ALLOC(*p_size);
-    u32 number_of_bytes_read = 0;
-    ReadFile(h_file, *pp_data, *p_size, &number_of_bytes_read, TG_NULL);
+    if (p_time0->minute < p_time1->minute)
+    {
+        return -1;
+    }
+    else if (p_time0->minute > p_time1->minute)
+    {
+        return 1;
+    }
 
-    CloseHandle(h_file);
+    if (p_time0->second < p_time1->second)
+    {
+        return -1;
+    }
+    else if (p_time0->second > p_time1->second)
+    {
+        return 1;
+    }
+
+    if (p_time0->milliseconds < p_time1->milliseconds)
+    {
+        return -1;
+    }
+    else if (p_time0->milliseconds > p_time1->milliseconds)
+    {
+        return 1;
+    }
+
+    return 0;
 }
-
-
-
-/*------------------------------------------------------------+
-| Timer                                                       |
-+------------------------------------------------------------*/
-
-typedef struct tg_timer
-{
-    b32              running;
-    LONGLONG         counter_elapsed;
-    LARGE_INTEGER    performance_frequency;
-    LARGE_INTEGER    start_performance_counter;
-    LARGE_INTEGER    end_performance_counter;
-} tg_timer;
 
 
 
@@ -319,23 +476,22 @@ void tg_platform_timer_destroy(tg_timer_h h_timer)
 | Multithreading                                              |
 +------------------------------------------------------------*/
 
-#define TG_WORK_QUEUE_MAX_ENTRY_COUNT    1024
-#define TG_MEMORY_FENCE                  _ReadWriteBarrier(); _mm_mfence() // TODO: do i ever use this?
+#define TG_WORK_QUEUE_MAX_ENTRY_COUNT    65536
 
 typedef struct tg_work_queue
 {
-    volatile HANDLE     h_semaphore;
-    tg_work_fn*         pp_work_fns[TG_WORK_QUEUE_MAX_ENTRY_COUNT];
-    volatile void*      pp_user_datas[TG_WORK_QUEUE_MAX_ENTRY_COUNT];
-    volatile u32        current;
-    volatile u32        count;
-    volatile tg_lock    lock;
+    volatile HANDLE    h_semaphore;
+    tg_work_fn*        pp_work_fns[TG_WORK_QUEUE_MAX_ENTRY_COUNT];
+    volatile void*     pp_user_datas[TG_WORK_QUEUE_MAX_ENTRY_COUNT];
+    volatile u32       first;
+    volatile u32       one_past_last;
+    volatile i32       lock;
+    volatile u32       active_thread_count;
 } tg_work_queue;
 
 static volatile tg_work_queue work_queue = { 0 };
 static volatile u32 p_thread_ids[TG_WORKER_THREAD_COUNT + 1] = { 0 };
-static volatile u32 in = 0;
-static volatile u32 out = 0;
+
 static b32 tg__work_queue_execute_entry()
 {
     b32 result = TG_FALSE;
@@ -345,23 +501,17 @@ static b32 tg__work_queue_execute_entry()
         tg_work_fn* p_work_fn = TG_NULL;
         volatile void* p_user_data = TG_NULL;
 
-        if (work_queue.count)
+        if (work_queue.first != work_queue.one_past_last)
         {
-            _InterlockedIncrement(&out);
             result = TG_TRUE;
+            _InterlockedIncrement((volatile i32*)&work_queue.active_thread_count);
 
-            if (work_queue.count > 100)
-            {
-                int bh = 0;
-            }
-            p_work_fn = work_queue.pp_work_fns[work_queue.current];
-            p_user_data = work_queue.pp_user_datas[work_queue.current];
+            p_work_fn = work_queue.pp_work_fns[work_queue.first];
+            p_user_data = work_queue.pp_user_datas[work_queue.first];
 
-            work_queue.pp_work_fns[work_queue.current] = TG_NULL;
-            work_queue.pp_user_datas[work_queue.current] = TG_NULL;
-            
-            work_queue.current = tgm_u32_incmod(work_queue.current, TG_WORK_QUEUE_MAX_ENTRY_COUNT);
-            work_queue.count--;
+            work_queue.pp_work_fns[work_queue.first] = TG_NULL;
+            work_queue.pp_user_datas[work_queue.first] = TG_NULL;
+            work_queue.first = tgm_u32_incmod(work_queue.first, TG_WORK_QUEUE_MAX_ENTRY_COUNT);
         }
 
         _InterlockedExchange(&work_queue.lock, 0);
@@ -369,6 +519,7 @@ static b32 tg__work_queue_execute_entry()
         if (result)
         {
             p_work_fn(p_user_data);
+            _InterlockedDecrement((volatile i32*)&work_queue.active_thread_count);
         }
     }
 
@@ -429,222 +580,25 @@ void tg_platform_unlock(volatile tg_lock* p_lock)
 void tg_platform_work_queue_add_entry(tg_work_fn* p_work_fn, volatile void* p_user_data)
 {
     TG_ASSERT(p_work_fn);
-    _InterlockedIncrement(&in);
 
-    while (_InterlockedCompareExchange(&work_queue.lock, 1, 0) != 0); // TODO: this could potentially block until entire queue is empty!
-    TG_ASSERT(work_queue.count + 1 < TG_WORK_QUEUE_MAX_ENTRY_COUNT);
+    work_queue.pp_work_fns[work_queue.one_past_last] = p_work_fn;
+    work_queue.pp_user_datas[work_queue.one_past_last] = p_user_data;
+    work_queue.one_past_last++;
 
-    u32 entry_index = work_queue.current + work_queue.count;
-    if (entry_index == TG_WORK_QUEUE_MAX_ENTRY_COUNT)
-    {
-        entry_index = 0;
-    }
-    work_queue.pp_work_fns[entry_index] = p_work_fn;
-    work_queue.pp_user_datas[entry_index] = p_user_data;
-    work_queue.count++;
-
-    _InterlockedExchange(&work_queue.lock, 0);
     ReleaseSemaphore(work_queue.h_semaphore, 1, TG_NULL);
 }
 
 void tg_platform_work_queue_wait_for_completion()
 {
-    while (work_queue.count)
+    while (work_queue.first != work_queue.one_past_last || work_queue.active_thread_count)
     {
         tg__work_queue_execute_entry(tg_platform_get_current_thread_id());
     }
 }
 
 
-/*------------------------------------------------------------+
-| Platform                                                    |
-+------------------------------------------------------------*/
-
-#ifdef TG_DEBUG
-void tg_platform_debug_log(const char* p_format, ...)
-{
-    char p_buffer[2048] = { 0 };
-    va_list va = TG_NULL;
-    tg_variadic_start(va, p_format);
-    tg_string_format_va(sizeof(p_buffer), p_buffer, p_format, va);
-
-    OutputDebugStringA(p_buffer);
-    OutputDebugStringA("\n");
-}
-#endif
 
 
-
-void* tg_platform_memory_alloc(u64 size)
-{
-#ifdef TG_DEBUG
-    void* p_memory = HeapAlloc(h_process_heap, HEAP_ZERO_MEMORY, size);
-#else
-    void* p_memory = HeapAlloc(h_process_heap, 0, size);
-#endif
-    TG_ASSERT(p_memory);
-    return p_memory;
-}
-
-void* tg_platform_memory_alloc_nullify(u64 size)
-{
-    void* p_memory = HeapAlloc(h_process_heap, HEAP_ZERO_MEMORY, size);
-    TG_ASSERT(p_memory);
-    return p_memory;
-}
-
-void tg_platform_memory_free(void* p_memory)
-{
-    const BOOL result = HeapFree(h_process_heap, 0, p_memory);
-    TG_ASSERT(result);
-}
-
-void* tg_platform_memory_realloc(u64 size, void* p_memory)
-{
-#ifdef TG_DEBUG
-    void* p_reallocated_memory = HeapReAlloc(h_process_heap, HEAP_ZERO_MEMORY, p_memory, size);
-#else
-    void* p_reallocated_memory = HeapReAlloc(h_process_heap, 0, p_memory, size);
-#endif
-    TG_ASSERT(p_reallocated_memory);
-    return p_reallocated_memory;
-}
-
-void* tg_platform_memory_realloc_nullify(u64 size, void* p_memory)
-{
-    void* p_reallocated_memory = HeapReAlloc(h_process_heap, HEAP_ZERO_MEMORY, p_memory, size);
-    TG_ASSERT(p_reallocated_memory);
-    return p_reallocated_memory;
-}
-
-
-
-void tg_platform_get_mouse_position(u32* p_x, u32* p_y)
-{
-    POINT point = { 0 };
-    WIN32_CALL(GetCursorPos(&point));
-    WIN32_CALL(ScreenToClient(h_window, &point));
-    u32 width;
-    u32 height;
-    tg_platform_get_window_size(&width, &height);
-    *p_x = (u32)tgm_i32_clamp(point.x, 0, width - 1);
-    *p_y = (u32)tgm_i32_clamp(point.y, 0, height - 1);
-}
-
-void tg_platform_get_screen_size(u32* p_width, u32* p_height)
-{
-    RECT rect;
-    WIN32_CALL(GetWindowRect(GetDesktopWindow(), &rect));
-    *p_width = rect.right - rect.left;
-    *p_height = rect.bottom - rect.top;
-}
-
-f32  tg_platform_get_window_aspect_ratio()
-{
-    u32 width;
-    u32 height;
-    tg_platform_get_window_size(&width, &height);
-    return (f32)width / (f32)height;
-}
-
-tg_window_h tg_platform_get_window_handle()
-{
-    return h_window;
-}
-
-void tg_platform_get_window_size(u32* p_width, u32* p_height)
-{
-    RECT rect;
-    WIN32_CALL(GetWindowRect(h_window, &rect));
-    *p_width = rect.right - rect.left;
-    *p_height = rect.bottom - rect.top;
-}
-
-void tg_platform_handle_events()
-{
-    MSG msg = { 0 };
-    while (PeekMessageA(&msg, TG_NULL, 0, 0, PM_REMOVE))
-    {
-        TranslateMessage(&msg);
-        DispatchMessageA(&msg);
-    }
-}
-
-
-
-i8 tg_platform_system_time_compare(tg_system_time* p_time0, tg_system_time* p_time1)
-{
-    if (p_time0->year < p_time1->year)
-    {
-        return -1;
-    }
-    else if (p_time0->year > p_time1->year)
-    {
-        return 1;
-    }
-    
-    if (p_time0->month < p_time1->month)
-    {
-        return -1;
-    }
-    else if (p_time0->month > p_time1->month)
-    {
-        return 1;
-    }
-    
-    if (p_time0->day < p_time1->day)
-    {
-        return -1;
-    }
-    else if (p_time0->day > p_time1->day)
-    {
-        return 1;
-    }
-    
-    if (p_time0->hour < p_time1->hour)
-    {
-        return -1;
-    }
-    else if (p_time0->hour > p_time1->hour)
-    {
-        return 1;
-    }
-    
-    if (p_time0->minute < p_time1->minute)
-    {
-        return -1;
-    }
-    else if (p_time0->minute > p_time1->minute)
-    {
-        return 1;
-    }
-    
-    if (p_time0->second < p_time1->second)
-    {
-        return -1;
-    }
-    else if (p_time0->second > p_time1->second)
-    {
-        return 1;
-    }
-    
-    if (p_time0->milliseconds < p_time1->milliseconds)
-    {
-        return -1;
-    }
-    else if (p_time0->milliseconds > p_time1->milliseconds)
-    {
-        return 1;
-    }
-
-    return 0;
-}
-
-
-
-/*------------------------------------------------------------+
-| Windows Internals                                           |
-+------------------------------------------------------------*/
 
 LRESULT CALLBACK tg_platform_win32_window_proc(HWND h_window, UINT message, WPARAM w_param, LPARAM l_param)
 {

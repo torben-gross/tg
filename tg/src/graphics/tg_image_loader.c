@@ -309,16 +309,17 @@ void tg_image_load(const char* p_filename, u32* p_width, u32* p_height, tg_color
 {
 	TG_ASSERT(p_filename && p_width && p_height && p_format && pp_data);
 
-	u32 size = 0;
-	char* memory = TG_NULL;
-	tg_platform_read_file(p_filename, &size, &memory);
+	tg_file_properties file_properties = { 0 };
+	tg_platform_file_get_properties(p_filename, &file_properties);
+	char* p_memory = TG_MEMORY_STACK_ALLOC(file_properties.size);
+	tg_platform_file_read(p_filename, file_properties.size, p_memory);
 
-	if (size >= 2 && *(u16*)memory == TG_BMP_IDENTIFIER)
+	if (file_properties.size >= 2 && *(u16*)p_memory == TG_BMP_IDENTIFIER)
 	{
-		tg__load_bmp_from_memory(size, memory, p_width, p_height, p_format, pp_data);
+		tg__load_bmp_from_memory(file_properties.size, p_memory, p_width, p_height, p_format, pp_data);
 	}
 
-	tg_platform_free_file(memory);
+	TG_MEMORY_STACK_FREE(file_properties.size);
 }
 
 void tg_image_free(u32* p_data)

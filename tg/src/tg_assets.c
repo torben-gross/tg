@@ -63,7 +63,7 @@ static void tg__try_load(const tg_file_properties* p_properties)
 	TG_ASSERT(assets.count < TG_MAX_ASSET_COUNT);
 
 	char p_filename_buffer[TG_MAX_PATH] = { 0 };
-	tg_string_format(TG_MAX_PATH, p_filename_buffer, "%s%c%s", p_properties->p_relative_directory, tg_platform_get_file_separator(), p_properties->p_filename);
+	tg_string_format(TG_MAX_PATH, p_filename_buffer, "%s%c%s", p_properties->p_relative_directory, TG_FILE_SEPERATOR, p_properties->p_filename);
 
 	const char* p_file_extension = tg_string_extract_filename_extension(p_properties->p_filename);
 
@@ -114,7 +114,7 @@ static void tg__try_load(const tg_file_properties* p_properties)
 static void tg__try_load_directory(const char* p_relative_directory)
 {
 	tg_file_properties file_properties = { 0 };
-	tg_file_iterator_h h_file_iterator = tg_platform_begin_file_iteration(p_relative_directory, &file_properties);
+	tg_file_iterator_h h_file_iterator = tg_platform_directory_begin_iteration(p_relative_directory, &file_properties);
 
 	if (h_file_iterator == TG_NULL)
 	{
@@ -126,14 +126,14 @@ static void tg__try_load_directory(const char* p_relative_directory)
 		if (file_properties.is_directory)
 		{
 			char p_buffer[TG_MAX_PATH] = { 0 };
-			tg_string_format(TG_MAX_PATH, p_buffer, "%s%c%s", p_relative_directory, tg_platform_get_file_separator(), file_properties.p_filename);
+			tg_string_format(TG_MAX_PATH, p_buffer, "%s%c%s", p_relative_directory, TG_FILE_SEPERATOR, file_properties.p_filename);
 			tg__try_load_directory(p_buffer);
 		}
 		else
 		{
 			tg__try_load(&file_properties);
 		}
-	} while (tg_platform_continue_file_iteration(p_relative_directory, h_file_iterator, &file_properties));
+	} while (tg_platform_directory_continue_iteration(h_file_iterator, p_relative_directory, &file_properties));
 }
 
 
@@ -141,7 +141,7 @@ static void tg__try_load_directory(const char* p_relative_directory)
 void tg_assets_init()
 {
 	p_asset_path = TG_ASSET_PATH;
-	TG_ASSERT(tg_platform_get_full_directory_size(TG_ASSET_PATH) <= TG_MAX_ASSETS_DIRECTORY_SIZE);
+	TG_ASSERT(tg_platform_directory_get_size(TG_ASSET_PATH) <= TG_MAX_ASSETS_DIRECTORY_SIZE);
 	tg__try_load_directory(TG_ASSET_PATH);
 }
 
@@ -180,7 +180,7 @@ const char* tg_assets_get_asset_path()
 tg_handle tg_assets_get_asset(const char* p_filename)
 {
 	char p_filename_buffer[TG_MAX_PATH] = { 0 };
-	tg_string_format(TG_MAX_PATH, p_filename_buffer, "%s%c%s", TG_ASSET_PATH, tg_platform_get_file_separator(), p_filename);
+	tg_string_format(TG_MAX_PATH, p_filename_buffer, "%s%c%s", TG_ASSET_PATH, TG_FILE_SEPERATOR, p_filename);
 	const char* p_short_filename = tg__remove_filename_prefix(p_filename);
 
 	const u32 hash = tg__hash(p_filename_buffer);

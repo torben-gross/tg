@@ -1796,11 +1796,12 @@ tg_vulkan_shader tg_vulkan_shader_create(const char* p_filename)
 
     // TODO: shader recompilation here
 
-    u32 size = 0;
-    char* p_content = TG_NULL;
-    tg_platform_read_file(p_filename_buffer, &size, &p_content);
+    tg_file_properties file_properties = { 0 };
+    tg_platform_file_get_properties(p_filename_buffer, &file_properties);
+    char* p_content = TG_MEMORY_STACK_ALLOC(file_properties.size);
+    tg_platform_file_read(p_filename_buffer, file_properties.size, p_content);
 
-    const u32 word_count = size / 4;
+    const u32 word_count = (u32)(file_properties.size / 4);
     const u32* p_words = (u32*)p_content;
 
     tg_spirv_fill_layout(word_count, p_words, &vulkan_shader.spirv_layout);
@@ -1809,11 +1810,11 @@ tg_vulkan_shader tg_vulkan_shader_create(const char* p_filename)
     shader_module_create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     shader_module_create_info.pNext = TG_NULL;
     shader_module_create_info.flags = 0;
-    shader_module_create_info.codeSize = size;
+    shader_module_create_info.codeSize = file_properties.size;
     shader_module_create_info.pCode = (const u32*)p_content;
 
     VK_CALL(vkCreateShaderModule(device, &shader_module_create_info, TG_NULL, &vulkan_shader.shader_module));
-    tg_platform_free_file(p_content);
+    TG_MEMORY_STACK_FREE(file_properties.size);
 
     return vulkan_shader;
 }

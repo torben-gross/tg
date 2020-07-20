@@ -63,7 +63,14 @@ typedef struct tg_sample_scene
 b32 running = TG_TRUE;
 tg_sample_scene sample_scene = { 0 };
 
-
+void tg_work_proc(volatile void* p_user_data)
+{
+    for (u32 i = 0; i < 10000; i++)
+    {
+        tgm_noise(0.0f, 0.0f, 0.0f);
+    }
+    TG_DEBUG_LOG("%u\n", tg_platform_get_current_thread_id());
+}
 
 static void tg__game_3d_create()
 {

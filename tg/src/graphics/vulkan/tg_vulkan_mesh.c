@@ -585,14 +585,16 @@ tg_mesh_h tg_mesh_load(const char* p_filename, v3 scale)
 
     tg_mesh_h h_mesh = TG_NULL;
 
-    u32 size = 0; char* p_data = TG_NULL;
-    tg_platform_read_file(p_filename, &size, &p_data);
+    tg_file_properties file_properties = { 0 };
+    tg_platform_file_get_properties(p_filename, &file_properties);
+    char* p_data = TG_MEMORY_STACK_ALLOC(file_properties.size);
+    tg_platform_file_read(p_filename, file_properties.size, p_data);
 
     const char* p_extension = tg_string_extract_filename_extension(p_filename);
     if (tg_string_equal(p_extension, "obj"))
     {
         const char* p_it = p_data;
-        const char* const p_eof = p_data + size;
+        const char* const p_eof = p_data + file_properties.size;
 
         u32 unique_vertex_count = 0;
         u32 unique_uv_count = 0;
@@ -762,6 +764,8 @@ tg_mesh_h tg_mesh_load(const char* p_filename, v3 scale)
         TG_MEMORY_STACK_FREE(unique_normal_count * sizeof(v3));
         TG_MEMORY_STACK_FREE(unique_vertex_count * sizeof(v3));
     }
+
+    TG_MEMORY_STACK_FREE(file_properties.size);
 
     return h_mesh;
 }

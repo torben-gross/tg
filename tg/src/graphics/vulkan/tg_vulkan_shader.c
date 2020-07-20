@@ -17,13 +17,13 @@
 static void tg__recompile(const char* p_filename)
 {
 	tg_file_properties uncompiled_properties = { 0 };
-	tg_platform_get_file_properties(p_filename, &uncompiled_properties);
+	tg_platform_file_get_properties(p_filename, &uncompiled_properties);
 
 	char p_filename_buffer_spv[TG_MAX_PATH] = { 0 };
 	tg_string_format(TG_MAX_PATH, p_filename_buffer_spv, "%s.spv", p_filename);
 
 	tg_file_properties compiled_properties = { 0 };
-	const b32 spv_exists = tg_platform_get_file_properties(p_filename_buffer_spv, &compiled_properties);
+	const b32 spv_exists = tg_platform_file_get_properties(p_filename_buffer_spv, &compiled_properties);
 
 	b32 recompile = TG_FALSE;
 	if (spv_exists)
@@ -34,7 +34,7 @@ static void tg__recompile(const char* p_filename)
 	if (!spv_exists || recompile)
 	{
 		char p_filename_buffer[TG_MAX_PATH] = { 0 };
-		tg_string_format(TG_MAX_PATH, p_filename_buffer, "%s%c%s", uncompiled_properties.p_relative_directory, tg_platform_get_file_separator(), uncompiled_properties.p_filename);
+		tg_string_format(TG_MAX_PATH, p_filename_buffer, "%s%c%s", uncompiled_properties.p_relative_directory, TG_FILE_SEPERATOR, uncompiled_properties.p_filename);
 
 		char p_delete_buffer[10 + 2 * TG_MAX_PATH] = { 0 };
 		tg_string_format(
