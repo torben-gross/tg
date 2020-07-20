@@ -54,7 +54,7 @@ void tg_memory_init()
 void tg_memory_shutdown()
 {
 #ifdef TG_DEBUG
-	while (!tg_platform_lock(&lock));
+	while (!tg_platform_try_lock(&lock));
 	recording_allocations = TG_FALSE;
 	TG_ASSERT(memory_stack.exhausted_size == 1);
 #endif
@@ -110,9 +110,9 @@ void* tg_memory_alloc_impl(u64 size, const char* p_filename, u32 line, b32 nulli
 	}
 	TG_ASSERT(p_memory);
 
-	if (tg_platform_interlocked_compare_exchange((volatile i32*)&recording_allocations, TG_FALSE, TG_TRUE) == TG_TRUE)
+	if (TG_INTERLOCKED_COMPARE_EXCHANGE(&recording_allocations, TG_FALSE, TG_TRUE) == TG_TRUE)
 	{
-		while (!tg_platform_lock(&lock));
+		while (!tg_platform_try_lock(&lock));
 		tg_memory_allocator_allocation allocation = { 0 };
 		allocation.line = line;
 		tg_memory_copy(tg_string_length(p_filename) * sizeof(*p_filename), p_filename, allocation.p_filename);
@@ -137,9 +137,9 @@ void* tg_memory_realloc_impl(u64 size, void* p_memory, const char* p_filename, u
 	}
 	TG_ASSERT(p_reallocated_memory);
 
-	if (tg_platform_interlocked_compare_exchange((volatile i32*)&recording_allocations, TG_FALSE, TG_TRUE) == TG_TRUE)
+	if (TG_INTERLOCKED_COMPARE_EXCHANGE(&recording_allocations, TG_FALSE, TG_TRUE) == TG_TRUE)
 	{
-		while (!tg_platform_lock(&lock));
+		while (!tg_platform_try_lock(&lock));
 		tg_hashmap_remove(&memory_allocations, &p_memory);
 		tg_memory_allocator_allocation allocation = { 0 };
 		allocation.line = line;
@@ -155,9 +155,9 @@ void* tg_memory_realloc_impl(u64 size, void* p_memory, const char* p_filename, u
 
 void tg_memory_free_impl(void* p_memory, const char* p_filename, u32 line)
 {
-	if (tg_platform_interlocked_compare_exchange((volatile i32*)&recording_allocations, TG_FALSE, TG_TRUE) == TG_TRUE)
+	if (TG_INTERLOCKED_COMPARE_EXCHANGE(&recording_allocations, TG_FALSE, TG_TRUE) == TG_TRUE)
 	{
-		while (!tg_platform_lock(&lock));
+		while (!tg_platform_try_lock(&lock));
 		// TODO: this needs to 'try', because the platform layer calls
 		// 'tg_memory_create_unfreed_allocations_list', which disables recording
 		// temporarily and thus, the hashmap does not contain it.
@@ -177,7 +177,7 @@ u32 tg_memory_unfreed_allocation_count()
 
 tg_list tg_memory_create_unfreed_allocations_list()
 {
-	while (!tg_platform_lock(&lock));
+	while (!tg_platform_try_lock(&lock));
 	recording_allocations = TG_FALSE;
 	const tg_list list = tg_hashmap_value_list_create(&memory_allocations);
 	recording_allocations = TG_TRUE;

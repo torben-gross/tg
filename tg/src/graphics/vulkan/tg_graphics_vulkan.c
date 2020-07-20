@@ -204,7 +204,7 @@ static void tg__queue_release(tg_vulkan_queue* p_queue)
 static tg_vulkan_queue* tg__queue_take(tg_vulkan_queue_type type)
 {
     tg_vulkan_queue* p_queue = pp_queues[type];
-    while (!tg_platform_lock(&p_queue->lock));
+    while (!tg_platform_try_lock(&p_queue->lock));
     return p_queue;
 }
 

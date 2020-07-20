@@ -1,7 +1,5 @@
 #include "platform/tg_platform.h"
 
-#define _CRT_SECURE_NO_WARNINGS
-
 #include "graphics/tg_graphics.h"
 #include "memory/tg_memory.h"
 #include "tg_application.h"
@@ -9,7 +7,6 @@
 #include "tg_input.h"
 #include "util/tg_list.h"
 #include "util/tg_string.h"
-#include <windows.h>
 
 
 
@@ -485,7 +482,8 @@ typedef struct tg_work_queue
     volatile void*     pp_user_datas[TG_WORK_QUEUE_MAX_ENTRY_COUNT];
     volatile u32       first;
     volatile u32       one_past_last;
-    volatile i32       lock;
+    volatile i32       lock_push;
+    volatile i32       lock_pop;
     volatile u32       active_thread_count;
 } tg_work_queue;
 
@@ -496,7 +494,7 @@ static b32 tg__work_queue_execute_entry()
 {
     b32 result = TG_FALSE;
 
-    if (_InterlockedCompareExchange(&work_queue.lock, 1, 0) == 0)
+    if (_InterlockedCompareExchange(&work_queue.lock_pop, 1, 0) == 0)
     {
         tg_work_fn* p_work_fn = TG_NULL;
         volatile void* p_user_data = TG_NULL;
@@ -514,11 +512,11 @@ static b32 tg__work_queue_execute_entry()
             work_queue.first = tgm_u32_incmod(work_queue.first, TG_WORK_QUEUE_MAX_ENTRY_COUNT);
         }
 
-        _InterlockedExchange(&work_queue.lock, 0);
+        _InterlockedExchange(&work_queue.lock_pop, 0);
 
         if (result)
         {
-            p_work_fn(p_user_data);
+            p_work_fn(p_user_data); // if this crashes because p_work_fn is TG_NULL, than TG_WORK_QUEUE_MAX_ENTRY_COUNT is too small
             _InterlockedDecrement((volatile i32*)&work_queue.active_thread_count);
         }
     }
@@ -532,16 +530,11 @@ static u32 WINAPI tg__worker_thread_proc(void* p_param)
     {
         if (!tg__work_queue_execute_entry())
         {
-            WaitForSingleObjectEx(work_queue.h_semaphore, INFINITE, TG_FALSE);
+            const DWORD result = WaitForSingleObjectEx(work_queue.h_semaphore, INFINITE, TG_FALSE);
+            TG_ASSERT(result == WAIT_OBJECT_0);
         }
     }
     return 0;
-}
-
-i32 tg_platform_interlocked_compare_exchange(volatile i32* p_destination, i32 exchange, i32 comperand)
-{
-    const i32 result = _InterlockedCompareExchange(p_destination, exchange, comperand);
-    return result;
 }
 
 u32 tg_platform_get_current_thread_id()
@@ -566,14 +559,18 @@ tg_lock tg_platform_lock_create(tg_lock_state initial_state)
     return initial_state;
 }
 
-b32 tg_platform_lock(volatile tg_lock* p_lock)
+b32 tg_platform_try_lock(volatile tg_lock* p_lock)
 {
     const b32 result = _InterlockedCompareExchange(p_lock, 1, 0) == 0;
+    _ReadWriteBarrier();
+    _mm_mfence();
     return result;
 }
 
 void tg_platform_unlock(volatile tg_lock* p_lock)
 {
+    _ReadWriteBarrier();
+    _mm_mfence();
     _InterlockedExchange(p_lock, 0);
 }
 
@@ -581,9 +578,11 @@ void tg_platform_work_queue_add_entry(tg_work_fn* p_work_fn, volatile void* p_us
 {
     TG_ASSERT(p_work_fn);
 
-    work_queue.pp_work_fns[work_queue.one_past_last] = p_work_fn;
+    while (_InterlockedCompareExchange(&work_queue.lock_push, 1, 0) != 0); // TODO: no spin lock! the generic locks should also not be spinning locks
     work_queue.pp_user_datas[work_queue.one_past_last] = p_user_data;
-    work_queue.one_past_last++;
+    work_queue.pp_work_fns[work_queue.one_past_last] = p_work_fn;
+    work_queue.one_past_last = tgm_u32_incmod(work_queue.one_past_last, TG_WORK_QUEUE_MAX_ENTRY_COUNT);
+    _InterlockedExchange(&work_queue.lock_push, 0);
 
     ReleaseSemaphore(work_queue.h_semaphore, 1, TG_NULL);
 }
@@ -651,7 +650,7 @@ LRESULT CALLBACK tg_platform_win32_window_proc(HWND h_window, UINT message, WPAR
 int CALLBACK WinMain(_In_ HINSTANCE h_instance, _In_opt_ HINSTANCE h_prev_instance, _In_ LPSTR cmd_line, _In_ int show_cmd)
 {
     work_queue.h_semaphore = CreateSemaphoreEx(TG_NULL, 0, TG_WORKER_THREAD_COUNT, TG_NULL, 0, SEMAPHORE_ALL_ACCESS);
-    work_queue.lock = tg_platform_lock_create(TG_LOCK_STATE_FREE);
+    work_queue.lock_pop = tg_platform_lock_create(TG_LOCK_STATE_FREE);
 
     p_thread_ids[0] = GetThreadId(GetCurrentThread());
     for (u8 i = 0; i < TG_WORKER_THREAD_COUNT; i++)

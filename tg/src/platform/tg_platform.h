@@ -8,8 +8,23 @@
 #define TG_WORKER_THREAD_COUNT    7
 
 #ifdef TG_WIN32
-#define TG_MAX_PATH               260
-#define TG_FILE_SEPERATOR         '\\'
+#define _CRT_SECURE_NO_WARNINGS
+#include <windows.h>
+#undef near
+#undef far
+#undef min
+#undef max
+#endif
+
+#ifdef TG_WIN32
+#define TG_MAX_PATH                                                            MAX_PATH
+#define TG_FILE_SEPERATOR                                                      '\\'
+#define TG_INTERLOCKED_COMPARE_EXCHANGE(p_destination, exchange, comperand)    _InterlockedCompareExchange((volatile LONG*)(p_destination), (LONG)(exchange), (LONG)(comperand))
+#define TG_INTERLOCKED_INCREMENT_I32(p_append)                                 _InterlockedIncrement((volatile LONG*)(p_append))
+#define TG_INTERLOCKED_DECREMENT_I32(p_append)                                 _InterlockedDecrement((volatile LONG*)(p_append))
+#define TG_INTERLOCKED_INCREMENT_I64(p_append)                                 _InterlockedIncrement64((volatile LONG64*)(p_append))
+#define TG_INTERLOCKED_DECREMENT_I64(p_append)                                 _InterlockedDecrement64((volatile LONG64*)(p_append))
+typedef i32 tg_lock;
 #endif
 
 #ifdef TG_DEBUG
@@ -18,15 +33,9 @@
 #define TG_DEBUG_LOG(x, ...)
 #endif
 
-
-
 typedef void* tg_window_h;
 typedef void* tg_file_iterator_h;
 TG_DECLARE_HANDLE(tg_timer);
-
-#ifdef TG_WIN32
-typedef i32 tg_lock;
-#endif
 
 typedef void tg_work_fn(volatile void* p_user_data);
 
@@ -99,10 +108,9 @@ void                  tg_platform_timer_reset(tg_timer_h h_timer);
 f32                   tg_platform_timer_elapsed_milliseconds(tg_timer_h h_timer);
 void                  tg_platform_timer_destroy(tg_timer_h h_timer);
 
-i32                   tg_platform_interlocked_compare_exchange(volatile i32* p_destination, i32 exchange, i32 comperand);
 u32                   tg_platform_get_current_thread_id();
 tg_lock               tg_platform_lock_create(tg_lock_state initial_state);
-b32                   tg_platform_lock(volatile tg_lock* p_lock);
+b32                   tg_platform_try_lock(volatile tg_lock* p_lock);
 void                  tg_platform_unlock(volatile tg_lock* p_lock);
 void                  tg_platform_work_queue_add_entry(tg_work_fn* p_work_fn, volatile void* p_user_data);
 void                  tg_platform_work_queue_wait_for_completion();
