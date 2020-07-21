@@ -1243,7 +1243,7 @@ void tg_renderer_end(tg_renderer_h h_renderer)
             tgm_enclosing_sphere(8, p_corners_ws, &center, &radius);
 
             const m4 t = tgm_m4_translate(tgm_v3_neg(center));
-            const m4 r = tgm_m4_inverse(tgm_m4_euler(-(f32)TGM_PI * 0.4f, -(f32)TGM_PI * 0.4f, 0.0f));
+            const m4 r = tgm_m4_inverse(tgm_m4_euler(-TG_PI * 0.4f, -TG_PI * 0.4f, 0.0f));
             const m4 v = tgm_m4_mul(r, t);
             const m4 p = tgm_m4_orthographic(-radius, radius, -radius, radius, -radius, radius);
             const m4 vp = tgm_m4_mul(p, v);

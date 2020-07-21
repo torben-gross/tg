@@ -453,15 +453,15 @@ tg_mesh_h tg_mesh_create_sphere(f32 radius, u32 sector_count, u32 stack_count)
     v3* p_unique_positions = TG_MEMORY_STACK_ALLOC(unique_vertex_count * sizeof(*p_unique_positions));
     v2* p_unique_uvs = TG_MEMORY_STACK_ALLOC(unique_vertex_count * sizeof(*p_unique_uvs));
 
-    const f32 sector_step = 2.0f * (f32)TGM_PI / sector_count;
-    const f32 stack_step = (f32)TGM_PI / stack_count;
+    const f32 sector_step = 2.0f * TG_PI / sector_count;
+    const f32 stack_step = TG_PI / stack_count;
 
     u32 it = 0;
     for (u32 i = 0; i < stack_count + 1; i++)
     {
         TG_ASSERT(it < unique_vertex_count);
 
-        const f32 stack_angle = (f32)TGM_PI / 2.0f - (f32)i * stack_step;
+        const f32 stack_angle = TG_PI / 2.0f - (f32)i * stack_step;
         const f32 y = radius * tgm_f32_sin(stack_angle);
         const f32 xz = radius * tgm_f32_cos(stack_angle);
 
@@ -725,6 +725,9 @@ tg_mesh_h tg_mesh_load(const char* p_filename, v3 scale)
                 p_it = tg__skip_line(p_it, p_eof);
             }
         }
+
+        // TODO: u16 is not enough in some cases
+        //TG_ASSERT(3 * total_triangle_count < TG_U16_MAX);
 
         v3* p_positions = TG_MEMORY_STACK_ALLOC(3 * (u64)total_triangle_count * sizeof(v3));
         v3* p_normals = TG_MEMORY_STACK_ALLOC(3 * (u64)total_triangle_count * sizeof(v3));

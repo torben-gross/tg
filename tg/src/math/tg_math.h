@@ -1,29 +1,22 @@
-/*
-Noise uses Simplex Noise.
-Random uses Marsaglia's Xorshift.
-
-Matrices are layed out in column major.
-
-Projection matrices are currently layed out for following clipping setup:
-	Left: -1, right: 1, bottom: 1, top: -1, near: 0, far: 1
-
-TODO: Support other clipping setups via macros!
-*/
-
 #ifndef TG_MATH
 #define TG_MATH
 
 #include "tg_common.h"
-#define TGM_PI                     3.14159265358979323846
-#define TG_GOLDEN_RATIO            1.61803401f
-#define TGM_TO_DEGREES(radians)    (radians * (360.0f / ((f32)TGM_PI * 2.0f)))
-#define TGM_TO_RADIANS(degrees)    (degrees * (((f32)TGM_PI * 2.0f) / 360.0f))
 
-#define V2(f)                      ((v2) { (f), (f) })
-#define V2I(i)                     ((v2i) { (i), (i) })
-#define V3(f)                      ((v3) { (f), (f), (f) })
-#define V3I(i)                     ((v3i) { (i), (i), (i) })
-#define V4(f)                      ((v4) { (f), (f), (f), (f) })
+
+
+#define TG_PI                     3.14159274f
+#define TG_GOLDEN_RATIO           1.61803401f
+#define TG_MAX(v0, v1)            ((v0) > (v1) ? (v0) : (v1))
+#define TG_MIN(v0, v1)            ((v0) < (v1) ? (v0) : (v1))
+#define TG_TO_DEGREES(radians)    (radians * (360.0f / (TG_PI * 2.0f)))
+#define TG_TO_RADIANS(degrees)    (degrees * ((TG_PI * 2.0f) / 360.0f))
+
+#define V2(f)                     ((v2) { (f), (f) })
+#define V2I(i)                    ((v2i) { (i), (i) })
+#define V3(f)                     ((v3) { (f), (f), (f) })
+#define V3I(i)                    ((v3i) { (i), (i), (i) })
+#define V4(f)                     ((v4) { (f), (f), (f), (f) })
 
 
 
@@ -251,7 +244,7 @@ typedef struct tg_random
 | Miscellaneous                                               |
 +------------------------------------------------------------*/
 
-f32     tgm_noise(f32 x, f32 y, f32 z);
+f32     tgm_noise(f32 x, f32 y, f32 z); // simplex noise
 void    tgm_random_init(tg_random* p_random, u32 seed); // TODO: Unity uses Marsaglia's Xorshift 128, this is the basic variation
 f32     tgm_random_next_f32(tg_random* p_random);
 u32     tgm_random_next_u32(tg_random* p_random);

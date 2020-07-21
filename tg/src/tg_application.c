@@ -71,7 +71,7 @@ static void tg__game_3d_create()
     sample_scene.camera.pitch = 0.0f;
     sample_scene.camera.yaw = 0.0f;
     sample_scene.camera.roll = 0.0f;
-    sample_scene.camera.perspective.fov_y_in_radians = TGM_TO_RADIANS(70.0f);
+    sample_scene.camera.perspective.fov_y_in_radians = TG_TO_RADIANS(70.0f);
     sample_scene.camera.perspective.aspect = tg_platform_get_window_aspect_ratio();
     sample_scene.camera.perspective.near = -0.1f;
     sample_scene.camera.perspective.far = -1000.0f;
@@ -195,7 +195,7 @@ static void tg__game_3d_update_and_render(f32 dt)
     {
         sample_scene.quad_delta_time_sum_looped -= 10000.0f;
     }
-    const f32 sint = tgm_f32_sin(0.001f * sample_scene.quad_delta_time_sum_looped * 2.0f * (f32)TGM_PI);
+    const f32 sint = tgm_f32_sin(0.001f * sample_scene.quad_delta_time_sum_looped * 2.0f * TG_PI);
     const f32 noise_x = tgm_noise(sint, 0.1f, 0.1f) + 0.5f;
     const f32 noise_y = tgm_noise(0.1f, sint, 0.1f) + 0.5f;
     const f32 noise_z = tgm_noise(0.1f, 0.1f, sint) + 0.5f;
@@ -208,8 +208,8 @@ static void tg__game_3d_update_and_render(f32 dt)
     tg_input_get_mouse_position(&mouse_x, &mouse_y);
     if (tg_input_is_mouse_button_down(TG_BUTTON_LEFT))
     {
-        sample_scene.camera.yaw += TGM_TO_RADIANS(0.064f * (f32)((i32)sample_scene.last_mouse_x - (i32)mouse_x));
-        sample_scene.camera.pitch += TGM_TO_RADIANS(0.064f * (f32)((i32)sample_scene.last_mouse_y - (i32)mouse_y));
+        sample_scene.camera.yaw += TG_TO_RADIANS(0.064f * (f32)((i32)sample_scene.last_mouse_x - (i32)mouse_x));
+        sample_scene.camera.pitch += TG_TO_RADIANS(0.064f * (f32)((i32)sample_scene.last_mouse_y - (i32)mouse_y));
     }
     const m4 camera_rotation = tgm_m4_euler(sample_scene.camera.pitch, sample_scene.camera.yaw, sample_scene.camera.roll);
 
@@ -267,11 +267,11 @@ static void tg__game_3d_update_and_render(f32 dt)
     {
         sample_scene.light_timer -= 32000.0f;
     }
-    const f32 lx0 = tgm_f32_sin(sample_scene.light_timer / 32000.0f * 2.0f * (f32)TGM_PI);
-    const f32 ly0 = tgm_f32_sin(sample_scene.light_timer / 32000.0f * 2.0f * (f32)TGM_PI) * 0.5f - 0.5f;
-    const f32 lz0 = tgm_f32_cos(sample_scene.light_timer / 32000.0f * 2.0f * (f32)TGM_PI);
-    const f32 lx1 = 127.0f + 5.0f * tgm_f32_cos(sample_scene.light_timer / 4000.0f * 2.0f * (f32)TGM_PI);
-    const f32 ly1 = 149.0f + 5.0f * tgm_f32_sin(sample_scene.light_timer / 4000.0f * 2.0f * (f32)TGM_PI);
+    const f32 lx0 = tgm_f32_sin(sample_scene.light_timer / 32000.0f * 2.0f * TG_PI);
+    const f32 ly0 = tgm_f32_sin(sample_scene.light_timer / 32000.0f * 2.0f * TG_PI) * 0.5f - 0.5f;
+    const f32 lz0 = tgm_f32_cos(sample_scene.light_timer / 32000.0f * 2.0f * TG_PI);
+    const f32 lx1 = 127.0f + 5.0f * tgm_f32_cos(sample_scene.light_timer / 4000.0f * 2.0f * TG_PI);
+    const f32 ly1 = 149.0f + 5.0f * tgm_f32_sin(sample_scene.light_timer / 4000.0f * 2.0f * TG_PI);
     const f32 lz1 = 112.0f + 2.0f;
 
 
@@ -340,7 +340,7 @@ static void tg__raytracer_test_create()
     raytrace_scene.camera.pitch = 0.0f;
     raytrace_scene.camera.yaw = 0.0f;
     raytrace_scene.camera.roll = 0.0f;
-    raytrace_scene.camera.perspective.fov_y_in_radians = TGM_TO_RADIANS(70.0f);
+    raytrace_scene.camera.perspective.fov_y_in_radians = TG_TO_RADIANS(70.0f);
     raytrace_scene.camera.perspective.aspect = tg_platform_get_window_aspect_ratio();
     raytrace_scene.camera.perspective.near = -0.1f;
     raytrace_scene.camera.perspective.far = -1000.0f;
@@ -356,8 +356,8 @@ static void tg__raytracer_test_update_and_render(f32 dt)
     tg_input_get_mouse_position(&mouse_x, &mouse_y);
     if (tg_input_is_mouse_button_down(TG_BUTTON_LEFT))
     {
-        raytrace_scene.camera.yaw += TGM_TO_RADIANS(0.064f * (f32)((i32)raytrace_scene.last_mouse_x - (i32)mouse_x));
-        raytrace_scene.camera.pitch += TGM_TO_RADIANS(0.064f * (f32)((i32)raytrace_scene.last_mouse_y - (i32)mouse_y));
+        raytrace_scene.camera.yaw += TG_TO_RADIANS(0.064f * (f32)((i32)raytrace_scene.last_mouse_x - (i32)mouse_x));
+        raytrace_scene.camera.pitch += TG_TO_RADIANS(0.064f * (f32)((i32)raytrace_scene.last_mouse_y - (i32)mouse_y));
     }
     raytrace_scene.last_mouse_x = mouse_x;
     raytrace_scene.last_mouse_y = mouse_y;

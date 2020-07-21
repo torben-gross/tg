@@ -98,6 +98,8 @@ void tg_memory_set_all_bits(u64 size, void* p_memory)
 
 void* tg_memory_alloc_impl(u64 size, const char* p_filename, u32 line, b32 nullify)
 {
+	TG_ASSERT(size);
+
 	void* p_memory = TG_NULL;
 
 	if (nullify)
@@ -126,29 +128,38 @@ void* tg_memory_alloc_impl(u64 size, const char* p_filename, u32 line, b32 nulli
 
 void* tg_memory_realloc_impl(u64 size, void* p_memory, const char* p_filename, u32 line, b32 nullify)
 {
+	TG_ASSERT(size);
+	
 	void* p_reallocated_memory = TG_NULL;
-	if (nullify)
+	if (p_memory)
 	{
-		p_reallocated_memory = tg_platform_memory_realloc_nullify(size, p_memory);
+		if (nullify)
+		{
+			p_reallocated_memory = tg_platform_memory_realloc_nullify(size, p_memory);
+		}
+		else
+		{
+			p_reallocated_memory = tg_platform_memory_realloc(size, p_memory);
+		}
+		TG_ASSERT(p_reallocated_memory);
+
+		if (TG_INTERLOCKED_COMPARE_EXCHANGE(&recording_allocations, TG_FALSE, TG_TRUE) == TG_TRUE)
+		{
+			while (!tg_platform_try_lock(&lock));
+			tg_hashmap_try_remove(&memory_allocations, &p_memory); // TODO: this should not 'try', but this implementation is not properly thread save!
+			tg_memory_allocator_allocation allocation = { 0 };
+			allocation.line = line;
+			tg_memory_copy(tg_string_length(p_filename) * sizeof(*p_filename), p_filename, allocation.p_filename);
+			tg_hashmap_insert(&memory_allocations, &p_reallocated_memory, &allocation);
+			recording_allocations = TG_TRUE;
+			tg_platform_unlock(&lock);
+		}
+		tg_platform_unlock(&lock);
 	}
 	else
 	{
-		p_reallocated_memory = tg_platform_memory_realloc(size, p_memory);
+		p_reallocated_memory = tg_memory_alloc_impl(size, p_filename, line, nullify);
 	}
-	TG_ASSERT(p_reallocated_memory);
-
-	if (TG_INTERLOCKED_COMPARE_EXCHANGE(&recording_allocations, TG_FALSE, TG_TRUE) == TG_TRUE)
-	{
-		while (!tg_platform_try_lock(&lock));
-		tg_hashmap_remove(&memory_allocations, &p_memory);
-		tg_memory_allocator_allocation allocation = { 0 };
-		allocation.line = line;
-		tg_memory_copy(tg_string_length(p_filename) * sizeof(*p_filename), p_filename, allocation.p_filename);
-		tg_hashmap_insert(&memory_allocations, &p_reallocated_memory, &allocation);
-		recording_allocations = TG_TRUE;
-		tg_platform_unlock(&lock);
-	}
-	tg_platform_unlock(&lock);
 
 	return p_reallocated_memory;
 }

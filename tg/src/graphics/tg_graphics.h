@@ -209,20 +209,23 @@ typedef struct tg_kd_node
 		struct
 		{
 			f32            split_position;
-			u32            p_child_index_offsets[2];
+			u32            p_child_indices[2];
 		} node;
 		struct
 		{
-			u32            vertex_count;
-			v3*            p_vertex_positions;
+			u32            first_index_offset;
+			u32            index_count;
 		} leaf;
 	};
 } tg_kd_node;
 
 typedef struct tg_kd_tree
 {
-	tg_bounds     bounds;
+	tg_mesh_h     h_mesh;
+	u32           index_capacity;
+	u32           index_count;
 	u32           node_count;
+	u32*          p_indices;
 	tg_kd_node    p_nodes[0];
 } tg_kd_tree;
 

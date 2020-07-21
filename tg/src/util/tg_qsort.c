@@ -1,15 +1,17 @@
 #include "util/tg_qsort.h"
 
+#include "math/tg_math.h"
+
 
 
 // source: https://github.com/lattera/glibc/blob/master/stdlib/qsort.c
 
 #define TG_MAX_THRESH                   4
-#define TG_MIN(x, y)                    ((x) < (y) ? (x) : (y))
 #define TG_STACK_SIZE                   (8 * sizeof(u32))
 #define TG_STACK_PUSH(p_low, p_high)    ((void) ((p_top->p_lo = (p_low)), (p_top->p_hi = (p_high)), ++p_top))
 #define TG_STACK_POP(p_low, p_high)     ((void) (--p_top, (p_low = p_top->p_lo), (p_high = p_top->p_hi)))
 #define TG_STACK_NOT_EMPTY              (p_stack < p_top)
+
 #define TG_SWAP(element_size, p_left, p_right) \
     do                                         \
     {                                          \
@@ -143,46 +145,49 @@ void tg_qsort_impl(u32 element_size, u32 element_count, void* p_elements, tg_qso
         }
     }
 
-    const i8* const p_end = &p_base[element_size * (element_count - 1)];
-    i8* p_tmp = p_base;
-    const i8* p_thresh = TG_MIN(p_end, p_base + max_thresh);
-    i8* p_run;
-
-    for (p_run = p_tmp + element_size; p_run <= p_thresh; p_run += element_size)
     {
-        if ((*p_compare_fn)((void*)p_run, (void*)p_tmp, p_user_data) < 0)
-        {
-            p_tmp = p_run;
-        }
-    }
+        const i8* const p_end = &p_base[element_size * (element_count - 1)];
+        i8* p_tmp = p_base;
+        const i8* p_thresh = TG_MIN(p_end, p_base + max_thresh);
+        i8* p_run;
 
-    if (p_tmp != p_base)
-    {
-        TG_SWAP(element_size, p_tmp, p_base);
-    }
-
-    p_run = p_base + element_size;
-    while ((p_run += element_size) <= p_end)
-    {
-        p_tmp = p_run - element_size;
-        while ((*p_compare_fn)((void*)p_run, (void*)p_tmp, p_user_data) < 0)
+        for (p_run = p_tmp + element_size; p_run <= p_thresh; p_run += element_size)
         {
-            p_tmp -= element_size;
-        }
-        p_tmp += element_size;
-        if (p_tmp != p_run)
-        {
-            i8* p_trav = p_run + element_size;
-            while (--p_trav >= p_run)
+            if ((*p_compare_fn)((void*)p_run, (void*)p_tmp, p_user_data) < 0)
             {
-                const i8 c = *p_trav;
-                char* p_hi;
-                char* p_lo;
-                for (p_hi = p_lo = p_trav; (p_lo -= element_size) >= p_tmp; p_hi = p_lo)
+                p_tmp = p_run;
+            }
+        }
+
+        if (p_tmp != p_base)
+        {
+            TG_SWAP(element_size, p_tmp, p_base);
+        }
+
+        p_run = p_base + element_size;
+        while ((p_run += element_size) <= p_end)
+        {
+            p_tmp = p_run - element_size;
+            while ((*p_compare_fn)((void*)p_run, (void*)p_tmp, p_user_data) < 0)
+            {
+                p_tmp -= element_size;
+            }
+            p_tmp += element_size;
+            if (p_tmp != p_run)
+            {
+                i8* p_trav = p_run + element_size;
+                while (--p_trav >= p_run)
                 {
-                    p_hi = p_lo;
+                    const i8 c = *p_trav;
+                    char* p_hi;
+                    char* p_lo;
+
+                    for (p_hi = p_lo = p_trav; (p_lo -= element_size) >= p_tmp; p_hi = p_lo)
+                    {
+                        *p_hi = *p_lo;
+                    }
+                    *p_hi = c;
                 }
-                *p_hi = c;
             }
         }
     }
