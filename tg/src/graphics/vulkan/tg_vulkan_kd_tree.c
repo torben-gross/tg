@@ -23,7 +23,7 @@ typedef struct tg_construction_triangle
 {
 	u32          i0, i1, i2;
 	tg_bounds    bounds;
-} tg_construction_triangle;
+} tg_construction_triangle; // TODO: put this in as a struct [0];
 
 typedef struct tg_stack_node
 {
@@ -36,7 +36,7 @@ typedef struct tg_stack_node
 typedef struct tg_work_thread_info
 {
 	tg_kd_tree*       p_tree;
-	tg_lock           stack_lock;
+	tg_mutex_h        h_stack_mutex;
 	tg_mutex_h        h_indices_mutex;
 	i32               stack_node_count;
 	tg_stack_node*    p_stack_nodes;
@@ -54,7 +54,7 @@ typedef struct tg_qsort_user_data
 void tg__work_fn(volatile void* p_user_data);
 static void tg__stack_push(tg_work_thread_info* p_work_thread_info, u32 node_index, tg_bounds bounds, u32 tri_count, tg_construction_triangle* p_tris)
 {
-	while (!tg_platform_try_lock(&p_work_thread_info->stack_lock));
+	TG_MUTEX_LOCK(p_work_thread_info->h_stack_mutex);
 
 	tg_stack_node* p_stack_node = &p_work_thread_info->p_stack_nodes[p_work_thread_info->stack_node_count++];
 	p_stack_node->node_index = node_index;
@@ -62,7 +62,7 @@ static void tg__stack_push(tg_work_thread_info* p_work_thread_info, u32 node_ind
 	p_stack_node->tri_count = tri_count;
 	p_stack_node->p_tris = p_tris;
 
-	tg_platform_unlock(&p_work_thread_info->stack_lock);
+	TG_MUTEX_UNLOCK(p_work_thread_info->h_stack_mutex);
 	tg_platform_work_queue_add_entry(tg__work_fn, p_work_thread_info);
 }
 
@@ -153,7 +153,7 @@ void tg__work_fn(volatile void* p_user_data)
 	u32 tri_count = 0;
 	tg_construction_triangle* p_tris = TG_NULL;
 
-	while(!tg_platform_try_lock(&p_work_thread_info->stack_lock));
+	TG_MUTEX_LOCK(p_work_thread_info->h_stack_mutex);
 	const b32 work_exists = p_work_thread_info->stack_node_count > 0;
 	if (work_exists)
 	{
@@ -164,7 +164,7 @@ void tg__work_fn(volatile void* p_user_data)
 		p_tris = p_stack_node->p_tris;
 		*p_stack_node = (tg_stack_node){ 0 };
 	}
-	tg_platform_unlock(&p_work_thread_info->stack_lock);
+	TG_MUTEX_UNLOCK(p_work_thread_info->h_stack_mutex);
 
 	if (work_exists)
 	{
@@ -303,7 +303,7 @@ tg_kd_tree* tg_kd_tree_create(const tg_mesh_h h_mesh)
 	tg_work_thread_info work_thread_info = { 0 };
 	work_thread_info.p_tree = p_tree;
 	const u64 nodes_size = ((u64)initial_tri_count + 1LL) * sizeof(tg_stack_node);
-	work_thread_info.stack_lock = tg_platform_lock_create(TG_LOCK_STATE_FREE);
+	work_thread_info.h_stack_mutex = TG_MUTEX_CREATE();
 	work_thread_info.h_indices_mutex = TG_MUTEX_CREATE();
 	work_thread_info.p_stack_nodes = TG_MEMORY_STACK_ALLOC(nodes_size);
 	tg_memory_nullify(nodes_size, work_thread_info.p_stack_nodes);

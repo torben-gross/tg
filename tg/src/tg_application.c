@@ -280,7 +280,7 @@ static void tg__game_3d_update_and_render(f32 dt)
     const v3 c0d = tgm_v3_mulf((v3) { 0.529f, 0.808f, 0.922f }, 2.0f);
     const v3 c0n = tgm_v3_mulf((v3) { 0.992f, 0.369f, 0.325f }, 2.0f);
     //const v3 c0 = tgm_v3_lerp(c0n, c0d, -d0.y);
-    const v3 c0 = { 4.0f, 4.0f, 4.0f };
+    const v3 c0 = V3(1.0f);
 
     tg_renderer_begin(sample_scene.h_secondary_renderer);
     tg_renderer_push_directional_light(sample_scene.h_secondary_renderer, d0, (v3) { 4.0f, 4.0f, 10.0f });
@@ -409,10 +409,10 @@ void tg_application_start()
         {
             if (debug_info.fps < 60)
             {
-                TG_DEBUG_LOG("Low framerate!");
+                TG_DEBUG_LOG("Low framerate!\n");
             }
-            TG_DEBUG_LOG("%d ms", debug_info.ms_sum / debug_info.fps);
-            TG_DEBUG_LOG("%u fps", debug_info.fps);
+            TG_DEBUG_LOG("%d ms\n", debug_info.ms_sum / debug_info.fps);
+            TG_DEBUG_LOG("%u fps\n", debug_info.fps);
 
             debug_info.ms_sum = 0.0f;
             debug_info.fps = 0;

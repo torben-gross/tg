@@ -8,7 +8,6 @@
 #define TG_WORKER_THREAD_COUNT    7
 
 #ifdef TG_WIN32
-#define _CRT_SECURE_NO_WARNINGS
 #include <windows.h>
 #undef near
 #undef far
@@ -22,23 +21,26 @@
 
 #define TG_MAX_PATH                                                            MAX_PATH
 #define TG_FILE_SEPERATOR                                                      '\\'
+
 #define TG_INTERLOCKED_COMPARE_EXCHANGE(p_destination, exchange, comperand)    _InterlockedCompareExchange((volatile LONG*)(p_destination), (LONG)(exchange), (LONG)(comperand))
 #define TG_INTERLOCKED_INCREMENT_I32(p_append)                                 _InterlockedIncrement((volatile LONG*)(p_append))
 #define TG_INTERLOCKED_DECREMENT_I32(p_append)                                 _InterlockedDecrement((volatile LONG*)(p_append))
 #define TG_INTERLOCKED_INCREMENT_I64(p_append)                                 _InterlockedIncrement64((volatile LONG64*)(p_append))
 #define TG_INTERLOCKED_DECREMENT_I64(p_append)                                 _InterlockedDecrement64((volatile LONG64*)(p_append))
+
 #define TG_MUTEX_CREATE()                                                      ((tg_mutex_h)CreateMutex(TG_NULL, TG_FALSE, TG_NULL))
-#define TG_MUTEX_DESTROY(h_mutex)                                              CloseHandle((HANDLE)(h_mutex));
+#define TG_MUTEX_CREATE_LOCKED()                                               ((tg_mutex_h)CreateMutex(TG_NULL, TG_TRUE, TG_NULL))
+#define TG_MUTEX_DESTROY(h_mutex)                                              CloseHandle((HANDLE)(h_mutex))
+#define TG_MUTEX_TRY_LOCK(h_mutex)                                             (WaitForSingleObject((HANDLE)(h_mutex), 0) == WAIT_OBJECT_0)
 
 #ifdef TG_DEBUG
-#define TG_MUTEX_LOCK(h_mutex)                                                 TG_ASSERT(WaitForSingleObject((HANDLE)(h_mutex), INFINITE) == WAIT_OBJECT_0);
+#define TG_MUTEX_LOCK(h_mutex)                                                 TG_ASSERT(WaitForSingleObject((HANDLE)(h_mutex), INFINITE) == WAIT_OBJECT_0)
 #define TG_MUTEX_UNLOCK(h_mutex)                                               TG_ASSERT(ReleaseMutex((HANDLE)(h_mutex)));
 #else
-#define TG_MUTEX_LOCK(h_mutex)                                                 WaitForSingleObject((HANDLE)(h_mutex), INFINITE);
-#define TG_MUTEX_UNLOCK(h_mutex)                                               ReleaseMutex((HANDLE)(h_mutex));
+#define TG_MUTEX_LOCK(h_mutex)                                                 WaitForSingleObject((HANDLE)(h_mutex), INFINITE)
+#define TG_MUTEX_UNLOCK(h_mutex)                                               ReleaseMutex((HANDLE)(h_mutex))
 #endif
 
-typedef i32 tg_lock;
 typedef HANDLE tg_mutex_h;
 typedef HANDLE tg_window_h;
 typedef void* tg_file_iterator_h;
@@ -49,7 +51,7 @@ TG_DECLARE_HANDLE(tg_timer);
 
 
 #ifdef TG_DEBUG
-#define TG_DEBUG_LOG(x, ...)      tg_platform_debug_log(x, __VA_ARGS__)
+#define TG_DEBUG_LOG(x, ...)                                                   tg_platform_debug_log(x, __VA_ARGS__)
 #else
 #define TG_DEBUG_LOG(x, ...)
 #endif
@@ -57,14 +59,6 @@ TG_DECLARE_HANDLE(tg_timer);
 
 
 typedef void tg_work_fn(volatile void* p_user_data);
-
-
-
-typedef enum tg_lock_state
-{
-    TG_LOCK_STATE_FREE      = 0,
-    TG_LOCK_STATE_LOCKED    = 1
-} tg_lock_state;
 
 
 
@@ -128,9 +122,6 @@ f32                   tg_platform_timer_elapsed_milliseconds(tg_timer_h h_timer)
 void                  tg_platform_timer_destroy(tg_timer_h h_timer);
 
 u32                   tg_platform_get_current_thread_id();
-tg_lock               tg_platform_lock_create(tg_lock_state initial_state);
-b32                   tg_platform_try_lock(volatile tg_lock* p_lock);
-void                  tg_platform_unlock(volatile tg_lock* p_lock);
 void                  tg_platform_work_queue_add_entry(tg_work_fn* p_work_fn, volatile void* p_user_data);
 void                  tg_platform_work_queue_wait_for_completion();
 

@@ -17,15 +17,17 @@
 #ifdef TG_DEBUG
 #define VK_CALL_NAME2(x, y) x ## y
 #define VK_CALL_NAME(x, y) VK_CALL_NAME2(x, y)
+
 #define VK_CALL(x) \
     const VkResult VK_CALL_NAME(vk_call_result, __LINE__) = (x); \
     if (VK_CALL_NAME(vk_call_result, __LINE__) != VK_SUCCESS) \
     { \
         char p_buffer[1024] = { 0 }; \
         tg_vulkan_convert_vkresult_to_string(p_buffer, VK_CALL_NAME(vk_call_result, __LINE__)); \
-        TG_DEBUG_LOG("VkResult: %s", p_buffer); \
+        TG_DEBUG_LOG("VkResult: %s\n", p_buffer); \
     } \
     if (VK_CALL_NAME(vk_call_result, __LINE__) != VK_SUCCESS) TG_INVALID_CODEPATH();
+
 #else
 #define VK_CALL(x) x
 #endif
@@ -142,9 +144,9 @@ typedef struct tg_vulkan_pipeline
 
 typedef struct tg_vulkan_queue
 {
-    tg_lock    lock;
-    u32        index;
-    VkQueue    queue;
+    tg_mutex_h    h_mutex;
+    u32           index;
+    VkQueue       queue;
 } tg_vulkan_queue;
 
 typedef struct tg_vulkan_sampler_create_info

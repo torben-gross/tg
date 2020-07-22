@@ -54,9 +54,9 @@ static VkCommandPool               p_compute_command_pool[TG_WORKER_THREAD_COUNT
 
 
 #ifdef TG_DEBUG
-static VKAPI_ATTR VkBool32 VKAPI_CALL tg__debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity, VkDebugUtilsMessageTypeFlagsEXT message_type, const VkDebugUtilsMessengerCallbackDataEXT* callback_data, void* user_data)
+static VKAPI_ATTR VkBool32 VKAPI_CALL tg__debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity, VkDebugUtilsMessageTypeFlagsEXT message_type, const VkDebugUtilsMessengerCallbackDataEXT* p_callback_data, void* user_data)
 {
-    TG_DEBUG_LOG(callback_data->pMessage);
+    TG_DEBUG_LOG("%s\n", p_callback_data->pMessage);
     return VK_TRUE;
 }
 #endif
@@ -66,6 +66,9 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL tg__debug_callback(VkDebugUtilsMessageSeve
 /*------------------------------------------------------------+
 | General utilities                                           |
 +------------------------------------------------------------*/
+
+#define TG_QUEUE_TAKE(type, p_queue)    (p_queue) = pp_queues[type]; TG_MUTEX_LOCK((p_queue)->h_mutex)
+#define TG_QUEUE_RELEASE(p_queue)       TG_MUTEX_UNLOCK((p_queue)->h_mutex)
 
 static VkImageView tg__image_view_create(VkImage image, VkImageViewType view_type, VkFormat format, VkImageAspectFlagBits aspect_mask, u32 mip_levels)
 {
@@ -192,20 +195,6 @@ void tg__pipeline_init(tg_vulkan_pipeline* p_pipeline, u32 shader_count, const t
     pipeline_layout_create_info.pPushConstantRanges = TG_NULL;
 
     VK_CALL(vkCreatePipelineLayout(device, &pipeline_layout_create_info, TG_NULL, &p_pipeline->pipeline_layout));
-}
-
-
-
-static void tg__queue_release(tg_vulkan_queue* p_queue)
-{
-    tg_platform_unlock(&p_queue->lock);
-}
-
-static tg_vulkan_queue* tg__queue_take(tg_vulkan_queue_type type)
-{
-    tg_vulkan_queue* p_queue = pp_queues[type];
-    while (!tg_platform_try_lock(&p_queue->lock));
-    return p_queue;
 }
 
 
@@ -932,12 +921,13 @@ void tg_vulkan_command_buffer_end_and_submit(VkCommandBuffer command_buffer, tg_
     submit_info.signalSemaphoreCount = 0;
     submit_info.pSignalSemaphores = TG_NULL;
 
-    tg_vulkan_queue* p_queue = tg__queue_take(type);
+    tg_vulkan_queue* p_queue;
+    TG_QUEUE_TAKE(type, p_queue);
 
     VK_CALL(vkQueueSubmit(p_queue->queue, 1, &submit_info, VK_NULL_HANDLE));
     VK_CALL(vkQueueWaitIdle(p_queue->queue)); // TODO: is this necessary?
 
-    tg__queue_release(p_queue);
+    TG_QUEUE_RELEASE(p_queue);
 }
 
 void tg_vulkan_command_buffer_free(tg_vulkan_command_pool_type type, VkCommandBuffer command_buffer)
@@ -1684,23 +1674,26 @@ void tg_vulkan_pipeline_destroy(tg_vulkan_pipeline* p_pipeline)
 
 void tg_vulkan_queue_present(VkPresentInfoKHR* p_present_info)
 {
-    tg_vulkan_queue* p_queue = tg__queue_take(TG_VULKAN_QUEUE_TYPE_PRESENT);
+    tg_vulkan_queue* p_queue;
+    TG_QUEUE_TAKE(TG_VULKAN_QUEUE_TYPE_PRESENT, p_queue);
     VK_CALL(vkQueuePresentKHR(p_queue->queue, p_present_info));
-    tg__queue_release(p_queue);
+    TG_QUEUE_RELEASE(p_queue);
 }
 
 void tg_vulkan_queue_submit(tg_vulkan_queue_type type, u32 submit_count, VkSubmitInfo* p_submit_infos, VkFence fence)
 {
-    tg_vulkan_queue* p_queue = tg__queue_take(type);
+    tg_vulkan_queue* p_queue;
+    TG_QUEUE_TAKE(type, p_queue);
     VK_CALL(vkQueueSubmit(p_queue->queue, submit_count, p_submit_infos, fence));
-    tg__queue_release(p_queue);
+    TG_QUEUE_RELEASE(p_queue);
 }
 
 void tg_vulkan_queue_wait_idle(tg_vulkan_queue_type type)
 {
-    tg_vulkan_queue* p_queue = tg__queue_take(type);
+    tg_vulkan_queue* p_queue;
+    TG_QUEUE_TAKE(type, p_queue);
     VK_CALL(vkQueueWaitIdle(p_queue->queue));
-    tg__queue_release(p_queue);
+    TG_QUEUE_RELEASE(p_queue);
 }
 
 
@@ -2481,6 +2474,7 @@ static void tg__queues_create(u32 count)
         if (!found)
         {
             p_queue_buffer[i].queue = p_queue_buffer[i].queue;
+            p_queue_buffer[i].h_mutex = TG_MUTEX_CREATE();
             pp_queues[i] = &p_queue_buffer[i];
         }
     }

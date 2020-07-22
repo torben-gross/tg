@@ -71,7 +71,7 @@ static void tg__fill_file_properties(const char* p_directory, WIN32_FIND_DATAA* 
 #ifdef TG_DEBUG
 void tg_platform_debug_log(const char* p_format, ...)
 {
-    char p_buffer[2048] = { 0 };
+    char p_buffer[4096] = { 0 };
     va_list va = TG_NULL;
     tg_variadic_start(va, p_format);
     tg_string_format_va(sizeof(p_buffer), p_buffer, p_format, va);
@@ -482,8 +482,8 @@ typedef struct tg_work_queue
     volatile void*     pp_user_datas[TG_WORK_QUEUE_MAX_ENTRY_COUNT];
     volatile u32       first;
     volatile u32       one_past_last;
-    volatile i32       lock_push;
-    volatile i32       lock_pop;
+    volatile HANDLE    h_push_mutex;
+    volatile HANDLE    h_pop_mutex;
     volatile u32       active_thread_count;
 } tg_work_queue;
 
@@ -494,7 +494,7 @@ static b32 tg__work_queue_execute_entry()
 {
     b32 result = TG_FALSE;
 
-    if (_InterlockedCompareExchange(&work_queue.lock_pop, 1, 0) == 0)
+    if (WaitForSingleObject(work_queue.h_pop_mutex, 0) == WAIT_OBJECT_0)
     {
         tg_work_fn* p_work_fn = TG_NULL;
         volatile void* p_user_data = TG_NULL;
@@ -512,7 +512,7 @@ static b32 tg__work_queue_execute_entry()
             work_queue.first = tgm_u32_incmod(work_queue.first, TG_WORK_QUEUE_MAX_ENTRY_COUNT);
         }
 
-        _InterlockedExchange(&work_queue.lock_pop, 0);
+        ReleaseMutex(work_queue.h_pop_mutex);
 
         if (result)
         {
@@ -554,35 +554,15 @@ u32 tg_platform_get_current_thread_id()
     return result;
 }
 
-tg_lock tg_platform_lock_create(tg_lock_state initial_state)
-{ 
-    return initial_state;
-}
-
-b32 tg_platform_try_lock(volatile tg_lock* p_lock)
-{
-    const b32 result = _InterlockedCompareExchange(p_lock, 1, 0) == 0;
-    _ReadWriteBarrier();
-    _mm_mfence();
-    return result;
-}
-
-void tg_platform_unlock(volatile tg_lock* p_lock)
-{
-    _ReadWriteBarrier();
-    _mm_mfence();
-    _InterlockedExchange(p_lock, 0);
-}
-
 void tg_platform_work_queue_add_entry(tg_work_fn* p_work_fn, volatile void* p_user_data)
 {
     TG_ASSERT(p_work_fn);
 
-    while (_InterlockedCompareExchange(&work_queue.lock_push, 1, 0) != 0); // TODO: no spin lock! the generic locks should also not be spinning locks
+    WaitForSingleObject(work_queue.h_push_mutex, INFINITE);
     work_queue.pp_user_datas[work_queue.one_past_last] = p_user_data;
     work_queue.pp_work_fns[work_queue.one_past_last] = p_work_fn;
     work_queue.one_past_last = tgm_u32_incmod(work_queue.one_past_last, TG_WORK_QUEUE_MAX_ENTRY_COUNT);
-    _InterlockedExchange(&work_queue.lock_push, 0);
+    ReleaseMutex(work_queue.h_push_mutex);
 
     ReleaseSemaphore(work_queue.h_semaphore, 1, TG_NULL);
 }
@@ -650,7 +630,8 @@ LRESULT CALLBACK tg_platform_win32_window_proc(HWND h_window, UINT message, WPAR
 int CALLBACK WinMain(_In_ HINSTANCE h_instance, _In_opt_ HINSTANCE h_prev_instance, _In_ LPSTR cmd_line, _In_ int show_cmd)
 {
     work_queue.h_semaphore = CreateSemaphoreEx(TG_NULL, 0, TG_WORKER_THREAD_COUNT, TG_NULL, 0, SEMAPHORE_ALL_ACCESS);
-    work_queue.lock_pop = tg_platform_lock_create(TG_LOCK_STATE_FREE);
+    work_queue.h_push_mutex = CreateMutex(TG_NULL, TG_FALSE, TG_NULL);
+    work_queue.h_pop_mutex = CreateMutex(TG_NULL, TG_FALSE, TG_NULL);
 
     p_thread_ids[0] = GetThreadId(GetCurrentThread());
     for (u8 i = 0; i < TG_WORKER_THREAD_COUNT; i++)
@@ -696,22 +677,6 @@ int CALLBACK WinMain(_In_ HINSTANCE h_instance, _In_opt_ HINSTANCE h_prev_instan
 
     tg_application_start();
 
-#ifdef TG_DEBUG
-    const u32 alloc_count = tg_memory_unfreed_allocation_count();
-    if (alloc_count != 0)
-    {
-        tg_list unfreed_allocations_list = tg_memory_create_unfreed_allocations_list();
-        TG_DEBUG_LOG("\nMEMORY LEAKS:");
-        for (u32 i = 0; i < unfreed_allocations_list.count; i++)
-        {
-            const tg_memory_allocator_allocation* p_allocation = TG_LIST_POINTER_TO(unfreed_allocations_list, i);
-            TG_DEBUG_LOG("\tFilename: %s, Line: %u", p_allocation->p_filename, p_allocation->line);
-        }
-        TG_DEBUG_LOG("");
-        tg_list_destroy(&unfreed_allocations_list);
-    }
-    TG_ASSERT(alloc_count == 0);
-#endif
     tg_memory_shutdown();
 
     // TODO: use this for killing threads without stdlib?

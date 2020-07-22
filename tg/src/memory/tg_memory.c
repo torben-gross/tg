@@ -1,15 +1,17 @@
 #include "memory/tg_memory.h"
 
 #ifdef TG_DEBUG
+#include "math/tg_math.h"
 #include "platform/tg_platform.h"
-#include "util/tg_hashmap.h"
 #include "util/tg_string.h"
 #endif
 
 
 
-#define TG_MEMORY_STACK_SIZE            (1LL << 30LL)
-#define TG_MEMORY_STACK_MAGIC_NUMBER    163ui8
+#define TG_MEMORY_MAX_ALLOCATION_COUNT    4099
+#define TG_MEMORY_STACK_SIZE              (1LL << 30LL)
+#define TG_MEMORY_STACK_MAGIC_NUMBER      163ui8
+#define TG_MEMORY_HASH(p_key)             ((u32)((u64)(p_key) >> 3LL) % TG_MEMORY_MAX_ALLOCATION_COUNT)
 
 
 
@@ -19,32 +21,121 @@ typedef struct tg_memory_stack
 	u8*    p_memory;
 } tg_memory_stack;
 
+#ifdef TG_DEBUG
+typedef struct tg_memory_allocator_allocation
+{
+	char    p_filename[TG_MAX_PATH];
+	u32     line;
+} tg_memory_allocator_allocation;
+
+typedef struct tg_memory_hashmap
+{
+	u32                               count;
+	void*                             pp_keys[TG_MEMORY_MAX_ALLOCATION_COUNT];
+	tg_memory_allocator_allocation    p_values[TG_MEMORY_MAX_ALLOCATION_COUNT];
+	u64                               count_since_startup;
+	u32                               max_count;
+	u32                               max_step_count;
+} tg_memory_hashmap;
+#endif
+
 
 
 #ifdef TG_DEBUG
-static volatile b32       recording_allocations = TG_FALSE;
-static tg_hashmap         memory_allocations = { 0 };
-static tg_lock            lock;
+static tg_mutex_h                        h_mutex;
+static tg_memory_hashmap                 hashmap = { 0 };
+static void*                             pp_rehash_keys[TG_MEMORY_MAX_ALLOCATION_COUNT] = { 0 };
+static tg_memory_allocator_allocation    p_rehash_values[TG_MEMORY_MAX_ALLOCATION_COUNT] = { 0 };
 #endif
 
-static tg_memory_stack    memory_stack = { 0 };
+static tg_memory_stack       memory_stack = { 0 };
+
+
+
+#ifdef TG_DEBUG
+
+void tg__insert(void* p_memory, const char* p_filename, u32 line)
+{
+	TG_ASSERT(p_memory);
+
+	TG_ASSERT(hashmap.count < TG_MEMORY_MAX_ALLOCATION_COUNT);
+	hashmap.count_since_startup++;
+	hashmap.count++;
+	hashmap.max_count = TG_MAX(hashmap.max_count, hashmap.count);
+
+	u32 hash = TG_MEMORY_HASH(p_memory);
+	u8 step_count = 0;
+	while (hashmap.pp_keys[hash] != TG_NULL)
+	{
+		hash = tgm_u32_incmod(hash, TG_MEMORY_MAX_ALLOCATION_COUNT);
+		step_count++;
+	}
+	hashmap.max_step_count = TG_MAX(hashmap.max_step_count, step_count);
+
+	hashmap.pp_keys[hash] = p_memory;
+	hashmap.p_values[hash].line = line;
+	tg_memory_copy(tg_string_length(p_filename) * sizeof(*p_filename), p_filename, hashmap.p_values[hash].p_filename);
+}
+
+void tg__remove(void* p_memory)
+{
+	u32 hash = TG_MEMORY_HASH(p_memory);
+	u32 original = hash;
+	while (hashmap.pp_keys[hash] != p_memory)
+	{
+		int seval = -1;
+		if (hashmap.pp_keys[hash] == TG_NULL)
+		{
+			for (u32 i = 0; i < TG_MEMORY_MAX_ALLOCATION_COUNT; i++)
+			{
+				if (hashmap.pp_keys[i] == p_memory)
+				{
+					seval = i;
+					break;
+				}
+			}
+		}
+		TG_ASSERT(hashmap.pp_keys[hash] != TG_NULL);
+		hash++;
+	}
+	hashmap.pp_keys[hash] = TG_NULL;
+	hashmap.p_values[hash] = (tg_memory_allocator_allocation){ 0 };
+	hashmap.count--;
+
+	hash = tgm_u32_incmod(hash, TG_MEMORY_MAX_ALLOCATION_COUNT);
+	u32 rehash_entry_count = 0;
+	while (hashmap.pp_keys[hash] != TG_NULL)
+	{
+		pp_rehash_keys[rehash_entry_count] = hashmap.pp_keys[hash];
+		p_rehash_values[rehash_entry_count++] = hashmap.p_values[hash];
+
+		hashmap.pp_keys[hash] = TG_NULL;
+		hashmap.p_values[hash] = (tg_memory_allocator_allocation){ 0 };
+
+		hashmap.count--;
+		hash = tgm_u32_incmod(hash, TG_MEMORY_MAX_ALLOCATION_COUNT);
+	}
+	for (u32 i = 0; i < rehash_entry_count; i++)
+	{
+		tg__insert(pp_rehash_keys[i], p_rehash_values->p_filename, p_rehash_values->line);
+	}
+}
+
+#endif
 
 
 
 void tg_memory_init()
 {
 #ifdef TG_DEBUG
-	lock = tg_platform_lock_create(TG_LOCK_STATE_LOCKED);
-	memory_allocations = TG_HASHMAP_CREATE(void*, tg_memory_allocator_allocation);
+	h_mutex = TG_MUTEX_CREATE_LOCKED();
 
 	memory_stack.exhausted_size = 1;
 	memory_stack.p_memory = tg_platform_memory_alloc(TG_MEMORY_STACK_SIZE);
 	TG_ASSERT(memory_stack.p_memory);
-	
 	memory_stack.p_memory[0] = TG_MEMORY_STACK_MAGIC_NUMBER;
 
-	recording_allocations = TG_TRUE;
-	tg_platform_unlock(&lock);
+	TG_MUTEX_UNLOCK(h_mutex);
 #else
 	memory_stack.exhausted_size = 0;
 	memory_stack.p_memory = tg_platform_memory_alloc(TG_MEMORY_STACK_SIZE);
@@ -54,8 +145,21 @@ void tg_memory_init()
 void tg_memory_shutdown()
 {
 #ifdef TG_DEBUG
-	while (!tg_platform_try_lock(&lock));
-	recording_allocations = TG_FALSE;
+	TG_MUTEX_LOCK(h_mutex);
+
+	if (hashmap.count != 0)
+	{
+		TG_DEBUG_LOG("\nMEMORY LEAKS DETECTED:\n");
+		for (u32 i = 0; i < TG_MEMORY_MAX_ALLOCATION_COUNT; i++)
+		{
+			if (hashmap.pp_keys[i] != TG_NULL)
+			{
+				const tg_memory_allocator_allocation* p_allocation = &hashmap.p_values[i];
+				TG_DEBUG_LOG("\tFilename: %s, Line: %u\n", p_allocation->p_filename, p_allocation->line);
+			}
+		}
+		TG_DEBUG_LOG("\n");
+	}
 	TG_ASSERT(memory_stack.exhausted_size == 1);
 #endif
 
@@ -63,8 +167,7 @@ void tg_memory_shutdown()
 	memory_stack.exhausted_size = 0;
 
 #ifdef TG_DEBUG
-	tg_hashmap_destroy(&memory_allocations);
-	tg_platform_unlock(&lock);
+	TG_MUTEX_UNLOCK(h_mutex);
 #endif
 }
 
@@ -99,7 +202,6 @@ void tg_memory_set_all_bits(u64 size, void* p_memory)
 void* tg_memory_alloc_impl(u64 size, const char* p_filename, u32 line, b32 nullify)
 {
 	TG_ASSERT(size);
-
 	void* p_memory = TG_NULL;
 
 	if (nullify)
@@ -112,16 +214,9 @@ void* tg_memory_alloc_impl(u64 size, const char* p_filename, u32 line, b32 nulli
 	}
 	TG_ASSERT(p_memory);
 
-	if (TG_INTERLOCKED_COMPARE_EXCHANGE(&recording_allocations, TG_FALSE, TG_TRUE) == TG_TRUE)
-	{
-		while (!tg_platform_try_lock(&lock));
-		tg_memory_allocator_allocation allocation = { 0 };
-		allocation.line = line;
-		tg_memory_copy(tg_string_length(p_filename) * sizeof(*p_filename), p_filename, allocation.p_filename);
-		tg_hashmap_insert(&memory_allocations, &p_memory, &allocation);
-		recording_allocations = TG_TRUE;
-		tg_platform_unlock(&lock);
-	}
+	TG_MUTEX_LOCK(h_mutex);
+	tg__insert(p_memory, p_filename, line);
+	TG_MUTEX_UNLOCK(h_mutex);
 
 	return p_memory;
 }
@@ -143,18 +238,13 @@ void* tg_memory_realloc_impl(u64 size, void* p_memory, const char* p_filename, u
 		}
 		TG_ASSERT(p_reallocated_memory);
 
-		if (TG_INTERLOCKED_COMPARE_EXCHANGE(&recording_allocations, TG_FALSE, TG_TRUE) == TG_TRUE)
+		if (p_memory != p_reallocated_memory)
 		{
-			while (!tg_platform_try_lock(&lock));
-			tg_hashmap_try_remove(&memory_allocations, &p_memory); // TODO: this should not 'try', but this implementation is not properly thread save!
-			tg_memory_allocator_allocation allocation = { 0 };
-			allocation.line = line;
-			tg_memory_copy(tg_string_length(p_filename) * sizeof(*p_filename), p_filename, allocation.p_filename);
-			tg_hashmap_insert(&memory_allocations, &p_reallocated_memory, &allocation);
-			recording_allocations = TG_TRUE;
-			tg_platform_unlock(&lock);
+			TG_MUTEX_LOCK(h_mutex);
+			tg__remove(p_memory);
+			tg__insert(p_reallocated_memory, p_filename, line);
+			TG_MUTEX_UNLOCK(h_mutex);
 		}
-		tg_platform_unlock(&lock);
 	}
 	else
 	{
@@ -166,34 +256,16 @@ void* tg_memory_realloc_impl(u64 size, void* p_memory, const char* p_filename, u
 
 void tg_memory_free_impl(void* p_memory, const char* p_filename, u32 line)
 {
-	if (TG_INTERLOCKED_COMPARE_EXCHANGE(&recording_allocations, TG_FALSE, TG_TRUE) == TG_TRUE)
-	{
-		while (!tg_platform_try_lock(&lock));
-		// TODO: this needs to 'try', because the platform layer calls
-		// 'tg_memory_create_unfreed_allocations_list', which disables recording
-		// temporarily and thus, the hashmap does not contain it.
-		tg_hashmap_try_remove(&memory_allocations, &p_memory);
-		recording_allocations = TG_TRUE;
-		tg_platform_unlock(&lock);
-	}
-	tg_platform_unlock(&lock);
+	TG_MUTEX_LOCK(h_mutex);
+	tg__remove(p_memory);
+	TG_MUTEX_UNLOCK(h_mutex);
 
 	tg_platform_memory_free(p_memory);
 }
 
-u32 tg_memory_unfreed_allocation_count()
+u32 tg_memory_active_allocation_count()
 {
-	return tg_hashmap_element_count(&memory_allocations);
-}
-
-tg_list tg_memory_create_unfreed_allocations_list()
-{
-	while (!tg_platform_try_lock(&lock));
-	recording_allocations = TG_FALSE;
-	const tg_list list = tg_hashmap_value_list_create(&memory_allocations);
-	recording_allocations = TG_TRUE;
-	tg_platform_unlock(&lock);
-	return list;
+	return hashmap.count;
 }
 
 #endif

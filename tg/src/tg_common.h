@@ -31,9 +31,11 @@
 
 #ifdef TG_DEBUG
 #define TG_ASSERT(x)                       if (!(x)) *(int*)0 = 0
+#define TG_DEBUG_EXEC(x)                   x
 #define TG_INVALID_CODEPATH()              *(int*)0 = 0
 #else
 #define TG_ASSERT(x)
+#define TG_DEBUG_EXEC(x)
 #define TG_INVALID_CODEPATH()
 #endif
 
@@ -79,19 +81,16 @@
 
 
 
-typedef int                             b32;
-
-typedef float                           f32;
-typedef double                          f64;
-
-typedef signed char                     i8;
-typedef short                           i16;
-typedef int                             i32;
-typedef long long                       i64;
-
-typedef unsigned char                   u8;
-typedef unsigned short                  u16;
-typedef unsigned int                    u32;
-typedef unsigned long long              u64;
+typedef int                                b32;
+typedef float                              f32;
+typedef double                             f64;
+typedef signed char                        i8;
+typedef short                              i16;
+typedef int                                i32;
+typedef long long                          i64;
+typedef unsigned char                      u8;
+typedef unsigned short                     u16;
+typedef unsigned int                       u32;
+typedef unsigned long long                 u64;
 
 #endif

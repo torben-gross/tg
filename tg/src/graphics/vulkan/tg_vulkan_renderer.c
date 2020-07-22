@@ -1053,7 +1053,8 @@ void tg_renderer_destroy(tg_renderer_h h_renderer)
 {
     TG_ASSERT(h_renderer);
 
-    TG_INVALID_CODEPATH();
+    // TODO: this
+    // TG_INVALID_CODEPATH();
 }
 
 void tg_renderer_enable_shadows(tg_renderer_h h_renderer, b32 enable)
