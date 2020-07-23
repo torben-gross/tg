@@ -16,9 +16,9 @@
 
 #define TG_MEMORY_ALLOC(size)                        tg_platform_memory_alloc((u64)size)
 #define TG_MEMORY_ALLOC_NULLIFY(size)                tg_platform_memory_alloc_nullify((u64)size)
-#define TG_MEMORY_REALLOC(size, p_memory)            tg_platform_memory_realloc((u64)size, p_memory)
-#define TG_MEMORY_REALLOC_NULLIFY(size, p_memory)    tg_platform_memory_realloc_nullify((u64)size, p_memory)
-#define TG_MEMORY_FREE(p_memory)                     tg_platform_memory_free(p_memory);
+#define TG_MEMORY_REALLOC(size, p_mapped_device_memory)            tg_platform_memory_realloc((u64)size, p_mapped_device_memory)
+#define TG_MEMORY_REALLOC_NULLIFY(size, p_mapped_device_memory)    tg_platform_memory_realloc_nullify((u64)size, p_mapped_device_memory)
+#define TG_MEMORY_FREE(p_mapped_device_memory)                     tg_platform_memory_free(p_mapped_device_memory);
 
 #endif
 
