@@ -165,6 +165,7 @@
     <ClInclude Include="src\util\tg_rectangle_packer.h" />
     <ClInclude Include="src\util\tg_qsort.h" />
     <ClInclude Include="src\util\tg_string.h" />
+    <ClInclude Include="src\TODO.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="assets\shaders\frag.spv" />

@@ -271,7 +271,7 @@ typedef struct tg_render_target
     tg_depth_image    depth_attachment;
     tg_color_image    color_attachment_copy;
     tg_depth_image    depth_attachment_copy;
-    VkFence           fence;
+    VkFence           fence; // TODO: use 'timeline' semaphore?
 } tg_render_target;
 
 typedef struct tg_fragment_shader

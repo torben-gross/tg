@@ -139,6 +139,16 @@ static void tg__game_3d_create()
     tg_render_command_h h_sponza_render_command = tg_render_command_create(h_sponza_mesh, h_sponza_material, (v3) { 128.0f, 140.0f, 128.0f }, 1, & h_sponza_ubo);
     tg_list_insert(&sample_scene.render_commands, &h_sponza_render_command);
 
+    tg_mesh_h h_my_mesh = tg_mesh_load("meshes/untitled.obj", V3(0.12f));
+    tg_uniform_buffer_h h_my_ubo = tg_uniform_buffer_create(sizeof(tg_pbr_material));
+    ((tg_pbr_material*)tg_uniform_buffer_data(h_my_ubo))->albedo = (v4){ 1.0f, 0.6f, 0.0f, 1.0f };
+    ((tg_pbr_material*)tg_uniform_buffer_data(h_my_ubo))->metallic = 0.8f;
+    ((tg_pbr_material*)tg_uniform_buffer_data(h_my_ubo))->roughness = 0.5f;
+    ((tg_pbr_material*)tg_uniform_buffer_data(h_my_ubo))->ao = 1.0f;
+    tg_material_h h_my_material = tg_material_create_deferred(tg_vertex_shader_get("shaders/deferred_pbr.vert"), tg_fragment_shader_get("shaders/deferred_pbr.frag"));
+    tg_render_command_h h_my_render_command = tg_render_command_create(h_my_mesh, h_my_material, (v3) { 128.0f, 141.9f, 126.0f }, 1, & h_my_ubo);
+    tg_list_insert(&sample_scene.render_commands, &h_my_render_command);
+
     sample_scene.terrain = tg_terrain_create(&sample_scene.camera);
 
 
