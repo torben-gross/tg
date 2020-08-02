@@ -1,3 +1,4 @@
 .vs
 build
 /tg/assets/shaders/*.spv
+/tg/assets/*.blend1
