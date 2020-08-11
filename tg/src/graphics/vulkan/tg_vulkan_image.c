@@ -86,6 +86,19 @@ void tg_color_image_destroy(tg_color_image_h h_color_image)
 
 
 
+tg_cube_map_h tg_cube_map_create(u32 width, u32 height, u32 depth, tg_color_image_format format)
+{
+    tg_cube_map_h h_cube_map = TG_NULL;
+    TG_VULKAN_TAKE_HANDLE(p_cube_maps, h_cube_map);
+    h_cube_map->type = TG_HANDLE_TYPE_CUBE_MAP;
+
+    h_cube_map->cube_map = tg_vulkan_cube_map_create(width, height, depth, tg_vulkan_color_image_convert_format(format), TG_NULL);
+
+    return h_cube_map;
+}
+
+
+
 tg_depth_image_h tg_depth_image_create(const tg_depth_image_create_info* p_depth_image_create_info)
 {
     TG_ASSERT(p_depth_image_create_info);

@@ -547,7 +547,7 @@ VkFormat tg_vulkan_color_image_convert_format(tg_color_image_format format)
     case TG_COLOR_IMAGE_FORMAT_B8G8R8A8:            return VK_FORMAT_B8G8R8A8_SRGB;
     case TG_COLOR_IMAGE_FORMAT_R16G16B16A16_SFLOAT: return VK_FORMAT_R16G16B16A16_SFLOAT;
     case TG_COLOR_IMAGE_FORMAT_R32G32B32A32_SFLOAT: return VK_FORMAT_R32G32B32A32_SFLOAT;
-    case TG_COLOR_IMAGE_FORMAT_R8:                  return VK_FORMAT_R8_SRGB;
+    case TG_COLOR_IMAGE_FORMAT_R8:                  return VK_FORMAT_R8_UNORM;
     case TG_COLOR_IMAGE_FORMAT_R8G8:                return VK_FORMAT_R8G8_SRGB;
     case TG_COLOR_IMAGE_FORMAT_R8G8B8:              return VK_FORMAT_R8G8B8_SRGB;
     case TG_COLOR_IMAGE_FORMAT_R8G8B8A8:            return VK_FORMAT_R8G8B8A8_SRGB;
@@ -600,7 +600,6 @@ tg_vulkan_cube_map tg_vulkan_cube_map_create(u32 width, u32 height, u32 depth, V
     cube_map.memory = tg_vulkan_memory_allocator_alloc(memory_requirements.alignment, memory_requirements.size, memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     VK_CALL(vkBindImageMemory(device, cube_map.image, cube_map.memory.device_memory, cube_map.memory.offset));
 
-    TG_INVALID_CODEPATH(); // TODO: six layered image view?
     cube_map.image_view = tg__image_view_create(cube_map.image, VK_IMAGE_VIEW_TYPE_3D, cube_map.format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
 
     if (p_vulkan_sampler_create_info)

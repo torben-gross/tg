@@ -233,6 +233,12 @@ typedef struct tg_compute_shader
     VkCommandBuffer             command_buffer;
 } tg_compute_shader;
 
+typedef struct tg_cube_map
+{
+    tg_handle_type        type;
+    tg_vulkan_cube_map    cube_map;
+} tg_cube_map;
+
 typedef struct tg_depth_image
 {
     tg_handle_type            type;
@@ -479,6 +485,7 @@ VkImageView           p_swapchain_image_views[TG_VULKAN_SURFACE_IMAGE_COUNT];
 
 
 tg_compute_shader     p_compute_shaders[TG_MAX_COMPUTE_SHADERS];
+tg_cube_map           p_cube_maps[TG_MAX_CUBE_MAPS];
 tg_fragment_shader    p_fragment_shaders[TG_MAX_FRAGMENT_SHADERS];
 tg_material           p_materials[TG_MAX_MATERIALS];
 tg_mesh               p_meshes[TG_MAX_MESHES];

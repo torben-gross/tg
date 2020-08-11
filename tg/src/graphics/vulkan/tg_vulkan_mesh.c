@@ -447,7 +447,104 @@ tg_mesh_h tg_mesh_create_empty(u32 vertex_capacity, u32 index_capacity)
     return h_mesh;
 }
 
-tg_mesh_h tg_mesh_create_sphere(f32 radius, u32 sector_count, u32 stack_count)
+tg_mesh_h tg_mesh_create_sphere(f32 radius, u32 sector_count, u32 stack_count) // TODO: i should not have a copied flat version of this!
+{
+    const u32 vertex_count = (sector_count + 1) * (stack_count + 1) - 2;
+    const u32 index_count = 6 * sector_count * (stack_count - 1);
+
+    v3* p_positions = TG_MEMORY_STACK_ALLOC(vertex_count * sizeof(*p_positions));
+    v3* p_normals = TG_MEMORY_STACK_ALLOC(vertex_count * sizeof(*p_normals));
+    v2* p_uvs = TG_MEMORY_STACK_ALLOC(vertex_count * sizeof(*p_uvs));
+    u16* p_indices = TG_MEMORY_STACK_ALLOC((u64)index_count * sizeof(*p_indices));
+
+    const f32 sector_step = 2.0f * TG_PI / sector_count;
+    const f32 stack_step = TG_PI / stack_count;
+
+    u32 it = 0;
+    for (u32 i = 0; i < stack_count + 1; i++)
+    {
+        TG_ASSERT(it < vertex_count);
+
+        const f32 stack_angle = TG_PI / 2.0f - (f32)i * stack_step;
+        const f32 y = radius * tgm_f32_sin(stack_angle);
+        const f32 xz = radius * tgm_f32_cos(stack_angle);
+
+        for (u32 j = 0; j < sector_count + 1; j++)
+        {
+            if ((i != 0 && i != stack_count) || j != sector_count) // we need once vertex less on the poles
+            {
+                const f32 sector_angle = (f32)j * sector_step;
+            
+                p_positions[it].x = xz * tgm_f32_cos(sector_angle);
+                p_positions[it].y = y;
+                p_positions[it].z = -xz * tgm_f32_sin(sector_angle);
+                p_normals[it] = tgm_v3_normalized(p_positions[it]);
+                if (i == 0 || i == stack_count)
+                {
+                    p_uvs[it] = (v2){ ((f32)j + 0.5f) / sector_count, ((f32)i + 0.5f) / stack_count };
+                }
+                else
+                {
+                    p_uvs[it] = (v2){ (f32)j / sector_count, (f32)i / stack_count };
+                }
+
+                it++;
+            }
+        }
+    }
+
+    it = 0;
+    for (u32 i = 0; i < stack_count; i++)
+    {
+        for (u32 j = 0; j < sector_count; j++)
+        {
+            const u32 i0 = j + (sector_count + 1) * i;
+            const u32 i1 = j + (sector_count + 1) * (i + 1);
+
+            // v0 - v3
+            // |     |
+            // v1 - v2
+
+            const u32 iv0 = i0;
+            const u32 iv1 = i1;
+            const u32 iv2 = i1 + 1;
+            const u32 iv3 = i0 + 1;
+
+            if (i == 0)
+            {
+                p_indices[it++] = iv0;
+                p_indices[it++] = iv1 - 1;
+                p_indices[it++] = iv2 - 1;
+            }
+            else if (i == stack_count - 1)
+            {
+                p_indices[it++] = iv0 - 1;
+                p_indices[it++] = iv1 - 1;
+                p_indices[it++] = iv3 - 1;
+            }
+            else
+            {
+                p_indices[it++] = iv0 - 1;
+                p_indices[it++] = iv1 - 1;
+                p_indices[it++] = iv2 - 1;
+                p_indices[it++] = iv2 - 1;
+                p_indices[it++] = iv3 - 1;
+                p_indices[it++] = iv0 - 1;
+            }
+        }
+    }
+
+    tg_mesh_h h_mesh = tg_mesh_create(vertex_count, p_positions, p_normals, p_uvs, TG_NULL, index_count, p_indices);
+
+    TG_MEMORY_STACK_FREE((u64)index_count * sizeof(*p_indices));
+    TG_MEMORY_STACK_FREE(vertex_count * sizeof(*p_uvs));
+    TG_MEMORY_STACK_FREE(vertex_count * sizeof(*p_normals));
+    TG_MEMORY_STACK_FREE(vertex_count * sizeof(*p_positions));
+
+    return h_mesh;
+}
+
+tg_mesh_h tg_mesh_create_sphere_flat(f32 radius, u32 sector_count, u32 stack_count)
 {
     const u32 unique_vertex_count = (sector_count + 1) * (stack_count + 1);
     v3* p_unique_positions = TG_MEMORY_STACK_ALLOC(unique_vertex_count * sizeof(*p_unique_positions));

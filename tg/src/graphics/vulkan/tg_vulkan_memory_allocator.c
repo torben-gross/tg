@@ -30,6 +30,7 @@ typedef struct tg_vulkan_memory_pool
     VkMemoryPropertyFlags      memory_property_flags;
     VkDeviceMemory             device_memory;
     void*                      p_mapped_device_memory;
+    u32                        memory_type_bit;
     u32                        total_page_count;
     u32                        reserved_page_count;
     u32                        entry_count;
@@ -66,7 +67,12 @@ void tg_vulkan_memory_allocator_init(VkDevice device, VkPhysicalDevice physical_
     VkDeviceSize p_memory_types_per_memory_heap[VK_MAX_MEMORY_HEAPS] = { 0 };
     for (u32 i = 0; i < physical_device_memory_properties.memoryTypeCount; i++)
     {
-        p_memory_types_per_memory_heap[physical_device_memory_properties.memoryTypes[i].heapIndex]++;
+        if (physical_device_memory_properties.memoryTypes[i].propertyFlags == (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) ||
+            physical_device_memory_properties.memoryTypes[i].propertyFlags == VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+        )
+        {
+            p_memory_types_per_memory_heap[physical_device_memory_properties.memoryTypes[i].heapIndex]++;
+        }
     }
     VkDeviceSize p_allocation_size_per_memory_heap[VK_MAX_MEMORY_HEAPS] = { 0 };
 
@@ -83,36 +89,45 @@ void tg_vulkan_memory_allocator_init(VkDevice device, VkPhysicalDevice physical_
         }
     }
 
-    vulkan_memory.pool_count = physical_device_memory_properties.memoryTypeCount;
-    for (u32 i = 0; i < vulkan_memory.pool_count; i++)
+    vulkan_memory.pool_count = 0;
+    for (u32 i = 0; i < physical_device_memory_properties.memoryTypeCount; i++)
     {
-        vulkan_memory.p_pools[i].memory_property_flags = physical_device_memory_properties.memoryTypes[i].propertyFlags;
+        if (physical_device_memory_properties.memoryTypes[i].propertyFlags == (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) ||
+            physical_device_memory_properties.memoryTypes[i].propertyFlags == VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+        )
+        {
+            vulkan_memory.p_pools[vulkan_memory.pool_count].memory_property_flags = physical_device_memory_properties.memoryTypes[i].propertyFlags;
 
-        const VkDeviceSize allocation_size = p_allocation_size_per_memory_heap[physical_device_memory_properties.memoryTypes[i].heapIndex];
-        TG_ASSERT(allocation_size / vulkan_memory.page_size <= TG_U32_MAX);
-        const u32 total_page_count = (u32)(allocation_size / vulkan_memory.page_size);
+            const VkDeviceSize allocation_size = p_allocation_size_per_memory_heap[physical_device_memory_properties.memoryTypes[i].heapIndex];
+            TG_ASSERT(allocation_size / vulkan_memory.page_size <= TG_U32_MAX);
+            const u32 total_page_count = (u32)(allocation_size / vulkan_memory.page_size);
         
-        vulkan_memory.p_pools[i].total_page_count = total_page_count;
-        vulkan_memory.p_pools[i].entry_count = 1;
-        vulkan_memory.p_pools[i].p_entries = TG_MEMORY_ALLOC(total_page_count * sizeof(*vulkan_memory.p_pools[i].p_entries));
-        vulkan_memory.p_pools[i].p_entries[0].reserved = TG_FALSE;
-        vulkan_memory.p_pools[i].p_entries[0].page_count = total_page_count;
-        vulkan_memory.p_pools[i].p_entries[0].offset = 0;
+            vulkan_memory.p_pools[vulkan_memory.pool_count].memory_type_bit = i;
+            vulkan_memory.p_pools[vulkan_memory.pool_count].reserved_page_count = 0;
+            vulkan_memory.p_pools[vulkan_memory.pool_count].total_page_count = total_page_count;
+            vulkan_memory.p_pools[vulkan_memory.pool_count].entry_count = 1;
+            vulkan_memory.p_pools[vulkan_memory.pool_count].p_entries = TG_MEMORY_ALLOC(total_page_count * sizeof(*vulkan_memory.p_pools[vulkan_memory.pool_count].p_entries));
+            vulkan_memory.p_pools[vulkan_memory.pool_count].p_entries[0].reserved = TG_FALSE;
+            vulkan_memory.p_pools[vulkan_memory.pool_count].p_entries[0].page_count = total_page_count;
+            vulkan_memory.p_pools[vulkan_memory.pool_count].p_entries[0].offset = 0;
 
-        VkMemoryAllocateInfo memory_allocate_info = { 0 };
-        memory_allocate_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        memory_allocate_info.pNext = TG_NULL;
-        memory_allocate_info.allocationSize = allocation_size;
-        memory_allocate_info.memoryTypeIndex = i;
+            VkMemoryAllocateInfo memory_allocate_info = { 0 };
+            memory_allocate_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+            memory_allocate_info.pNext = TG_NULL;
+            memory_allocate_info.allocationSize = allocation_size;
+            memory_allocate_info.memoryTypeIndex = i;
 
-        VK_CALL(vkAllocateMemory(device, &memory_allocate_info, TG_NULL, &vulkan_memory.p_pools[i].device_memory));
-        if (physical_device_memory_properties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
-        {
-            VK_CALL(vkMapMemory(device, vulkan_memory.p_pools[i].device_memory, 0, VK_WHOLE_SIZE, 0, &vulkan_memory.p_pools[i].p_mapped_device_memory));
-        }
-        else
-        {
-            vulkan_memory.p_pools[i].p_mapped_device_memory = TG_NULL;
+            VK_CALL(vkAllocateMemory(device, &memory_allocate_info, TG_NULL, &vulkan_memory.p_pools[vulkan_memory.pool_count].device_memory));
+            if (physical_device_memory_properties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
+            {
+                VK_CALL(vkMapMemory(device, vulkan_memory.p_pools[vulkan_memory.pool_count].device_memory, 0, VK_WHOLE_SIZE, 0, &vulkan_memory.p_pools[vulkan_memory.pool_count].p_mapped_device_memory));
+            }
+            else
+            {
+                vulkan_memory.p_pools[vulkan_memory.pool_count].p_mapped_device_memory = TG_NULL;
+            }
+
+            vulkan_memory.pool_count++;
         }
     }
 
@@ -147,12 +162,13 @@ tg_vulkan_memory_block tg_vulkan_memory_allocator_alloc(VkDeviceSize alignment, 
 
     for (u32 i = 0; i < vulkan_memory.pool_count; i++)
     {
-        const b32 is_required_memory_type = (memory_type_bits & (1 << i)) == (1 << i);
-        const b32 has_required_memory_properties = (vulkan_memory.p_pools[i].memory_property_flags & memory_property_flags) == memory_property_flags;
+        tg_vulkan_memory_pool* p_pool = &vulkan_memory.p_pools[i];
 
-        if (is_required_memory_type && has_required_memory_properties && vulkan_memory.p_pools[i].reserved_page_count + required_page_count <= vulkan_memory.p_pools[i].total_page_count)
+        const b32 is_required_memory_type = (memory_type_bits & (1 << p_pool->memory_type_bit)) == (1 << p_pool->memory_type_bit);
+        const b32 has_required_memory_properties = (p_pool->memory_property_flags & memory_property_flags) == memory_property_flags;
+
+        if (is_required_memory_type && has_required_memory_properties && p_pool->reserved_page_count + required_page_count <= p_pool->total_page_count)
         {
-            tg_vulkan_memory_pool* p_pool = &vulkan_memory.p_pools[i];
             for (i32 j = p_pool->entry_count - 1; j >= 0; j--)
             {
                 tg_vulkan_memory_entry* p_entry = &p_pool->p_entries[j];

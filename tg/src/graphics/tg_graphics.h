@@ -7,6 +7,7 @@
 
 
 #define TG_MAX_COMPUTE_SHADERS            16
+#define TG_MAX_CUBE_MAPS                  32
 #define TG_MAX_FRAGMENT_SHADERS           32
 #define TG_MAX_MATERIALS                  512
 #define TG_MAX_MESHES                     65536
@@ -34,6 +35,7 @@
 
 TG_DECLARE_HANDLE(tg_color_image);
 TG_DECLARE_HANDLE(tg_compute_shader);
+TG_DECLARE_HANDLE(tg_cube_map);
 TG_DECLARE_HANDLE(tg_depth_image);
 TG_DECLARE_HANDLE(tg_fragment_shader);
 TG_DECLARE_HANDLE(tg_material);
@@ -83,6 +85,7 @@ typedef enum tg_handle_type
 	TG_HANDLE_TYPE_STORAGE_BUFFER,
 	TG_HANDLE_TYPE_COLOR_IMAGE,
 	TG_HANDLE_TYPE_COMPUTE_SHADER,
+	TG_HANDLE_TYPE_CUBE_MAP,
 	TG_HANDLE_TYPE_DEPTH_IMAGE,
 	TG_HANDLE_TYPE_FRAGMENT_SHADER,
 	TG_HANDLE_TYPE_MATERIAL,
@@ -262,6 +265,9 @@ void                             tg_compute_shader_dispatch(tg_compute_shader_h 
 void                             tg_compute_shader_destroy(tg_compute_shader_h h_compute_shader);
 tg_compute_shader_h              tg_compute_shader_get(const char* filename);
 
+tg_cube_map_h                    tg_cube_map_create(u32 width, u32 height, u32 depth, tg_color_image_format format);
+// TODO: destroy
+
 tg_depth_image_h                 tg_depth_image_create(const tg_depth_image_create_info* p_depth_image_create_info);
 void                             tg_depth_image_destroy(tg_depth_image_h h_depth_image);
 
@@ -282,6 +288,7 @@ tg_mesh_h                        tg_mesh_create(u32 vertex_count, const v3* p_po
 tg_mesh_h                        tg_mesh_create2(u32 vertex_count, u32 vertex_input_attribute_count, const tg_vertex_input_attribute_format* p_vertex_input_attribute_formats, const void* p_vertices, u32 index_count, const u16* p_indices);
 tg_mesh_h                        tg_mesh_create_empty(u32 vertex_capacity, u32 index_capacity);
 tg_mesh_h                        tg_mesh_create_sphere(f32 radius, u32 sector_count, u32 stack_count);
+tg_mesh_h                        tg_mesh_create_sphere_flat(f32 radius, u32 sector_count, u32 stack_count);
 tg_mesh_h                        tg_mesh_load(const char* p_filename, v3 scale);
 void                             tg_mesh_destroy(tg_mesh_h h_mesh);
 void                             tg_mesh_update(tg_mesh_h h_mesh, u32 vertex_count, const v3* p_positions, const v3* p_normals, const v2* p_uvs, const v3* p_tangents, u32 index_count, const u16* p_indices);

@@ -83,20 +83,8 @@ void tg__remove(void* p_memory)
 	u32 original = hash;
 	while (hashmap.pp_keys[hash] != p_memory)
 	{
-		int seval = -1;
-		if (hashmap.pp_keys[hash] == TG_NULL)
-		{
-			for (u32 i = 0; i < TG_MEMORY_MAX_ALLOCATION_COUNT; i++)
-			{
-				if (hashmap.pp_keys[i] == p_memory)
-				{
-					seval = i;
-					break;
-				}
-			}
-		}
 		TG_ASSERT(hashmap.pp_keys[hash] != TG_NULL);
-		hash++;
+		hash = tgm_u32_incmod(hash, TG_MEMORY_MAX_ALLOCATION_COUNT);
 	}
 	hashmap.pp_keys[hash] = TG_NULL;
 	hashmap.p_values[hash] = (tg_memory_allocator_allocation){ 0 };

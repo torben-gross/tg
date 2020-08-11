@@ -54,6 +54,7 @@ typedef struct tg_sample_scene
     };
     tg_mesh_h                   h_pbr_sphere_mesh;
     tg_pbr_sphere               p_pbr_spheres[49];
+    tg_render_command_h         h_probe_render_command;
     tg_terrain                  terrain;
     f32                         light_timer;
 } tg_sample_scene;
@@ -67,7 +68,7 @@ static void tg__game_3d_create()
 {
     sample_scene.render_commands = TG_LIST_CREATE(tg_render_command_h);
     sample_scene.camera.type = TG_CAMERA_TYPE_PERSPECTIVE;
-    sample_scene.camera.position = (v3) { 128.0f, 150.0f, 128.0f };
+    sample_scene.camera.position = (v3) { 128.0f, 141.0f, 128.0f };
     sample_scene.camera.pitch = 0.0f;
     sample_scene.camera.yaw = 0.0f;
     sample_scene.camera.roll = 0.0f;
@@ -126,6 +127,34 @@ static void tg__game_3d_create()
     sample_scene.quad_offset_z = -65.0f;
     tg_list_insert(&sample_scene.render_commands, &sample_scene.h_quad_render_command);
 
+
+
+
+
+
+
+
+
+
+    tg_mesh_h h_probe_mesh = tg_mesh_create_sphere(0.5f, 64, 32);
+    const v3 probe_translation = { 128.0f + 7.0f, 143.0f, 128.0f };
+    tg_cube_map_h h_cube_map = tg_cube_map_create(1, 1, 1, TG_COLOR_IMAGE_FORMAT_R8);
+    tg_material_h h_probe_material = tg_material_create_forward(tg_vertex_shader_get("shaders/forward.vert"), tg_fragment_shader_get("shaders/forward_probe.frag"));
+    sample_scene.h_probe_render_command = tg_render_command_create(h_probe_mesh, h_probe_material, probe_translation, 0, TG_NULL);
+    tg_list_insert(&sample_scene.render_commands, &sample_scene.h_probe_render_command);
+
+
+
+
+
+
+
+
+
+
+
+
+
     tg_mesh_h h_sponza_mesh = tg_mesh_load("meshes/sponza.obj", V3(0.01f));
     tg_kd_tree* p_sponza_kd_tree = tg_kd_tree_create(h_sponza_mesh);
 
@@ -141,9 +170,9 @@ static void tg__game_3d_create()
 
     tg_mesh_h h_my_mesh = tg_mesh_load("meshes/untitled.obj", V3(0.12f));
     tg_uniform_buffer_h h_my_ubo = tg_uniform_buffer_create(sizeof(tg_pbr_material));
-    ((tg_pbr_material*)tg_uniform_buffer_data(h_my_ubo))->albedo = (v4){ 1.0f, 0.6f, 0.0f, 1.0f };
-    ((tg_pbr_material*)tg_uniform_buffer_data(h_my_ubo))->metallic = 0.8f;
-    ((tg_pbr_material*)tg_uniform_buffer_data(h_my_ubo))->roughness = 0.5f;
+    ((tg_pbr_material*)tg_uniform_buffer_data(h_my_ubo))->albedo = (v4){ 0.816f, 0.506f, 0.024f, 1.0f };
+    ((tg_pbr_material*)tg_uniform_buffer_data(h_my_ubo))->metallic = 1.0f;
+    ((tg_pbr_material*)tg_uniform_buffer_data(h_my_ubo))->roughness = 0.4f;
     ((tg_pbr_material*)tg_uniform_buffer_data(h_my_ubo))->ao = 1.0f;
     tg_material_h h_my_material = tg_material_create_deferred(tg_vertex_shader_get("shaders/deferred_pbr.vert"), tg_fragment_shader_get("shaders/deferred_pbr.frag"));
     tg_render_command_h h_my_render_command = tg_render_command_create(h_my_mesh, h_my_material, (v3) { 128.0f, 141.9f, 126.0f }, 1, & h_my_ubo);
@@ -153,7 +182,7 @@ static void tg__game_3d_create()
 
 
 
-    sample_scene.h_pbr_sphere_mesh = tg_mesh_create_sphere(0.5f, 128, 64);
+    sample_scene.h_pbr_sphere_mesh = tg_mesh_create_sphere_flat(0.5f, 128, 64);
     for (u32 y = 0; y < 7; y++)
     {
         for (u32 x = 0; x < 7; x++)
@@ -170,7 +199,7 @@ static void tg__game_3d_create()
             sample_scene.p_pbr_spheres[i].h_material = tg_material_create_deferred(tg_vertex_shader_get("shaders/deferred_pbr.vert"), tg_fragment_shader_get("shaders/deferred_pbr.frag"));
             if (x == 6 && y == 0)
             {
-                sample_scene.p_pbr_spheres[i].h_render_command = tg_render_command_create(tg_mesh_create_sphere(3.0f, 128, 64), sample_scene.p_pbr_spheres[i].h_material, sphere_translation, 1, &sample_scene.p_pbr_spheres[i].h_ubo);
+                sample_scene.p_pbr_spheres[i].h_render_command = tg_render_command_create(tg_mesh_create_sphere_flat(3.0f, 128, 64), sample_scene.p_pbr_spheres[i].h_material, sphere_translation, 1, &sample_scene.p_pbr_spheres[i].h_ubo);
             }
             else
             {
@@ -179,6 +208,7 @@ static void tg__game_3d_create()
             tg_list_insert(&sample_scene.render_commands, &sample_scene.p_pbr_spheres[i].h_render_command);
         }
     }
+
 
     // TODO: implement :)
     // tg_renderer_bake_begin(sample_scene.h_main_renderer);
