@@ -1,5 +1,3 @@
-#include "graphics/tg_spirv.h"
-
 #include "graphics/tg_graphics.h"
 #include "memory/tg_memory.h"
 #include "util/tg_qsort.h"

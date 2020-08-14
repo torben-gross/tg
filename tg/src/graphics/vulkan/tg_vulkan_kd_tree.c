@@ -1,4 +1,4 @@
-#include "graphics/vulkan/tg_graphics_vulkan.h"
+#include "graphics/tg_graphics.h"
 
 #ifdef TG_VULKAN
 

@@ -10,5 +10,6 @@ layout(location = 0) out vec4    out_color;
 
 void main()
 {
-    out_color = vec4(1.0);
+    float brightness = max(0.0, dot(v_normal, vec3(0.0, 1.0, 0.0)));
+    out_color = vec4(vec3(brightness), 1.0);
 }

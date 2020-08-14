@@ -130,13 +130,6 @@ static void tg__convert_format_to_masks(tg_color_image_format format, u32* r_mas
 {
 	switch (format)
 	{
-	case TG_COLOR_IMAGE_FORMAT_A8R8G8B8:
-	{
-		*r_mask = 0x0000ff00;
-		*g_mask = 0x00ff0000;
-		*b_mask = 0xff000000;
-		*a_mask = 0x000000ff;
-	} break;
 	case TG_COLOR_IMAGE_FORMAT_A8B8G8R8:
 	{
 		*r_mask = 0xff000000;
@@ -212,11 +205,7 @@ static void tg__convert_masks_to_format(u32 r_mask, u32 g_mask, u32 b_mask, u32 
 	const b32 a_0x0000ff00 = (a_mask & mask_0x0000ff00) == mask_0x0000ff00;
 	const b32 a_0x000000ff = (a_mask & mask_0x000000ff) == mask_0x000000ff;
 
-	if (a_0x000000ff && r_0x0000ff00 && g_0x00ff0000 && b_0xff000000)
-	{
-		*format = TG_COLOR_IMAGE_FORMAT_A8R8G8B8;
-	}
-	else if (a_0x000000ff && b_0x0000ff00 && g_0x00ff0000 && r_0xff000000)
+	if (a_0x000000ff && b_0x0000ff00 && g_0x00ff0000 && r_0xff000000)
 	{
 		*format = TG_COLOR_IMAGE_FORMAT_A8B8G8R8;
 	}

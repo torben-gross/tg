@@ -1,9 +1,9 @@
-#include "graphics/vulkan/tg_graphics_vulkan.h"
+#include "graphics/tg_graphics.h"
 
 #ifdef TG_VULKAN
 
-#define TG_MESH_VERTEX_CAPACITY(h_mesh)    ((u32)((h_mesh)->vbo.size / sizeof(tg_vertex)))
-#define TG_MESH_INDEX_CAPACITY(h_mesh)     ((u32)((h_mesh)->ibo.size / sizeof(u16)))
+#define TG_MESH_VERTEX_CAPACITY(h_mesh)    ((u32)((h_mesh)->vbo.memory.size / sizeof(tg_vertex)))
+#define TG_MESH_INDEX_CAPACITY(h_mesh)     ((u32)((h_mesh)->ibo.memory.size / sizeof(u16)))
 
 #include "memory/tg_memory.h"
 #include "tg_assets.h"
@@ -226,7 +226,7 @@ tg_mesh_h tg_mesh_create(u32 vertex_count, const v3* p_positions, const v3* p_no
 
     tg_mesh_h h_mesh = TG_NULL;
     TG_VULKAN_TAKE_HANDLE(p_meshes, h_mesh);
-    h_mesh->type = TG_HANDLE_TYPE_MESH;
+    h_mesh->type = TG_STRUCTURE_TYPE_MESH;
     
     h_mesh->vertex_input_attribute_count = 5;
     h_mesh->p_vertex_input_attribute_formats[0] = TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32B32_SFLOAT;
@@ -323,7 +323,6 @@ tg_mesh_h tg_mesh_create(u32 vertex_count, const v3* p_positions, const v3* p_no
     }
     else
     {
-        h_mesh->ibo.size = 0;
         h_mesh->ibo.buffer = VK_NULL_HANDLE;
         h_mesh->ibo.memory = (tg_vulkan_memory_block) { 0 };
     }
@@ -343,7 +342,7 @@ tg_mesh_h tg_mesh_create2(u32 vertex_count, u32 vertex_input_attribute_count, co
 
     tg_mesh_h h_mesh = TG_NULL;
     TG_VULKAN_TAKE_HANDLE(p_meshes, h_mesh);
-    h_mesh->type = TG_HANDLE_TYPE_MESH;
+    h_mesh->type = TG_STRUCTURE_TYPE_MESH;
     h_mesh->vertex_input_attribute_count = vertex_input_attribute_count;
 
     u64 vertex_stride = 0;
@@ -381,7 +380,6 @@ tg_mesh_h tg_mesh_create2(u32 vertex_count, u32 vertex_input_attribute_count, co
     }
     else
     {
-        h_mesh->ibo.size = 0;
         h_mesh->ibo.buffer = VK_NULL_HANDLE;
         h_mesh->ibo.memory = (tg_vulkan_memory_block) { 0 };
     }
@@ -427,7 +425,7 @@ tg_mesh_h tg_mesh_create_empty(u32 vertex_capacity, u32 index_capacity)
 {
     tg_mesh_h h_mesh = TG_NULL;
     TG_VULKAN_TAKE_HANDLE(p_meshes, h_mesh);
-    h_mesh->type = TG_HANDLE_TYPE_MESH;
+    h_mesh->type = TG_STRUCTURE_TYPE_MESH;
 
     h_mesh->vertex_count = 0;
     h_mesh->vbo = tg_vulkan_buffer_create(tgm_u64_max(vertex_capacity, 3) * sizeof(tg_vertex), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
@@ -439,7 +437,6 @@ tg_mesh_h tg_mesh_create_empty(u32 vertex_capacity, u32 index_capacity)
     }
     else
     {
-        h_mesh->ibo.size = 0;
         h_mesh->ibo.buffer = VK_NULL_HANDLE;
         h_mesh->ibo.memory = (tg_vulkan_memory_block) { 0 };
     }
@@ -749,7 +746,7 @@ tg_mesh_h tg_mesh_load(const char* p_filename, v3 scale)
                 {
                     p_it = tg__skip_whitespace(tg__skip_token(p_it), p_eof);
                     p_unique_uvs[unique_uv_count].x = tg_string_to_f32(p_it); p_it = tg__skip_whitespace(tg__skip_token(p_it), p_eof);
-                    p_unique_uvs[unique_uv_count].y = tg_string_to_f32(p_it); p_it = tg__skip_whitespace(tg__skip_token(p_it), p_eof);
+                    p_unique_uvs[unique_uv_count].y = 1.0f - tg_string_to_f32(p_it); p_it = tg__skip_whitespace(tg__skip_token(p_it), p_eof);
                     unique_uv_count++;
                 }
                 else if (p_it[1] == 'n')

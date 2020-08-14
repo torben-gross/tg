@@ -1,4 +1,4 @@
-#include "graphics/vulkan/tg_graphics_vulkan.h"
+#include "graphics/tg_graphics.h"
 
 #ifdef TG_VULKAN
 
@@ -11,7 +11,7 @@ static tg_material_h tg__create(tg_vulkan_material_type vulkan_material_type, tg
     tg_material_h h_material = TG_NULL;
     TG_VULKAN_TAKE_HANDLE(p_materials, h_material);
 
-    h_material->type = TG_HANDLE_TYPE_MATERIAL;
+    h_material->type = TG_STRUCTURE_TYPE_MATERIAL;
     h_material->material_type = vulkan_material_type;
     h_material->h_vertex_shader = h_vertex_shader;
     h_material->h_fragment_shader = h_fragment_shader;

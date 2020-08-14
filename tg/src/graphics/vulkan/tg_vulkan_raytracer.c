@@ -1,3 +1,5 @@
+#if 0
+
 #include "graphics/vulkan/tg_graphics_vulkan.h"
 
 #ifdef TG_VULKAN
@@ -41,12 +43,12 @@ tg_raytracer_h tg_raytracer_create(tg_camera* p_camera)
 {
 	tg_raytracer_h h_raytracer = TG_NULL;
 	TG_VULKAN_TAKE_HANDLE(p_raytracers, h_raytracer);
-    h_raytracer->type = TG_HANDLE_TYPE_RAYTRACER;
+    h_raytracer->type = TG_STRUCTURE_TYPE_RAYTRACER;
 
     h_raytracer->p_camera = p_camera;
     h_raytracer->semaphore = tg_vulkan_semaphore_create();
     h_raytracer->fence = tg_vulkan_fence_create(VK_FENCE_CREATE_SIGNALED_BIT);
-    h_raytracer->storage_image = tg_vulkan_storage_image_create(swapchain_extent.width, swapchain_extent.height, VK_FORMAT_R32G32B32A32_SFLOAT, TG_NULL);
+    h_raytracer->storage_image = tg_vulkan_color_image_create(swapchain_extent.width, swapchain_extent.height, VK_FORMAT_R32G32B32A32_SFLOAT, TG_NULL);
 
     tg_vulkan_screen_vertex p_vertices[4] = { 0 };
     p_vertices[0].position = (v2){ -1.0f,  1.0f };
@@ -65,11 +67,11 @@ tg_raytracer_h tg_raytracer_create(tg_camera* p_camera)
     tg_memory_copy(sizeof(p_vertices), p_vertices, staging_buffer.memory.p_mapped_device_memory);
     tg_vulkan_buffer_flush_mapped_memory(&staging_buffer);
     h_raytracer->screen_quad_vbo = tg_vulkan_buffer_create(sizeof(p_vertices), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    tg_vulkan_buffer_copy(sizeof(p_vertices), staging_buffer.buffer, h_raytracer->screen_quad_vbo.buffer);
+    tg_vulkan_buffer_copy(sizeof(p_vertices), staging_buffer.vulkan_buffer, h_raytracer->screen_quad_vbo.vulkan_buffer);
     tg_memory_copy(sizeof(p_indices), p_indices, staging_buffer.memory.p_mapped_device_memory);
     tg_vulkan_buffer_flush_mapped_memory(&staging_buffer);
     h_raytracer->screen_quad_ibo = tg_vulkan_buffer_create(sizeof(p_indices), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    tg_vulkan_buffer_copy(sizeof(p_indices), staging_buffer.buffer, h_raytracer->screen_quad_ibo.buffer);
+    tg_vulkan_buffer_copy(sizeof(p_indices), staging_buffer.vulkan_buffer, h_raytracer->screen_quad_ibo.vulkan_buffer);
     tg_vulkan_buffer_destroy(&staging_buffer);
 
     h_raytracer->raytrace_pass.compute_pipeline = tg_vulkan_pipeline_create_compute(&((tg_compute_shader_h)tg_assets_get_asset("shaders/raytracer.comp"))->vulkan_shader);
@@ -79,7 +81,7 @@ tg_raytracer_h tg_raytracer_create(tg_camera* p_camera)
     tg_mesh_h h_mesh = tg_mesh_load("meshes/sponza.obj", V3(0.01f));
 
     staging_buffer = tg_vulkan_buffer_create(h_mesh->vertex_count * sizeof(tg_vertex), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    tg_vulkan_buffer_copy(h_mesh->vertex_count * sizeof(tg_vertex), h_mesh->vbo.buffer, staging_buffer.buffer);
+    tg_vulkan_buffer_copy(h_mesh->vertex_count * sizeof(tg_vertex), h_mesh->vbo.vulkan_buffer, staging_buffer.vulkan_buffer);
 
     tg_vulkan_buffer ubo = tg_vulkan_buffer_create(sizeof(tg_raytracer_vertices), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
     ((tg_raytracer_vertices*)ubo.memory.p_mapped_device_memory)->u_vertex_count            = h_mesh->vertex_count;
@@ -91,7 +93,7 @@ tg_raytracer_h tg_raytracer_create(tg_camera* p_camera)
     ((tg_raytracer_vertices*)ubo.memory.p_mapped_device_memory)->u_offset_floats_bitangent = offsetof(tg_vertex, bitangent) / sizeof(f32);
 
     VkDescriptorBufferInfo descriptor_buffer_info = { 0 };
-    descriptor_buffer_info.buffer = h_raytracer->raytrace_pass.ubo.buffer;
+    descriptor_buffer_info.vulkan_buffer = h_raytracer->raytrace_pass.ubo.vulkan_buffer;
     descriptor_buffer_info.offset = 0;
     descriptor_buffer_info.range = VK_WHOLE_SIZE;
     VkWriteDescriptorSet write_descriptor_set = { 0 };
@@ -117,14 +119,14 @@ tg_raytracer_h tg_raytracer_create(tg_camera* p_camera)
     write_descriptor_set.pBufferInfo = TG_NULL;
     tg_vulkan_descriptor_sets_update(1, &write_descriptor_set); // TODO: update color image
 
-    descriptor_buffer_info.buffer = ubo.buffer;
+    descriptor_buffer_info.vulkan_buffer = ubo.vulkan_buffer;
     write_descriptor_set.dstBinding = 2;
     write_descriptor_set.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     write_descriptor_set.pImageInfo = TG_NULL;
     write_descriptor_set.pBufferInfo = &descriptor_buffer_info;
     tg_vulkan_descriptor_sets_update(1, &write_descriptor_set);
 
-    descriptor_buffer_info.buffer = staging_buffer.buffer;
+    descriptor_buffer_info.vulkan_buffer = staging_buffer.vulkan_buffer;
     write_descriptor_set.dstBinding = 3;
     write_descriptor_set.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     tg_vulkan_descriptor_sets_update(1, &write_descriptor_set);
@@ -241,8 +243,8 @@ tg_raytracer_h tg_raytracer_create(tg_camera* p_camera)
 
         const VkDeviceSize vertex_buffer_offset = 0;
         vkCmdBindPipeline(h_raytracer->present_pass.p_command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, h_raytracer->present_pass.graphics_pipeline.pipeline);
-        vkCmdBindVertexBuffers(h_raytracer->present_pass.p_command_buffers[i], 0, 1, &h_raytracer->screen_quad_vbo.buffer, &vertex_buffer_offset);
-        vkCmdBindIndexBuffer(h_raytracer->present_pass.p_command_buffers[i], h_raytracer->screen_quad_ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
+        vkCmdBindVertexBuffers(h_raytracer->present_pass.p_command_buffers[i], 0, 1, &h_raytracer->screen_quad_vbo.vulkan_buffer, &vertex_buffer_offset);
+        vkCmdBindIndexBuffer(h_raytracer->present_pass.p_command_buffers[i], h_raytracer->screen_quad_ibo.vulkan_buffer, 0, VK_INDEX_TYPE_UINT16);
         vkCmdBindDescriptorSets(h_raytracer->present_pass.p_command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, h_raytracer->present_pass.graphics_pipeline.pipeline_layout, 0, 1, &h_raytracer->present_pass.graphics_pipeline.descriptor_set, 0, TG_NULL);
         tg_vulkan_command_buffer_cmd_begin_render_pass(h_raytracer->present_pass.p_command_buffers[i], h_raytracer->present_pass.render_pass, &h_raytracer->present_pass.p_framebuffers[i], VK_SUBPASS_CONTENTS_INLINE);
         vkCmdDrawIndexed(h_raytracer->present_pass.p_command_buffers[i], 6, 1, 0, 0, 0);
@@ -425,5 +427,7 @@ void tg_raytracer_destroy(tg_raytracer_h h_raytracer)
 {
 
 }
+
+#endif
 
 #endif

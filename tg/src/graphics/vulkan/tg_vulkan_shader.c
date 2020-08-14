@@ -1,4 +1,4 @@
-#include "graphics/vulkan/tg_graphics_vulkan.h"
+#include "graphics/tg_graphics.h"
 
 #ifdef TG_VULKAN
 
@@ -80,7 +80,7 @@ tg_compute_shader_h tg_compute_shader_create(const char* p_filename)
 	tg_compute_shader_h h_compute_shader = TG_NULL;
 	TG_VULKAN_TAKE_HANDLE(p_compute_shaders, h_compute_shader);
 
-	h_compute_shader->type = TG_HANDLE_TYPE_COMPUTE_SHADER;
+	h_compute_shader->type = TG_STRUCTURE_TYPE_COMPUTE_SHADER;
 	h_compute_shader->vulkan_shader = tg_vulkan_shader_create(p_filename);
 	h_compute_shader->compute_pipeline = tg_vulkan_pipeline_create_compute(&h_compute_shader->vulkan_shader);
 	// TODO: global command buffer in tg_graphics_vulkan.c
@@ -147,7 +147,7 @@ tg_vertex_shader_h tg_vertex_shader_create(const char* p_filename)
 	tg_vertex_shader_h h_vertex_shader = TG_NULL;
 	TG_VULKAN_TAKE_HANDLE(p_vertex_shaders, h_vertex_shader);
 
-	h_vertex_shader->type = TG_HANDLE_TYPE_VERTEX_SHADER;
+	h_vertex_shader->type = TG_STRUCTURE_TYPE_VERTEX_SHADER;
 	h_vertex_shader->vulkan_shader = tg_vulkan_shader_create(p_filename);
 	return h_vertex_shader;
 }
@@ -182,7 +182,7 @@ tg_fragment_shader_h tg_fragment_shader_create(const char* p_filename)
 	tg_fragment_shader_h h_fragment_shader = TG_NULL;
 	TG_VULKAN_TAKE_HANDLE(p_fragment_shaders, h_fragment_shader);
 
-	h_fragment_shader->type = TG_HANDLE_TYPE_FRAGMENT_SHADER;
+	h_fragment_shader->type = TG_STRUCTURE_TYPE_FRAGMENT_SHADER;
 	h_fragment_shader->vulkan_shader = tg_vulkan_shader_create(p_filename);
 	return h_fragment_shader;
 }

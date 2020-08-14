@@ -2,7 +2,6 @@
 #define TG_TRANSVOXEL_TERRAIN_H
 
 #include "graphics/tg_graphics.h"
-#include "platform/tg_platform.h"
 
 
 

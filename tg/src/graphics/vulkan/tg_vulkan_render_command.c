@@ -1,4 +1,4 @@
-#include "graphics/vulkan/tg_graphics_vulkan.h"
+#include "graphics/tg_graphics.h"
 
 #ifdef TG_VULKAN
 
@@ -80,7 +80,7 @@ static void tg__register(tg_render_command_h h_render_command, tg_renderer_h h_r
 
         const VkDeviceSize vertex_buffer_offset = 0;
         vkCmdBindVertexBuffers(p_renderer_info->command_buffer, 0, 1, &h_render_command->h_mesh->vbo.buffer, &vertex_buffer_offset);
-        if (h_render_command->h_mesh->ibo.size != 0)
+        if (h_render_command->h_mesh->ibo.memory.size != 0)
         {
             vkCmdBindIndexBuffer(p_renderer_info->command_buffer, h_render_command->h_mesh->ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
         }
@@ -151,7 +151,7 @@ static void tg__register(tg_render_command_h h_render_command, tg_renderer_h h_r
 
             const VkDeviceSize vertex_buffer_offset = 0;
             vkCmdBindVertexBuffers(p_renderer_info->p_shadow_command_buffers[i], 0, 1, &h_render_command->h_mesh->vbo.buffer, &vertex_buffer_offset);
-            if (h_render_command->h_mesh->ibo.size != 0)
+            if (h_render_command->h_mesh->ibo.memory.size != 0)
             {
                 vkCmdBindIndexBuffer(p_renderer_info->p_shadow_command_buffers[i], h_render_command->h_mesh->ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
             }
@@ -180,7 +180,7 @@ tg_render_command_h tg_render_command_create(tg_mesh_h h_mesh, tg_material_h h_m
     tg_render_command_h h_render_command = TG_NULL;
     TG_VULKAN_TAKE_HANDLE(p_render_commands, h_render_command);
 
-	h_render_command->type = TG_HANDLE_TYPE_RENDER_COMMAND;
+	h_render_command->type = TG_STRUCTURE_TYPE_RENDER_COMMAND;
 	h_render_command->h_mesh = h_mesh;
 	h_render_command->h_material = h_material;
     h_render_command->model_ubo = tg_vulkan_buffer_create(sizeof(m4), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
@@ -189,7 +189,7 @@ tg_render_command_h tg_render_command_create(tg_mesh_h h_mesh, tg_material_h h_m
 	h_render_command->renderer_info_count = 0;
     for (u32 i = 0; i < TG_MAX_RENDERERS; i++)
     {
-        if (p_renderers[i].type != TG_HANDLE_TYPE_INVALID)
+        if (p_renderers[i].type != TG_STRUCTURE_TYPE_INVALID)
         {
             tg__register(h_render_command, &p_renderers[i], global_resource_count, p_global_resources);
         }
