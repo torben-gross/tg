@@ -894,11 +894,23 @@ v3 tgm_v3_neg(v3 v)
 v3 tgm_v3_normalized(v3 v)
 {
 	v3 result = { 0 };
-	const f32 magnitude = tgm_v3_mag(v);
-	TG_ASSERT(magnitude);
-	result.x = v.x / magnitude;
-	result.y = v.y / magnitude;
-	result.z = v.z / magnitude;
+	const f32 mag = tgm_v3_mag(v);
+	TG_ASSERT(mag);
+	result.x = v.x / mag;
+	result.y = v.y / mag;
+	result.z = v.z / mag;
+	return result;
+}
+
+v3 tgm_v3_normalized_not_null(v3 v, v3 alt)
+{
+	v3 result = alt;
+	const f32 magsqr = tgm_v3_magsqr(v);
+	if (magsqr != 0.0f)
+	{
+		const f32 mag = tgm_f32_sqrt(magsqr);
+		result = (v3){ v.x / mag, v.y / mag, v.z / mag };
+	}
 	return result;
 }
 
@@ -1252,12 +1264,12 @@ v4 tgm_v4_neg(v4 v)
 v4 tgm_v4_normalized(v4 v)
 {
 	v4 result = { 0 };
-	const f32 magnitude = tgm_v4_mag(v);
-	TG_ASSERT(magnitude);
-	result.x = v.x / magnitude;
-	result.y = v.y / magnitude;
-	result.z = v.z / magnitude;
-	result.w = v.w / magnitude;
+	const f32 mag = tgm_v4_mag(v);
+	TG_ASSERT(mag);
+	result.x = v.x / mag;
+	result.y = v.y / mag;
+	result.z = v.z / mag;
+	result.w = v.w / mag;
 	return result;
 }
 

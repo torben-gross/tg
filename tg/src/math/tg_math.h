@@ -355,6 +355,7 @@ v3     tgm_v3_mul(v3 v0, v3 v1);
 v3     tgm_v3_mulf(v3 v, f32 f);
 v3     tgm_v3_neg(v3 v);
 v3     tgm_v3_normalized(v3 v);
+v3     tgm_v3_normalized_not_null(v3 v, v3 alt);
 v3     tgm_v3_round(v3 v);
 b32    tgm_v3_similar(v3 v0, v3 v1, f32 epsilon);
 v3     tgm_v3_sub(v3 v0, v3 v1);

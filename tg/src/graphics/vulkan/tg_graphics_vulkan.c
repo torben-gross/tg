@@ -1320,25 +1320,24 @@ tg_vulkan_pipeline tg_vulkan_pipeline_create_graphics(const tg_vulkan_graphics_p
 {
     tg_vulkan_pipeline graphics_pipeline = { 0 };
 
-    VkVertexInputBindingDescription vertex_input_binding_description = { 0 };
-    vertex_input_binding_description.binding = 0;
-    vertex_input_binding_description.stride = p_create_info->p_vertex_shader->spirv_layout.vertex_stride;
-    vertex_input_binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
+    VkVertexInputBindingDescription p_vertex_input_binding_descriptions[TG_MAX_SHADER_INPUTS] = { 0 };
     VkVertexInputAttributeDescription p_vertex_input_attribute_descriptions[TG_MAX_SHADER_INPUTS] = { 0 };
     for (u8 i = 0; i < p_create_info->p_vertex_shader->spirv_layout.input_resource_count; i++)
     {
-        p_vertex_input_attribute_descriptions[i].binding = 0;
+        p_vertex_input_binding_descriptions[i].binding = i;
+        p_vertex_input_binding_descriptions[i].stride = tg_vertex_input_attribute_format_get_size(p_create_info->p_vertex_shader->spirv_layout.p_input_resources[i].format);
+        p_vertex_input_binding_descriptions[i].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+        p_vertex_input_attribute_descriptions[i].binding = i;
         p_vertex_input_attribute_descriptions[i].location = p_create_info->p_vertex_shader->spirv_layout.p_input_resources[i].location;
         p_vertex_input_attribute_descriptions[i].format = p_create_info->p_vertex_shader->spirv_layout.p_input_resources[i].format;
-        p_vertex_input_attribute_descriptions[i].offset = p_create_info->p_vertex_shader->spirv_layout.p_input_resources[i].offset;
+        p_vertex_input_attribute_descriptions[i].offset = 0;
     }
-    graphics_pipeline = tg_vulkan_pipeline_create_graphics2(p_create_info, vertex_input_binding_description, p_create_info->p_vertex_shader->spirv_layout.input_resource_count, p_vertex_input_attribute_descriptions);
+    graphics_pipeline = tg_vulkan_pipeline_create_graphics2(p_create_info, p_create_info->p_vertex_shader->spirv_layout.input_resource_count, p_vertex_input_binding_descriptions, p_vertex_input_attribute_descriptions);
 
     return graphics_pipeline;
 }
 
-tg_vulkan_pipeline tg_vulkan_pipeline_create_graphics2(const tg_vulkan_graphics_pipeline_create_info* p_create_info, VkVertexInputBindingDescription vertex_bindings, u32 vertex_attrib_count, VkVertexInputAttributeDescription* p_vertex_attribs)
+tg_vulkan_pipeline tg_vulkan_pipeline_create_graphics2(const tg_vulkan_graphics_pipeline_create_info* p_create_info, u32 vertex_attrib_count, VkVertexInputBindingDescription* p_vertex_bindings, VkVertexInputAttributeDescription* p_vertex_attribs)
 {
     tg_vulkan_pipeline graphics_pipeline = { 0 };
 
@@ -1474,8 +1473,8 @@ tg_vulkan_pipeline tg_vulkan_pipeline_create_graphics2(const tg_vulkan_graphics_
     pipeline_vertex_input_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     pipeline_vertex_input_state_create_info.pNext = TG_NULL;
     pipeline_vertex_input_state_create_info.flags = 0;
-    pipeline_vertex_input_state_create_info.vertexBindingDescriptionCount = 1;
-    pipeline_vertex_input_state_create_info.pVertexBindingDescriptions = &vertex_bindings;
+    pipeline_vertex_input_state_create_info.vertexBindingDescriptionCount = vertex_attrib_count;
+    pipeline_vertex_input_state_create_info.pVertexBindingDescriptions = p_vertex_bindings;
     pipeline_vertex_input_state_create_info.vertexAttributeDescriptionCount = vertex_attrib_count;
     pipeline_vertex_input_state_create_info.pVertexAttributeDescriptions = p_vertex_attribs;
 

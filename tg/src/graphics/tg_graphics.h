@@ -34,7 +34,6 @@
 TG_DECLARE_HANDLE(tg_compute_shader);
 TG_DECLARE_HANDLE(tg_fragment_shader);
 TG_DECLARE_HANDLE(tg_material);
-TG_DECLARE_HANDLE(tg_mesh);
 TG_DECLARE_HANDLE(tg_raytracer);
 TG_DECLARE_HANDLE(tg_render_command);
 TG_DECLARE_HANDLE(tg_render_target);
@@ -187,14 +186,15 @@ typedef struct tg_kd_node
 	};
 } tg_kd_node;
 
+typedef struct tg_mesh tg_mesh;
 typedef struct tg_kd_tree
 {
-	tg_mesh_h     h_mesh;
-	u32           index_capacity;
-	u32           index_count;
-	u32           node_count;
-	u32*          p_indices;
-	tg_kd_node    p_nodes[0];
+	const tg_mesh*    p_mesh;
+	u32               index_capacity;
+	u32               index_count;
+	u32               node_count;
+	u32*              p_indices;
+	tg_kd_node        p_nodes[0];
 } tg_kd_tree;
 
 typedef struct tg_vertex
@@ -489,7 +489,7 @@ typedef struct tg_depth_image
 typedef struct tg_render_command
 {
     tg_structure_type                         type;
-    tg_mesh_h                                 h_mesh;
+    tg_mesh*                                  p_mesh;
     tg_material_h                             h_material;
     tg_vulkan_buffer                          model_ubo;
     u32                                       renderer_info_count;
@@ -524,13 +524,25 @@ typedef struct tg_mesh
 {
     tg_structure_type    type;
     tg_bounds            bounds;
-    u32                  vertex_input_attribute_count;
-    VkFormat             p_vertex_input_attribute_formats[TG_MAX_SHADER_INPUTS];
-    u32                  vertex_count;
-    u32                  index_count;
-    tg_vulkan_buffer     vbo;
-    tg_vulkan_buffer     ibo;
-    v3*                  p_vertex_positions;
+
+    u32                  index_count; // TODO: move all of these into vulkan_buffer, this one only has its total size but not its size in USAGE
+    u32                  position_count;
+    u32                  normal_count;
+    u32                  uv_count;
+    u32                  tangent_count;
+    u32                  bitangent_count;
+
+    tg_vulkan_buffer     index_buffer;
+    tg_vulkan_buffer     positions_buffer;
+    tg_vulkan_buffer     normals_buffer;
+    tg_vulkan_buffer     uvs_buffer;
+    tg_vulkan_buffer     tangents_buffer;
+    tg_vulkan_buffer     bitangents_buffer;
+
+    u32                  index_capacity;
+    u32                  position_capacity;
+    u16*                 p_indices;
+    v3*                  p_positions;
 } tg_mesh;
 
 typedef struct tg_raytracer
@@ -566,8 +578,9 @@ typedef struct tg_renderer
     const tg_camera*             p_camera;
     tg_vulkan_buffer             view_projection_ubo;
     tg_render_target             render_target;
-    tg_vulkan_buffer             screen_quad_vbo;
-    tg_vulkan_buffer             screen_quad_ibo;
+    tg_vulkan_buffer             screen_quad_indices;
+    tg_vulkan_buffer             screen_quad_positions_buffer;
+    tg_vulkan_buffer             screen_quad_uvs_buffer;
 
     u32                          render_command_count;
     tg_render_command_h          ph_render_commands[TG_MAX_RENDER_COMMANDS];
@@ -763,7 +776,7 @@ VkPhysicalDeviceProperties    tg_vulkan_physical_device_get_properties();
 
 tg_vulkan_pipeline            tg_vulkan_pipeline_create_compute(const tg_vulkan_shader* p_compute_shader);
 tg_vulkan_pipeline            tg_vulkan_pipeline_create_graphics(const tg_vulkan_graphics_pipeline_create_info* p_create_info);
-tg_vulkan_pipeline            tg_vulkan_pipeline_create_graphics2(const tg_vulkan_graphics_pipeline_create_info* p_create_info, VkVertexInputBindingDescription vertex_bindings, u32 vertex_attrib_count, VkVertexInputAttributeDescription* p_vertex_attribs);
+tg_vulkan_pipeline            tg_vulkan_pipeline_create_graphics2(const tg_vulkan_graphics_pipeline_create_info* p_create_info, u32 vertex_attrib_count, VkVertexInputBindingDescription* p_vertex_bindings, VkVertexInputAttributeDescription* p_vertex_attribs);
 void                          tg_vulkan_pipeline_destroy(tg_vulkan_pipeline* p_pipeline);
 
 void                          tg_vulkan_queue_present(VkPresentInfoKHR* p_present_info);
@@ -790,100 +803,103 @@ void                          tg_vulkan_shader_destroy(tg_vulkan_shader* p_vulka
 
 
 
-void                             tg_graphics_init();
-void                             tg_graphics_on_window_resize(u32 width, u32 height);
-void                             tg_graphics_shutdown();
-void                             tg_graphics_wait_idle();
+void                    tg_graphics_init();
+void                    tg_graphics_on_window_resize(u32 width, u32 height);
+void                    tg_graphics_shutdown();
+void                    tg_graphics_wait_idle();
 
 
 
-u32                              tg_vertex_input_attribute_format_get_alignment(tg_vertex_input_attribute_format format);
-u32                              tg_vertex_input_attribute_format_get_size(tg_vertex_input_attribute_format format);
+u32                     tg_vertex_input_attribute_format_get_alignment(tg_vertex_input_attribute_format format);
+u32                     tg_vertex_input_attribute_format_get_size(tg_vertex_input_attribute_format format);
 
 
 
-tg_color_image                   tg_color_image_create(u32 width, u32 height, tg_color_image_format format, const tg_sampler_create_info* p_sampler_create_info);
-tg_color_image                   tg_color_image_create2(const char* p_filename, const tg_sampler_create_info* p_sampler_create_info);
-void                             tg_color_image_destroy(tg_color_image* p_color_image);
+tg_color_image          tg_color_image_create(u32 width, u32 height, tg_color_image_format format, const tg_sampler_create_info* p_sampler_create_info);
+tg_color_image          tg_color_image_create2(const char* p_filename, const tg_sampler_create_info* p_sampler_create_info);
+void                    tg_color_image_destroy(tg_color_image* p_color_image);
 
-void                             tg_compute_shader_bind_input(tg_compute_shader_h h_compute_shader, u32 first_handle_index, u32 handle_count, tg_handle* p_handles);
-tg_compute_shader_h              tg_compute_shader_create(const char* filename);
-void                             tg_compute_shader_dispatch(tg_compute_shader_h h_compute_shader, u32 group_count_x, u32 group_count_y, u32 group_count_z);
-void                             tg_compute_shader_destroy(tg_compute_shader_h h_compute_shader);
-tg_compute_shader_h              tg_compute_shader_get(const char* filename);
+void                    tg_compute_shader_bind_input(tg_compute_shader_h h_compute_shader, u32 first_handle_index, u32 handle_count, tg_handle* p_handles);
+tg_compute_shader_h     tg_compute_shader_create(const char* filename);
+void                    tg_compute_shader_dispatch(tg_compute_shader_h h_compute_shader, u32 group_count_x, u32 group_count_y, u32 group_count_z);
+void                    tg_compute_shader_destroy(tg_compute_shader_h h_compute_shader);
+tg_compute_shader_h     tg_compute_shader_get(const char* filename);
 
-tg_color_image_3d                tg_color_image_3d_create(u32 width, u32 height, u32 depth, tg_color_image_format format, const tg_sampler_create_info* p_sampler_create_info);
-void                             tg_color_image_3d_destroy(tg_color_image_3d* p_color_image_3d);
+tg_color_image_3d       tg_color_image_3d_create(u32 width, u32 height, u32 depth, tg_color_image_format format, const tg_sampler_create_info* p_sampler_create_info);
+void                    tg_color_image_3d_destroy(tg_color_image_3d* p_color_image_3d);
 // TODO: destroy
 
-tg_depth_image                   tg_depth_image_create(u32 width, u32 height, tg_depth_image_format format, const tg_sampler_create_info* p_sampler_create_info);
-void                             tg_depth_image_destroy(tg_depth_image* p_depth_image);
+tg_depth_image          tg_depth_image_create(u32 width, u32 height, tg_depth_image_format format, const tg_sampler_create_info* p_sampler_create_info);
+void                    tg_depth_image_destroy(tg_depth_image* p_depth_image);
 
-tg_fragment_shader_h             tg_fragment_shader_create(const char* p_filename);
-void                             tg_fragment_shader_destroy(tg_fragment_shader_h h_fragment_shader);
-tg_fragment_shader_h             tg_fragment_shader_get(const char* p_filename);
+tg_fragment_shader_h    tg_fragment_shader_create(const char* p_filename);
+void                    tg_fragment_shader_destroy(tg_fragment_shader_h h_fragment_shader);
+tg_fragment_shader_h    tg_fragment_shader_get(const char* p_filename);
 
-tg_kd_tree*                      tg_kd_tree_create(const tg_mesh_h h_mesh);
-void                             tg_kd_tree_destroy(tg_kd_tree* p_kd_tree);
+tg_kd_tree*             tg_kd_tree_create(const tg_mesh* p_mesh);
+void                    tg_kd_tree_destroy(tg_kd_tree* p_kd_tree);
 
-tg_material_h                    tg_material_create_deferred(tg_vertex_shader_h h_vertex_shader, tg_fragment_shader_h h_fragment_shader);
-tg_material_h                    tg_material_create_forward(tg_vertex_shader_h h_vertex_shader, tg_fragment_shader_h h_fragment_shader);
-void                             tg_material_destroy(tg_material_h h_material);
-b32                              tg_material_is_deferred(tg_material_h h_material);
-b32                              tg_material_is_forward(tg_material_h h_material);
+tg_material_h           tg_material_create_deferred(tg_vertex_shader_h h_vertex_shader, tg_fragment_shader_h h_fragment_shader);
+tg_material_h           tg_material_create_forward(tg_vertex_shader_h h_vertex_shader, tg_fragment_shader_h h_fragment_shader);
+void                    tg_material_destroy(tg_material_h h_material);
+b32                     tg_material_is_deferred(tg_material_h h_material);
+b32                     tg_material_is_forward(tg_material_h h_material);
 
-tg_mesh_h                        tg_mesh_create(u32 vertex_count, const v3* p_positions, const v3* p_normals, const v2* p_uvs, const v3* p_tangents, u32 index_count, const u16* p_indices);
-tg_mesh_h                        tg_mesh_create2(u32 vertex_count, u32 vertex_input_attribute_count, const tg_vertex_input_attribute_format* p_vertex_input_attribute_formats, const void* p_vertices, u32 index_count, const u16* p_indices);
-tg_mesh_h                        tg_mesh_create_empty(u32 vertex_capacity, u32 index_capacity);
-tg_mesh_h                        tg_mesh_create_sphere(f32 radius, u32 sector_count, u32 stack_count);
-tg_mesh_h                        tg_mesh_create_sphere_flat(f32 radius, u32 sector_count, u32 stack_count);
-tg_mesh_h                        tg_mesh_load(const char* p_filename, v3 scale);
-void                             tg_mesh_destroy(tg_mesh_h h_mesh);
-void                             tg_mesh_update(tg_mesh_h h_mesh, u32 vertex_count, const v3* p_positions, const v3* p_normals, const v2* p_uvs, const v3* p_tangents, u32 index_count, const u16* p_indices);
-void                             tg_mesh_update2(tg_mesh_h h_mesh, u32 vertex_count, u32 vertex_stride, const void* p_vertices, u32 index_count, const u16* p_indices); // TODO: this needs to set a flag or a time, so that the terrain knows, that it needs a reset
+tg_mesh                 tg_mesh_create();
+tg_mesh                 tg_mesh_create2(const char* p_filename, v3 scale); // TODO: scale is temporary
+tg_mesh                 tg_mesh_create_sphere(f32 radius, u32 sector_count, u32 stack_count, b32 normals, b32 uvs, b32 tangents_bitangents);
+tg_mesh                 tg_mesh_create_sphere_flat(f32 radius, u32 sector_count, u32 stack_count, b32 normals, b32 uvs, b32 tangents_bitangents);
+void                    tg_mesh_set_indices(tg_mesh* p_mesh, u32 count, const u16* p_indices);
+void                    tg_mesh_set_positions(tg_mesh* p_mesh, u32 count, const v3* p_positions);
+void                    tg_mesh_set_normals(tg_mesh* p_mesh, u32 count, const v3* p_normals);
+void                    tg_mesh_set_uvs(tg_mesh* p_mesh, u32 count, const v2* p_uvs);
+void                    tg_mesh_set_tangents_bitangents(tg_mesh* p_mesh, u32 count, const v3* p_tangents, const v3* p_bitangents);
+void                    tg_mesh_regenerate_normals(tg_mesh* p_mesh);
+void                    tg_mesh_regenerate_tangents_bitangents(tg_mesh* p_mesh);
+void                    tg_mesh_destroy(tg_mesh* p_mesh);
 
-tg_raytracer_h                   tg_raytracer_create(tg_camera* p_camera);
-void                             tg_raytracer_begin(tg_raytracer_h h_raytracer);
-void                             tg_raytracer_push_directional_light(tg_raytracer_h h_raytracer, v3 direction, v3 color);
-void                             tg_raytracer_push_point_light(tg_raytracer_h h_raytracer, v3 position, v3 color);
-void                             tg_raytracer_push_sphere(tg_raytracer_h h_raytracer, v3 center, f32 radius);
-void                             tg_raytracer_end(tg_raytracer_h h_raytracer);
-void                             tg_raytracer_present(tg_raytracer_h h_raytracer);
-void                             tg_raytracer_get_render_target(tg_raytracer_h h_raytracer);
-void                             tg_raytracer_destroy(tg_raytracer_h h_raytracer);
+tg_raytracer_h          tg_raytracer_create(tg_camera* p_camera);
+void                    tg_raytracer_begin(tg_raytracer_h h_raytracer);
+void                    tg_raytracer_push_directional_light(tg_raytracer_h h_raytracer, v3 direction, v3 color);
+void                    tg_raytracer_push_point_light(tg_raytracer_h h_raytracer, v3 position, v3 color);
+void                    tg_raytracer_push_sphere(tg_raytracer_h h_raytracer, v3 center, f32 radius);
+void                    tg_raytracer_end(tg_raytracer_h h_raytracer);
+void                    tg_raytracer_present(tg_raytracer_h h_raytracer);
+void                    tg_raytracer_get_render_target(tg_raytracer_h h_raytracer);
+void                    tg_raytracer_destroy(tg_raytracer_h h_raytracer);
 
-tg_render_command_h              tg_render_command_create(tg_mesh_h h_mesh, tg_material_h h_material, v3 position, u32 global_resource_count, tg_handle* p_global_resources);
-void                             tg_render_command_destroy(tg_render_command_h h_render_command);
-void                             tg_render_command_set_position(tg_render_command_h h_render_command, v3 position);
+tg_render_command_h     tg_render_command_create(tg_mesh* p_mesh, tg_material_h h_material, v3 position, u32 global_resource_count, tg_handle* p_global_resources);
+void                    tg_render_command_destroy(tg_render_command_h h_render_command);
+void                    tg_render_command_set_position(tg_render_command_h h_render_command, v3 position);
 
-tg_renderer_h                    tg_renderer_create(tg_camera* p_camera);
-void                             tg_renderer_destroy(tg_renderer_h h_renderer);
-void                             tg_renderer_enable_shadows(tg_renderer_h h_renderer, b32 enable);
-void                             tg_renderer_bake_begin(tg_renderer_h h_renderer);
-void                             tg_renderer_bake_push_probe(tg_renderer_h h_renderer, f32 x, f32 y, f32 z);
-void                             tg_renderer_bake_push_static(tg_renderer_h h_renderer, tg_render_command_h h_render_command);
-void                             tg_renderer_bake_end(tg_renderer_h h_renderer);
-void                             tg_renderer_begin(tg_renderer_h h_renderer);
-void                             tg_renderer_push_directional_light(tg_renderer_h h_renderer, v3 direction, v3 color);
-void                             tg_renderer_push_point_light(tg_renderer_h h_renderer, v3 position, v3 color);
-void                             tg_renderer_execute(tg_renderer_h h_renderer, tg_render_command_h h_render_command);
-void                             tg_renderer_end(tg_renderer_h h_renderer);
-void                             tg_renderer_present(tg_renderer_h h_renderer);
-void                             tg_renderer_clear(tg_renderer_h h_renderer);
-tg_render_target_h               tg_renderer_get_render_target(tg_renderer_h h_renderer);
+tg_renderer_h           tg_renderer_create(tg_camera* p_camera);
+void                    tg_renderer_destroy(tg_renderer_h h_renderer);
+void                    tg_renderer_enable_shadows(tg_renderer_h h_renderer, b32 enable);
+void                    tg_renderer_bake_begin(tg_renderer_h h_renderer);
+void                    tg_renderer_bake_push_probe(tg_renderer_h h_renderer, f32 x, f32 y, f32 z);
+void                    tg_renderer_bake_push_static(tg_renderer_h h_renderer, tg_render_command_h h_render_command);
+void                    tg_renderer_bake_end(tg_renderer_h h_renderer);
+void                    tg_renderer_begin(tg_renderer_h h_renderer);
+void                    tg_renderer_push_directional_light(tg_renderer_h h_renderer, v3 direction, v3 color);
+void                    tg_renderer_push_point_light(tg_renderer_h h_renderer, v3 position, v3 color);
+void                    tg_renderer_execute(tg_renderer_h h_renderer, tg_render_command_h h_render_command);
+void                    tg_renderer_end(tg_renderer_h h_renderer);
+void                    tg_renderer_present(tg_renderer_h h_renderer);
+void                    tg_renderer_clear(tg_renderer_h h_renderer);
+tg_render_target_h      tg_renderer_get_render_target(tg_renderer_h h_renderer);
 
-tg_storage_buffer                tg_storage_buffer_create(u64 size, b32 visible);
-u64                              tg_storage_buffer_size(tg_storage_buffer* p_storage_buffer);
-void*                            tg_storage_buffer_data(tg_storage_buffer* p_storage_buffer);
-void                             tg_storage_buffer_destroy(tg_storage_buffer* p_storage_buffer);
+tg_storage_buffer       tg_storage_buffer_create(u64 size, b32 visible);
+u64                     tg_storage_buffer_size(tg_storage_buffer* p_storage_buffer);
+void*                   tg_storage_buffer_data(tg_storage_buffer* p_storage_buffer);
+void                    tg_storage_buffer_destroy(tg_storage_buffer* p_storage_buffer);
 
-tg_uniform_buffer                tg_uniform_buffer_create(u64 size);
-u64                              tg_uniform_buffer_size(tg_uniform_buffer* p_uniform_buffer);
-void*                            tg_uniform_buffer_data(tg_uniform_buffer* p_uniform_buffer);
-void                             tg_uniform_buffer_destroy(tg_uniform_buffer* p_uniform_buffer);
+tg_uniform_buffer       tg_uniform_buffer_create(u64 size);
+u64                     tg_uniform_buffer_size(tg_uniform_buffer* p_uniform_buffer);
+void*                   tg_uniform_buffer_data(tg_uniform_buffer* p_uniform_buffer);
+void                    tg_uniform_buffer_destroy(tg_uniform_buffer* p_uniform_buffer);
 
-tg_vertex_shader_h               tg_vertex_shader_create(const char* p_filename);
-void                             tg_vertex_shader_destroy(tg_vertex_shader_h h_vertex_shader);
-tg_vertex_shader_h               tg_vertex_shader_get(const char* p_filename);
+tg_vertex_shader_h      tg_vertex_shader_create(const char* p_filename);
+void                    tg_vertex_shader_destroy(tg_vertex_shader_h h_vertex_shader);
+tg_vertex_shader_h      tg_vertex_shader_get(const char* p_filename);
 
 #endif

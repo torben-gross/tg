@@ -376,8 +376,9 @@ static void tg__init_ssao_pass(tg_renderer_h h_renderer)
         const VkDeviceSize vertex_buffer_offset = 0;
 
         vkCmdBindPipeline(h_renderer->ssao_pass.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, h_renderer->ssao_pass.ssao_graphics_pipeline.pipeline);
-        vkCmdBindVertexBuffers(h_renderer->ssao_pass.command_buffer, 0, 1, &h_renderer->screen_quad_vbo.buffer, &vertex_buffer_offset);
-        vkCmdBindIndexBuffer(h_renderer->ssao_pass.command_buffer, h_renderer->screen_quad_ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
+        vkCmdBindIndexBuffer(h_renderer->ssao_pass.command_buffer, h_renderer->screen_quad_indices.buffer, 0, VK_INDEX_TYPE_UINT16);
+        vkCmdBindVertexBuffers(h_renderer->ssao_pass.command_buffer, 0, 1, &h_renderer->screen_quad_positions_buffer.buffer, &vertex_buffer_offset);
+        vkCmdBindVertexBuffers(h_renderer->ssao_pass.command_buffer, 1, 1, &h_renderer->screen_quad_uvs_buffer.buffer, &vertex_buffer_offset);
         vkCmdBindDescriptorSets(h_renderer->ssao_pass.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, h_renderer->ssao_pass.ssao_graphics_pipeline.pipeline_layout, 0, 1, &h_renderer->ssao_pass.ssao_graphics_pipeline.descriptor_set, 0, TG_NULL);
         tg_vulkan_command_buffer_cmd_begin_render_pass(h_renderer->ssao_pass.command_buffer, h_renderer->ssao_pass.ssao_render_pass, &h_renderer->ssao_pass.ssao_framebuffer, VK_SUBPASS_CONTENTS_INLINE);
         vkCmdDrawIndexed(h_renderer->ssao_pass.command_buffer, 6, 1, 0, 0, 0);
@@ -391,8 +392,9 @@ static void tg__init_ssao_pass(tg_renderer_h h_renderer)
         );
 
         vkCmdBindPipeline(h_renderer->ssao_pass.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, h_renderer->ssao_pass.blur_graphics_pipeline.pipeline);
-        vkCmdBindVertexBuffers(h_renderer->ssao_pass.command_buffer, 0, 1, &h_renderer->screen_quad_vbo.buffer, &vertex_buffer_offset);
-        vkCmdBindIndexBuffer(h_renderer->ssao_pass.command_buffer, h_renderer->screen_quad_ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
+        vkCmdBindIndexBuffer(h_renderer->ssao_pass.command_buffer, h_renderer->screen_quad_indices.buffer, 0, VK_INDEX_TYPE_UINT16);
+        vkCmdBindVertexBuffers(h_renderer->ssao_pass.command_buffer, 0, 1, &h_renderer->screen_quad_positions_buffer.buffer, &vertex_buffer_offset);
+        vkCmdBindVertexBuffers(h_renderer->ssao_pass.command_buffer, 1, 1, &h_renderer->screen_quad_uvs_buffer.buffer, &vertex_buffer_offset);
         vkCmdBindDescriptorSets(h_renderer->ssao_pass.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, h_renderer->ssao_pass.blur_graphics_pipeline.pipeline_layout, 0, 1, &h_renderer->ssao_pass.blur_graphics_pipeline.descriptor_set, 0, TG_NULL);
         tg_vulkan_command_buffer_cmd_begin_render_pass(h_renderer->ssao_pass.command_buffer, h_renderer->ssao_pass.blur_render_pass, &h_renderer->ssao_pass.blur_framebuffer, VK_SUBPASS_CONTENTS_INLINE);
         vkCmdDrawIndexed(h_renderer->ssao_pass.command_buffer, 6, 1, 0, 0, 0);
@@ -537,8 +539,9 @@ static void tg__init_shading_pass(tg_renderer_h h_renderer)
         vkCmdBindPipeline(h_renderer->shading_pass.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, h_renderer->shading_pass.graphics_pipeline.pipeline);
 
         const VkDeviceSize vertex_buffer_offset = 0;
-        vkCmdBindVertexBuffers(h_renderer->shading_pass.command_buffer, 0, 1, &h_renderer->screen_quad_vbo.buffer, &vertex_buffer_offset);
-        vkCmdBindIndexBuffer(h_renderer->shading_pass.command_buffer, h_renderer->screen_quad_ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
+        vkCmdBindIndexBuffer(h_renderer->shading_pass.command_buffer, h_renderer->screen_quad_indices.buffer, 0, VK_INDEX_TYPE_UINT16);
+        vkCmdBindVertexBuffers(h_renderer->shading_pass.command_buffer, 0, 1, &h_renderer->screen_quad_positions_buffer.buffer, &vertex_buffer_offset);
+        vkCmdBindVertexBuffers(h_renderer->shading_pass.command_buffer, 1, 1, &h_renderer->screen_quad_uvs_buffer.buffer, &vertex_buffer_offset);
         vkCmdBindDescriptorSets(h_renderer->shading_pass.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, h_renderer->shading_pass.graphics_pipeline.pipeline_layout, 0, 1, &h_renderer->shading_pass.graphics_pipeline.descriptor_set, 0, TG_NULL);
 
         tg_vulkan_command_buffer_cmd_begin_render_pass(h_renderer->shading_pass.command_buffer, h_renderer->shading_pass.render_pass, &h_renderer->shading_pass.framebuffer, VK_SUBPASS_CONTENTS_INLINE);
@@ -676,8 +679,9 @@ static void tg__init_tone_mapping_pass(tg_renderer_h h_renderer)
         vkCmdBindPipeline(h_renderer->tone_mapping_pass.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, h_renderer->tone_mapping_pass.graphics_pipeline.pipeline);
 
         const VkDeviceSize vertex_buffer_offset = 0;
-        vkCmdBindVertexBuffers(h_renderer->tone_mapping_pass.command_buffer, 0, 1, &h_renderer->screen_quad_vbo.buffer, &vertex_buffer_offset);
-        vkCmdBindIndexBuffer(h_renderer->tone_mapping_pass.command_buffer, h_renderer->screen_quad_ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
+        vkCmdBindIndexBuffer(h_renderer->tone_mapping_pass.command_buffer, h_renderer->screen_quad_indices.buffer, 0, VK_INDEX_TYPE_UINT16);
+        vkCmdBindVertexBuffers(h_renderer->tone_mapping_pass.command_buffer, 0, 1, &h_renderer->screen_quad_positions_buffer.buffer, &vertex_buffer_offset);
+        vkCmdBindVertexBuffers(h_renderer->tone_mapping_pass.command_buffer, 1, 1, &h_renderer->screen_quad_uvs_buffer.buffer, &vertex_buffer_offset);
         vkCmdBindDescriptorSets(h_renderer->tone_mapping_pass.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, h_renderer->tone_mapping_pass.graphics_pipeline.pipeline_layout, 0, 1, &h_renderer->tone_mapping_pass.graphics_pipeline.descriptor_set, 0, TG_NULL);
 
         tg_vulkan_command_buffer_cmd_begin_render_pass(h_renderer->tone_mapping_pass.command_buffer, h_renderer->tone_mapping_pass.render_pass, &h_renderer->tone_mapping_pass.framebuffer, VK_SUBPASS_CONTENTS_INLINE);
@@ -891,8 +895,9 @@ static void tg__init_present_pass(tg_renderer_h h_renderer)
             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT
         );
         vkCmdBindPipeline(h_renderer->present_pass.p_command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, h_renderer->present_pass.graphics_pipeline.pipeline);
-        vkCmdBindVertexBuffers(h_renderer->present_pass.p_command_buffers[i], 0, 1, &h_renderer->screen_quad_vbo.buffer, &vertex_buffer_offset);
-        vkCmdBindIndexBuffer(h_renderer->present_pass.p_command_buffers[i], h_renderer->screen_quad_ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
+        vkCmdBindIndexBuffer(h_renderer->present_pass.p_command_buffers[i], h_renderer->screen_quad_indices.buffer, 0, VK_INDEX_TYPE_UINT16);
+        vkCmdBindVertexBuffers(h_renderer->present_pass.p_command_buffers[i], 0, 1, &h_renderer->screen_quad_positions_buffer.buffer, &vertex_buffer_offset);
+        vkCmdBindVertexBuffers(h_renderer->present_pass.p_command_buffers[i], 1, 1, &h_renderer->screen_quad_uvs_buffer.buffer, &vertex_buffer_offset);
         vkCmdBindDescriptorSets(h_renderer->present_pass.p_command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, h_renderer->present_pass.graphics_pipeline.pipeline_layout, 0, 1, &h_renderer->present_pass.graphics_pipeline.descriptor_set, 0, TG_NULL);
 
         tg_vulkan_command_buffer_cmd_begin_render_pass(h_renderer->present_pass.p_command_buffers[i], h_renderer->present_pass.render_pass, &h_renderer->present_pass.p_framebuffers[i], VK_SUBPASS_CONTENTS_INLINE);
@@ -953,30 +958,37 @@ tg_renderer_h tg_renderer_create(tg_camera* p_camera)
     h_renderer->p_camera = p_camera;
     h_renderer->view_projection_ubo = tg_vulkan_buffer_create(2 * sizeof(m4), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-    tg_vulkan_screen_vertex p_vertices[4] = { 0 };
-    p_vertices[0].position = (v2){ -1.0f,  1.0f };
-    p_vertices[0].uv       = (v2){  0.0f,  1.0f };
-    p_vertices[1].position = (v2){  1.0f,  1.0f };
-    p_vertices[1].uv       = (v2){  1.0f,  1.0f };
-    p_vertices[2].position = (v2){  1.0f, -1.0f };
-    p_vertices[2].uv       = (v2){  1.0f,  0.0f };
-    p_vertices[3].position = (v2){ -1.0f, -1.0f };
-    p_vertices[3].uv       = (v2){  0.0f,  0.0f };
-
     const u16 p_indices[6] = { 0, 1, 2, 2, 3, 0 };
 
-    // TODO: is a global staging buffer possible?
-    tg_vulkan_buffer staging_buffer = tg_vulkan_buffer_create(tgm_u64_max(sizeof(p_vertices), sizeof(p_indices)), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+    v2 p_positions[4] = { 0 };
+    p_positions[0] = (v2){ -1.0f,  1.0f };
+    p_positions[1] = (v2){  1.0f,  1.0f };
+    p_positions[2] = (v2){  1.0f, -1.0f };
+    p_positions[3] = (v2){ -1.0f, -1.0f };
 
-    tg_memory_copy(sizeof(p_vertices), p_vertices, staging_buffer.memory.p_mapped_device_memory);
-    tg_vulkan_buffer_flush_mapped_memory(&staging_buffer);
-    h_renderer->screen_quad_vbo = tg_vulkan_buffer_create(sizeof(p_vertices), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    tg_vulkan_buffer_copy(sizeof(p_vertices), staging_buffer.buffer, h_renderer->screen_quad_vbo.buffer);
+    v2 p_uvs[4] = { 0 };
+    p_uvs[0] = (v2){  0.0f,  1.0f };
+    p_uvs[1] = (v2){  1.0f,  1.0f };
+    p_uvs[2] = (v2){  1.0f,  0.0f };
+    p_uvs[3] = (v2){  0.0f,  0.0f };
+
+    // TODO: is a global staging buffer possible?
+    tg_vulkan_buffer staging_buffer = tg_vulkan_buffer_create(tgm_u64_max(sizeof(p_indices), tgm_u64_max(sizeof(p_positions), sizeof(p_uvs))), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 
     tg_memory_copy(sizeof(p_indices), p_indices, staging_buffer.memory.p_mapped_device_memory);
     tg_vulkan_buffer_flush_mapped_memory(&staging_buffer);
-    h_renderer->screen_quad_ibo = tg_vulkan_buffer_create(sizeof(p_indices), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    tg_vulkan_buffer_copy(sizeof(p_indices), staging_buffer.buffer, h_renderer->screen_quad_ibo.buffer);
+    h_renderer->screen_quad_indices = tg_vulkan_buffer_create(sizeof(p_indices), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    tg_vulkan_buffer_copy(sizeof(p_indices), staging_buffer.buffer, h_renderer->screen_quad_indices.buffer);
+
+    tg_memory_copy(sizeof(p_positions), p_positions, staging_buffer.memory.p_mapped_device_memory);
+    tg_vulkan_buffer_flush_mapped_memory(&staging_buffer);
+    h_renderer->screen_quad_positions_buffer = tg_vulkan_buffer_create(sizeof(p_positions), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    tg_vulkan_buffer_copy(sizeof(p_positions), staging_buffer.buffer, h_renderer->screen_quad_positions_buffer.buffer);
+
+    tg_memory_copy(sizeof(p_uvs), p_uvs, staging_buffer.memory.p_mapped_device_memory);
+    tg_vulkan_buffer_flush_mapped_memory(&staging_buffer);
+    h_renderer->screen_quad_uvs_buffer = tg_vulkan_buffer_create(sizeof(p_uvs), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    tg_vulkan_buffer_copy(sizeof(p_uvs), staging_buffer.buffer, h_renderer->screen_quad_uvs_buffer.buffer);
     
     tg_vulkan_buffer_destroy(&staging_buffer);
 

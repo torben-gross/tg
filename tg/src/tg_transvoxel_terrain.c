@@ -36,14 +36,6 @@ typedef enum tg_full_resolution_face
 
 
 
-typedef struct tg_transvoxel_vertex
-{
-	v3    position;
-	v3    normal;
-} tg_transvoxel_vertex;
-
-
-
 
 
 static void tg__fill_voxel_map(v3i octree_min_coordinates, i8* p_voxel_map_buffer)
@@ -209,18 +201,6 @@ static u8 tg__get_transition_mask(v3 camera_position, v3i octree_min_coordinates
 	return transition_mask;
 }
 
-static v3 tg__normalized_not_null(v3 v)
-{
-	const f32 magsqr = tgm_v3_magsqr(v);
-	v3 result = { 0.0f, 1.0f, 0.0f };
-	if (magsqr != 0.0f)
-	{
-		const f32 mag = tgm_f32_sqrt(magsqr);
-		result = (v3) { v.x / mag, v.y / mag, v.z / mag };
-	}
-	return result;
-}
-
 static v3i tg__transition_face_to_block(v3i pad, u8 half_resolution_lod, i32 x, i32 y, u8 direction)
 {
 	TG_ASSERT(half_resolution_lod > 0);
@@ -247,7 +227,7 @@ static v3i tg__transition_face_to_block(v3i pad, u8 half_resolution_lod, i32 x, 
 
 
 
-static void tg__build_block(v3i octree_min_coordinates, v3i block_offset_in_octree, u8 lod, const i8* p_voxel_map, u16* p_vertex_count, tg_transvoxel_vertex* p_vertex_buffer)
+static void tg__build_block(v3i octree_min_coordinates, v3i block_offset_in_octree, u8 lod, const i8* p_voxel_map, u16* p_position_count, v3* p_position_buffer)
 {
 	const i32 scaled_block_stride_in_cells = TG_CELLS_PER_BLOCK_SIDE << lod;
 	const i32 lod_scale = 1 << lod;
@@ -379,26 +359,18 @@ static void tg__build_block(v3i octree_min_coordinates, v3i block_offset_in_octr
 						{
 							q = tgm_v3i_to_v3(t == 0 ? p1 : p0);
 						}
-						p_vertex_buffer[j].position = q;
+						p_position_buffer[j] = q;
 					}
 
-					const v3 v01 = tgm_v3_sub(p_vertex_buffer[1].position, p_vertex_buffer[0].position);
-					const v3 v02 = tgm_v3_sub(p_vertex_buffer[2].position, p_vertex_buffer[0].position);
-					const v3 normal = tg__normalized_not_null(tgm_v3_cross(v01, v02));
-
-					p_vertex_buffer[0].normal = normal;
-					p_vertex_buffer[1].normal = normal;
-					p_vertex_buffer[2].normal = normal;
-
-					p_vertex_buffer += 3;
-					*p_vertex_count += 3;
+					p_position_buffer += 3;
+					*p_position_count += 3;
 				}
 			}
 		}
 	}
 }
 
-static void tg__build_transition(v3i octree_min_coordinates, v3i block_offset_in_octree, u8 lod, const i8* p_voxel_map, u8 direction, u16* p_vertex_count, tg_transvoxel_vertex* p_vertex_buffer)
+static void tg__build_transition(v3i octree_min_coordinates, v3i block_offset_in_octree, u8 lod, const i8* p_voxel_map, u8 direction, u16* p_position_count, v3* p_position_buffer)
 {
 	TG_ASSERT(lod > 0);
 
@@ -551,26 +523,18 @@ static void tg__build_transition(v3i octree_min_coordinates, v3i block_offset_in
 					{
 						q = tgm_v3i_to_v3(t == 0 ? p1 : p0);
 					}
-					p_vertex_buffer[j].position = q;
+					p_position_buffer[j] = q;
 				}
 
 				if (invert)
 				{
-					const v3 temp = p_vertex_buffer[2].position;
-					p_vertex_buffer[2].position = p_vertex_buffer[1].position;
-					p_vertex_buffer[1].position = temp;
+					const v3 temp = p_position_buffer[2];
+					p_position_buffer[2] = p_position_buffer[1];
+					p_position_buffer[1] = temp;
 				}
 
-				const v3 v01 = tgm_v3_sub(p_vertex_buffer[1].position, p_vertex_buffer[0].position);
-				const v3 v02 = tgm_v3_sub(p_vertex_buffer[2].position, p_vertex_buffer[0].position);
-				const v3 normal = tg__normalized_not_null(tgm_v3_cross(v01, v02));
-
-				p_vertex_buffer[0].normal = normal;
-				p_vertex_buffer[1].normal = normal;
-				p_vertex_buffer[2].normal = normal;
-
-				p_vertex_buffer += 3;
-				*p_vertex_count += 3;
+				p_position_buffer += 3;
+				*p_position_count += 3;
 			}
 		}
 	}
@@ -578,42 +542,46 @@ static void tg__build_transition(v3i octree_min_coordinates, v3i block_offset_in
 
 static void tg__build_node(tg_terrain* p_terrain, tg_terrain_octree* p_octree, tg_terrain_octree_node* p_node, v3i block_offset_in_octree, u8 lod)
 {
-	const u64 vertex_buffer_size = 15 * TG_CELLS_PER_BLOCK * sizeof(tg_transvoxel_vertex);
-	tg_transvoxel_vertex* p_vertex_buffer = TG_MEMORY_STACK_ALLOC(vertex_buffer_size);
+	const u64 positions_size = 15 * TG_CELLS_PER_BLOCK * sizeof(v3);
+	v3* p_positions = TG_MEMORY_STACK_ALLOC(positions_size);
 
 	p_node->flags |= TG_TRANSVOXEL_FLAG_LEAF;
 
-	u16 vertex_count = 0;
-	tg__build_block(p_octree->min_coordinates, block_offset_in_octree, lod, p_octree->p_voxel_map, &vertex_count, p_vertex_buffer);
+	u16 position_count = 0;
+	tg__build_block(p_octree->min_coordinates, block_offset_in_octree, lod, p_octree->p_voxel_map, &position_count, p_positions);
 
 	tg_terrain_block* p_block = &p_node->block;
 
 	p_block->transition_mask = tg__get_transition_mask(p_terrain->p_camera->position, p_octree->min_coordinates, block_offset_in_octree, lod);
 
-	if (vertex_count)
+	if (position_count)
 	{
 		const tg_vertex_input_attribute_format p_formats[2] = { TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32B32_SFLOAT, TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32B32_SFLOAT };
-		p_block->h_block_mesh = tg_mesh_create2(vertex_count, 2, p_formats, p_vertex_buffer, 0, TG_NULL);
-		p_block->h_block_render_command = tg_render_command_create(p_block->h_block_mesh, p_terrain->h_material, V3(0), 0, TG_NULL);
+		p_block->block_mesh = tg_mesh_create();
+		tg_mesh_set_positions(&p_block->block_mesh, position_count, p_positions);
+		tg_mesh_regenerate_normals(&p_block->block_mesh);
+		p_block->h_block_render_command = tg_render_command_create(&p_block->block_mesh, p_terrain->h_material, V3(0), 0, TG_NULL);
 	}
 
 	if (lod > 0)
 	{
 		for (u8 i = 0; i < 6; i++)
 		{
-			vertex_count = 0;
-			tg__build_transition(p_octree->min_coordinates, block_offset_in_octree, lod, p_octree->p_voxel_map, i, &vertex_count, p_vertex_buffer);
+			position_count = 0;
+			tg__build_transition(p_octree->min_coordinates, block_offset_in_octree, lod, p_octree->p_voxel_map, i, &position_count, p_positions);
 
-			if (vertex_count)
+			if (position_count)
 			{
 				const tg_vertex_input_attribute_format p_formats[2] = { TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32B32_SFLOAT, TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32B32_SFLOAT };
-				p_block->ph_transition_meshes[i] = tg_mesh_create2(vertex_count, 2, p_formats, p_vertex_buffer, 0, TG_NULL);
-				p_block->ph_transition_render_commands[i] = tg_render_command_create(p_block->ph_transition_meshes[i], p_terrain->h_material, V3(0), 0, TG_NULL);
+				p_block->p_transition_meshes[i] = tg_mesh_create();
+				tg_mesh_set_positions(&p_block->p_transition_meshes[i], position_count, p_positions);
+				tg_mesh_regenerate_normals(&p_block->p_transition_meshes[i]);
+				p_block->ph_transition_render_commands[i] = tg_render_command_create(&p_block->p_transition_meshes[i], p_terrain->h_material, V3(0), 0, TG_NULL);
 			}
 		}
 	}
 
-	TG_MEMORY_STACK_FREE(vertex_buffer_size);
+	TG_MEMORY_STACK_FREE(positions_size);
 }
 
 static void tg__build_node_children(tg_terrain* p_terrain, tg_terrain_octree* p_octree, tg_terrain_octree_node* p_node, v3i block_offset_in_octree, u8 lod)
@@ -701,16 +669,16 @@ static void tg__destroy_nodes_recursively(tg_terrain_octree_node* p_node)
 
 		if (p_block->h_block_render_command)
 		{
-			tg_mesh_destroy(p_block->h_block_mesh);
 			tg_render_command_destroy(p_block->h_block_render_command);
+			tg_mesh_destroy(&p_block->block_mesh);
 		}
 
 		for (u8 i = 0; i < 6; i++)
 		{
 			if (p_block->ph_transition_render_commands[i])
 			{
-				tg_mesh_destroy(p_block->ph_transition_meshes[i]);
 				tg_render_command_destroy(p_block->ph_transition_render_commands[i]);
+				tg_mesh_destroy(&p_block->p_transition_meshes[i]);
 			}
 		}
 
