@@ -29,6 +29,10 @@
 
 #define TG_IMAGE_MAX_MIP_LEVELS(w, h)     ((u32)tgm_f32_log2((f32)tgm_u32_max((u32)w, (u32)h)) + 1)
 
+#define TG_CAMERA_RIGHT(camera)      (tgm_m4_mulv4(tgm_m4_inverse(tgm_m4_euler((camera).pitch, (camera).yaw, (camera).roll)), (v4){  1.0f,  0.0f,  0.0f,  0.0f }).xyz)
+#define TG_CAMERA_UP(camera)         (tgm_m4_mulv4(tgm_m4_inverse(tgm_m4_euler((camera).pitch, (camera).yaw, (camera).roll)), (v4){  0.0f,  1.0f,  0.0f,  0.0f }).xyz)
+#define TG_CAMERA_FORWARD(camera)    (tgm_m4_mulv4(tgm_m4_inverse(tgm_m4_euler((camera).pitch, (camera).yaw, (camera).roll)), (v4){  0.0f,  0.0f, -1.0f,  0.0f }).xyz)
+
 
 
 TG_DECLARE_HANDLE(tg_compute_shader);
@@ -69,7 +73,7 @@ typedef enum tg_depth_image_format
 	TG_DEPTH_IMAGE_FORMAT_D32_SFLOAT    = 126
 } tg_depth_image_format;
 
-typedef enum tg_structure_type // TODO: rename to tg_structure_type
+typedef enum tg_structure_type
 {
 	TG_STRUCTURE_TYPE_INVALID = 0,
 	TG_STRUCTURE_TYPE_STORAGE_BUFFER,
@@ -310,18 +314,20 @@ void tg_spirv_fill_layout(u32 word_count, const u32* p_words, tg_spirv_layout* p
 
 
 #define TG_VULKAN_TAKE_HANDLE(p_array, p_result)                                   \
-    const u32 array_element_count = sizeof(p_array) / sizeof(*p_array);            \
+    const u32 array_element_count = sizeof(p_array) / sizeof(*(p_array));            \
     for (u32 handle_index = 0; handle_index < array_element_count; handle_index++) \
     {                                                                              \
-        if (p_array[handle_index].type == TG_STRUCTURE_TYPE_INVALID)                  \
+        if ((p_array)[handle_index].type == TG_STRUCTURE_TYPE_INVALID)                  \
         {                                                                          \
-            p_result = &p_array[handle_index];                                     \
+            (p_result) = &(p_array)[handle_index];                                     \
             break;                                                                 \
         }                                                                          \
     }                                                                              \
     TG_ASSERT(p_result)
 
-#define TG_VULKAN_RELEASE_HANDLE(handle)                             TG_ASSERT(handle && handle->type != TG_STRUCTURE_TYPE_INVALID); handle->type = TG_STRUCTURE_TYPE_INVALID
+#define TG_VULKAN_RELEASE_HANDLE(handle)                             TG_ASSERT((handle) && (handle)->type != TG_STRUCTURE_TYPE_INVALID); (handle)->type = TG_STRUCTURE_TYPE_INVALID
+
+#define TG_MESH_POSITIONS(mesh) ((mesh).p_positions)
 
 
 

@@ -2,6 +2,7 @@
 
 #include "graphics/tg_graphics.h"
 #include "memory/tg_memory.h"
+#include "physics/tg_physics.h"
 #include "platform/tg_platform.h"
 #include "tg_assets.h"
 #include "tg_input.h"
@@ -153,6 +154,11 @@ static void tg__game_3d_create()
 
     scene.sponza_mesh = tg_mesh_create2("meshes/sponza.obj", V3(0.01f));
     tg_kd_tree* p_sponza_kd_tree = tg_kd_tree_create(&scene.sponza_mesh);
+    const v3 origin = tgm_v3_sub(scene.camera.position, (v3) { 128.0f, 140.0f, 128.0f });
+    const v3 direction = TG_CAMERA_FORWARD(scene.camera);
+    v3 hit = { 0 };
+    const b32 raycast_result = tg_raycast_kd_tree(origin, direction, p_sponza_kd_tree, &hit);
+
 
     scene.sponza_ubo = tg_uniform_buffer_create(sizeof(tg_pbr_material));
     ((tg_pbr_material*)tg_uniform_buffer_data(&scene.sponza_ubo))->albedo = (v4) { 1.0f, 1.0f, 1.0f, 1.0f };
@@ -180,8 +186,8 @@ static void tg__game_3d_create()
 
 
 
-    scene.pbr_sphere_mesh = tg_mesh_create_sphere_flat(0.5f, 128, 64, TG_TRUE, TG_FALSE, TG_FALSE);
-    scene.pbr_sphere_mesh2 = tg_mesh_create_sphere_flat(3.0f, 128, 64, TG_TRUE, TG_FALSE, TG_FALSE);
+    scene.pbr_sphere_mesh = tg_mesh_create_sphere_flat(0.5f, 128, 64, TG_TRUE, TG_TRUE, TG_FALSE);
+    scene.pbr_sphere_mesh2 = tg_mesh_create_sphere_flat(3.0f, 128, 64, TG_TRUE, TG_TRUE, TG_FALSE);
     for (u32 y = 0; y < 7; y++)
     {
         for (u32 x = 0; x < 7; x++)

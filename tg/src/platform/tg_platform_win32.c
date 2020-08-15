@@ -207,7 +207,7 @@ void tg_platform_file_read(const char* p_filename, u64 buffer_size, char* p_buff
     const u32 size = GetFileSize(h_file, TG_NULL);
     TG_ASSERT(buffer_size >= size);
     u32 number_of_bytes_read = 0;
-    ReadFile(h_file, p_buffer, size, &number_of_bytes_read, TG_NULL);
+    WIN32_CALL(ReadFile(h_file, p_buffer, size, &number_of_bytes_read, TG_NULL));
 
     CloseHandle(h_file);
 }
@@ -639,7 +639,10 @@ int CALLBACK WinMain(_In_ HINSTANCE h_instance, _In_opt_ HINSTANCE h_prev_instan
         u32 thread_id = 0;
         HANDLE h_thread = CreateThread(TG_NULL, 0, tg__worker_thread_proc, TG_NULL, 0, &thread_id);
         p_thread_ids[i + 1] = thread_id;
+#pragma warning(push) // TODO: this is ridiculous
+#pragma warning(disable:6001)
         WIN32_CALL(CloseHandle(h_thread));
+#pragma warning(pop)
     }
 
     h_process_heap = GetProcessHeap();
