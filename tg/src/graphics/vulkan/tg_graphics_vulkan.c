@@ -13,11 +13,11 @@
 #ifdef TG_WIN32
 
 #ifdef TG_DEBUG
-#define TG_VULKAN_INSTANCE_EXTENSION_COUNT    3
-#define TG_VULKAN_INSTANCE_EXTENSION_NAMES    { VK_EXT_DEBUG_UTILS_EXTENSION_NAME, VK_KHR_SURFACE_EXTENSION_NAME, VK_KHR_WIN32_SURFACE_EXTENSION_NAME }
+#define TG_VULKAN_INSTANCE_EXTENSION_COUNT    4
+#define TG_VULKAN_INSTANCE_EXTENSION_NAMES    { VK_EXT_DEBUG_UTILS_EXTENSION_NAME, VK_KHR_SURFACE_EXTENSION_NAME, VK_KHR_WIN32_SURFACE_EXTENSION_NAME, VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME }
 #else
-#define TG_VULKAN_INSTANCE_EXTENSION_COUNT    2
-#define TG_VULKAN_INSTANCE_EXTENSION_NAMES    { VK_KHR_SURFACE_EXTENSION_NAME, VK_KHR_WIN32_SURFACE_EXTENSION_NAME }
+#define TG_VULKAN_INSTANCE_EXTENSION_COUNT    3
+#define TG_VULKAN_INSTANCE_EXTENSION_NAMES    { VK_KHR_SURFACE_EXTENSION_NAME, VK_KHR_WIN32_SURFACE_EXTENSION_NAME, VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME }
 #endif
 
 #else
@@ -27,8 +27,8 @@
 
 #endif
 
-#define TG_VULKAN_DEVICE_EXTENSION_COUNT      1
-#define TG_VULKAN_DEVICE_EXTENSION_NAMES      { VK_KHR_SWAPCHAIN_EXTENSION_NAME }
+#define TG_VULKAN_DEVICE_EXTENSION_COUNT      2
+#define TG_VULKAN_DEVICE_EXTENSION_NAMES      { VK_KHR_SWAPCHAIN_EXTENSION_NAME, VK_EXT_CONSERVATIVE_RASTERIZATION_EXTENSION_NAME }
 
 #ifdef TG_DEBUG
 #define TG_VULKAN_VALIDATION_LAYER_COUNT      1
@@ -1445,7 +1445,7 @@ tg_vulkan_pipeline tg_vulkan_pipeline_create_graphics2(const tg_vulkan_graphics_
     pipeline_rasterization_state_create_info.flags = 0;
     pipeline_rasterization_state_create_info.depthClampEnable = VK_TRUE; // TODO: make this optional
     pipeline_rasterization_state_create_info.rasterizerDiscardEnable = VK_FALSE;
-    pipeline_rasterization_state_create_info.polygonMode = VK_POLYGON_MODE_FILL;
+    pipeline_rasterization_state_create_info.polygonMode = p_create_info->polygon_mode;
     pipeline_rasterization_state_create_info.cullMode = p_create_info->cull_mode;
     pipeline_rasterization_state_create_info.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     pipeline_rasterization_state_create_info.depthBiasEnable = VK_FALSE;
@@ -1960,7 +1960,7 @@ static b32 tg__physical_device_supports_extension(VkPhysicalDevice physical_devi
         b32 supports_extension = TG_FALSE;
         for (u32 j = 0; j < device_extension_property_count; j++)
         {
-            if (strcmp(((char*[TG_VULKAN_DEVICE_EXTENSION_COUNT])TG_VULKAN_DEVICE_EXTENSION_NAMES)[i], device_extension_properties[j].extensionName) == 0)
+            if (tg_string_equal(((char*[TG_VULKAN_DEVICE_EXTENSION_COUNT])TG_VULKAN_DEVICE_EXTENSION_NAMES)[i], device_extension_properties[j].extensionName) == 0)
             {
                 supports_extension = TG_TRUE;
                 break;
@@ -2210,7 +2210,7 @@ static VkDevice tg__device_create()
     physical_device_features.drawIndirectFirstInstance = VK_FALSE;
     physical_device_features.depthClamp = VK_TRUE;
     physical_device_features.depthBiasClamp = VK_FALSE;
-    physical_device_features.fillModeNonSolid = VK_FALSE;
+    physical_device_features.fillModeNonSolid = VK_TRUE;
     physical_device_features.depthBounds = VK_FALSE;
     physical_device_features.wideLines = VK_FALSE;
     physical_device_features.largePoints = VK_FALSE;

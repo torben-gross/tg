@@ -149,10 +149,10 @@ static void tg__game_3d_create()
     scene.camera.pitch = 0.0f;
     scene.camera.yaw = 0.0f;
     scene.camera.roll = 0.0f;
-    scene.camera.perspective.fov_y_in_radians = TG_TO_RADIANS(70.0f);
-    scene.camera.perspective.aspect = tg_platform_get_window_aspect_ratio();
-    scene.camera.perspective.near = -0.1f;
-    scene.camera.perspective.far = -1000.0f;
+    scene.camera.persp.fov_y_in_radians = TG_TO_RADIANS(70.0f);
+    scene.camera.persp.aspect = tg_platform_get_window_aspect_ratio();
+    scene.camera.persp.n = -0.1f;
+    scene.camera.persp.f = -1000.0f;
     tg_input_get_mouse_position(&scene.last_mouse_x, &scene.last_mouse_y);
     scene.h_main_renderer = tg_renderer_create(&scene.camera);
     scene.h_secondary_renderer = tg_renderer_create(&scene.camera);
@@ -279,13 +279,6 @@ static void tg__game_3d_create()
             tg_list_insert(&scene.render_commands, &scene.p_pbr_spheres[i].h_render_command);
         }
     }
-
-
-    // TODO: implement :)
-    // tg_renderer_bake_begin(scene.h_main_renderer);
-    // tg_renderer_bake_push_probe(scene.h_main_renderer, 128.0f, 145.0f, 128.0f);
-    // tg_renderer_bake_push_static(scene.h_main_renderer, h_sponza_render_command);
-    // tg_renderer_bake_end(scene.h_main_renderer);
 }
 
 static void tg__game_3d_update_and_render(f32 dt)
@@ -368,7 +361,7 @@ static void tg__game_3d_update_and_render(f32 dt)
 
     if (tg_input_get_mouse_wheel_detents(TG_FALSE))
     {
-        scene.camera.perspective.fov_y_in_radians -= 0.1f * tg_input_get_mouse_wheel_detents(TG_TRUE);
+        scene.camera.persp.fov_y_in_radians -= 0.1f * tg_input_get_mouse_wheel_detents(TG_TRUE);
     }
 
     tg_terrain_update(&scene.terrain, dt);
@@ -413,6 +406,7 @@ static void tg__game_3d_update_and_render(f32 dt)
     {
         tg_renderer_execute(scene.h_main_renderer, ph_render_commands[i]);
     }
+    tg_renderer_draw_cube_DEBUG(scene.h_main_renderer, scene.probe_translation, (v3) { 1.0f, 1.0f, 1.0f }, (v4) { 1.0f, 0.5f, 0.1f, 0.5f }, TG_TRUE);
     tg_renderer_end(scene.h_main_renderer);
 
     tg_renderer_present(scene.h_main_renderer);
@@ -452,10 +446,10 @@ static void tg__raytracer_test_create()
     raytrace_scene.camera.pitch = 0.0f;
     raytrace_scene.camera.yaw = 0.0f;
     raytrace_scene.camera.roll = 0.0f;
-    raytrace_scene.camera.perspective.fov_y_in_radians = TG_TO_RADIANS(70.0f);
-    raytrace_scene.camera.perspective.aspect = tg_platform_get_window_aspect_ratio();
-    raytrace_scene.camera.perspective.near = -0.1f;
-    raytrace_scene.camera.perspective.far = -1000.0f;
+    raytrace_scene.camera.persp.fov_y_in_radians = TG_TO_RADIANS(70.0f);
+    raytrace_scene.camera.persp.aspect = tg_platform_get_window_aspect_ratio();
+    raytrace_scene.camera.persp.n = -0.1f;
+    raytrace_scene.camera.persp.f = -1000.0f;
     tg_input_get_mouse_position(&raytrace_scene.last_mouse_x, &raytrace_scene.last_mouse_y);
 
     raytrace_scene.h_raytracer = tg_raytracer_create(&raytrace_scene.camera);

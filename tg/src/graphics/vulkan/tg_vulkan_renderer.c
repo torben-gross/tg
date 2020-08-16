@@ -249,6 +249,7 @@ static void tg__init_ssao_pass(tg_renderer_h h_renderer)
     ssao_pipeline_create_info.render_pass = h_renderer->ssao_pass.ssao_render_pass;
     ssao_pipeline_create_info.viewport_size.x = (f32)TG_SSAO_MAP_SIZE;
     ssao_pipeline_create_info.viewport_size.y = (f32)TG_SSAO_MAP_SIZE;
+    ssao_pipeline_create_info.polygon_mode = VK_POLYGON_MODE_FILL;
 
     h_renderer->ssao_pass.ssao_graphics_pipeline = tg_vulkan_pipeline_create_graphics(&ssao_pipeline_create_info);
     h_renderer->ssao_pass.ssao_ubo = tg_vulkan_buffer_create(sizeof(tg_ssao_info), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
@@ -341,6 +342,7 @@ static void tg__init_ssao_pass(tg_renderer_h h_renderer)
     blur_pipeline_create_info.render_pass = h_renderer->ssao_pass.blur_render_pass;
     blur_pipeline_create_info.viewport_size.x = (f32)TG_SSAO_MAP_SIZE;
     blur_pipeline_create_info.viewport_size.y = (f32)TG_SSAO_MAP_SIZE;
+    blur_pipeline_create_info.polygon_mode = VK_POLYGON_MODE_FILL;
 
     h_renderer->ssao_pass.blur_graphics_pipeline = tg_vulkan_pipeline_create_graphics(&blur_pipeline_create_info);
     tg_vulkan_descriptor_set_update_image(h_renderer->ssao_pass.blur_graphics_pipeline.descriptor_set, &h_renderer->ssao_pass.ssao_attachment, 0);
@@ -488,6 +490,7 @@ static void tg__init_shading_pass(tg_renderer_h h_renderer)
     vulkan_graphics_pipeline_create_info.render_pass = h_renderer->shading_pass.render_pass;
     vulkan_graphics_pipeline_create_info.viewport_size.x = (f32)h_renderer->shading_pass.framebuffer.width;
     vulkan_graphics_pipeline_create_info.viewport_size.y = (f32)h_renderer->shading_pass.framebuffer.height;
+    vulkan_graphics_pipeline_create_info.polygon_mode = VK_POLYGON_MODE_FILL;
 
     h_renderer->shading_pass.graphics_pipeline = tg_vulkan_pipeline_create_graphics(&vulkan_graphics_pipeline_create_info);
 
@@ -642,6 +645,7 @@ static void tg__init_tone_mapping_pass(tg_renderer_h h_renderer)
     exposure_vulkan_graphics_pipeline_create_info.render_pass = h_renderer->tone_mapping_pass.render_pass;
     exposure_vulkan_graphics_pipeline_create_info.viewport_size.x = (f32)h_renderer->tone_mapping_pass.framebuffer.width;
     exposure_vulkan_graphics_pipeline_create_info.viewport_size.y = (f32)h_renderer->tone_mapping_pass.framebuffer.height;
+    exposure_vulkan_graphics_pipeline_create_info.polygon_mode = VK_POLYGON_MODE_FILL;
 
     h_renderer->tone_mapping_pass.graphics_pipeline = tg_vulkan_pipeline_create_graphics(&exposure_vulkan_graphics_pipeline_create_info);
 
@@ -855,6 +859,7 @@ static void tg__init_present_pass(tg_renderer_h h_renderer)
     vulkan_graphics_pipeline_create_info.render_pass = h_renderer->present_pass.render_pass;
     vulkan_graphics_pipeline_create_info.viewport_size.x = (f32)swapchain_extent.width;
     vulkan_graphics_pipeline_create_info.viewport_size.y = (f32)swapchain_extent.height;
+    vulkan_graphics_pipeline_create_info.polygon_mode = VK_POLYGON_MODE_FILL;
 
     h_renderer->present_pass.graphics_pipeline = tg_vulkan_pipeline_create_graphics(&vulkan_graphics_pipeline_create_info);
 
@@ -1025,21 +1030,6 @@ void tg_renderer_enable_shadows(tg_renderer_h h_renderer, b32 enable)
     h_renderer->shadow_pass.enabled = enable;
 }
 
-void tg_renderer_bake_begin(tg_renderer_h h_renderer)
-{
-}
-
-void tg_renderer_bake_push_probe(tg_renderer_h h_renderer, f32 x, f32 y, f32 z)
-{
-    h_renderer->probe_position = (v3) { x, y, z };
-    h_renderer->probe = tg_color_image_3d_create(256, 256, 256, VK_FORMAT_R32G32B32A32_SFLOAT, TG_NULL);
-}
-
-void tg_renderer_bake_push_static(tg_renderer_h h_renderer, tg_render_command_h h_render_command)
-{
-    h_renderer->h_probe_raytracing_target = h_render_command;
-}
-
 void tg_renderer_bake_end(tg_renderer_h h_renderer)
 {
 
@@ -1050,6 +1040,9 @@ void tg_renderer_begin(tg_renderer_h h_renderer)
     TG_ASSERT(h_renderer);
 
     h_renderer->render_command_count = 0;
+#if TG_ENABLE_DEBUG_TOOLS == 1
+    h_renderer->DEBUG.cube_count = 0;
+#endif
 }
 
 void tg_renderer_push_directional_light(tg_renderer_h h_renderer, v3 direction, v3 color)
@@ -1118,35 +1111,22 @@ void tg_renderer_execute(tg_renderer_h h_renderer, tg_render_command_h h_render_
 void tg_renderer_end(tg_renderer_h h_renderer)
 {
     TG_ASSERT(h_renderer);
-
+    
+    const tg_camera* p_cam = h_renderer->p_camera;
     TG_CAMERA_VIEW(h_renderer->view_projection_ubo) = tgm_m4_mul(
-        tgm_m4_inverse(tgm_m4_euler(h_renderer->p_camera->pitch, h_renderer->p_camera->yaw, h_renderer->p_camera->roll)),
-        tgm_m4_translate(tgm_v3_neg(h_renderer->p_camera->position))
+        tgm_m4_inverse(tgm_m4_euler(p_cam->pitch, p_cam->yaw, p_cam->roll)),
+        tgm_m4_translate(tgm_v3_neg(p_cam->position))
     );
-    switch (h_renderer->p_camera->type)
+
+    if (h_renderer->p_camera->type == TG_CAMERA_TYPE_ORTHOGRAPHIC)
     {
-    case TG_CAMERA_TYPE_ORTHOGRAPHIC:
-    {
-        TG_CAMERA_PROJ(h_renderer->view_projection_ubo) = tgm_m4_orthographic(
-            h_renderer->p_camera->orthographic.left,
-            h_renderer->p_camera->orthographic.right,
-            h_renderer->p_camera->orthographic.bottom,
-            h_renderer->p_camera->orthographic.top,
-            h_renderer->p_camera->orthographic.far,
-            h_renderer->p_camera->orthographic.near
-        );
-    } break;
-    case TG_CAMERA_TYPE_PERSPECTIVE:
-    {
-        TG_CAMERA_PROJ(h_renderer->view_projection_ubo) = tgm_m4_perspective(
-            h_renderer->p_camera->perspective.fov_y_in_radians,
-            h_renderer->p_camera->perspective.aspect,
-            h_renderer->p_camera->perspective.near,
-            h_renderer->p_camera->perspective.far
-        );
-    } break;
-    default: TG_INVALID_CODEPATH(); break;
+        TG_CAMERA_PROJ(h_renderer->view_projection_ubo) = tgm_m4_orthographic(p_cam->ortho.l, p_cam->ortho.r, p_cam->ortho.b, p_cam->ortho.t, p_cam->ortho.f, p_cam->ortho.n);
     }
+    else
+    {
+        TG_CAMERA_PROJ(h_renderer->view_projection_ubo) = tgm_m4_perspective(p_cam->persp.fov_y_in_radians, p_cam->persp.aspect, p_cam->persp.n, p_cam->persp.f);
+    }
+
     ((tg_ssao_info*)h_renderer->ssao_pass.ssao_ubo.memory.p_mapped_device_memory)->view = TG_CAMERA_VIEW(h_renderer->view_projection_ubo);
     ((tg_ssao_info*)h_renderer->ssao_pass.ssao_ubo.memory.p_mapped_device_memory)->projection = TG_CAMERA_PROJ(h_renderer->view_projection_ubo);
 
@@ -1407,6 +1387,108 @@ void tg_renderer_end(tg_renderer_h h_renderer)
             }
         }
     }
+    
+#if TG_ENABLE_DEBUG_TOOLS == 1
+    tg_vulkan_buffer* DEBUG_p_position_buffers = TG_MEMORY_STACK_ALLOC(TG_DEBUG_MAX_CUBES * sizeof(*DEBUG_p_position_buffers));
+    tg_vulkan_buffer* DEBUG_p_color_buffers = TG_MEMORY_STACK_ALLOC(TG_DEBUG_MAX_CUBES * sizeof(*DEBUG_p_color_buffers));
+    tg_vulkan_pipeline* DEBUG_p_graphics_pipelines = TG_MEMORY_STACK_ALLOC(TG_DEBUG_MAX_CUBES * sizeof(*DEBUG_p_graphics_pipelines));
+    VkCommandBuffer* DEBUG_p_command_buffers = TG_MEMORY_STACK_ALLOC(TG_DEBUG_MAX_CUBES * sizeof(*DEBUG_p_command_buffers));
+
+    for (u32 i = 0; i < h_renderer->DEBUG.cube_count; i++)
+    {
+        DEBUG_p_position_buffers[i] = tg_vulkan_buffer_create(36 * sizeof(v3), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+        DEBUG_p_color_buffers[i] = tg_vulkan_buffer_create(36 * sizeof(v4), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+
+        ((v3*)DEBUG_p_position_buffers[i].memory.p_mapped_device_memory)[ 0] = tgm_v3_add(h_renderer->DEBUG.p_cubes[i].position, (v3) { -h_renderer->DEBUG.p_cubes[i].scale.x / 2.0f, -h_renderer->DEBUG.p_cubes[i].scale.y / 2.0f, -h_renderer->DEBUG.p_cubes[i].scale.z / 2.0f });
+        ((v3*)DEBUG_p_position_buffers[i].memory.p_mapped_device_memory)[ 1] = tgm_v3_add(h_renderer->DEBUG.p_cubes[i].position, (v3) { -h_renderer->DEBUG.p_cubes[i].scale.x / 2.0f, -h_renderer->DEBUG.p_cubes[i].scale.y / 2.0f,  h_renderer->DEBUG.p_cubes[i].scale.z / 2.0f });
+        ((v3*)DEBUG_p_position_buffers[i].memory.p_mapped_device_memory)[ 2] = tgm_v3_add(h_renderer->DEBUG.p_cubes[i].position, (v3) { -h_renderer->DEBUG.p_cubes[i].scale.x / 2.0f,  h_renderer->DEBUG.p_cubes[i].scale.y / 2.0f,  h_renderer->DEBUG.p_cubes[i].scale.z / 2.0f });
+        ((v3*)DEBUG_p_position_buffers[i].memory.p_mapped_device_memory)[ 3] = tgm_v3_add(h_renderer->DEBUG.p_cubes[i].position, (v3) { -h_renderer->DEBUG.p_cubes[i].scale.x / 2.0f,  h_renderer->DEBUG.p_cubes[i].scale.y / 2.0f,  h_renderer->DEBUG.p_cubes[i].scale.z / 2.0f });
+        ((v3*)DEBUG_p_position_buffers[i].memory.p_mapped_device_memory)[ 4] = tgm_v3_add(h_renderer->DEBUG.p_cubes[i].position, (v3) { -h_renderer->DEBUG.p_cubes[i].scale.x / 2.0f,  h_renderer->DEBUG.p_cubes[i].scale.y / 2.0f, -h_renderer->DEBUG.p_cubes[i].scale.z / 2.0f });
+        ((v3*)DEBUG_p_position_buffers[i].memory.p_mapped_device_memory)[ 5] = tgm_v3_add(h_renderer->DEBUG.p_cubes[i].position, (v3) { -h_renderer->DEBUG.p_cubes[i].scale.x / 2.0f, -h_renderer->DEBUG.p_cubes[i].scale.y / 2.0f, -h_renderer->DEBUG.p_cubes[i].scale.z / 2.0f });
+
+        ((v3*)DEBUG_p_position_buffers[i].memory.p_mapped_device_memory)[ 6] = tgm_v3_add(h_renderer->DEBUG.p_cubes[i].position, (v3) {  h_renderer->DEBUG.p_cubes[i].scale.x / 2.0f, -h_renderer->DEBUG.p_cubes[i].scale.y / 2.0f,  h_renderer->DEBUG.p_cubes[i].scale.z / 2.0f });
+        ((v3*)DEBUG_p_position_buffers[i].memory.p_mapped_device_memory)[ 7] = tgm_v3_add(h_renderer->DEBUG.p_cubes[i].position, (v3) {  h_renderer->DEBUG.p_cubes[i].scale.x / 2.0f, -h_renderer->DEBUG.p_cubes[i].scale.y / 2.0f, -h_renderer->DEBUG.p_cubes[i].scale.z / 2.0f });
+        ((v3*)DEBUG_p_position_buffers[i].memory.p_mapped_device_memory)[ 8] = tgm_v3_add(h_renderer->DEBUG.p_cubes[i].position, (v3) {  h_renderer->DEBUG.p_cubes[i].scale.x / 2.0f,  h_renderer->DEBUG.p_cubes[i].scale.y / 2.0f, -h_renderer->DEBUG.p_cubes[i].scale.z / 2.0f });
+        ((v3*)DEBUG_p_position_buffers[i].memory.p_mapped_device_memory)[ 9] = tgm_v3_add(h_renderer->DEBUG.p_cubes[i].position, (v3) {  h_renderer->DEBUG.p_cubes[i].scale.x / 2.0f,  h_renderer->DEBUG.p_cubes[i].scale.y / 2.0f, -h_renderer->DEBUG.p_cubes[i].scale.z / 2.0f });
+        ((v3*)DEBUG_p_position_buffers[i].memory.p_mapped_device_memory)[10] = tgm_v3_add(h_renderer->DEBUG.p_cubes[i].position, (v3) {  h_renderer->DEBUG.p_cubes[i].scale.x / 2.0f,  h_renderer->DEBUG.p_cubes[i].scale.y / 2.0f,  h_renderer->DEBUG.p_cubes[i].scale.z / 2.0f });
+        ((v3*)DEBUG_p_position_buffers[i].memory.p_mapped_device_memory)[11] = tgm_v3_add(h_renderer->DEBUG.p_cubes[i].position, (v3) {  h_renderer->DEBUG.p_cubes[i].scale.x / 2.0f, -h_renderer->DEBUG.p_cubes[i].scale.y / 2.0f,  h_renderer->DEBUG.p_cubes[i].scale.z / 2.0f });
+
+        ((v3*)DEBUG_p_position_buffers[i].memory.p_mapped_device_memory)[12] = tgm_v3_add(h_renderer->DEBUG.p_cubes[i].position, (v3) { -h_renderer->DEBUG.p_cubes[i].scale.x / 2.0f, -h_renderer->DEBUG.p_cubes[i].scale.y / 2.0f, -h_renderer->DEBUG.p_cubes[i].scale.z / 2.0f });
+        ((v3*)DEBUG_p_position_buffers[i].memory.p_mapped_device_memory)[13] = tgm_v3_add(h_renderer->DEBUG.p_cubes[i].position, (v3) {  h_renderer->DEBUG.p_cubes[i].scale.x / 2.0f, -h_renderer->DEBUG.p_cubes[i].scale.y / 2.0f, -h_renderer->DEBUG.p_cubes[i].scale.z / 2.0f });
+        ((v3*)DEBUG_p_position_buffers[i].memory.p_mapped_device_memory)[14] = tgm_v3_add(h_renderer->DEBUG.p_cubes[i].position, (v3) {  h_renderer->DEBUG.p_cubes[i].scale.x / 2.0f, -h_renderer->DEBUG.p_cubes[i].scale.y / 2.0f,  h_renderer->DEBUG.p_cubes[i].scale.z / 2.0f });
+        ((v3*)DEBUG_p_position_buffers[i].memory.p_mapped_device_memory)[15] = tgm_v3_add(h_renderer->DEBUG.p_cubes[i].position, (v3) {  h_renderer->DEBUG.p_cubes[i].scale.x / 2.0f, -h_renderer->DEBUG.p_cubes[i].scale.y / 2.0f,  h_renderer->DEBUG.p_cubes[i].scale.z / 2.0f });
+        ((v3*)DEBUG_p_position_buffers[i].memory.p_mapped_device_memory)[16] = tgm_v3_add(h_renderer->DEBUG.p_cubes[i].position, (v3) { -h_renderer->DEBUG.p_cubes[i].scale.x / 2.0f, -h_renderer->DEBUG.p_cubes[i].scale.y / 2.0f,  h_renderer->DEBUG.p_cubes[i].scale.z / 2.0f });
+        ((v3*)DEBUG_p_position_buffers[i].memory.p_mapped_device_memory)[17] = tgm_v3_add(h_renderer->DEBUG.p_cubes[i].position, (v3) { -h_renderer->DEBUG.p_cubes[i].scale.x / 2.0f, -h_renderer->DEBUG.p_cubes[i].scale.y / 2.0f, -h_renderer->DEBUG.p_cubes[i].scale.z / 2.0f });
+
+        ((v3*)DEBUG_p_position_buffers[i].memory.p_mapped_device_memory)[18] = tgm_v3_add(h_renderer->DEBUG.p_cubes[i].position, (v3) { -h_renderer->DEBUG.p_cubes[i].scale.x / 2.0f,  h_renderer->DEBUG.p_cubes[i].scale.y / 2.0f,  h_renderer->DEBUG.p_cubes[i].scale.z / 2.0f });
+        ((v3*)DEBUG_p_position_buffers[i].memory.p_mapped_device_memory)[19] = tgm_v3_add(h_renderer->DEBUG.p_cubes[i].position, (v3) {  h_renderer->DEBUG.p_cubes[i].scale.x / 2.0f,  h_renderer->DEBUG.p_cubes[i].scale.y / 2.0f,  h_renderer->DEBUG.p_cubes[i].scale.z / 2.0f });
+        ((v3*)DEBUG_p_position_buffers[i].memory.p_mapped_device_memory)[20] = tgm_v3_add(h_renderer->DEBUG.p_cubes[i].position, (v3) {  h_renderer->DEBUG.p_cubes[i].scale.x / 2.0f,  h_renderer->DEBUG.p_cubes[i].scale.y / 2.0f, -h_renderer->DEBUG.p_cubes[i].scale.z / 2.0f });
+        ((v3*)DEBUG_p_position_buffers[i].memory.p_mapped_device_memory)[21] = tgm_v3_add(h_renderer->DEBUG.p_cubes[i].position, (v3) {  h_renderer->DEBUG.p_cubes[i].scale.x / 2.0f,  h_renderer->DEBUG.p_cubes[i].scale.y / 2.0f, -h_renderer->DEBUG.p_cubes[i].scale.z / 2.0f });
+        ((v3*)DEBUG_p_position_buffers[i].memory.p_mapped_device_memory)[22] = tgm_v3_add(h_renderer->DEBUG.p_cubes[i].position, (v3) { -h_renderer->DEBUG.p_cubes[i].scale.x / 2.0f,  h_renderer->DEBUG.p_cubes[i].scale.y / 2.0f, -h_renderer->DEBUG.p_cubes[i].scale.z / 2.0f });
+        ((v3*)DEBUG_p_position_buffers[i].memory.p_mapped_device_memory)[23] = tgm_v3_add(h_renderer->DEBUG.p_cubes[i].position, (v3) { -h_renderer->DEBUG.p_cubes[i].scale.x / 2.0f,  h_renderer->DEBUG.p_cubes[i].scale.y / 2.0f,  h_renderer->DEBUG.p_cubes[i].scale.z / 2.0f });
+
+        ((v3*)DEBUG_p_position_buffers[i].memory.p_mapped_device_memory)[24] = tgm_v3_add(h_renderer->DEBUG.p_cubes[i].position, (v3) {  h_renderer->DEBUG.p_cubes[i].scale.x / 2.0f, -h_renderer->DEBUG.p_cubes[i].scale.y / 2.0f, -h_renderer->DEBUG.p_cubes[i].scale.z / 2.0f });
+        ((v3*)DEBUG_p_position_buffers[i].memory.p_mapped_device_memory)[25] = tgm_v3_add(h_renderer->DEBUG.p_cubes[i].position, (v3) { -h_renderer->DEBUG.p_cubes[i].scale.x / 2.0f, -h_renderer->DEBUG.p_cubes[i].scale.y / 2.0f, -h_renderer->DEBUG.p_cubes[i].scale.z / 2.0f });
+        ((v3*)DEBUG_p_position_buffers[i].memory.p_mapped_device_memory)[26] = tgm_v3_add(h_renderer->DEBUG.p_cubes[i].position, (v3) { -h_renderer->DEBUG.p_cubes[i].scale.x / 2.0f,  h_renderer->DEBUG.p_cubes[i].scale.y / 2.0f, -h_renderer->DEBUG.p_cubes[i].scale.z / 2.0f });
+        ((v3*)DEBUG_p_position_buffers[i].memory.p_mapped_device_memory)[27] = tgm_v3_add(h_renderer->DEBUG.p_cubes[i].position, (v3) { -h_renderer->DEBUG.p_cubes[i].scale.x / 2.0f,  h_renderer->DEBUG.p_cubes[i].scale.y / 2.0f, -h_renderer->DEBUG.p_cubes[i].scale.z / 2.0f });
+        ((v3*)DEBUG_p_position_buffers[i].memory.p_mapped_device_memory)[28] = tgm_v3_add(h_renderer->DEBUG.p_cubes[i].position, (v3) {  h_renderer->DEBUG.p_cubes[i].scale.x / 2.0f,  h_renderer->DEBUG.p_cubes[i].scale.y / 2.0f, -h_renderer->DEBUG.p_cubes[i].scale.z / 2.0f });
+        ((v3*)DEBUG_p_position_buffers[i].memory.p_mapped_device_memory)[29] = tgm_v3_add(h_renderer->DEBUG.p_cubes[i].position, (v3) {  h_renderer->DEBUG.p_cubes[i].scale.x / 2.0f, -h_renderer->DEBUG.p_cubes[i].scale.y / 2.0f, -h_renderer->DEBUG.p_cubes[i].scale.z / 2.0f });
+        
+        ((v3*)DEBUG_p_position_buffers[i].memory.p_mapped_device_memory)[30] = tgm_v3_add(h_renderer->DEBUG.p_cubes[i].position, (v3) { -h_renderer->DEBUG.p_cubes[i].scale.x / 2.0f, -h_renderer->DEBUG.p_cubes[i].scale.y / 2.0f,  h_renderer->DEBUG.p_cubes[i].scale.z / 2.0f });
+        ((v3*)DEBUG_p_position_buffers[i].memory.p_mapped_device_memory)[31] = tgm_v3_add(h_renderer->DEBUG.p_cubes[i].position, (v3) {  h_renderer->DEBUG.p_cubes[i].scale.x / 2.0f, -h_renderer->DEBUG.p_cubes[i].scale.y / 2.0f,  h_renderer->DEBUG.p_cubes[i].scale.z / 2.0f });
+        ((v3*)DEBUG_p_position_buffers[i].memory.p_mapped_device_memory)[32] = tgm_v3_add(h_renderer->DEBUG.p_cubes[i].position, (v3) {  h_renderer->DEBUG.p_cubes[i].scale.x / 2.0f,  h_renderer->DEBUG.p_cubes[i].scale.y / 2.0f,  h_renderer->DEBUG.p_cubes[i].scale.z / 2.0f });
+        ((v3*)DEBUG_p_position_buffers[i].memory.p_mapped_device_memory)[33] = tgm_v3_add(h_renderer->DEBUG.p_cubes[i].position, (v3) {  h_renderer->DEBUG.p_cubes[i].scale.x / 2.0f,  h_renderer->DEBUG.p_cubes[i].scale.y / 2.0f,  h_renderer->DEBUG.p_cubes[i].scale.z / 2.0f });
+        ((v3*)DEBUG_p_position_buffers[i].memory.p_mapped_device_memory)[34] = tgm_v3_add(h_renderer->DEBUG.p_cubes[i].position, (v3) { -h_renderer->DEBUG.p_cubes[i].scale.x / 2.0f,  h_renderer->DEBUG.p_cubes[i].scale.y / 2.0f,  h_renderer->DEBUG.p_cubes[i].scale.z / 2.0f });
+        ((v3*)DEBUG_p_position_buffers[i].memory.p_mapped_device_memory)[35] = tgm_v3_add(h_renderer->DEBUG.p_cubes[i].position, (v3) { -h_renderer->DEBUG.p_cubes[i].scale.x / 2.0f, -h_renderer->DEBUG.p_cubes[i].scale.y / 2.0f,  h_renderer->DEBUG.p_cubes[i].scale.z / 2.0f });
+
+        for (u32 j = 0; j < 36; j++)
+        {
+            ((v4*)DEBUG_p_color_buffers[i].memory.p_mapped_device_memory)[j] = h_renderer->DEBUG.p_cubes[i].color;
+        }
+
+        tg_vulkan_buffer_flush_mapped_memory(&DEBUG_p_position_buffers[i]);
+        tg_vulkan_buffer_flush_mapped_memory(&DEBUG_p_color_buffers[i]);
+
+        tg_vulkan_graphics_pipeline_create_info DEBUG_vulkan_graphics_pipeline_create_info = { 0 };
+        DEBUG_vulkan_graphics_pipeline_create_info.p_vertex_shader = &((tg_vertex_shader_h)tg_assets_get_asset("DEBUG_forward.vert"))->vulkan_shader;
+        DEBUG_vulkan_graphics_pipeline_create_info.p_fragment_shader = &((tg_fragment_shader_h)tg_assets_get_asset("DEBUG_forward.frag"))->vulkan_shader;
+        DEBUG_vulkan_graphics_pipeline_create_info.cull_mode = VK_CULL_MODE_NONE;
+        DEBUG_vulkan_graphics_pipeline_create_info.sample_count = VK_SAMPLE_COUNT_1_BIT;
+        DEBUG_vulkan_graphics_pipeline_create_info.depth_test_enable = VK_TRUE;
+        DEBUG_vulkan_graphics_pipeline_create_info.depth_write_enable = VK_TRUE;
+        DEBUG_vulkan_graphics_pipeline_create_info.blend_enable = VK_TRUE;
+        DEBUG_vulkan_graphics_pipeline_create_info.render_pass = h_renderer->forward_pass.render_pass;
+        DEBUG_vulkan_graphics_pipeline_create_info.viewport_size.x = (f32)h_renderer->forward_pass.framebuffer.width;
+        DEBUG_vulkan_graphics_pipeline_create_info.viewport_size.y = (f32)h_renderer->forward_pass.framebuffer.height;
+        DEBUG_vulkan_graphics_pipeline_create_info.polygon_mode = h_renderer->DEBUG.p_cubes[i].wireframe ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;
+
+        DEBUG_p_graphics_pipelines[i] = tg_vulkan_pipeline_create_graphics(&DEBUG_vulkan_graphics_pipeline_create_info);
+
+        tg_vulkan_descriptor_set_update_uniform_buffer(DEBUG_p_graphics_pipelines[i].descriptor_set, h_renderer->view_projection_ubo.buffer, 0);
+
+        DEBUG_p_command_buffers[i] = tg_vulkan_command_buffer_allocate(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_SECONDARY);
+
+        VkCommandBufferInheritanceInfo DEBUG_command_buffer_inheritance_info = { 0 };
+        DEBUG_command_buffer_inheritance_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
+        DEBUG_command_buffer_inheritance_info.pNext = TG_NULL;
+        DEBUG_command_buffer_inheritance_info.renderPass = h_renderer->forward_pass.render_pass;
+        DEBUG_command_buffer_inheritance_info.subpass = 0;
+        DEBUG_command_buffer_inheritance_info.framebuffer = h_renderer->forward_pass.framebuffer.framebuffer;
+        DEBUG_command_buffer_inheritance_info.occlusionQueryEnable = TG_FALSE;
+        DEBUG_command_buffer_inheritance_info.queryFlags = 0;
+        DEBUG_command_buffer_inheritance_info.pipelineStatistics = 0;
+
+        tg_vulkan_command_buffer_begin(DEBUG_p_command_buffers[i], VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, &DEBUG_command_buffer_inheritance_info);
+        vkCmdBindPipeline(DEBUG_p_command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, DEBUG_p_graphics_pipelines[i].pipeline);
+        const VkDeviceSize DEBUG_vertex_buffer_offset = 0;
+        vkCmdBindVertexBuffers(DEBUG_p_command_buffers[i], 0, 1, &DEBUG_p_position_buffers[i].buffer, &DEBUG_vertex_buffer_offset);
+        vkCmdBindVertexBuffers(DEBUG_p_command_buffers[i], 1, 1, &DEBUG_p_color_buffers[i].buffer, &DEBUG_vertex_buffer_offset);
+        vkCmdBindDescriptorSets(DEBUG_p_command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, DEBUG_p_graphics_pipelines[i].pipeline_layout, 0, 1, &DEBUG_p_graphics_pipelines[i].descriptor_set, 0, TG_NULL);
+        vkCmdDraw(DEBUG_p_command_buffers[i], 36, 1, 0, 0);
+        vkEndCommandBuffer(DEBUG_p_command_buffers[i]);
+        vkCmdExecuteCommands(h_renderer->forward_pass.command_buffer, 1, &DEBUG_p_command_buffers[i]);
+    }
+#endif
 
     vkCmdEndRenderPass(h_renderer->forward_pass.command_buffer);
     tg_vulkan_command_buffer_cmd_transition_color_image_layout(
@@ -1531,6 +1613,23 @@ void tg_renderer_end(tg_renderer_h h_renderer)
     forward_submit_info.pSignalSemaphores = TG_NULL;
 
     tg_vulkan_queue_submit(TG_VULKAN_QUEUE_TYPE_GRAPHICS, 1, &forward_submit_info, h_renderer->render_target.fence);
+
+#if TG_ENABLE_DEBUG_TOOLS == 1
+    tg_vulkan_fence_wait(h_renderer->render_target.fence);
+
+    for (u32 i = 0; i < h_renderer->DEBUG.cube_count; i++)
+    {
+        tg_vulkan_command_buffer_free(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, DEBUG_p_command_buffers[i]);
+        tg_vulkan_pipeline_destroy(&DEBUG_p_graphics_pipelines[i]);
+        tg_vulkan_buffer_destroy(&DEBUG_p_color_buffers[i]);
+        tg_vulkan_buffer_destroy(&DEBUG_p_position_buffers[i]);
+    }
+
+    TG_MEMORY_STACK_FREE(TG_DEBUG_MAX_CUBES * sizeof(*DEBUG_p_command_buffers));
+    TG_MEMORY_STACK_FREE(TG_DEBUG_MAX_CUBES * sizeof(*DEBUG_p_graphics_pipelines));
+    TG_MEMORY_STACK_FREE(TG_DEBUG_MAX_CUBES * sizeof(*DEBUG_p_color_buffers));
+    TG_MEMORY_STACK_FREE(TG_DEBUG_MAX_CUBES * sizeof(*DEBUG_p_position_buffers));
+#endif
 }
 
 void tg_renderer_present(tg_renderer_h h_renderer)
@@ -1603,5 +1702,17 @@ tg_render_target_h tg_renderer_get_render_target(tg_renderer_h h_renderer)
 {
     return &h_renderer->render_target;
 }
+
+#if TG_ENABLE_DEBUG_TOOLS == 1
+void tg_renderer_draw_cube_DEBUG(tg_renderer_h h_renderer, v3 position, v3 scale, v4 color, b32 wireframe)
+{
+    TG_ASSERT(h_renderer && h_renderer->DEBUG.cube_count < TG_DEBUG_MAX_CUBES);
+    h_renderer->DEBUG.p_cubes[h_renderer->DEBUG.cube_count].position = position;
+    h_renderer->DEBUG.p_cubes[h_renderer->DEBUG.cube_count].scale = scale;
+    h_renderer->DEBUG.p_cubes[h_renderer->DEBUG.cube_count].color = color;
+    h_renderer->DEBUG.p_cubes[h_renderer->DEBUG.cube_count].wireframe = wireframe;
+    h_renderer->DEBUG.cube_count++;
+}
+#endif
 
 #endif

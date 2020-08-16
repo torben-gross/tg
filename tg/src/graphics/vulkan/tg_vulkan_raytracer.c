@@ -327,10 +327,10 @@ void tg_raytracer_end(tg_raytracer_h h_raytracer)
     );
 
     const m4 proj = tgm_m4_perspective(
-        h_raytracer->p_camera->perspective.fov_y_in_radians,
-        h_raytracer->p_camera->perspective.aspect,
-        h_raytracer->p_camera->perspective.near,
-        h_raytracer->p_camera->perspective.far
+        h_raytracer->p_camera->persp.fov_y_in_radians,
+        h_raytracer->p_camera->persp.aspect,
+        h_raytracer->p_camera->persp.n,
+        h_raytracer->p_camera->persp.f
     );
 
     const m4 inv_view_proj = tgm_m4_inverse(tgm_m4_mul(proj, view));

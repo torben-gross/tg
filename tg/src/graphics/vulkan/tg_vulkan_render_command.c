@@ -39,6 +39,7 @@ static void tg__register(tg_render_command_h h_render_command, tg_renderer_h h_r
     } break;
     default: TG_INVALID_CODEPATH(); break;
     }
+    vulkan_graphics_pipeline_create_info.polygon_mode = VK_POLYGON_MODE_FILL;
 
     p_renderer_info->graphics_pipeline = tg_vulkan_pipeline_create_graphics(&vulkan_graphics_pipeline_create_info);
 
@@ -155,6 +156,7 @@ static void tg__register(tg_render_command_h h_render_command, tg_renderer_h h_r
     pipeline_create_info.render_pass = h_renderer->shadow_pass.render_pass;
     pipeline_create_info.viewport_size.x = (f32)TG_CASCADED_SHADOW_MAP_SIZE;
     pipeline_create_info.viewport_size.y = (f32)TG_CASCADED_SHADOW_MAP_SIZE;
+    pipeline_create_info.polygon_mode = VK_POLYGON_MODE_FILL;
 
     TG_ASSERT(pipeline_create_info.p_vertex_shader->spirv_layout.input_resource_count > 0);
     TG_ASSERT(tg_vertex_input_attribute_format_get_size(pipeline_create_info.p_vertex_shader->spirv_layout.p_input_resources[0].format) == sizeof(v3));

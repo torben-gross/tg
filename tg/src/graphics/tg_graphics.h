@@ -149,20 +149,14 @@ typedef struct tg_camera
 	{
 		struct
 		{
-			f32       left;
-			f32       right;
-			f32       bottom;
-			f32       top;
-			f32       far;
-			f32       near;
-		} orthographic;
+            f32       l, r, b, t, n, f;
+		} ortho;
 		struct
 		{
 			f32       fov_y_in_radians;
 			f32       aspect;
-			f32       near;
-			f32       far;
-		} perspective;
+			f32       n, f;
+		} persp;
 	};
 } tg_camera;
 
@@ -431,6 +425,7 @@ typedef struct tg_vulkan_graphics_pipeline_create_info
     VkBool32                                 blend_enable;
     VkRenderPass                             render_pass;
     v2                                       viewport_size;
+    VkPolygonMode                            polygon_mode;
 } tg_vulkan_graphics_pipeline_create_info;
 
 typedef struct tg_vulkan_image_extent
@@ -691,9 +686,20 @@ typedef struct tg_renderer
         VkCommandBuffer          command_buffer;
     } clear_pass;
 
-    v3                           probe_position;
-    tg_color_image_3d            probe;
-    tg_render_command_h          h_probe_raytracing_target;
+#if TG_ENABLE_DEBUG_TOOLS == 1
+#define TG_DEBUG_MAX_CUBES 256
+    struct
+    {
+        u32 cube_count;
+        struct
+        {
+            v3 position;
+            v3 scale;
+            v4 color;
+            b32 wireframe;
+        } p_cubes[TG_DEBUG_MAX_CUBES];
+    } DEBUG;
+#endif
 } tg_renderer;
 
 typedef struct tg_storage_buffer
@@ -912,9 +918,6 @@ void                    tg_render_command_set_position(tg_render_command_h h_ren
 tg_renderer_h           tg_renderer_create(tg_camera* p_camera);
 void                    tg_renderer_destroy(tg_renderer_h h_renderer);
 void                    tg_renderer_enable_shadows(tg_renderer_h h_renderer, b32 enable);
-void                    tg_renderer_bake_begin(tg_renderer_h h_renderer);
-void                    tg_renderer_bake_push_probe(tg_renderer_h h_renderer, f32 x, f32 y, f32 z);
-void                    tg_renderer_bake_push_static(tg_renderer_h h_renderer, tg_render_command_h h_render_command);
 void                    tg_renderer_bake_end(tg_renderer_h h_renderer);
 void                    tg_renderer_begin(tg_renderer_h h_renderer);
 void                    tg_renderer_push_directional_light(tg_renderer_h h_renderer, v3 direction, v3 color);
@@ -924,6 +927,11 @@ void                    tg_renderer_end(tg_renderer_h h_renderer);
 void                    tg_renderer_present(tg_renderer_h h_renderer);
 void                    tg_renderer_clear(tg_renderer_h h_renderer);
 tg_render_target_h      tg_renderer_get_render_target(tg_renderer_h h_renderer);
+#if TG_ENABLE_DEBUG_TOOLS == 1
+void                    tg_renderer_draw_cube_DEBUG(tg_renderer_h h_renderer, v3 position, v3 scale, v4 color, b32 wireframe);
+#else
+#define                 tg_renderer_draw_cube_DEBUG(h_renderer, position, scale, color, wireframe)
+#endif
 
 tg_storage_buffer       tg_storage_buffer_create(u64 size, b32 visible);
 u64                     tg_storage_buffer_size(tg_storage_buffer* p_storage_buffer);
