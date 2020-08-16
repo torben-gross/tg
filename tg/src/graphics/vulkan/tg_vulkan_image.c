@@ -82,6 +82,18 @@ tg_cube_map tg_cube_map_create(u32 dimension, tg_color_image_format format, cons
 	tg_cube_map cube_map = { 0 };
 	cube_map.type = TG_STRUCTURE_TYPE_CUBE_MAP;
 	cube_map.vulkan_cube_map = tg_vulkan_cube_map_create(dimension, (VkFormat)format, p_sampler_create_info);
+	tg_vulkan_command_buffer_begin(global_graphics_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
+	tg_vulkan_command_buffer_cmd_transition_cube_map_layout(
+		global_graphics_command_buffer,
+		&cube_map.vulkan_cube_map,
+		0,
+		VK_ACCESS_SHADER_READ_BIT,
+		VK_IMAGE_LAYOUT_UNDEFINED,
+		VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+		VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+		VK_PIPELINE_STAGE_VERTEX_INPUT_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
+	);
+	tg_vulkan_command_buffer_end_and_submit(global_graphics_command_buffer, TG_VULKAN_QUEUE_TYPE_GRAPHICS);
 	return cube_map;
 }
 
@@ -99,13 +111,29 @@ void tg_cube_map_set_data(tg_cube_map* p_cube_map, void* p_data)
 	tg_memory_copy(size, p_data, staging_buffer.memory.p_mapped_device_memory);
 	tg_vulkan_buffer_flush_mapped_memory(&staging_buffer);
 
-	VkCommandBuffer command_buffer = tg_vulkan_command_buffer_allocate(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY); // TODO: generic command_buffer
-	tg_vulkan_command_buffer_begin(command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
-	tg_vulkan_command_buffer_cmd_transition_cube_map_layout(command_buffer, &p_cube_map->vulkan_cube_map, 0, 0, p_cube_map->layout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
-	p_cube_map->layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-	tg_vulkan_command_buffer_cmd_copy_buffer_to_cube_map(command_buffer, staging_buffer.buffer, &p_cube_map->vulkan_cube_map);
-	tg_vulkan_command_buffer_end_and_submit(command_buffer, TG_VULKAN_QUEUE_TYPE_GRAPHICS);
-	tg_vulkan_command_buffer_free(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, command_buffer);
+	tg_vulkan_command_buffer_begin(global_graphics_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
+	tg_vulkan_command_buffer_cmd_transition_cube_map_layout(
+		global_graphics_command_buffer,
+		&p_cube_map->vulkan_cube_map,
+		VK_ACCESS_SHADER_READ_BIT,
+		VK_ACCESS_TRANSFER_WRITE_BIT,
+		VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+		VK_PIPELINE_STAGE_TRANSFER_BIT
+	);
+	tg_vulkan_command_buffer_cmd_copy_buffer_to_cube_map(global_graphics_command_buffer, staging_buffer.buffer, &p_cube_map->vulkan_cube_map);
+	tg_vulkan_command_buffer_cmd_transition_cube_map_layout(
+		global_graphics_command_buffer,
+		&p_cube_map->vulkan_cube_map,
+		VK_ACCESS_TRANSFER_WRITE_BIT,
+		VK_ACCESS_SHADER_READ_BIT,
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+		VK_PIPELINE_STAGE_TRANSFER_BIT,
+		VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
+	);
+	tg_vulkan_command_buffer_end_and_submit(global_graphics_command_buffer, TG_VULKAN_QUEUE_TYPE_GRAPHICS);
 
 	tg_vulkan_buffer_destroy(&staging_buffer);
 }

@@ -202,11 +202,12 @@ f32 tgm_noise(f32 x, f32 y, f32 z) // see: http://staffwww.itn.liu.se/~stegu/sim
 
 #undef TGM_SIMPLEX_NOISE_FASTFLOOR
 
-void tgm_random_init(tg_random* p_random, u32 seed)
+tg_random tgm_random_init(u32 seed)
 {
-	TG_ASSERT(p_random && seed);
+	TG_ASSERT(seed != 0);
 
-	p_random->state = seed;
+	tg_random result = { seed };
+	return result;
 }
 
 f32 tgm_random_next_f32(tg_random* p_random)
@@ -214,6 +215,14 @@ f32 tgm_random_next_f32(tg_random* p_random)
 	TG_ASSERT(p_random);
 
 	const f32 result = (f32)tgm_random_next_u32(p_random) / (f32)TG_U32_MAX;
+	return result;
+}
+
+f32 tgm_random_next_f32_between(tg_random* p_random, f32 low, f32 high)
+{
+	TG_ASSERT(p_random && low <= high);
+
+	const f32 result = tgm_random_next_f32(p_random) * (high - low) + low;
 	return result;
 }
 
@@ -910,6 +919,35 @@ v3 tgm_v3_normalized_not_null(v3 v, v3 alt)
 	{
 		const f32 mag = tgm_f32_sqrt(magsqr);
 		result = (v3){ v.x / mag, v.y / mag, v.z / mag };
+	}
+	return result;
+}
+
+v3 tgm_v3_reflect(v3 d, v3 n)
+{
+	TG_DEBUG_EXEC(
+		const f32 ms = tgm_v3_magsqr(n);
+		TG_ASSERT(ms < 1.02f && ms > 0.98f)
+	);
+
+	const v3 result = tgm_v3_sub(d, tgm_v3_mulf(n, 2.0f * tgm_v3_dot(n, d)));
+	return result;
+}
+
+v3 tgm_v3_refract(v3 d, v3 n, f32 eta)
+{
+	TG_DEBUG_EXEC(
+		const f32 msd = tgm_v3_magsqr(d);
+		const f32 msn = tgm_v3_magsqr(n);
+		TG_ASSERT(msd < 1.02f && msd > 0.98f && msn < 1.02f && msn > 0.98f)
+	);
+
+	v3 result = { 0 };
+	const f32 dot = tgm_v3_dot(n, d);
+	const f32 k = 1.0f - eta * eta * (1.0f - dot * dot);
+	if (k >= 0.0f)
+	{
+		result = tgm_v3_sub(tgm_v3_mulf(d, eta), tgm_v3_mulf(n, eta * tgm_v3_dot(n, d) + tgm_f32_sqrt(k)));
 	}
 	return result;
 }

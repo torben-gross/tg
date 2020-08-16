@@ -244,11 +244,12 @@ typedef struct tg_random
 | Miscellaneous                                               |
 +------------------------------------------------------------*/
 
-f32     tgm_noise(f32 x, f32 y, f32 z); // simplex noise
-void    tgm_random_init(tg_random* p_random, u32 seed); // TODO: Unity uses Marsaglia's Xorshift 128, this is the basic variation
-f32     tgm_random_next_f32(tg_random* p_random);
-u32     tgm_random_next_u32(tg_random* p_random);
-void    tgm_enclosing_sphere(u32 contained_point_count, const v3* p_contained_points, v3* p_center, f32* p_radius);
+f32          tgm_noise(f32 x, f32 y, f32 z); // simplex noise
+tg_random    tgm_random_init(u32 seed); // TODO: Unity uses Marsaglia's Xorshift 128, this is the basic variation
+f32          tgm_random_next_f32(tg_random* p_random);
+f32          tgm_random_next_f32_between(tg_random* p_random, f32 low, f32 high);
+u32          tgm_random_next_u32(tg_random* p_random);
+void         tgm_enclosing_sphere(u32 contained_point_count, const v3* p_contained_points, v3* p_center, f32* p_radius);
 
 
 
@@ -356,6 +357,8 @@ v3     tgm_v3_mulf(v3 v, f32 f);
 v3     tgm_v3_neg(v3 v);
 v3     tgm_v3_normalized(v3 v);
 v3     tgm_v3_normalized_not_null(v3 v, v3 alt);
+v3     tgm_v3_reflect(v3 d, v3 n);
+v3     tgm_v3_refract(v3 d, v3 n, f32 eta);
 v3     tgm_v3_round(v3 v);
 b32    tgm_v3_similar(v3 v0, v3 v1, f32 epsilon);
 v3     tgm_v3_sub(v3 v0, v3 v1);

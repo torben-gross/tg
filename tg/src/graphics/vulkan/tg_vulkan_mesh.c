@@ -727,11 +727,10 @@ void tg_mesh_regenerate_normals(tg_mesh* p_mesh)
     }
     else
     {
-#if 0
+#if 0 // TODO: reimplement this!
         // TODO: most of this can be created only once instead of per mesh
         tg_vulkan_shader compute_shader = { 0 };
         tg_vulkan_pipeline compute_pipeline = { 0 };
-        VkCommandBuffer command_buffer = VK_NULL_HANDLE;
 
 
 
@@ -752,24 +751,22 @@ void tg_mesh_regenerate_normals(tg_mesh* p_mesh)
         p_descriptor_set_layout_bindings[1].pImmutableSamplers = TG_NULL;
 
         compute_pipeline = tg_vulkan_pipeline_create_compute(&compute_shader);
-        command_buffer = tg_vulkan_command_buffer_allocate(TG_VULKAN_COMMAND_POOL_TYPE_COMPUTE, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
         uniform_buffer = tg_vulkan_buffer_create(sizeof(tg_normals_compute_shader_uniform_buffer), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
         tg_vulkan_descriptor_set_update_storage_buffer(compute_pipeline.descriptor_set, p_staging_buffer->buffer, 0);
         tg_vulkan_descriptor_set_update_uniform_buffer(compute_pipeline.descriptor_set, uniform_buffer.buffer, 1);
 
-        tg_vulkan_command_buffer_begin(command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
+        tg_vulkan_command_buffer_begin(global_compute_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
         {
-            vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute_pipeline.pipeline);
-            vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute_pipeline.pipeline_layout, 0, 1, &compute_pipeline.descriptor_set, 0, TG_NULL);
-            vkCmdDispatch(command_buffer, vertex_count, 1, 1);
+            vkCmdBindPipeline(global_compute_command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute_pipeline.pipeline);
+            vkCmdBindDescriptorSets(global_compute_command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute_pipeline.pipeline_layout, 0, 1, &compute_pipeline.descriptor_set, 0, TG_NULL);
+            vkCmdDispatch(global_compute_command_buffer, vertex_count, 1, 1);
         }
-        tg_vulkan_command_buffer_end_and_submit(command_buffer, TG_VULKAN_QUEUE_TYPE_COMPUTE);
+        tg_vulkan_command_buffer_end_and_submit(global_compute_command_buffer, TG_VULKAN_QUEUE_TYPE_COMPUTE);
 
 
 
         tg_vulkan_buffer_destroy(&uniform_buffer);
-        tg_vulkan_command_buffer_free(TG_VULKAN_COMMAND_POOL_TYPE_COMPUTE, command_buffer);
         tg_vulkan_pipeline_destroy(&compute_pipeline);
 #else
         for (u32 i = 0; i < p_mesh->position_count; i += 3)

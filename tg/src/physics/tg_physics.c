@@ -4,11 +4,11 @@
 
 
 
-b32 tg__traverse(v3 ray_origin, v3 ray_direction, const tg_kd_tree* p_kd_tree, const tg_kd_node* p_node, tg_bounds bounds, v3* p_hit)
+b32 tg__traverse(v3 ray_origin, v3 ray_direction, const tg_kd_tree* p_kd_tree, const tg_kd_node* p_node, tg_bounds bounds, tg_raycast_hit* p_hit)
 {
     if (p_node->flags == 0)
     {
-        f32 dsqr = TG_F32_MAX;
+        f32 distance = TG_F32_MAX;
         for (u32 i = p_node->leaf.first_index_offset; i < p_node->leaf.first_index_offset + p_node->leaf.index_count; i += 3)
         {
             u32 i0 = p_kd_tree->p_indices[i];
@@ -17,20 +17,22 @@ b32 tg__traverse(v3 ray_origin, v3 ray_direction, const tg_kd_tree* p_kd_tree, c
             const v3 p0 = TG_MESH_POSITIONS(*p_kd_tree->p_mesh)[i0];
             const v3 p1 = TG_MESH_POSITIONS(*p_kd_tree->p_mesh)[i1];
             const v3 p2 = TG_MESH_POSITIONS(*p_kd_tree->p_mesh)[i2];
-            v3 hit = { 0 };
+            tg_raycast_hit hit = { 0 };
             const b32 result = tg_intersect_ray_triangle(ray_origin, ray_direction, p0, p1, p2, &hit);
-            const f32 ds = tgm_v3_magsqr(tgm_v3_sub(hit, ray_origin));
-            if (result && ds < dsqr)
+            if (result && hit.distance < distance)
             {
-                tg_intersect_ray_triangle(ray_origin, ray_direction, p0, p1, p2, &hit);
-                dsqr = ds;
+                distance = hit.distance;
                 if (p_hit)
                 {
                     *p_hit = hit;
                 }
+                else
+                {
+                    return TG_TRUE;
+                }
             }
         }
-        return dsqr < TG_F32_MAX;
+        return distance < TG_F32_MAX;
     }
 
     if (!tg_intersect_ray_box(ray_origin, ray_direction, bounds.min, bounds.max, TG_NULL))
@@ -61,13 +63,20 @@ b32 tg__traverse(v3 ray_origin, v3 ray_direction, const tg_kd_tree* p_kd_tree, c
         bounds_far = temp;
     }
 
-    v3 hit = { 0 };
+    tg_raycast_hit hit = { 0 };
     b32 result = tg__traverse(ray_origin, ray_direction, p_kd_tree, p_near, bounds_near, &hit);
-    if (result && p_hit)
+    if (result)
     {
-        *p_hit = hit;
+        if (p_hit)
+        {
+            *p_hit = hit;
+        }
+        else
+        {
+            return TG_TRUE;
+        }
     }
-    if (!result || tgm_f32_abs(p_node->node.split_position - ray_origin.p_data[split_axis]) < tgm_f32_abs(hit.p_data[split_axis] - ray_origin.p_data[split_axis]))
+    if (!result || tgm_f32_abs(p_node->node.split_position - ray_origin.p_data[split_axis]) < tgm_f32_abs(hit.hit.p_data[split_axis] - ray_origin.p_data[split_axis]))
     {
         if (tg__traverse(ray_origin, ray_direction, p_kd_tree, p_far, bounds_far, &hit))
         {
@@ -84,12 +93,10 @@ b32 tg__traverse(v3 ray_origin, v3 ray_direction, const tg_kd_tree* p_kd_tree, c
 
 
 // source: https://github.com/erich666/GraphicsGems/blob/master/gems/RayBox.c
-
 #define TG_RIGHT	 0
 #define TG_LEFT	     1
 #define TG_MIDDLE	 2
-
-b32 tg_intersect_ray_box(v3 ray_origin, v3 ray_direction, v3 min, v3 max, v3* p_hit)
+b32 tg_intersect_ray_box(v3 ray_origin, v3 ray_direction, v3 min, v3 max, tg_raycast_hit* p_hit)
 {
     TG_ASSERT(tgm_v3_magsqr(ray_direction) > TG_F32_EPSILON);
 
@@ -121,7 +128,24 @@ b32 tg_intersect_ray_box(v3 ray_origin, v3 ray_direction, v3 min, v3 max, v3* p_
     {
         if (p_hit)
         {
-            *p_hit = ray_origin;
+            p_hit->distance = 0.0f;
+            p_hit->hit = ray_origin;
+            const v3 center = tgm_v3_divf(tgm_v3_add(min, max), 2.0f);
+            const v3 delta = tgm_v3_sub(ray_origin, center);
+            v3 normal = { 0 };
+            if (tgm_f32_abs(delta.x) >= tgm_f32_abs(delta.y) && tgm_f32_abs(delta.x) >= tgm_f32_abs(delta.z))
+            {
+                normal.x = 1.0f;
+            }
+            else if (tgm_f32_abs(delta.y) >= tgm_f32_abs(delta.x) && tgm_f32_abs(delta.y) >= tgm_f32_abs(delta.z))
+            {
+                normal.y = 1.0f;
+            }
+            else
+            {
+                normal.z = 1.0f;
+            }
+            p_hit->normal = tgm_v3_normalized(normal);
         }
         return TG_TRUE;
     }
@@ -153,6 +177,7 @@ b32 tg_intersect_ray_box(v3 ray_origin, v3 ray_direction, v3 min, v3 max, v3* p_
         return TG_FALSE;
     }
 
+    v3 hit = { 0 };
     for (u8 i = 0; i < 3; i++)
     {
         if (which_plane != i)
@@ -162,24 +187,46 @@ b32 tg_intersect_ray_box(v3 ray_origin, v3 ray_direction, v3 min, v3 max, v3* p_
             {
                 return TG_FALSE;
             }
-            else if (p_hit)
+            else
             {
-                p_hit->p_data[i] = f;
+                hit.p_data[i] = f;
             }
         }
-        else if (p_hit)
+        else
         {
-            p_hit->p_data[i] = candidate_plane[i];
+            hit.p_data[i] = candidate_plane[i];
         }
     }
+
+    if (p_hit)
+    {
+        p_hit->distance = tgm_v3_mag(tgm_v3_sub(hit, ray_origin));
+        p_hit->hit = hit;
+        const v3 center = tgm_v3_divf(tgm_v3_add(min, max), 2.0f);
+        const v3 delta = tgm_v3_sub(hit, center);
+        v3 normal = { 0 };
+        if (tgm_f32_abs(delta.x) >= tgm_f32_abs(delta.y) && tgm_f32_abs(delta.x) >= tgm_f32_abs(delta.z))
+        {
+            normal.x = 1.0f;
+        }
+        else if (tgm_f32_abs(delta.y) >= tgm_f32_abs(delta.x) && tgm_f32_abs(delta.y) >= tgm_f32_abs(delta.z))
+        {
+            normal.y = 1.0f;
+        }
+        else
+        {
+            normal.z = 1.0f;
+        }
+        p_hit->normal = tgm_v3_normalized(normal);
+    }
+
     return TG_TRUE;
 }
-
 #undef TG_MIDDLE
 #undef TG_LEFT
 #undef TG_RIGHT
 
-b32 tg_intersect_ray_plane(v3 ray_origin, v3 ray_direction, v3 plane_point, v3 plane_normal, f32* p_distance)
+b32 tg_intersect_ray_plane(v3 ray_origin, v3 ray_direction, v3 plane_point, v3 plane_normal, tg_raycast_hit* p_hit)
 {
     TG_ASSERT(tgm_v3_magsqr(ray_direction) > TG_F32_EPSILON && tgm_v3_magsqr(plane_normal) > TG_F32_EPSILON);
 
@@ -190,15 +237,17 @@ b32 tg_intersect_ray_plane(v3 ray_origin, v3 ray_direction, v3 plane_point, v3 p
         const v3 v = tgm_v3_sub(plane_point, ray_origin);
         float t = tgm_v3_dot(v, plane_normal) / denom;
         result = t >= 0;
-        if (result && p_distance)
+        if (result && p_hit)
         {
-            *p_distance = t;
+            p_hit->distance = t;
+            p_hit->hit = tgm_v3_add(ray_origin, tgm_v3_mulf(ray_direction, t));
+            p_hit->normal = plane_normal;
         }
     }
     return result;
 }
 
-b32 tg_intersect_ray_triangle(v3 ray_origin, v3 ray_direction, v3 tri_p0, v3 tri_p1, v3 tri_p2, v3* p_hit)
+b32 tg_intersect_ray_triangle(v3 ray_origin, v3 ray_direction, v3 tri_p0, v3 tri_p1, v3 tri_p2, tg_raycast_hit* p_hit)
 {
     TG_ASSERT(tgm_v3_magsqr(ray_direction) > TG_F32_EPSILON);
 
@@ -233,7 +282,7 @@ b32 tg_intersect_ray_triangle(v3 ray_origin, v3 ray_direction, v3 tri_p0, v3 tri
     }
 
     b32 result = TG_FALSE;
-    if (barycentric_coords.y >= 0.0f && barycentric_coords.z >= 0.0f && barycentric_coords.y + barycentric_coords.z <= 1.0f && p_hit)
+    if (barycentric_coords.y >= 0.0f && barycentric_coords.z >= 0.0f && barycentric_coords.y + barycentric_coords.z <= 1.0f)
     {
         const v3 v0 = tgm_v3_mulf(tri_p0, 1.0f - barycentric_coords.y - barycentric_coords.z);
         const v3 v1 = tgm_v3_mulf(tri_p1, barycentric_coords.y);
@@ -242,13 +291,18 @@ b32 tg_intersect_ray_triangle(v3 ray_origin, v3 ray_direction, v3 tri_p0, v3 tri
         if (tgm_v3_dot(tgm_v3_sub(hit, ray_origin), ray_direction) > 0.0f)
         {
             result = TG_TRUE;
-            *p_hit = hit;
+            if (p_hit)
+            {
+                p_hit->distance = tgm_v3_mag(tgm_v3_sub(hit, ray_origin));
+                p_hit->hit = hit;
+                p_hit->normal = tgm_v3_normalized(tgm_v3_cross(tgm_v3_sub(tri_p1, tri_p0), tgm_v3_sub(tri_p2, tri_p0)));
+            }
         }
     }
     return result;
 }
 
-b32 tg_raycast_kd_tree(v3 ray_origin, v3 ray_direction, const tg_kd_tree* p_kd_tree, v3* p_hit)
+b32 tg_raycast_kd_tree(v3 ray_origin, v3 ray_direction, const tg_kd_tree* p_kd_tree, tg_raycast_hit* p_hit)
 {
     TG_ASSERT(tgm_v3_magsqr(ray_direction) > TG_F32_EPSILON && p_kd_tree && p_kd_tree->node_count != 0);
 

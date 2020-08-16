@@ -55,14 +55,17 @@ typedef struct tg_sample_scene
     };
 
     tg_mesh                    sponza_mesh;
+    tg_kd_tree*                p_sponza_kd_tree;
     tg_uniform_buffer          sponza_ubo;
     tg_mesh                    my_mesh;
     tg_uniform_buffer          my_ubo;
 
+    u8                         p_light_values[6];
     tg_mesh                    pbr_sphere_mesh;
     tg_mesh                    pbr_sphere_mesh2;
     tg_pbr_sphere              p_pbr_spheres[49];
     tg_mesh                    probe_mesh;
+    v3                         probe_translation;
     tg_cube_map                probe_cube_map;
     tg_render_command_h        h_probe_render_command;
     tg_terrain                 terrain;
@@ -73,6 +76,70 @@ typedef struct tg_sample_scene
 
 b32 running = TG_TRUE;
 tg_sample_scene scene = { 0 };
+
+static v3 tg__random_dir_hemisphere(tg_random* p_random, v3 normal)
+{
+    const f32 x = tgm_f32_acos(normal.x);
+    const f32 y = tgm_f32_acos(normal.y);
+    const f32 z = tgm_f32_acos(normal.z);
+
+    const f32 ph = TG_PI / 2.0f;
+    const f32 lx = x - ph;
+    const f32 rx = x + ph;
+    const f32 ly = y - ph;
+    const f32 ry = y + ph;
+    const f32 lz = z - ph;
+    const f32 rz = z + ph;
+
+    v3 result = tgm_v3_normalized((v3) {
+        tgm_f32_cos(tgm_random_next_f32_between(p_random, lx, rx)),
+        tgm_f32_cos(tgm_random_next_f32_between(p_random, ly, ry)),
+        tgm_f32_cos(tgm_random_next_f32_between(p_random, lz, rz))
+    });
+    return result;
+}
+
+static void tg__raycast()
+{
+    v3 p_ray_origins[6] = {
+        tgm_v3_sub(scene.probe_translation, (v3) { 128.0f, 140.0f, 128.0f }),
+        tgm_v3_sub(scene.probe_translation, (v3) { 128.0f, 140.0f, 128.0f }),
+        tgm_v3_sub(scene.probe_translation, (v3) { 128.0f, 140.0f, 128.0f }),
+        tgm_v3_sub(scene.probe_translation, (v3) { 128.0f, 140.0f, 128.0f }),
+        tgm_v3_sub(scene.probe_translation, (v3) { 128.0f, 140.0f, 128.0f }),
+        tgm_v3_sub(scene.probe_translation, (v3) { 128.0f, 140.0f, 128.0f })
+    };
+    v3 p_ray_directions[6] = {
+        {  1.0f,  0.0f,  0.0f },
+        { -1.0f,  0.0f,  0.0f },
+        {  0.0f,  1.0f,  0.0f },
+        {  0.0f, -1.0f,  0.0f },
+        {  0.0f,  0.0f,  1.0f },
+        {  0.0f,  0.0f, -1.0f }
+    };
+    b32 p_raycast_results[6] = { 0 };
+    tg_raycast_hit p_raycast_hits[6] = { 0 };
+    u32 ms = (u32)tg_platform_get_system_time().milliseconds;
+    tg_random r = tgm_random_init(ms == 0 ? 1 : ms);
+    for (u8 i = 0; i < 6; i++)
+    {
+        p_ray_directions[i] = tg__random_dir_hemisphere(&r, p_ray_directions[i]);
+        p_raycast_results[i] = tg_raycast_kd_tree(p_ray_origins[i], p_ray_directions[i], scene.p_sponza_kd_tree, &p_raycast_hits[i]);
+        const f32 t = 0.02f;
+        if (p_raycast_results[i])
+        {
+            p_ray_origins[i] = p_raycast_hits[i].hit;
+            p_ray_directions[i] = (v3){ 0.0f, 1.0f, 0.0f };
+            p_raycast_results[i] = tg_raycast_kd_tree(p_ray_origins[i], p_ray_directions[i], scene.p_sponza_kd_tree, &p_raycast_hits[i]);
+            scene.p_light_values[i] = (u8)((1 - t) * (f32)scene.p_light_values[i] + t * (1.0f - (f32)p_raycast_results[i]) * 127.0f);
+        }
+        else
+        {
+            scene.p_light_values[i] = (u8)((1 - t) * scene.p_light_values[i] + t * 255.0f);
+        }
+    }
+    tg_cube_map_set_data(&scene.probe_cube_map, scene.p_light_values);
+}
 
 static void tg__game_3d_create()
 {
@@ -138,23 +205,15 @@ static void tg__game_3d_create()
 
 
     scene.sponza_mesh = tg_mesh_create2("meshes/sponza.obj", V3(0.01f));
-    tg_kd_tree* p_sponza_kd_tree = tg_kd_tree_create(&scene.sponza_mesh);
-    const v3 origin = tgm_v3_sub(scene.camera.position, (v3) { 128.0f, 140.0f, 128.0f });
-    const b32 l = tg_raycast_kd_tree(origin, TG_CAMERA_LEFT(scene.camera), p_sponza_kd_tree, TG_NULL);
-    const b32 r = tg_raycast_kd_tree(origin, TG_CAMERA_RIGHT(scene.camera), p_sponza_kd_tree, TG_NULL);
-    const b32 d = tg_raycast_kd_tree(origin, TG_CAMERA_DOWN(scene.camera), p_sponza_kd_tree, TG_NULL);
-    const b32 u = tg_raycast_kd_tree(origin, TG_CAMERA_UP(scene.camera), p_sponza_kd_tree, TG_NULL);
-    const b32 f = tg_raycast_kd_tree(origin, TG_CAMERA_FORWARD(scene.camera), p_sponza_kd_tree, TG_NULL);
-    const b32 b = tg_raycast_kd_tree(origin, TG_CAMERA_BACKWARD(scene.camera), p_sponza_kd_tree, TG_NULL);
+    scene.p_sponza_kd_tree = tg_kd_tree_create(&scene.sponza_mesh);
 
     scene.probe_mesh = tg_mesh_create_sphere(0.5f, 64, 32, TG_TRUE, TG_TRUE, TG_FALSE);
-    const v3 probe_translation = { 128.0f + 7.0f, 143.0f, 128.0f };
+    scene.probe_translation = (v3){ 128.0f + 7.0f, 153.0f, 128.0f };
     scene.probe_cube_map = tg_cube_map_create(1, TG_COLOR_IMAGE_FORMAT_R8, TG_NULL);
-    u8 p_cube_map_data[6] = { (1 - r) * 255, (1 - l) * 255, (1 - u) * 255, (1 - d) * 255, (1 - b) * 255, (1 - f) * 255 }; // r, l, u, d, b, f // TODO: can i define which direction is which?
-    tg_cube_map_set_data(&scene.probe_cube_map, p_cube_map_data);
+    tg__raycast();
     tg_material_h h_probe_material = tg_material_create_forward(tg_vertex_shader_get("shaders/forward.vert"), tg_fragment_shader_get("shaders/forward_probe.frag"));
     tg_handle p_probe_handles[1] = { &scene.probe_cube_map };
-    scene.h_probe_render_command = tg_render_command_create(&scene.probe_mesh, h_probe_material, probe_translation, 1, p_probe_handles);
+    scene.h_probe_render_command = tg_render_command_create(&scene.probe_mesh, h_probe_material, scene.probe_translation, 1, p_probe_handles);
     tg_list_insert(&scene.render_commands, &scene.h_probe_render_command);
 
 
@@ -231,6 +290,7 @@ static void tg__game_3d_create()
 
 static void tg__game_3d_update_and_render(f32 dt)
 {
+    tg__raycast();
     if (tg_input_is_key_down(TG_KEY_K))
     {
         scene.quad_offset_z += 0.01f * dt;

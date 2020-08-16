@@ -253,8 +253,7 @@ static void tg__init_ssao_pass(tg_renderer_h h_renderer)
     h_renderer->ssao_pass.ssao_graphics_pipeline = tg_vulkan_pipeline_create_graphics(&ssao_pipeline_create_info);
     h_renderer->ssao_pass.ssao_ubo = tg_vulkan_buffer_create(sizeof(tg_ssao_info), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-    tg_random random = { 0 };
-    tgm_random_init(&random, 13031995);
+    tg_random random = tgm_random_init(13031995);
     for (u32 i = 0; i < 64; i++)
     {
         v3 sample = { tgm_random_next_f32(&random) * 2.0f - 1.0f, tgm_random_next_f32(&random) * 2.0f - 1.0f, tgm_random_next_f32(&random) };

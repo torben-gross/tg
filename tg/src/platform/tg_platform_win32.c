@@ -159,6 +159,21 @@ void tg_platform_get_screen_size(u32* p_width, u32* p_height)
     *p_height = rect.bottom - rect.top;
 }
 
+tg_system_time tg_platform_get_system_time()
+{
+    SYSTEMTIME system_time = { 0 };
+    GetSystemTime(&system_time);
+    tg_system_time result = { 0 };
+    result.year = system_time.wYear;
+    result.month = system_time.wMonth;
+    result.day = system_time.wDay;
+    result.hour = system_time.wHour;
+    result.minute = system_time.wMinute;
+    result.second = system_time.wSecond;
+    result.milliseconds = system_time.wMilliseconds;
+    return result;
+}
+
 tg_window_h tg_platform_get_window_handle()
 {
     return h_window;
@@ -201,6 +216,13 @@ void tg_platform_file_read(const char* p_filename, u64 buffer_size, char* p_buff
     tg_string_format(sizeof(p_filename_buffer), p_filename_buffer, "%s/%s", tg_assets_get_asset_path(), p_filename);
 
     HANDLE h_file = CreateFileA(p_filename_buffer, GENERIC_READ | GENERIC_WRITE, 0, TG_NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, TG_NULL);
+    TG_DEBUG_EXEC(
+        if (h_file == INVALID_HANDLE_VALUE)
+        {
+            const u32 last_error = GetLastError();
+            TG_DEBUG_LOG("Error while trying to read file \"%s\". #%u\n", p_filename, last_error);
+        }
+    );
     TG_ASSERT(h_file != INVALID_HANDLE_VALUE);
     TG_ASSERT(GetLastError() != ERROR_FILE_NOT_FOUND);
 

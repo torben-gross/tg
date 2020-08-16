@@ -245,53 +245,6 @@ static void tg__sampler_destroy(VkSampler sampler)
 
 
 
-void tg_vulkan_convert_vkresult_to_string(char* p_buffer, VkResult result)
-{
-    switch (result)
-    {
-    case VK_SUCCESS:                                            { const char p_string[] = "VK_SUCCESS";                                            tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_NOT_READY:                                          { const char p_string[] = "VK_NOT_READY";                                          tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_TIMEOUT:                                            { const char p_string[] = "VK_TIMEOUT";                                            tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_EVENT_SET:                                          { const char p_string[] = "VK_EVENT_SET";                                          tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_EVENT_RESET:                                        { const char p_string[] = "VK_EVENT_RESET";                                        tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_INCOMPLETE:                                         { const char p_string[] = "VK_INCOMPLETE";                                         tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_OUT_OF_HOST_MEMORY:                           { const char p_string[] = "VK_ERROR_OUT_OF_HOST_MEMORY";                           tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_OUT_OF_DEVICE_MEMORY:                         { const char p_string[] = "VK_ERROR_OUT_OF_DEVICE_MEMORY";                         tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_INITIALIZATION_FAILED:                        { const char p_string[] = "VK_ERROR_INITIALIZATION_FAILED";                        tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_DEVICE_LOST:                                  { const char p_string[] = "VK_ERROR_DEVICE_LOST";                                  tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_MEMORY_MAP_FAILED:                            { const char p_string[] = "VK_ERROR_MEMORY_MAP_FAILED";                            tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_LAYER_NOT_PRESENT:                            { const char p_string[] = "VK_ERROR_LAYER_NOT_PRESENT";                            tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_EXTENSION_NOT_PRESENT:                        { const char p_string[] = "VK_ERROR_EXTENSION_NOT_PRESENT";                        tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_FEATURE_NOT_PRESENT:                          { const char p_string[] = "VK_ERROR_FEATURE_NOT_PRESENT";                          tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_INCOMPATIBLE_DRIVER:                          { const char p_string[] = "VK_ERROR_INCOMPATIBLE_DRIVER";                          tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_TOO_MANY_OBJECTS:                             { const char p_string[] = "VK_ERROR_TOO_MANY_OBJECTS";                             tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_FORMAT_NOT_SUPPORTED:                         { const char p_string[] = "VK_ERROR_FORMAT_NOT_SUPPORTED";                         tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_FRAGMENTED_POOL:                              { const char p_string[] = "VK_ERROR_FRAGMENTED_POOL";                              tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_UNKNOWN:                                      { const char p_string[] = "VK_ERROR_UNKNOWN";                                      tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_OUT_OF_POOL_MEMORY:                           { const char p_string[] = "VK_ERROR_OUT_OF_POOL_MEMORY";                           tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_INVALID_EXTERNAL_HANDLE:                      { const char p_string[] = "VK_ERROR_INVALID_EXTERNAL_HANDLE";                      tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_FRAGMENTATION:                                { const char p_string[] = "VK_ERROR_FRAGMENTATION";                                tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_INVALID_OPAQUE_CAPTURE_ADDRESS:               { const char p_string[] = "VK_ERROR_INVALID_OPAQUE_CAPTURE_ADDRESS";               tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_SURFACE_LOST_KHR:                             { const char p_string[] = "VK_ERROR_SURFACE_LOST_KHR";                             tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_NATIVE_WINDOW_IN_USE_KHR:                     { const char p_string[] = "VK_ERROR_NATIVE_WINDOW_IN_USE_KHR";                     tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_SUBOPTIMAL_KHR:                                     { const char p_string[] = "VK_SUBOPTIMAL_KHR";                                     tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_OUT_OF_DATE_KHR:                              { const char p_string[] = "VK_ERROR_OUT_OF_DATE_KHR";                              tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_INCOMPATIBLE_DISPLAY_KHR:                     { const char p_string[] = "VK_ERROR_INCOMPATIBLE_DISPLAY_KHR";                     tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_VALIDATION_FAILED_EXT:                        { const char p_string[] = "VK_ERROR_VALIDATION_FAILED_EXT";                        tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_INVALID_SHADER_NV:                            { const char p_string[] = "VK_ERROR_INVALID_SHADER_NV";                            tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_INCOMPATIBLE_VERSION_KHR:                     { const char p_string[] = "VK_ERROR_INCOMPATIBLE_VERSION_KHR";                     tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_INVALID_DRM_FORMAT_MODIFIER_PLANE_LAYOUT_EXT: { const char p_string[] = "VK_ERROR_INVALID_DRM_FORMAT_MODIFIER_PLANE_LAYOUT_EXT"; tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_NOT_PERMITTED_EXT:                            { const char p_string[] = "VK_ERROR_NOT_PERMITTED_EXT";                            tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT:          { const char p_string[] = "VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT";          tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_THREAD_IDLE_KHR:                                    { const char p_string[] = "VK_THREAD_IDLE_KHR";                                    tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_THREAD_DONE_KHR:                                    { const char p_string[] = "VK_THREAD_DONE_KHR";                                    tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_OPERATION_DEFERRED_KHR:                             { const char p_string[] = "VK_OPERATION_DEFERRED_KHR";                             tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_OPERATION_NOT_DEFERRED_KHR:                         { const char p_string[] = "VK_OPERATION_NOT_DEFERRED_KHR";                         tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_PIPELINE_COMPILE_REQUIRED_EXT:                      { const char p_string[] = "VK_PIPELINE_COMPILE_REQUIRED_EXT";                      tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    default: TG_INVALID_CODEPATH(); break;
-    }
-}
-
 u32 tg_vertex_input_attribute_format_get_alignment(tg_vertex_input_attribute_format format)
 {
     u32 result = 0;
@@ -1113,15 +1066,6 @@ void tg_vulkan_descriptor_set_update(VkDescriptorSet descriptor_set, tg_handle h
     case TG_STRUCTURE_TYPE_CUBE_MAP:
     {
         tg_cube_map* p_cube_map = (tg_cube_map*)handle;
-        if (p_cube_map->layout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) // TODO: is this a good location for this? i doubt it...
-        {
-            VkCommandBuffer command_buffer = tg_vulkan_command_buffer_allocate(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY); // TODO: generic command_buffer
-            tg_vulkan_command_buffer_begin(command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
-            tg_vulkan_command_buffer_cmd_transition_cube_map_layout(command_buffer, &p_cube_map->vulkan_cube_map, 0, 0, p_cube_map->layout, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-            p_cube_map->layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            tg_vulkan_command_buffer_end_and_submit(command_buffer, TG_VULKAN_QUEUE_TYPE_GRAPHICS);
-            tg_vulkan_command_buffer_free(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, command_buffer);
-        }
         tg_vulkan_descriptor_set_update_cube_map(descriptor_set, &p_cube_map->vulkan_cube_map, dst_binding);
     } break;
     case TG_STRUCTURE_TYPE_DEPTH_IMAGE:
@@ -1785,6 +1729,53 @@ VkDescriptorType tg_vulkan_structure_type_convert_to_descriptor_type(tg_structur
     return descriptor_type;
 }
 
+void tg_vulkan_vkresult_convert_to_string(char* p_buffer, VkResult result)
+{
+    switch (result)
+    {
+    case VK_SUCCESS:                                            { const char p_string[] = "VK_SUCCESS";                                            tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_NOT_READY:                                          { const char p_string[] = "VK_NOT_READY";                                          tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_TIMEOUT:                                            { const char p_string[] = "VK_TIMEOUT";                                            tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_EVENT_SET:                                          { const char p_string[] = "VK_EVENT_SET";                                          tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_EVENT_RESET:                                        { const char p_string[] = "VK_EVENT_RESET";                                        tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_INCOMPLETE:                                         { const char p_string[] = "VK_INCOMPLETE";                                         tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_OUT_OF_HOST_MEMORY:                           { const char p_string[] = "VK_ERROR_OUT_OF_HOST_MEMORY";                           tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_OUT_OF_DEVICE_MEMORY:                         { const char p_string[] = "VK_ERROR_OUT_OF_DEVICE_MEMORY";                         tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_INITIALIZATION_FAILED:                        { const char p_string[] = "VK_ERROR_INITIALIZATION_FAILED";                        tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_DEVICE_LOST:                                  { const char p_string[] = "VK_ERROR_DEVICE_LOST";                                  tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_MEMORY_MAP_FAILED:                            { const char p_string[] = "VK_ERROR_MEMORY_MAP_FAILED";                            tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_LAYER_NOT_PRESENT:                            { const char p_string[] = "VK_ERROR_LAYER_NOT_PRESENT";                            tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_EXTENSION_NOT_PRESENT:                        { const char p_string[] = "VK_ERROR_EXTENSION_NOT_PRESENT";                        tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_FEATURE_NOT_PRESENT:                          { const char p_string[] = "VK_ERROR_FEATURE_NOT_PRESENT";                          tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_INCOMPATIBLE_DRIVER:                          { const char p_string[] = "VK_ERROR_INCOMPATIBLE_DRIVER";                          tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_TOO_MANY_OBJECTS:                             { const char p_string[] = "VK_ERROR_TOO_MANY_OBJECTS";                             tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_FORMAT_NOT_SUPPORTED:                         { const char p_string[] = "VK_ERROR_FORMAT_NOT_SUPPORTED";                         tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_FRAGMENTED_POOL:                              { const char p_string[] = "VK_ERROR_FRAGMENTED_POOL";                              tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_UNKNOWN:                                      { const char p_string[] = "VK_ERROR_UNKNOWN";                                      tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_OUT_OF_POOL_MEMORY:                           { const char p_string[] = "VK_ERROR_OUT_OF_POOL_MEMORY";                           tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_INVALID_EXTERNAL_HANDLE:                      { const char p_string[] = "VK_ERROR_INVALID_EXTERNAL_HANDLE";                      tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_FRAGMENTATION:                                { const char p_string[] = "VK_ERROR_FRAGMENTATION";                                tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_INVALID_OPAQUE_CAPTURE_ADDRESS:               { const char p_string[] = "VK_ERROR_INVALID_OPAQUE_CAPTURE_ADDRESS";               tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_SURFACE_LOST_KHR:                             { const char p_string[] = "VK_ERROR_SURFACE_LOST_KHR";                             tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_NATIVE_WINDOW_IN_USE_KHR:                     { const char p_string[] = "VK_ERROR_NATIVE_WINDOW_IN_USE_KHR";                     tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_SUBOPTIMAL_KHR:                                     { const char p_string[] = "VK_SUBOPTIMAL_KHR";                                     tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_OUT_OF_DATE_KHR:                              { const char p_string[] = "VK_ERROR_OUT_OF_DATE_KHR";                              tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_INCOMPATIBLE_DISPLAY_KHR:                     { const char p_string[] = "VK_ERROR_INCOMPATIBLE_DISPLAY_KHR";                     tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_VALIDATION_FAILED_EXT:                        { const char p_string[] = "VK_ERROR_VALIDATION_FAILED_EXT";                        tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_INVALID_SHADER_NV:                            { const char p_string[] = "VK_ERROR_INVALID_SHADER_NV";                            tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_INCOMPATIBLE_VERSION_KHR:                     { const char p_string[] = "VK_ERROR_INCOMPATIBLE_VERSION_KHR";                     tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_INVALID_DRM_FORMAT_MODIFIER_PLANE_LAYOUT_EXT: { const char p_string[] = "VK_ERROR_INVALID_DRM_FORMAT_MODIFIER_PLANE_LAYOUT_EXT"; tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_NOT_PERMITTED_EXT:                            { const char p_string[] = "VK_ERROR_NOT_PERMITTED_EXT";                            tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT:          { const char p_string[] = "VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT";          tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_THREAD_IDLE_KHR:                                    { const char p_string[] = "VK_THREAD_IDLE_KHR";                                    tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_THREAD_DONE_KHR:                                    { const char p_string[] = "VK_THREAD_DONE_KHR";                                    tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_OPERATION_DEFERRED_KHR:                             { const char p_string[] = "VK_OPERATION_DEFERRED_KHR";                             tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_OPERATION_NOT_DEFERRED_KHR:                         { const char p_string[] = "VK_OPERATION_NOT_DEFERRED_KHR";                         tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_PIPELINE_COMPILE_REQUIRED_EXT:                      { const char p_string[] = "VK_PIPELINE_COMPILE_REQUIRED_EXT";                      tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    default: TG_INVALID_CODEPATH(); break;
+    }
+}
+
 
 
 /*------------------------------------------------------------+
@@ -2432,6 +2423,9 @@ void tg_graphics_init()
     }
     tg__swapchain_create();
 
+    global_graphics_command_buffer = tg_vulkan_command_buffer_allocate(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+    global_compute_command_buffer = tg_vulkan_command_buffer_allocate(TG_VULKAN_COMMAND_POOL_TYPE_COMPUTE, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+
     tg_vulkan_memory_allocator_init(device, physical_device);
 }
 
@@ -2442,6 +2436,9 @@ void tg_graphics_wait_idle()
 
 void tg_graphics_shutdown()
 {
+    tg_vulkan_command_buffer_free(TG_VULKAN_COMMAND_POOL_TYPE_COMPUTE, global_compute_command_buffer);
+    tg_vulkan_command_buffer_free(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, global_graphics_command_buffer);
+
     tg_vulkan_memory_allocator_shutdown(device);
 
     for (u32 i = 0; i < TG_WORKER_THREAD_COUNT + 1; i++)

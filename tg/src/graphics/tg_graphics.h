@@ -303,7 +303,7 @@ void tg_spirv_fill_layout(u32 word_count, const u32* p_words, tg_spirv_layout* p
     if (VK_CALL_NAME(vk_call_result, __LINE__) != VK_SUCCESS) \
     { \
         char p_buffer[1024] = { 0 }; \
-        tg_vulkan_convert_vkresult_to_string(p_buffer, VK_CALL_NAME(vk_call_result, __LINE__)); \
+        tg_vulkan_vkresult_convert_to_string(p_buffer, VK_CALL_NAME(vk_call_result, __LINE__)); \
         TG_DEBUG_LOG("VkResult: %s\n", p_buffer); \
     } \
     if (VK_CALL_NAME(vk_call_result, __LINE__) != VK_SUCCESS) TG_INVALID_CODEPATH();
@@ -503,7 +503,6 @@ typedef struct tg_compute_shader
 typedef struct tg_cube_map
 {
     tg_structure_type     type;
-    VkImageLayout         layout;
     tg_vulkan_cube_map    vulkan_cube_map;
 } tg_cube_map;
 
@@ -728,6 +727,8 @@ VkSwapchainKHR        swapchain;
 VkExtent2D            swapchain_extent;
 VkImage               p_swapchain_images[TG_VULKAN_SURFACE_IMAGE_COUNT];
 VkImageView           p_swapchain_image_views[TG_VULKAN_SURFACE_IMAGE_COUNT];
+VkCommandBuffer       global_graphics_command_buffer;
+VkCommandBuffer       global_compute_command_buffer;
 
 
 
@@ -739,10 +740,6 @@ tg_render_command     p_render_commands[TG_MAX_RENDER_COMMANDS];
 tg_raytracer          p_raytracers[TG_MAX_RAYTRACERS];
 tg_renderer           p_renderers[TG_MAX_RENDERERS];
 tg_vertex_shader      p_vertex_shaders[TG_MAX_VERTEX_SHADERS];
-
-
-
-void                          tg_vulkan_convert_vkresult_to_string(char* p_buffer, VkResult result);
 
 
 
@@ -827,6 +824,8 @@ tg_vulkan_shader              tg_vulkan_shader_create(const char* p_filename);
 void                          tg_vulkan_shader_destroy(tg_vulkan_shader* p_vulkan_shader);
 
 VkDescriptorType              tg_vulkan_structure_type_convert_to_descriptor_type(tg_structure_type type);
+
+void                          tg_vulkan_vkresult_convert_to_string(char* p_buffer, VkResult result);
 
 
 
