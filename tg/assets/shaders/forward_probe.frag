@@ -7,8 +7,10 @@ layout(location = 2) in vec2    v_uv;
 
 layout(location = 0) out vec4    out_color;
 
+layout(set = 0, binding = 2) uniform samplerCube cubemap;
+
 void main()
 {
-    float brightness = max(0.0, dot(v_normal, vec3(0.0, 1.0, 0.0)));
+    float brightness = texture(cubemap, normalize(v_normal)).x;
     out_color = vec4(vec3(brightness), 1.0);
 }

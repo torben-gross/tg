@@ -62,7 +62,7 @@ void tg__set_buffer_data(tg_vulkan_buffer* p_vulkan_buffer, u64 size, void* p_da
         // TODO: i could always save the last staging buffer and see if the required size
         // is larger and potentially recreate. then i could reuse this staging buffer for
         // everything! also, resizing would be nice. same applies for the case above.
-        tg_vulkan_buffer staging_buffer = tg_vulkan_buffer_create(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+        tg_vulkan_buffer staging_buffer = tg_vulkan_buffer_create(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
         v3* p_it = (v3*)staging_buffer.memory.p_mapped_device_memory;
         tg_memory_copy(size, p_data, staging_buffer.memory.p_mapped_device_memory);
         tg_vulkan_buffer_flush_mapped_memory(&staging_buffer);

@@ -22,8 +22,12 @@ b32 tg__traverse(v3 ray_origin, v3 ray_direction, const tg_kd_tree* p_kd_tree, c
             const f32 ds = tgm_v3_magsqr(tgm_v3_sub(hit, ray_origin));
             if (result && ds < dsqr)
             {
+                tg_intersect_ray_triangle(ray_origin, ray_direction, p0, p1, p2, &hit);
                 dsqr = ds;
-                *p_hit = hit;
+                if (p_hit)
+                {
+                    *p_hit = hit;
+                }
             }
         }
         return dsqr < TG_F32_MAX;
@@ -59,7 +63,7 @@ b32 tg__traverse(v3 ray_origin, v3 ray_direction, const tg_kd_tree* p_kd_tree, c
 
     v3 hit = { 0 };
     b32 result = tg__traverse(ray_origin, ray_direction, p_kd_tree, p_near, bounds_near, &hit);
-    if (result)
+    if (result && p_hit)
     {
         *p_hit = hit;
     }
@@ -68,7 +72,10 @@ b32 tg__traverse(v3 ray_origin, v3 ray_direction, const tg_kd_tree* p_kd_tree, c
         if (tg__traverse(ray_origin, ray_direction, p_kd_tree, p_far, bounds_far, &hit))
         {
             result |= TG_TRUE;
-            *p_hit = hit;
+            if (p_hit)
+            {
+                *p_hit = hit;
+            }
         }
     }
     return result;
@@ -225,13 +232,18 @@ b32 tg_intersect_ray_triangle(v3 ray_origin, v3 ray_direction, v3 tri_p0, v3 tri
         }
     }
 
-    const b32 result = barycentric_coords.y >= 0.0f && barycentric_coords.z >= 0.0f && barycentric_coords.y + barycentric_coords.z <= 1.0f;
-    if (result && p_hit)
+    b32 result = TG_FALSE;
+    if (barycentric_coords.y >= 0.0f && barycentric_coords.z >= 0.0f && barycentric_coords.y + barycentric_coords.z <= 1.0f && p_hit)
     {
         const v3 v0 = tgm_v3_mulf(tri_p0, 1.0f - barycentric_coords.y - barycentric_coords.z);
         const v3 v1 = tgm_v3_mulf(tri_p1, barycentric_coords.y);
         const v3 v2 = tgm_v3_mulf(tri_p2, barycentric_coords.z);
-        *p_hit = tgm_v3_add(tgm_v3_add(v0, v1), v2);
+        const v3 hit = tgm_v3_add(tgm_v3_add(v0, v1), v2);
+        if (tgm_v3_dot(tgm_v3_sub(hit, ray_origin), ray_direction) > 0.0f)
+        {
+            result = TG_TRUE;
+            *p_hit = hit;
+        }
     }
     return result;
 }

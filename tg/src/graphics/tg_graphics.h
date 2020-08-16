@@ -29,9 +29,12 @@
 
 #define TG_IMAGE_MAX_MIP_LEVELS(w, h)     ((u32)tgm_f32_log2((f32)tgm_u32_max((u32)w, (u32)h)) + 1)
 
-#define TG_CAMERA_RIGHT(camera)      (tgm_m4_mulv4(tgm_m4_inverse(tgm_m4_euler((camera).pitch, (camera).yaw, (camera).roll)), (v4){  1.0f,  0.0f,  0.0f,  0.0f }).xyz)
-#define TG_CAMERA_UP(camera)         (tgm_m4_mulv4(tgm_m4_inverse(tgm_m4_euler((camera).pitch, (camera).yaw, (camera).roll)), (v4){  0.0f,  1.0f,  0.0f,  0.0f }).xyz)
-#define TG_CAMERA_FORWARD(camera)    (tgm_m4_mulv4(tgm_m4_inverse(tgm_m4_euler((camera).pitch, (camera).yaw, (camera).roll)), (v4){  0.0f,  0.0f, -1.0f,  0.0f }).xyz)
+#define TG_CAMERA_LEFT(camera)        (tgm_m4_mulv4(tgm_m4_inverse(tgm_m4_euler((camera).pitch, (camera).yaw, (camera).roll)), (v4){ -1.0f,  0.0f,  0.0f,  0.0f }).xyz)
+#define TG_CAMERA_RIGHT(camera)       (tgm_m4_mulv4(tgm_m4_inverse(tgm_m4_euler((camera).pitch, (camera).yaw, (camera).roll)), (v4){  1.0f,  0.0f,  0.0f,  0.0f }).xyz)
+#define TG_CAMERA_DOWN(camera)        (tgm_m4_mulv4(tgm_m4_inverse(tgm_m4_euler((camera).pitch, (camera).yaw, (camera).roll)), (v4){  0.0f, -1.0f,  0.0f,  0.0f }).xyz)
+#define TG_CAMERA_UP(camera)          (tgm_m4_mulv4(tgm_m4_inverse(tgm_m4_euler((camera).pitch, (camera).yaw, (camera).roll)), (v4){  0.0f,  1.0f,  0.0f,  0.0f }).xyz)
+#define TG_CAMERA_FORWARD(camera)     (tgm_m4_mulv4(tgm_m4_inverse(tgm_m4_euler((camera).pitch, (camera).yaw, (camera).roll)), (v4){  0.0f,  0.0f, -1.0f,  0.0f }).xyz)
+#define TG_CAMERA_BACKWARD(camera)    (tgm_m4_mulv4(tgm_m4_inverse(tgm_m4_euler((camera).pitch, (camera).yaw, (camera).roll)), (v4){  0.0f,  0.0f,  1.0f,  0.0f }).xyz)
 
 
 
@@ -80,6 +83,7 @@ typedef enum tg_structure_type
 	TG_STRUCTURE_TYPE_COLOR_IMAGE,
 	TG_STRUCTURE_TYPE_COLOR_IMAGE_3D,
 	TG_STRUCTURE_TYPE_COMPUTE_SHADER,
+    TG_STRUCTURE_TYPE_CUBE_MAP,
 	TG_STRUCTURE_TYPE_DEPTH_IMAGE,
 	TG_STRUCTURE_TYPE_FRAGMENT_SHADER,
 	TG_STRUCTURE_TYPE_MATERIAL,
@@ -370,6 +374,16 @@ typedef struct tg_vulkan_buffer
     tg_vulkan_memory_block    memory;
 } tg_vulkan_buffer;
 
+typedef struct tg_vulkan_cube_map
+{
+    u32                       dimension;
+    VkFormat                  format;
+    VkImage                   image;
+    tg_vulkan_memory_block    memory;
+    VkImageView               image_view;
+    VkSampler                 sampler;
+} tg_vulkan_cube_map;
+
 typedef struct tg_vulkan_image
 {
     u32                       width;
@@ -472,6 +486,12 @@ typedef struct tg_color_image
     tg_vulkan_image      vulkan_image;
 } tg_color_image;
 
+typedef struct tg_color_image_3d
+{
+    tg_structure_type     type;
+    tg_vulkan_image_3d    vulkan_image_3d;
+} tg_color_image_3d;
+
 typedef struct tg_compute_shader
 {
     tg_structure_type     type;
@@ -480,11 +500,12 @@ typedef struct tg_compute_shader
     VkCommandBuffer       command_buffer;
 } tg_compute_shader;
 
-typedef struct tg_color_image_3d
+typedef struct tg_cube_map
 {
     tg_structure_type     type;
-    tg_vulkan_image_3d    vulkan_image_3d;
-} tg_color_image_3d;
+    VkImageLayout         layout;
+    tg_vulkan_cube_map    vulkan_cube_map;
+} tg_cube_map;
 
 typedef struct tg_depth_image
 {
@@ -744,20 +765,26 @@ void                          tg_vulkan_command_buffer_cmd_blit_image(VkCommandB
 void                          tg_vulkan_command_buffer_cmd_clear_color_image(VkCommandBuffer command_buffer, tg_vulkan_image* p_vulkan_image);
 void                          tg_vulkan_command_buffer_cmd_clear_depth_image(VkCommandBuffer command_buffer, tg_vulkan_image* p_vulkan_image);
 void                          tg_vulkan_command_buffer_cmd_copy_buffer_to_color_image(VkCommandBuffer command_buffer, VkBuffer source, tg_vulkan_image* p_destination);
+void                          tg_vulkan_command_buffer_cmd_copy_buffer_to_cube_map(VkCommandBuffer command_buffer, VkBuffer source, tg_vulkan_cube_map* p_destination);
 void                          tg_vulkan_command_buffer_cmd_copy_buffer_to_depth_image(VkCommandBuffer command_buffer, VkBuffer source, tg_vulkan_image* p_destination);
 void                          tg_vulkan_command_buffer_cmd_copy_color_image(VkCommandBuffer command_buffer, tg_vulkan_image* p_source, tg_vulkan_image* p_destination);
 void                          tg_vulkan_command_buffer_cmd_copy_color_image_to_buffer(VkCommandBuffer command_buffer, tg_vulkan_image* p_source, VkBuffer destination);
 void                          tg_vulkan_command_buffer_cmd_transition_color_image_layout(VkCommandBuffer command_buffer, tg_vulkan_image* p_vulkan_image, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits);
+void                          tg_vulkan_command_buffer_cmd_transition_cube_map_layout(VkCommandBuffer command_buffer, tg_vulkan_cube_map* p_vulkan_cube_map, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits);
 void                          tg_vulkan_command_buffer_cmd_transition_depth_image_layout(VkCommandBuffer command_buffer, tg_vulkan_image* p_vulkan_image, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits);
 void                          tg_vulkan_command_buffer_end_and_submit(VkCommandBuffer command_buffer, tg_vulkan_queue_type type);
 void                          tg_vulkan_command_buffer_free(tg_vulkan_command_pool_type type, VkCommandBuffer command_buffer); // TODO: save command pool in command buffers?
 void                          tg_vulkan_command_buffers_allocate(tg_vulkan_command_pool_type type, VkCommandBufferLevel level, u32 command_buffer_count, VkCommandBuffer* p_command_buffers);
 void                          tg_vulkan_command_buffers_free(tg_vulkan_command_pool_type type, u32 command_buffer_count, const VkCommandBuffer* p_command_buffers);
 
+tg_vulkan_cube_map            tg_vulkan_cube_map_create(u32 dimension, VkFormat format, const tg_sampler_create_info* p_sampler_create_info);
+void                          tg_vulkan_cube_map_destroy(tg_vulkan_cube_map* p_vulkan_cube_map);
+
 tg_vulkan_image               tg_vulkan_depth_image_create(u32 width, u32 height, VkFormat format, const tg_sampler_create_info* p_sampler_create_info);
 void                          tg_vulkan_depth_image_destroy(tg_vulkan_image* p_vulkan_image);
 
 void                          tg_vulkan_descriptor_set_update(VkDescriptorSet descriptor_set, tg_handle shader_input_element_handle, u32 dst_binding);
+void                          tg_vulkan_descriptor_set_update_cube_map(VkDescriptorSet descriptor_set, tg_vulkan_cube_map* p_vulkan_cube_map, u32 dst_binding);
 void                          tg_vulkan_descriptor_set_update_image(VkDescriptorSet descriptor_set, tg_vulkan_image* p_vulkan_image, u32 dst_binding);
 void                          tg_vulkan_descriptor_set_update_image_array(VkDescriptorSet descriptor_set, tg_vulkan_image* p_vulkan_image, u32 dst_binding, u32 array_index);
 void                          tg_vulkan_descriptor_set_update_render_target(VkDescriptorSet descriptor_set, tg_render_target* p_render_target, u32 dst_binding);
@@ -775,8 +802,6 @@ void                          tg_vulkan_fence_wait(VkFence fence);
 tg_vulkan_framebuffer         tg_vulkan_framebuffer_create(VkRenderPass render_pass, u32 attachment_count, const VkImageView* p_attachments, u32 width, u32 height);
 void                          tg_vulkan_framebuffer_destroy(tg_vulkan_framebuffer* p_framebuffer);
 void                          tg_vulkan_framebuffers_destroy(u32 count, tg_vulkan_framebuffer* p_framebuffers);
-
-VkDescriptorType              tg_vulkan_handle_type_convert_to_descriptor_type(tg_structure_type type);
 
 VkPhysicalDeviceProperties    tg_vulkan_physical_device_get_properties();
 
@@ -800,6 +825,8 @@ void                          tg_vulkan_semaphore_destroy(VkSemaphore semaphore)
 
 tg_vulkan_shader              tg_vulkan_shader_create(const char* p_filename);
 void                          tg_vulkan_shader_destroy(tg_vulkan_shader* p_vulkan_shader);
+
+VkDescriptorType              tg_vulkan_structure_type_convert_to_descriptor_type(tg_structure_type type);
 
 
 
@@ -825,15 +852,20 @@ tg_color_image          tg_color_image_create(u32 width, u32 height, tg_color_im
 tg_color_image          tg_color_image_create2(const char* p_filename, const tg_sampler_create_info* p_sampler_create_info);
 void                    tg_color_image_destroy(tg_color_image* p_color_image);
 
+u32                     tg_color_image_format_size(tg_color_image_format format);
+
+tg_color_image_3d       tg_color_image_3d_create(u32 width, u32 height, u32 depth, tg_color_image_format format, const tg_sampler_create_info* p_sampler_create_info);
+void                    tg_color_image_3d_destroy(tg_color_image_3d* p_color_image_3d);
+
 void                    tg_compute_shader_bind_input(tg_compute_shader_h h_compute_shader, u32 first_handle_index, u32 handle_count, tg_handle* p_handles);
 tg_compute_shader_h     tg_compute_shader_create(const char* filename);
 void                    tg_compute_shader_dispatch(tg_compute_shader_h h_compute_shader, u32 group_count_x, u32 group_count_y, u32 group_count_z);
 void                    tg_compute_shader_destroy(tg_compute_shader_h h_compute_shader);
 tg_compute_shader_h     tg_compute_shader_get(const char* filename);
 
-tg_color_image_3d       tg_color_image_3d_create(u32 width, u32 height, u32 depth, tg_color_image_format format, const tg_sampler_create_info* p_sampler_create_info);
-void                    tg_color_image_3d_destroy(tg_color_image_3d* p_color_image_3d);
-// TODO: destroy
+tg_cube_map             tg_cube_map_create(u32 dimension, tg_color_image_format format, const tg_sampler_create_info* p_sampler_create_info);
+void                    tg_cube_map_destroy(tg_cube_map* p_cube_map);
+void                    tg_cube_map_set_data(tg_cube_map* p_cube_map, void* p_data);
 
 tg_depth_image          tg_depth_image_create(u32 width, u32 height, tg_depth_image_format format, const tg_sampler_create_info* p_sampler_create_info);
 void                    tg_depth_image_destroy(tg_depth_image* p_depth_image);

@@ -92,7 +92,7 @@ static VkImageView tg__image_view_create(VkImage image, VkImageViewType view_typ
     image_view_create_info.subresourceRange.baseMipLevel = 0;
     image_view_create_info.subresourceRange.levelCount = mip_levels;
     image_view_create_info.subresourceRange.baseArrayLayer = 0;
-    image_view_create_info.subresourceRange.layerCount = 1;
+    image_view_create_info.subresourceRange.layerCount = view_type == VK_IMAGE_VIEW_TYPE_CUBE ? 6 : 1;
 
     VK_CALL(vkCreateImageView(device, &image_view_create_info, TG_NULL, &image_view));
 
@@ -752,6 +752,26 @@ void tg_vulkan_command_buffer_cmd_copy_buffer_to_color_image(VkCommandBuffer com
     vkCmdCopyBufferToImage(command_buffer, source, p_destination->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &buffer_image_copy);
 }
 
+void tg_vulkan_command_buffer_cmd_copy_buffer_to_cube_map(VkCommandBuffer command_buffer, VkBuffer source, tg_vulkan_cube_map* p_destination)
+{
+    VkBufferImageCopy buffer_image_copy = { 0 };
+    buffer_image_copy.bufferOffset = 0;
+    buffer_image_copy.bufferRowLength = 0;
+    buffer_image_copy.bufferImageHeight = 0;
+    buffer_image_copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    buffer_image_copy.imageSubresource.mipLevel = 0;
+    buffer_image_copy.imageSubresource.baseArrayLayer = 0;
+    buffer_image_copy.imageSubresource.layerCount = 6;
+    buffer_image_copy.imageOffset.x = 0;
+    buffer_image_copy.imageOffset.y = 0;
+    buffer_image_copy.imageOffset.z = 0;
+    buffer_image_copy.imageExtent.width = p_destination->dimension;
+    buffer_image_copy.imageExtent.height = p_destination->dimension;
+    buffer_image_copy.imageExtent.depth = 1;
+
+    vkCmdCopyBufferToImage(command_buffer, source, p_destination->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &buffer_image_copy);
+}
+
 void tg_vulkan_command_buffer_cmd_copy_buffer_to_depth_image(VkCommandBuffer command_buffer, VkBuffer source, tg_vulkan_image* p_destination)
 {
     VkBufferImageCopy buffer_image_copy = { 0 };
@@ -816,7 +836,7 @@ void tg_vulkan_command_buffer_cmd_copy_color_image_to_buffer(VkCommandBuffer com
     vkCmdCopyImageToBuffer(command_buffer, p_source->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, destination, 1, &buffer_image_copy);
 }
 
-void tg_vulkan_command_buffer_cmd_transition_color_image_layout(VkCommandBuffer command_buffer, tg_vulkan_image* p_vulkan_color_image, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits)
+void tg_vulkan_command_buffer_cmd_transition_color_image_layout(VkCommandBuffer command_buffer, tg_vulkan_image* p_vulkan_image, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits)
 {
     VkImageMemoryBarrier image_memory_barrier = { 0 };
     image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -827,7 +847,7 @@ void tg_vulkan_command_buffer_cmd_transition_color_image_layout(VkCommandBuffer 
     image_memory_barrier.newLayout = new_layout;
     image_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     image_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    image_memory_barrier.image = p_vulkan_color_image->image;
+    image_memory_barrier.image = p_vulkan_image->image;
     image_memory_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     image_memory_barrier.subresourceRange.baseMipLevel = 0;
     image_memory_barrier.subresourceRange.levelCount = 1;
@@ -837,7 +857,7 @@ void tg_vulkan_command_buffer_cmd_transition_color_image_layout(VkCommandBuffer 
     vkCmdPipelineBarrier(command_buffer, src_stage_bits, dst_stage_bits, 0, 0, TG_NULL, 0, TG_NULL, 1, &image_memory_barrier);
 }
 
-void tg_vulkan_command_buffer_cmd_transition_depth_image_layout(VkCommandBuffer command_buffer, tg_vulkan_image* p_vulkan_depth_image, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits)
+void tg_vulkan_command_buffer_cmd_transition_cube_map_layout(VkCommandBuffer command_buffer, tg_vulkan_cube_map* p_vulkan_cube_map, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits)
 {
     VkImageMemoryBarrier image_memory_barrier = { 0 };
     image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -848,7 +868,28 @@ void tg_vulkan_command_buffer_cmd_transition_depth_image_layout(VkCommandBuffer 
     image_memory_barrier.newLayout = new_layout;
     image_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     image_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    image_memory_barrier.image = p_vulkan_depth_image->image;
+    image_memory_barrier.image = p_vulkan_cube_map->image;
+    image_memory_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    image_memory_barrier.subresourceRange.baseMipLevel = 0;
+    image_memory_barrier.subresourceRange.levelCount = 1;
+    image_memory_barrier.subresourceRange.baseArrayLayer = 0;
+    image_memory_barrier.subresourceRange.layerCount = 6;
+
+    vkCmdPipelineBarrier(command_buffer, src_stage_bits, dst_stage_bits, 0, 0, TG_NULL, 0, TG_NULL, 1, &image_memory_barrier);
+}
+
+void tg_vulkan_command_buffer_cmd_transition_depth_image_layout(VkCommandBuffer command_buffer, tg_vulkan_image* p_vulkan_image, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits)
+{
+    VkImageMemoryBarrier image_memory_barrier = { 0 };
+    image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    image_memory_barrier.pNext = TG_NULL;
+    image_memory_barrier.srcAccessMask = src_access_mask;
+    image_memory_barrier.dstAccessMask = dst_access_mask;
+    image_memory_barrier.oldLayout = old_layout;
+    image_memory_barrier.newLayout = new_layout;
+    image_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    image_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    image_memory_barrier.image = p_vulkan_image->image;
     image_memory_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
     image_memory_barrier.subresourceRange.baseMipLevel = 0;
     image_memory_barrier.subresourceRange.levelCount = 1;
@@ -937,6 +978,65 @@ void tg_vulkan_command_buffers_free(tg_vulkan_command_pool_type type, u32 comman
 
 
 
+tg_vulkan_cube_map tg_vulkan_cube_map_create(u32 dimension, VkFormat format, const tg_sampler_create_info* p_sampler_create_info)
+{
+    tg_vulkan_cube_map vulkan_cube_map = { 0 };
+    vulkan_cube_map.dimension = dimension;
+    vulkan_cube_map.format = format;
+
+    VkImageCreateInfo image_create_info = { 0 };
+    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_create_info.pNext = TG_NULL;
+    image_create_info.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+    image_create_info.imageType = VK_IMAGE_TYPE_2D;
+    image_create_info.format = vulkan_cube_map.format;
+    image_create_info.extent.width = vulkan_cube_map.dimension;
+    image_create_info.extent.height = vulkan_cube_map.dimension;
+    image_create_info.extent.depth = 1;
+    image_create_info.mipLevels = 1;
+    image_create_info.arrayLayers = 6;
+    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
+    image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+    image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    image_create_info.queueFamilyIndexCount = 0;
+    image_create_info.pQueueFamilyIndices = TG_NULL;
+    image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+    VK_CALL(vkCreateImage(device, &image_create_info, TG_NULL, &vulkan_cube_map.image));
+
+    VkMemoryRequirements memory_requirements = { 0 };
+    vkGetImageMemoryRequirements(device, vulkan_cube_map.image, &memory_requirements);
+    vulkan_cube_map.memory = tg_vulkan_memory_allocator_alloc(memory_requirements.alignment, memory_requirements.size, memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    VK_CALL(vkBindImageMemory(device, vulkan_cube_map.image, vulkan_cube_map.memory.device_memory, vulkan_cube_map.memory.offset));
+
+    vulkan_cube_map.image_view = tg__image_view_create(vulkan_cube_map.image, VK_IMAGE_VIEW_TYPE_CUBE, vulkan_cube_map.format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+
+    if (p_sampler_create_info)
+    {
+        vulkan_cube_map.sampler = tg__sampler_create_custom(
+            1,
+            p_sampler_create_info->min_filter,
+            p_sampler_create_info->mag_filter,
+            p_sampler_create_info->address_mode_u,
+            p_sampler_create_info->address_mode_v,
+            p_sampler_create_info->address_mode_w
+        );
+    }
+    else
+    {
+        vulkan_cube_map.sampler = tg__sampler_create(1);
+    }
+
+    return vulkan_cube_map;
+}
+
+void tg_vulkan_cube_map_destroy(tg_vulkan_cube_map* p_vulkan_cube_map)
+{
+    TG_INVALID_CODEPATH();
+}
+
+
 tg_vulkan_image tg_vulkan_depth_image_create(u32 width, u32 height, VkFormat format, const tg_sampler_create_info* p_sampler_create_info)
 {
     tg_vulkan_image depth_image = { 0 };
@@ -1010,6 +1110,20 @@ void tg_vulkan_descriptor_set_update(VkDescriptorSet descriptor_set, tg_handle h
         tg_color_image* p_color_image = (tg_color_image*)handle;
         tg_vulkan_descriptor_set_update_image(descriptor_set, &p_color_image->vulkan_image, dst_binding);
     } break;
+    case TG_STRUCTURE_TYPE_CUBE_MAP:
+    {
+        tg_cube_map* p_cube_map = (tg_cube_map*)handle;
+        if (p_cube_map->layout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) // TODO: is this a good location for this? i doubt it...
+        {
+            VkCommandBuffer command_buffer = tg_vulkan_command_buffer_allocate(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY); // TODO: generic command_buffer
+            tg_vulkan_command_buffer_begin(command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
+            tg_vulkan_command_buffer_cmd_transition_cube_map_layout(command_buffer, &p_cube_map->vulkan_cube_map, 0, 0, p_cube_map->layout, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+            p_cube_map->layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            tg_vulkan_command_buffer_end_and_submit(command_buffer, TG_VULKAN_QUEUE_TYPE_GRAPHICS);
+            tg_vulkan_command_buffer_free(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, command_buffer);
+        }
+        tg_vulkan_descriptor_set_update_cube_map(descriptor_set, &p_cube_map->vulkan_cube_map, dst_binding);
+    } break;
     case TG_STRUCTURE_TYPE_DEPTH_IMAGE:
     {
         tg_depth_image* p_depth_image = (tg_depth_image*)handle;
@@ -1039,6 +1153,28 @@ void tg_vulkan_descriptor_set_update_image(VkDescriptorSet descriptor_set, tg_vu
     VkDescriptorImageInfo descriptor_image_info = { 0 };
     descriptor_image_info.sampler = p_vulkan_image->sampler;
     descriptor_image_info.imageView = p_vulkan_image->image_view;
+    descriptor_image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+    VkWriteDescriptorSet write_descriptor_set = { 0 };
+    write_descriptor_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    write_descriptor_set.pNext = TG_NULL;
+    write_descriptor_set.dstSet = descriptor_set;
+    write_descriptor_set.dstBinding = dst_binding;
+    write_descriptor_set.dstArrayElement = 0;
+    write_descriptor_set.descriptorCount = 1;
+    write_descriptor_set.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    write_descriptor_set.pImageInfo = &descriptor_image_info;
+    write_descriptor_set.pBufferInfo = TG_NULL;
+    write_descriptor_set.pTexelBufferView = TG_NULL;
+
+    vkUpdateDescriptorSets(device, 1, &write_descriptor_set, 0, TG_NULL);
+}
+
+void tg_vulkan_descriptor_set_update_cube_map(VkDescriptorSet descriptor_set, tg_vulkan_cube_map* p_vulkan_cube_map, u32 dst_binding)
+{
+    VkDescriptorImageInfo descriptor_image_info = { 0 };
+    descriptor_image_info.sampler = p_vulkan_cube_map->sampler;
+    descriptor_image_info.imageView = p_vulkan_cube_map->image_view;
     descriptor_image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
     VkWriteDescriptorSet write_descriptor_set = { 0 };
@@ -1243,36 +1379,6 @@ void tg_vulkan_framebuffers_destroy(u32 count, tg_vulkan_framebuffer* p_framebuf
     for (u32 i = 0; i < count; i++)
     {
         vkDestroyFramebuffer(device, p_framebuffers[i].framebuffer, TG_NULL);
-    }
-}
-
-
-
-VkDescriptorType tg_vulkan_handle_type_convert_to_descriptor_type(tg_structure_type type)
-{
-    switch (type)
-    {
-    case TG_STRUCTURE_TYPE_COLOR_IMAGE:         return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    case TG_STRUCTURE_TYPE_DEPTH_IMAGE:         return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    case TG_STRUCTURE_TYPE_RENDER_TARGET:       return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    case TG_STRUCTURE_TYPE_STORAGE_BUFFER:      return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    case TG_STRUCTURE_TYPE_UNIFORM_BUFFER:      return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    }
-
-    TG_INVALID_CODEPATH();
-    return -1;
-}
-
-
-
-VkFilter tg_vulkan_image_convert_filter(tg_image_filter filter)
-{
-    switch (filter)
-    {
-    case TG_IMAGE_FILTER_LINEAR:  return VK_FILTER_LINEAR;
-    case TG_IMAGE_FILTER_NEAREST: return VK_FILTER_NEAREST;
-
-    default: TG_INVALID_CODEPATH(); return -1;
     }
 }
 
@@ -1657,6 +1763,26 @@ tg_vulkan_shader tg_vulkan_shader_create(const char* p_filename)
 void tg_vulkan_shader_destroy(tg_vulkan_shader* p_vulkan_shader)
 {
     vkDestroyShaderModule(device, p_vulkan_shader->shader_module, TG_NULL);
+}
+
+
+
+VkDescriptorType tg_vulkan_structure_type_convert_to_descriptor_type(tg_structure_type type)
+{
+    VkDescriptorType descriptor_type = -1;
+
+    switch (type)
+    {
+    case TG_STRUCTURE_TYPE_COLOR_IMAGE:       descriptor_type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER; break;
+    case TG_STRUCTURE_TYPE_DEPTH_IMAGE:       descriptor_type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER; break;
+    case TG_STRUCTURE_TYPE_RENDER_TARGET:     descriptor_type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER; break;
+    case TG_STRUCTURE_TYPE_STORAGE_BUFFER:    descriptor_type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;         break;
+    case TG_STRUCTURE_TYPE_UNIFORM_BUFFER:    descriptor_type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;         break;
+
+    default: TG_INVALID_CODEPATH(); break;
+    }
+
+    return descriptor_type;
 }
 
 

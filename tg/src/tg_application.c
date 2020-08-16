@@ -63,6 +63,7 @@ typedef struct tg_sample_scene
     tg_mesh                    pbr_sphere_mesh2;
     tg_pbr_sphere              p_pbr_spheres[49];
     tg_mesh                    probe_mesh;
+    tg_cube_map                probe_cube_map;
     tg_render_command_h        h_probe_render_command;
     tg_terrain                 terrain;
     f32                        light_timer;
@@ -133,11 +134,27 @@ static void tg__game_3d_create()
 
 
 
+
+
+
+    scene.sponza_mesh = tg_mesh_create2("meshes/sponza.obj", V3(0.01f));
+    tg_kd_tree* p_sponza_kd_tree = tg_kd_tree_create(&scene.sponza_mesh);
+    const v3 origin = tgm_v3_sub(scene.camera.position, (v3) { 128.0f, 140.0f, 128.0f });
+    const b32 l = tg_raycast_kd_tree(origin, TG_CAMERA_LEFT(scene.camera), p_sponza_kd_tree, TG_NULL);
+    const b32 r = tg_raycast_kd_tree(origin, TG_CAMERA_RIGHT(scene.camera), p_sponza_kd_tree, TG_NULL);
+    const b32 d = tg_raycast_kd_tree(origin, TG_CAMERA_DOWN(scene.camera), p_sponza_kd_tree, TG_NULL);
+    const b32 u = tg_raycast_kd_tree(origin, TG_CAMERA_UP(scene.camera), p_sponza_kd_tree, TG_NULL);
+    const b32 f = tg_raycast_kd_tree(origin, TG_CAMERA_FORWARD(scene.camera), p_sponza_kd_tree, TG_NULL);
+    const b32 b = tg_raycast_kd_tree(origin, TG_CAMERA_BACKWARD(scene.camera), p_sponza_kd_tree, TG_NULL);
+
     scene.probe_mesh = tg_mesh_create_sphere(0.5f, 64, 32, TG_TRUE, TG_TRUE, TG_FALSE);
     const v3 probe_translation = { 128.0f + 7.0f, 143.0f, 128.0f };
-    tg_color_image_3d color_image_3d = tg_color_image_3d_create(1, 1, 1, TG_COLOR_IMAGE_FORMAT_R8, TG_NULL);
+    scene.probe_cube_map = tg_cube_map_create(1, TG_COLOR_IMAGE_FORMAT_R8, TG_NULL);
+    u8 p_cube_map_data[6] = { (1 - r) * 255, (1 - l) * 255, (1 - u) * 255, (1 - d) * 255, (1 - b) * 255, (1 - f) * 255 }; // r, l, u, d, b, f // TODO: can i define which direction is which?
+    tg_cube_map_set_data(&scene.probe_cube_map, p_cube_map_data);
     tg_material_h h_probe_material = tg_material_create_forward(tg_vertex_shader_get("shaders/forward.vert"), tg_fragment_shader_get("shaders/forward_probe.frag"));
-    scene.h_probe_render_command = tg_render_command_create(&scene.probe_mesh, h_probe_material, probe_translation, 0, TG_NULL);
+    tg_handle p_probe_handles[1] = { &scene.probe_cube_map };
+    scene.h_probe_render_command = tg_render_command_create(&scene.probe_mesh, h_probe_material, probe_translation, 1, p_probe_handles);
     tg_list_insert(&scene.render_commands, &scene.h_probe_render_command);
 
 
@@ -147,17 +164,6 @@ static void tg__game_3d_create()
 
 
 
-
-
-
-
-
-    scene.sponza_mesh = tg_mesh_create2("meshes/sponza.obj", V3(0.01f));
-    tg_kd_tree* p_sponza_kd_tree = tg_kd_tree_create(&scene.sponza_mesh);
-    const v3 origin = tgm_v3_sub(scene.camera.position, (v3) { 128.0f, 140.0f, 128.0f });
-    const v3 direction = TG_CAMERA_FORWARD(scene.camera);
-    v3 hit = { 0 };
-    const b32 raycast_result = tg_raycast_kd_tree(origin, direction, p_sponza_kd_tree, &hit);
 
 
     scene.sponza_ubo = tg_uniform_buffer_create(sizeof(tg_pbr_material));
