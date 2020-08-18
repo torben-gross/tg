@@ -208,6 +208,16 @@ typedef struct tg_vertex
 	v3    bitangent;
 } tg_vertex;
 
+typedef struct tg_voxel
+{
+    u32    albedo;
+    f32    metallic;
+    f32    roughness;
+    f32    ao;
+    f32    normal_x;
+    f32    normal_y;
+} tg_voxel;
+
 
 
 
@@ -608,11 +618,25 @@ typedef struct tg_renderer
 
     struct
     {
+        VkRenderPass             render_pass;
+        tg_vulkan_framebuffer    framebuffer;
+        VkDescriptorPool         descriptor_pool;
+        VkDescriptorSetLayout    descriptor_set_layout;
+        VkDescriptorSet          descriptor_set;
+        VkPipelineLayout         graphcis_pipeline_layout;
+        VkPipeline               graphics_pipeline;
+        tg_vulkan_buffer         view_projection_ubo;
+        tg_vulkan_image_3d       image_3d;
+        tg_vulkan_buffer         voxel_buffer;
+        VkCommandBuffer          command_buffer;
+    } voxelize_pass;
+
+    struct
+    {
         b32                      enabled;
         tg_vulkan_image          p_shadow_maps[TG_CASCADED_SHADOW_MAPS];
         VkRenderPass             render_pass;
         tg_vulkan_framebuffer    p_framebuffers[TG_CASCADED_SHADOW_MAPS];
-        tg_vulkan_pipeline       graphics_pipeline;
         VkCommandBuffer          command_buffer;
         tg_vulkan_buffer         p_lightspace_ubos[TG_CASCADED_SHADOW_MAPS];
     } shadow_pass;
@@ -687,16 +711,17 @@ typedef struct tg_renderer
     } clear_pass;
 
 #if TG_ENABLE_DEBUG_TOOLS == 1
-#define TG_DEBUG_MAX_CUBES 256
+#define TG_DEBUG_MAX_CUBES 2097152
     struct
     {
-        u32 cube_count;
+        u32                      cube_count;
+        tg_vulkan_buffer         cube_index_buffer;
+        tg_vulkan_buffer         cube_position_buffer;
         struct
         {
-            v3 position;
-            v3 scale;
-            v4 color;
-            b32 wireframe;
+            tg_vulkan_pipeline   graphics_pipeline;
+            tg_vulkan_buffer     ubo;
+            VkCommandBuffer      command_buffer;
         } p_cubes[TG_DEBUG_MAX_CUBES];
     } DEBUG;
 #endif
@@ -772,7 +797,9 @@ void                          tg_vulkan_command_buffer_cmd_copy_buffer_to_cube_m
 void                          tg_vulkan_command_buffer_cmd_copy_buffer_to_depth_image(VkCommandBuffer command_buffer, VkBuffer source, tg_vulkan_image* p_destination);
 void                          tg_vulkan_command_buffer_cmd_copy_color_image(VkCommandBuffer command_buffer, tg_vulkan_image* p_source, tg_vulkan_image* p_destination);
 void                          tg_vulkan_command_buffer_cmd_copy_color_image_to_buffer(VkCommandBuffer command_buffer, tg_vulkan_image* p_source, VkBuffer destination);
+void                          tg_vulkan_command_buffer_cmd_copy_color_image_3d_to_buffer(VkCommandBuffer command_buffer, tg_vulkan_image_3d* p_source, VkBuffer destination);
 void                          tg_vulkan_command_buffer_cmd_transition_color_image_layout(VkCommandBuffer command_buffer, tg_vulkan_image* p_vulkan_image, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits);
+void                          tg_vulkan_command_buffer_cmd_transition_color_image_3d_layout(VkCommandBuffer command_buffer, tg_vulkan_image_3d* p_vulkan_image_3d, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits);
 void                          tg_vulkan_command_buffer_cmd_transition_cube_map_layout(VkCommandBuffer command_buffer, tg_vulkan_cube_map* p_vulkan_cube_map, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits);
 void                          tg_vulkan_command_buffer_cmd_transition_depth_image_layout(VkCommandBuffer command_buffer, tg_vulkan_image* p_vulkan_image, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits);
 void                          tg_vulkan_command_buffer_end_and_submit(VkCommandBuffer command_buffer, tg_vulkan_queue_type type);
@@ -789,6 +816,7 @@ void                          tg_vulkan_depth_image_destroy(tg_vulkan_image* p_v
 void                          tg_vulkan_descriptor_set_update(VkDescriptorSet descriptor_set, tg_handle shader_input_element_handle, u32 dst_binding);
 void                          tg_vulkan_descriptor_set_update_cube_map(VkDescriptorSet descriptor_set, tg_vulkan_cube_map* p_vulkan_cube_map, u32 dst_binding);
 void                          tg_vulkan_descriptor_set_update_image(VkDescriptorSet descriptor_set, tg_vulkan_image* p_vulkan_image, u32 dst_binding);
+void                          tg_vulkan_descriptor_set_update_image_3d(VkDescriptorSet descriptor_set, tg_vulkan_image_3d* p_vulkan_image_3d, u32 dst_binding);
 void                          tg_vulkan_descriptor_set_update_image_array(VkDescriptorSet descriptor_set, tg_vulkan_image* p_vulkan_image, u32 dst_binding, u32 array_index);
 void                          tg_vulkan_descriptor_set_update_render_target(VkDescriptorSet descriptor_set, tg_render_target* p_render_target, u32 dst_binding);
 void                          tg_vulkan_descriptor_set_update_storage_buffer(VkDescriptorSet descriptor_set, VkBuffer buffer, u32 dst_binding);
@@ -808,9 +836,24 @@ void                          tg_vulkan_framebuffers_destroy(u32 count, tg_vulka
 
 VkPhysicalDeviceProperties    tg_vulkan_physical_device_get_properties();
 
+void                                       tg_vulkan_pipeline_shader_stage_create_infos_create(const tg_vulkan_shader* p_vertex_shader, const tg_vulkan_shader* p_fragment_shader, VkPipelineShaderStageCreateInfo* p_pipeline_shader_stage_create_infos);
+VkPipelineInputAssemblyStateCreateInfo     tg_vulkan_pipeline_input_assembly_state_create_info_create();
+VkPipelineInputAssemblyStateCreateInfo     tg_vulkan_pipeline_input_assembly_state_create_info_create();
+VkViewport                                 tg_vulkan_viewport_create(f32 width, f32 height);
+VkPipelineViewportStateCreateInfo          tg_vulkan_pipeline_viewport_state_create_info_create(const VkViewport* p_viewport, const VkRect2D* p_scissors);
+VkPipelineRasterizationStateCreateInfo     tg_vulkan_pipeline_rasterization_state_create_info_create(VkPipelineRasterizationStateCreateInfo* p_next, VkBool32 depth_clamp_enable, VkPolygonMode polygon_mode, VkCullModeFlags cull_mode);
+VkPipelineMultisampleStateCreateInfo       tg_vulkan_pipeline_multisample_state_create_info_create(u32 rasterization_samples, VkBool32 sample_shading_enable, f32 min_sample_shading);
+VkPipelineDepthStencilStateCreateInfo      tg_vulkan_pipeline_depth_stencil_state_create_info_create(VkBool32 depth_test_enable, VkBool32 depth_write_enable);
+void                                       tg_vulkan_pipeline_color_blend_attachmen_states_create(VkBool32 blend_enable, u32 count, VkPipelineColorBlendAttachmentState* p_pipeline_color_blend_attachment_states);
+VkPipelineColorBlendStateCreateInfo        tg_vulkan_pipeline_color_blend_state_create_info_create(u32 attachment_count, VkPipelineColorBlendAttachmentState* p_pipeline_color_blend_attachmen_states);
+VkPipelineVertexInputStateCreateInfo       tg_vulkan_pipeline_vertex_input_state_create_info_create(u32 vertex_binding_description_count, VkVertexInputBindingDescription* p_vertex_binding_descriptions, u32 vertex_attribute_description_count, VkVertexInputAttributeDescription* p_vertex_attribute_descriptions);
+VkPipelineLayout                           tg_vulkan_pipeline_layout_create(VkDescriptorSetLayout set_layout, u32 push_constant_range_count, const VkPushConstantRange* p_push_constant_ranges);
+void                                       tg_vulkan_descriptor_create(u32 shader_count, const tg_vulkan_shader* const* pp_shaders, VkDescriptorPool* p_pool, VkDescriptorSetLayout* p_set_layout, VkDescriptorSet* p_set);
+
 tg_vulkan_pipeline            tg_vulkan_pipeline_create_compute(const tg_vulkan_shader* p_compute_shader);
 tg_vulkan_pipeline            tg_vulkan_pipeline_create_graphics(const tg_vulkan_graphics_pipeline_create_info* p_create_info);
 tg_vulkan_pipeline            tg_vulkan_pipeline_create_graphics2(const tg_vulkan_graphics_pipeline_create_info* p_create_info, u32 vertex_attrib_count, VkVertexInputBindingDescription* p_vertex_bindings, VkVertexInputAttributeDescription* p_vertex_attribs);
+VkPipeline                    tg_vulkan_pipeline_create_graphics3(const VkGraphicsPipelineCreateInfo* p_create_info);
 void                          tg_vulkan_pipeline_destroy(tg_vulkan_pipeline* p_pipeline);
 
 void                          tg_vulkan_queue_present(VkPresentInfoKHR* p_present_info);
@@ -845,11 +888,6 @@ void                    tg_graphics_init();
 void                    tg_graphics_on_window_resize(u32 width, u32 height);
 void                    tg_graphics_shutdown();
 void                    tg_graphics_wait_idle();
-
-
-
-u32                     tg_vertex_input_attribute_format_get_alignment(tg_vertex_input_attribute_format format);
-u32                     tg_vertex_input_attribute_format_get_size(tg_vertex_input_attribute_format format);
 
 
 
@@ -918,7 +956,9 @@ void                    tg_render_command_set_position(tg_render_command_h h_ren
 tg_renderer_h           tg_renderer_create(tg_camera* p_camera);
 void                    tg_renderer_destroy(tg_renderer_h h_renderer);
 void                    tg_renderer_enable_shadows(tg_renderer_h h_renderer, b32 enable);
-void                    tg_renderer_bake_end(tg_renderer_h h_renderer);
+void                    tg_renderer_voxelize_begin(tg_renderer_h h_renderer, v3i min_corner, v3i dimensions);
+void                    tg_renderer_voxelize(tg_renderer_h h_renderer, tg_render_command_h h_render_command);
+void                    tg_renderer_voxelize_end(tg_renderer_h h_renderer);
 void                    tg_renderer_begin(tg_renderer_h h_renderer);
 void                    tg_renderer_push_directional_light(tg_renderer_h h_renderer, v3 direction, v3 color);
 void                    tg_renderer_push_point_light(tg_renderer_h h_renderer, v3 position, v3 color);
@@ -928,9 +968,9 @@ void                    tg_renderer_present(tg_renderer_h h_renderer);
 void                    tg_renderer_clear(tg_renderer_h h_renderer);
 tg_render_target_h      tg_renderer_get_render_target(tg_renderer_h h_renderer);
 #if TG_ENABLE_DEBUG_TOOLS == 1
-void                    tg_renderer_draw_cube_DEBUG(tg_renderer_h h_renderer, v3 position, v3 scale, v4 color, b32 wireframe);
+void                    tg_renderer_draw_cube_DEBUG(tg_renderer_h h_renderer, v3 position, v3 scale, v4 color);
 #else
-#define                 tg_renderer_draw_cube_DEBUG(h_renderer, position, scale, color, wireframe)
+#define                 tg_renderer_draw_cube_DEBUG(h_renderer, position, scale, color)
 #endif
 
 tg_storage_buffer       tg_storage_buffer_create(u64 size, b32 visible);
@@ -942,6 +982,9 @@ tg_uniform_buffer       tg_uniform_buffer_create(u64 size);
 u64                     tg_uniform_buffer_size(tg_uniform_buffer* p_uniform_buffer);
 void*                   tg_uniform_buffer_data(tg_uniform_buffer* p_uniform_buffer);
 void                    tg_uniform_buffer_destroy(tg_uniform_buffer* p_uniform_buffer);
+
+u32                     tg_vertex_input_attribute_format_get_alignment(tg_vertex_input_attribute_format format);
+u32                     tg_vertex_input_attribute_format_get_size(tg_vertex_input_attribute_format format);
 
 tg_vertex_shader_h      tg_vertex_shader_create(const char* p_filename);
 void                    tg_vertex_shader_destroy(tg_vertex_shader_h h_vertex_shader);

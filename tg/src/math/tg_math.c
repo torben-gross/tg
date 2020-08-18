@@ -1853,6 +1853,33 @@ m4 tgm_m4_rotate_z(f32 angle_in_radians)
 	return result;
 }
 
+m4 tgm_m4_scale(v3 v)
+{
+	m4 result = { 0 };
+
+	result.m00 = v.x;
+	result.m10 = 0.0f;
+	result.m20 = 0.0f;
+	result.m30 = 0.0f;
+
+	result.m01 = 0.0f;
+	result.m11 = v.y;
+	result.m21 = 0.0f;
+	result.m31 = 0.0f;
+
+	result.m02 = 0.0f;
+	result.m12 = 0.0f;
+	result.m22 = v.z;
+	result.m32 = 0.0f;
+
+	result.m03 = 0.0f;
+	result.m13 = 0.0f;
+	result.m23 = 0.0f;
+	result.m33 = 1.0f;
+
+	return result;
+}
+
 m4 tgm_m4_translate(v3 v)
 {
 	m4 result = { 0 };

@@ -46,7 +46,7 @@ static v3 tg__calculate_bitangent(v3 normal, v3 tangent)
     return bitangent;
 }
 
-void tg__set_buffer_data(tg_vulkan_buffer* p_vulkan_buffer, u64 size, void* p_data, VkBufferUsageFlagBits buffer_type_flag)
+void tg__set_buffer_data(tg_vulkan_buffer* p_vulkan_buffer, u64 size, const void* p_data, VkBufferUsageFlagBits buffer_type_flag)
 {
     if (size && p_data)
     {
@@ -54,7 +54,7 @@ void tg__set_buffer_data(tg_vulkan_buffer* p_vulkan_buffer, u64 size, void* p_da
         {
             if (p_vulkan_buffer->buffer)
             {
-                tg_vulkan_buffer_destroy(p_vulkan_buffer);
+                tg_vulkan_buffer_destroy(p_vulkan_buffer); // TODO: realloc and rebind memory?
             }
             *p_vulkan_buffer = tg_vulkan_buffer_create(size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | buffer_type_flag, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
         }
@@ -63,7 +63,6 @@ void tg__set_buffer_data(tg_vulkan_buffer* p_vulkan_buffer, u64 size, void* p_da
         // is larger and potentially recreate. then i could reuse this staging buffer for
         // everything! also, resizing would be nice. same applies for the case above.
         tg_vulkan_buffer staging_buffer = tg_vulkan_buffer_create(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-        v3* p_it = (v3*)staging_buffer.memory.p_mapped_device_memory;
         tg_memory_copy(size, p_data, staging_buffer.memory.p_mapped_device_memory);
         tg_vulkan_buffer_flush_mapped_memory(&staging_buffer);
         tg_vulkan_buffer_copy(size, staging_buffer.buffer, p_vulkan_buffer->buffer);
@@ -657,7 +656,7 @@ void tg_mesh_set_positions(tg_mesh* p_mesh, u32 count, const v3* p_positions) //
     TG_ASSERT(p_mesh && ((!count && !p_positions) || (count && p_positions)));
 
     p_mesh->position_count = p_positions ? count : 0;
-    tg__set_buffer_data(&p_mesh->positions_buffer, count * sizeof(*p_positions), (void*)p_positions, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+    tg__set_buffer_data(&p_mesh->positions_buffer, count * sizeof(*p_positions), (const void*)p_positions, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
 
     if (count && p_positions)
     {

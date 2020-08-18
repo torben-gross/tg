@@ -6,7 +6,6 @@
 #include "platform/tg_platform.h"
 #include "tg_assets.h"
 #include "tg_input.h"
-#include "tg_marching_cubes.h"
 #include "tg_transvoxel_terrain.h"
 #include "util/tg_list.h"
 #include "util/tg_string.h"
@@ -55,6 +54,7 @@ typedef struct tg_sample_scene
     };
 
     tg_mesh                    sponza_mesh;
+    tg_render_command_h        h_sponza_render_command;
     tg_kd_tree*                p_sponza_kd_tree;
     tg_uniform_buffer          sponza_ubo;
     tg_mesh                    my_mesh;
@@ -204,13 +204,9 @@ static void tg__game_3d_create()
 
 
 
-    scene.sponza_mesh = tg_mesh_create2("meshes/sponza.obj", V3(0.01f));
-    scene.p_sponza_kd_tree = tg_kd_tree_create(&scene.sponza_mesh);
-
     scene.probe_mesh = tg_mesh_create_sphere(0.5f, 64, 32, TG_TRUE, TG_TRUE, TG_FALSE);
     scene.probe_translation = (v3){ 128.0f + 7.0f, 153.0f, 128.0f };
     scene.probe_cube_map = tg_cube_map_create(1, TG_COLOR_IMAGE_FORMAT_R8, TG_NULL);
-    tg__raycast();
     tg_material_h h_probe_material = tg_material_create_forward(tg_vertex_shader_get("shaders/forward.vert"), tg_fragment_shader_get("shaders/forward_probe.frag"));
     tg_handle p_probe_handles[1] = { &scene.probe_cube_map };
     scene.h_probe_render_command = tg_render_command_create(&scene.probe_mesh, h_probe_material, scene.probe_translation, 1, p_probe_handles);
@@ -223,7 +219,8 @@ static void tg__game_3d_create()
 
 
 
-
+    scene.sponza_mesh = tg_mesh_create2("meshes/sponza.obj", V3(0.01f));
+    scene.p_sponza_kd_tree = tg_kd_tree_create(&scene.sponza_mesh);
 
     scene.sponza_ubo = tg_uniform_buffer_create(sizeof(tg_pbr_material));
     ((tg_pbr_material*)tg_uniform_buffer_data(&scene.sponza_ubo))->albedo = (v4) { 1.0f, 1.0f, 1.0f, 1.0f };
@@ -233,19 +230,28 @@ static void tg__game_3d_create()
     tg_material_h h_sponza_material = tg_material_create_deferred(tg_vertex_shader_get("shaders/deferred_pbr.vert"), tg_fragment_shader_get("shaders/deferred_pbr.frag"));
 
     tg_handle p_sponza_handles[1] = { &scene.sponza_ubo };
-    tg_render_command_h h_sponza_render_command = tg_render_command_create(&scene.sponza_mesh, h_sponza_material, (v3) { 128.0f, 140.0f, 128.0f }, 1, p_sponza_handles);
-    tg_list_insert(&scene.render_commands, &h_sponza_render_command);
+    scene.h_sponza_render_command = tg_render_command_create(&scene.sponza_mesh, h_sponza_material, (v3) { 128.0f, 140.0f, 128.0f }, 1, p_sponza_handles);
+    tg_list_insert(&scene.render_commands, &scene.h_sponza_render_command);
+    tg__raycast();
 
-    scene.my_mesh = tg_mesh_create2("meshes/untitled.obj", V3(0.12f));
-    scene.my_ubo = tg_uniform_buffer_create(sizeof(tg_pbr_material));
-    ((tg_pbr_material*)tg_uniform_buffer_data(&scene.my_ubo))->albedo = (v4){ 0.816f, 0.506f, 0.024f, 1.0f };
-    ((tg_pbr_material*)tg_uniform_buffer_data(&scene.my_ubo))->metallic = 1.0f;
-    ((tg_pbr_material*)tg_uniform_buffer_data(&scene.my_ubo))->roughness = 0.4f;
-    ((tg_pbr_material*)tg_uniform_buffer_data(&scene.my_ubo))->ao = 1.0f;
-    tg_material_h h_my_material = tg_material_create_deferred(tg_vertex_shader_get("shaders/deferred_pbr.vert"), tg_fragment_shader_get("shaders/deferred_pbr.frag"));
-    tg_handle p_my_handles[1] = { &scene.my_ubo };
-    tg_render_command_h h_my_render_command = tg_render_command_create(&scene.my_mesh, h_my_material, (v3) { 128.0f, 141.9f, 126.0f }, 1, p_my_handles);
-    tg_list_insert(&scene.render_commands, &h_my_render_command);
+    const v3i min_corner = { 108, 138, 116 };
+    const v3i dimensions = { 40, 18, 24 };
+    tg_renderer_voxelize_begin(scene.h_main_renderer, min_corner, dimensions);
+    tg_renderer_voxelize(scene.h_main_renderer, scene.h_sponza_render_command);
+    tg_renderer_voxelize_end(scene.h_main_renderer);
+
+
+
+    //scene.my_mesh = tg_mesh_create2("meshes/untitled.obj", V3(0.12f));
+    //scene.my_ubo = tg_uniform_buffer_create(sizeof(tg_pbr_material));
+    //((tg_pbr_material*)tg_uniform_buffer_data(&scene.my_ubo))->albedo = (v4){ 0.816f, 0.506f, 0.024f, 1.0f };
+    //((tg_pbr_material*)tg_uniform_buffer_data(&scene.my_ubo))->metallic = 1.0f;
+    //((tg_pbr_material*)tg_uniform_buffer_data(&scene.my_ubo))->roughness = 0.4f;
+    //((tg_pbr_material*)tg_uniform_buffer_data(&scene.my_ubo))->ao = 1.0f;
+    //tg_material_h h_my_material = tg_material_create_deferred(tg_vertex_shader_get("shaders/deferred_pbr.vert"), tg_fragment_shader_get("shaders/deferred_pbr.frag"));
+    //tg_handle p_my_handles[1] = { &scene.my_ubo };
+    //tg_render_command_h h_my_render_command = tg_render_command_create(&scene.my_mesh, h_my_material, (v3) { 128.0f, 141.9f, 126.0f }, 1, p_my_handles);
+    //tg_list_insert(&scene.render_commands, &h_my_render_command);
 
     scene.terrain = tg_terrain_create(&scene.camera);
 
@@ -406,7 +412,9 @@ static void tg__game_3d_update_and_render(f32 dt)
     {
         tg_renderer_execute(scene.h_main_renderer, ph_render_commands[i]);
     }
-    tg_renderer_draw_cube_DEBUG(scene.h_main_renderer, scene.probe_translation, (v3) { 1.0f, 1.0f, 1.0f }, (v4) { 1.0f, 0.5f, 0.1f, 0.5f }, TG_TRUE);
+    tg_renderer_draw_cube_DEBUG(scene.h_main_renderer, (v3) { 108.5f, 138.5f, 116.5f }, (v3) { 1.0f, 1.0f, 1.0f }, (v4) { 1.0f, 0.0f, 0.0f, 1.0f });
+    tg_renderer_draw_cube_DEBUG(scene.h_main_renderer, (v3) { 146.5f, 154.5f, 139.5f }, (v3) { 1.0f, 1.0f, 1.0f }, (v4) { 1.0f, 0.0f, 0.0f, 1.0f });
+    tg_renderer_draw_cube_DEBUG(scene.h_main_renderer, (v3) { 127.5f, 146.5f, 128.0f }, (v3) { 39.0f, 17.0f, 24.0f }, (v4) { 1.0f, 0.0f, 1.0f, 1.0f });
     tg_renderer_end(scene.h_main_renderer);
 
     tg_renderer_present(scene.h_main_renderer);

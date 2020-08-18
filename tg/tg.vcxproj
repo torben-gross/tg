@@ -137,6 +137,7 @@
     <ClCompile Include="src\math\tg_math.c" />
     <ClCompile Include="src\memory\tg_memory.c" />
     <ClCompile Include="src\platform\tg_platform_win32.c" />
+    <ClCompile Include="src\util\tg_color.c" />
     <ClCompile Include="src\util\tg_hashmap.c" />
     <ClCompile Include="src\util\tg_list.c" />
     <ClCompile Include="src\util\tg_qsort.c" />
@@ -159,6 +160,7 @@
     <ClInclude Include="src\tg_transvoxel_lookup_tables.h" />
     <ClInclude Include="src\tg_transvoxel_terrain.h" />
     <ClInclude Include="src\tg_variadic.h" />
+    <ClInclude Include="src\util\tg_color.h" />
     <ClInclude Include="src\util\tg_hashmap.h" />
     <ClInclude Include="src\util\tg_list.h" />
     <ClInclude Include="src\util\tg_rectangle_packer.h" />

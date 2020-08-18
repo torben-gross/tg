@@ -143,9 +143,9 @@ static void tg__register(tg_render_command_h h_render_command, tg_renderer_h h_r
 
 
 
-    TG_ASSERT(h_render_command->p_mesh->positions_buffer.buffer); // TODO: add flag for non shaddow casting
+    TG_ASSERT(h_render_command->p_mesh->positions_buffer.buffer); // TODO: add flag for non shadow casting
 
-    tg_vulkan_graphics_pipeline_create_info pipeline_create_info = { 0 };
+    tg_vulkan_graphics_pipeline_create_info pipeline_create_info = { 0 }; // TODO: create this pipeline only once in the shader and reuse for everything? only the command buffer should be cached in the render_command
     pipeline_create_info.p_vertex_shader = &tg_vertex_shader_get("shaders/shadow.vert")->vulkan_shader;
     pipeline_create_info.p_fragment_shader = &tg_fragment_shader_get("shaders/shadow.frag")->vulkan_shader;
     pipeline_create_info.cull_mode = VK_CULL_MODE_BACK_BIT;

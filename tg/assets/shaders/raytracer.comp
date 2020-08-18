@@ -22,7 +22,7 @@ layout(set = 0, binding = 0) uniform render_info
     vec4[512]    u_sphere_centers_radii;
 };
 
-layout(set = 0, binding = 1, rgba32f) uniform image2D u_render_target;
+layout(set = 0, binding = 1, RGBA32F) uniform image2D u_render_target;
 
 layout(set = 0, binding = 2) uniform vertex_info
 {

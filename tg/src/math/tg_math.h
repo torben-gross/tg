@@ -436,6 +436,7 @@ m4     tgm_m4_perspective(f32 fov_y_in_radians, f32 aspect, f32 near, f32 far);
 m4     tgm_m4_rotate_x(f32 angle_in_radians);
 m4     tgm_m4_rotate_y(f32 angle_in_radians);
 m4     tgm_m4_rotate_z(f32 angle_in_radians);
+m4     tgm_m4_scale(v3 v);
 m4     tgm_m4_translate(v3 v);
 m4     tgm_m4_transposed(m4 m);
 
