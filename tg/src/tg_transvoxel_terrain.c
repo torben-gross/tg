@@ -749,13 +749,13 @@ static void tg__render(tg_terrain_octree_node* p_node, tg_renderer_h h_renderer)
 	{
 		if (p_node->block.h_block_render_command)
 		{
-			tg_renderer_execute(h_renderer, p_node->block.h_block_render_command);
+			tg_renderer_exec(h_renderer, p_node->block.h_block_render_command);
 		}
 		for (u8 i = 0; i < 6; i++)
 		{
 			if ((p_node->block.transition_mask & (1 << i)) && p_node->block.ph_transition_render_commands[i])
 			{
-				tg_renderer_execute(h_renderer, p_node->block.ph_transition_render_commands[i]);
+				tg_renderer_exec(h_renderer, p_node->block.ph_transition_render_commands[i]);
 			}
 		}
 	}

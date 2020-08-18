@@ -1,6 +1,7 @@
 #include "tg_application.h"
 
 #include "graphics/tg_graphics.h"
+#include "graphics/tg_sparse_voxel_octree.h"
 #include "memory/tg_memory.h"
 #include "physics/tg_physics.h"
 #include "platform/tg_platform.h"
@@ -56,6 +57,7 @@ typedef struct tg_sample_scene
     tg_mesh                    sponza_mesh;
     tg_render_command_h        h_sponza_render_command;
     tg_kd_tree*                p_sponza_kd_tree;
+    tg_voxel                   p_voxels[TG_SVO_DIMS3];
     tg_uniform_buffer          sponza_ubo;
     tg_mesh                    my_mesh;
     tg_uniform_buffer          my_ubo;
@@ -214,6 +216,41 @@ static void tg__game_3d_create()
 
 
 
+    scene.pbr_sphere_mesh = tg_mesh_create_sphere_flat(0.5f, 128, 64, TG_TRUE, TG_TRUE, TG_FALSE);
+    scene.pbr_sphere_mesh2 = tg_mesh_create_sphere_flat(3.0f, 128, 64, TG_TRUE, TG_TRUE, TG_FALSE);
+    for (u32 y = 0; y < 7; y++)
+    {
+        for (u32 x = 0; x < 7; x++)
+        {
+
+            const u32 i = y * 7 + x;
+
+            const v3 sphere_translation = { 128.0f - 7.0f + (f32)x * 2.0f, 143.0f + (f32)y * 2.0f, 112.0f };
+            scene.p_pbr_spheres[i].ubo = tg_uniform_buffer_create(sizeof(tg_pbr_material));
+            ((tg_pbr_material*)tg_uniform_buffer_data(&scene.p_pbr_spheres[i].ubo))->albedo = (v4){ 1.0f, 1.0f, 1.0f, 1.0f };
+            ((tg_pbr_material*)tg_uniform_buffer_data(&scene.p_pbr_spheres[i].ubo))->metallic = (f32)x / 6.0f;
+            ((tg_pbr_material*)tg_uniform_buffer_data(&scene.p_pbr_spheres[i].ubo))->roughness = ((f32)y + 0.1f) / 6.5f;
+            ((tg_pbr_material*)tg_uniform_buffer_data(&scene.p_pbr_spheres[i].ubo))->ao = 1.0f;
+            scene.p_pbr_spheres[i].h_material = tg_material_create_deferred(tg_vertex_shader_get("shaders/deferred_pbr.vert"), tg_fragment_shader_get("shaders/deferred_pbr.frag"));
+            tg_handle p_handles[1] = { &scene.p_pbr_spheres[i].ubo };
+            if (x == 6 && y == 6)
+            {
+                scene.p_pbr_spheres[i].h_render_command = tg_render_command_create(
+                    &scene.pbr_sphere_mesh2, scene.p_pbr_spheres[i].h_material,
+                    (v3) { 133.0f, 140.0f, 128.0f },
+                    1, p_handles
+                );
+            }
+            else
+            {
+                scene.p_pbr_spheres[i].h_render_command = tg_render_command_create(&scene.pbr_sphere_mesh, scene.p_pbr_spheres[i].h_material, sphere_translation, 1, p_handles);
+            }
+            tg_list_insert(&scene.render_commands, &scene.p_pbr_spheres[i].h_render_command);
+        }
+    }
+
+
+
 
 
 
@@ -236,9 +273,17 @@ static void tg__game_3d_create()
 
     const v3i min_corner = { 108, 138, 116 };
     const v3i dimensions = { 40, 18, 24 };
-    tg_renderer_voxelize_begin(scene.h_main_renderer, min_corner, dimensions);
-    tg_renderer_voxelize(scene.h_main_renderer, scene.h_sponza_render_command);
-    tg_renderer_voxelize_end(scene.h_main_renderer);
+    tg_voxelizer* p_voxelizer = TG_MEMORY_STACK_ALLOC(sizeof(*p_voxelizer));
+    tg_voxelizer_create(p_voxelizer);
+    tg_voxelizer_begin(p_voxelizer, V3I(0));
+    tg_voxelizer_exec(p_voxelizer, scene.h_sponza_render_command);
+    tg_voxelizer_exec(p_voxelizer, scene.p_pbr_spheres[48].h_render_command);
+    tg_voxelizer_end(p_voxelizer, scene.p_voxels);
+    tg_voxelizer_begin(p_voxelizer, V3I(0));
+    tg_voxelizer_exec(p_voxelizer, scene.h_sponza_render_command);
+    tg_voxelizer_end(p_voxelizer, scene.p_voxels);
+    tg_voxelizer_destroy(p_voxelizer);
+    TG_MEMORY_STACK_FREE(sizeof(*p_voxelizer));
 
 
 
@@ -254,37 +299,6 @@ static void tg__game_3d_create()
     //tg_list_insert(&scene.render_commands, &h_my_render_command);
 
     scene.terrain = tg_terrain_create(&scene.camera);
-
-
-
-    scene.pbr_sphere_mesh = tg_mesh_create_sphere_flat(0.5f, 128, 64, TG_TRUE, TG_TRUE, TG_FALSE);
-    scene.pbr_sphere_mesh2 = tg_mesh_create_sphere_flat(3.0f, 128, 64, TG_TRUE, TG_TRUE, TG_FALSE);
-    for (u32 y = 0; y < 7; y++)
-    {
-        for (u32 x = 0; x < 7; x++)
-        {
-
-            const u32 i = y * 7 + x;
-            
-            const v3 sphere_translation = { 128.0f - 7.0f + (f32)x * 2.0f, 143.0f + (f32)y * 2.0f, 112.0f };
-            scene.p_pbr_spheres[i].ubo = tg_uniform_buffer_create(sizeof(tg_pbr_material));
-            ((tg_pbr_material*)tg_uniform_buffer_data(&scene.p_pbr_spheres[i].ubo))->albedo = (v4) { 1.0f, 1.0f, 1.0f, 1.0f };
-            ((tg_pbr_material*)tg_uniform_buffer_data(&scene.p_pbr_spheres[i].ubo))->metallic = (f32)x / 6.0f;
-            ((tg_pbr_material*)tg_uniform_buffer_data(&scene.p_pbr_spheres[i].ubo))->roughness = ((f32)y + 0.1f) / 6.5f;
-            ((tg_pbr_material*)tg_uniform_buffer_data(&scene.p_pbr_spheres[i].ubo))->ao = 1.0f;
-            scene.p_pbr_spheres[i].h_material = tg_material_create_deferred(tg_vertex_shader_get("shaders/deferred_pbr.vert"), tg_fragment_shader_get("shaders/deferred_pbr.frag"));
-            tg_handle p_handles[1] = { &scene.p_pbr_spheres[i].ubo };
-            if (x == 6 && y == 0)
-            {
-                scene.p_pbr_spheres[i].h_render_command = tg_render_command_create(&scene.pbr_sphere_mesh2, scene.p_pbr_spheres[i].h_material, sphere_translation, 1, p_handles);
-            }
-            else
-            {
-                scene.p_pbr_spheres[i].h_render_command = tg_render_command_create(&scene.pbr_sphere_mesh, scene.p_pbr_spheres[i].h_material, sphere_translation, 1, p_handles);
-            }
-            tg_list_insert(&scene.render_commands, &scene.p_pbr_spheres[i].h_render_command);
-        }
-    }
 }
 
 static void tg__game_3d_update_and_render(f32 dt)
@@ -399,7 +413,7 @@ static void tg__game_3d_update_and_render(f32 dt)
     tg_render_command_h* ph_render_commands = TG_LIST_POINTER_TO(scene.render_commands, 0);
     for (u32 i = 0; i < scene.render_commands.count; i++)
     {
-        tg_renderer_execute(scene.h_secondary_renderer, ph_render_commands[i]);
+        tg_renderer_exec(scene.h_secondary_renderer, ph_render_commands[i]);
     }
     tg_renderer_end(scene.h_secondary_renderer);
 
@@ -410,11 +424,35 @@ static void tg__game_3d_update_and_render(f32 dt)
     ph_render_commands = TG_LIST_POINTER_TO(scene.render_commands, 0);
     for (u32 i = 0; i < scene.render_commands.count; i++)
     {
-        tg_renderer_execute(scene.h_main_renderer, ph_render_commands[i]);
+        tg_renderer_exec(scene.h_main_renderer, ph_render_commands[i]);
     }
+
+#if TG_ENABLE_DEBUG_TOOLS == 1
     tg_renderer_draw_cube_DEBUG(scene.h_main_renderer, (v3) { 108.5f, 138.5f, 116.5f }, (v3) { 1.0f, 1.0f, 1.0f }, (v4) { 1.0f, 0.0f, 0.0f, 1.0f });
     tg_renderer_draw_cube_DEBUG(scene.h_main_renderer, (v3) { 146.5f, 154.5f, 139.5f }, (v3) { 1.0f, 1.0f, 1.0f }, (v4) { 1.0f, 0.0f, 0.0f, 1.0f });
     tg_renderer_draw_cube_DEBUG(scene.h_main_renderer, (v3) { 127.5f, 146.5f, 128.0f }, (v3) { 39.0f, 17.0f, 24.0f }, (v4) { 1.0f, 0.0f, 1.0f, 1.0f });
+
+    const f32 DEBUG_dh = (f32)TG_SVO_DIMS / 2.0f;
+    tg_renderer_draw_cube_DEBUG(scene.h_main_renderer, (v3) { 108.0f + DEBUG_dh, 138.0f + DEBUG_dh, 116.0f + DEBUG_dh    }, V3((f32)TG_SVO_DIMS), (v4) { 0.5f, 1.0f, 0.0f, 1.0f });
+    tg_renderer_draw_cube_DEBUG(scene.h_main_renderer, (v3) { 108.0f + DEBUG_dh, 138.0f + DEBUG_dh, 116.0f + TG_SVO_DIMS }, V3(1.0f),             (v4) { 0.5f, 0.0f, 1.0f, 1.0f });
+    for (u32 z = 0; z < TG_SVO_DIMS; z++)
+    {
+        for (u32 y = 0; y < TG_SVO_DIMS; y++)
+        {
+            for (u32 x = 0; x < TG_SVO_DIMS; x++)
+            {
+                const u32 i = z * TG_SVO_DIMS * TG_SVO_DIMS + y * TG_SVO_DIMS + x;
+                if (scene.p_voxels[i].albedo == 255)
+                {
+                    const v3 p = { (f32)x + 108.5f, (f32)y + 138.5f, (f32)z + 116.5f };
+                    const v3 s = V3(0.5f);
+                    tg_renderer_draw_cube_DEBUG(scene.h_main_renderer, p, s, (v4) { 1.0f, 0.0f, 0.0f, 1.0f });
+                }
+            }
+        }
+    }
+#endif
+
     tg_renderer_end(scene.h_main_renderer);
 
     tg_renderer_present(scene.h_main_renderer);

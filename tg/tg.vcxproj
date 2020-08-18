@@ -124,6 +124,7 @@
     <ClCompile Include="src\graphics\vulkan\tg_vulkan_raytracer.c" />
     <ClCompile Include="src\graphics\vulkan\tg_vulkan_renderer.c" />
     <ClCompile Include="src\graphics\vulkan\tg_vulkan_render_command.c" />
+    <ClCompile Include="src\graphics\vulkan\tg_vulkan_sparse_voxel_octree.c" />
     <ClCompile Include="src\physics\tg_physics.c" />
     <ClCompile Include="src\tg_marching_cubes.c" />
     <ClCompile Include="src\tg_transvoxel_terrain.c" />
@@ -146,6 +147,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\graphics\tg_graphics.h" />
+    <ClInclude Include="src\graphics\tg_sparse_voxel_octree.h" />
     <ClInclude Include="src\graphics\vulkan\tg_vulkan_memory_allocator.h" />
     <ClInclude Include="src\physics\tg_physics.h" />
     <ClInclude Include="src\tg_assets.h" />
