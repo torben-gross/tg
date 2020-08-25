@@ -271,17 +271,15 @@ static void tg__game_3d_create()
     tg_list_insert(&scene.render_commands, &scene.h_sponza_render_command);
     tg__raycast();
 
-    const v3i min_corner = { 108, 138, 116 };
-    const v3i dimensions = { 40, 18, 24 };
+    // TODO: remove
+    //const v3i min_corner = { 108, 138, 116 };
+    //const v3i dimensions = { 40, 18, 24 };
     tg_voxelizer* p_voxelizer = TG_MEMORY_STACK_ALLOC(sizeof(*p_voxelizer));
     tg_voxelizer_create(p_voxelizer);
-    tg_voxelizer_begin(p_voxelizer, V3I(0));
+    tg_voxelizer_begin(p_voxelizer);
     tg_voxelizer_exec(p_voxelizer, scene.h_sponza_render_command);
     tg_voxelizer_exec(p_voxelizer, scene.p_pbr_spheres[48].h_render_command);
-    tg_voxelizer_end(p_voxelizer, scene.p_voxels);
-    tg_voxelizer_begin(p_voxelizer, V3I(0));
-    tg_voxelizer_exec(p_voxelizer, scene.h_sponza_render_command);
-    tg_voxelizer_end(p_voxelizer, scene.p_voxels);
+    tg_voxelizer_end(p_voxelizer, (v3i) { 1, 2, 1 }, scene.p_voxels);
     tg_voxelizer_destroy(p_voxelizer);
     TG_MEMORY_STACK_FREE(sizeof(*p_voxelizer));
 
@@ -433,8 +431,8 @@ static void tg__game_3d_update_and_render(f32 dt)
     tg_renderer_draw_cube_DEBUG(scene.h_main_renderer, (v3) { 127.5f, 146.5f, 128.0f }, (v3) { 39.0f, 17.0f, 24.0f }, (v4) { 1.0f, 0.0f, 1.0f, 1.0f });
 
     const f32 DEBUG_dh = (f32)TG_SVO_DIMS / 2.0f;
-    tg_renderer_draw_cube_DEBUG(scene.h_main_renderer, (v3) { 108.0f + DEBUG_dh, 138.0f + DEBUG_dh, 116.0f + DEBUG_dh    }, V3((f32)TG_SVO_DIMS), (v4) { 0.5f, 1.0f, 0.0f, 1.0f });
-    tg_renderer_draw_cube_DEBUG(scene.h_main_renderer, (v3) { 108.0f + DEBUG_dh, 138.0f + DEBUG_dh, 116.0f + TG_SVO_DIMS }, V3(1.0f),             (v4) { 0.5f, 0.0f, 1.0f, 1.0f });
+    tg_renderer_draw_cube_DEBUG(scene.h_main_renderer, (v3) { 64.0f + DEBUG_dh, 128.0f + DEBUG_dh, 64.0f + DEBUG_dh    }, V3((f32)TG_SVO_DIMS), (v4) { 0.5f, 1.0f, 0.0f, 1.0f });
+    tg_renderer_draw_cube_DEBUG(scene.h_main_renderer, (v3) { 64.0f + DEBUG_dh, 128.0f + DEBUG_dh, 64.0f + TG_SVO_DIMS }, V3(1.0f),             (v4) { 0.5f, 0.0f, 1.0f, 1.0f });
     for (u32 z = 0; z < TG_SVO_DIMS; z++)
     {
         for (u32 y = 0; y < TG_SVO_DIMS; y++)
@@ -442,11 +440,12 @@ static void tg__game_3d_update_and_render(f32 dt)
             for (u32 x = 0; x < TG_SVO_DIMS; x++)
             {
                 const u32 i = z * TG_SVO_DIMS * TG_SVO_DIMS + y * TG_SVO_DIMS + x;
-                if (scene.p_voxels[i].albedo == 255)
+                if (scene.p_voxels[i].albedo.w != 0.0f)
                 {
-                    const v3 p = { (f32)x + 108.5f, (f32)y + 138.5f, (f32)z + 116.5f };
-                    const v3 s = V3(0.5f);
-                    tg_renderer_draw_cube_DEBUG(scene.h_main_renderer, p, s, (v4) { 1.0f, 0.0f, 0.0f, 1.0f });
+                    const v3 p = { (f32)x + 64.5f, (f32)y + 128.5f, (f32)z + 64.5f };
+                    const v3 s = V3(0.9f);
+
+                    tg_renderer_draw_cube_DEBUG(scene.h_main_renderer, p, s, scene.p_voxels[i].albedo);
                 }
             }
         }

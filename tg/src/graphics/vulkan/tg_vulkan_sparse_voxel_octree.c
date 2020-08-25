@@ -38,18 +38,25 @@ void tg_voxelizer_create(tg_voxelizer* p_voxelizer)
     const VkPipelineRasterizationStateCreateInfo pipeline_rasterization_state_create_info = tg_vulkan_pipeline_rasterization_state_create_info_create(TG_NULL, VK_FALSE, VK_POLYGON_MODE_FILL, VK_CULL_MODE_NONE);
     const VkPipelineMultisampleStateCreateInfo pipeline_multisample_state_create_info = tg_vulkan_pipeline_multisample_state_create_info_create(1, VK_FALSE, 0.0f);
 
-    VkVertexInputBindingDescription vertex_input_binding_description = { 0 };
-    vertex_input_binding_description.binding = 0;
-    vertex_input_binding_description.stride = 12;
-    vertex_input_binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+    VkVertexInputBindingDescription p_vertex_input_binding_descriptions[2] = { 0 };
+    p_vertex_input_binding_descriptions[0].binding = 0;
+    p_vertex_input_binding_descriptions[0].stride = 12;
+    p_vertex_input_binding_descriptions[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+    p_vertex_input_binding_descriptions[1].binding = 1;
+    p_vertex_input_binding_descriptions[1].stride = 12;
+    p_vertex_input_binding_descriptions[1].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-    VkVertexInputAttributeDescription vertex_input_attribute_description = { 0 };
-    vertex_input_attribute_description.location = 0;
-    vertex_input_attribute_description.binding = 0;
-    vertex_input_attribute_description.format = VK_FORMAT_R32G32B32_SFLOAT;
-    vertex_input_attribute_description.offset = 0;
+    VkVertexInputAttributeDescription p_vertex_input_attribute_descriptions[2] = { 0 };
+    p_vertex_input_attribute_descriptions[0].location = 0;
+    p_vertex_input_attribute_descriptions[0].binding = 0;
+    p_vertex_input_attribute_descriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
+    p_vertex_input_attribute_descriptions[0].offset = 0;
+    p_vertex_input_attribute_descriptions[1].location = 1;
+    p_vertex_input_attribute_descriptions[1].binding = 1;
+    p_vertex_input_attribute_descriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+    p_vertex_input_attribute_descriptions[1].offset = 0;
 
-    const VkPipelineVertexInputStateCreateInfo pipeline_vertex_input_state_create_info = tg_vulkan_pipeline_vertex_input_state_create_info_create(1, &vertex_input_binding_description, 1, &vertex_input_attribute_description);
+    const VkPipelineVertexInputStateCreateInfo pipeline_vertex_input_state_create_info = tg_vulkan_pipeline_vertex_input_state_create_info_create(2, p_vertex_input_binding_descriptions, 2, p_vertex_input_attribute_descriptions);
 
     p_voxelizer->descriptor_set_layout = tg_vulkan_descriptor_set_layout_create(2, pp_vulkan_shaders);
     p_voxelizer->graphics_pipeline_layout = tg_vulkan_pipeline_layout_create(p_voxelizer->descriptor_set_layout.descriptor_set_layout, 0, TG_NULL);
@@ -79,59 +86,54 @@ void tg_voxelizer_create(tg_voxelizer* p_voxelizer)
 
     p_voxelizer->view_projection_ubo = tg_vulkan_buffer_create(3 * sizeof(m4), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 
-    p_voxelizer->image_3d = tg_vulkan_color_image_3d_create(TG_SVO_DIMS, TG_SVO_DIMS, TG_SVO_DIMS, VK_FORMAT_R8_UNORM, TG_NULL);
-    tg_vulkan_command_buffer_begin(global_graphics_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
-    tg_vulkan_command_buffer_cmd_transition_color_image_3d_layout(
-        global_graphics_command_buffer,
-        &p_voxelizer->image_3d,
-        0,
-        VK_ACCESS_SHADER_WRITE_BIT,
-        VK_IMAGE_LAYOUT_UNDEFINED,
-        VK_IMAGE_LAYOUT_GENERAL,
-        VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
-    );
-    tg_vulkan_command_buffer_end_and_submit(global_graphics_command_buffer, TG_VULKAN_QUEUE_TYPE_GRAPHICS);
+    p_voxelizer->p_image_3ds[0] = tg_vulkan_color_image_3d_create(TG_SVO_DIMS, TG_SVO_DIMS, TG_SVO_DIMS, VK_FORMAT_R32_UINT, TG_NULL);
+    p_voxelizer->p_image_3ds[1] = tg_vulkan_color_image_3d_create(TG_SVO_DIMS, TG_SVO_DIMS, TG_SVO_DIMS, VK_FORMAT_R32_UINT, TG_NULL);
+    p_voxelizer->p_image_3ds[2] = tg_vulkan_color_image_3d_create(TG_SVO_DIMS, TG_SVO_DIMS, TG_SVO_DIMS, VK_FORMAT_R32_UINT, TG_NULL);
+    p_voxelizer->p_image_3ds[3] = tg_vulkan_color_image_3d_create(TG_SVO_DIMS, TG_SVO_DIMS, TG_SVO_DIMS, VK_FORMAT_R32_UINT, TG_NULL);
+    p_voxelizer->p_image_3ds[4] = tg_vulkan_color_image_3d_create(TG_SVO_DIMS, TG_SVO_DIMS, TG_SVO_DIMS, VK_FORMAT_R32_UINT, TG_NULL);
+    p_voxelizer->p_image_3ds[5] = tg_vulkan_color_image_3d_create(TG_SVO_DIMS, TG_SVO_DIMS, TG_SVO_DIMS, VK_FORMAT_R32_UINT, TG_NULL);
+    p_voxelizer->p_image_3ds[6] = tg_vulkan_color_image_3d_create(TG_SVO_DIMS, TG_SVO_DIMS, TG_SVO_DIMS, VK_FORMAT_R32_UINT, TG_NULL);
+    p_voxelizer->p_image_3ds[7] = tg_vulkan_color_image_3d_create(TG_SVO_DIMS, TG_SVO_DIMS, TG_SVO_DIMS, VK_FORMAT_R32_UINT, TG_NULL);
 
-    p_voxelizer->voxel_buffer = tg_vulkan_buffer_create(TG_SVO_DIMS3 * sizeof(u8), VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+    tg_vulkan_command_buffer_begin(global_graphics_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
+    for (u32 i = 0; i < TG_SVO_ATTACHMENTS; i++)
+    {
+        tg_vulkan_command_buffer_cmd_transition_color_image_3d_layout(global_graphics_command_buffer, &p_voxelizer->p_image_3ds[i], 0, VK_ACCESS_SHADER_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+    }
+    tg_vulkan_command_buffer_end_and_submit(global_graphics_command_buffer, TG_VULKAN_QUEUE_TYPE_GRAPHICS);
+    for (u32 i = 0; i < TG_SVO_ATTACHMENTS; i++)
+    {
+        const VkDeviceSize format_size = (VkDeviceSize)tg_color_image_format_size((tg_color_image_format)p_voxelizer->p_image_3ds[i].format);
+        p_voxelizer->p_voxel_buffers[i] = tg_vulkan_buffer_create(TG_SVO_DIMS3 * format_size, VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+    }
     p_voxelizer->command_buffer = tg_vulkan_command_buffer_allocate(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 }
 
-void tg_voxelizer_begin(tg_voxelizer* p_voxelizer, v3i index_3d)
+void tg_voxelizer_begin(tg_voxelizer* p_voxelizer)
 {
     TG_ASSERT(p_voxelizer);
 
     p_voxelizer->descriptor_set_count = 0;
 
     tg_vulkan_command_buffer_begin(p_voxelizer->command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
-    tg_vulkan_command_buffer_cmd_transition_color_image_3d_layout(
-        p_voxelizer->command_buffer,
-        &p_voxelizer->image_3d,
-        VK_ACCESS_SHADER_WRITE_BIT,
-        VK_ACCESS_TRANSFER_WRITE_BIT,
-        VK_IMAGE_LAYOUT_GENERAL,
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-        VK_PIPELINE_STAGE_TRANSFER_BIT
-    );
-    tg_vulkan_command_buffer_cmd_clear_color_image_3d(p_voxelizer->command_buffer, &p_voxelizer->image_3d);
-    tg_vulkan_command_buffer_cmd_transition_color_image_3d_layout(
-        p_voxelizer->command_buffer,
-        &p_voxelizer->image_3d,
-        VK_ACCESS_TRANSFER_WRITE_BIT,
-        VK_ACCESS_SHADER_WRITE_BIT,
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        VK_IMAGE_LAYOUT_GENERAL,
-        VK_PIPELINE_STAGE_TRANSFER_BIT,
-        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
-    );
+    for (u32 i = 0; i < TG_SVO_ATTACHMENTS; i++)
+    {
+        tg_vulkan_command_buffer_cmd_transition_color_image_3d_layout(p_voxelizer->command_buffer, &p_voxelizer->p_image_3ds[i], VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+        tg_vulkan_command_buffer_cmd_clear_color_image_3d(p_voxelizer->command_buffer, &p_voxelizer->p_image_3ds[i]);
+        tg_vulkan_command_buffer_cmd_transition_color_image_3d_layout(p_voxelizer->command_buffer, &p_voxelizer->p_image_3ds[i], VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_WRITE_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+    }
     tg_vulkan_command_buffer_end_and_submit(p_voxelizer->command_buffer, TG_VULKAN_QUEUE_TYPE_GRAPHICS);
 
-    for (u32 i = 0; i < TG_SVO_DIMS3; i++)
+    for (u32 i = 0; i < TG_SVO_ATTACHMENTS; i++)
     {
-        ((u8*)p_voxelizer->voxel_buffer.memory.p_mapped_device_memory)[i] = 0;
+        u8* p_it = (u8*)p_voxelizer->p_voxel_buffers[i].memory.p_mapped_device_memory;
+        const VkDeviceSize format_size = (VkDeviceSize)tg_color_image_format_size((tg_color_image_format)p_voxelizer->p_image_3ds[i].format);
+        for (u32 j = 0; j < TG_SVO_DIMS3 * format_size; j++)
+        {
+            *p_it++ = 0;
+        }
+        tg_vulkan_buffer_flush_mapped_memory(&p_voxelizer->p_voxel_buffers[i]);
     }
-    tg_vulkan_buffer_flush_mapped_memory(&p_voxelizer->voxel_buffer);
 
     tg_vulkan_command_buffer_begin(p_voxelizer->command_buffer, 0, TG_NULL);
     tg_vulkan_command_buffer_cmd_begin_render_pass(p_voxelizer->command_buffer, p_voxelizer->render_pass, &p_voxelizer->framebuffer, VK_SUBPASS_CONTENTS_INLINE);
@@ -139,7 +141,7 @@ void tg_voxelizer_begin(tg_voxelizer* p_voxelizer, v3i index_3d)
 
 void tg_voxelizer_exec(tg_voxelizer* p_voxelizer, tg_render_command_h h_render_command)
 {
-    TG_ASSERT(p_voxelizer && h_render_command);
+    TG_ASSERT(p_voxelizer && h_render_command && h_render_command->p_mesh->positions_buffer.buffer && h_render_command->p_mesh->normals_buffer.buffer);
     TG_ASSERT(p_voxelizer->descriptor_set_count < TG_MAX_RENDER_COMMANDS);
 
     if (p_voxelizer->p_descriptor_sets[p_voxelizer->descriptor_set_count].descriptor_pool == VK_NULL_HANDLE)
@@ -150,25 +152,50 @@ void tg_voxelizer_exec(tg_voxelizer* p_voxelizer, tg_render_command_h h_render_c
 
     tg_vulkan_descriptor_set_update_uniform_buffer(p_vulkan_descriptor_set->descriptor_set, h_render_command->model_ubo.buffer, 0);
     tg_vulkan_descriptor_set_update_uniform_buffer(p_vulkan_descriptor_set->descriptor_set, p_voxelizer->view_projection_ubo.buffer, 1);
-    tg_vulkan_descriptor_set_update_image_3d(p_vulkan_descriptor_set->descriptor_set, &p_voxelizer->image_3d, 2);
+    for (u32 i = 0; i < TG_SVO_ATTACHMENTS; i++)
+    {
+        tg_vulkan_descriptor_set_update_image_3d(p_vulkan_descriptor_set->descriptor_set, &p_voxelizer->p_image_3ds[i], 2 + i);
+    }
 
     vkCmdBindPipeline(p_voxelizer->command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_voxelizer->graphics_pipeline);
     const VkDeviceSize offset = 0;
+    if (h_render_command->p_mesh->index_count)
+    {
+        vkCmdBindIndexBuffer(p_voxelizer->command_buffer, h_render_command->p_mesh->index_buffer.buffer, 0, VK_INDEX_TYPE_UINT16);
+    }
     vkCmdBindVertexBuffers(p_voxelizer->command_buffer, 0, 1, &h_render_command->p_mesh->positions_buffer.buffer, &offset);
-    //vkCmdBindVertexBuffers(p_voxelizer->command_buffer, 1, 1, &h_render_command->p_mesh->normals_buffer.buffer, &offset); // TODO: normals
-    vkCmdBindDescriptorSets(p_voxelizer->command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_voxelizer->graphics_pipeline_layout, 0, 1 /*for now? can this be 0?*/, &p_vulkan_descriptor_set->descriptor_set, 0, TG_NULL);
-    vkCmdDraw(p_voxelizer->command_buffer, h_render_command->p_mesh->position_count, 1, 0, 0);
+    vkCmdBindVertexBuffers(p_voxelizer->command_buffer, 1, 1, &h_render_command->p_mesh->normals_buffer.buffer, &offset);
+    vkCmdBindDescriptorSets(p_voxelizer->command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_voxelizer->graphics_pipeline_layout, 0, 1 /*TODO: for now? can this be 0?*/, &p_vulkan_descriptor_set->descriptor_set, 0, TG_NULL);
+    if (h_render_command->p_mesh->index_count)
+    {
+        vkCmdDrawIndexed(p_voxelizer->command_buffer, h_render_command->p_mesh->index_count, 1, 0, 0, 0);
+    }
+    else
+    {
+        vkCmdDraw(p_voxelizer->command_buffer, h_render_command->p_mesh->position_count, 1, 0, 0);
+    }
 }
 
-void tg_voxelizer_end(tg_voxelizer* p_voxelizer, tg_voxel* p_voxels)
+void tg_voxelizer_end(tg_voxelizer* p_voxelizer, v3i min_corner_index_3d, tg_voxel* p_voxels)
 {
     TG_ASSERT(p_voxelizer);
 
+    const f32 dh = (f32)(TG_SVO_DIMS / 2);
+    const v3 camera_position = {
+        (f32)(min_corner_index_3d.x * TG_SVO_DIMS) + dh,
+        (f32)(min_corner_index_3d.y * TG_SVO_DIMS) + dh,
+        (f32)(min_corner_index_3d.z * TG_SVO_DIMS) + dh
+    };
+
     vkCmdEndRenderPass(p_voxelizer->command_buffer);
     vkEndCommandBuffer(p_voxelizer->command_buffer);
-    ((m4*)p_voxelizer->view_projection_ubo.memory.p_mapped_device_memory)[0] = tgm_m4_translate(tgm_v3_neg((v3) { 108.0f + TG_SVO_DIMS / 2.0f, 138.0f + TG_SVO_DIMS / 2.0f, 116.0f + TG_SVO_DIMS / 2.0f }));
+
+    ((m4*)p_voxelizer->view_projection_ubo.memory.p_mapped_device_memory)[0] = tgm_m4_translate(tgm_v3_neg(camera_position));
+    ((m4*)p_voxelizer->view_projection_ubo.memory.p_mapped_device_memory)[2] = tgm_m4_orthographic(-dh, dh, -dh, dh, -dh, dh);
+
+
+
     ((m4*)p_voxelizer->view_projection_ubo.memory.p_mapped_device_memory)[1] = tgm_m4_inverse(tgm_m4_euler(0.0f, 0.0f, 0.0f));
-    ((m4*)p_voxelizer->view_projection_ubo.memory.p_mapped_device_memory)[2] = tgm_m4_orthographic(-TG_SVO_DIMS / 2.0f, TG_SVO_DIMS / 2.0f, -TG_SVO_DIMS / 2.0f, TG_SVO_DIMS / 2.0f, -TG_SVO_DIMS / 2.0f, TG_SVO_DIMS / 2.0f);
     tg_vulkan_buffer_flush_mapped_memory(&p_voxelizer->view_projection_ubo);
 
     VkSubmitInfo submit_info = { 0 };
@@ -186,52 +213,59 @@ void tg_voxelizer_end(tg_voxelizer* p_voxelizer, tg_voxel* p_voxels)
     tg_vulkan_fence_wait(p_voxelizer->fence);
     tg_vulkan_fence_reset(p_voxelizer->fence);
 
-    ((m4*)p_voxelizer->view_projection_ubo.memory.p_mapped_device_memory)[0] = tgm_m4_translate(tgm_v3_neg((v3) { 108.0f + TG_SVO_DIMS / 2.0f, 138.0f + TG_SVO_DIMS / 2.0f, 116.0f + TG_SVO_DIMS / 2.0f }));
+
+
     ((m4*)p_voxelizer->view_projection_ubo.memory.p_mapped_device_memory)[1] = tgm_m4_inverse(tgm_m4_euler(0.0f, TG_TO_RADIANS(90.0f), 0.0f));
-    ((m4*)p_voxelizer->view_projection_ubo.memory.p_mapped_device_memory)[2] = tgm_m4_orthographic(-TG_SVO_DIMS / 2.0f, TG_SVO_DIMS / 2.0f, -TG_SVO_DIMS / 2.0f, TG_SVO_DIMS / 2.0f, -TG_SVO_DIMS / 2.0f, TG_SVO_DIMS / 2.0f);
     tg_vulkan_buffer_flush_mapped_memory(&p_voxelizer->view_projection_ubo);
 
     tg_vulkan_queue_submit(TG_VULKAN_QUEUE_TYPE_GRAPHICS, 1, &submit_info, p_voxelizer->fence);
     tg_vulkan_fence_wait(p_voxelizer->fence);
     tg_vulkan_fence_reset(p_voxelizer->fence);
 
-    ((m4*)p_voxelizer->view_projection_ubo.memory.p_mapped_device_memory)[0] = tgm_m4_translate(tgm_v3_neg((v3) { 108.0f + TG_SVO_DIMS / 2.0f, 138.0f + TG_SVO_DIMS / 2.0f, 116.0f + TG_SVO_DIMS / 2.0f }));
+
+
     ((m4*)p_voxelizer->view_projection_ubo.memory.p_mapped_device_memory)[1] = tgm_m4_inverse(tgm_m4_euler(TG_TO_RADIANS(90.0f), 0.0f, 0.0f));
-    ((m4*)p_voxelizer->view_projection_ubo.memory.p_mapped_device_memory)[2] = tgm_m4_orthographic(-TG_SVO_DIMS / 2.0f, TG_SVO_DIMS / 2.0f, -TG_SVO_DIMS / 2.0f, TG_SVO_DIMS / 2.0f, -TG_SVO_DIMS / 2.0f, TG_SVO_DIMS / 2.0f);
     tg_vulkan_buffer_flush_mapped_memory(&p_voxelizer->view_projection_ubo);
 
     tg_vulkan_queue_submit(TG_VULKAN_QUEUE_TYPE_GRAPHICS, 1, &submit_info, p_voxelizer->fence);
     tg_vulkan_fence_wait(p_voxelizer->fence);
     tg_vulkan_fence_reset(p_voxelizer->fence);
+
+
 
     tg_vulkan_command_buffer_begin(global_graphics_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
-    tg_vulkan_command_buffer_cmd_transition_color_image_3d_layout(
-        global_graphics_command_buffer,
-        &p_voxelizer->image_3d,
-        VK_ACCESS_SHADER_WRITE_BIT,
-        VK_ACCESS_TRANSFER_READ_BIT,
-        VK_IMAGE_LAYOUT_GENERAL,
-        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-        VK_PIPELINE_STAGE_TRANSFER_BIT
-    );
-    tg_vulkan_command_buffer_cmd_copy_color_image_3d_to_buffer(global_graphics_command_buffer, &p_voxelizer->image_3d, p_voxelizer->voxel_buffer.buffer);
-    tg_vulkan_command_buffer_cmd_transition_color_image_3d_layout(
-        global_graphics_command_buffer,
-        &p_voxelizer->image_3d,
-        VK_ACCESS_TRANSFER_READ_BIT,
-        VK_ACCESS_SHADER_WRITE_BIT,
-        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-        VK_IMAGE_LAYOUT_GENERAL,
-        VK_PIPELINE_STAGE_TRANSFER_BIT,
-        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
-    );
+    for (u32 i = 0; i < TG_SVO_ATTACHMENTS; i++)
+    {
+        tg_vulkan_command_buffer_cmd_transition_color_image_3d_layout(global_graphics_command_buffer, &p_voxelizer->p_image_3ds[i], VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+        tg_vulkan_command_buffer_cmd_copy_color_image_3d_to_buffer(global_graphics_command_buffer, &p_voxelizer->p_image_3ds[i], p_voxelizer->p_voxel_buffers[i].buffer);
+        tg_vulkan_command_buffer_cmd_transition_color_image_3d_layout(global_graphics_command_buffer, &p_voxelizer->p_image_3ds[i], VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_SHADER_WRITE_BIT, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+    }
     tg_vulkan_command_buffer_end_and_submit(global_graphics_command_buffer, TG_VULKAN_QUEUE_TYPE_GRAPHICS);
+    for (u32 i = 0; i < TG_SVO_ATTACHMENTS; i++)
+    {
+        tg_vulkan_buffer_flush_mapped_memory(&p_voxelizer->p_voxel_buffers[i]);
+    }
+    
+    const u32* p_albedo_r_it  = (u32*)p_voxelizer->p_voxel_buffers[0].memory.p_mapped_device_memory;
+    const u32* p_albedo_g_it  = (u32*)p_voxelizer->p_voxel_buffers[1].memory.p_mapped_device_memory;
+    const u32* p_albedo_b_it  = (u32*)p_voxelizer->p_voxel_buffers[2].memory.p_mapped_device_memory;
+    const u32* p_albedo_a_it  = (u32*)p_voxelizer->p_voxel_buffers[3].memory.p_mapped_device_memory;
+    const u32* p_metallic_it  = (u32*)p_voxelizer->p_voxel_buffers[4].memory.p_mapped_device_memory;
+    const u32* p_roughness_it = (u32*)p_voxelizer->p_voxel_buffers[5].memory.p_mapped_device_memory;
+    const u32* p_ao_it        = (u32*)p_voxelizer->p_voxel_buffers[6].memory.p_mapped_device_memory;
+    const u32* p_count_it     = (u32*)p_voxelizer->p_voxel_buffers[7].memory.p_mapped_device_memory;
 
-    tg_vulkan_buffer_flush_mapped_memory(&p_voxelizer->voxel_buffer);
     for (u32 i = 0; i < TG_SVO_DIMS3; i++)
     {
-        p_voxels[i].albedo = ((u8*)p_voxelizer->voxel_buffer.memory.p_mapped_device_memory)[i];
+        const f32 count = tgm_f32_max(1.0f, (f32)*p_count_it++);
+
+        p_voxels[i].albedo.x  = (f32)*p_albedo_r_it++  / count;
+        p_voxels[i].albedo.y  = (f32)*p_albedo_g_it++  / count;
+        p_voxels[i].albedo.z  = (f32)*p_albedo_b_it++  / count;
+        p_voxels[i].albedo.w  = (f32)*p_albedo_a_it++  / count;
+        p_voxels[i].metallic  = (f32)*p_metallic_it++  / count;
+        p_voxels[i].roughness = (f32)*p_roughness_it++ / count;
+        p_voxels[i].ao        = (f32)*p_ao_it++        / count;
     }
 }
 
@@ -240,8 +274,11 @@ void tg_voxelizer_destroy(tg_voxelizer* p_voxelizer)
     TG_ASSERT(p_voxelizer);
 
     tg_vulkan_command_buffer_free(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, p_voxelizer->command_buffer);
-    tg_vulkan_buffer_destroy(&p_voxelizer->voxel_buffer);
-    tg_vulkan_color_image_3d_destroy(&p_voxelizer->image_3d);
+    for (u32 i = 0; i < TG_SVO_ATTACHMENTS; i++)
+    {
+        tg_vulkan_buffer_destroy(&p_voxelizer->p_voxel_buffers[i]);
+        tg_vulkan_color_image_3d_destroy(&p_voxelizer->p_image_3ds[i]);
+    }
     tg_vulkan_buffer_destroy(&p_voxelizer->view_projection_ubo);
     vkDestroyPipeline(device, p_voxelizer->graphics_pipeline, TG_NULL);
     vkDestroyPipelineLayout(device, p_voxelizer->graphics_pipeline_layout, TG_NULL);
@@ -260,4 +297,13 @@ void tg_voxelizer_destroy(tg_voxelizer* p_voxelizer)
     tg_vulkan_framebuffer_destroy(&p_voxelizer->framebuffer);
     tg_vulkan_render_pass_destroy(p_voxelizer->render_pass);
     tg_vulkan_fence_destroy(p_voxelizer->fence);
+}
+
+
+
+
+
+void tg_svo_init(const tg_voxel* p_voxels)
+{
+
 }

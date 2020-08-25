@@ -5,18 +5,17 @@
 #include "math/tg_math.h"
 #include "tg_common.h"
 
-#define TG_SVO_DIMS     64
-#define TG_SVO_DIMS3    262144 //64^3
+#define TG_SVO_DIMS           64
+#define TG_SVO_DIMS3          262144 //64^3
+#define TG_SVO_ATTACHMENTS    8      // albedo := 4, metallic := 1, roughness := 1, ao := 1, count := 1
 
 TG_DECLARE_HANDLE(tg_render_command);
 TG_DECLARE_HANDLE(tg_voxelizer);
 
 typedef struct tg_voxel
 {
-    f32    normal_x;              // normal can be reconstructed from x and y
-    f32    normal_y;// TODO: this normal could only use only 16 bits for x and y respectively, which will shrink this struct down to 12 bytes
-    u32    albedo;                // rgba
-    u32    metallic_roughness_ao; // metallic: 12, roughness: 12, ao: 8
+    v4     albedo;
+    f32    metallic, roughness, ao;
 } tg_voxel;
 
 typedef struct tg_voxelizer
@@ -30,8 +29,8 @@ typedef struct tg_voxelizer
     VkPipelineLayout                   graphics_pipeline_layout;
     VkPipeline                         graphics_pipeline;
     tg_vulkan_buffer                   view_projection_ubo;
-    tg_vulkan_image_3d                 image_3d;
-    tg_vulkan_buffer                   voxel_buffer;
+    tg_vulkan_image_3d                 p_image_3ds[TG_SVO_ATTACHMENTS];
+    tg_vulkan_buffer                   p_voxel_buffers[TG_SVO_ATTACHMENTS];
     VkCommandBuffer                    command_buffer;
 } tg_voxelizer;
 
@@ -52,11 +51,11 @@ typedef struct tg_svo
 } tg_svo;
 
 void    tg_voxelizer_create(tg_voxelizer* p_voxelizer);
-void    tg_voxelizer_begin(tg_voxelizer* p_voxelizer, v3i index_3d);
+void    tg_voxelizer_begin(tg_voxelizer* p_voxelizer);
 void    tg_voxelizer_exec(tg_voxelizer* p_voxelizer, tg_render_command_h h_render_command);
-void    tg_voxelizer_end(tg_voxelizer* p_voxelizer, tg_voxel* p_voxels);
+void    tg_voxelizer_end(tg_voxelizer* p_voxelizer, v3i min_corner_index_3d, tg_voxel* p_voxels);
 void    tg_voxelizer_destroy(tg_voxelizer* p_voxelizer);
 
-void    tg_svo_init(tg_voxel* p_voxels);
+void    tg_svo_init(const tg_voxel* p_voxels);
 
 #endif

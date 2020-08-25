@@ -64,6 +64,7 @@ typedef enum tg_color_image_format
 	TG_COLOR_IMAGE_FORMAT_A8B8G8R8               = 57,
 	TG_COLOR_IMAGE_FORMAT_B8G8R8A8               = 50,
 	TG_COLOR_IMAGE_FORMAT_R16G16B16A16_SFLOAT    = 97,
+    TG_COLOR_IMAGE_FORMAT_R32                    = 98,
 	TG_COLOR_IMAGE_FORMAT_R32G32B32A32_SFLOAT    = 109,
 	TG_COLOR_IMAGE_FORMAT_R8                     = 9,
 	TG_COLOR_IMAGE_FORMAT_R8G8                   = 22,

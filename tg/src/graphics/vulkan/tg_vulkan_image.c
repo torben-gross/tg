@@ -43,6 +43,7 @@ u32 tg_color_image_format_size(tg_color_image_format format)
 	case TG_COLOR_IMAGE_FORMAT_B8G8R8A8:               size =  4; break;
 	case TG_COLOR_IMAGE_FORMAT_R16G16B16A16_SFLOAT:    size =  8; break;
 	case TG_COLOR_IMAGE_FORMAT_R32G32B32A32_SFLOAT:    size = 16; break;
+	case TG_COLOR_IMAGE_FORMAT_R32:                    size =  4; break;
 	case TG_COLOR_IMAGE_FORMAT_R8:                     size =  1; break;
 	case TG_COLOR_IMAGE_FORMAT_R8G8:                   size =  2; break;
 	case TG_COLOR_IMAGE_FORMAT_R8G8B8:                 size =  3; break;
