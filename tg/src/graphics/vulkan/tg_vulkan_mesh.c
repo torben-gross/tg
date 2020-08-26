@@ -144,8 +144,7 @@ tg_mesh tg_mesh_create2(const char* p_filename, v3 scale) // TODO: scale is temp
     char* p_data = TG_MEMORY_STACK_ALLOC(file_properties.size);
     tg_platform_file_read(p_filename, file_properties.size, p_data);
 
-    const char* p_extension = tg_string_extract_filename_extension(p_filename);
-    if (tg_string_equal(p_extension, "obj"))
+    if (tg_string_equal(file_properties.p_extension, "obj"))
     {
         const char* p_it = p_data;
         const char* const p_eof = p_data + file_properties.size;

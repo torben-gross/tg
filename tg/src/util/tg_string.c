@@ -2,6 +2,18 @@
 
 #include "math/tg_math.h"
 
+void tg_string_copy(u32 size, char* p_buffer, const char* p_string)
+{
+	for (u32 i = 0; i < size; i++)
+	{
+		p_buffer[i] = p_string[i];
+		if (p_string[i] == '\0')
+		{
+			break;
+		}
+	}
+}
+
 b32 tg_string_equal(const char* p_s0, const char* p_s1)
 {
 	b32 result = TG_TRUE;
@@ -11,20 +23,6 @@ b32 tg_string_equal(const char* p_s0, const char* p_s1)
 	}
 	result &= !*p_s0 && !*p_s1;
 	return result;
-}
-
-const char* tg_string_extract_filename_extension(const char* p_filename)
-{
-	const char* p_it = &p_filename[tg_string_length(p_filename) - 1];
-	while (*p_it != '.')
-	{
-		if (p_it-- == p_filename)
-		{
-			break;
-		}
-	}
-	p_it++;
-	return p_it;
 }
 
 void tg_string_format(u32 size, char* p_buffer, const char* p_format, ...)

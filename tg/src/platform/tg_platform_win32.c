@@ -47,6 +47,23 @@ static void tg__convert_filetime_to_systemtime(const FILETIME* p_file_time, tg_s
     p_system_time->milliseconds = systemtime.wMilliseconds;
 }
 
+void tg__extract_directory(char* p_buffer, const char* p_filename)
+{
+    u32 character_count = 0;
+    const char* p_it = p_filename;
+    while (*p_it != '\0')
+    {
+        if (*p_it == TG_FILE_SEPERATOR)
+        {
+            character_count = (u32)(p_it - p_filename);
+        }
+        p_it++;
+    }
+
+    tg_memory_copy((u64)character_count, p_filename, p_buffer);
+    p_buffer[character_count] = '\0';
+}
+
 static void tg__fill_file_properties(const char* p_directory, WIN32_FIND_DATAA* p_find_data, tg_file_properties* p_properties)
 {
     p_properties->is_directory = (p_find_data->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
@@ -60,8 +77,28 @@ static void tg__fill_file_properties(const char* p_directory, WIN32_FIND_DATAA* 
     size.HighPart = p_find_data->nFileSizeHigh;
     p_properties->size = size.QuadPart;
 
-    tg_memory_copy(MAX_PATH, p_directory, p_properties->p_relative_directory);
-    tg_memory_copy(MAX_PATH, p_find_data->cFileName, p_properties->p_filename);
+    if (*p_directory == '.')
+    {
+        TG_ASSERT(p_directory[1] == '\0');
+        tg_string_copy(MAX_PATH, p_properties->p_filename, p_find_data->cFileName);
+        p_properties->p_short_filename = p_properties->p_filename;
+    }
+    else
+    {
+        tg_string_format(MAX_PATH, p_properties->p_filename, "%s%c%s", p_directory, TG_FILE_SEPERATOR, p_find_data->cFileName);
+        p_properties->p_short_filename = &p_properties->p_filename[tg_string_length(p_directory) + 1];
+    }
+    tg_string_copy(MAX_PATH, p_properties->p_directory, p_directory);
+    if (p_properties->is_directory)
+    {
+        p_properties->p_extension = TG_NULL;
+    }
+    else
+    {
+        p_properties->p_extension = p_properties->p_short_filename;
+        while (*p_properties->p_extension != '\0' && *p_properties->p_extension++ != '.');
+        TG_ASSERT(*p_properties->p_extension != '\0');
+    }
 }
 
 
@@ -201,10 +238,10 @@ b32 tg_platform_file_exists(const char* p_filename)
 {
     TG_ASSERT(p_filename);
 
-    char p_filename_buffer[MAX_PATH] = { 0 };
-    tg_string_format(sizeof(p_filename_buffer), p_filename_buffer, "%s/%s", tg_assets_get_asset_path(), p_filename);
+    char p_buffer[MAX_PATH] = { 0 };
+    tg_platform_prepend_asset_directory(p_filename, MAX_PATH, p_buffer);
 
-    const u32 result = GetFileAttributesA(p_filename_buffer) != INVALID_FILE_ATTRIBUTES;
+    const u32 result = GetFileAttributesA(p_buffer) != INVALID_FILE_ATTRIBUTES;
     return result;
 }
 
@@ -213,7 +250,7 @@ void tg_platform_file_read(const char* p_filename, u64 buffer_size, char* p_buff
     TG_ASSERT(p_filename && buffer_size && p_buffer);
 
     char p_filename_buffer[MAX_PATH] = { 0 };
-    tg_string_format(sizeof(p_filename_buffer), p_filename_buffer, "%s/%s", tg_assets_get_asset_path(), p_filename);
+    tg_platform_prepend_asset_directory(p_filename, MAX_PATH, p_filename_buffer);
 
     HANDLE h_file = CreateFileA(p_filename_buffer, GENERIC_READ | GENERIC_WRITE, 0, TG_NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, TG_NULL);
     TG_DEBUG_EXEC(
@@ -238,10 +275,10 @@ void tg_platform_file_create(const char* p_filename, u32 size, char* p_data, b32
 {
     TG_ASSERT(p_filename && size && p_data);
 
-    char p_filename_buffer[MAX_PATH] = { 0 };
-    tg_string_format(MAX_PATH, p_filename_buffer, "%s/%s", tg_assets_get_asset_path(), p_filename);
+    char p_buffer[MAX_PATH] = { 0 };
+    tg_platform_prepend_asset_directory(p_filename, MAX_PATH, p_buffer);
 
-    HANDLE h_file = CreateFileA(p_filename_buffer, GENERIC_READ | GENERIC_WRITE, 0, TG_NULL, replace_existing ? CREATE_ALWAYS : CREATE_NEW, FILE_ATTRIBUTE_NORMAL, TG_NULL);
+    HANDLE h_file = CreateFileA(p_buffer, GENERIC_READ | GENERIC_WRITE, 0, TG_NULL, replace_existing ? CREATE_ALWAYS : CREATE_NEW, FILE_ATTRIBUTE_NORMAL, TG_NULL);
     u32 written_size = 0;
     WriteFile(h_file, p_data, size, &written_size, TG_NULL);
     CloseHandle(h_file);
@@ -249,22 +286,18 @@ void tg_platform_file_create(const char* p_filename, u32 size, char* p_data, b32
 
 b32 tg_platform_file_get_properties(const char* p_filename, tg_file_properties* p_properties)
 {
-    char p_filename_buffer[MAX_PATH] = { 0 };
-    tg_string_format(sizeof(p_filename_buffer), p_filename_buffer, "%s/%s", tg_assets_get_asset_path(), p_filename);
+    char p_buffer[MAX_PATH] = { 0 };
+    tg_platform_prepend_asset_directory(p_filename, MAX_PATH, p_buffer);
 
     WIN32_FIND_DATAA find_data = { 0 };
-    HANDLE handle = FindFirstFileA(p_filename_buffer, &find_data);
+    HANDLE handle = FindFirstFileA(p_buffer, &find_data);
     if (handle == INVALID_HANDLE_VALUE)
     {
         return TG_FALSE;
     }
 
-    char p_relative_directory_buffer[MAX_PATH] = { 0 };
-    tg_platform_file_extract_directory(MAX_PATH, p_relative_directory_buffer, p_filename);
-
     char p_directory_buffer[MAX_PATH] = { 0 };
-    tg_string_format(MAX_PATH, p_directory_buffer, "%s\\%s", tg_assets_get_asset_path(), p_relative_directory_buffer);
-    tg_string_replace_characters(p_directory_buffer, '/', '\\');
+    tg__extract_directory(p_directory_buffer, p_filename);
 
     tg__fill_file_properties(p_directory_buffer, &find_data, p_properties);
     FindClose(handle);
@@ -272,36 +305,18 @@ b32 tg_platform_file_get_properties(const char* p_filename, tg_file_properties* 
     return TG_TRUE;
 }
 
-void tg_platform_file_extract_directory(u64 size, char* p_buffer, const char* p_filename)
-{
-    u32 character_count = 0;
-    const char* p_it = p_filename;
-    while (*p_it != '\0')
-    {
-        if (*p_it == '/' || *p_it == '\\')
-        {
-            character_count = (u32)(p_it - p_filename);
-        }
-        p_it++;
-    }
-
-    TG_ASSERT(character_count < size);
-    tg_memory_copy((u64)character_count, p_filename, p_buffer);
-    p_buffer[character_count] = '\0';
-}
-
 tg_file_iterator_h tg_platform_directory_begin_iteration(const char* p_directory, tg_file_properties* p_properties)
 {
     TG_ASSERT(p_directory && p_properties);
 
-    char p_filename_buffer[MAX_PATH] = { 0 };
-    u32 dir_length = tg_string_length(p_directory);
-    TG_ASSERT(dir_length <= MAX_PATH - 3);
+    char p_postfix_buffer[MAX_PATH] = { 0 };
+    tg_string_format(MAX_PATH, p_postfix_buffer, "%s%c%c", p_directory, TG_FILE_SEPERATOR, '*');
 
-    tg_string_format(dir_length, p_filename_buffer, "%s%s", p_directory, "\\*");
+    char p_buffer[MAX_PATH] = { 0 };
+    tg_platform_prepend_asset_directory(p_postfix_buffer, MAX_PATH, p_buffer);
 
     WIN32_FIND_DATAA find_data = { 0 };
-    HANDLE h_file_iterator = FindFirstFileA(p_filename_buffer, &find_data);
+    HANDLE h_file_iterator = FindFirstFileA(p_buffer, &find_data);
     TG_ASSERT(h_file_iterator != INVALID_HANDLE_VALUE);
 
     while (find_data.cFileName[0] == '.' && (find_data.cFileName[1] == '\0' || find_data.cFileName[1] == '.'))
@@ -348,9 +363,17 @@ u64 tg_platform_directory_get_size(const char* p_directory)
     {
         if (file_properties.is_directory)
         {
-            char p_buffer[TG_MAX_PATH] = { 0 };
-            tg_string_format(sizeof(p_buffer), p_buffer, "%s%c%s", p_directory, TG_FILE_SEPERATOR, file_properties.p_filename);
-            size += tg_platform_directory_get_size(p_buffer);
+            if (*p_directory == '.')
+            {
+                TG_ASSERT(p_directory[1] == '\0');
+                size += tg_platform_directory_get_size(file_properties.p_filename);
+            }
+            else
+            {
+                char p_buffer[MAX_PATH] = { 0 };
+                tg_string_format(MAX_PATH, p_buffer, "%s%c%s", p_directory, TG_FILE_SEPERATOR, file_properties.p_short_filename);
+                size += tg_platform_directory_get_size(p_buffer);
+            }
         }
         else
         {
@@ -426,6 +449,11 @@ i8 tg_platform_system_time_compare(tg_system_time* p_time0, tg_system_time* p_ti
     }
 
     return 0;
+}
+
+void tg_platform_prepend_asset_directory(const char* p_filename, u32 size, char* p_buffer)
+{
+    tg_string_format(size, p_buffer, "%s%c%s", "assets", TG_FILE_SEPERATOR, p_filename);
 }
 
 

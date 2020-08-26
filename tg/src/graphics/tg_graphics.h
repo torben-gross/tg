@@ -42,7 +42,6 @@
 TG_DECLARE_HANDLE(tg_compute_shader);
 TG_DECLARE_HANDLE(tg_fragment_shader);
 TG_DECLARE_HANDLE(tg_material);
-TG_DECLARE_HANDLE(tg_raytracer);
 TG_DECLARE_HANDLE(tg_render_command);
 TG_DECLARE_HANDLE(tg_render_target);
 TG_DECLARE_HANDLE(tg_renderer);
@@ -619,6 +618,7 @@ typedef struct tg_renderer
     tg_vulkan_buffer             screen_quad_indices;
     tg_vulkan_buffer             screen_quad_positions_buffer;
     tg_vulkan_buffer             screen_quad_uvs_buffer;
+    VkSemaphore                  semaphore;
 
     u32                          render_command_count;
     tg_render_command_h          ph_render_commands[TG_MAX_RENDER_COMMANDS];
@@ -661,7 +661,6 @@ typedef struct tg_renderer
     struct
     {
         tg_vulkan_image          color_attachment;
-        VkSemaphore              rendering_finished_semaphore; // TODO: only one needed
         VkRenderPass             render_pass;
         tg_vulkan_framebuffer    framebuffer;
         tg_vulkan_pipeline       graphics_pipeline;
@@ -690,7 +689,6 @@ typedef struct tg_renderer
     struct
     {
         VkSemaphore              image_acquired_semaphore;
-        VkSemaphore              semaphore;
         VkRenderPass             render_pass;
         tg_vulkan_framebuffer    p_framebuffers[TG_VULKAN_SURFACE_IMAGE_COUNT];
         tg_vulkan_pipeline       graphics_pipeline;
@@ -935,16 +933,6 @@ void                    tg_mesh_regenerate_normals(tg_mesh* p_mesh);
 void                    tg_mesh_regenerate_tangents_bitangents(tg_mesh* p_mesh);
 void                    tg_mesh_destroy(tg_mesh* p_mesh);
 
-tg_raytracer_h          tg_raytracer_create(tg_camera* p_camera);
-void                    tg_raytracer_begin(tg_raytracer_h h_raytracer);
-void                    tg_raytracer_push_directional_light(tg_raytracer_h h_raytracer, v3 direction, v3 color);
-void                    tg_raytracer_push_point_light(tg_raytracer_h h_raytracer, v3 position, v3 color);
-void                    tg_raytracer_push_sphere(tg_raytracer_h h_raytracer, v3 center, f32 radius);
-void                    tg_raytracer_end(tg_raytracer_h h_raytracer);
-void                    tg_raytracer_present(tg_raytracer_h h_raytracer);
-void                    tg_raytracer_get_render_target(tg_raytracer_h h_raytracer);
-void                    tg_raytracer_destroy(tg_raytracer_h h_raytracer);
-
 tg_render_command_h     tg_render_command_create(tg_mesh* p_mesh, tg_material_h h_material, v3 position, u32 global_resource_count, tg_handle* p_global_resources);
 void                    tg_render_command_destroy(tg_render_command_h h_render_command);
 void                    tg_render_command_set_position(tg_render_command_h h_render_command, v3 position);
@@ -956,8 +944,7 @@ void                    tg_renderer_begin(tg_renderer_h h_renderer);
 void                    tg_renderer_push_directional_light(tg_renderer_h h_renderer, v3 direction, v3 color);
 void                    tg_renderer_push_point_light(tg_renderer_h h_renderer, v3 position, v3 color);
 void                    tg_renderer_exec(tg_renderer_h h_renderer, tg_render_command_h h_render_command);
-void                    tg_renderer_end(tg_renderer_h h_renderer);
-void                    tg_renderer_present(tg_renderer_h h_renderer);
+void                    tg_renderer_end(tg_renderer_h h_renderer, b32 present);
 void                    tg_renderer_clear(tg_renderer_h h_renderer);
 tg_render_target_h      tg_renderer_get_render_target(tg_renderer_h h_renderer);
 #if TG_ENABLE_DEBUG_TOOLS == 1

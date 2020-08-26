@@ -34,13 +34,16 @@ static void tg__recompile(const char* p_filename)
 	if (!spv_exists || recompile)
 	{
 		char p_filename_buffer[TG_MAX_PATH] = { 0 };
-		tg_string_format(TG_MAX_PATH, p_filename_buffer, "%s%c%s", uncompiled_properties.p_relative_directory, TG_FILE_SEPERATOR, uncompiled_properties.p_filename);
+		tg_string_format(TG_MAX_PATH, p_filename_buffer, "%s%c%s", uncompiled_properties.p_directory, TG_FILE_SEPERATOR, uncompiled_properties.p_short_filename);
+
+		char p_full_filename_buffer[TG_MAX_PATH] = { 0 };
+		tg_platform_prepend_asset_directory(p_filename_buffer, TG_MAX_PATH, p_full_filename_buffer);
 
 		char p_delete_buffer[10 + 2 * TG_MAX_PATH] = { 0 };
 		tg_string_format(
 			sizeof(p_delete_buffer), p_delete_buffer,
 			"del /s /q %s.spv",
-			p_filename_buffer
+			p_full_filename_buffer
 		);
 		const i32 result0 = system(p_delete_buffer);
 		TG_ASSERT(result0 != -1);
@@ -49,8 +52,8 @@ static void tg__recompile(const char* p_filename)
 		tg_string_format(
 			sizeof(p_compile_buffer), p_compile_buffer,
 			"C:/VulkanSDK/1.2.141.2/Bin/glslc.exe %s -o %s.spv",
-			p_filename_buffer,
-			p_filename_buffer
+			p_full_filename_buffer,
+			p_full_filename_buffer
 		);
 		const i32 result1 = system(p_compile_buffer);
 		TG_ASSERT(result1 != -1);

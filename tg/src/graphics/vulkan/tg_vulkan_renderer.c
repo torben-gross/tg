@@ -51,14 +51,12 @@ static void tg__init_shadow_pass(tg_renderer_h h_renderer)
         h_renderer->shadow_pass.p_shadow_maps[i] = tg_vulkan_depth_image_create(TG_CASCADED_SHADOW_MAP_SIZE, TG_CASCADED_SHADOW_MAP_SIZE, VK_FORMAT_D32_SFLOAT, TG_NULL);
     }
 
-    VkCommandBuffer command_buffer = tg_vulkan_command_buffer_allocate(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY); // TODO: global! also for other ones in this file!
-    tg_vulkan_command_buffer_begin(command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
+    tg_vulkan_command_buffer_begin(global_graphics_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
     for (u32 i = 0; i < TG_CASCADED_SHADOW_MAPS; i++)
     {
-        tg_vulkan_command_buffer_cmd_transition_depth_image_layout(command_buffer, &h_renderer->shadow_pass.p_shadow_maps[i], 0, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT);
+        tg_vulkan_command_buffer_cmd_transition_depth_image_layout(global_graphics_command_buffer, &h_renderer->shadow_pass.p_shadow_maps[i], 0, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT);
     }
-    tg_vulkan_command_buffer_end_and_submit(command_buffer, TG_VULKAN_QUEUE_TYPE_GRAPHICS);
-    tg_vulkan_command_buffer_free(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, command_buffer);
+    tg_vulkan_command_buffer_end_and_submit(global_graphics_command_buffer, TG_VULKAN_QUEUE_TYPE_GRAPHICS);
 
     VkAttachmentDescription attachment_description = { 0 };
     attachment_description.flags = 0;
@@ -439,8 +437,6 @@ static void tg__init_shading_pass(tg_renderer_h h_renderer)
     tg_vulkan_command_buffer_end_and_submit(command_buffer, TG_VULKAN_QUEUE_TYPE_GRAPHICS);
     tg_vulkan_command_buffer_free(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, command_buffer);
 
-    h_renderer->shading_pass.rendering_finished_semaphore = tg_vulkan_semaphore_create();
-
     VkAttachmentDescription attachment_description = { 0 };
     attachment_description.flags = 0;
     attachment_description.format = TG_SHADING_COLOR_ATTACHMENT_FORMAT;
@@ -812,7 +808,6 @@ static void tg__init_present_pass(tg_renderer_h h_renderer)
     tg_vulkan_buffer staging_buffer = { 0 };
 
     h_renderer->present_pass.image_acquired_semaphore = tg_vulkan_semaphore_create();
-    h_renderer->present_pass.semaphore = tg_vulkan_semaphore_create();
 
     VkAttachmentReference color_attachment_reference = { 0 };
     color_attachment_reference.attachment = 0;
@@ -1003,6 +998,8 @@ tg_renderer_h tg_renderer_create(tg_camera* p_camera)
     );
     h_renderer->render_command_count = 0;
 
+    h_renderer->semaphore = tg_vulkan_semaphore_create();
+
     tg__init_shadow_pass(h_renderer);
     tg__init_geometry_pass(h_renderer);
     tg__init_ssao_pass(h_renderer);
@@ -1150,25 +1147,21 @@ void tg_renderer_exec(tg_renderer_h h_renderer, tg_render_command_h h_render_com
         }
     }
 
-    // TODO: this crashes, when a render command is created before the camera. that way,
-    // the camera info is not set up for that specific camera. think of threading in
-    // this case!
+    // TODO: this crashes, when a render command is created before the renderer. that
+    // way, the renderer info is not set up for that specific renderer. think of
+    // threading in this case!
     TG_ASSERT(p_renderer_info);
     TG_ASSERT(h_renderer->render_command_count < TG_MAX_RENDER_COMMANDS);
 
     h_renderer->ph_render_commands[h_renderer->render_command_count++] = h_render_command;
 }
 
-void tg_renderer_end(tg_renderer_h h_renderer)
+void tg_renderer_end(tg_renderer_h h_renderer, b32 present)
 {
     TG_ASSERT(h_renderer);
     
     const tg_camera* p_cam = h_renderer->p_camera;
-    TG_CAMERA_VIEW(h_renderer->view_projection_ubo) = tgm_m4_mul(
-        tgm_m4_inverse(tgm_m4_euler(p_cam->pitch, p_cam->yaw, p_cam->roll)),
-        tgm_m4_translate(tgm_v3_neg(p_cam->position))
-    );
-
+    TG_CAMERA_VIEW(h_renderer->view_projection_ubo) = tgm_m4_mul(tgm_m4_inverse(tgm_m4_euler(p_cam->pitch, p_cam->yaw, p_cam->roll)), tgm_m4_translate(tgm_v3_neg(p_cam->position)));
     if (h_renderer->p_camera->type == TG_CAMERA_TYPE_ORTHOGRAPHIC)
     {
         TG_CAMERA_PROJ(h_renderer->view_projection_ubo) = tgm_m4_orthographic(p_cam->ortho.l, p_cam->ortho.r, p_cam->ortho.b, p_cam->ortho.t, p_cam->ortho.f, p_cam->ortho.n);
@@ -1375,7 +1368,7 @@ void tg_renderer_end(tg_renderer_h h_renderer)
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &h_renderer->geometry_pass.command_buffer;
     submit_info.signalSemaphoreCount = 1;
-    submit_info.pSignalSemaphores = &h_renderer->shading_pass.rendering_finished_semaphore;
+    submit_info.pSignalSemaphores = &h_renderer->semaphore;
 
     tg_vulkan_queue_submit(TG_VULKAN_QUEUE_TYPE_GRAPHICS, 1, &submit_info, VK_NULL_HANDLE);
 
@@ -1384,12 +1377,12 @@ void tg_renderer_end(tg_renderer_h h_renderer)
     ssao_submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     ssao_submit_info.pNext = TG_NULL;
     ssao_submit_info.waitSemaphoreCount = 1;
-    ssao_submit_info.pWaitSemaphores = &h_renderer->shading_pass.rendering_finished_semaphore;
+    ssao_submit_info.pWaitSemaphores = &h_renderer->semaphore;
     ssao_submit_info.pWaitDstStageMask = p_pipeline_stage_flags;
     ssao_submit_info.commandBufferCount = 1;
     ssao_submit_info.pCommandBuffers = &h_renderer->ssao_pass.command_buffer;
     ssao_submit_info.signalSemaphoreCount = 1;
-    ssao_submit_info.pSignalSemaphores = &h_renderer->shading_pass.rendering_finished_semaphore;
+    ssao_submit_info.pSignalSemaphores = &h_renderer->semaphore;
 
     tg_vulkan_queue_submit(TG_VULKAN_QUEUE_TYPE_GRAPHICS, 1, &ssao_submit_info, VK_NULL_HANDLE);
 
@@ -1397,12 +1390,12 @@ void tg_renderer_end(tg_renderer_h h_renderer)
     shading_submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     shading_submit_info.pNext = TG_NULL;
     shading_submit_info.waitSemaphoreCount = 1;
-    shading_submit_info.pWaitSemaphores = &h_renderer->shading_pass.rendering_finished_semaphore;
+    shading_submit_info.pWaitSemaphores = &h_renderer->semaphore;
     shading_submit_info.pWaitDstStageMask = p_pipeline_stage_flags;
     shading_submit_info.commandBufferCount = 1;
     shading_submit_info.pCommandBuffers = &h_renderer->shading_pass.command_buffer;
     shading_submit_info.signalSemaphoreCount = 1;
-    shading_submit_info.pSignalSemaphores = &h_renderer->shading_pass.rendering_finished_semaphore;
+    shading_submit_info.pSignalSemaphores = &h_renderer->semaphore;
 
     tg_vulkan_queue_submit(TG_VULKAN_QUEUE_TYPE_GRAPHICS, 1, &shading_submit_info, VK_NULL_HANDLE);
 
@@ -1410,19 +1403,18 @@ void tg_renderer_end(tg_renderer_h h_renderer)
     tone_mapping_submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     tone_mapping_submit_info.pNext = TG_NULL;
     tone_mapping_submit_info.waitSemaphoreCount = 1;
-    tone_mapping_submit_info.pWaitSemaphores = &h_renderer->shading_pass.rendering_finished_semaphore;
+    tone_mapping_submit_info.pWaitSemaphores = &h_renderer->semaphore;
     tone_mapping_submit_info.pWaitDstStageMask = p_pipeline_stage_flags;
     tone_mapping_submit_info.commandBufferCount = 1;
     tone_mapping_submit_info.pCommandBuffers = &h_renderer->tone_mapping_pass.command_buffer;
-    tone_mapping_submit_info.signalSemaphoreCount = 0;
-    tone_mapping_submit_info.pSignalSemaphores = TG_NULL;
+    tone_mapping_submit_info.signalSemaphoreCount = 1;
+    tone_mapping_submit_info.pSignalSemaphores = &h_renderer->semaphore;
 
-    tg_vulkan_queue_submit(TG_VULKAN_QUEUE_TYPE_GRAPHICS, 1, &tone_mapping_submit_info, h_renderer->render_target.fence);
+    tg_vulkan_queue_submit(TG_VULKAN_QUEUE_TYPE_GRAPHICS, 1, &tone_mapping_submit_info, VK_NULL_HANDLE);
 
     tg_vulkan_command_buffer_begin(h_renderer->forward_pass.command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, TG_NULL);
     tg_vulkan_command_buffer_cmd_begin_render_pass(h_renderer->forward_pass.command_buffer, h_renderer->forward_pass.render_pass, &h_renderer->forward_pass.framebuffer, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 
-    // TODO: this loop can be abstracted
     for (u32 i = 0; i < h_renderer->render_command_count; i++)
     {
         tg_render_command_h h_render_command = h_renderer->ph_render_commands[i];
@@ -1575,60 +1567,60 @@ void tg_renderer_end(tg_renderer_h h_renderer)
     );
     VK_CALL(vkEndCommandBuffer(h_renderer->forward_pass.command_buffer));
 
-    tg_vulkan_fence_wait(h_renderer->render_target.fence);
-    tg_vulkan_fence_reset(h_renderer->render_target.fence);
-
     VkSubmitInfo forward_submit_info = { 0 };
     forward_submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     forward_submit_info.pNext = TG_NULL;
-    forward_submit_info.waitSemaphoreCount = 0;
-    forward_submit_info.pWaitSemaphores = TG_NULL;
-    forward_submit_info.pWaitDstStageMask = TG_NULL;
+    forward_submit_info.waitSemaphoreCount = 1;
+    forward_submit_info.pWaitSemaphores = &h_renderer->semaphore;
+    forward_submit_info.pWaitDstStageMask = p_pipeline_stage_flags;
     forward_submit_info.commandBufferCount = 1;
     forward_submit_info.pCommandBuffers = &h_renderer->forward_pass.command_buffer;
-    forward_submit_info.signalSemaphoreCount = 0;
-    forward_submit_info.pSignalSemaphores = TG_NULL;
 
-    tg_vulkan_queue_submit(TG_VULKAN_QUEUE_TYPE_GRAPHICS, 1, &forward_submit_info, h_renderer->render_target.fence);
-}
+    if (!present)
+    {
+        forward_submit_info.signalSemaphoreCount = 0;
+        forward_submit_info.pSignalSemaphores = TG_NULL;
 
-void tg_renderer_present(tg_renderer_h h_renderer)
-{
-    TG_ASSERT(h_renderer);
+        tg_vulkan_queue_submit(TG_VULKAN_QUEUE_TYPE_GRAPHICS, 1, &forward_submit_info, h_renderer->render_target.fence);
+    }
+    else
+    {
+        forward_submit_info.signalSemaphoreCount = 1;
+        forward_submit_info.pSignalSemaphores = &h_renderer->semaphore;
 
-    u32 current_image;
-    VK_CALL(vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, h_renderer->present_pass.image_acquired_semaphore, VK_NULL_HANDLE, &current_image));
+        tg_vulkan_queue_submit(TG_VULKAN_QUEUE_TYPE_GRAPHICS, 1, &forward_submit_info, VK_NULL_HANDLE);
 
-    tg_vulkan_fence_wait(h_renderer->render_target.fence);
-    tg_vulkan_fence_reset(h_renderer->render_target.fence);
+        u32 current_image;
+        VK_CALL(vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, h_renderer->present_pass.image_acquired_semaphore, VK_NULL_HANDLE, &current_image));
 
-    const VkSemaphore p_wait_semaphores[1] = { h_renderer->present_pass.image_acquired_semaphore };
-    const VkPipelineStageFlags p_pipeline_stage_masks[1] = { VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT };
+        const VkSemaphore p_wait_semaphores[2] = { h_renderer->semaphore, h_renderer->present_pass.image_acquired_semaphore };
+        const VkPipelineStageFlags p_pipeline_stage_masks[2] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT };
 
-    VkSubmitInfo draw_submit_info = { 0 };
-    draw_submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    draw_submit_info.pNext = TG_NULL;
-    draw_submit_info.waitSemaphoreCount = 1;
-    draw_submit_info.pWaitSemaphores = p_wait_semaphores;
-    draw_submit_info.pWaitDstStageMask = p_pipeline_stage_masks;
-    draw_submit_info.commandBufferCount = 1;
-    draw_submit_info.pCommandBuffers = &h_renderer->present_pass.p_command_buffers[current_image];
-    draw_submit_info.signalSemaphoreCount = 1;
-    draw_submit_info.pSignalSemaphores = &h_renderer->present_pass.semaphore;
+        VkSubmitInfo draw_submit_info = { 0 };
+        draw_submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        draw_submit_info.pNext = TG_NULL;
+        draw_submit_info.waitSemaphoreCount = 2;
+        draw_submit_info.pWaitSemaphores = p_wait_semaphores;
+        draw_submit_info.pWaitDstStageMask = p_pipeline_stage_masks;
+        draw_submit_info.commandBufferCount = 1;
+        draw_submit_info.pCommandBuffers = &h_renderer->present_pass.p_command_buffers[current_image];
+        draw_submit_info.signalSemaphoreCount = 1;
+        draw_submit_info.pSignalSemaphores = &h_renderer->semaphore;
 
-    tg_vulkan_queue_submit(TG_VULKAN_QUEUE_TYPE_GRAPHICS, 1, &draw_submit_info, h_renderer->render_target.fence);
+        tg_vulkan_queue_submit(TG_VULKAN_QUEUE_TYPE_GRAPHICS, 1, &draw_submit_info, h_renderer->render_target.fence);
 
-    VkPresentInfoKHR present_info = { 0 };
-    present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-    present_info.pNext = TG_NULL;
-    present_info.waitSemaphoreCount = 1;
-    present_info.pWaitSemaphores = &h_renderer->present_pass.semaphore;
-    present_info.swapchainCount = 1;
-    present_info.pSwapchains = &swapchain;
-    present_info.pImageIndices = &current_image;
-    present_info.pResults = TG_NULL;
+        VkPresentInfoKHR present_info = { 0 };
+        present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+        present_info.pNext = TG_NULL;
+        present_info.waitSemaphoreCount = 1;
+        present_info.pWaitSemaphores = &h_renderer->semaphore;
+        present_info.swapchainCount = 1;
+        present_info.pSwapchains = &swapchain;
+        present_info.pImageIndices = &current_image;
+        present_info.pResults = TG_NULL;
 
-    tg_vulkan_queue_present(&present_info);
+        tg_vulkan_queue_present(&present_info);
+    }
 }
 
 void tg_renderer_clear(tg_renderer_h h_renderer)
@@ -1680,8 +1672,8 @@ void tg_renderer_draw_cube_DEBUG(tg_renderer_h h_renderer, v3 position, v3 scale
     if (h_renderer->DEBUG.p_cubes[h_renderer->DEBUG.cube_count].graphics_pipeline.pipeline == VK_NULL_HANDLE)
     {
         tg_vulkan_graphics_pipeline_create_info vulkan_graphics_pipeline_create_info = { 0 };
-        vulkan_graphics_pipeline_create_info.p_vertex_shader = &((tg_vertex_shader_h)tg_assets_get_asset("DEBUG_forward.vert"))->vulkan_shader;
-        vulkan_graphics_pipeline_create_info.p_fragment_shader = &((tg_fragment_shader_h)tg_assets_get_asset("DEBUG_forward.frag"))->vulkan_shader;
+        vulkan_graphics_pipeline_create_info.p_vertex_shader = &((tg_vertex_shader_h)tg_assets_get_asset("shaders/debug/forward.vert"))->vulkan_shader;
+        vulkan_graphics_pipeline_create_info.p_fragment_shader = &((tg_fragment_shader_h)tg_assets_get_asset("shaders/debug/forward.frag"))->vulkan_shader;
         vulkan_graphics_pipeline_create_info.cull_mode = VK_CULL_MODE_NONE;
         vulkan_graphics_pipeline_create_info.sample_count = VK_SAMPLE_COUNT_1_BIT;
         vulkan_graphics_pipeline_create_info.depth_test_enable = TG_TRUE;

@@ -4,8 +4,8 @@
 #include "tg_common.h"
 #include "tg_variadic.h"
 
+void           tg_string_copy(u32 size, char* p_buffer, const char* p_string);
 b32            tg_string_equal(const char* p_s0, const char* p_s1);
-const char*    tg_string_extract_filename_extension(const char* p_filename);
 
 /*
 %c - char

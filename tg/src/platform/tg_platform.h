@@ -80,8 +80,10 @@ typedef struct tg_file_properties
     tg_system_time    last_access_time;
     tg_system_time    last_write_time;
     u64               size;
-    char              p_relative_directory[TG_MAX_PATH];
     char              p_filename[TG_MAX_PATH];
+    char              p_directory[TG_MAX_PATH];
+    char*             p_short_filename;
+    char*             p_extension;
 } tg_file_properties;
 
 
@@ -109,11 +111,11 @@ b32                   tg_platform_file_exists(const char* p_filename);
 void                  tg_platform_file_read(const char* p_filename, u64 buffer_size, char* p_buffer);
 void                  tg_platform_file_create(const char* p_filename, u32 size, char* p_data, b32 replace_existing);
 b32                   tg_platform_file_get_properties(const char* p_filename, tg_file_properties* p_properties);
-void                  tg_platform_file_extract_directory(u64 size, char* p_buffer, const char* p_filename);
 tg_file_iterator_h    tg_platform_directory_begin_iteration(const char* p_directory, tg_file_properties* p_properties);
 b32                   tg_platform_directory_continue_iteration(tg_file_iterator_h h_file_iterator, const char* p_directory, tg_file_properties* p_properties);
 u64                   tg_platform_directory_get_size(const char* p_directory);
 i8                    tg_platform_system_time_compare(tg_system_time* p_time0, tg_system_time* p_time1);
+void                  tg_platform_prepend_asset_directory(const char* p_filename, u32 size, char* p_buffer);
 
 tg_timer_h            tg_platform_timer_create();
 void                  tg_platform_timer_start(tg_timer_h h_timer);

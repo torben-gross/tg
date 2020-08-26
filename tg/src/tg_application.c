@@ -11,12 +11,10 @@
 #include "util/tg_list.h"
 #include "util/tg_string.h"
 
-#define TG_RAYTRACER 0
-
 #ifdef TG_DEBUG
 typedef struct tg_debug_info
 {
-    f32     ms_sum;
+    f32     dt_sum;
     u32     fps;
 } tg_debug_info;
 #endif
@@ -413,7 +411,7 @@ static void tg__game_3d_update_and_render(f32 dt)
     {
         tg_renderer_exec(scene.h_secondary_renderer, ph_render_commands[i]);
     }
-    tg_renderer_end(scene.h_secondary_renderer);
+    tg_renderer_end(scene.h_secondary_renderer, TG_FALSE);
 
     tg_renderer_begin(scene.h_main_renderer);
     tg_renderer_push_directional_light(scene.h_main_renderer, d0, c0);
@@ -452,9 +450,8 @@ static void tg__game_3d_update_and_render(f32 dt)
     }
 #endif
 
-    tg_renderer_end(scene.h_main_renderer);
+    tg_renderer_end(scene.h_main_renderer, TG_TRUE);
 
-    tg_renderer_present(scene.h_main_renderer);
     tg_renderer_clear(scene.h_secondary_renderer);
     tg_renderer_clear(scene.h_main_renderer);
 }
@@ -475,65 +472,11 @@ static void tg__game_3d_destroy()
 
 
 
-typedef struct tg_raytracer_scene
-{
-    tg_camera         camera;
-    u32               last_mouse_x;
-    u32               last_mouse_y;
-    tg_raytracer_h    h_raytracer;
-} tg_raytracer_scene;
-
-tg_raytracer_scene raytrace_scene;
-
-static void tg__raytracer_test_create()
-{
-    raytrace_scene.camera.position = (v3) { 0.0f, 0.0f, 0.0f };
-    raytrace_scene.camera.pitch = 0.0f;
-    raytrace_scene.camera.yaw = 0.0f;
-    raytrace_scene.camera.roll = 0.0f;
-    raytrace_scene.camera.persp.fov_y_in_radians = TG_TO_RADIANS(70.0f);
-    raytrace_scene.camera.persp.aspect = tg_platform_get_window_aspect_ratio();
-    raytrace_scene.camera.persp.n = -0.1f;
-    raytrace_scene.camera.persp.f = -1000.0f;
-    tg_input_get_mouse_position(&raytrace_scene.last_mouse_x, &raytrace_scene.last_mouse_y);
-
-    raytrace_scene.h_raytracer = tg_raytracer_create(&raytrace_scene.camera);
-}
-
-static void tg__raytracer_test_update_and_render(f32 dt)
-{
-    u32 mouse_x = 0;
-    u32 mouse_y = 0;
-    tg_input_get_mouse_position(&mouse_x, &mouse_y);
-    if (tg_input_is_mouse_button_down(TG_BUTTON_LEFT))
-    {
-        raytrace_scene.camera.yaw += TG_TO_RADIANS(0.064f * (f32)((i32)raytrace_scene.last_mouse_x - (i32)mouse_x));
-        raytrace_scene.camera.pitch += TG_TO_RADIANS(0.064f * (f32)((i32)raytrace_scene.last_mouse_y - (i32)mouse_y));
-    }
-    raytrace_scene.last_mouse_x = mouse_x;
-    raytrace_scene.last_mouse_y = mouse_y;
-
-    tg_raytracer_begin(raytrace_scene.h_raytracer);
-    tg_raytracer_push_directional_light(raytrace_scene.h_raytracer, tgm_v3_normalized((v3) { 0.3f, -0.2f, -0.5f }), (v3) { 1.0f, 2.0f, 3.0f });
-    tg_raytracer_push_sphere(raytrace_scene.h_raytracer, (v3) { 0.0f, 0.0f, -3.0f }, 1.0f);
-    tg_raytracer_push_sphere(raytrace_scene.h_raytracer, (v3) { 2.0f, 1.0f, -5.0f }, 1.0f);
-    tg_raytracer_push_sphere(raytrace_scene.h_raytracer, (v3) { -2.5f, 0.8f, -3.0f }, 1.0f);
-    tg_raytracer_push_sphere(raytrace_scene.h_raytracer, (v3) { -1.0f, -2.0f, -2.0f }, 1.0f);
-    tg_raytracer_end(raytrace_scene.h_raytracer);
-    tg_raytracer_present(raytrace_scene.h_raytracer);
-}
-
-
-
 void tg_application_start()
 {
     tg_graphics_init();
     tg_assets_init();
-#if TG_RAYTRACER == 0
     tg__game_3d_create();
-#else
-    tg__raytracer_test_create();
-#endif
 
 #ifdef TG_DEBUG
     tg_debug_info debug_info = { 0 };
@@ -554,29 +497,25 @@ void tg_application_start()
         tg_platform_timer_start(h_timer);
 
 #ifdef TG_DEBUG
-        debug_info.ms_sum += dt;
+        debug_info.dt_sum += dt;
         debug_info.fps++;
-        if (debug_info.ms_sum > 1000.0f)
+        if (debug_info.dt_sum > 1000.0f)
         {
             if (debug_info.fps < 60)
             {
                 TG_DEBUG_LOG("Low framerate!\n");
             }
-            TG_DEBUG_LOG("%d ms\n", debug_info.ms_sum / debug_info.fps);
+            TG_DEBUG_LOG("%d ms\n", debug_info.dt_sum / debug_info.fps);
             TG_DEBUG_LOG("%u fps\n", debug_info.fps);
 
-            debug_info.ms_sum = 0.0f;
+            debug_info.dt_sum = 0.0f;
             debug_info.fps = 0;
         }
 #endif
 
         tg_input_clear();
         tg_platform_handle_events();
-#if TG_RAYTRACER == 0
         tg__game_3d_update_and_render(dt);
-#else
-        tg__raytracer_test_update_and_render(dt);
-#endif
     }
 
     /*--------------------------------------------------------+
