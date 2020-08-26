@@ -780,7 +780,7 @@ tg_terrain tg_terrain_create(tg_camera* p_camera)
 	tg_terrain terrain = { 0 };
 
 	terrain.p_camera = p_camera;
-	terrain.h_material = tg_material_create_deferred(tg_vertex_shader_get("shaders/deferred_terrain.vert"), tg_fragment_shader_get("shaders/deferred_terrain.frag"));
+	terrain.h_material = tg_material_create_deferred(tg_vertex_shader_get("shaders/deferred/terrain.vert"), tg_fragment_shader_get("shaders/deferred/terrain.frag"));
 
 	for (i8 z = -TG_VIEW_DISTANCE_IN_OCTREES; z < TG_VIEW_DISTANCE_IN_OCTREES + 1; z++)
 	{

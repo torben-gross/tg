@@ -2716,6 +2716,7 @@ void tg_graphics_init()
     global_compute_command_buffer = tg_vulkan_command_buffer_allocate(TG_VULKAN_COMMAND_POOL_TYPE_COMPUTE, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
     tg_vulkan_memory_allocator_init(device, physical_device);
+    tg_vulkan_renderer_init_shared_resources();
 }
 
 void tg_graphics_wait_idle()

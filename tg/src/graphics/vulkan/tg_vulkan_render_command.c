@@ -26,14 +26,14 @@ static void tg__register(tg_render_command_h h_render_command, tg_renderer_h h_r
     case TG_VULKAN_MATERIAL_TYPE_DEFERRED:
     {
         vulkan_graphics_pipeline_create_info.blend_enable = VK_FALSE;
-        vulkan_graphics_pipeline_create_info.render_pass = h_renderer->geometry_pass.render_pass;
+        vulkan_graphics_pipeline_create_info.render_pass = shared_renderer_data.geometry_render_pass;
         vulkan_graphics_pipeline_create_info.viewport_size.x = (f32)h_renderer->geometry_pass.framebuffer.width;
         vulkan_graphics_pipeline_create_info.viewport_size.y = (f32)h_renderer->geometry_pass.framebuffer.height;
     } break;
     case TG_VULKAN_MATERIAL_TYPE_FORWARD:
     {
         vulkan_graphics_pipeline_create_info.blend_enable = VK_TRUE;
-        vulkan_graphics_pipeline_create_info.render_pass = h_renderer->forward_pass.render_pass;
+        vulkan_graphics_pipeline_create_info.render_pass = shared_renderer_data.forward_render_pass;
         vulkan_graphics_pipeline_create_info.viewport_size.x = (f32)h_renderer->forward_pass.framebuffer.width;
         vulkan_graphics_pipeline_create_info.viewport_size.y = (f32)h_renderer->forward_pass.framebuffer.height;
     } break;
@@ -55,12 +55,12 @@ static void tg__register(tg_render_command_h h_render_command, tg_renderer_h h_r
     {
     case TG_VULKAN_MATERIAL_TYPE_DEFERRED:
     {
-        command_buffer_inheritance_info.renderPass = h_renderer->geometry_pass.render_pass;
+        command_buffer_inheritance_info.renderPass = shared_renderer_data.geometry_render_pass;
         command_buffer_inheritance_info.framebuffer = h_renderer->geometry_pass.framebuffer.framebuffer;
     } break;
     case TG_VULKAN_MATERIAL_TYPE_FORWARD:
     {
-        command_buffer_inheritance_info.renderPass = h_renderer->forward_pass.render_pass;
+        command_buffer_inheritance_info.renderPass = shared_renderer_data.forward_render_pass;
         command_buffer_inheritance_info.framebuffer = h_renderer->forward_pass.framebuffer.framebuffer;
     }break;
     default: TG_INVALID_CODEPATH(); break;
@@ -153,7 +153,7 @@ static void tg__register(tg_render_command_h h_render_command, tg_renderer_h h_r
     pipeline_create_info.depth_test_enable = TG_TRUE;
     pipeline_create_info.depth_write_enable = TG_TRUE;
     pipeline_create_info.blend_enable = TG_FALSE;
-    pipeline_create_info.render_pass = h_renderer->shadow_pass.render_pass;
+    pipeline_create_info.render_pass = shared_renderer_data.shadow_render_pass;
     pipeline_create_info.viewport_size.x = (f32)TG_CASCADED_SHADOW_MAP_SIZE;
     pipeline_create_info.viewport_size.y = (f32)TG_CASCADED_SHADOW_MAP_SIZE;
     pipeline_create_info.polygon_mode = VK_POLYGON_MODE_FILL;
@@ -183,7 +183,7 @@ static void tg__register(tg_render_command_h h_render_command, tg_renderer_h h_r
         VkCommandBufferInheritanceInfo shadow_command_buffer_inheritance_info = { 0 };
         shadow_command_buffer_inheritance_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
         shadow_command_buffer_inheritance_info.pNext = TG_NULL;
-        shadow_command_buffer_inheritance_info.renderPass = h_renderer->shadow_pass.render_pass;
+        shadow_command_buffer_inheritance_info.renderPass = shared_renderer_data.shadow_render_pass;
         shadow_command_buffer_inheritance_info.subpass = 0;
         shadow_command_buffer_inheritance_info.framebuffer = h_renderer->shadow_pass.p_framebuffers[i].framebuffer;
         shadow_command_buffer_inheritance_info.occlusionQueryEnable = VK_FALSE;

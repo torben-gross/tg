@@ -615,9 +615,6 @@ typedef struct tg_renderer
     const tg_camera*             p_camera;
     tg_vulkan_buffer             view_projection_ubo;
     tg_render_target             render_target;
-    tg_vulkan_buffer             screen_quad_indices;
-    tg_vulkan_buffer             screen_quad_positions_buffer;
-    tg_vulkan_buffer             screen_quad_uvs_buffer;
     VkSemaphore                  semaphore;
 
     u32                          render_command_count;
@@ -627,7 +624,6 @@ typedef struct tg_renderer
     {
         b32                      enabled;
         tg_vulkan_image          p_shadow_maps[TG_CASCADED_SHADOW_MAPS];
-        VkRenderPass             render_pass;
         tg_vulkan_framebuffer    p_framebuffers[TG_CASCADED_SHADOW_MAPS];
         VkCommandBuffer          command_buffer;
         tg_vulkan_buffer         p_lightspace_ubos[TG_CASCADED_SHADOW_MAPS];
@@ -636,7 +632,6 @@ typedef struct tg_renderer
     struct
     {
         tg_vulkan_image          p_color_attachments[TG_DEFERRED_GEOMETRY_COLOR_ATTACHMENT_COUNT];
-        VkRenderPass             render_pass;
         tg_vulkan_framebuffer    framebuffer;
         VkCommandBuffer          command_buffer;
     } geometry_pass;
@@ -644,14 +639,12 @@ typedef struct tg_renderer
     struct
     {
         tg_vulkan_image          ssao_attachment;
-        VkRenderPass             ssao_render_pass;
         tg_vulkan_framebuffer    ssao_framebuffer;
         tg_vulkan_pipeline       ssao_graphics_pipeline;
         tg_vulkan_image          ssao_noise_image;
         tg_vulkan_buffer         ssao_ubo;
 
         tg_vulkan_image          blur_attachment;
-        VkRenderPass             blur_render_pass;
         tg_vulkan_framebuffer    blur_framebuffer;
         tg_vulkan_pipeline       blur_graphics_pipeline;
 
@@ -661,7 +654,6 @@ typedef struct tg_renderer
     struct
     {
         tg_vulkan_image          color_attachment;
-        VkRenderPass             render_pass;
         tg_vulkan_framebuffer    framebuffer;
         tg_vulkan_pipeline       graphics_pipeline;
         VkCommandBuffer          command_buffer;
@@ -673,7 +665,6 @@ typedef struct tg_renderer
         tg_vulkan_shader         acquire_exposure_compute_shader;
         tg_vulkan_pipeline       acquire_exposure_compute_pipeline;
         tg_vulkan_buffer         exposure_storage_buffer;
-        VkRenderPass             render_pass;
         tg_vulkan_framebuffer    framebuffer;
         tg_vulkan_pipeline       graphics_pipeline;
         VkCommandBuffer          command_buffer;
@@ -681,7 +672,6 @@ typedef struct tg_renderer
 
     struct
     {
-        VkRenderPass             render_pass;
         tg_vulkan_framebuffer    framebuffer;
         VkCommandBuffer          command_buffer;
     } forward_pass;
@@ -689,7 +679,6 @@ typedef struct tg_renderer
     struct
     {
         VkSemaphore              image_acquired_semaphore;
-        VkRenderPass             render_pass;
         tg_vulkan_framebuffer    p_framebuffers[TG_VULKAN_SURFACE_IMAGE_COUNT];
         tg_vulkan_pipeline       graphics_pipeline;
         VkCommandBuffer          p_command_buffers[TG_VULKAN_SURFACE_IMAGE_COUNT];
@@ -717,6 +706,23 @@ typedef struct tg_renderer
 #endif
 } tg_renderer;
 
+typedef struct tg_renderer_shared_resources
+{
+    tg_vulkan_buffer    screen_quad_indices;
+    tg_vulkan_buffer    screen_quad_positions_buffer;
+    tg_vulkan_buffer    screen_quad_uvs_buffer;
+
+    VkRenderPass        shadow_render_pass;
+    VkRenderPass        geometry_render_pass;
+    VkFormat            p_color_attachment_formats[TG_DEFERRED_GEOMETRY_COLOR_ATTACHMENT_COUNT];
+    VkRenderPass        ssao_render_pass;
+    VkRenderPass        ssao_blur_render_pass;
+    VkRenderPass        shading_render_pass;
+    VkRenderPass        tone_mapping_render_pass;
+    VkRenderPass        forward_render_pass;
+    VkRenderPass        present_render_pass;
+} tg_renderer_shared_resources;
+
 typedef struct tg_storage_buffer
 {
     tg_structure_type    type;
@@ -737,30 +743,31 @@ typedef struct tg_vertex_shader
 
 
 
-VkInstance            instance;
-tg_vulkan_surface     surface;
-VkPhysicalDevice      physical_device;
-VkDevice              device;
+VkInstance                      instance;
+tg_vulkan_surface               surface;
+VkPhysicalDevice                physical_device;
+VkDevice                        device;
 
 
 
-VkSwapchainKHR        swapchain;
-VkExtent2D            swapchain_extent;
-VkImage               p_swapchain_images[TG_VULKAN_SURFACE_IMAGE_COUNT];
-VkImageView           p_swapchain_image_views[TG_VULKAN_SURFACE_IMAGE_COUNT];
-VkCommandBuffer       global_graphics_command_buffer;
-VkCommandBuffer       global_compute_command_buffer;
+VkSwapchainKHR                  swapchain;
+VkExtent2D                      swapchain_extent;
+VkImage                         p_swapchain_images[TG_VULKAN_SURFACE_IMAGE_COUNT];
+VkImageView                     p_swapchain_image_views[TG_VULKAN_SURFACE_IMAGE_COUNT];
+VkCommandBuffer                 global_graphics_command_buffer;
+VkCommandBuffer                 global_compute_command_buffer;
+tg_renderer_shared_resources    shared_renderer_data;
 
 
 
-tg_compute_shader     p_compute_shaders[TG_MAX_COMPUTE_SHADERS];
-tg_fragment_shader    p_fragment_shaders[TG_MAX_FRAGMENT_SHADERS];
-tg_material           p_materials[TG_MAX_MATERIALS];
-tg_mesh               p_meshes[TG_MAX_MESHES];
-tg_render_command     p_render_commands[TG_MAX_RENDER_COMMANDS];
-tg_raytracer          p_raytracers[TG_MAX_RAYTRACERS];
-tg_renderer           p_renderers[TG_MAX_RENDERERS];
-tg_vertex_shader      p_vertex_shaders[TG_MAX_VERTEX_SHADERS];
+tg_compute_shader               p_compute_shaders[TG_MAX_COMPUTE_SHADERS];
+tg_fragment_shader              p_fragment_shaders[TG_MAX_FRAGMENT_SHADERS];
+tg_material                     p_materials[TG_MAX_MATERIALS];
+tg_mesh                         p_meshes[TG_MAX_MESHES];
+tg_render_command               p_render_commands[TG_MAX_RENDER_COMMANDS];
+tg_raytracer                    p_raytracers[TG_MAX_RAYTRACERS];
+tg_renderer                     p_renderers[TG_MAX_RENDERERS];
+tg_vertex_shader                p_vertex_shaders[TG_MAX_VERTEX_SHADERS];
 
 
 
@@ -859,6 +866,9 @@ VkRenderPass                               tg_vulkan_render_pass_create(u32 atta
 void                                       tg_vulkan_render_pass_destroy(VkRenderPass render_pass);
 tg_render_target                           tg_vulkan_render_target_create(u32 color_width, u32 color_height, VkFormat color_format, const tg_sampler_create_info* p_color_sampler_create_info, u32 depth_width, u32 depth_height, VkFormat depth_format, const tg_sampler_create_info* p_depth_sampler_create_info, VkFenceCreateFlags fence_create_flags);
 void                                       tg_vulkan_render_target_destroy(tg_render_target* p_render_target);
+
+void                                       tg_vulkan_renderer_init_shared_resources(); // TODO: rename this to tg_vulkan_renderer_shared_resources_create() ? and also rename the shared resources by vulkan internal naming convention
+void                                       tg_vulkan_shutdown_shared_resources(); // TODO: this
 
 VkSemaphore                                tg_vulkan_semaphore_create();
 void                                       tg_vulkan_semaphore_destroy(VkSemaphore semaphore);
