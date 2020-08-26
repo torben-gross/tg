@@ -67,7 +67,7 @@ void tg_compute_shader_bind_input(tg_compute_shader_h h_compute_shader, u32 firs
 {
 	for (u32 i = first_handle_index; i < first_handle_index + handle_count; i++)
 	{
-		tg_vulkan_descriptor_set_update(h_compute_shader->compute_pipeline.descriptor_set, p_handles[i], i);
+		tg_vulkan_descriptor_set_update(h_compute_shader->descriptor_set.descriptor_set, p_handles[i], i);
 	}
 }
 
@@ -86,8 +86,7 @@ tg_compute_shader_h tg_compute_shader_create(const char* p_filename)
 	h_compute_shader->type = TG_STRUCTURE_TYPE_COMPUTE_SHADER;
 	h_compute_shader->vulkan_shader = tg_vulkan_shader_create(p_filename);
 	h_compute_shader->compute_pipeline = tg_vulkan_pipeline_create_compute(&h_compute_shader->vulkan_shader);
-	// TODO: global command buffer in tg_graphics_vulkan.c
-	h_compute_shader->command_buffer = tg_vulkan_command_buffer_allocate(TG_VULKAN_COMMAND_POOL_TYPE_COMPUTE, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+	h_compute_shader->descriptor_set = tg_vulkan_descriptor_set_create(&h_compute_shader->compute_pipeline);
 
 	return h_compute_shader;
 }
@@ -96,11 +95,11 @@ void tg_compute_shader_dispatch(tg_compute_shader_h h_compute_shader, u32 group_
 {
 	TG_ASSERT(h_compute_shader && group_count_x && group_count_y && group_count_z);
 
-	tg_vulkan_command_buffer_begin(h_compute_shader->command_buffer, 0, TG_NULL);
-	vkCmdBindPipeline(h_compute_shader->command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, h_compute_shader->compute_pipeline.pipeline);
-	vkCmdBindDescriptorSets(h_compute_shader->command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, h_compute_shader->compute_pipeline.pipeline_layout, 0, 1, &h_compute_shader->compute_pipeline.descriptor_set, 0, TG_NULL);
-	vkCmdDispatch(h_compute_shader->command_buffer, group_count_x, group_count_y, group_count_z);
-	VK_CALL(vkEndCommandBuffer(h_compute_shader->command_buffer));
+	tg_vulkan_command_buffer_begin(global_compute_command_buffer, 0, TG_NULL);
+	vkCmdBindPipeline(global_compute_command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, h_compute_shader->compute_pipeline.pipeline);
+	vkCmdBindDescriptorSets(global_compute_command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, h_compute_shader->compute_pipeline.layout.pipeline_layout, 0, 1, &h_compute_shader->descriptor_set.descriptor_set, 0, TG_NULL);
+	vkCmdDispatch(global_compute_command_buffer, group_count_x, group_count_y, group_count_z);
+	VK_CALL(vkEndCommandBuffer(global_compute_command_buffer));
 
 	VkSubmitInfo submit_info = { 0 };// TODO: add fence to compute shader
 	{
@@ -110,7 +109,7 @@ void tg_compute_shader_dispatch(tg_compute_shader_h h_compute_shader, u32 group_
 		submit_info.pWaitSemaphores = TG_NULL;
 		submit_info.pWaitDstStageMask = TG_NULL;
 		submit_info.commandBufferCount = 1;
-		submit_info.pCommandBuffers = &h_compute_shader->command_buffer;
+		submit_info.pCommandBuffers = &global_compute_command_buffer;
 		submit_info.signalSemaphoreCount = 0;
 		submit_info.pSignalSemaphores = TG_NULL;
 	}
@@ -122,7 +121,6 @@ void tg_compute_shader_destroy(tg_compute_shader_h h_compute_shader)
 {
 	TG_ASSERT(h_compute_shader);
 
-	tg_vulkan_command_buffer_free(TG_VULKAN_COMMAND_POOL_TYPE_COMPUTE, h_compute_shader->command_buffer);
 	tg_vulkan_pipeline_destroy(&h_compute_shader->compute_pipeline);
 	tg_vulkan_shader_destroy(&h_compute_shader->vulkan_shader);
 	TG_VULKAN_RELEASE_HANDLE(h_compute_shader);

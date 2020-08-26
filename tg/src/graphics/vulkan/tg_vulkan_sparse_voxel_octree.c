@@ -23,22 +23,20 @@ void tg_voxelizer_create(tg_voxelizer* p_voxelizer)
     p_voxelizer->render_pass = tg_vulkan_render_pass_create(0, TG_NULL, 1, &subpass_description, 0, TG_NULL);
     p_voxelizer->framebuffer = tg_vulkan_framebuffer_create(p_voxelizer->render_pass, 0, TG_NULL, TG_SVO_DIMS, TG_SVO_DIMS);
 
-    const tg_vulkan_shader* pp_vulkan_shaders[2] = {
-        &tg_vertex_shader_get("shaders/voxelize.vert")->vulkan_shader,
-        &tg_fragment_shader_get("shaders/voxelize.frag")->vulkan_shader
-    };
-
-    VkPipelineShaderStageCreateInfo p_pipeline_shader_stage_create_infos[2] = { 0 };
-    tg_vulkan_pipeline_shader_stage_create_infos_create(pp_vulkan_shaders[0], pp_vulkan_shaders[1], p_pipeline_shader_stage_create_infos);
-    const VkPipelineInputAssemblyStateCreateInfo pipeline_input_assembly_state_create_info = tg_vulkan_pipeline_input_assembly_state_create_info_create();
-    const VkViewport viewport = tg_vulkan_viewport_create(TG_SVO_DIMS, TG_SVO_DIMS);
-    const VkRect2D scissors = { (VkOffset2D) { 0, 0 }, (VkExtent2D) { TG_SVO_DIMS, TG_SVO_DIMS } };
-    const VkPipelineViewportStateCreateInfo pipeline_viewport_state_create_info = tg_vulkan_pipeline_viewport_state_create_info_create(&viewport, &scissors);
-
-    const VkPipelineRasterizationStateCreateInfo pipeline_rasterization_state_create_info = tg_vulkan_pipeline_rasterization_state_create_info_create(TG_NULL, VK_FALSE, VK_POLYGON_MODE_FILL, VK_CULL_MODE_NONE);
-    const VkPipelineMultisampleStateCreateInfo pipeline_multisample_state_create_info = tg_vulkan_pipeline_multisample_state_create_info_create(1, VK_FALSE, 0.0f);
+    tg_vulkan_graphics_pipeline_create_info vulkan_graphics_pipeline_create_info = { 0 };
+    vulkan_graphics_pipeline_create_info.p_vertex_shader = &tg_vertex_shader_get("shaders/voxelize.vert")->vulkan_shader;
+    vulkan_graphics_pipeline_create_info.p_fragment_shader = &tg_fragment_shader_get("shaders/voxelize.frag")->vulkan_shader;
+    vulkan_graphics_pipeline_create_info.cull_mode = VK_CULL_MODE_NONE;
+    vulkan_graphics_pipeline_create_info.sample_count = VK_SAMPLE_COUNT_1_BIT;
+    vulkan_graphics_pipeline_create_info.depth_test_enable = VK_FALSE;
+    vulkan_graphics_pipeline_create_info.depth_write_enable = VK_FALSE;
+    vulkan_graphics_pipeline_create_info.blend_enable = VK_FALSE;
+    vulkan_graphics_pipeline_create_info.render_pass = p_voxelizer->render_pass;
+    vulkan_graphics_pipeline_create_info.viewport_size = (v2){ (f32)TG_SVO_DIMS, (f32)TG_SVO_DIMS };
+    vulkan_graphics_pipeline_create_info.polygon_mode = VK_POLYGON_MODE_FILL;
 
     VkVertexInputBindingDescription p_vertex_input_binding_descriptions[2] = { 0 };
+
     p_vertex_input_binding_descriptions[0].binding = 0;
     p_vertex_input_binding_descriptions[0].stride = 12;
     p_vertex_input_binding_descriptions[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
@@ -56,33 +54,7 @@ void tg_voxelizer_create(tg_voxelizer* p_voxelizer)
     p_vertex_input_attribute_descriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
     p_vertex_input_attribute_descriptions[1].offset = 0;
 
-    const VkPipelineVertexInputStateCreateInfo pipeline_vertex_input_state_create_info = tg_vulkan_pipeline_vertex_input_state_create_info_create(2, p_vertex_input_binding_descriptions, 2, p_vertex_input_attribute_descriptions);
-
-    p_voxelizer->descriptor_set_layout = tg_vulkan_descriptor_set_layout_create(2, pp_vulkan_shaders);
-    p_voxelizer->graphics_pipeline_layout = tg_vulkan_pipeline_layout_create(p_voxelizer->descriptor_set_layout.descriptor_set_layout, 0, TG_NULL);
-
-    VkGraphicsPipelineCreateInfo graphics_pipeline_create_info = { 0 };
-    graphics_pipeline_create_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    graphics_pipeline_create_info.pNext = TG_NULL;
-    graphics_pipeline_create_info.flags = 0;
-    graphics_pipeline_create_info.stageCount = 2;
-    graphics_pipeline_create_info.pStages = p_pipeline_shader_stage_create_infos;
-    graphics_pipeline_create_info.pVertexInputState = &pipeline_vertex_input_state_create_info;
-    graphics_pipeline_create_info.pInputAssemblyState = &pipeline_input_assembly_state_create_info;
-    graphics_pipeline_create_info.pTessellationState = TG_NULL;
-    graphics_pipeline_create_info.pViewportState = &pipeline_viewport_state_create_info;
-    graphics_pipeline_create_info.pRasterizationState = &pipeline_rasterization_state_create_info;
-    graphics_pipeline_create_info.pMultisampleState = &pipeline_multisample_state_create_info;
-    graphics_pipeline_create_info.pDepthStencilState = TG_NULL;
-    graphics_pipeline_create_info.pColorBlendState = TG_NULL;
-    graphics_pipeline_create_info.pDynamicState = TG_NULL;
-    graphics_pipeline_create_info.layout = p_voxelizer->graphics_pipeline_layout;
-    graphics_pipeline_create_info.renderPass = p_voxelizer->render_pass;
-    graphics_pipeline_create_info.subpass = 0;
-    graphics_pipeline_create_info.basePipelineHandle = VK_NULL_HANDLE;
-    graphics_pipeline_create_info.basePipelineIndex = -1;
-
-    vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &graphics_pipeline_create_info, TG_NULL, &p_voxelizer->graphics_pipeline);
+    p_voxelizer->pipeline = tg_vulkan_pipeline_create_graphics2(&vulkan_graphics_pipeline_create_info, 2, p_vertex_input_binding_descriptions, p_vertex_input_attribute_descriptions);
 
     p_voxelizer->view_projection_ubo = tg_vulkan_buffer_create(3 * sizeof(m4), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 
@@ -146,7 +118,7 @@ void tg_voxelizer_exec(tg_voxelizer* p_voxelizer, tg_render_command_h h_render_c
 
     if (p_voxelizer->p_descriptor_sets[p_voxelizer->descriptor_set_count].descriptor_pool == VK_NULL_HANDLE)
     {
-        p_voxelizer->p_descriptor_sets[p_voxelizer->descriptor_set_count] = tg_vulkan_descriptor_set_create(&p_voxelizer->descriptor_set_layout);
+        p_voxelizer->p_descriptor_sets[p_voxelizer->descriptor_set_count] = tg_vulkan_descriptor_set_create(&p_voxelizer->pipeline);
     }
     tg_vulkan_descriptor_set* p_vulkan_descriptor_set = &p_voxelizer->p_descriptor_sets[p_voxelizer->descriptor_set_count++];
 
@@ -157,7 +129,7 @@ void tg_voxelizer_exec(tg_voxelizer* p_voxelizer, tg_render_command_h h_render_c
         tg_vulkan_descriptor_set_update_image_3d(p_vulkan_descriptor_set->descriptor_set, &p_voxelizer->p_image_3ds[i], 2 + i);
     }
 
-    vkCmdBindPipeline(p_voxelizer->command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_voxelizer->graphics_pipeline);
+    vkCmdBindPipeline(p_voxelizer->command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_voxelizer->pipeline.pipeline);
     const VkDeviceSize offset = 0;
     if (h_render_command->p_mesh->index_count)
     {
@@ -165,7 +137,7 @@ void tg_voxelizer_exec(tg_voxelizer* p_voxelizer, tg_render_command_h h_render_c
     }
     vkCmdBindVertexBuffers(p_voxelizer->command_buffer, 0, 1, &h_render_command->p_mesh->positions_buffer.buffer, &offset);
     vkCmdBindVertexBuffers(p_voxelizer->command_buffer, 1, 1, &h_render_command->p_mesh->normals_buffer.buffer, &offset);
-    vkCmdBindDescriptorSets(p_voxelizer->command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_voxelizer->graphics_pipeline_layout, 0, 1 /*TODO: for now? can this be 0?*/, &p_vulkan_descriptor_set->descriptor_set, 0, TG_NULL);
+    vkCmdBindDescriptorSets(p_voxelizer->command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_voxelizer->pipeline.layout.pipeline_layout, 0, 1, &p_vulkan_descriptor_set->descriptor_set, 0, TG_NULL);
     if (h_render_command->p_mesh->index_count)
     {
         vkCmdDrawIndexed(p_voxelizer->command_buffer, h_render_command->p_mesh->index_count, 1, 0, 0, 0);
@@ -280,8 +252,7 @@ void tg_voxelizer_destroy(tg_voxelizer* p_voxelizer)
         tg_vulkan_color_image_3d_destroy(&p_voxelizer->p_image_3ds[i]);
     }
     tg_vulkan_buffer_destroy(&p_voxelizer->view_projection_ubo);
-    vkDestroyPipeline(device, p_voxelizer->graphics_pipeline, TG_NULL);
-    vkDestroyPipelineLayout(device, p_voxelizer->graphics_pipeline_layout, TG_NULL);
+    tg_vulkan_pipeline_destroy(&p_voxelizer->pipeline);
     for (u32 i = 0; i < TG_MAX_RENDER_COMMANDS; i++)
     {
         if (p_voxelizer->p_descriptor_sets[i].descriptor_pool != VK_NULL_HANDLE)
@@ -293,7 +264,6 @@ void tg_voxelizer_destroy(tg_voxelizer* p_voxelizer)
             break;
         }
     }
-    tg_vulkan_descriptor_set_layout_destroy(&p_voxelizer->descriptor_set_layout);
     tg_vulkan_framebuffer_destroy(&p_voxelizer->framebuffer);
     tg_vulkan_render_pass_destroy(p_voxelizer->render_pass);
     tg_vulkan_fence_destroy(p_voxelizer->fence);

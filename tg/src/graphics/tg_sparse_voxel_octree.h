@@ -23,11 +23,9 @@ typedef struct tg_voxelizer
     VkFence                            fence;
     VkRenderPass                       render_pass;
     tg_vulkan_framebuffer              framebuffer;
-    tg_vulkan_descriptor_set_layout    descriptor_set_layout;
+    tg_vulkan_pipeline                 pipeline;
     u32                                descriptor_set_count;
     tg_vulkan_descriptor_set           p_descriptor_sets[TG_MAX_RENDER_COMMANDS];
-    VkPipelineLayout                   graphics_pipeline_layout;
-    VkPipeline                         graphics_pipeline;
     tg_vulkan_buffer                   view_projection_ubo;
     tg_vulkan_image_3d                 p_image_3ds[TG_SVO_ATTACHMENTS];
     tg_vulkan_buffer                   p_voxel_buffers[TG_SVO_ATTACHMENTS];

@@ -379,14 +379,15 @@ typedef struct tg_vulkan_cube_map
     VkSampler                 sampler;
 } tg_vulkan_cube_map;
 
-typedef struct tg_vulkan_descriptor_set_layout
+typedef struct tg_vulkan_pipeline_layout
 {
     u32                             global_resource_count;
     tg_spirv_global_resource        p_global_resources[TG_MAX_SHADER_GLOBAL_RESOURCES];
     VkShaderStageFlags              p_shader_stages[TG_MAX_SHADER_GLOBAL_RESOURCES];
     VkDescriptorSetLayoutBinding    p_descriptor_set_layout_bindings[TG_MAX_SHADER_GLOBAL_RESOURCES];
     VkDescriptorSetLayout           descriptor_set_layout;
-} tg_vulkan_descriptor_set_layout;
+    VkPipelineLayout                pipeline_layout;
+} tg_vulkan_pipeline_layout;
 
 typedef struct tg_vulkan_descriptor_set
 {
@@ -454,11 +455,8 @@ typedef struct tg_vulkan_image_extent
 
 typedef struct tg_vulkan_pipeline
 {
-    VkDescriptorSetLayout    descriptor_set_layout;
-    VkDescriptorPool         descriptor_pool;
-    VkDescriptorSet          descriptor_set;
-    VkPipelineLayout         pipeline_layout;
-    VkPipeline               pipeline;
+    tg_vulkan_pipeline_layout    layout;
+    VkPipeline                   pipeline;
 } tg_vulkan_pipeline;
 
 typedef struct tg_vulkan_queue
@@ -470,11 +468,12 @@ typedef struct tg_vulkan_queue
 
 typedef struct tg_vulkan_render_command_renderer_info
 {
-    tg_renderer_h         h_renderer;
-    tg_vulkan_pipeline    graphics_pipeline;
-    VkCommandBuffer       command_buffer;
-    tg_vulkan_pipeline    p_shadow_graphics_pipelines[TG_CASCADED_SHADOW_MAPS];
-    VkCommandBuffer       p_shadow_command_buffers[TG_CASCADED_SHADOW_MAPS];
+    tg_renderer_h               h_renderer;
+    tg_vulkan_descriptor_set    descriptor_set;
+    VkCommandBuffer             command_buffer;
+    tg_vulkan_pipeline          p_shadow_graphics_pipelines[TG_CASCADED_SHADOW_MAPS];
+    tg_vulkan_descriptor_set    p_shadow_descriptor_sets[TG_CASCADED_SHADOW_MAPS];
+    VkCommandBuffer             p_shadow_command_buffers[TG_CASCADED_SHADOW_MAPS];
 } tg_vulkan_render_command_renderer_info;
 
 typedef struct tg_vulkan_screen_vertex
@@ -482,6 +481,23 @@ typedef struct tg_vulkan_screen_vertex
     v2    position;
     v2    uv;
 } tg_vulkan_screen_vertex;
+
+typedef struct tg_vulkan_shared_render_resources
+{
+    tg_vulkan_buffer    screen_quad_indices;
+    tg_vulkan_buffer    screen_quad_positions_buffer;
+    tg_vulkan_buffer    screen_quad_uvs_buffer;
+
+    VkRenderPass        shadow_render_pass;
+    VkRenderPass        geometry_render_pass;
+    VkFormat            p_color_attachment_formats[TG_DEFERRED_GEOMETRY_COLOR_ATTACHMENT_COUNT];
+    VkRenderPass        ssao_render_pass;
+    VkRenderPass        ssao_blur_render_pass;
+    VkRenderPass        shading_render_pass;
+    VkRenderPass        tone_mapping_render_pass;
+    VkRenderPass        forward_render_pass;
+    VkRenderPass        present_render_pass;
+} tg_vulkan_shared_render_resources;
 
 typedef struct tg_vulkan_surface
 {
@@ -505,10 +521,10 @@ typedef struct tg_color_image_3d
 
 typedef struct tg_compute_shader
 {
-    tg_structure_type     type;
-    tg_vulkan_shader      vulkan_shader;
-    tg_vulkan_pipeline    compute_pipeline;
-    VkCommandBuffer       command_buffer;
+    tg_structure_type           type;
+    tg_vulkan_shader            vulkan_shader;
+    tg_vulkan_pipeline          compute_pipeline;
+    tg_vulkan_descriptor_set    descriptor_set;
 } tg_compute_shader;
 
 typedef struct tg_cube_map
@@ -529,6 +545,7 @@ typedef struct tg_render_command
     tg_mesh*                                  p_mesh;
     tg_material_h                             h_material;
     tg_vulkan_buffer                          model_ubo;
+    tg_vulkan_pipeline                        graphics_pipeline;
     u32                                       renderer_info_count;
     tg_vulkan_render_command_renderer_info    p_renderer_infos[TG_MAX_RENDERERS];
 } tg_render_command;
@@ -582,146 +599,109 @@ typedef struct tg_mesh
     v3*                  p_positions;
 } tg_mesh;
 
-typedef struct tg_raytracer
-{
-    tg_structure_type    type;
-    const tg_camera*     p_camera;
-    VkSemaphore          semaphore;
-    VkFence              fence;
-    tg_vulkan_image      storage_image; // TODO: this is a storage image, can every image also be a storage image? also, this should be a render target
-    tg_vulkan_buffer     screen_quad_vbo;
-    tg_vulkan_buffer     screen_quad_ibo;
-
-    struct
-    {
-        tg_vulkan_pipeline       compute_pipeline;
-        VkCommandBuffer          command_buffer;
-        tg_vulkan_buffer         ubo;
-    } raytrace_pass;
-
-    struct
-    {
-        VkSemaphore              image_acquired_semaphore;
-        VkRenderPass             render_pass;
-        tg_vulkan_framebuffer    p_framebuffers[TG_VULKAN_SURFACE_IMAGE_COUNT];
-        tg_vulkan_pipeline       graphics_pipeline;
-        VkCommandBuffer          p_command_buffers[TG_VULKAN_SURFACE_IMAGE_COUNT];
-    } present_pass;
-} tg_raytracer;
-
 typedef struct tg_renderer
 {
-    tg_structure_type            type;
-    const tg_camera*             p_camera;
-    tg_vulkan_buffer             view_projection_ubo;
-    tg_render_target             render_target;
-    VkSemaphore                  semaphore;
+    tg_structure_type               type;
+    const tg_camera*                p_camera;
+    tg_vulkan_buffer                view_projection_ubo;
+    tg_render_target                render_target;
+    VkSemaphore                     semaphore;
 
-    u32                          render_command_count;
-    tg_render_command_h          ph_render_commands[TG_MAX_RENDER_COMMANDS];
+    u32                             render_command_count;
+    tg_render_command_h             ph_render_commands[TG_MAX_RENDER_COMMANDS];
 
     struct
     {
-        b32                      enabled;
-        tg_vulkan_image          p_shadow_maps[TG_CASCADED_SHADOW_MAPS];
-        tg_vulkan_framebuffer    p_framebuffers[TG_CASCADED_SHADOW_MAPS];
-        VkCommandBuffer          command_buffer;
-        tg_vulkan_buffer         p_lightspace_ubos[TG_CASCADED_SHADOW_MAPS];
+        b32                         enabled;
+        tg_vulkan_image             p_shadow_maps[TG_CASCADED_SHADOW_MAPS];
+        tg_vulkan_framebuffer       p_framebuffers[TG_CASCADED_SHADOW_MAPS];
+        VkCommandBuffer             command_buffer;
+        tg_vulkan_buffer            p_lightspace_ubos[TG_CASCADED_SHADOW_MAPS];
     } shadow_pass;
 
     struct
     {
-        tg_vulkan_image          p_color_attachments[TG_DEFERRED_GEOMETRY_COLOR_ATTACHMENT_COUNT];
-        tg_vulkan_framebuffer    framebuffer;
-        VkCommandBuffer          command_buffer;
+        tg_vulkan_image             p_color_attachments[TG_DEFERRED_GEOMETRY_COLOR_ATTACHMENT_COUNT];
+        tg_vulkan_framebuffer       framebuffer;
+        VkCommandBuffer             command_buffer;
     } geometry_pass;
 
     struct
     {
-        tg_vulkan_image          ssao_attachment;
-        tg_vulkan_framebuffer    ssao_framebuffer;
-        tg_vulkan_pipeline       ssao_graphics_pipeline;
-        tg_vulkan_image          ssao_noise_image;
-        tg_vulkan_buffer         ssao_ubo;
+        tg_vulkan_image             ssao_attachment;
+        tg_vulkan_framebuffer       ssao_framebuffer;
+        tg_vulkan_pipeline          ssao_graphics_pipeline;
+        tg_vulkan_descriptor_set    ssao_descriptor_set;
+        tg_vulkan_image             ssao_noise_image;
+        tg_vulkan_buffer            ssao_ubo;
 
-        tg_vulkan_image          blur_attachment;
-        tg_vulkan_framebuffer    blur_framebuffer;
-        tg_vulkan_pipeline       blur_graphics_pipeline;
+        tg_vulkan_image             blur_attachment;
+        tg_vulkan_framebuffer       blur_framebuffer;
+        tg_vulkan_pipeline          blur_graphics_pipeline;
+        tg_vulkan_descriptor_set    blur_descriptor_set;
 
-        VkCommandBuffer          command_buffer;
+        VkCommandBuffer             command_buffer;
     } ssao_pass;
 
     struct
     {
-        tg_vulkan_image          color_attachment;
-        tg_vulkan_framebuffer    framebuffer;
-        tg_vulkan_pipeline       graphics_pipeline;
-        VkCommandBuffer          command_buffer;
-        tg_vulkan_buffer         shading_info_ubo;
+        tg_vulkan_image             color_attachment;
+        tg_vulkan_framebuffer       framebuffer;
+        tg_vulkan_pipeline          graphics_pipeline;
+        tg_vulkan_descriptor_set    descriptor_set;
+        VkCommandBuffer             command_buffer;
+        tg_vulkan_buffer            shading_info_ubo;
     } shading_pass;
 
     struct
     {
-        tg_vulkan_shader         acquire_exposure_compute_shader;
-        tg_vulkan_pipeline       acquire_exposure_compute_pipeline;
-        tg_vulkan_buffer         exposure_storage_buffer;
-        tg_vulkan_framebuffer    framebuffer;
-        tg_vulkan_pipeline       graphics_pipeline;
-        VkCommandBuffer          command_buffer;
+        tg_vulkan_shader            acquire_exposure_compute_shader;
+        tg_vulkan_pipeline          acquire_exposure_compute_pipeline;
+        tg_vulkan_descriptor_set    acquire_exposure_descriptor_set;
+        tg_vulkan_buffer            exposure_storage_buffer;
+        tg_vulkan_framebuffer       framebuffer;
+        tg_vulkan_pipeline          graphics_pipeline;
+        tg_vulkan_descriptor_set    descriptor_set;
+        VkCommandBuffer             command_buffer;
     } tone_mapping_pass;
 
     struct
     {
-        tg_vulkan_framebuffer    framebuffer;
-        VkCommandBuffer          command_buffer;
+        tg_vulkan_framebuffer       framebuffer;
+        VkCommandBuffer             command_buffer;
     } forward_pass;
 
     struct
     {
-        VkSemaphore              image_acquired_semaphore;
-        tg_vulkan_framebuffer    p_framebuffers[TG_VULKAN_SURFACE_IMAGE_COUNT];
-        tg_vulkan_pipeline       graphics_pipeline;
-        VkCommandBuffer          p_command_buffers[TG_VULKAN_SURFACE_IMAGE_COUNT];
+        VkSemaphore                 image_acquired_semaphore;
+        tg_vulkan_framebuffer       p_framebuffers[TG_VULKAN_SURFACE_IMAGE_COUNT];
+        tg_vulkan_pipeline          graphics_pipeline;
+        tg_vulkan_descriptor_set    descriptor_set;
+        VkCommandBuffer             p_command_buffers[TG_VULKAN_SURFACE_IMAGE_COUNT];
     } present_pass;
 
     struct
     {
-        VkCommandBuffer          command_buffer;
+        VkCommandBuffer             command_buffer;
     } clear_pass;
 
 #if TG_ENABLE_DEBUG_TOOLS == 1
 #define TG_DEBUG_MAX_CUBES 2097152
     struct
     {
-        u32                      cube_count;
-        tg_vulkan_buffer         cube_index_buffer;
-        tg_vulkan_buffer         cube_position_buffer;
+        u32                             cube_count;
+        tg_vulkan_buffer                cube_index_buffer;
+        tg_vulkan_buffer                cube_position_buffer;
         struct
         {
-            tg_vulkan_pipeline   graphics_pipeline;
-            tg_vulkan_buffer     ubo;
-            VkCommandBuffer      command_buffer;
-        } p_cubes[TG_DEBUG_MAX_CUBES];
+            tg_vulkan_pipeline          graphics_pipeline;
+            tg_vulkan_descriptor_set    descriptor_set;
+            tg_vulkan_buffer            ubo;
+            VkCommandBuffer             command_buffer;
+        } *p_cubes;
     } DEBUG;
 #endif
 } tg_renderer;
-
-typedef struct tg_renderer_shared_resources
-{
-    tg_vulkan_buffer    screen_quad_indices;
-    tg_vulkan_buffer    screen_quad_positions_buffer;
-    tg_vulkan_buffer    screen_quad_uvs_buffer;
-
-    VkRenderPass        shadow_render_pass;
-    VkRenderPass        geometry_render_pass;
-    VkFormat            p_color_attachment_formats[TG_DEFERRED_GEOMETRY_COLOR_ATTACHMENT_COUNT];
-    VkRenderPass        ssao_render_pass;
-    VkRenderPass        ssao_blur_render_pass;
-    VkRenderPass        shading_render_pass;
-    VkRenderPass        tone_mapping_render_pass;
-    VkRenderPass        forward_render_pass;
-    VkRenderPass        present_render_pass;
-} tg_renderer_shared_resources;
 
 typedef struct tg_storage_buffer
 {
@@ -743,31 +723,30 @@ typedef struct tg_vertex_shader
 
 
 
-VkInstance                      instance;
-tg_vulkan_surface               surface;
-VkPhysicalDevice                physical_device;
-VkDevice                        device;
+VkInstance                           instance;
+tg_vulkan_surface                    surface;
+VkPhysicalDevice                     physical_device;
+VkDevice                             device;
 
 
 
-VkSwapchainKHR                  swapchain;
-VkExtent2D                      swapchain_extent;
-VkImage                         p_swapchain_images[TG_VULKAN_SURFACE_IMAGE_COUNT];
-VkImageView                     p_swapchain_image_views[TG_VULKAN_SURFACE_IMAGE_COUNT];
-VkCommandBuffer                 global_graphics_command_buffer;
-VkCommandBuffer                 global_compute_command_buffer;
-tg_renderer_shared_resources    shared_renderer_data;
+VkSwapchainKHR                       swapchain;
+VkExtent2D                           swapchain_extent;
+VkImage                              p_swapchain_images[TG_VULKAN_SURFACE_IMAGE_COUNT];
+VkImageView                          p_swapchain_image_views[TG_VULKAN_SURFACE_IMAGE_COUNT];
+VkCommandBuffer                      global_graphics_command_buffer;
+VkCommandBuffer                      global_compute_command_buffer;
+tg_vulkan_shared_render_resources    shared_render_resources;
 
 
 
-tg_compute_shader               p_compute_shaders[TG_MAX_COMPUTE_SHADERS];
-tg_fragment_shader              p_fragment_shaders[TG_MAX_FRAGMENT_SHADERS];
-tg_material                     p_materials[TG_MAX_MATERIALS];
-tg_mesh                         p_meshes[TG_MAX_MESHES];
-tg_render_command               p_render_commands[TG_MAX_RENDER_COMMANDS];
-tg_raytracer                    p_raytracers[TG_MAX_RAYTRACERS];
-tg_renderer                     p_renderers[TG_MAX_RENDERERS];
-tg_vertex_shader                p_vertex_shaders[TG_MAX_VERTEX_SHADERS];
+tg_compute_shader                    p_compute_shaders[TG_MAX_COMPUTE_SHADERS];
+tg_fragment_shader                   p_fragment_shaders[TG_MAX_FRAGMENT_SHADERS];
+tg_material                          p_materials[TG_MAX_MATERIALS];
+tg_mesh                              p_meshes[TG_MAX_MESHES];
+tg_render_command                    p_render_commands[TG_MAX_RENDER_COMMANDS];
+tg_renderer                          p_renderers[TG_MAX_RENDERERS];
+tg_vertex_shader                     p_vertex_shaders[TG_MAX_VERTEX_SHADERS];
 
 
 
@@ -807,14 +786,11 @@ void                                       tg_vulkan_command_buffers_free(tg_vul
 tg_vulkan_cube_map                         tg_vulkan_cube_map_create(u32 dimension, VkFormat format, const tg_sampler_create_info* p_sampler_create_info);
 void                                       tg_vulkan_cube_map_destroy(tg_vulkan_cube_map* p_vulkan_cube_map);
 
+tg_vulkan_descriptor_set                   tg_vulkan_descriptor_set_create(const tg_vulkan_pipeline* p_pipeline);
+void                                       tg_vulkan_descriptor_set_destroy(tg_vulkan_descriptor_set* p_vulkan_descriptor_set);
+
 tg_vulkan_image                            tg_vulkan_depth_image_create(u32 width, u32 height, VkFormat format, const tg_sampler_create_info* p_sampler_create_info);
 void                                       tg_vulkan_depth_image_destroy(tg_vulkan_image* p_vulkan_image);
-
-tg_vulkan_descriptor_set_layout            tg_vulkan_descriptor_set_layout_create(u32 shader_count, const tg_vulkan_shader* const* pp_shaders);
-void                                       tg_vulkan_descriptor_set_destroy(tg_vulkan_descriptor_set* p_descriptor_set);
-
-tg_vulkan_descriptor_set                   tg_vulkan_descriptor_set_create(const tg_vulkan_descriptor_set_layout* p_layout);
-void                                       tg_vulkan_descriptor_set_layout_destroy(tg_vulkan_descriptor_set_layout* p_descriptor_set_layout);
 
 void                                       tg_vulkan_descriptor_set_update(VkDescriptorSet descriptor_set, tg_handle shader_input_element_handle, u32 dst_binding);
 void                                       tg_vulkan_descriptor_set_update_cube_map(VkDescriptorSet descriptor_set, tg_vulkan_cube_map* p_vulkan_cube_map, u32 dst_binding);
@@ -850,8 +826,6 @@ VkPipelineDepthStencilStateCreateInfo      tg_vulkan_pipeline_depth_stencil_stat
 void                                       tg_vulkan_pipeline_color_blend_attachmen_states_create(VkBool32 blend_enable, u32 count, VkPipelineColorBlendAttachmentState* p_pipeline_color_blend_attachment_states);
 VkPipelineColorBlendStateCreateInfo        tg_vulkan_pipeline_color_blend_state_create_info_create(u32 attachment_count, VkPipelineColorBlendAttachmentState* p_pipeline_color_blend_attachmen_states);
 VkPipelineVertexInputStateCreateInfo       tg_vulkan_pipeline_vertex_input_state_create_info_create(u32 vertex_binding_description_count, VkVertexInputBindingDescription* p_vertex_binding_descriptions, u32 vertex_attribute_description_count, VkVertexInputAttributeDescription* p_vertex_attribute_descriptions);
-
-VkPipelineLayout                           tg_vulkan_pipeline_layout_create(VkDescriptorSetLayout set_layout, u32 push_constant_range_count, const VkPushConstantRange* p_push_constant_ranges);
 
 tg_vulkan_pipeline                         tg_vulkan_pipeline_create_compute(const tg_vulkan_shader* p_compute_shader);
 tg_vulkan_pipeline                         tg_vulkan_pipeline_create_graphics(const tg_vulkan_graphics_pipeline_create_info* p_create_info);
