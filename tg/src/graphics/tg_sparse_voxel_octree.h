@@ -1,7 +1,10 @@
 #ifndef TG_SPARSE_VOXEL_OCTREE
 #define TG_SPARSE_VOXEL_OCTREE
 
-#include "graphics/tg_graphics.h"
+#include "graphics/vulkan/tg_graphics_vulkan.h"
+
+#ifdef TG_VULKAN
+
 #include "math/tg_math.h"
 #include "tg_common.h"
 
@@ -55,5 +58,7 @@ void    tg_voxelizer_end(tg_voxelizer* p_voxelizer, v3i min_corner_index_3d, tg_
 void    tg_voxelizer_destroy(tg_voxelizer* p_voxelizer);
 
 void    tg_svo_init(const tg_voxel* p_voxels);
+
+#endif
 
 #endif

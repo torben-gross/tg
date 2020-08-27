@@ -1,4 +1,4 @@
-#include "graphics/tg_graphics.h"
+#include "graphics/vulkan/tg_graphics_vulkan.h"
 
 #ifdef TG_VULKAN
 
@@ -23,26 +23,14 @@ static void tg__register(tg_render_command_h h_render_command, tg_renderer_h h_r
     }
 
     VkCommandBufferInheritanceInfo command_buffer_inheritance_info = { 0 };
-    command_buffer_inheritance_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
-    command_buffer_inheritance_info.pNext = TG_NULL;
-    command_buffer_inheritance_info.subpass = 0;
-    command_buffer_inheritance_info.occlusionQueryEnable = VK_FALSE;
-    command_buffer_inheritance_info.queryFlags = 0;
-    command_buffer_inheritance_info.pipelineStatistics = 0;
-
-    switch (h_render_command->h_material->material_type)
+    if (h_render_command->h_material->material_type == TG_VULKAN_MATERIAL_TYPE_DEFERRED)
     {
-    case TG_VULKAN_MATERIAL_TYPE_DEFERRED:
+        command_buffer_inheritance_info = tg_vulkan_command_buffer_inheritance_info_create(shared_render_resources.geometry_render_pass, h_renderer->geometry_pass.framebuffer.framebuffer);
+    }
+    else
     {
-        command_buffer_inheritance_info.renderPass = shared_render_resources.geometry_render_pass;
-        command_buffer_inheritance_info.framebuffer = h_renderer->geometry_pass.framebuffer.framebuffer;
-    } break;
-    case TG_VULKAN_MATERIAL_TYPE_FORWARD:
-    {
-        command_buffer_inheritance_info.renderPass = shared_render_resources.forward_render_pass;
-        command_buffer_inheritance_info.framebuffer = h_renderer->forward_pass.framebuffer.framebuffer;
-    }break;
-    default: TG_INVALID_CODEPATH(); break;
+        TG_ASSERT(h_render_command->h_material->material_type == TG_VULKAN_MATERIAL_TYPE_FORWARD);
+        command_buffer_inheritance_info = tg_vulkan_command_buffer_inheritance_info_create(shared_render_resources.forward_render_pass, h_renderer->forward_pass.framebuffer.framebuffer);
     }
 
     p_renderer_info->command_buffer = tg_vulkan_command_buffer_allocate(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_SECONDARY);
@@ -50,61 +38,61 @@ static void tg__register(tg_render_command_h h_render_command, tg_renderer_h h_r
     {
         vkCmdBindPipeline(p_renderer_info->command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, h_render_command->graphics_pipeline.pipeline);
 
-        if (h_render_command->p_mesh->index_buffer.buffer)
+        if (h_render_command->h_mesh->index_buffer.buffer)
         {
-            vkCmdBindIndexBuffer(p_renderer_info->command_buffer, h_render_command->p_mesh->index_buffer.buffer, 0, VK_INDEX_TYPE_UINT16);
+            vkCmdBindIndexBuffer(p_renderer_info->command_buffer, h_render_command->h_mesh->index_buffer.buffer, 0, VK_INDEX_TYPE_UINT16);
         }
         const VkDeviceSize vertex_buffer_offset = 0;
-        if (h_render_command->p_mesh->positions_buffer.buffer)
+        if (h_render_command->h_mesh->positions_buffer.buffer)
         {
             vkCmdBindVertexBuffers(
                 p_renderer_info->command_buffer, 0, 1,
-                &h_render_command->p_mesh->positions_buffer.buffer,
+                &h_render_command->h_mesh->positions_buffer.buffer,
                 &vertex_buffer_offset
             );
         }
-        if (h_render_command->p_mesh->normals_buffer.buffer)
+        if (h_render_command->h_mesh->normals_buffer.buffer)
         {
             vkCmdBindVertexBuffers(
                 p_renderer_info->command_buffer, 1, 1,
-                &h_render_command->p_mesh->normals_buffer.buffer,
+                &h_render_command->h_mesh->normals_buffer.buffer,
                 &vertex_buffer_offset
             );
         }
-        if (h_render_command->p_mesh->uvs_buffer.buffer)
+        if (h_render_command->h_mesh->uvs_buffer.buffer)
         {
             vkCmdBindVertexBuffers(
                 p_renderer_info->command_buffer, 2, 1,
-                &h_render_command->p_mesh->uvs_buffer.buffer,
+                &h_render_command->h_mesh->uvs_buffer.buffer,
                 &vertex_buffer_offset
             );
         }
-        if (h_render_command->p_mesh->tangents_buffer.buffer)
+        if (h_render_command->h_mesh->tangents_buffer.buffer)
         {
             vkCmdBindVertexBuffers(
                 p_renderer_info->command_buffer, 3, 1,
-                &h_render_command->p_mesh->tangents_buffer.buffer,
+                &h_render_command->h_mesh->tangents_buffer.buffer,
                 &vertex_buffer_offset
             );
         }
-        if (h_render_command->p_mesh->bitangents_buffer.buffer)
+        if (h_render_command->h_mesh->bitangents_buffer.buffer)
         {
             vkCmdBindVertexBuffers(
                 p_renderer_info->command_buffer, 4, 1,
-                &h_render_command->p_mesh->bitangents_buffer.buffer,
+                &h_render_command->h_mesh->bitangents_buffer.buffer,
                 &vertex_buffer_offset
             );
         }
 
         vkCmdBindDescriptorSets(p_renderer_info->command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, h_render_command->graphics_pipeline.layout.pipeline_layout, 0, 1, &p_renderer_info->descriptor_set.descriptor_set, 0, TG_NULL);
 
-        if (h_render_command->p_mesh->index_count != 0)
+        if (h_render_command->h_mesh->index_count != 0)
         {
-            vkCmdDrawIndexed(p_renderer_info->command_buffer, (u32)h_render_command->p_mesh->index_count, 1, 0, 0, 0); // TODO: u16
+            vkCmdDrawIndexed(p_renderer_info->command_buffer, (u32)h_render_command->h_mesh->index_count, 1, 0, 0, 0); // TODO: u16
         }
         else
         {
-            vkCmdDraw(p_renderer_info->command_buffer, (u32)h_render_command->p_mesh->position_count, 1, 0, 0);
+            vkCmdDraw(p_renderer_info->command_buffer, (u32)h_render_command->h_mesh->position_count, 1, 0, 0);
         }
     }
     VK_CALL(vkEndCommandBuffer(p_renderer_info->command_buffer));
@@ -113,7 +101,7 @@ static void tg__register(tg_render_command_h h_render_command, tg_renderer_h h_r
 
 
 
-    TG_ASSERT(h_render_command->p_mesh->positions_buffer.buffer); // TODO: add flag for non shadow casting
+    TG_ASSERT(h_render_command->h_mesh->positions_buffer.buffer); // TODO: add flag for non shadow casting
 
     tg_vulkan_graphics_pipeline_create_info pipeline_create_info = { 0 }; // TODO: create this pipeline only once in the shader and reuse for everything? only the command buffer should be cached in the render_command
     pipeline_create_info.p_vertex_shader = &tg_vertex_shader_get("shaders/shadow.vert")->vulkan_shader;
@@ -166,19 +154,19 @@ static void tg__register(tg_render_command_h h_render_command, tg_renderer_h h_r
         {
             vkCmdBindPipeline(p_renderer_info->p_shadow_command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, p_renderer_info->p_shadow_graphics_pipelines[i].pipeline);
             const VkDeviceSize vertex_buffer_offset = 0;
-            if (h_render_command->p_mesh->index_buffer.memory.size != 0)
+            if (h_render_command->h_mesh->index_buffer.memory.size != 0)
             {
-                vkCmdBindIndexBuffer(p_renderer_info->p_shadow_command_buffers[i], h_render_command->p_mesh->index_buffer.buffer, 0, VK_INDEX_TYPE_UINT16);
+                vkCmdBindIndexBuffer(p_renderer_info->p_shadow_command_buffers[i], h_render_command->h_mesh->index_buffer.buffer, 0, VK_INDEX_TYPE_UINT16);
             }
-            vkCmdBindVertexBuffers(p_renderer_info->p_shadow_command_buffers[i], 0, 1, &h_render_command->p_mesh->positions_buffer.buffer, &vertex_buffer_offset);
+            vkCmdBindVertexBuffers(p_renderer_info->p_shadow_command_buffers[i], 0, 1, &h_render_command->h_mesh->positions_buffer.buffer, &vertex_buffer_offset);
             vkCmdBindDescriptorSets(p_renderer_info->p_shadow_command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, p_renderer_info->p_shadow_graphics_pipelines[i].layout.pipeline_layout, 0, 1, &p_renderer_info->p_shadow_descriptor_sets[i].descriptor_set, 0, TG_NULL);
-            if (h_render_command->p_mesh->index_count != 0)
+            if (h_render_command->h_mesh->index_count != 0)
             {
-                vkCmdDrawIndexed(p_renderer_info->p_shadow_command_buffers[i], (u32)(h_render_command->p_mesh->index_count), 1, 0, 0, 0); // TODO: u16
+                vkCmdDrawIndexed(p_renderer_info->p_shadow_command_buffers[i], (u32)(h_render_command->h_mesh->index_count), 1, 0, 0, 0); // TODO: u16
             }
             else
             {
-                vkCmdDraw(p_renderer_info->p_shadow_command_buffers[i], (u32)(h_render_command->p_mesh->position_count), 1, 0, 0);
+                vkCmdDraw(p_renderer_info->p_shadow_command_buffers[i], (u32)(h_render_command->h_mesh->position_count), 1, 0, 0);
             }
         }
         VK_CALL(vkEndCommandBuffer(p_renderer_info->p_shadow_command_buffers[i]));
@@ -187,15 +175,15 @@ static void tg__register(tg_render_command_h h_render_command, tg_renderer_h h_r
 
 
 
-tg_render_command_h tg_render_command_create(tg_mesh* p_mesh, tg_material_h h_material, v3 position, u32 global_resource_count, tg_handle* p_global_resources)
+tg_render_command_h tg_render_command_create(tg_mesh_h h_mesh, tg_material_h h_material, v3 position, u32 global_resource_count, tg_handle* p_global_resources)
 {
-	TG_ASSERT(p_mesh && h_material);
+	TG_ASSERT(h_mesh && h_material);
 
     tg_render_command_h h_render_command = TG_NULL;
     TG_VULKAN_TAKE_HANDLE(p_render_commands, h_render_command);
 
 	h_render_command->type = TG_STRUCTURE_TYPE_RENDER_COMMAND;
-	h_render_command->p_mesh = p_mesh;
+	h_render_command->h_mesh = h_mesh;
 	h_render_command->h_material = h_material;
     h_render_command->model_ubo = tg_vulkan_buffer_create(sizeof(m4), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
     *((m4*)h_render_command->model_ubo.memory.p_mapped_device_memory) = tgm_m4_translate(position);

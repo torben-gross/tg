@@ -113,7 +113,7 @@ void tg_voxelizer_begin(tg_voxelizer* p_voxelizer)
 
 void tg_voxelizer_exec(tg_voxelizer* p_voxelizer, tg_render_command_h h_render_command)
 {
-    TG_ASSERT(p_voxelizer && h_render_command && h_render_command->p_mesh->positions_buffer.buffer && h_render_command->p_mesh->normals_buffer.buffer);
+    TG_ASSERT(p_voxelizer && h_render_command && h_render_command->h_mesh->positions_buffer.buffer && h_render_command->h_mesh->normals_buffer.buffer);
     TG_ASSERT(p_voxelizer->descriptor_set_count < TG_MAX_RENDER_COMMANDS);
 
     if (p_voxelizer->p_descriptor_sets[p_voxelizer->descriptor_set_count].descriptor_pool == VK_NULL_HANDLE)
@@ -131,20 +131,20 @@ void tg_voxelizer_exec(tg_voxelizer* p_voxelizer, tg_render_command_h h_render_c
 
     vkCmdBindPipeline(p_voxelizer->command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_voxelizer->pipeline.pipeline);
     const VkDeviceSize offset = 0;
-    if (h_render_command->p_mesh->index_count)
+    if (h_render_command->h_mesh->index_count)
     {
-        vkCmdBindIndexBuffer(p_voxelizer->command_buffer, h_render_command->p_mesh->index_buffer.buffer, 0, VK_INDEX_TYPE_UINT16);
+        vkCmdBindIndexBuffer(p_voxelizer->command_buffer, h_render_command->h_mesh->index_buffer.buffer, 0, VK_INDEX_TYPE_UINT16);
     }
-    vkCmdBindVertexBuffers(p_voxelizer->command_buffer, 0, 1, &h_render_command->p_mesh->positions_buffer.buffer, &offset);
-    vkCmdBindVertexBuffers(p_voxelizer->command_buffer, 1, 1, &h_render_command->p_mesh->normals_buffer.buffer, &offset);
+    vkCmdBindVertexBuffers(p_voxelizer->command_buffer, 0, 1, &h_render_command->h_mesh->positions_buffer.buffer, &offset);
+    vkCmdBindVertexBuffers(p_voxelizer->command_buffer, 1, 1, &h_render_command->h_mesh->normals_buffer.buffer, &offset);
     vkCmdBindDescriptorSets(p_voxelizer->command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_voxelizer->pipeline.layout.pipeline_layout, 0, 1, &p_vulkan_descriptor_set->descriptor_set, 0, TG_NULL);
-    if (h_render_command->p_mesh->index_count)
+    if (h_render_command->h_mesh->index_count)
     {
-        vkCmdDrawIndexed(p_voxelizer->command_buffer, h_render_command->p_mesh->index_count, 1, 0, 0, 0);
+        vkCmdDrawIndexed(p_voxelizer->command_buffer, h_render_command->h_mesh->index_count, 1, 0, 0, 0);
     }
     else
     {
-        vkCmdDraw(p_voxelizer->command_buffer, h_render_command->p_mesh->position_count, 1, 0, 0);
+        vkCmdDraw(p_voxelizer->command_buffer, h_render_command->h_mesh->position_count, 1, 0, 0);
     }
 }
 

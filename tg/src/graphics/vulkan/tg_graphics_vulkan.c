@@ -1,4 +1,4 @@
-#include "graphics/tg_graphics.h"
+#include "graphics/vulkan/tg_graphics_vulkan.h"
 
 #ifdef TG_VULKAN
 
@@ -959,6 +959,23 @@ void tg_vulkan_command_buffers_free(tg_vulkan_command_pool_type type, u32 comman
 
 
 
+VkCommandBufferInheritanceInfo tg_vulkan_command_buffer_inheritance_info_create(VkRenderPass render_pass, VkFramebuffer framebuffer)
+{
+    VkCommandBufferInheritanceInfo command_buffer_inheritance_info = { 0 };
+    command_buffer_inheritance_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
+    command_buffer_inheritance_info.pNext = TG_NULL;
+    command_buffer_inheritance_info.subpass = 0;
+    command_buffer_inheritance_info.occlusionQueryEnable = VK_FALSE;
+    command_buffer_inheritance_info.queryFlags = 0;
+    command_buffer_inheritance_info.pipelineStatistics = 0;
+    command_buffer_inheritance_info.renderPass = render_pass;
+    command_buffer_inheritance_info.framebuffer = framebuffer;
+
+    return command_buffer_inheritance_info;
+}
+
+
+
 tg_vulkan_cube_map tg_vulkan_cube_map_create(u32 dimension, VkFormat format, const tg_sampler_create_info* p_sampler_create_info)
 {
     tg_vulkan_cube_map vulkan_cube_map = { 0 };
@@ -1128,18 +1145,18 @@ void tg_vulkan_descriptor_set_update(VkDescriptorSet descriptor_set, tg_handle h
     {
     case TG_STRUCTURE_TYPE_COLOR_IMAGE:
     {
-        tg_color_image* p_color_image = (tg_color_image*)handle;
-        tg_vulkan_descriptor_set_update_image(descriptor_set, &p_color_image->vulkan_image, dst_binding);
+        tg_color_image_h h_color_image = (tg_color_image_h)handle;
+        tg_vulkan_descriptor_set_update_image(descriptor_set, &h_color_image->vulkan_image, dst_binding);
     } break;
     case TG_STRUCTURE_TYPE_CUBE_MAP:
     {
-        tg_cube_map* p_cube_map = (tg_cube_map*)handle;
-        tg_vulkan_descriptor_set_update_cube_map(descriptor_set, &p_cube_map->vulkan_cube_map, dst_binding);
+        tg_cube_map_h h_cube_map = (tg_cube_map_h)handle;
+        tg_vulkan_descriptor_set_update_cube_map(descriptor_set, &h_cube_map->vulkan_cube_map, dst_binding);
     } break;
     case TG_STRUCTURE_TYPE_DEPTH_IMAGE:
     {
-        tg_depth_image* p_depth_image = (tg_depth_image*)handle;
-        tg_vulkan_descriptor_set_update_image(descriptor_set, &p_depth_image->vulkan_image, dst_binding);
+        tg_depth_image* h_depth_image = (tg_depth_image_h)handle;
+        tg_vulkan_descriptor_set_update_image(descriptor_set, &h_depth_image->vulkan_image, dst_binding);
     } break;
     case TG_STRUCTURE_TYPE_RENDER_TARGET:
     {
@@ -1153,8 +1170,8 @@ void tg_vulkan_descriptor_set_update(VkDescriptorSet descriptor_set, tg_handle h
     } break;
     case TG_STRUCTURE_TYPE_UNIFORM_BUFFER:
     {
-        tg_uniform_buffer* p_uniform_buffer = (tg_uniform_buffer*)handle;
-        tg_vulkan_descriptor_set_update_uniform_buffer(descriptor_set, p_uniform_buffer->vulkan_buffer.buffer, dst_binding);
+        tg_uniform_buffer_h h_uniform_buffer = (tg_uniform_buffer_h)handle;
+        tg_vulkan_descriptor_set_update_uniform_buffer(descriptor_set, h_uniform_buffer->vulkan_buffer.buffer, dst_binding);
     } break;
     default: TG_INVALID_CODEPATH(); break;
     }

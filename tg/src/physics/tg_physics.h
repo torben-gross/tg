@@ -2,9 +2,8 @@
 #define TG_PHYSICS_H
 
 #include "math/tg_math.h"
+#include "physics/tg_kd_tree.h"
 #include "tg_common.h"
-
-typedef struct tg_kd_tree tg_kd_tree;
 
 typedef struct tg_raycast_hit
 {

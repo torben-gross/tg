@@ -9,10 +9,10 @@ typedef struct tg_terrain_block
 {
 	u32                    transition_mask;
 	
-	tg_mesh                block_mesh;
+	tg_mesh_h              h_block_mesh;
 	tg_render_command_h    h_block_render_command;
 
-	tg_mesh                p_transition_meshes[6];
+	tg_mesh_h              ph_transition_meshes[6];
 	tg_render_command_h    ph_transition_render_commands[6];
 } tg_terrain_block;
 

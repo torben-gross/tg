@@ -1,7 +1,6 @@
+#include "physics/tg_kd_tree.h"
+
 #include "graphics/tg_graphics.h"
-
-#ifdef TG_VULKAN
-
 #include "memory/tg_memory.h"
 #include "util/tg_qsort.h"
 
@@ -13,9 +12,9 @@
 	const f32 d##result = (b).max.z - (b).min.z;                                                     \
 	const f32 result = 2.0f * (w##result * w##result + h##result * h##result+ d##result * d##result)
 
-#define TG_TIME_TRAVERSAL                       1.0f
-#define TG_TIME_INTERSECT                       2.0f
-#define TG_SPLIT_AXIS(dims)                     ((dims).x > (dims).y ? ((dims).x > (dims).z ? 0 : 2) : ((dims).y > (dims).z ? 1 : 2))
+#define TG_TIME_TRAVERSAL      1.0f
+#define TG_TIME_INTERSECT      2.0f
+#define TG_SPLIT_AXIS(dims)    ((dims).x > (dims).y ? ((dims).x > (dims).z ? 0 : 2) : ((dims).y > (dims).z ? 1 : 2))
 
 
 
@@ -285,17 +284,20 @@ void tg__work_fn(volatile void* p_user_data)
 	}
 }
 
-tg_kd_tree* tg_kd_tree_create(const tg_mesh* p_mesh)
+tg_kd_tree* tg_kd_tree_create(tg_mesh_h h_mesh)
 {
-	TG_ASSERT(p_mesh && p_mesh->position_count);
-	TG_ASSERT(p_mesh->index_count == 0); // TODO: ibo's not supported for now
+	TG_ASSERT(h_mesh);
+	TG_ASSERT(tg_mesh_get_index_count(h_mesh) == 0); // TODO: ibo's not supported for now
 
-	const u32 initial_tri_count = p_mesh->position_count / 3;
+	const u32 position_count = tg_mesh_get_position_count(h_mesh);
+	TG_ASSERT(position_count);
+	const v3* p_positions = tg_mesh_get_positions(h_mesh);
+	const u32 initial_tri_count = position_count / 3;
 
 	const u32 max_node_count = 2 * initial_tri_count - 1; // this is only true as long as each child contains at least one triangle less than it's parent
 	tg_kd_tree* p_tree = TG_MEMORY_ALLOC_NULLIFY(sizeof(*p_tree) + max_node_count * sizeof(*p_tree->p_nodes));
-	p_tree->p_mesh = p_mesh;
-	p_tree->index_capacity = (u64)p_mesh->position_count * sizeof(*p_tree->p_indices);
+	p_tree->h_mesh = h_mesh;
+	p_tree->index_capacity = (u64)position_count * sizeof(*p_tree->p_indices);
 	p_tree->index_count = 0;
 	p_tree->node_count = 1;
 	p_tree->p_indices = TG_MEMORY_ALLOC(p_tree->index_capacity);
@@ -316,14 +318,14 @@ tg_kd_tree* tg_kd_tree_create(const tg_mesh* p_mesh)
 		p_initial_tris[i].i0 = 3 * i;
 		p_initial_tris[i].i1 = 3 * i + 1;
 		p_initial_tris[i].i2 = 3 * i + 2;
-		const v3 p0 = p_mesh->p_positions[3 * i];
-		const v3 p1 = p_mesh->p_positions[3 * i + 1];
-		const v3 p2 = p_mesh->p_positions[3 * i + 2];
+		const v3 p0 = p_positions[3 * i];
+		const v3 p1 = p_positions[3 * i + 1];
+		const v3 p2 = p_positions[3 * i + 2];
 		p_initial_tris[i].bounds.min = tgm_v3_min(tgm_v3_min(p0, p1), p2);
 		p_initial_tris[i].bounds.max = tgm_v3_max(tgm_v3_max(p0, p1), p2);
 	}
 
-	tg__stack_push(&work_thread_info, 0, p_tree->p_mesh->bounds, initial_tri_count, p_initial_tris);
+	tg__stack_push(&work_thread_info, 0, tg_mesh_get_bounds(p_tree->h_mesh), initial_tri_count, p_initial_tris);
 	tg_platform_work_queue_wait_for_completion();
 
 	TG_MEMORY_STACK_FREE(nodes_size);
@@ -337,5 +339,3 @@ void tg_kd_tree_destroy(tg_kd_tree* p_kd_tree)
 
 	TG_INVALID_CODEPATH();
 }
-
-#endif

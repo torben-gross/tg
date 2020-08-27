@@ -557,10 +557,10 @@ static void tg__build_node(tg_terrain* p_terrain, tg_terrain_octree* p_octree, t
 	if (position_count)
 	{
 		const tg_vertex_input_attribute_format p_formats[2] = { TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32B32_SFLOAT, TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32B32_SFLOAT };
-		p_block->block_mesh = tg_mesh_create();
-		tg_mesh_set_positions(&p_block->block_mesh, position_count, p_positions);
-		tg_mesh_regenerate_normals(&p_block->block_mesh);
-		p_block->h_block_render_command = tg_render_command_create(&p_block->block_mesh, p_terrain->h_material, V3(0), 0, TG_NULL);
+		p_block->h_block_mesh = tg_mesh_create();
+		tg_mesh_set_positions(p_block->h_block_mesh, position_count, p_positions);
+		tg_mesh_regenerate_normals(p_block->h_block_mesh);
+		p_block->h_block_render_command = tg_render_command_create(p_block->h_block_mesh, p_terrain->h_material, V3(0), 0, TG_NULL);
 	}
 
 	if (lod > 0)
@@ -573,10 +573,10 @@ static void tg__build_node(tg_terrain* p_terrain, tg_terrain_octree* p_octree, t
 			if (position_count)
 			{
 				const tg_vertex_input_attribute_format p_formats[2] = { TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32B32_SFLOAT, TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32B32_SFLOAT };
-				p_block->p_transition_meshes[i] = tg_mesh_create();
-				tg_mesh_set_positions(&p_block->p_transition_meshes[i], position_count, p_positions);
-				tg_mesh_regenerate_normals(&p_block->p_transition_meshes[i]);
-				p_block->ph_transition_render_commands[i] = tg_render_command_create(&p_block->p_transition_meshes[i], p_terrain->h_material, V3(0), 0, TG_NULL);
+				p_block->ph_transition_meshes[i] = tg_mesh_create();
+				tg_mesh_set_positions(p_block->ph_transition_meshes[i], position_count, p_positions);
+				tg_mesh_regenerate_normals(p_block->ph_transition_meshes[i]);
+				p_block->ph_transition_render_commands[i] = tg_render_command_create(p_block->ph_transition_meshes[i], p_terrain->h_material, V3(0), 0, TG_NULL);
 			}
 		}
 	}
@@ -670,7 +670,7 @@ static void tg__destroy_nodes_recursively(tg_terrain_octree_node* p_node)
 		if (p_block->h_block_render_command)
 		{
 			tg_render_command_destroy(p_block->h_block_render_command);
-			tg_mesh_destroy(&p_block->block_mesh);
+			tg_mesh_destroy(p_block->h_block_mesh);
 		}
 
 		for (u8 i = 0; i < 6; i++)
@@ -678,7 +678,7 @@ static void tg__destroy_nodes_recursively(tg_terrain_octree_node* p_node)
 			if (p_block->ph_transition_render_commands[i])
 			{
 				tg_render_command_destroy(p_block->ph_transition_render_commands[i]);
-				tg_mesh_destroy(&p_block->p_transition_meshes[i]);
+				tg_mesh_destroy(p_block->ph_transition_meshes[i]);
 			}
 		}
 

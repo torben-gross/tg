@@ -118,7 +118,7 @@
     <ClCompile Include="src\graphics\tg_spirv.c" />
     <ClCompile Include="src\graphics\vulkan\tg_vulkan_buffer.c" />
     <ClCompile Include="src\graphics\vulkan\tg_vulkan_image.c" />
-    <ClCompile Include="src\graphics\vulkan\tg_vulkan_kd_tree.c" />
+    <ClCompile Include="src\physics\tg_kd_tree.c" />
     <ClCompile Include="src\graphics\vulkan\tg_vulkan_material.c" />
     <ClCompile Include="src\graphics\vulkan\tg_vulkan_memory_allocator.c" />
     <ClCompile Include="src\graphics\vulkan\tg_vulkan_renderer.c" />
@@ -147,7 +147,10 @@
   <ItemGroup>
     <ClInclude Include="src\graphics\tg_graphics.h" />
     <ClInclude Include="src\graphics\tg_sparse_voxel_octree.h" />
+    <ClInclude Include="src\graphics\tg_spirv.h" />
+    <ClInclude Include="src\graphics\vulkan\tg_graphics_vulkan.h" />
     <ClInclude Include="src\graphics\vulkan\tg_vulkan_memory_allocator.h" />
+    <ClInclude Include="src\physics\tg_kd_tree.h" />
     <ClInclude Include="src\physics\tg_physics.h" />
     <ClInclude Include="src\tg_assets.h" />
     <ClInclude Include="src\tg_input.h" />

@@ -6,6 +6,7 @@
 
 b32 tg__traverse(v3 ray_origin, v3 ray_direction, const tg_kd_tree* p_kd_tree, const tg_kd_node* p_node, tg_bounds bounds, tg_raycast_hit* p_hit)
 {
+    const v3* p_positions = tg_mesh_get_positions(p_kd_tree->h_mesh);
     if (p_node->flags == 0)
     {
         f32 distance = TG_F32_MAX;
@@ -14,9 +15,9 @@ b32 tg__traverse(v3 ray_origin, v3 ray_direction, const tg_kd_tree* p_kd_tree, c
             u32 i0 = p_kd_tree->p_indices[i];
             u32 i1 = p_kd_tree->p_indices[i + 1];
             u32 i2 = p_kd_tree->p_indices[i + 2];
-            const v3 p0 = TG_MESH_POSITIONS(*p_kd_tree->p_mesh)[i0];
-            const v3 p1 = TG_MESH_POSITIONS(*p_kd_tree->p_mesh)[i1];
-            const v3 p2 = TG_MESH_POSITIONS(*p_kd_tree->p_mesh)[i2];
+            const v3 p0 = p_positions[i0];
+            const v3 p1 = p_positions[i1];
+            const v3 p2 = p_positions[i2];
             tg_raycast_hit hit = { 0 };
             const b32 result = tg_intersect_ray_triangle(ray_origin, ray_direction, p0, p1, p2, &hit);
             if (result && hit.distance < distance)
@@ -306,6 +307,6 @@ b32 tg_raycast_kd_tree(v3 ray_origin, v3 ray_direction, const tg_kd_tree* p_kd_t
 {
     TG_ASSERT(tgm_v3_magsqr(ray_direction) > TG_F32_EPSILON && p_kd_tree && p_kd_tree->node_count != 0);
 
-    const b32 result = tg__traverse(ray_origin, ray_direction, p_kd_tree, p_kd_tree->p_nodes, p_kd_tree->p_mesh->bounds, p_hit);
+    const b32 result = tg__traverse(ray_origin, ray_direction, p_kd_tree, p_kd_tree->p_nodes, tg_mesh_get_bounds(p_kd_tree->h_mesh), p_hit);
     return result;
 }
