@@ -22,15 +22,14 @@
 #ifdef TG_DEBUG
 #define VK_CALL_NAME2(x, y) x ## y
 #define VK_CALL_NAME(x, y) VK_CALL_NAME2(x, y)
-
-#define VK_CALL(x) \
-    const VkResult VK_CALL_NAME(vk_call_result, __LINE__) = (x); \
-    if (VK_CALL_NAME(vk_call_result, __LINE__) != VK_SUCCESS) \
-    { \
-        char p_buffer[1024] = { 0 }; \
+#define VK_CALL(x)                                                                              \
+    const VkResult VK_CALL_NAME(vk_call_result, __LINE__) = (x);                                \
+    if (VK_CALL_NAME(vk_call_result, __LINE__) != VK_SUCCESS)                                   \
+    {                                                                                           \
+        char p_buffer[1024] = { 0 };                                                            \
         tg_vulkan_vkresult_convert_to_string(p_buffer, VK_CALL_NAME(vk_call_result, __LINE__)); \
-        TG_DEBUG_LOG("VkResult: %s\n", p_buffer); \
-    } \
+        TG_DEBUG_LOG("VkResult: %s\n", p_buffer);                                               \
+    }                                                                                           \
     if (VK_CALL_NAME(vk_call_result, __LINE__) != VK_SUCCESS) TG_INVALID_CODEPATH();
 
 #else
@@ -39,22 +38,6 @@
 
 #define TG_VULKAN_SURFACE_IMAGE_COUNT    2
 #define TG_VULKAN_MAX_LOD_COUNT     8
-
-
-
-#define TG_VULKAN_TAKE_HANDLE(p_array, p_result)                                   \
-    const u32 array_element_count = sizeof(p_array) / sizeof(*(p_array));          \
-    for (u32 handle_index = 0; handle_index < array_element_count; handle_index++) \
-    {                                                                              \
-        if ((p_array)[handle_index].type == TG_STRUCTURE_TYPE_INVALID)             \
-        {                                                                          \
-            (p_result) = &(p_array)[handle_index];                                 \
-            break;                                                                 \
-        }                                                                          \
-    }                                                                              \
-    TG_ASSERT(p_result)
-
-#define TG_VULKAN_RELEASE_HANDLE(handle)                             TG_ASSERT((handle) && (handle)->type != TG_STRUCTURE_TYPE_INVALID); (handle)->type = TG_STRUCTURE_TYPE_INVALID
 
 
 
@@ -96,6 +79,13 @@ typedef struct tg_vulkan_buffer
     VkBuffer                  buffer;
     tg_vulkan_memory_block    memory;
 } tg_vulkan_buffer;
+
+typedef struct tgvk_command_buffer
+{
+    VkCommandBuffer                command_buffer;
+    tg_vulkan_command_pool_type    command_pool_type;
+    VkCommandBufferLevel           command_buffer_level;
+} tgvk_command_buffer;
 
 typedef struct tg_vulkan_cube_map
 {
@@ -198,10 +188,10 @@ typedef struct tg_vulkan_render_command_renderer_info
 {
     tg_renderer_h               h_renderer;
     tg_vulkan_descriptor_set    descriptor_set;
-    VkCommandBuffer             command_buffer;
+    tgvk_command_buffer         command_buffer;
     tg_vulkan_pipeline          p_shadow_graphics_pipelines[TG_CASCADED_SHADOW_MAPS];
     tg_vulkan_descriptor_set    p_shadow_descriptor_sets[TG_CASCADED_SHADOW_MAPS];
-    VkCommandBuffer             p_shadow_command_buffers[TG_CASCADED_SHADOW_MAPS];
+    tgvk_command_buffer         p_shadow_command_buffers[TG_CASCADED_SHADOW_MAPS];
 } tg_vulkan_render_command_renderer_info;
 
 typedef struct tg_vulkan_screen_vertex
@@ -343,7 +333,7 @@ typedef struct tg_renderer
         b32                         enabled;
         tg_vulkan_image             p_shadow_maps[TG_CASCADED_SHADOW_MAPS];
         tg_vulkan_framebuffer       p_framebuffers[TG_CASCADED_SHADOW_MAPS];
-        VkCommandBuffer             command_buffer;
+        tgvk_command_buffer         command_buffer;
         tg_vulkan_buffer            p_lightspace_ubos[TG_CASCADED_SHADOW_MAPS];
     } shadow_pass;
 
@@ -351,7 +341,7 @@ typedef struct tg_renderer
     {
         tg_vulkan_image             p_color_attachments[TG_DEFERRED_GEOMETRY_COLOR_ATTACHMENT_COUNT];
         tg_vulkan_framebuffer       framebuffer;
-        VkCommandBuffer             command_buffer;
+        tgvk_command_buffer         command_buffer;
     } geometry_pass;
 
     struct
@@ -368,7 +358,7 @@ typedef struct tg_renderer
         tg_vulkan_pipeline          blur_graphics_pipeline;
         tg_vulkan_descriptor_set    blur_descriptor_set;
 
-        VkCommandBuffer             command_buffer;
+        tgvk_command_buffer         command_buffer;
     } ssao_pass;
 
     struct
@@ -377,7 +367,7 @@ typedef struct tg_renderer
         tg_vulkan_framebuffer       framebuffer;
         tg_vulkan_pipeline          graphics_pipeline;
         tg_vulkan_descriptor_set    descriptor_set;
-        VkCommandBuffer             command_buffer;
+        tgvk_command_buffer         command_buffer;
         tg_vulkan_buffer            shading_info_ubo;
     } shading_pass;
 
@@ -390,13 +380,13 @@ typedef struct tg_renderer
         tg_vulkan_framebuffer       framebuffer;
         tg_vulkan_pipeline          graphics_pipeline;
         tg_vulkan_descriptor_set    descriptor_set;
-        VkCommandBuffer             command_buffer;
+        tgvk_command_buffer         command_buffer;
     } tone_mapping_pass;
 
     struct
     {
         tg_vulkan_framebuffer       framebuffer;
-        VkCommandBuffer             command_buffer;
+        tgvk_command_buffer         command_buffer;
     } forward_pass;
 
     struct
@@ -405,12 +395,12 @@ typedef struct tg_renderer
         tg_vulkan_framebuffer       p_framebuffers[TG_VULKAN_SURFACE_IMAGE_COUNT];
         tg_vulkan_pipeline          graphics_pipeline;
         tg_vulkan_descriptor_set    descriptor_set;
-        VkCommandBuffer             p_command_buffers[TG_VULKAN_SURFACE_IMAGE_COUNT];
+        tgvk_command_buffer         p_command_buffers[TG_VULKAN_SURFACE_IMAGE_COUNT];
     } present_pass;
 
     struct
     {
-        VkCommandBuffer             command_buffer;
+        tgvk_command_buffer         command_buffer;
     } clear_pass;
 
 #if TG_ENABLE_DEBUG_TOOLS == 1
@@ -425,7 +415,7 @@ typedef struct tg_renderer
             tg_vulkan_pipeline          graphics_pipeline;
             tg_vulkan_descriptor_set    descriptor_set;
             tg_vulkan_buffer            ubo;
-            VkCommandBuffer             command_buffer;
+            tgvk_command_buffer         command_buffer;
         } *p_cubes;
     } DEBUG;
 #endif
@@ -462,27 +452,15 @@ VkSwapchainKHR                       swapchain;
 VkExtent2D                           swapchain_extent;
 VkImage                              p_swapchain_images[TG_VULKAN_SURFACE_IMAGE_COUNT];
 VkImageView                          p_swapchain_image_views[TG_VULKAN_SURFACE_IMAGE_COUNT];
-VkCommandBuffer                      global_graphics_command_buffer;
-VkCommandBuffer                      global_compute_command_buffer;
+tgvk_command_buffer                  global_graphics_command_buffer;
+tgvk_command_buffer                  global_compute_command_buffer;
 tg_vulkan_shared_render_resources    shared_render_resources;
 
 
 
-tg_color_image                       p_color_images[TG_MAX_COLOR_IMAGES];
-tg_color_image_3d                    p_color_images_3d[TG_MAX_COLOR_IMAGES_3D];
-tg_compute_shader                    p_compute_shaders[TG_MAX_COMPUTE_SHADERS];
-tg_cube_map                          p_cube_maps[TG_MAX_CUBE_MAPS];
-tg_depth_image                       p_depth_images[TG_MAX_DEPTH_IMAGES];
-tg_fragment_shader                   p_fragment_shaders[TG_MAX_FRAGMENT_SHADERS];
-tg_material                          p_materials[TG_MAX_MATERIALS];
-tg_mesh                              p_meshes[TG_MAX_MESHES];
-tg_render_command                    p_render_commands[TG_MAX_RENDER_COMMANDS];
-tg_renderer                          p_renderers[TG_MAX_RENDERERS];
-tg_storage_buffer                    p_storage_buffers[TG_MAX_STORAGE_BUFFERS];
-tg_uniform_buffer                    p_uniform_buffers[TG_MAX_UNIFORM_BUFFERS];
-tg_vertex_shader                     p_vertex_shaders[TG_MAX_VERTEX_SHADERS];
-
-
+void*                                      tgvk_handle_array(tg_structure_type type);
+void*                                      tgvk_handle_take(tg_structure_type type);
+#define                                    tgvk_handle_release(handle) TG_ASSERT((handle) && (handle)->type != TG_STRUCTURE_TYPE_INVALID); (handle)->type = TG_STRUCTURE_TYPE_INVALID
 
 void                                       tg_vulkan_buffer_copy(VkDeviceSize size, VkBuffer source, VkBuffer destination);
 tg_vulkan_buffer                           tg_vulkan_buffer_create(VkDeviceSize size, VkBufferUsageFlags buffer_usage_flags, VkMemoryPropertyFlags memory_property_flags);
@@ -495,27 +473,28 @@ void                                       tg_vulkan_color_image_destroy(tg_vulk
 tg_vulkan_image_3d                         tg_vulkan_color_image_3d_create(u32 width, u32 height, u32 depth, VkFormat format, const tg_sampler_create_info* p_sampler_create_info);
 void                                       tg_vulkan_color_image_3d_destroy(tg_vulkan_image_3d* p_vulkan_image_3d);
 
-VkCommandBuffer                            tg_vulkan_command_buffer_allocate(tg_vulkan_command_pool_type type, VkCommandBufferLevel level); // TODO: encapsulate this into tg_vulkan_command_buffer, so the level does not have to be passed every time and everywhere!
-void                                       tg_vulkan_command_buffer_begin(VkCommandBuffer command_buffer, VkCommandBufferUsageFlags usage_flags, const VkCommandBufferInheritanceInfo* p_inheritance_info);
-void                                       tg_vulkan_command_buffer_cmd_begin_render_pass(VkCommandBuffer command_buffer, VkRenderPass render_pass, tg_vulkan_framebuffer* p_framebuffer, VkSubpassContents subpass_contents);
-void                                       tg_vulkan_command_buffer_cmd_blit_image(VkCommandBuffer command_buffer, tg_vulkan_image* p_source, tg_vulkan_image* p_destination, const VkImageBlit* p_region);
-void                                       tg_vulkan_command_buffer_cmd_clear_color_image(VkCommandBuffer command_buffer, tg_vulkan_image* p_vulkan_image);
-void                                       tg_vulkan_command_buffer_cmd_clear_color_image_3d(VkCommandBuffer command_buffer, tg_vulkan_image_3d* p_vulkan_image_3d);
-void                                       tg_vulkan_command_buffer_cmd_clear_depth_image(VkCommandBuffer command_buffer, tg_vulkan_image* p_vulkan_image);
-void                                       tg_vulkan_command_buffer_cmd_copy_buffer_to_color_image(VkCommandBuffer command_buffer, VkBuffer source, tg_vulkan_image* p_destination);
-void                                       tg_vulkan_command_buffer_cmd_copy_buffer_to_cube_map(VkCommandBuffer command_buffer, VkBuffer source, tg_vulkan_cube_map* p_destination);
-void                                       tg_vulkan_command_buffer_cmd_copy_buffer_to_depth_image(VkCommandBuffer command_buffer, VkBuffer source, tg_vulkan_image* p_destination);
-void                                       tg_vulkan_command_buffer_cmd_copy_color_image(VkCommandBuffer command_buffer, tg_vulkan_image* p_source, tg_vulkan_image* p_destination);
-void                                       tg_vulkan_command_buffer_cmd_copy_color_image_to_buffer(VkCommandBuffer command_buffer, tg_vulkan_image* p_source, VkBuffer destination);
-void                                       tg_vulkan_command_buffer_cmd_copy_color_image_3d_to_buffer(VkCommandBuffer command_buffer, tg_vulkan_image_3d* p_source, VkBuffer destination);
-void                                       tg_vulkan_command_buffer_cmd_transition_color_image_layout(VkCommandBuffer command_buffer, tg_vulkan_image* p_vulkan_image, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits);
-void                                       tg_vulkan_command_buffer_cmd_transition_color_image_3d_layout(VkCommandBuffer command_buffer, tg_vulkan_image_3d* p_vulkan_image_3d, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits);
-void                                       tg_vulkan_command_buffer_cmd_transition_cube_map_layout(VkCommandBuffer command_buffer, tg_vulkan_cube_map* p_vulkan_cube_map, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits);
-void                                       tg_vulkan_command_buffer_cmd_transition_depth_image_layout(VkCommandBuffer command_buffer, tg_vulkan_image* p_vulkan_image, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits);
-void                                       tg_vulkan_command_buffer_end_and_submit(VkCommandBuffer command_buffer, tg_vulkan_queue_type type);
-void                                       tg_vulkan_command_buffer_free(tg_vulkan_command_pool_type type, VkCommandBuffer command_buffer); // TODO: save command pool in command buffers?
-void                                       tg_vulkan_command_buffers_allocate(tg_vulkan_command_pool_type type, VkCommandBufferLevel level, u32 command_buffer_count, VkCommandBuffer* p_command_buffers);
-void                                       tg_vulkan_command_buffers_free(tg_vulkan_command_pool_type type, u32 command_buffer_count, const VkCommandBuffer* p_command_buffers);
+tgvk_command_buffer                        tg_vulkan_command_buffer_allocate(tg_vulkan_command_pool_type type, VkCommandBufferLevel level);
+void                                       tg_vulkan_command_buffers_allocate(tg_vulkan_command_pool_type type, VkCommandBufferLevel level, u32 command_buffer_count, tgvk_command_buffer* p_command_buffers);
+void                                       tg_vulkan_command_buffer_free(tgvk_command_buffer* p_command_buffer);
+void                                       tg_vulkan_command_buffers_free(u32 command_buffer_count, tgvk_command_buffer* p_command_buffers);
+void                                       tg_vulkan_command_buffer_begin(tgvk_command_buffer* p_command_buffer, VkCommandBufferUsageFlags flags);
+void                                       tg_vulkan_command_buffer_begin_secondary(tgvk_command_buffer* p_command_buffer, VkCommandBufferUsageFlags flags, VkRenderPass render_pass, VkFramebuffer framebuffer);
+void                                       tg_vulkan_command_buffer_cmd_begin_render_pass(tgvk_command_buffer* p_command_buffer, VkRenderPass render_pass, tg_vulkan_framebuffer* p_framebuffer, VkSubpassContents subpass_contents);
+void                                       tg_vulkan_command_buffer_cmd_blit_image(tgvk_command_buffer* p_command_buffer, tg_vulkan_image* p_source, tg_vulkan_image* p_destination, const VkImageBlit* p_region);
+void                                       tg_vulkan_command_buffer_cmd_clear_color_image(tgvk_command_buffer* p_command_buffer, tg_vulkan_image* p_vulkan_image);
+void                                       tg_vulkan_command_buffer_cmd_clear_color_image_3d(tgvk_command_buffer* p_command_buffer, tg_vulkan_image_3d* p_vulkan_image_3d);
+void                                       tg_vulkan_command_buffer_cmd_clear_depth_image(tgvk_command_buffer* p_command_buffer, tg_vulkan_image* p_vulkan_image);
+void                                       tg_vulkan_command_buffer_cmd_copy_buffer_to_color_image(tgvk_command_buffer* p_command_buffer, VkBuffer source, tg_vulkan_image* p_destination);
+void                                       tg_vulkan_command_buffer_cmd_copy_buffer_to_cube_map(tgvk_command_buffer* p_command_buffer, VkBuffer source, tg_vulkan_cube_map* p_destination);
+void                                       tg_vulkan_command_buffer_cmd_copy_buffer_to_depth_image(tgvk_command_buffer* p_command_buffer, VkBuffer source, tg_vulkan_image* p_destination);
+void                                       tg_vulkan_command_buffer_cmd_copy_color_image(tgvk_command_buffer* p_command_buffer, tg_vulkan_image* p_source, tg_vulkan_image* p_destination);
+void                                       tg_vulkan_command_buffer_cmd_copy_color_image_to_buffer(tgvk_command_buffer* p_command_buffer, tg_vulkan_image* p_source, VkBuffer destination);
+void                                       tg_vulkan_command_buffer_cmd_copy_color_image_3d_to_buffer(tgvk_command_buffer* p_command_buffer, tg_vulkan_image_3d* p_source, VkBuffer destination);
+void                                       tg_vulkan_command_buffer_cmd_transition_color_image_layout(tgvk_command_buffer* p_command_buffer, tg_vulkan_image* p_vulkan_image, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits);
+void                                       tg_vulkan_command_buffer_cmd_transition_color_image_3d_layout(tgvk_command_buffer* p_command_buffer, tg_vulkan_image_3d* p_vulkan_image_3d, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits);
+void                                       tg_vulkan_command_buffer_cmd_transition_cube_map_layout(tgvk_command_buffer* p_command_buffer, tg_vulkan_cube_map* p_vulkan_cube_map, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits);
+void                                       tg_vulkan_command_buffer_cmd_transition_depth_image_layout(tgvk_command_buffer* p_command_buffer, tg_vulkan_image* p_vulkan_image, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits);
+void                                       tg_vulkan_command_buffer_end_and_submit(tgvk_command_buffer* p_command_buffer);
 
 VkCommandBufferInheritanceInfo             tg_vulkan_command_buffer_inheritance_info_create(VkRenderPass render_pass, VkFramebuffer framebuffer);
 

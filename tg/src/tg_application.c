@@ -16,8 +16,8 @@
 #ifdef TG_DEBUG
 typedef struct tg_debug_info
 {
-    f32     dt_sum;
-    u32     fps;
+    f32    dt_sum;
+    u32    fps;
 } tg_debug_info;
 #endif
 

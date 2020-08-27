@@ -101,13 +101,10 @@ typedef enum tg_structure_type
 	TG_STRUCTURE_TYPE_FRAGMENT_SHADER,
 	TG_STRUCTURE_TYPE_MATERIAL,
 	TG_STRUCTURE_TYPE_MESH,
-	TG_STRUCTURE_TYPE_INDEX_BUFFER,
-	TG_STRUCTURE_TYPE_RAYTRACER,
 	TG_STRUCTURE_TYPE_RENDER_COMMAND,
 	TG_STRUCTURE_TYPE_RENDER_TARGET,
 	TG_STRUCTURE_TYPE_RENDERER,
 	TG_STRUCTURE_TYPE_UNIFORM_BUFFER,
-	TG_STRUCTURE_TYPE_VERTEX_BUFFER,
 	TG_STRUCTURE_TYPE_VERTEX_SHADER
 } tg_structure_type;
 
@@ -181,15 +178,6 @@ typedef struct tg_sampler_create_info
 	tg_image_address_mode    address_mode_v;
 	tg_image_address_mode    address_mode_w;
 } tg_sampler_create_info;
-
-typedef struct tg_vertex
-{
-	v3    position;
-	v3    normal;
-	v2    uv;
-	v3    tangent;
-	v3    bitangent;
-} tg_vertex;
 
 
 

@@ -22,47 +22,46 @@ static void tg__register(tg_render_command_h h_render_command, tg_renderer_h h_r
         tg_vulkan_descriptor_set_update(p_renderer_info->descriptor_set.descriptor_set, p_global_resources[i], binding);
     }
 
-    VkCommandBufferInheritanceInfo command_buffer_inheritance_info = { 0 };
+    p_renderer_info->command_buffer = tg_vulkan_command_buffer_allocate(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_SECONDARY);
+
+    VkRenderPass render_pass = VK_NULL_HANDLE;
+    VkFramebuffer framebuffer = VK_NULL_HANDLE;
     if (h_render_command->h_material->material_type == TG_VULKAN_MATERIAL_TYPE_DEFERRED)
     {
-        command_buffer_inheritance_info = tg_vulkan_command_buffer_inheritance_info_create(shared_render_resources.geometry_render_pass, h_renderer->geometry_pass.framebuffer.framebuffer);
+        render_pass = shared_render_resources.geometry_render_pass;
+        framebuffer = h_renderer->geometry_pass.framebuffer.framebuffer;
     }
     else
     {
         TG_ASSERT(h_render_command->h_material->material_type == TG_VULKAN_MATERIAL_TYPE_FORWARD);
-        command_buffer_inheritance_info = tg_vulkan_command_buffer_inheritance_info_create(shared_render_resources.forward_render_pass, h_renderer->forward_pass.framebuffer.framebuffer);
+        render_pass = shared_render_resources.forward_render_pass;
+        framebuffer = h_renderer->forward_pass.framebuffer.framebuffer;
     }
-
-    p_renderer_info->command_buffer = tg_vulkan_command_buffer_allocate(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_SECONDARY);
-    tg_vulkan_command_buffer_begin(p_renderer_info->command_buffer, VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, &command_buffer_inheritance_info);
+    tg_vulkan_command_buffer_begin_secondary(&p_renderer_info->command_buffer, VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, render_pass, framebuffer);
     {
-        vkCmdBindPipeline(p_renderer_info->command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, h_render_command->graphics_pipeline.pipeline);
+        vkCmdBindPipeline(p_renderer_info->command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, h_render_command->graphics_pipeline.pipeline);
 
         if (h_render_command->h_mesh->index_buffer.buffer)
         {
-            vkCmdBindIndexBuffer(p_renderer_info->command_buffer, h_render_command->h_mesh->index_buffer.buffer, 0, VK_INDEX_TYPE_UINT16);
+            vkCmdBindIndexBuffer(p_renderer_info->command_buffer.command_buffer, h_render_command->h_mesh->index_buffer.buffer, 0, VK_INDEX_TYPE_UINT16);
         }
         const VkDeviceSize vertex_buffer_offset = 0;
-        if (h_render_command->h_mesh->positions_buffer.buffer)
-        {
-            vkCmdBindVertexBuffers(
-                p_renderer_info->command_buffer, 0, 1,
-                &h_render_command->h_mesh->positions_buffer.buffer,
-                &vertex_buffer_offset
-            );
-        }
-        if (h_render_command->h_mesh->normals_buffer.buffer)
-        {
-            vkCmdBindVertexBuffers(
-                p_renderer_info->command_buffer, 1, 1,
-                &h_render_command->h_mesh->normals_buffer.buffer,
-                &vertex_buffer_offset
-            );
-        }
+        TG_ASSERT(h_render_command->h_mesh->positions_buffer.buffer);
+        vkCmdBindVertexBuffers(
+            p_renderer_info->command_buffer.command_buffer, 0, 1,
+            &h_render_command->h_mesh->positions_buffer.buffer,
+            &vertex_buffer_offset
+        );
+        TG_ASSERT(h_render_command->h_mesh->normals_buffer.buffer);
+        vkCmdBindVertexBuffers(
+            p_renderer_info->command_buffer.command_buffer, 1, 1,
+            &h_render_command->h_mesh->normals_buffer.buffer,
+            &vertex_buffer_offset
+        );
         if (h_render_command->h_mesh->uvs_buffer.buffer)
         {
             vkCmdBindVertexBuffers(
-                p_renderer_info->command_buffer, 2, 1,
+                p_renderer_info->command_buffer.command_buffer, 2, 1,
                 &h_render_command->h_mesh->uvs_buffer.buffer,
                 &vertex_buffer_offset
             );
@@ -70,7 +69,7 @@ static void tg__register(tg_render_command_h h_render_command, tg_renderer_h h_r
         if (h_render_command->h_mesh->tangents_buffer.buffer)
         {
             vkCmdBindVertexBuffers(
-                p_renderer_info->command_buffer, 3, 1,
+                p_renderer_info->command_buffer.command_buffer, 3, 1,
                 &h_render_command->h_mesh->tangents_buffer.buffer,
                 &vertex_buffer_offset
             );
@@ -78,24 +77,24 @@ static void tg__register(tg_render_command_h h_render_command, tg_renderer_h h_r
         if (h_render_command->h_mesh->bitangents_buffer.buffer)
         {
             vkCmdBindVertexBuffers(
-                p_renderer_info->command_buffer, 4, 1,
+                p_renderer_info->command_buffer.command_buffer, 4, 1,
                 &h_render_command->h_mesh->bitangents_buffer.buffer,
                 &vertex_buffer_offset
             );
         }
 
-        vkCmdBindDescriptorSets(p_renderer_info->command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, h_render_command->graphics_pipeline.layout.pipeline_layout, 0, 1, &p_renderer_info->descriptor_set.descriptor_set, 0, TG_NULL);
+        vkCmdBindDescriptorSets(p_renderer_info->command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, h_render_command->graphics_pipeline.layout.pipeline_layout, 0, 1, &p_renderer_info->descriptor_set.descriptor_set, 0, TG_NULL);
 
         if (h_render_command->h_mesh->index_count != 0)
         {
-            vkCmdDrawIndexed(p_renderer_info->command_buffer, (u32)h_render_command->h_mesh->index_count, 1, 0, 0, 0); // TODO: u16
+            vkCmdDrawIndexed(p_renderer_info->command_buffer.command_buffer, (u32)h_render_command->h_mesh->index_count, 1, 0, 0, 0); // TODO: u16
         }
         else
         {
-            vkCmdDraw(p_renderer_info->command_buffer, (u32)h_render_command->h_mesh->position_count, 1, 0, 0);
+            vkCmdDraw(p_renderer_info->command_buffer.command_buffer, (u32)h_render_command->h_mesh->position_count, 1, 0, 0);
         }
     }
-    VK_CALL(vkEndCommandBuffer(p_renderer_info->command_buffer));
+    VK_CALL(vkEndCommandBuffer(p_renderer_info->command_buffer.command_buffer));
 
 
 
@@ -130,8 +129,6 @@ static void tg__register(tg_render_command_h h_render_command, tg_renderer_h h_r
     vertex_input_attribute_description.format = VK_FORMAT_R32G32B32_SFLOAT;
     vertex_input_attribute_description.offset = 0;
 
-    h_renderer->shadow_pass.command_buffer = tg_vulkan_command_buffer_allocate(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
-
     for (u32 i = 0; i < TG_CASCADED_SHADOW_MAPS; i++)
     {
         p_renderer_info->p_shadow_graphics_pipelines[i] = tg_vulkan_pipeline_create_graphics2(&pipeline_create_info, 1, &vertex_input_binding_description, &vertex_input_attribute_description);
@@ -150,26 +147,26 @@ static void tg__register(tg_render_command_h h_render_command, tg_renderer_h h_r
         shadow_command_buffer_inheritance_info.pipelineStatistics = 0;
         
         p_renderer_info->p_shadow_command_buffers[i] = tg_vulkan_command_buffer_allocate(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_SECONDARY);
-        tg_vulkan_command_buffer_begin(p_renderer_info->p_shadow_command_buffers[i], VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, &shadow_command_buffer_inheritance_info);
+        tg_vulkan_command_buffer_begin_secondary(&p_renderer_info->p_shadow_command_buffers[i], VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, shared_render_resources.shadow_render_pass, h_renderer->shadow_pass.p_framebuffers[i].framebuffer);
         {
-            vkCmdBindPipeline(p_renderer_info->p_shadow_command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, p_renderer_info->p_shadow_graphics_pipelines[i].pipeline);
+            vkCmdBindPipeline(p_renderer_info->p_shadow_command_buffers[i].command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_renderer_info->p_shadow_graphics_pipelines[i].pipeline);
             const VkDeviceSize vertex_buffer_offset = 0;
             if (h_render_command->h_mesh->index_buffer.memory.size != 0)
             {
-                vkCmdBindIndexBuffer(p_renderer_info->p_shadow_command_buffers[i], h_render_command->h_mesh->index_buffer.buffer, 0, VK_INDEX_TYPE_UINT16);
+                vkCmdBindIndexBuffer(p_renderer_info->p_shadow_command_buffers[i].command_buffer, h_render_command->h_mesh->index_buffer.buffer, 0, VK_INDEX_TYPE_UINT16);
             }
-            vkCmdBindVertexBuffers(p_renderer_info->p_shadow_command_buffers[i], 0, 1, &h_render_command->h_mesh->positions_buffer.buffer, &vertex_buffer_offset);
-            vkCmdBindDescriptorSets(p_renderer_info->p_shadow_command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, p_renderer_info->p_shadow_graphics_pipelines[i].layout.pipeline_layout, 0, 1, &p_renderer_info->p_shadow_descriptor_sets[i].descriptor_set, 0, TG_NULL);
+            vkCmdBindVertexBuffers(p_renderer_info->p_shadow_command_buffers[i].command_buffer, 0, 1, &h_render_command->h_mesh->positions_buffer.buffer, &vertex_buffer_offset);
+            vkCmdBindDescriptorSets(p_renderer_info->p_shadow_command_buffers[i].command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_renderer_info->p_shadow_graphics_pipelines[i].layout.pipeline_layout, 0, 1, &p_renderer_info->p_shadow_descriptor_sets[i].descriptor_set, 0, TG_NULL);
             if (h_render_command->h_mesh->index_count != 0)
             {
-                vkCmdDrawIndexed(p_renderer_info->p_shadow_command_buffers[i], (u32)(h_render_command->h_mesh->index_count), 1, 0, 0, 0); // TODO: u16
+                vkCmdDrawIndexed(p_renderer_info->p_shadow_command_buffers[i].command_buffer, (u32)(h_render_command->h_mesh->index_count), 1, 0, 0, 0); // TODO: u16
             }
             else
             {
-                vkCmdDraw(p_renderer_info->p_shadow_command_buffers[i], (u32)(h_render_command->h_mesh->position_count), 1, 0, 0);
+                vkCmdDraw(p_renderer_info->p_shadow_command_buffers[i].command_buffer, (u32)(h_render_command->h_mesh->position_count), 1, 0, 0);
             }
         }
-        VK_CALL(vkEndCommandBuffer(p_renderer_info->p_shadow_command_buffers[i]));
+        VK_CALL(vkEndCommandBuffer(p_renderer_info->p_shadow_command_buffers[i].command_buffer));
     }
 }
 
@@ -179,10 +176,7 @@ tg_render_command_h tg_render_command_create(tg_mesh_h h_mesh, tg_material_h h_m
 {
 	TG_ASSERT(h_mesh && h_material);
 
-    tg_render_command_h h_render_command = TG_NULL;
-    TG_VULKAN_TAKE_HANDLE(p_render_commands, h_render_command);
-
-	h_render_command->type = TG_STRUCTURE_TYPE_RENDER_COMMAND;
+    tg_render_command_h h_render_command = tgvk_handle_take(TG_STRUCTURE_TYPE_RENDER_COMMAND);
 	h_render_command->h_mesh = h_mesh;
 	h_render_command->h_material = h_material;
     h_render_command->model_ubo = tg_vulkan_buffer_create(sizeof(m4), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
@@ -218,6 +212,7 @@ tg_render_command_h tg_render_command_create(tg_mesh_h h_mesh, tg_material_h h_m
     h_render_command->graphics_pipeline = tg_vulkan_pipeline_create_graphics(&vulkan_graphics_pipeline_create_info);
 
 	h_render_command->renderer_info_count = 0;
+    tg_renderer* p_renderers = tgvk_handle_array(TG_STRUCTURE_TYPE_RENDERER);
     for (u32 i = 0; i < TG_MAX_RENDERERS; i++)
     {
         if (p_renderers[i].type != TG_STRUCTURE_TYPE_INVALID)
@@ -237,13 +232,13 @@ void tg_render_command_destroy(tg_render_command_h h_render_command)
     {
         for (u32 j = 0; j < TG_CASCADED_SHADOW_MAPS; j++)
         {
-            tg_vulkan_command_buffer_free(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, h_render_command->p_renderer_infos[i].p_shadow_command_buffers[j]);
+            tg_vulkan_command_buffer_free(&h_render_command->p_renderer_infos[i].p_shadow_command_buffers[j]);
         }
-        tg_vulkan_command_buffer_free(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, h_render_command->p_renderer_infos[i].command_buffer);
+        tg_vulkan_command_buffer_free(&h_render_command->p_renderer_infos[i].command_buffer);
     }
     tg_vulkan_pipeline_destroy(&h_render_command->graphics_pipeline);
     tg_vulkan_buffer_destroy(&h_render_command->model_ubo);
-    TG_VULKAN_RELEASE_HANDLE(h_render_command);
+    tgvk_handle_release(h_render_command);
 }
 
 void tg_render_command_set_position(tg_render_command_h h_render_command, v3 position)

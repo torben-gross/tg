@@ -32,7 +32,7 @@ typedef struct tg_voxelizer
     tg_vulkan_buffer                   view_projection_ubo;
     tg_vulkan_image_3d                 p_image_3ds[TG_SVO_ATTACHMENTS];
     tg_vulkan_buffer                   p_voxel_buffers[TG_SVO_ATTACHMENTS];
-    VkCommandBuffer                    command_buffer;
+    tgvk_command_buffer                command_buffer;
 } tg_voxelizer;
 
 typedef struct tg_svo_node

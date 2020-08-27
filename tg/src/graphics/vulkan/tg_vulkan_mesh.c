@@ -2,9 +2,6 @@
 
 #ifdef TG_VULKAN
 
-#define TG_MESH_VERTEX_CAPACITY(h_mesh)    ((u32)((h_mesh)->vbo.memory.size / sizeof(tg_vertex)))
-#define TG_MESH_INDEX_CAPACITY(h_mesh)     ((u32)((h_mesh)->ibo.memory.size / sizeof(u16)))
-
 #include "memory/tg_memory.h"
 #include "tg_assets.h"
 #include "util/tg_string.h"
@@ -127,9 +124,7 @@ static const char* tg__skip_whitespace(const char* p_iterator, const char* const
 
 tg_mesh_h tg_mesh_create()
 {
-    tg_mesh_h h_mesh = TG_NULL;
-    TG_VULKAN_TAKE_HANDLE(p_meshes, h_mesh);
-    h_mesh->type = TG_STRUCTURE_TYPE_MESH;
+    tg_mesh_h h_mesh = tgvk_handle_take(TG_STRUCTURE_TYPE_MESH);
     return h_mesh;
 }
 
@@ -137,9 +132,7 @@ tg_mesh_h tg_mesh_create2(const char* p_filename, v3 scale) // TODO: scale is te
 {
     TG_ASSERT(p_filename && tgm_v3_magsqr(scale) != 0.0f);
 
-    tg_mesh_h h_mesh = TG_NULL;
-    TG_VULKAN_TAKE_HANDLE(p_meshes, h_mesh);
-    h_mesh->type = TG_STRUCTURE_TYPE_MESH;
+    tg_mesh_h h_mesh = tgvk_handle_take(TG_STRUCTURE_TYPE_MESH);
 
     tg_file_properties file_properties = { 0 };
     tg_platform_file_get_properties(p_filename, &file_properties);
@@ -865,7 +858,8 @@ void tg_mesh_destroy(tg_mesh_h h_mesh)
     {
         TG_MEMORY_FREE(h_mesh->p_indices);
     }
-    *h_mesh = (tg_mesh){ 0 };
+
+    tgvk_handle_release(h_mesh);
 }
 
 #endif
