@@ -9,7 +9,7 @@ tg_color_image_h tg_color_image_create(u32 width, u32 height, tg_color_image_for
 	TG_ASSERT(width && height);
 
 	tg_color_image_h h_color_image = tgvk_handle_take(TG_STRUCTURE_TYPE_COLOR_IMAGE);
-	h_color_image->vulkan_image = tg_vulkan_color_image_create(width, height, (VkFormat)format, p_sampler_create_info);
+	h_color_image->vulkan_image = tgvk_color_image_create(width, height, (VkFormat)format, p_sampler_create_info);
 	return h_color_image;
 }
 
@@ -18,7 +18,7 @@ tg_color_image_h tg_color_image_create2(const char* p_filename, const tg_sampler
 	TG_ASSERT(p_filename);
 
 	tg_color_image_h h_color_image = tgvk_handle_take(TG_STRUCTURE_TYPE_COLOR_IMAGE);
-	h_color_image->vulkan_image = tg_vulkan_color_image_create2(p_filename, p_sampler_create_info);
+	h_color_image->vulkan_image = tgvk_color_image_create2(p_filename, p_sampler_create_info);
 	return h_color_image;
 }
 
@@ -26,7 +26,7 @@ void tg_color_image_destroy(tg_color_image_h h_color_image)
 {
 	TG_ASSERT(h_color_image);
 
-	tg_vulkan_color_image_destroy(&h_color_image->vulkan_image);
+	tgvk_color_image_destroy(&h_color_image->vulkan_image);
 }
 
 
@@ -60,7 +60,7 @@ tg_color_image_3d_h tg_color_image_3d_create(u32 width, u32 height, u32 depth, t
 	TG_ASSERT(width && height && depth);
 
 	tg_color_image_3d_h h_color_image_3d = tgvk_handle_take(TG_STRUCTURE_TYPE_COLOR_IMAGE_3D);
-	h_color_image_3d->vulkan_image_3d = tg_vulkan_color_image_3d_create(width, height, depth, (VkFormat)format, p_sampler_create_info);
+	h_color_image_3d->vulkan_image_3d = tgvk_color_image_3d_create(width, height, depth, (VkFormat)format, p_sampler_create_info);
 	return h_color_image_3d;
 }
 
@@ -68,7 +68,7 @@ void tg_color_image_3d_destroy(tg_color_image_3d_h h_color_image_3d)
 {
 	TG_ASSERT(h_color_image_3d);
 
-	tg_vulkan_color_image_3d_destroy(&h_color_image_3d->vulkan_image_3d);
+	tgvk_color_image_3d_destroy(&h_color_image_3d->vulkan_image_3d);
 }
 
 
@@ -78,9 +78,9 @@ tg_cube_map_h tg_cube_map_create(u32 dimension, tg_color_image_format format, co
 	TG_ASSERT(dimension);
 
 	tg_cube_map_h h_cube_map = tgvk_handle_take(TG_STRUCTURE_TYPE_CUBE_MAP);
-	h_cube_map->vulkan_cube_map = tg_vulkan_cube_map_create(dimension, (VkFormat)format, p_sampler_create_info);
-	tg_vulkan_command_buffer_begin(&global_graphics_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-	tg_vulkan_command_buffer_cmd_transition_cube_map_layout(
+	h_cube_map->vulkan_cube_map = tgvk_cube_map_create(dimension, (VkFormat)format, p_sampler_create_info);
+	tgvk_command_buffer_begin(&global_graphics_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+	tgvk_command_buffer_cmd_transition_cube_map_layout(
 		&global_graphics_command_buffer,
 		&h_cube_map->vulkan_cube_map,
 		0,
@@ -90,7 +90,7 @@ tg_cube_map_h tg_cube_map_create(u32 dimension, tg_color_image_format format, co
 		VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
 		VK_PIPELINE_STAGE_VERTEX_INPUT_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
 	);
-	tg_vulkan_command_buffer_end_and_submit(&global_graphics_command_buffer);
+	tgvk_command_buffer_end_and_submit(&global_graphics_command_buffer);
 	return h_cube_map;
 }
 
@@ -98,7 +98,7 @@ void tg_cube_map_destroy(tg_cube_map_h h_cube_map)
 {
 	TG_ASSERT(h_cube_map);
 
-	tg_vulkan_cube_map_destroy(&h_cube_map->vulkan_cube_map);
+	tgvk_cube_map_destroy(&h_cube_map->vulkan_cube_map);
 }
 
 void tg_cube_map_set_data(tg_cube_map_h h_cube_map, void* p_data)
@@ -106,12 +106,12 @@ void tg_cube_map_set_data(tg_cube_map_h h_cube_map, void* p_data)
 	TG_ASSERT(h_cube_map && p_data);
 
 	const VkDeviceSize size = 6LL * (VkDeviceSize)h_cube_map->vulkan_cube_map.dimension * (VkDeviceSize)h_cube_map->vulkan_cube_map.dimension * tg_color_image_format_size((tg_color_image_format)h_cube_map->vulkan_cube_map.format);
-	tg_vulkan_buffer staging_buffer = tg_vulkan_buffer_create(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+	tgvk_buffer staging_buffer = tgvk_buffer_create(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 	tg_memory_copy(size, p_data, staging_buffer.memory.p_mapped_device_memory);
-	tg_vulkan_buffer_flush_mapped_memory(&staging_buffer);
+	tgvk_buffer_flush_mapped_memory(&staging_buffer);
 
-	tg_vulkan_command_buffer_begin(&global_graphics_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-	tg_vulkan_command_buffer_cmd_transition_cube_map_layout(
+	tgvk_command_buffer_begin(&global_graphics_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+	tgvk_command_buffer_cmd_transition_cube_map_layout(
 		&global_graphics_command_buffer,
 		&h_cube_map->vulkan_cube_map,
 		VK_ACCESS_SHADER_READ_BIT,
@@ -121,8 +121,8 @@ void tg_cube_map_set_data(tg_cube_map_h h_cube_map, void* p_data)
 		VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
 		VK_PIPELINE_STAGE_TRANSFER_BIT
 	);
-	tg_vulkan_command_buffer_cmd_copy_buffer_to_cube_map(&global_graphics_command_buffer, staging_buffer.buffer, &h_cube_map->vulkan_cube_map);
-	tg_vulkan_command_buffer_cmd_transition_cube_map_layout(
+	tgvk_command_buffer_cmd_copy_buffer_to_cube_map(&global_graphics_command_buffer, staging_buffer.buffer, &h_cube_map->vulkan_cube_map);
+	tgvk_command_buffer_cmd_transition_cube_map_layout(
 		&global_graphics_command_buffer,
 		&h_cube_map->vulkan_cube_map,
 		VK_ACCESS_TRANSFER_WRITE_BIT,
@@ -132,9 +132,9 @@ void tg_cube_map_set_data(tg_cube_map_h h_cube_map, void* p_data)
 		VK_PIPELINE_STAGE_TRANSFER_BIT,
 		VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
 	);
-	tg_vulkan_command_buffer_end_and_submit(&global_graphics_command_buffer);
+	tgvk_command_buffer_end_and_submit(&global_graphics_command_buffer);
 
-	tg_vulkan_buffer_destroy(&staging_buffer);
+	tgvk_buffer_destroy(&staging_buffer);
 }
 
 
@@ -144,7 +144,7 @@ tg_depth_image_h tg_depth_image_create(u32 width, u32 height, tg_depth_image_for
 	TG_ASSERT(width && height);
 
 	tg_depth_image_h h_depth_image = tgvk_handle_take(TG_STRUCTURE_TYPE_DEPTH_IMAGE);
-	h_depth_image->vulkan_image = tg_vulkan_depth_image_create(width, height, (VkFormat)format, p_sampler_create_info);
+	h_depth_image->vulkan_image = tgvk_depth_image_create(width, height, (VkFormat)format, p_sampler_create_info);
 	return h_depth_image;
 }
 
@@ -152,7 +152,7 @@ void tg_depth_image_destroy(tg_depth_image_h h_depth_image)
 {
 	TG_ASSERT(h_depth_image);
 
-	tg_vulkan_depth_image_destroy(&h_depth_image->vulkan_image);
+	tgvk_depth_image_destroy(&h_depth_image->vulkan_image);
 }
 
 #endif

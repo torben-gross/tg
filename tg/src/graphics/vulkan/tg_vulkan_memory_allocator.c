@@ -9,52 +9,52 @@
 
 
 #ifdef TG_DEBUG
-#define VK_CALL(x)    TG_ASSERT(x == VK_SUCCESS) // TODO: how can i make this not be a duplicate?
+#define VK_CALL(x)     TG_ASSERT((x) == VK_SUCCESS) // TODO: how can i make this not be a duplicate?
 #else
-#define VK_CALL(x)    x
+#define VK_CALL(x)     x
 #endif
 
 #define TG_ROUND(size) ((((size) + vulkan_memory.page_size - 1) / vulkan_memory.page_size) * vulkan_memory.page_size)
 
 
 
-typedef struct tg_vulkan_memory_entry
+typedef struct tgvk_memory_entry
 {
     b32      reserved;
     u32      page_count;
     u64      offset;
-} tg_vulkan_memory_entry;
+} tgvk_memory_entry;
 
-typedef struct tg_vulkan_memory_pool
+typedef struct tgvk_memory_pool
 {
-    VkMemoryPropertyFlags      memory_property_flags;
-    VkDeviceMemory             device_memory;
-    void*                      p_mapped_device_memory;
-    u32                        memory_type_bit;
-    u32                        total_page_count;
-    u32                        reserved_page_count;
-    u32                        entry_count;
-    tg_vulkan_memory_entry*    p_entries;
-} tg_vulkan_memory_pool;
+    VkMemoryPropertyFlags    memory_property_flags;
+    VkDeviceMemory           device_memory;
+    void*                    p_mapped_device_memory;
+    u32                      memory_type_bit;
+    u32                      total_page_count;
+    u32                      reserved_page_count;
+    u32                      entry_count;
+    tgvk_memory_entry*       p_entries;
+} tgvk_memory_pool;
 
-typedef struct tg_vulkan_memory
+typedef struct tgvk_memory
 {
-    VkDeviceSize             page_size;
-    u32                      pool_count;
-    tg_vulkan_memory_pool    p_pools[VK_MAX_MEMORY_TYPES];
-} tg_vulkan_memory;
+    VkDeviceSize        page_size;
+    u32                 pool_count;
+    tgvk_memory_pool    p_pools[VK_MAX_MEMORY_TYPES];
+} tgvk_memory;
 
 
 
-tg_vulkan_memory    vulkan_memory;
+tgvk_memory    vulkan_memory;
 
 #ifdef TG_DEBUG
-b32                 initialized = TG_FALSE;
+b32            initialized = TG_FALSE;
 #endif
 
 
 
-void tg_vulkan_memory_allocator_init(VkDevice device, VkPhysicalDevice physical_device)
+void tgvk_memory_allocator_init(VkDevice device, VkPhysicalDevice physical_device)
 {
     TG_ASSERT(!initialized);
 
@@ -136,7 +136,7 @@ void tg_vulkan_memory_allocator_init(VkDevice device, VkPhysicalDevice physical_
 #endif
 }
 
-void tg_vulkan_memory_allocator_shutdown(VkDevice device)
+void tgvk_memory_allocator_shutdown(VkDevice device)
 {
     TG_ASSERT(initialized);
 
@@ -151,18 +151,18 @@ void tg_vulkan_memory_allocator_shutdown(VkDevice device)
     }
 }
 
-tg_vulkan_memory_block tg_vulkan_memory_allocator_alloc(VkDeviceSize alignment, VkDeviceSize size, u32 memory_type_bits, VkMemoryPropertyFlags memory_property_flags)
+tgvk_memory_block tgvk_memory_allocator_alloc(VkDeviceSize alignment, VkDeviceSize size, u32 memory_type_bits, VkMemoryPropertyFlags memory_property_flags)
 {
     TG_ASSERT(memory_type_bits && memory_property_flags);
 
-    tg_vulkan_memory_block memory = { 0 };
+    tgvk_memory_block memory = { 0 };
 
     const VkDeviceSize aligned_size = TG_ROUND(size);
     const u32 required_page_count = (u32)(aligned_size / vulkan_memory.page_size);
 
     for (u32 i = 0; i < vulkan_memory.pool_count; i++)
     {
-        tg_vulkan_memory_pool* p_pool = &vulkan_memory.p_pools[i];
+        tgvk_memory_pool* p_pool = &vulkan_memory.p_pools[i];
 
         const b32 is_required_memory_type = (memory_type_bits & (1 << p_pool->memory_type_bit)) == (1 << p_pool->memory_type_bit);
         const b32 has_required_memory_properties = (p_pool->memory_property_flags & memory_property_flags) == memory_property_flags;
@@ -171,7 +171,7 @@ tg_vulkan_memory_block tg_vulkan_memory_allocator_alloc(VkDeviceSize alignment, 
         {
             for (i32 j = p_pool->entry_count - 1; j >= 0; j--)
             {
-                tg_vulkan_memory_entry* p_entry = &p_pool->p_entries[j];
+                tgvk_memory_entry* p_entry = &p_pool->p_entries[j];
                 if (!p_entry->reserved && p_entry->page_count >= required_page_count)
                 {
                     p_entry->reserved = TG_TRUE;
@@ -183,7 +183,7 @@ tg_vulkan_memory_block tg_vulkan_memory_allocator_alloc(VkDeviceSize alignment, 
                         }
                         p_pool->entry_count++;
 
-                        tg_vulkan_memory_entry* p_new_entry = &p_pool->p_entries[j + 1];
+                        tgvk_memory_entry* p_new_entry = &p_pool->p_entries[j + 1];
                         p_new_entry->reserved = TG_FALSE;
                         p_new_entry->page_count = p_entry->page_count - required_page_count;
                         p_entry->page_count = required_page_count;
@@ -209,7 +209,7 @@ tg_vulkan_memory_block tg_vulkan_memory_allocator_alloc(VkDeviceSize alignment, 
     return memory;
 }
 
-void tg_vulkan_memory_allocator_free(tg_vulkan_memory_block* p_memory)
+void tgvk_memory_allocator_free(tgvk_memory_block* p_memory)
 {
     TG_ASSERT(p_memory);
 
@@ -217,10 +217,10 @@ void tg_vulkan_memory_allocator_free(tg_vulkan_memory_block* p_memory)
     const u32 page_count = (u32)(p_memory->size / vulkan_memory.page_size);
     vulkan_memory.p_pools[p_memory->pool_index].reserved_page_count -= page_count;
 
-    tg_vulkan_memory_pool* p_pool = &vulkan_memory.p_pools[p_memory->pool_index];
+    tgvk_memory_pool* p_pool = &vulkan_memory.p_pools[p_memory->pool_index];
     for (i32 i = p_pool->entry_count - 1; i >= 0; i--) // TODO: hashmap for faster deallocation?
     {
-        tg_vulkan_memory_entry* p_entry = &p_pool->p_entries[i];
+        tgvk_memory_entry* p_entry = &p_pool->p_entries[i];
         if (p_entry->offset == p_memory->offset)
         {
             p_entry->reserved = TG_FALSE;

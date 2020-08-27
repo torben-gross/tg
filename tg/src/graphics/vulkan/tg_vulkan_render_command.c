@@ -10,19 +10,19 @@ static void tg__register(tg_render_command_h h_render_command, tg_renderer_h h_r
 {
     TG_ASSERT(h_render_command && h_renderer && (global_resource_count == 0 || p_global_resources));
 
-    tg_vulkan_render_command_renderer_info* p_renderer_info = &h_render_command->p_renderer_infos[h_render_command->renderer_info_count++];
+    tgvk_render_command_renderer_info* p_renderer_info = &h_render_command->p_renderer_infos[h_render_command->renderer_info_count++];
     p_renderer_info->h_renderer = h_renderer;
 
-    p_renderer_info->descriptor_set = tg_vulkan_descriptor_set_create(&h_render_command->graphics_pipeline);
-    tg_vulkan_descriptor_set_update_uniform_buffer(p_renderer_info->descriptor_set.descriptor_set, h_render_command->model_ubo.buffer, 0);
-    tg_vulkan_descriptor_set_update_uniform_buffer(p_renderer_info->descriptor_set.descriptor_set, p_renderer_info->h_renderer->view_projection_ubo.buffer, 1);
+    p_renderer_info->descriptor_set = tgvk_descriptor_set_create(&h_render_command->graphics_pipeline);
+    tgvk_descriptor_set_update_uniform_buffer(p_renderer_info->descriptor_set.descriptor_set, h_render_command->model_ubo.buffer, 0);
+    tgvk_descriptor_set_update_uniform_buffer(p_renderer_info->descriptor_set.descriptor_set, p_renderer_info->h_renderer->view_projection_ubo.buffer, 1);
     for (u32 i = 0; i < global_resource_count; i++)
     {
         const u32 binding = i + TG_SHADER_RESERVED_BINDINGS;
-        tg_vulkan_descriptor_set_update(p_renderer_info->descriptor_set.descriptor_set, p_global_resources[i], binding);
+        tgvk_descriptor_set_update(p_renderer_info->descriptor_set.descriptor_set, p_global_resources[i], binding);
     }
 
-    p_renderer_info->command_buffer = tg_vulkan_command_buffer_allocate(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_SECONDARY);
+    p_renderer_info->command_buffer = tgvk_command_buffer_allocate(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_SECONDARY);
 
     VkRenderPass render_pass = VK_NULL_HANDLE;
     VkFramebuffer framebuffer = VK_NULL_HANDLE;
@@ -37,7 +37,7 @@ static void tg__register(tg_render_command_h h_render_command, tg_renderer_h h_r
         render_pass = shared_render_resources.forward_render_pass;
         framebuffer = h_renderer->forward_pass.framebuffer.framebuffer;
     }
-    tg_vulkan_command_buffer_begin_secondary(&p_renderer_info->command_buffer, VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, render_pass, framebuffer);
+    tgvk_command_buffer_begin_secondary(&p_renderer_info->command_buffer, VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, render_pass, framebuffer);
     {
         vkCmdBindPipeline(p_renderer_info->command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, h_render_command->graphics_pipeline.pipeline);
 
@@ -102,7 +102,7 @@ static void tg__register(tg_render_command_h h_render_command, tg_renderer_h h_r
 
     TG_ASSERT(h_render_command->h_mesh->positions_buffer.buffer); // TODO: add flag for non shadow casting
 
-    tg_vulkan_graphics_pipeline_create_info pipeline_create_info = { 0 }; // TODO: create this pipeline only once in the shader and reuse for everything? only the command buffer should be cached in the render_command
+    tgvk_graphics_pipeline_create_info pipeline_create_info = { 0 }; // TODO: create this pipeline only once in the shader and reuse for everything? only the command buffer should be cached in the render_command
     pipeline_create_info.p_vertex_shader = &tg_vertex_shader_get("shaders/shadow.vert")->vulkan_shader;
     pipeline_create_info.p_fragment_shader = &tg_fragment_shader_get("shaders/shadow.frag")->vulkan_shader;
     pipeline_create_info.cull_mode = VK_CULL_MODE_BACK_BIT;
@@ -131,10 +131,10 @@ static void tg__register(tg_render_command_h h_render_command, tg_renderer_h h_r
 
     for (u32 i = 0; i < TG_CASCADED_SHADOW_MAPS; i++)
     {
-        p_renderer_info->p_shadow_graphics_pipelines[i] = tg_vulkan_pipeline_create_graphics2(&pipeline_create_info, 1, &vertex_input_binding_description, &vertex_input_attribute_description);
-        p_renderer_info->p_shadow_descriptor_sets[i] = tg_vulkan_descriptor_set_create(&p_renderer_info->p_shadow_graphics_pipelines[i]);
-        tg_vulkan_descriptor_set_update_uniform_buffer(p_renderer_info->p_shadow_descriptor_sets[i].descriptor_set, h_render_command->model_ubo.buffer, 0);
-        tg_vulkan_descriptor_set_update_uniform_buffer(p_renderer_info->p_shadow_descriptor_sets[i].descriptor_set, h_renderer->shadow_pass.p_lightspace_ubos[i].buffer, 1);
+        p_renderer_info->p_shadow_graphics_pipelines[i] = tgvk_pipeline_create_graphics2(&pipeline_create_info, 1, &vertex_input_binding_description, &vertex_input_attribute_description);
+        p_renderer_info->p_shadow_descriptor_sets[i] = tgvk_descriptor_set_create(&p_renderer_info->p_shadow_graphics_pipelines[i]);
+        tgvk_descriptor_set_update_uniform_buffer(p_renderer_info->p_shadow_descriptor_sets[i].descriptor_set, h_render_command->model_ubo.buffer, 0);
+        tgvk_descriptor_set_update_uniform_buffer(p_renderer_info->p_shadow_descriptor_sets[i].descriptor_set, h_renderer->shadow_pass.p_lightspace_ubos[i].buffer, 1);
 
         VkCommandBufferInheritanceInfo shadow_command_buffer_inheritance_info = { 0 };
         shadow_command_buffer_inheritance_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
@@ -146,8 +146,8 @@ static void tg__register(tg_render_command_h h_render_command, tg_renderer_h h_r
         shadow_command_buffer_inheritance_info.queryFlags = 0;
         shadow_command_buffer_inheritance_info.pipelineStatistics = 0;
         
-        p_renderer_info->p_shadow_command_buffers[i] = tg_vulkan_command_buffer_allocate(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_SECONDARY);
-        tg_vulkan_command_buffer_begin_secondary(&p_renderer_info->p_shadow_command_buffers[i], VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, shared_render_resources.shadow_render_pass, h_renderer->shadow_pass.p_framebuffers[i].framebuffer);
+        p_renderer_info->p_shadow_command_buffers[i] = tgvk_command_buffer_allocate(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_SECONDARY);
+        tgvk_command_buffer_begin_secondary(&p_renderer_info->p_shadow_command_buffers[i], VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, shared_render_resources.shadow_render_pass, h_renderer->shadow_pass.p_framebuffers[i].framebuffer);
         {
             vkCmdBindPipeline(p_renderer_info->p_shadow_command_buffers[i].command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_renderer_info->p_shadow_graphics_pipelines[i].pipeline);
             const VkDeviceSize vertex_buffer_offset = 0;
@@ -179,10 +179,10 @@ tg_render_command_h tg_render_command_create(tg_mesh_h h_mesh, tg_material_h h_m
     tg_render_command_h h_render_command = tgvk_handle_take(TG_STRUCTURE_TYPE_RENDER_COMMAND);
 	h_render_command->h_mesh = h_mesh;
 	h_render_command->h_material = h_material;
-    h_render_command->model_ubo = tg_vulkan_buffer_create(sizeof(m4), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    h_render_command->model_ubo = tgvk_buffer_create(sizeof(m4), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
     *((m4*)h_render_command->model_ubo.memory.p_mapped_device_memory) = tgm_m4_translate(position);
 
-    tg_vulkan_graphics_pipeline_create_info vulkan_graphics_pipeline_create_info = { 0 };
+    tgvk_graphics_pipeline_create_info vulkan_graphics_pipeline_create_info = { 0 };
     vulkan_graphics_pipeline_create_info.p_vertex_shader = &h_render_command->h_material->h_vertex_shader->vulkan_shader;
     vulkan_graphics_pipeline_create_info.p_fragment_shader = &h_render_command->h_material->h_fragment_shader->vulkan_shader;
     vulkan_graphics_pipeline_create_info.cull_mode = VK_CULL_MODE_BACK_BIT;
@@ -209,7 +209,7 @@ tg_render_command_h tg_render_command_create(tg_mesh_h h_mesh, tg_material_h h_m
     vulkan_graphics_pipeline_create_info.viewport_size.y = (f32)swapchain_extent.height;
     vulkan_graphics_pipeline_create_info.polygon_mode = VK_POLYGON_MODE_FILL;
 
-    h_render_command->graphics_pipeline = tg_vulkan_pipeline_create_graphics(&vulkan_graphics_pipeline_create_info);
+    h_render_command->graphics_pipeline = tgvk_pipeline_create_graphics(&vulkan_graphics_pipeline_create_info);
 
 	h_render_command->renderer_info_count = 0;
     tg_renderer* p_renderers = tgvk_handle_array(TG_STRUCTURE_TYPE_RENDERER);
@@ -232,12 +232,12 @@ void tg_render_command_destroy(tg_render_command_h h_render_command)
     {
         for (u32 j = 0; j < TG_CASCADED_SHADOW_MAPS; j++)
         {
-            tg_vulkan_command_buffer_free(&h_render_command->p_renderer_infos[i].p_shadow_command_buffers[j]);
+            tgvk_command_buffer_free(&h_render_command->p_renderer_infos[i].p_shadow_command_buffers[j]);
         }
-        tg_vulkan_command_buffer_free(&h_render_command->p_renderer_infos[i].command_buffer);
+        tgvk_command_buffer_free(&h_render_command->p_renderer_infos[i].command_buffer);
     }
-    tg_vulkan_pipeline_destroy(&h_render_command->graphics_pipeline);
-    tg_vulkan_buffer_destroy(&h_render_command->model_ubo);
+    tgvk_pipeline_destroy(&h_render_command->graphics_pipeline);
+    tgvk_buffer_destroy(&h_render_command->model_ubo);
     tgvk_handle_release(h_render_command);
 }
 

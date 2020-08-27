@@ -4,7 +4,7 @@
 
 
 
-static tg_material_h tg__create(tg_vulkan_material_type vulkan_material_type, tg_vertex_shader_h h_vertex_shader, tg_fragment_shader_h h_fragment_shader)
+static tg_material_h tg__create(tgvk_material_type vulkan_material_type, tg_vertex_shader_h h_vertex_shader, tg_fragment_shader_h h_fragment_shader)
 {
     tg_material_h h_material = tgvk_handle_take(TG_STRUCTURE_TYPE_MATERIAL);
     h_material->material_type = vulkan_material_type;

@@ -6,6 +6,8 @@
 
 
 
+#define TG_MAX_SWAPCHAIN_IMAGES           2
+
 #define TG_MAX_COLOR_IMAGES               32
 #define TG_MAX_COLOR_IMAGES_3D            16
 #define TG_MAX_COMPUTE_SHADERS            16

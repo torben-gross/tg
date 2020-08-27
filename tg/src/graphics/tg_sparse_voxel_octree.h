@@ -23,16 +23,16 @@ typedef struct tg_voxel
 
 typedef struct tg_voxelizer
 {
-    VkFence                            fence;
-    VkRenderPass                       render_pass;
-    tg_vulkan_framebuffer              framebuffer;
-    tg_vulkan_pipeline                 pipeline;
-    u32                                descriptor_set_count;
-    tg_vulkan_descriptor_set           p_descriptor_sets[TG_MAX_RENDER_COMMANDS];
-    tg_vulkan_buffer                   view_projection_ubo;
-    tg_vulkan_image_3d                 p_image_3ds[TG_SVO_ATTACHMENTS];
-    tg_vulkan_buffer                   p_voxel_buffers[TG_SVO_ATTACHMENTS];
-    tgvk_command_buffer                command_buffer;
+    VkFence                fence;
+    VkRenderPass           render_pass;
+    tgvk_framebuffer       framebuffer;
+    tgvk_pipeline          pipeline;
+    u32                    descriptor_set_count;
+    tgvk_descriptor_set    p_descriptor_sets[TG_MAX_RENDER_COMMANDS];
+    tgvk_buffer            view_projection_ubo;
+    tgvk_image_3d          p_image_3ds[TG_SVO_ATTACHMENTS];
+    tgvk_buffer            p_voxel_buffers[TG_SVO_ATTACHMENTS];
+    tgvk_command_buffer    command_buffer;
 } tg_voxelizer;
 
 typedef struct tg_svo_node
