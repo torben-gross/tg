@@ -1,0 +1,27 @@
+#version 450
+
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+readonly layout(set = 0, binding = 0) buffer exposure_sum
+{
+	uint    u_count;
+	uint    u_exposure_sum;
+};
+
+layout(set = 0, binding = 1) buffer exposure
+{
+	float    u_exposure;
+};
+
+layout(set = 0, binding = 2) uniform dt
+{
+	float    u_dt;
+};
+
+void main()
+{
+	float target = float(u_exposure_sum) / float(u_count * 255);
+	float f = target > u_exposure ? 2.0 : 1.0;
+	float t = clamp(f * (u_dt / 1000.0), 0.0, 1.0);
+	u_exposure = mix(u_exposure, target, t);
+}

@@ -16,10 +16,10 @@ typedef struct tgvk_memory_block
     void*             p_mapped_device_memory;
 } tgvk_memory_block;
 
-void                      tgvk_memory_allocator_init(VkDevice device, VkPhysicalDevice physical_device);
-void                      tgvk_memory_allocator_shutdown();
+void                 tgvk_memory_allocator_init(VkDevice device, VkPhysicalDevice physical_device);
+void                 tgvk_memory_allocator_shutdown(VkDevice device);
 tgvk_memory_block    tgvk_memory_allocator_alloc(VkDeviceSize alignment, VkDeviceSize size, u32 memory_type_bits, VkMemoryPropertyFlags memory_property_flags);
-void                      tgvk_memory_allocator_free(tgvk_memory_block* p_memory);
+void                 tgvk_memory_allocator_free(tgvk_memory_block* p_memory_block);
 
 #endif
 

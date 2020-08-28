@@ -66,17 +66,17 @@ static void tg__copy(u32 element_size, u32 count, const void* p_src, u32* p_capa
     }
 }
 
-void tg__set_buffer_data(tgvk_buffer* p_vulkan_buffer, u64 size, const void* p_data, VkBufferUsageFlagBits buffer_type_flag)
+void tg__set_buffer_data(tgvk_buffer* p_buffer, u64 size, const void* p_data, VkBufferUsageFlagBits buffer_type_flag)
 {
     if (size && p_data)
     {
-        if (size > p_vulkan_buffer->memory.size)
+        if (size > p_buffer->memory.size)
         {
-            if (p_vulkan_buffer->buffer)
+            if (p_buffer->buffer)
             {
-                tgvk_buffer_destroy(p_vulkan_buffer); // TODO: realloc and rebind memory?
+                tgvk_buffer_destroy(p_buffer); // TODO: realloc and rebind memory?
             }
-            *p_vulkan_buffer = tgvk_buffer_create(size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | buffer_type_flag, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+            *p_buffer = tgvk_buffer_create(size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | buffer_type_flag, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
         }
 
         // TODO: i could always save the last staging buffer and see if the required size
@@ -85,13 +85,13 @@ void tg__set_buffer_data(tgvk_buffer* p_vulkan_buffer, u64 size, const void* p_d
         tgvk_buffer staging_buffer = tgvk_buffer_create(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
         tg_memory_copy(size, p_data, staging_buffer.memory.p_mapped_device_memory);
         tgvk_buffer_flush_mapped_memory(&staging_buffer);
-        tgvk_buffer_copy(size, staging_buffer.buffer, p_vulkan_buffer->buffer);
+        tgvk_buffer_copy(size, &staging_buffer, p_buffer);
         tgvk_buffer_destroy(&staging_buffer);
     }
     else
     {
-        tgvk_buffer_destroy(p_vulkan_buffer);
-        *p_vulkan_buffer = (tgvk_buffer){ 0 };
+        tgvk_buffer_destroy(p_buffer);
+        *p_buffer = (tgvk_buffer){ 0 };
     }
 }
 
@@ -201,7 +201,7 @@ tg_mesh_h tg_mesh_create2(const char* p_filename, v3 scale) // TODO: scale is te
 
         v3* p_unique_positions = TG_MEMORY_STACK_ALLOC(unique_vertex_count * sizeof(v3));
         v3* p_unique_normals = TG_MEMORY_STACK_ALLOC(unique_normal_count * sizeof(v3));
-        v2* p_unique_uvs = TG_MEMORY_STACK_ALLOC(unique_uv_count * sizeof(v2));
+        v2* p_unique_uvs = unique_uv_count == 0 ? TG_NULL : TG_MEMORY_STACK_ALLOC(unique_uv_count * sizeof(v2));
 
         v3i* p_triangle_positions = TG_MEMORY_STACK_ALLOC(total_triangle_count * sizeof(v3i));
         v3i* p_triangle_normals = TG_MEMORY_STACK_ALLOC(total_triangle_count * sizeof(v3i));
@@ -310,7 +310,7 @@ tg_mesh_h tg_mesh_create2(const char* p_filename, v3 scale) // TODO: scale is te
             p_positions[3 * i + 1] = p_unique_positions[p_triangle_positions[i].p_data[1] - 1];
             p_positions[3 * i + 2] = p_unique_positions[p_triangle_positions[i].p_data[2] - 1];
             p_normals[3 * i + 0] = p_triangle_normals[i].p_data[0] == 0 ? (v3) { 0.0f, 0.0f, 0.0f } : p_unique_normals[p_triangle_normals[i].p_data[0] - 1]; // TODO: these should only be included if actually present in the given mesh, otherwise, mesh should initially be creates without them
-            p_normals[3 * i + 1] = p_triangle_normals[i].p_data[1] == 0 ? (v3) { 0.0f, 0.0f, 0.0f } : p_unique_normals[p_triangle_normals[i].p_data[1] - 1];
+            p_normals[3 * i + 1] = p_triangle_normals[i].p_data[1] == 0 ? (v3) { 0.0f, 0.0f, 0.0f } : p_unique_normals[p_triangle_normals[i].p_data[1] - 1]; // TODO: same goes for uvs
             p_normals[3 * i + 2] = p_triangle_normals[i].p_data[2] == 0 ? (v3) { 0.0f, 0.0f, 0.0f } : p_unique_normals[p_triangle_normals[i].p_data[2] - 1];
             p_uvs[3 * i + 0] = p_triangle_uvs[i].p_data[0] == 0 ? (v2) { 0.0f, 0.0f } : p_unique_uvs[p_triangle_uvs[i].p_data[0] - 1];
             p_uvs[3 * i + 1] = p_triangle_uvs[i].p_data[1] == 0 ? (v2) { 0.0f, 0.0f } : p_unique_uvs[p_triangle_uvs[i].p_data[1] - 1];
@@ -338,7 +338,10 @@ tg_mesh_h tg_mesh_create2(const char* p_filename, v3 scale) // TODO: scale is te
         TG_MEMORY_STACK_FREE(total_triangle_count * sizeof(v3i));
         TG_MEMORY_STACK_FREE(total_triangle_count * sizeof(v3i));
 
-        TG_MEMORY_STACK_FREE(unique_uv_count * sizeof(v2));
+        if (unique_uv_count != 0)
+        {
+            TG_MEMORY_STACK_FREE(unique_uv_count * sizeof(v2));
+        }
         TG_MEMORY_STACK_FREE(unique_normal_count * sizeof(v3));
         TG_MEMORY_STACK_FREE(unique_vertex_count * sizeof(v3));
     }
@@ -765,7 +768,7 @@ void tg_mesh_regenerate_normals(tg_mesh_h h_mesh)
 
 
 
-        compute_shader = ((tg_compute_shader_h)tg_assets_get_asset("shaders/normals_vbo.comp"))->vulkan_shader;
+        compute_shader = ((tg_compute_shader_h)tg_assets_get_asset("shaders/normals_vbo.comp"))->shader;
 
         VkDescriptorSetLayoutBinding p_descriptor_set_layout_bindings[2] = { 0 };
 

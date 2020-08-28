@@ -23,17 +23,17 @@ void tg_voxelizer_create(tg_voxelizer* p_voxelizer)
     p_voxelizer->render_pass = tgvk_render_pass_create(0, TG_NULL, 1, &subpass_description, 0, TG_NULL);
     p_voxelizer->framebuffer = tgvk_framebuffer_create(p_voxelizer->render_pass, 0, TG_NULL, TG_SVO_DIMS, TG_SVO_DIMS);
 
-    tgvk_graphics_pipeline_create_info vulkan_graphics_pipeline_create_info = { 0 };
-    vulkan_graphics_pipeline_create_info.p_vertex_shader = &tg_vertex_shader_get("shaders/voxelize.vert")->vulkan_shader;
-    vulkan_graphics_pipeline_create_info.p_fragment_shader = &tg_fragment_shader_get("shaders/voxelize.frag")->vulkan_shader;
-    vulkan_graphics_pipeline_create_info.cull_mode = VK_CULL_MODE_NONE;
-    vulkan_graphics_pipeline_create_info.sample_count = VK_SAMPLE_COUNT_1_BIT;
-    vulkan_graphics_pipeline_create_info.depth_test_enable = VK_FALSE;
-    vulkan_graphics_pipeline_create_info.depth_write_enable = VK_FALSE;
-    vulkan_graphics_pipeline_create_info.blend_enable = VK_FALSE;
-    vulkan_graphics_pipeline_create_info.render_pass = p_voxelizer->render_pass;
-    vulkan_graphics_pipeline_create_info.viewport_size = (v2){ (f32)TG_SVO_DIMS, (f32)TG_SVO_DIMS };
-    vulkan_graphics_pipeline_create_info.polygon_mode = VK_POLYGON_MODE_FILL;
+    tgvk_graphics_pipeline_create_info graphics_pipeline_create_info = { 0 };
+    graphics_pipeline_create_info.p_vertex_shader = &tg_vertex_shader_get("shaders/voxelize.vert")->shader;
+    graphics_pipeline_create_info.p_fragment_shader = &tg_fragment_shader_get("shaders/voxelize.frag")->shader;
+    graphics_pipeline_create_info.cull_mode = VK_CULL_MODE_NONE;
+    graphics_pipeline_create_info.sample_count = VK_SAMPLE_COUNT_1_BIT;
+    graphics_pipeline_create_info.depth_test_enable = VK_FALSE;
+    graphics_pipeline_create_info.depth_write_enable = VK_FALSE;
+    graphics_pipeline_create_info.blend_enable = VK_FALSE;
+    graphics_pipeline_create_info.render_pass = p_voxelizer->render_pass;
+    graphics_pipeline_create_info.viewport_size = (v2){ (f32)TG_SVO_DIMS, (f32)TG_SVO_DIMS };
+    graphics_pipeline_create_info.polygon_mode = VK_POLYGON_MODE_FILL;
 
     VkVertexInputBindingDescription p_vertex_input_binding_descriptions[2] = { 0 };
 
@@ -54,7 +54,7 @@ void tg_voxelizer_create(tg_voxelizer* p_voxelizer)
     p_vertex_input_attribute_descriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
     p_vertex_input_attribute_descriptions[1].offset = 0;
 
-    p_voxelizer->pipeline = tgvk_pipeline_create_graphics2(&vulkan_graphics_pipeline_create_info, 2, p_vertex_input_binding_descriptions, p_vertex_input_attribute_descriptions);
+    p_voxelizer->pipeline = tgvk_pipeline_create_graphics2(&graphics_pipeline_create_info, 2, p_vertex_input_binding_descriptions, p_vertex_input_attribute_descriptions);
 
     p_voxelizer->view_projection_ubo = tgvk_buffer_create(3 * sizeof(m4), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 
@@ -120,13 +120,13 @@ void tg_voxelizer_exec(tg_voxelizer* p_voxelizer, tg_render_command_h h_render_c
     {
         p_voxelizer->p_descriptor_sets[p_voxelizer->descriptor_set_count] = tgvk_descriptor_set_create(&p_voxelizer->pipeline);
     }
-    tgvk_descriptor_set* p_vulkan_descriptor_set = &p_voxelizer->p_descriptor_sets[p_voxelizer->descriptor_set_count++];
+    tgvk_descriptor_set* p_descriptor_set = &p_voxelizer->p_descriptor_sets[p_voxelizer->descriptor_set_count++];
 
-    tgvk_descriptor_set_update_uniform_buffer(p_vulkan_descriptor_set->descriptor_set, h_render_command->model_ubo.buffer, 0);
-    tgvk_descriptor_set_update_uniform_buffer(p_vulkan_descriptor_set->descriptor_set, p_voxelizer->view_projection_ubo.buffer, 1);
+    tgvk_descriptor_set_update_uniform_buffer(p_descriptor_set->descriptor_set, h_render_command->model_ubo.buffer, 0);
+    tgvk_descriptor_set_update_uniform_buffer(p_descriptor_set->descriptor_set, p_voxelizer->view_projection_ubo.buffer, 1);
     for (u32 i = 0; i < TG_SVO_ATTACHMENTS; i++)
     {
-        tgvk_descriptor_set_update_image_3d(p_vulkan_descriptor_set->descriptor_set, &p_voxelizer->p_image_3ds[i], 2 + i);
+        tgvk_descriptor_set_update_image_3d(p_descriptor_set->descriptor_set, &p_voxelizer->p_image_3ds[i], 2 + i);
     }
 
     vkCmdBindPipeline(p_voxelizer->command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_voxelizer->pipeline.pipeline);
@@ -137,7 +137,7 @@ void tg_voxelizer_exec(tg_voxelizer* p_voxelizer, tg_render_command_h h_render_c
     }
     vkCmdBindVertexBuffers(p_voxelizer->command_buffer.command_buffer, 0, 1, &h_render_command->h_mesh->positions_buffer.buffer, &offset);
     vkCmdBindVertexBuffers(p_voxelizer->command_buffer.command_buffer, 1, 1, &h_render_command->h_mesh->normals_buffer.buffer, &offset);
-    vkCmdBindDescriptorSets(p_voxelizer->command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_voxelizer->pipeline.layout.pipeline_layout, 0, 1, &p_vulkan_descriptor_set->descriptor_set, 0, TG_NULL);
+    vkCmdBindDescriptorSets(p_voxelizer->command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_voxelizer->pipeline.layout.pipeline_layout, 0, 1, &p_descriptor_set->descriptor_set, 0, TG_NULL);
     if (h_render_command->h_mesh->index_count)
     {
         vkCmdDrawIndexed(p_voxelizer->command_buffer.command_buffer, h_render_command->h_mesh->index_count, 1, 0, 0, 0);

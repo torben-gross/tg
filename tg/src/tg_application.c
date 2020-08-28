@@ -59,7 +59,7 @@ typedef struct tg_sample_scene
     tg_kd_tree*                p_sponza_kd_tree;
     tg_voxel                   p_voxels[TG_SVO_DIMS3];
     tg_uniform_buffer_h        h_sponza_ubo;
-    tg_mesh                    my_mesh;
+    tg_mesh_h                  h_my_mesh;
     tg_uniform_buffer_h        h_my_ubo;
 
     u8                         p_light_values[6];
@@ -287,15 +287,16 @@ static void tg__game_3d_create()
 
 
 
-    //scene.my_mesh = tg_mesh_create2("meshes/untitled.obj", V3(0.12f));
-    //scene.my_ubo = tg_uniform_buffer_create(sizeof(tg_pbr_material));
-    //((tg_pbr_material*)tg_uniform_buffer_data(&scene.my_ubo))->albedo = (v4){ 0.816f, 0.506f, 0.024f, 1.0f };
-    //((tg_pbr_material*)tg_uniform_buffer_data(&scene.my_ubo))->metallic = 1.0f;
-    //((tg_pbr_material*)tg_uniform_buffer_data(&scene.my_ubo))->roughness = 0.4f;
-    //((tg_pbr_material*)tg_uniform_buffer_data(&scene.my_ubo))->ao = 1.0f;
-    //tg_material_h h_my_material = tg_material_create_deferred(tg_vertex_shader_get("shaders/deferred_pbr.vert"), tg_fragment_shader_get("shaders/deferred_pbr.frag"));
-    //tg_handle p_my_handles[1] = { &scene.my_ubo };
-    //tg_render_command_h h_my_render_command = tg_render_command_create(&scene.my_mesh, h_my_material, (v3) { 128.0f, 141.9f, 126.0f }, 1, p_my_handles);
+    //scene.h_my_mesh = tg_mesh_create2("meshes/untitled.obj", V3(0.12f));
+    //scene.h_my_mesh = tg_mesh_create2("meshes/nymph1.obj", V3(1.0f));
+    //scene.h_my_ubo = tg_uniform_buffer_create(sizeof(tg_pbr_material));
+    //((tg_pbr_material*)tg_uniform_buffer_data(scene.h_my_ubo))->albedo = (v4){ 0.816f, 0.506f, 0.024f, 1.0f };
+    //((tg_pbr_material*)tg_uniform_buffer_data(scene.h_my_ubo))->metallic = 1.0f;
+    //((tg_pbr_material*)tg_uniform_buffer_data(scene.h_my_ubo))->roughness = 0.4f;
+    //((tg_pbr_material*)tg_uniform_buffer_data(scene.h_my_ubo))->ao = 1.0f;
+    //tg_material_h h_my_material = tg_material_create_deferred(tg_vertex_shader_get("shaders/deferred/pbr.vert"), tg_fragment_shader_get("shaders/deferred/pbr.frag"));
+    //tg_handle p_my_handles[1] = { scene.h_my_ubo };
+    //tg_render_command_h h_my_render_command = tg_render_command_create(scene.h_my_mesh, h_my_material, (v3) { 128.0f, 141.9f, 126.0f }, 1, p_my_handles);
     //tg_list_insert(&scene.render_commands, &h_my_render_command);
 
     scene.terrain = tg_terrain_create(&scene.camera);
@@ -415,7 +416,7 @@ static void tg__game_3d_update_and_render(f32 dt)
     {
         tg_renderer_exec(scene.h_secondary_renderer, ph_render_commands[i]);
     }
-    tg_renderer_end(scene.h_secondary_renderer, TG_FALSE);
+    tg_renderer_end(scene.h_secondary_renderer, dt, TG_FALSE);
 
     tg_renderer_begin(scene.h_main_renderer);
     tg_renderer_push_directional_light(scene.h_main_renderer, d0, c0);
@@ -454,7 +455,7 @@ static void tg__game_3d_update_and_render(f32 dt)
     }
 #endif
 
-    tg_renderer_end(scene.h_main_renderer, TG_TRUE);
+    tg_renderer_end(scene.h_main_renderer, dt, TG_TRUE);
 
     tg_renderer_clear(scene.h_secondary_renderer);
     tg_renderer_clear(scene.h_main_renderer);

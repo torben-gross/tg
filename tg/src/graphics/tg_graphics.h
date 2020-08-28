@@ -253,7 +253,7 @@ void                    tg_renderer_begin(tg_renderer_h h_renderer);
 void                    tg_renderer_push_directional_light(tg_renderer_h h_renderer, v3 direction, v3 color);
 void                    tg_renderer_push_point_light(tg_renderer_h h_renderer, v3 position, v3 color);
 void                    tg_renderer_exec(tg_renderer_h h_renderer, tg_render_command_h h_render_command);
-void                    tg_renderer_end(tg_renderer_h h_renderer, b32 present);
+void                    tg_renderer_end(tg_renderer_h h_renderer, f32 dt, b32 present);
 void                    tg_renderer_clear(tg_renderer_h h_renderer);
 tg_render_target_h      tg_renderer_get_render_target(tg_renderer_h h_renderer);
 #if TG_ENABLE_DEBUG_TOOLS == 1
