@@ -8,8 +8,6 @@
 #define TG_RECOMPILE_SHADERS_ON_STARTUP 0
 #endif
 
-#include "memory/tg_memory.h"
-#include "platform/tg_platform.h"
 #include "tg_assets.h"
 #include "util/tg_string.h"
 

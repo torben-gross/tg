@@ -289,9 +289,10 @@ tg_kd_tree* tg_kd_tree_create(tg_mesh_h h_mesh)
 	TG_ASSERT(h_mesh);
 	TG_ASSERT(tg_mesh_get_index_count(h_mesh) == 0); // TODO: ibo's not supported for now
 
-	const u32 position_count = tg_mesh_get_position_count(h_mesh);
+	const u32 position_count = tg_mesh_get_vertex_count(h_mesh);
 	TG_ASSERT(position_count);
-	const v3* p_positions = tg_mesh_get_positions(h_mesh);
+	v3* p_positions = TG_MEMORY_STACK_ALLOC(position_count * sizeof(*p_positions));
+	tg_mesh_copy_positions(h_mesh, 0, position_count, p_positions);
 	const u32 initial_tri_count = position_count / 3;
 
 	const u32 max_node_count = 2 * initial_tri_count - 1; // this is only true as long as each child contains at least one triangle less than it's parent
@@ -329,6 +330,7 @@ tg_kd_tree* tg_kd_tree_create(tg_mesh_h h_mesh)
 	tg_platform_work_queue_wait_for_completion();
 
 	TG_MEMORY_STACK_FREE(nodes_size);
+	TG_MEMORY_STACK_FREE(position_count * sizeof(*p_positions));
 
 	return p_tree;
 }

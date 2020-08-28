@@ -259,7 +259,7 @@ static void tg__game_3d_create()
 
 
     scene.h_sponza_mesh = tg_mesh_create2("meshes/sponza.obj", V3(0.01f));
-    scene.p_sponza_kd_tree = tg_kd_tree_create(scene.h_sponza_mesh);
+    //scene.p_sponza_kd_tree = tg_kd_tree_create(scene.h_sponza_mesh);
 
     scene.h_sponza_ubo = tg_uniform_buffer_create(sizeof(tg_pbr_material));
     ((tg_pbr_material*)tg_uniform_buffer_data(scene.h_sponza_ubo))->albedo = (v4) { 1.0f, 1.0f, 1.0f, 1.0f };
@@ -271,7 +271,7 @@ static void tg__game_3d_create()
     tg_handle p_sponza_handles[1] = { scene.h_sponza_ubo };
     scene.h_sponza_render_command = tg_render_command_create(scene.h_sponza_mesh, h_sponza_material, (v3) { 128.0f, 140.0f, 128.0f }, 1, p_sponza_handles);
     tg_list_insert(&scene.render_commands, &scene.h_sponza_render_command);
-    tg__raycast();
+    //tg__raycast();
 
     // TODO: remove
     //const v3i min_corner = { 108, 138, 116 };
@@ -304,7 +304,7 @@ static void tg__game_3d_create()
 
 static void tg__game_3d_update_and_render(f32 dt)
 {
-    tg__raycast();
+    //tg__raycast();
     if (tg_input_is_key_down(TG_KEY_K))
     {
         scene.quad_offset_z += 0.01f * dt;

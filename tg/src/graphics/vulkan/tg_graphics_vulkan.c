@@ -3,9 +3,6 @@
 #ifdef TG_VULKAN
 
 #include "graphics/tg_image_loader.h"
-#include "math/tg_math.h"
-#include "memory/tg_memory.h"
-#include "util/tg_hashmap.h"
 #include "util/tg_string.h"
 
 
@@ -44,8 +41,8 @@
 static VkDebugUtilsMessengerEXT    debug_utils_messenger = VK_NULL_HANDLE;
 #endif
 
-static tgvk_queue             p_queue_buffer[TG_VULKAN_QUEUE_TYPE_COUNT] = { 0 };
-static tgvk_queue*            pp_queues[TG_VULKAN_QUEUE_TYPE_COUNT] = { 0 };
+static tgvk_queue                  p_queue_buffer[TG_VULKAN_QUEUE_TYPE_COUNT] = { 0 };
+static tgvk_queue*                 pp_queues[TG_VULKAN_QUEUE_TYPE_COUNT] = { 0 };
 
 static VkCommandPool               p_graphics_command_pool[TG_WORKER_THREAD_COUNT + 1];
 static VkCommandPool               p_compute_command_pool[TG_WORKER_THREAD_COUNT + 1];

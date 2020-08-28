@@ -2,9 +2,6 @@
 
 #ifdef TG_VULKAN
 
-#include "memory/tg_memory.h"
-#include "tg_assets.h"
-
 
 
 #define TG_CAMERA_VIEW(view_projection_ubo)             (((m4*)(view_projection_ubo).memory.p_mapped_device_memory)[0])

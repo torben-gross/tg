@@ -230,14 +230,19 @@ tg_mesh_h               tg_mesh_create_sphere(f32 radius, u32 sector_count, u32 
 tg_mesh_h               tg_mesh_create_sphere_flat(f32 radius, u32 sector_count, u32 stack_count, b32 normals, b32 uvs, b32 tangents_bitangents);
 tg_bounds               tg_mesh_get_bounds(tg_mesh_h h_mesh); // TODO: could i separate tg_mesh and tg_mesh_internal, such that i dont need these getters?
 u32                     tg_mesh_get_index_count(tg_mesh_h h_mesh);
-u16*                    tg_mesh_get_indices(tg_mesh_h h_mesh);
-u32                     tg_mesh_get_position_count(tg_mesh_h h_mesh);
-v3*                     tg_mesh_get_positions(tg_mesh_h h_mesh);
+u32                     tg_mesh_get_vertex_count(tg_mesh_h h_mesh);
+void                    tg_mesh_copy_indices(tg_mesh_h h_mesh, u32 first, u32 count, u16* p_buffer);
+void                    tg_mesh_copy_positions(tg_mesh_h h_mesh, u32 first, u32 count, v3* p_buffer);
+void                    tg_mesh_copy_normals(tg_mesh_h h_mesh, u32 first, u32 count, v3* p_buffer);
+void                    tg_mesh_copy_uvs(tg_mesh_h h_mesh, u32 first, u32 count, v2* p_buffer);
+void                    tg_mesh_copy_tangents(tg_mesh_h h_mesh, u32 first, u32 count, v3* p_buffer);
+void                    tg_mesh_copy_bitangents(tg_mesh_h h_mesh, u32 first, u32 count, v3* p_buffer);
 void                    tg_mesh_set_indices(tg_mesh_h h_mesh, u32 count, const u16* p_indices);
 void                    tg_mesh_set_positions(tg_mesh_h h_mesh, u32 count, const v3* p_positions);
 void                    tg_mesh_set_normals(tg_mesh_h h_mesh, u32 count, const v3* p_normals);
 void                    tg_mesh_set_uvs(tg_mesh_h h_mesh, u32 count, const v2* p_uvs);
-void                    tg_mesh_set_tangents_bitangents(tg_mesh_h h_mesh, u32 count, const v3* p_tangents, const v3* p_bitangents);
+void                    tg_mesh_set_tangents(tg_mesh_h h_mesh, u32 count, const v3* p_tangents);
+void                    tg_mesh_set_bitangents(tg_mesh_h h_mesh, u32 count, const v3* p_bitangents);
 void                    tg_mesh_regenerate_normals(tg_mesh_h h_mesh);
 void                    tg_mesh_regenerate_tangents_bitangents(tg_mesh_h h_mesh);
 void                    tg_mesh_destroy(tg_mesh_h h_mesh);

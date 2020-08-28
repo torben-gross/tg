@@ -8,7 +8,7 @@
 
 
 
-#define TG_MEMORY_MAX_ALLOCATION_COUNT    4099
+#define TG_MEMORY_MAX_ALLOCATION_COUNT    7919
 #define TG_MEMORY_STACK_SIZE              (1LL << 30LL)
 #define TG_MEMORY_STACK_MAGIC_NUMBER      163ui8
 #define TG_MEMORY_HASH(p_key)             ((u32)((u64)(p_key) >> 3LL) % TG_MEMORY_MAX_ALLOCATION_COUNT)

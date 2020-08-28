@@ -2,10 +2,6 @@
 
 #ifdef TG_VULKAN
 
-#include "memory/tg_memory.h"
-
-
-
 static void tg__register(tg_render_command_h h_render_command, tg_renderer_h h_renderer, u32 global_resource_count, tg_handle* p_global_resources)
 {
     TG_ASSERT(h_render_command && h_renderer && (global_resource_count == 0 || p_global_resources));
@@ -91,7 +87,7 @@ static void tg__register(tg_render_command_h h_render_command, tg_renderer_h h_r
         }
         else
         {
-            vkCmdDraw(p_renderer_info->command_buffer.command_buffer, (u32)h_render_command->h_mesh->position_count, 1, 0, 0);
+            vkCmdDraw(p_renderer_info->command_buffer.command_buffer, (u32)h_render_command->h_mesh->vertex_count, 1, 0, 0);
         }
     }
     VK_CALL(vkEndCommandBuffer(p_renderer_info->command_buffer.command_buffer));
@@ -163,7 +159,7 @@ static void tg__register(tg_render_command_h h_render_command, tg_renderer_h h_r
             }
             else
             {
-                vkCmdDraw(p_renderer_info->p_shadow_command_buffers[i].command_buffer, (u32)(h_render_command->h_mesh->position_count), 1, 0, 0);
+                vkCmdDraw(p_renderer_info->p_shadow_command_buffers[i].command_buffer, (u32)(h_render_command->h_mesh->vertex_count), 1, 0, 0);
             }
         }
         VK_CALL(vkEndCommandBuffer(p_renderer_info->p_shadow_command_buffers[i].command_buffer));

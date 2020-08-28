@@ -2,8 +2,6 @@
 
 #ifdef TG_VULKAN
 
-#include "memory/tg_memory.h"
-
 tg_color_image_h tg_color_image_create(u32 width, u32 height, tg_color_image_format format, const tg_sampler_create_info* p_sampler_create_info)
 {
 	TG_ASSERT(width && height);

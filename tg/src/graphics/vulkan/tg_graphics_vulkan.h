@@ -5,9 +5,10 @@
 
 #ifdef TG_VULKAN
 
-#include "graphics/vulkan/tg_vulkan_memory_allocator.h"
-#include "platform/tg_platform.h"
 #include "graphics/tg_spirv.h"
+#include "graphics/vulkan/tg_vulkan_memory_allocator.h"
+#include "memory/tg_memory.h"
+#include "platform/tg_platform.h"
 #include <vulkan/vulkan.h>
 
 #ifdef TG_WIN32
@@ -293,35 +294,15 @@ typedef struct tg_mesh
 {
     tg_structure_type    type;
     tg_bounds            bounds;
-
-    u32                  index_count; // TODO: move all of these into vulkan_buffer, this one only has its total size but not its size in USAGE
-    u32                  index_capacity;
-    u16*                 p_indices;
+    
+    u32                  index_count;
+    u32                  vertex_count;
+    
     tgvk_buffer          index_buffer;
-
-    u32                  position_count;
-    u32                  position_capacity;
-    v3*                  p_positions;
     tgvk_buffer          positions_buffer;
-
-    u32                  normal_count;
-    u32                  normal_capacity;
-    v3*                  p_normals;
     tgvk_buffer          normals_buffer;
-
-    u32                  uv_count;
-    u32                  uv_capacity;
-    v2*                  p_uvs;
     tgvk_buffer          uvs_buffer;
-
-    u32                  tangent_count;
-    u32                  tangent_capacity;
-    v3*                  p_tangents;
     tgvk_buffer          tangents_buffer;
-
-    u32                  bitangent_count;
-    u32                  bitangent_capacity;
-    v3*                  p_bitangents;
     tgvk_buffer          bitangents_buffer;
 
 } tg_mesh;
@@ -482,7 +463,7 @@ tgvk_shared_render_resources    shared_render_resources;
 
 void*                                     tgvk_handle_array(tg_structure_type type);
 void*                                     tgvk_handle_take(tg_structure_type type);
-#define                                   tgvk_handle_release(handle) TG_ASSERT((handle) && (handle)->type != TG_STRUCTURE_TYPE_INVALID); (handle)->type = TG_STRUCTURE_TYPE_INVALID
+#define                                   tgvk_handle_release(handle) TG_ASSERT((handle) && (handle)->type != TG_STRUCTURE_TYPE_INVALID); tg_memory_nullify(sizeof(*(handle)), (handle))
 
 void                                      tgvk_buffer_copy(VkDeviceSize size, tgvk_buffer* p_src, tgvk_buffer* p_dst);
 tgvk_buffer                               tgvk_buffer_create(VkDeviceSize size, VkBufferUsageFlags buffer_usage_flags, VkMemoryPropertyFlags memory_property_flags);

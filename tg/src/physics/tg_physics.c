@@ -1,15 +1,21 @@
 #include "physics/tg_physics.h"
 
 #include "graphics/tg_graphics.h"
+#include "memory/tg_memory.h"
 
 
 
 b32 tg__traverse(v3 ray_origin, v3 ray_direction, const tg_kd_tree* p_kd_tree, const tg_kd_node* p_node, tg_bounds bounds, tg_raycast_hit* p_hit)
 {
-    const v3* p_positions = tg_mesh_get_positions(p_kd_tree->h_mesh);
     if (p_node->flags == 0)
     {
+        const u32 position_count = tg_mesh_get_vertex_count(p_kd_tree->h_mesh);
+        const u64 positions_size = position_count * sizeof(v3);
+        v3* p_positions = TG_MEMORY_STACK_ALLOC(positions_size);
+        tg_mesh_copy_positions(p_kd_tree->h_mesh, 0, position_count, p_positions); // TODO: this will be insanely slow now! keep copy of positions in tree!
+
         f32 distance = TG_F32_MAX;
+        b32 result = TG_FALSE;
         for (u32 i = p_node->leaf.first_index_offset; i < p_node->leaf.first_index_offset + p_node->leaf.index_count; i += 3)
         {
             u32 i0 = p_kd_tree->p_indices[i];
@@ -19,8 +25,8 @@ b32 tg__traverse(v3 ray_origin, v3 ray_direction, const tg_kd_tree* p_kd_tree, c
             const v3 p1 = p_positions[i1];
             const v3 p2 = p_positions[i2];
             tg_raycast_hit hit = { 0 };
-            const b32 result = tg_intersect_ray_triangle(ray_origin, ray_direction, p0, p1, p2, &hit);
-            if (result && hit.distance < distance)
+            const b32 res = tg_intersect_ray_triangle(ray_origin, ray_direction, p0, p1, p2, &hit);
+            if (res && hit.distance < distance)
             {
                 distance = hit.distance;
                 if (p_hit)
@@ -29,11 +35,14 @@ b32 tg__traverse(v3 ray_origin, v3 ray_direction, const tg_kd_tree* p_kd_tree, c
                 }
                 else
                 {
-                    return TG_TRUE;
+                    result = TG_TRUE;
+                    break;
                 }
             }
         }
-        return distance < TG_F32_MAX;
+        TG_MEMORY_STACK_FREE(positions_size);
+        result = distance < TG_F32_MAX;
+        return result;
     }
 
     if (!tg_intersect_ray_box(ray_origin, ray_direction, bounds.min, bounds.max, TG_NULL))

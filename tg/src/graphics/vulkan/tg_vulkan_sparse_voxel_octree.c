@@ -56,6 +56,12 @@ void tg_voxelizer_create(tg_voxelizer* p_voxelizer)
 
     p_voxelizer->pipeline = tgvk_pipeline_create_graphics2(&graphics_pipeline_create_info, 2, p_vertex_input_binding_descriptions, p_vertex_input_attribute_descriptions);
 
+    p_voxelizer->descriptor_set_count = 0;
+    for (u32 i = 0; i < TG_MAX_RENDER_COMMANDS; i++)
+    {
+        p_voxelizer->p_descriptor_sets[i] = (tgvk_descriptor_set){ 0 };
+    }
+
     p_voxelizer->view_projection_ubo = tgvk_buffer_create(3 * sizeof(m4), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 
     p_voxelizer->p_image_3ds[0] = tgvk_color_image_3d_create(TG_SVO_DIMS, TG_SVO_DIMS, TG_SVO_DIMS, VK_FORMAT_R32_UINT, TG_NULL);
@@ -144,7 +150,7 @@ void tg_voxelizer_exec(tg_voxelizer* p_voxelizer, tg_render_command_h h_render_c
     }
     else
     {
-        vkCmdDraw(p_voxelizer->command_buffer.command_buffer, h_render_command->h_mesh->position_count, 1, 0, 0);
+        vkCmdDraw(p_voxelizer->command_buffer.command_buffer, h_render_command->h_mesh->vertex_count, 1, 0, 0);
     }
 }
 
