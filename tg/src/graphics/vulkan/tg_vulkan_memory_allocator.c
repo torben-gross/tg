@@ -78,7 +78,7 @@ void tgvk_memory_allocator_init(VkDevice device, VkPhysicalDevice physical_devic
 
     memory.page_size = tgm_u64_max(1024, physical_device_properties.limits.bufferImageGranularity);
 
-    const VkDeviceSize heap_size_fraction_denominator = 4;
+    const VkDeviceSize heap_size_fraction_denominator = 2;
     for (u32 i = 0; i < physical_device_memory_properties.memoryHeapCount; i++)
     {
         if (p_memory_types_per_memory_heap[i])

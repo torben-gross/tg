@@ -1,5 +1,7 @@
 #version 450
 
+#define TG_PI    3.14159265358979323846
+
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 
 layout(set = 0, binding = 0) uniform sampler2D u_shaded_image;
@@ -14,9 +16,10 @@ void main()
 {
 	uvec2 work_groups = gl_NumWorkGroups.xy;
 	uvec2 work_group = gl_WorkGroupID.xy;
+
 	vec2 uv = vec2(
-		float(work_group.x + 1) / float(work_groups.x + 2),
-		float(work_group.y + 1) / float(work_groups.y + 2)
+		float(work_group.x + 1) / float(work_groups.x + 1),
+		float(work_group.y + 1) / float(work_groups.y + 1)
 	);
 
 	atomicAdd(u_count, 1);

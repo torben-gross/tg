@@ -42,39 +42,39 @@ static void tg__register(tg_render_command_h h_render_command, tg_renderer_h h_r
             vkCmdBindIndexBuffer(p_renderer_info->command_buffer.command_buffer, h_render_command->h_mesh->index_buffer.buffer, 0, VK_INDEX_TYPE_UINT16);
         }
         const VkDeviceSize vertex_buffer_offset = 0;
-        TG_ASSERT(h_render_command->h_mesh->positions_buffer.buffer);
+        TG_ASSERT(h_render_command->h_mesh->position_buffer.buffer);
         vkCmdBindVertexBuffers(
             p_renderer_info->command_buffer.command_buffer, 0, 1,
-            &h_render_command->h_mesh->positions_buffer.buffer,
+            &h_render_command->h_mesh->position_buffer.buffer,
             &vertex_buffer_offset
         );
-        TG_ASSERT(h_render_command->h_mesh->normals_buffer.buffer);
+        TG_ASSERT(h_render_command->h_mesh->normal_buffer.buffer);
         vkCmdBindVertexBuffers(
             p_renderer_info->command_buffer.command_buffer, 1, 1,
-            &h_render_command->h_mesh->normals_buffer.buffer,
+            &h_render_command->h_mesh->normal_buffer.buffer,
             &vertex_buffer_offset
         );
-        if (h_render_command->h_mesh->uvs_buffer.buffer)
+        if (h_render_command->h_mesh->uv_buffer.buffer)
         {
             vkCmdBindVertexBuffers(
                 p_renderer_info->command_buffer.command_buffer, 2, 1,
-                &h_render_command->h_mesh->uvs_buffer.buffer,
+                &h_render_command->h_mesh->uv_buffer.buffer,
                 &vertex_buffer_offset
             );
         }
-        if (h_render_command->h_mesh->tangents_buffer.buffer)
+        if (h_render_command->h_mesh->tangent_buffer.buffer)
         {
             vkCmdBindVertexBuffers(
                 p_renderer_info->command_buffer.command_buffer, 3, 1,
-                &h_render_command->h_mesh->tangents_buffer.buffer,
+                &h_render_command->h_mesh->tangent_buffer.buffer,
                 &vertex_buffer_offset
             );
         }
-        if (h_render_command->h_mesh->bitangents_buffer.buffer)
+        if (h_render_command->h_mesh->bitangent_buffer.buffer)
         {
             vkCmdBindVertexBuffers(
                 p_renderer_info->command_buffer.command_buffer, 4, 1,
-                &h_render_command->h_mesh->bitangents_buffer.buffer,
+                &h_render_command->h_mesh->bitangent_buffer.buffer,
                 &vertex_buffer_offset
             );
         }
@@ -96,7 +96,7 @@ static void tg__register(tg_render_command_h h_render_command, tg_renderer_h h_r
 
 
 
-    TG_ASSERT(h_render_command->h_mesh->positions_buffer.buffer); // TODO: add flag for non shadow casting
+    TG_ASSERT(h_render_command->h_mesh->position_buffer.buffer); // TODO: add flag for non shadow casting
 
     tgvk_graphics_pipeline_create_info pipeline_create_info = { 0 }; // TODO: create this pipeline only once in the shader and reuse for everything? only the command buffer should be cached in the render_command
     pipeline_create_info.p_vertex_shader = &tg_vertex_shader_get("shaders/shadow.vert")->shader;
@@ -151,7 +151,7 @@ static void tg__register(tg_render_command_h h_render_command, tg_renderer_h h_r
             {
                 vkCmdBindIndexBuffer(p_renderer_info->p_shadow_command_buffers[i].command_buffer, h_render_command->h_mesh->index_buffer.buffer, 0, VK_INDEX_TYPE_UINT16);
             }
-            vkCmdBindVertexBuffers(p_renderer_info->p_shadow_command_buffers[i].command_buffer, 0, 1, &h_render_command->h_mesh->positions_buffer.buffer, &vertex_buffer_offset);
+            vkCmdBindVertexBuffers(p_renderer_info->p_shadow_command_buffers[i].command_buffer, 0, 1, &h_render_command->h_mesh->position_buffer.buffer, &vertex_buffer_offset);
             vkCmdBindDescriptorSets(p_renderer_info->p_shadow_command_buffers[i].command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_renderer_info->p_shadow_graphics_pipelines[i].layout.pipeline_layout, 0, 1, &p_renderer_info->p_shadow_descriptor_sets[i].descriptor_set, 0, TG_NULL);
             if (h_render_command->h_mesh->index_count != 0)
             {
@@ -200,8 +200,11 @@ void tg_render_command_destroy(tg_render_command_h h_render_command)
         for (u32 j = 0; j < TG_CASCADED_SHADOW_MAPS; j++)
         {
             tgvk_command_buffer_free(&h_render_command->p_renderer_infos[i].p_shadow_command_buffers[j]);
+            tgvk_descriptor_set_destroy(&h_render_command->p_renderer_infos[i].p_shadow_descriptor_sets[j]);
+            tgvk_pipeline_destroy(&h_render_command->p_renderer_infos[i].p_shadow_graphics_pipelines[j]);
         }
         tgvk_command_buffer_free(&h_render_command->p_renderer_infos[i].command_buffer);
+        tgvk_descriptor_set_destroy(&h_render_command->p_renderer_infos[i].descriptor_set);
     }
     tgvk_buffer_destroy(&h_render_command->model_ubo);
     tgvk_handle_release(h_render_command);

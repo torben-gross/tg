@@ -119,7 +119,7 @@ void tg_voxelizer_begin(tg_voxelizer* p_voxelizer)
 
 void tg_voxelizer_exec(tg_voxelizer* p_voxelizer, tg_render_command_h h_render_command)
 {
-    TG_ASSERT(p_voxelizer && h_render_command && h_render_command->h_mesh->positions_buffer.buffer && h_render_command->h_mesh->normals_buffer.buffer);
+    TG_ASSERT(p_voxelizer && h_render_command && h_render_command->h_mesh->position_buffer.buffer && h_render_command->h_mesh->normal_buffer.buffer);
     TG_ASSERT(p_voxelizer->descriptor_set_count < TG_MAX_RENDER_COMMANDS);
 
     if (p_voxelizer->p_descriptor_sets[p_voxelizer->descriptor_set_count].descriptor_pool == VK_NULL_HANDLE)
@@ -141,8 +141,8 @@ void tg_voxelizer_exec(tg_voxelizer* p_voxelizer, tg_render_command_h h_render_c
     {
         vkCmdBindIndexBuffer(p_voxelizer->command_buffer.command_buffer, h_render_command->h_mesh->index_buffer.buffer, 0, VK_INDEX_TYPE_UINT16);
     }
-    vkCmdBindVertexBuffers(p_voxelizer->command_buffer.command_buffer, 0, 1, &h_render_command->h_mesh->positions_buffer.buffer, &offset);
-    vkCmdBindVertexBuffers(p_voxelizer->command_buffer.command_buffer, 1, 1, &h_render_command->h_mesh->normals_buffer.buffer, &offset);
+    vkCmdBindVertexBuffers(p_voxelizer->command_buffer.command_buffer, 0, 1, &h_render_command->h_mesh->position_buffer.buffer, &offset);
+    vkCmdBindVertexBuffers(p_voxelizer->command_buffer.command_buffer, 1, 1, &h_render_command->h_mesh->normal_buffer.buffer, &offset);
     vkCmdBindDescriptorSets(p_voxelizer->command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_voxelizer->pipeline.layout.pipeline_layout, 0, 1, &p_descriptor_set->descriptor_set, 0, TG_NULL);
     if (h_render_command->h_mesh->index_count)
     {
@@ -235,15 +235,15 @@ void tg_voxelizer_end(tg_voxelizer* p_voxelizer, v3i min_corner_index_3d, tg_vox
 
     for (u32 i = 0; i < TG_SVO_DIMS3; i++)
     {
-        const f32 count = tgm_f32_max(1.0f, (f32)*p_count_it++);
+        const f32 denominator = tgm_f32_max(1.0f, 255.0f * (f32)*p_count_it++);
 
-        p_voxels[i].albedo.x  = (f32)*p_albedo_r_it++  / count;
-        p_voxels[i].albedo.y  = (f32)*p_albedo_g_it++  / count;
-        p_voxels[i].albedo.z  = (f32)*p_albedo_b_it++  / count;
-        p_voxels[i].albedo.w  = (f32)*p_albedo_a_it++  / count;
-        p_voxels[i].metallic  = (f32)*p_metallic_it++  / count;
-        p_voxels[i].roughness = (f32)*p_roughness_it++ / count;
-        p_voxels[i].ao        = (f32)*p_ao_it++        / count;
+        p_voxels[i].albedo.x  = (f32)*p_albedo_r_it++  / denominator;
+        p_voxels[i].albedo.y  = (f32)*p_albedo_g_it++  / denominator;
+        p_voxels[i].albedo.z  = (f32)*p_albedo_b_it++  / denominator;
+        p_voxels[i].albedo.w  = (f32)*p_albedo_a_it++  / denominator;
+        p_voxels[i].metallic  = (f32)*p_metallic_it++  / denominator;
+        p_voxels[i].roughness = (f32)*p_roughness_it++ / denominator;
+        p_voxels[i].ao        = (f32)*p_ao_it++        / denominator;
     }
 }
 

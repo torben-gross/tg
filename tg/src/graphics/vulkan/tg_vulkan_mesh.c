@@ -70,7 +70,7 @@ void tg__set_buffer_data(tgvk_buffer* p_buffer, u64 size, const void* p_data, Vk
         {
             if (p_buffer->buffer)
             {
-                tgvk_buffer_destroy(p_buffer); // TODO: realloc and rebind memory?
+                tgvk_buffer_destroy(p_buffer);
             }
             *p_buffer = tgvk_buffer_create(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | buffer_type_flag, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
         }
@@ -504,47 +504,47 @@ void tg_mesh_copy_indices(tg_mesh_h h_mesh, u32 first, u32 count, u16* p_buffer)
 
 void tg_mesh_copy_positions(tg_mesh_h h_mesh, u32 first, u32 count, v3* p_buffer)
 {
-    TG_ASSERT(h_mesh && h_mesh->positions_buffer.buffer);
+    TG_ASSERT(h_mesh && h_mesh->position_buffer.buffer);
 
     const VkDeviceSize offset = first * sizeof(v3);
     const VkDeviceSize size = h_mesh->vertex_count * sizeof(v3);
-    tg__copy(offset, size, &h_mesh->positions_buffer, p_buffer);
+    tg__copy(offset, size, &h_mesh->position_buffer, p_buffer);
 }
 
 void tg_mesh_copy_normals(tg_mesh_h h_mesh, u32 first, u32 count, v3* p_buffer)
 {
-    TG_ASSERT(h_mesh && h_mesh->normals_buffer.buffer);
+    TG_ASSERT(h_mesh && h_mesh->normal_buffer.buffer);
 
     const VkDeviceSize offset = first * sizeof(v3);
     const VkDeviceSize size = h_mesh->vertex_count * sizeof(v3);
-    tg__copy(offset, size, &h_mesh->normals_buffer, p_buffer);
+    tg__copy(offset, size, &h_mesh->normal_buffer, p_buffer);
 }
 
 void tg_mesh_copy_uvs(tg_mesh_h h_mesh, u32 first, u32 count, v2* p_buffer)
 {
-    TG_ASSERT(h_mesh && h_mesh->uvs_buffer.buffer);
+    TG_ASSERT(h_mesh && h_mesh->uv_buffer.buffer);
 
     const VkDeviceSize offset = first * sizeof(v2);
     const VkDeviceSize size = h_mesh->vertex_count * sizeof(v2);
-    tg__copy(offset, size, &h_mesh->uvs_buffer, p_buffer);
+    tg__copy(offset, size, &h_mesh->uv_buffer, p_buffer);
 }
 
 void tg_mesh_copy_tangents(tg_mesh_h h_mesh, u32 first, u32 count, v3* p_buffer)
 {
-    TG_ASSERT(h_mesh && h_mesh->tangents_buffer.buffer);
+    TG_ASSERT(h_mesh && h_mesh->tangent_buffer.buffer);
 
     const VkDeviceSize offset = first * sizeof(v3);
     const VkDeviceSize size = h_mesh->vertex_count * sizeof(v3);
-    tg__copy(offset, size, &h_mesh->tangents_buffer, p_buffer);
+    tg__copy(offset, size, &h_mesh->tangent_buffer, p_buffer);
 }
 
 void tg_mesh_copy_bitangents(tg_mesh_h h_mesh, u32 first, u32 count, v3* p_buffer)
 {
-    TG_ASSERT(h_mesh && h_mesh->bitangents_buffer.buffer);
+    TG_ASSERT(h_mesh && h_mesh->bitangent_buffer.buffer);
 
     const VkDeviceSize offset = first * sizeof(v3);
     const VkDeviceSize size = h_mesh->vertex_count * sizeof(v3);
-    tg__copy(offset, size, &h_mesh->bitangents_buffer, p_buffer);
+    tg__copy(offset, size, &h_mesh->bitangent_buffer, p_buffer);
 }
 
 tg_mesh_h tg_mesh_create_sphere_flat(f32 radius, u32 sector_count, u32 stack_count, b32 normals, b32 uvs, b32 tangents_bitangents)
@@ -732,7 +732,7 @@ void tg_mesh_set_positions(tg_mesh_h h_mesh, u32 count, const v3* p_positions) /
     TG_ASSERT(h_mesh && ((!count && !p_positions) || (count && p_positions)));
 
     h_mesh->vertex_count = p_positions ? count : 0;
-    tg__set_buffer_data(&h_mesh->positions_buffer, count * sizeof(*p_positions), (const void*)p_positions, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+    tg__set_buffer_data(&h_mesh->position_buffer, count * sizeof(*p_positions), (const void*)p_positions, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
 
     if (count && p_positions)
     {
@@ -750,28 +750,28 @@ void tg_mesh_set_normals(tg_mesh_h h_mesh, u32 count, const v3* p_normals)
 {
     TG_ASSERT(h_mesh && ((!count && !p_normals) || (count && p_normals)));
 
-    tg__set_buffer_data(&h_mesh->normals_buffer, count * sizeof(*p_normals), (void*)p_normals, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+    tg__set_buffer_data(&h_mesh->normal_buffer, count * sizeof(*p_normals), (void*)p_normals, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
 }
 
 void tg_mesh_set_uvs(tg_mesh_h h_mesh, u32 count, const v2* p_uvs)
 {
     TG_ASSERT(h_mesh && ((!count && !p_uvs) || (count && p_uvs)));
 
-    tg__set_buffer_data(&h_mesh->uvs_buffer, count * sizeof(*p_uvs), (void*)p_uvs, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+    tg__set_buffer_data(&h_mesh->uv_buffer, count * sizeof(*p_uvs), (void*)p_uvs, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
 }
 
 void tg_mesh_set_tangents(tg_mesh_h h_mesh, u32 count, const v3* p_tangents)
 {
     TG_ASSERT(h_mesh && ((!count && !p_tangents) || (count && p_tangents)));
 
-    tg__set_buffer_data(&h_mesh->tangents_buffer, count * sizeof(*p_tangents), (void*)p_tangents, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+    tg__set_buffer_data(&h_mesh->tangent_buffer, count * sizeof(*p_tangents), (void*)p_tangents, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
 }
 
 void tg_mesh_set_bitangents(tg_mesh_h h_mesh, u32 count, const v3* p_bitangents)
 {
     TG_ASSERT(h_mesh && ((!count && !p_bitangents) || (count && p_bitangents)));
 
-    tg__set_buffer_data(&h_mesh->bitangents_buffer, count * sizeof(*p_bitangents), (void*)p_bitangents, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+    tg__set_buffer_data(&h_mesh->bitangent_buffer, count * sizeof(*p_bitangents), (void*)p_bitangents, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
 }
 
 void tg_mesh_regenerate_normals(tg_mesh_h h_mesh)
@@ -877,25 +877,29 @@ void tg_mesh_destroy(tg_mesh_h h_mesh)
 {
     TG_ASSERT(h_mesh);
 
-    if (h_mesh->positions_buffer.buffer)
+    if (h_mesh->index_buffer.buffer)
     {
-        tgvk_buffer_destroy(&h_mesh->positions_buffer);
+        tgvk_buffer_destroy(&h_mesh->index_buffer);
     }
-    if (h_mesh->normals_buffer.buffer)
+    if (h_mesh->position_buffer.buffer)
     {
-        tgvk_buffer_destroy(&h_mesh->normals_buffer);
+        tgvk_buffer_destroy(&h_mesh->position_buffer);
     }
-    if (h_mesh->uvs_buffer.buffer)
+    if (h_mesh->normal_buffer.buffer)
     {
-        tgvk_buffer_destroy(&h_mesh->uvs_buffer);
+        tgvk_buffer_destroy(&h_mesh->normal_buffer);
     }
-    if (h_mesh->tangents_buffer.buffer)
+    if (h_mesh->uv_buffer.buffer)
     {
-        tgvk_buffer_destroy(&h_mesh->tangents_buffer);
+        tgvk_buffer_destroy(&h_mesh->uv_buffer);
     }
-    if (h_mesh->bitangents_buffer.buffer)
+    if (h_mesh->tangent_buffer.buffer)
     {
-        tgvk_buffer_destroy(&h_mesh->bitangents_buffer);
+        tgvk_buffer_destroy(&h_mesh->tangent_buffer);
+    }
+    if (h_mesh->bitangent_buffer.buffer)
+    {
+        tgvk_buffer_destroy(&h_mesh->bitangent_buffer);
     }
 
     tgvk_handle_release(h_mesh);

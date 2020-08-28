@@ -29,7 +29,7 @@
 #define VK_USE_PLATFORM_WIN32_KHR
 #endif
 
-#define TG_ENABLE_DEBUG_TOOLS 1
+#define TG_ENABLE_DEBUG_TOOLS 0
 
 #ifdef TG_DEBUG
 #define TG_ASSERT(x)                       if (!(x)) *(int*)0 = 0

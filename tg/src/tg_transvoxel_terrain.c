@@ -154,7 +154,7 @@ static v3 tg__block_center(v3i absolute_min_coordinates, u8 lod)
 	return center;
 }
 
-static b32 tg__should_split_node(v3 camera_position, v3i absolute_min_coordinates, u8 lod)
+static b32 tg__should_split_node(v3 camera_position, v3i absolute_min_coordinates, u8 lod) // TODO: unroll
 {
 	if (lod == 0)
 	{
@@ -176,7 +176,7 @@ static u8 tg__get_transition_mask(v3 camera_position, v3i octree_min_coordinates
 	{
 		const i32 stride = TG_CELLS_PER_BLOCK_SIDE * (1 << lod);
 
-		const v3i off0 = tgm_v3i_sub(block_offset_in_octree, (v3i) { stride, 0, 0 });
+		const v3i off0 = tgm_v3i_sub(block_offset_in_octree, (v3i) { stride, 0, 0 }); // TODO: simd
 		const v3i off1 = tgm_v3i_add(block_offset_in_octree, (v3i) { stride, 0, 0 });
 		const v3i off2 = tgm_v3i_sub(block_offset_in_octree, (v3i) { 0, stride, 0 });
 		const v3i off3 = tgm_v3i_add(block_offset_in_octree, (v3i) { 0, stride, 0 });

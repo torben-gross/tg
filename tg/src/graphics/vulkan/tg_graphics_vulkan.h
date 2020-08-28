@@ -206,7 +206,6 @@ typedef struct tgvk_shared_render_resources
 
     VkRenderPass    shadow_render_pass;
     VkRenderPass    geometry_render_pass;
-    VkFormat        p_color_attachment_formats[TG_DEFERRED_GEOMETRY_COLOR_ATTACHMENT_COUNT];
     VkRenderPass    ssao_render_pass;
     VkRenderPass    ssao_blur_render_pass;
     VkRenderPass    shading_render_pass;
@@ -299,12 +298,11 @@ typedef struct tg_mesh
     u32                  vertex_count;
     
     tgvk_buffer          index_buffer;
-    tgvk_buffer          positions_buffer;
-    tgvk_buffer          normals_buffer;
-    tgvk_buffer          uvs_buffer;
-    tgvk_buffer          tangents_buffer;
-    tgvk_buffer          bitangents_buffer;
-
+    tgvk_buffer          position_buffer;
+    tgvk_buffer          normal_buffer;
+    tgvk_buffer          uv_buffer;
+    tgvk_buffer          tangent_buffer;
+    tgvk_buffer          bitangent_buffer;
 } tg_mesh;
 
 typedef struct tg_renderer
@@ -315,8 +313,12 @@ typedef struct tg_renderer
     tg_render_target           render_target;
     VkSemaphore                semaphore;
 
-    u32                        render_command_count;
-    tg_render_command_h        ph_render_commands[TG_MAX_RENDER_COMMANDS];
+    u32                        deferred_command_buffer_count;
+    u32                        shadow_command_buffer_count;
+    u32                        forward_render_command_count;
+    VkCommandBuffer            p_deferred_command_buffers[TG_MAX_RENDER_COMMANDS];
+    VkCommandBuffer            p_shadow_command_buffers[TG_CASCADED_SHADOW_MAPS][TG_MAX_RENDER_COMMANDS];
+    tg_render_command_h        ph_forward_render_commands[TG_MAX_RENDER_COMMANDS];
 
     struct
     {
