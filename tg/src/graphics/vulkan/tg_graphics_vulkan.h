@@ -21,54 +21,57 @@
 
 
 #ifdef TG_DEBUG
-#define VK_CALL_NAME2(x, y) x ## y
-#define VK_CALL_NAME(x, y) VK_CALL_NAME2(x, y)
-#define VK_CALL(x)                                                                              \
-    const VkResult VK_CALL_NAME(vk_call_result, __LINE__) = (x);                                \
-    if (VK_CALL_NAME(vk_call_result, __LINE__) != VK_SUCCESS)                                   \
-    {                                                                                           \
-        char p_buffer[1024] = { 0 };                                                            \
-        tgvk_vkresult_convert_to_string(p_buffer, VK_CALL_NAME(vk_call_result, __LINE__)); \
-        TG_DEBUG_LOG("VkResult: %s\n", p_buffer);                                               \
-    }                                                                                           \
-    if (VK_CALL_NAME(vk_call_result, __LINE__) != VK_SUCCESS) TG_INVALID_CODEPATH();
+#define TGVK_CALL_NAME2(x, y)    x ## y
+#define TGVK_CALL_NAME(x, y)     TGVK_CALL_NAME2(x, y)
+#define TGVK_CALL(x)                                                                         \
+    const VkResult TGVK_CALL_NAME(vk_call_result, __LINE__) = (x);                           \
+    if (TGVK_CALL_NAME(vk_call_result, __LINE__) != VK_SUCCESS)                              \
+    {                                                                                        \
+        char p_buffer[1024] = { 0 };                                                         \
+        tgvk_vkresult_convert_to_string(p_buffer, TGVK_CALL_NAME(vk_call_result, __LINE__)); \
+        TG_DEBUG_LOG("VkResult: %s\n", p_buffer);                                            \
+    }                                                                                        \
+    if (TGVK_CALL_NAME(vk_call_result, __LINE__) != VK_SUCCESS) TG_INVALID_CODEPATH()
 
 #else
-#define VK_CALL(x) x
+#define TGVK_CALL(x) x
 #endif
 
 
 
 typedef enum tgvk_command_pool_type
 {
-    TG_VULKAN_COMMAND_POOL_TYPE_COMPUTE,
-    TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS
+    TGVK_COMMAND_POOL_TYPE_COMPUTE,
+    TGVK_COMMAND_POOL_TYPE_GRAPHICS
 } tgvk_command_pool_type;
 
 typedef enum tgvk_material_type
 {
-    TG_VULKAN_MATERIAL_TYPE_DEFERRED,
-    TG_VULKAN_MATERIAL_TYPE_FORWARD
+    TGVK_MATERIAL_TYPE_DEFERRED,
+    TGVK_MATERIAL_TYPE_FORWARD
 } tgvk_material_type;
 
 typedef enum tgvk_queue_type
 {
-    TG_VULKAN_QUEUE_TYPE_COMPUTE,
-    TG_VULKAN_QUEUE_TYPE_GRAPHICS,
-    TG_VULKAN_QUEUE_TYPE_PRESENT,
+    TGVK_QUEUE_TYPE_COMPUTE,
+    TGVK_QUEUE_TYPE_GRAPHICS,
+    TGVK_QUEUE_TYPE_PRESENT,
 
-    TG_VULKAN_QUEUE_TYPE_COUNT
+    TGVK_QUEUE_TYPE_COUNT
 } tgvk_queue_type;
 
-typedef enum tg_deferred_geometry_color_attachment
+typedef enum tgvk_geometry_attachment
 {
-    TG_DEFERRED_GEOMETRY_COLOR_ATTACHMENT_POSITION,
-    TG_DEFERRED_GEOMETRY_COLOR_ATTACHMENT_NORMAL,
-    TG_DEFERRED_GEOMETRY_COLOR_ATTACHMENT_ALBEDO,
-    TG_DEFERRED_GEOMETRY_COLOR_ATTACHMENT_METALLIC_ROUGHNESS_AO,
+    TGVK_GEOMETRY_ATTACHMENT_POSITION                 = 0,
+    TGVK_GEOMETRY_ATTACHMENT_NORMAL                   = 1,
+    TGVK_GEOMETRY_ATTACHMENT_ALBEDO                   = 2,
+    TGVK_GEOMETRY_ATTACHMENT_METALLIC_ROUGHNESS_AO    = 3,
+    TGVK_GEOMETRY_ATTACHMENT_DEPTH                    = 4,
 
-    TG_DEFERRED_GEOMETRY_COLOR_ATTACHMENT_COUNT
-} tg_deferred_geometry_color_attachment;
+    TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT              = TGVK_GEOMETRY_ATTACHMENT_METALLIC_ROUGHNESS_AO + 1,
+    TGVK_GEOMETRY_ATTACHMENT_DEPTH_COUNT              = 1,
+    TGVK_GEOMETRY_ATTACHMENT_COUNT                    = TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT + TGVK_GEOMETRY_ATTACHMENT_DEPTH_COUNT
+} tgvk_geometry_attachment;
 
 
 
@@ -187,7 +190,6 @@ typedef struct tgvk_render_command_renderer_info
     tg_renderer_h          h_renderer;
     tgvk_descriptor_set    descriptor_set;
     tgvk_command_buffer    command_buffer;
-    tgvk_pipeline          p_shadow_graphics_pipelines[TG_CASCADED_SHADOW_MAPS];
     tgvk_descriptor_set    p_shadow_descriptor_sets[TG_CASCADED_SHADOW_MAPS];
     tgvk_command_buffer    p_shadow_command_buffers[TG_CASCADED_SHADOW_MAPS];
 } tgvk_render_command_renderer_info;
@@ -200,18 +202,19 @@ typedef struct tgvk_screen_vertex
 
 typedef struct tgvk_shared_render_resources
 {
-    tgvk_buffer     screen_quad_indices;
-    tgvk_buffer     screen_quad_positions_buffer;
-    tgvk_buffer     screen_quad_uvs_buffer;
+    tgvk_buffer      screen_quad_indices;
+    tgvk_buffer      screen_quad_positions_buffer;
+    tgvk_buffer      screen_quad_uvs_buffer;
 
-    VkRenderPass    shadow_render_pass;
-    VkRenderPass    geometry_render_pass;
-    VkRenderPass    ssao_render_pass;
-    VkRenderPass    ssao_blur_render_pass;
-    VkRenderPass    shading_render_pass;
-    VkRenderPass    tone_mapping_render_pass;
-    VkRenderPass    forward_render_pass;
-    VkRenderPass    present_render_pass;
+    VkRenderPass     shadow_render_pass;
+    tgvk_pipeline    shadow_pipeline;
+    VkRenderPass     geometry_render_pass;
+    VkRenderPass     ssao_render_pass;
+    VkRenderPass     ssao_blur_render_pass;
+    VkRenderPass     shading_render_pass;
+    VkRenderPass     tone_mapping_render_pass;
+    VkRenderPass     forward_render_pass;
+    VkRenderPass     present_render_pass;
 } tgvk_shared_render_resources;
 
 typedef struct tgvk_surface
@@ -331,7 +334,7 @@ typedef struct tg_renderer
 
     struct
     {
-        tgvk_image             p_color_attachments[TG_DEFERRED_GEOMETRY_COLOR_ATTACHMENT_COUNT];
+        tgvk_image             p_color_attachments[TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT];
         tgvk_framebuffer       framebuffer;
         tgvk_command_buffer    command_buffer;
     } geometry_pass;
@@ -559,9 +562,6 @@ VkRenderPass                              tgvk_render_pass_create(u32 attachment
 void                                      tgvk_render_pass_destroy(VkRenderPass render_pass);
 tg_render_target                          tgvk_render_target_create(u32 color_width, u32 color_height, VkFormat color_format, const tg_sampler_create_info* p_color_sampler_create_info, u32 depth_width, u32 depth_height, VkFormat depth_format, const tg_sampler_create_info* p_depth_sampler_create_info, VkFenceCreateFlags fence_create_flags);
 void                                      tgvk_render_target_destroy(tg_render_target* p_render_target);
-
-void                                      tgvk_renderer_init_shared_resources(); // TODO: rename this to tgvk_renderer_shared_resources_create() ? and also rename the shared resources by vulkan internal naming convention
-void                                      tgvk_shutdown_shared_resources(); // TODO: this
 
 VkSemaphore                               tgvk_semaphore_create();
 void                                      tgvk_semaphore_destroy(VkSemaphore semaphore);

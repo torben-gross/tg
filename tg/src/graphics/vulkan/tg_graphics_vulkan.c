@@ -10,29 +10,29 @@
 #ifdef TG_WIN32
 
 #ifdef TG_DEBUG
-#define TG_VULKAN_INSTANCE_EXTENSION_COUNT    4
-#define TG_VULKAN_INSTANCE_EXTENSION_NAMES    { VK_EXT_DEBUG_UTILS_EXTENSION_NAME, VK_KHR_SURFACE_EXTENSION_NAME, VK_KHR_WIN32_SURFACE_EXTENSION_NAME, VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME }
+#define TGVK_INSTANCE_EXTENSION_COUNT    4
+#define TGVK_INSTANCE_EXTENSION_NAMES    { VK_EXT_DEBUG_UTILS_EXTENSION_NAME, VK_KHR_SURFACE_EXTENSION_NAME, VK_KHR_WIN32_SURFACE_EXTENSION_NAME, VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME }
 #else
-#define TG_VULKAN_INSTANCE_EXTENSION_COUNT    3
-#define TG_VULKAN_INSTANCE_EXTENSION_NAMES    { VK_KHR_SURFACE_EXTENSION_NAME, VK_KHR_WIN32_SURFACE_EXTENSION_NAME, VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME }
+#define TGVK_INSTANCE_EXTENSION_COUNT    3
+#define TGVK_INSTANCE_EXTENSION_NAMES    { VK_KHR_SURFACE_EXTENSION_NAME, VK_KHR_WIN32_SURFACE_EXTENSION_NAME, VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME }
 #endif
 
 #else
 
-#define TG_VULKAN_INSTANCE_EXTENSION_COUNT    0
-#define TG_VULKAN_INSTANCE_EXTENSION_NAMES    TG_NULL
+#define TGVK_INSTANCE_EXTENSION_COUNT    0
+#define TGVK_INSTANCE_EXTENSION_NAMES    TG_NULL
 
 #endif
 
-#define TG_VULKAN_DEVICE_EXTENSION_COUNT      1
-#define TG_VULKAN_DEVICE_EXTENSION_NAMES      { VK_KHR_SWAPCHAIN_EXTENSION_NAME }
+#define TGVK_DEVICE_EXTENSION_COUNT      1
+#define TGVK_DEVICE_EXTENSION_NAMES      { VK_KHR_SWAPCHAIN_EXTENSION_NAME }
 
 #ifdef TG_DEBUG
-#define TG_VULKAN_VALIDATION_LAYER_COUNT      1
-#define TG_VULKAN_VALIDATION_LAYER_NAMES      { "VK_LAYER_KHRONOS_validation" }
+#define TGVK_VALIDATION_LAYER_COUNT      1
+#define TGVK_VALIDATION_LAYER_NAMES      { "VK_LAYER_KHRONOS_validation" }
 #else
-#define TG_VULKAN_VALIDATION_LAYER_COUNT      0
-#define TG_VULKAN_VALIDATION_LAYER_NAMES      TG_NULL
+#define TGVK_VALIDATION_LAYER_COUNT      0
+#define TGVK_VALIDATION_LAYER_NAMES      TG_NULL
 #endif
 
 
@@ -41,8 +41,8 @@
 static VkDebugUtilsMessengerEXT    debug_utils_messenger = VK_NULL_HANDLE;
 #endif
 
-static tgvk_queue                  p_queue_buffer[TG_VULKAN_QUEUE_TYPE_COUNT] = { 0 };
-static tgvk_queue*                 pp_queues[TG_VULKAN_QUEUE_TYPE_COUNT] = { 0 };
+static tgvk_queue                  p_queue_buffer[TGVK_QUEUE_TYPE_COUNT] = { 0 };
+static tgvk_queue*                 pp_queues[TGVK_QUEUE_TYPE_COUNT] = { 0 };
 
 static VkCommandPool               p_graphics_command_pool[TG_WORKER_THREAD_COUNT + 1];
 static VkCommandPool               p_compute_command_pool[TG_WORKER_THREAD_COUNT + 1];
@@ -77,10 +77,10 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL tg__debug_callback(VkDebugUtilsMessageSeve
 | General utilities                                           |
 +------------------------------------------------------------*/
 
-#define TG_QUEUE_TAKE(type, p_queue)    (p_queue) = pp_queues[type]; TG_MUTEX_LOCK((p_queue)->h_mutex)
-#define TG_QUEUE_RELEASE(p_queue)       TG_MUTEX_UNLOCK((p_queue)->h_mutex)
+#define TGVK_QUEUE_TAKE(type, p_queue)    (p_queue) = pp_queues[type]; TG_MUTEX_LOCK((p_queue)->h_mutex)
+#define TGVK_QUEUE_RELEASE(p_queue)       TG_MUTEX_UNLOCK((p_queue)->h_mutex)
 
-#define TG_HANDLE_TAKE(p_array, p_result)                                          \
+#define TGVK_HANDLE_TAKE(p_array, p_result)                                          \
     const u32 array_element_count = sizeof(p_array) / sizeof(*(p_array));          \
     for (u32 handle_index = 0; handle_index < array_element_count; handle_index++) \
     {                                                                              \
@@ -117,7 +117,7 @@ static VkImageView tg__image_view_create(VkImage image, VkImageViewType view_typ
     image_view_create_info.subresourceRange.baseArrayLayer = 0;
     image_view_create_info.subresourceRange.layerCount = view_type == VK_IMAGE_VIEW_TYPE_CUBE ? 6 : 1;
 
-    VK_CALL(vkCreateImageView(device, &image_view_create_info, TG_NULL, &image_view));
+    TGVK_CALL(vkCreateImageView(device, &image_view_create_info, TG_NULL, &image_view));
 
     return image_view;
 }
@@ -175,7 +175,7 @@ tgvk_pipeline_layout tg__pipeline_layout_create(u32 shader_count, const tgvk_sha
     descriptor_set_layout_create_info.bindingCount = pipeline_layout.global_resource_count;
     descriptor_set_layout_create_info.pBindings = pipeline_layout.p_descriptor_set_layout_bindings;
 
-    VK_CALL(vkCreateDescriptorSetLayout(device, &descriptor_set_layout_create_info, TG_NULL, &pipeline_layout.descriptor_set_layout));
+    TGVK_CALL(vkCreateDescriptorSetLayout(device, &descriptor_set_layout_create_info, TG_NULL, &pipeline_layout.descriptor_set_layout));
 
     VkPipelineLayoutCreateInfo pipeline_layout_create_info = { 0 };
     pipeline_layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -186,7 +186,7 @@ tgvk_pipeline_layout tg__pipeline_layout_create(u32 shader_count, const tgvk_sha
     pipeline_layout_create_info.pushConstantRangeCount = 0;
     pipeline_layout_create_info.pPushConstantRanges = TG_NULL;
 
-    VK_CALL(vkCreatePipelineLayout(device, &pipeline_layout_create_info, TG_NULL, &pipeline_layout.pipeline_layout));
+    TGVK_CALL(vkCreatePipelineLayout(device, &pipeline_layout_create_info, TG_NULL, &pipeline_layout.pipeline_layout));
 
     return pipeline_layout;
 }
@@ -217,7 +217,7 @@ static VkSampler tg__sampler_create_custom(u32 mip_levels, VkFilter min_filter, 
     sampler_create_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
     sampler_create_info.unnormalizedCoordinates = VK_FALSE;
 
-    VK_CALL(vkCreateSampler(device, &sampler_create_info, TG_NULL, &sampler));
+    TGVK_CALL(vkCreateSampler(device, &sampler_create_info, TG_NULL, &sampler));
 
     return sampler;
 }
@@ -320,19 +320,19 @@ void* tgvk_handle_take(tg_structure_type type)
 
     switch (type)
     {
-    case TG_STRUCTURE_TYPE_STORAGE_BUFFER:  { TG_HANDLE_TAKE(p_storage_buffers, p_handle);  } break;
-    case TG_STRUCTURE_TYPE_COLOR_IMAGE:     { TG_HANDLE_TAKE(p_color_images, p_handle);     } break;
-    case TG_STRUCTURE_TYPE_COLOR_IMAGE_3D:  { TG_HANDLE_TAKE(p_color_images_3d, p_handle);  } break;
-    case TG_STRUCTURE_TYPE_COMPUTE_SHADER:  { TG_HANDLE_TAKE(p_compute_shaders, p_handle);  } break;
-    case TG_STRUCTURE_TYPE_CUBE_MAP:        { TG_HANDLE_TAKE(p_cube_maps, p_handle);        } break;
-    case TG_STRUCTURE_TYPE_DEPTH_IMAGE:     { TG_HANDLE_TAKE(p_depth_images, p_handle);     } break;
-    case TG_STRUCTURE_TYPE_FRAGMENT_SHADER: { TG_HANDLE_TAKE(p_fragment_shaders, p_handle); } break;
-    case TG_STRUCTURE_TYPE_MATERIAL:        { TG_HANDLE_TAKE(p_materials, p_handle);        } break;
-    case TG_STRUCTURE_TYPE_MESH:            { TG_HANDLE_TAKE(p_meshes, p_handle);           } break;
-    case TG_STRUCTURE_TYPE_RENDER_COMMAND:  { TG_HANDLE_TAKE(p_render_commands, p_handle);  } break;
-    case TG_STRUCTURE_TYPE_RENDERER:        { TG_HANDLE_TAKE(p_renderers, p_handle);        } break;
-    case TG_STRUCTURE_TYPE_UNIFORM_BUFFER:  { TG_HANDLE_TAKE(p_uniform_buffers, p_handle);  } break;
-    case TG_STRUCTURE_TYPE_VERTEX_SHADER:   { TG_HANDLE_TAKE(p_vertex_shaders, p_handle);   } break;
+    case TG_STRUCTURE_TYPE_STORAGE_BUFFER:  { TGVK_HANDLE_TAKE(p_storage_buffers, p_handle);  } break;
+    case TG_STRUCTURE_TYPE_COLOR_IMAGE:     { TGVK_HANDLE_TAKE(p_color_images, p_handle);     } break;
+    case TG_STRUCTURE_TYPE_COLOR_IMAGE_3D:  { TGVK_HANDLE_TAKE(p_color_images_3d, p_handle);  } break;
+    case TG_STRUCTURE_TYPE_COMPUTE_SHADER:  { TGVK_HANDLE_TAKE(p_compute_shaders, p_handle);  } break;
+    case TG_STRUCTURE_TYPE_CUBE_MAP:        { TGVK_HANDLE_TAKE(p_cube_maps, p_handle);        } break;
+    case TG_STRUCTURE_TYPE_DEPTH_IMAGE:     { TGVK_HANDLE_TAKE(p_depth_images, p_handle);     } break;
+    case TG_STRUCTURE_TYPE_FRAGMENT_SHADER: { TGVK_HANDLE_TAKE(p_fragment_shaders, p_handle); } break;
+    case TG_STRUCTURE_TYPE_MATERIAL:        { TGVK_HANDLE_TAKE(p_materials, p_handle);        } break;
+    case TG_STRUCTURE_TYPE_MESH:            { TGVK_HANDLE_TAKE(p_meshes, p_handle);           } break;
+    case TG_STRUCTURE_TYPE_RENDER_COMMAND:  { TGVK_HANDLE_TAKE(p_render_commands, p_handle);  } break;
+    case TG_STRUCTURE_TYPE_RENDERER:        { TGVK_HANDLE_TAKE(p_renderers, p_handle);        } break;
+    case TG_STRUCTURE_TYPE_UNIFORM_BUFFER:  { TGVK_HANDLE_TAKE(p_uniform_buffers, p_handle);  } break;
+    case TG_STRUCTURE_TYPE_VERTEX_SHADER:   { TGVK_HANDLE_TAKE(p_vertex_shaders, p_handle);   } break;
 
     default: TG_INVALID_CODEPATH(); break;
     }
@@ -367,12 +367,12 @@ tgvk_buffer tgvk_buffer_create(VkDeviceSize size, VkBufferUsageFlags buffer_usag
     buffer_create_info.queueFamilyIndexCount = 0;
     buffer_create_info.pQueueFamilyIndices = TG_NULL;
 
-    VK_CALL(vkCreateBuffer(device, &buffer_create_info, TG_NULL, &buffer.buffer));
+    TGVK_CALL(vkCreateBuffer(device, &buffer_create_info, TG_NULL, &buffer.buffer));
 
     VkMemoryRequirements memory_requirements = { 0 };
     vkGetBufferMemoryRequirements(device, buffer.buffer, &memory_requirements);
     buffer.memory = tgvk_memory_allocator_alloc(memory_requirements.alignment, memory_requirements.size, memory_requirements.memoryTypeBits, memory_property_flags);
-    VK_CALL(vkBindBufferMemory(device, buffer.buffer, buffer.memory.device_memory, buffer.memory.offset));
+    TGVK_CALL(vkBindBufferMemory(device, buffer.buffer, buffer.memory.device_memory, buffer.memory.offset));
 
     return buffer;
 }
@@ -392,7 +392,7 @@ void tgvk_buffer_flush_mapped_memory(tgvk_buffer* p_buffer)
     mapped_memory_range.offset = p_buffer->memory.offset;
     mapped_memory_range.size = p_buffer->memory.size;
 
-    VK_CALL(vkFlushMappedMemoryRanges(device, 1, &mapped_memory_range));
+    TGVK_CALL(vkFlushMappedMemoryRanges(device, 1, &mapped_memory_range));
 }
 
 
@@ -423,12 +423,12 @@ tgvk_image tgvk_color_image_create(u32 width, u32 height, VkFormat format, const
     image_create_info.pQueueFamilyIndices = TG_NULL;
     image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-    VK_CALL(vkCreateImage(device, &image_create_info, TG_NULL, &image.image));
+    TGVK_CALL(vkCreateImage(device, &image_create_info, TG_NULL, &image.image));
 
     VkMemoryRequirements memory_requirements = { 0 };
     vkGetImageMemoryRequirements(device, image.image, &memory_requirements);
     image.memory = tgvk_memory_allocator_alloc(memory_requirements.alignment, memory_requirements.size, memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    VK_CALL(vkBindImageMemory(device, image.image, image.memory.device_memory, image.memory.offset));
+    TGVK_CALL(vkBindImageMemory(device, image.image, image.memory.device_memory, image.memory.offset));
 
     // TODO: mipmapping
     //VkCommandBuffer command_buffer = tgvk_command_buffer_allocate(graphics_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
@@ -595,12 +595,12 @@ tgvk_image_3d tgvk_color_image_3d_create(u32 width, u32 height, u32 depth, VkFor
     image_create_info.pQueueFamilyIndices = TG_NULL;
     image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-    VK_CALL(vkCreateImage(device, &image_create_info, TG_NULL, &image_3d.image));
+    TGVK_CALL(vkCreateImage(device, &image_create_info, TG_NULL, &image_3d.image));
 
     VkMemoryRequirements memory_requirements = { 0 };
     vkGetImageMemoryRequirements(device, image_3d.image, &memory_requirements);
     image_3d.memory = tgvk_memory_allocator_alloc(memory_requirements.alignment, memory_requirements.size, memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    VK_CALL(vkBindImageMemory(device, image_3d.image, image_3d.memory.device_memory, image_3d.memory.offset));
+    TGVK_CALL(vkBindImageMemory(device, image_3d.image, image_3d.memory.device_memory, image_3d.memory.offset));
 
     image_3d.image_view = tg__image_view_create(image_3d.image, VK_IMAGE_VIEW_TYPE_3D, image_3d.format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
 
@@ -647,8 +647,8 @@ tgvk_command_buffer tgvk_command_buffer_allocate(tgvk_command_pool_type type, Vk
     const u32 thread_id = tg_platform_get_current_thread_id();
     switch (type)
     {
-    case TG_VULKAN_COMMAND_POOL_TYPE_COMPUTE:  command_buffer_allocate_info.commandPool = p_compute_command_pool[thread_id];  break;
-    case TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS: command_buffer_allocate_info.commandPool = p_graphics_command_pool[thread_id]; break;
+    case TGVK_COMMAND_POOL_TYPE_COMPUTE:  command_buffer_allocate_info.commandPool = p_compute_command_pool[thread_id];  break;
+    case TGVK_COMMAND_POOL_TYPE_GRAPHICS: command_buffer_allocate_info.commandPool = p_graphics_command_pool[thread_id]; break;
 
     default: TG_INVALID_CODEPATH(); break;
     }
@@ -656,7 +656,7 @@ tgvk_command_buffer tgvk_command_buffer_allocate(tgvk_command_pool_type type, Vk
     command_buffer_allocate_info.level = level;
     command_buffer_allocate_info.commandBufferCount = 1;
 
-    VK_CALL(vkAllocateCommandBuffers(device, &command_buffer_allocate_info, &command_buffer.command_buffer));
+    TGVK_CALL(vkAllocateCommandBuffers(device, &command_buffer_allocate_info, &command_buffer.command_buffer));
 
     return command_buffer;
 }
@@ -676,8 +676,8 @@ void tgvk_command_buffer_free(tgvk_command_buffer* p_command_buffer)
     const u32 thread_id = tg_platform_get_current_thread_id();
     switch (p_command_buffer->command_pool_type)
     {
-    case TG_VULKAN_COMMAND_POOL_TYPE_COMPUTE:  command_pool = p_compute_command_pool[thread_id];  break;
-    case TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS: command_pool = p_graphics_command_pool[thread_id]; break;
+    case TGVK_COMMAND_POOL_TYPE_COMPUTE:  command_pool = p_compute_command_pool[thread_id];  break;
+    case TGVK_COMMAND_POOL_TYPE_GRAPHICS: command_pool = p_graphics_command_pool[thread_id]; break;
 
     default: TG_INVALID_CODEPATH(); break;
     }
@@ -701,7 +701,7 @@ void tgvk_command_buffer_begin(tgvk_command_buffer* p_command_buffer, VkCommandB
     command_buffer_begin_info.flags = flags;
     command_buffer_begin_info.pInheritanceInfo = TG_NULL;
 
-    VK_CALL(vkBeginCommandBuffer(p_command_buffer->command_buffer, &command_buffer_begin_info));
+    TGVK_CALL(vkBeginCommandBuffer(p_command_buffer->command_buffer, &command_buffer_begin_info));
 }
 
 void tgvk_command_buffer_begin_secondary(tgvk_command_buffer* p_command_buffer, VkCommandBufferUsageFlags flags, VkRenderPass render_pass, VkFramebuffer framebuffer)
@@ -722,7 +722,7 @@ void tgvk_command_buffer_begin_secondary(tgvk_command_buffer* p_command_buffer, 
     command_buffer_begin_info.flags = flags;
     command_buffer_begin_info.pInheritanceInfo = &command_buffer_inheritance_info;
 
-    VK_CALL(vkBeginCommandBuffer(p_command_buffer->command_buffer, &command_buffer_begin_info));
+    TGVK_CALL(vkBeginCommandBuffer(p_command_buffer->command_buffer, &command_buffer_begin_info));
 }
 
 void tgvk_command_buffer_cmd_begin_render_pass(tgvk_command_buffer* p_command_buffer, VkRenderPass render_pass, tgvk_framebuffer* p_framebuffer, VkSubpassContents subpass_contents)
@@ -1017,7 +1017,7 @@ void tgvk_command_buffer_cmd_transition_depth_image_layout(tgvk_command_buffer* 
 
 void tgvk_command_buffer_end_and_submit(tgvk_command_buffer* p_command_buffer)
 {
-    VK_CALL(vkEndCommandBuffer(p_command_buffer->command_buffer));
+    TGVK_CALL(vkEndCommandBuffer(p_command_buffer->command_buffer));
 
     VkSubmitInfo submit_info = { 0 };
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -1031,12 +1031,12 @@ void tgvk_command_buffer_end_and_submit(tgvk_command_buffer* p_command_buffer)
     submit_info.pSignalSemaphores = TG_NULL;
 
     tgvk_queue* p_queue;
-    TG_QUEUE_TAKE(p_command_buffer->command_pool_type, p_queue);
+    TGVK_QUEUE_TAKE(p_command_buffer->command_pool_type, p_queue);
 
-    VK_CALL(vkQueueSubmit(p_queue->queue, 1, &submit_info, VK_NULL_HANDLE));
-    VK_CALL(vkQueueWaitIdle(p_queue->queue)); // TODO: is this necessary?
+    TGVK_CALL(vkQueueSubmit(p_queue->queue, 1, &submit_info, VK_NULL_HANDLE));
+    TGVK_CALL(vkQueueWaitIdle(p_queue->queue)); // TODO: is this necessary?
 
-    TG_QUEUE_RELEASE(p_queue);
+    TGVK_QUEUE_RELEASE(p_queue);
 }
 
 
@@ -1066,12 +1066,12 @@ tgvk_cube_map tgvk_cube_map_create(u32 dimension, VkFormat format, const tg_samp
     image_create_info.pQueueFamilyIndices = TG_NULL;
     image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-    VK_CALL(vkCreateImage(device, &image_create_info, TG_NULL, &cube_map.image));
+    TGVK_CALL(vkCreateImage(device, &image_create_info, TG_NULL, &cube_map.image));
 
     VkMemoryRequirements memory_requirements = { 0 };
     vkGetImageMemoryRequirements(device, cube_map.image, &memory_requirements);
     cube_map.memory = tgvk_memory_allocator_alloc(memory_requirements.alignment, memory_requirements.size, memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    VK_CALL(vkBindImageMemory(device, cube_map.image, cube_map.memory.device_memory, cube_map.memory.offset));
+    TGVK_CALL(vkBindImageMemory(device, cube_map.image, cube_map.memory.device_memory, cube_map.memory.offset));
 
     cube_map.image_view = tg__image_view_create(cube_map.image, VK_IMAGE_VIEW_TYPE_CUBE, cube_map.format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
 
@@ -1126,12 +1126,12 @@ tgvk_image tgvk_depth_image_create(u32 width, u32 height, VkFormat format, const
     image_create_info.pQueueFamilyIndices = TG_NULL;
     image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-    VK_CALL(vkCreateImage(device, &image_create_info, TG_NULL, &depth_image.image));
+    TGVK_CALL(vkCreateImage(device, &image_create_info, TG_NULL, &depth_image.image));
 
     VkMemoryRequirements memory_requirements = { 0 };
     vkGetImageMemoryRequirements(device, depth_image.image, &memory_requirements);
     depth_image.memory = tgvk_memory_allocator_alloc(memory_requirements.alignment, memory_requirements.size, memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    VK_CALL(vkBindImageMemory(device, depth_image.image, depth_image.memory.device_memory, depth_image.memory.offset));
+    TGVK_CALL(vkBindImageMemory(device, depth_image.image, depth_image.memory.device_memory, depth_image.memory.offset));
 
     depth_image.image_view = tg__image_view_create(depth_image.image, VK_IMAGE_VIEW_TYPE_2D, depth_image.format, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
 
@@ -1183,7 +1183,7 @@ tgvk_descriptor_set tgvk_descriptor_set_create(const tgvk_pipeline* p_pipeline)
     descriptor_pool_create_info.poolSizeCount = p_pipeline->layout.global_resource_count;
     descriptor_pool_create_info.pPoolSizes = p_descriptor_pool_sizes;
 
-    VK_CALL(vkCreateDescriptorPool(device, &descriptor_pool_create_info, TG_NULL, &descriptor_set.descriptor_pool));
+    TGVK_CALL(vkCreateDescriptorPool(device, &descriptor_pool_create_info, TG_NULL, &descriptor_set.descriptor_pool));
 
     VkDescriptorSetAllocateInfo descriptor_set_allocate_info = { 0 };
     descriptor_set_allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -1192,7 +1192,7 @@ tgvk_descriptor_set tgvk_descriptor_set_create(const tgvk_pipeline* p_pipeline)
     descriptor_set_allocate_info.descriptorSetCount = 1;
     descriptor_set_allocate_info.pSetLayouts = &p_pipeline->layout.descriptor_set_layout;
 
-    VK_CALL(vkAllocateDescriptorSets(device, &descriptor_set_allocate_info, &descriptor_set.descriptor_set));
+    TGVK_CALL(vkAllocateDescriptorSets(device, &descriptor_set_allocate_info, &descriptor_set.descriptor_set));
 
     return descriptor_set;
 }
@@ -1440,7 +1440,7 @@ VkFence tgvk_fence_create(VkFenceCreateFlags fence_create_flags)
     fence_create_info.pNext = TG_NULL;
     fence_create_info.flags = fence_create_flags;
 
-    VK_CALL(vkCreateFence(device, &fence_create_info, TG_NULL, &fence));
+    TGVK_CALL(vkCreateFence(device, &fence_create_info, TG_NULL, &fence));
 
     return fence;
 }
@@ -1452,12 +1452,12 @@ void tgvk_fence_destroy(VkFence fence)
 
 void tgvk_fence_reset(VkFence fence)
 {
-    VK_CALL(vkResetFences(device, 1, &fence));
+    TGVK_CALL(vkResetFences(device, 1, &fence));
 }
 
 void tgvk_fence_wait(VkFence fence)
 {
-    VK_CALL(vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX));
+    TGVK_CALL(vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX));
 }
 
 
@@ -1480,7 +1480,7 @@ tgvk_framebuffer tgvk_framebuffer_create(VkRenderPass render_pass, u32 attachmen
     framebuffer_create_info.height = height;
     framebuffer_create_info.layers = 1;
 
-    VK_CALL(vkCreateFramebuffer(device, &framebuffer_create_info, TG_NULL, &framebuffer.framebuffer));
+    TGVK_CALL(vkCreateFramebuffer(device, &framebuffer_create_info, TG_NULL, &framebuffer.framebuffer));
 
     return framebuffer;
 }
@@ -1707,7 +1707,7 @@ tgvk_pipeline tgvk_pipeline_create_compute(const tgvk_shader* p_compute_shader)
     compute_pipeline_create_info.basePipelineHandle = VK_NULL_HANDLE;
     compute_pipeline_create_info.basePipelineIndex = -1;
 
-    VK_CALL(vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &compute_pipeline_create_info, TG_NULL, &compute_pipeline.pipeline));
+    TGVK_CALL(vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &compute_pipeline_create_info, TG_NULL, &compute_pipeline.pipeline));
 
     return compute_pipeline;
 }
@@ -1895,7 +1895,7 @@ tgvk_pipeline tgvk_pipeline_create_graphics2(const tgvk_graphics_pipeline_create
     graphics_pipeline_create_info.basePipelineHandle = VK_NULL_HANDLE;
     graphics_pipeline_create_info.basePipelineIndex = -1;
 
-    VK_CALL(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &graphics_pipeline_create_info, TG_NULL, &graphics_pipeline.pipeline));
+    TGVK_CALL(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &graphics_pipeline_create_info, TG_NULL, &graphics_pipeline.pipeline));
 
     return graphics_pipeline;
 }
@@ -1912,25 +1912,25 @@ void tgvk_pipeline_destroy(tgvk_pipeline* p_pipeline)
 void tgvk_queue_present(VkPresentInfoKHR* p_present_info)
 {
     tgvk_queue* p_queue;
-    TG_QUEUE_TAKE(TG_VULKAN_QUEUE_TYPE_PRESENT, p_queue);
-    VK_CALL(vkQueuePresentKHR(p_queue->queue, p_present_info));
-    TG_QUEUE_RELEASE(p_queue);
+    TGVK_QUEUE_TAKE(TGVK_QUEUE_TYPE_PRESENT, p_queue);
+    TGVK_CALL(vkQueuePresentKHR(p_queue->queue, p_present_info));
+    TGVK_QUEUE_RELEASE(p_queue);
 }
 
 void tgvk_queue_submit(tgvk_queue_type type, u32 submit_count, VkSubmitInfo* p_submit_infos, VkFence fence)
 {
     tgvk_queue* p_queue;
-    TG_QUEUE_TAKE(type, p_queue);
-    VK_CALL(vkQueueSubmit(p_queue->queue, submit_count, p_submit_infos, fence));
-    TG_QUEUE_RELEASE(p_queue);
+    TGVK_QUEUE_TAKE(type, p_queue);
+    TGVK_CALL(vkQueueSubmit(p_queue->queue, submit_count, p_submit_infos, fence));
+    TGVK_QUEUE_RELEASE(p_queue);
 }
 
 void tgvk_queue_wait_idle(tgvk_queue_type type)
 {
     tgvk_queue* p_queue;
-    TG_QUEUE_TAKE(type, p_queue);
-    VK_CALL(vkQueueWaitIdle(p_queue->queue));
-    TG_QUEUE_RELEASE(p_queue);
+    TGVK_QUEUE_TAKE(type, p_queue);
+    TGVK_CALL(vkQueueWaitIdle(p_queue->queue));
+    TGVK_QUEUE_RELEASE(p_queue);
 }
 
 
@@ -1950,7 +1950,7 @@ VkRenderPass tgvk_render_pass_create(u32 attachment_count, const VkAttachmentDes
     render_pass_create_info.dependencyCount = dependency_count;
     render_pass_create_info.pDependencies = p_dependencies;
 
-    VK_CALL(vkCreateRenderPass(device, &render_pass_create_info, TG_NULL, &render_pass));
+    TGVK_CALL(vkCreateRenderPass(device, &render_pass_create_info, TG_NULL, &render_pass));
 
     return render_pass;
 }
@@ -2004,7 +2004,7 @@ VkSemaphore tgvk_semaphore_create()
     semaphore_create_info.pNext = TG_NULL;
     semaphore_create_info.flags = 0;
 
-    VK_CALL(vkCreateSemaphore(device, &semaphore_create_info, TG_NULL, &semaphore));
+    TGVK_CALL(vkCreateSemaphore(device, &semaphore_create_info, TG_NULL, &semaphore));
 
     return semaphore;
 }
@@ -2043,7 +2043,7 @@ tgvk_shader tgvk_shader_create(const char* p_filename)
     shader_module_create_info.codeSize = file_properties.size;
     shader_module_create_info.pCode = (const u32*)p_content;
 
-    VK_CALL(vkCreateShaderModule(device, &shader_module_create_info, TG_NULL, &shader.shader_module));
+    TGVK_CALL(vkCreateShaderModule(device, &shader_module_create_info, TG_NULL, &shader.shader_module));
     TG_MEMORY_STACK_FREE(file_properties.size);
 
     return shader;
@@ -2137,7 +2137,7 @@ static VkCommandPool tg__command_pool_create(VkCommandPoolCreateFlags command_po
     command_pool_create_info.flags = command_pool_create_flags;
     command_pool_create_info.queueFamilyIndex = pp_queues[type]->index;
 
-    VK_CALL(vkCreateCommandPool(device, &command_pool_create_info, TG_NULL, &command_pool));
+    TGVK_CALL(vkCreateCommandPool(device, &command_pool_create_info, TG_NULL, &command_pool));
 
     return command_pool;
 }
@@ -2168,7 +2168,7 @@ static b32 tg__physical_device_supports_required_queue_families(VkPhysicalDevice
         supports_compute_family |= (p_queue_family_properties[i].queueFlags & VK_QUEUE_COMPUTE_BIT) != 0;
         supports_graphics_family |= (p_queue_family_properties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0;
         VkBool32 spf = VK_FALSE;
-        VK_CALL(vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, i, surface.surface, &spf));
+        TGVK_CALL(vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, i, surface.surface, &spf));
         supports_present_family |= spf != 0;
     }
 
@@ -2193,7 +2193,7 @@ static void tg__physical_device_find_queue_family_indices(VkPhysicalDevice physi
     {
         const b32 supports_graphics_family = (p_queue_family_properties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0;
         VkBool32 spf = VK_FALSE;
-        VK_CALL(vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, i, surface.surface, &spf));
+        TGVK_CALL(vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, i, surface.surface, &spf));
         const b32 supports_present_family = spf != 0;
         const b32 supports_compute_family = (p_queue_family_properties[i].queueFlags & VK_QUEUE_COMPUTE_BIT) != 0;
     
@@ -2226,7 +2226,7 @@ static void tg__physical_device_find_queue_family_indices(VkPhysicalDevice physi
             if (!supports_present_family)
             {
                 VkBool32 spf = VK_FALSE;
-                VK_CALL(vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, i, surface.surface, &spf));
+                TGVK_CALL(vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, i, surface.surface, &spf));
                 supports_present_family |= spf != 0;
                 if (supports_present_family)
                 {
@@ -2294,18 +2294,18 @@ static VkSampleCountFlagBits tg__physical_device_find_max_sample_count(VkPhysica
 static b32 tg__physical_device_supports_extension(VkPhysicalDevice physical_device)
 {
     u32 device_extension_property_count;
-    VK_CALL(vkEnumerateDeviceExtensionProperties(physical_device, TG_NULL, &device_extension_property_count, TG_NULL));
+    TGVK_CALL(vkEnumerateDeviceExtensionProperties(physical_device, TG_NULL, &device_extension_property_count, TG_NULL));
     const u64 device_extension_properties_size = device_extension_property_count * sizeof(VkExtensionProperties);
     VkExtensionProperties* device_extension_properties = TG_MEMORY_STACK_ALLOC(device_extension_properties_size);
-    VK_CALL(vkEnumerateDeviceExtensionProperties(physical_device, TG_NULL, &device_extension_property_count, device_extension_properties));
+    TGVK_CALL(vkEnumerateDeviceExtensionProperties(physical_device, TG_NULL, &device_extension_property_count, device_extension_properties));
 
     b32 supports_extensions = TG_TRUE;
-    for (u32 i = 0; i < TG_VULKAN_DEVICE_EXTENSION_COUNT; i++)
+    for (u32 i = 0; i < TGVK_DEVICE_EXTENSION_COUNT; i++)
     {
         b32 supports_extension = TG_FALSE;
         for (u32 j = 0; j < device_extension_property_count; j++)
         {
-            if (tg_string_equal(((char*[TG_VULKAN_DEVICE_EXTENSION_COUNT])TG_VULKAN_DEVICE_EXTENSION_NAMES)[i], device_extension_properties[j].extensionName) == 0)
+            if (tg_string_equal(((char*[TGVK_DEVICE_EXTENSION_COUNT])TGVK_DEVICE_EXTENSION_NAMES)[i], device_extension_properties[j].extensionName) == 0)
             {
                 supports_extension = TG_TRUE;
                 break;
@@ -2329,10 +2329,10 @@ static u32 tg__physical_device_rate(VkPhysicalDevice physical_device)
     vkGetPhysicalDeviceFeatures(physical_device, &physical_device_features);
 
     u32 physical_device_surface_format_count;
-    VK_CALL(vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface.surface, &physical_device_surface_format_count, TG_NULL));
+    TGVK_CALL(vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface.surface, &physical_device_surface_format_count, TG_NULL));
 
     u32 physical_device_present_mode_count;
-    VK_CALL(vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface.surface, &physical_device_present_mode_count, TG_NULL));
+    TGVK_CALL(vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface.surface, &physical_device_present_mode_count, TG_NULL));
 
     if (!tg__physical_device_supports_extension(physical_device) ||
         !tg__physical_device_supports_required_queue_families(physical_device) ||
@@ -2367,7 +2367,7 @@ static VkInstance tg__instance_create()
     VkInstance instance = VK_NULL_HANDLE;
 
 #ifdef TG_DEBUG
-    if (TG_VULKAN_VALIDATION_LAYER_COUNT)
+    if (TGVK_VALIDATION_LAYER_COUNT)
     {
         u32 layer_property_count;
         vkEnumerateInstanceLayerProperties(&layer_property_count, TG_NULL);
@@ -2375,8 +2375,8 @@ static VkInstance tg__instance_create()
         VkLayerProperties* p_layer_properties = TG_MEMORY_STACK_ALLOC(layer_properties_size);
         vkEnumerateInstanceLayerProperties(&layer_property_count, p_layer_properties);
 
-        const char* p_validation_layer_names[TG_VULKAN_VALIDATION_LAYER_COUNT] = TG_VULKAN_VALIDATION_LAYER_NAMES;
-        for (u32 i = 0; i < TG_VULKAN_VALIDATION_LAYER_COUNT; i++)
+        const char* p_validation_layer_names[TGVK_VALIDATION_LAYER_COUNT] = TGVK_VALIDATION_LAYER_NAMES;
+        for (u32 i = 0; i < TGVK_VALIDATION_LAYER_COUNT; i++)
         {
             b32 layer_found = TG_FALSE;
             for (u32 j = 0; j < layer_property_count; j++)
@@ -2402,14 +2402,14 @@ static VkInstance tg__instance_create()
     application_info.engineVersion = VK_MAKE_VERSION(0, 0, 0);
     application_info.apiVersion = VK_API_VERSION_1_2;
 
-#if TG_VULKAN_VALIDATION_LAYER_COUNT
-    const char* pp_enabled_layer_names[TG_VULKAN_VALIDATION_LAYER_COUNT] = TG_VULKAN_VALIDATION_LAYER_NAMES;
+#if TGVK_VALIDATION_LAYER_COUNT
+    const char* pp_enabled_layer_names[TGVK_VALIDATION_LAYER_COUNT] = TGVK_VALIDATION_LAYER_NAMES;
 #else
     const char** pp_enabled_layer_names = TG_NULL;
 #endif
 
-#if TG_VULKAN_INSTANCE_EXTENSION_COUNT
-    const char* pp_enabled_extension_names[TG_VULKAN_INSTANCE_EXTENSION_COUNT] = TG_VULKAN_INSTANCE_EXTENSION_NAMES;
+#if TGVK_INSTANCE_EXTENSION_COUNT
+    const char* pp_enabled_extension_names[TGVK_INSTANCE_EXTENSION_COUNT] = TGVK_INSTANCE_EXTENSION_NAMES;
 #else
     const char** pp_enabled_extension_names = TG_NULL;
 #endif
@@ -2419,12 +2419,12 @@ static VkInstance tg__instance_create()
     instance_create_info.pNext = TG_NULL;
     instance_create_info.flags = 0;
     instance_create_info.pApplicationInfo = &application_info;
-    instance_create_info.enabledLayerCount = TG_VULKAN_VALIDATION_LAYER_COUNT;
+    instance_create_info.enabledLayerCount = TGVK_VALIDATION_LAYER_COUNT;
     instance_create_info.ppEnabledLayerNames = pp_enabled_layer_names;
-    instance_create_info.enabledExtensionCount = TG_VULKAN_INSTANCE_EXTENSION_COUNT;
+    instance_create_info.enabledExtensionCount = TGVK_INSTANCE_EXTENSION_COUNT;
     instance_create_info.ppEnabledExtensionNames = pp_enabled_extension_names;
 
-    VK_CALL(vkCreateInstance(&instance_create_info, TG_NULL, &instance));
+    TGVK_CALL(vkCreateInstance(&instance_create_info, TG_NULL, &instance));
 
     return instance;
 }
@@ -2445,7 +2445,7 @@ static VkDebugUtilsMessengerEXT tg__debug_utils_manager_create()
 
     PFN_vkCreateDebugUtilsMessengerEXT vkCreateDebugUtilsMessengerEXT = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
     TG_ASSERT(vkCreateDebugUtilsMessengerEXT);
-    VK_CALL(vkCreateDebugUtilsMessengerEXT(instance, &debug_utils_messenger_create_info, TG_NULL, &debug_utils_messenger));
+    TGVK_CALL(vkCreateDebugUtilsMessengerEXT(instance, &debug_utils_messenger_create_info, TG_NULL, &debug_utils_messenger));
 
     return debug_utils_messenger;
 }
@@ -2463,7 +2463,7 @@ static tgvk_surface tg__surface_create()
     win32_surface_create_info.hinstance = GetModuleHandle(TG_NULL);
     win32_surface_create_info.hwnd = tg_platform_get_window_handle();
 
-    VK_CALL(vkCreateWin32SurfaceKHR(instance, &win32_surface_create_info, TG_NULL, &surface.surface));
+    TGVK_CALL(vkCreateWin32SurfaceKHR(instance, &win32_surface_create_info, TG_NULL, &surface.surface));
 
     return surface;
 }
@@ -2474,11 +2474,11 @@ static VkPhysicalDevice tg__physical_device_create()
     VkPhysicalDevice physical_device = VK_NULL_HANDLE;
 
     u32 physical_device_count;
-    VK_CALL(vkEnumeratePhysicalDevices(instance, &physical_device_count, TG_NULL));
+    TGVK_CALL(vkEnumeratePhysicalDevices(instance, &physical_device_count, TG_NULL));
     TG_ASSERT(physical_device_count);
     const u64 physical_devices_size = physical_device_count * sizeof(VkPhysicalDevice);
     VkPhysicalDevice* p_physical_devices = TG_MEMORY_STACK_ALLOC(physical_devices_size);
-    VK_CALL(vkEnumeratePhysicalDevices(instance, &physical_device_count, p_physical_devices));
+    TGVK_CALL(vkEnumeratePhysicalDevices(instance, &physical_device_count, p_physical_devices));
 
     u32 best_physical_device_index = 0;
     u32 best_physical_device_rating = 0;
@@ -2506,17 +2506,17 @@ static VkDevice tg__device_create()
 {
     VkDevice device = VK_NULL_HANDLE;
 
-    const f32 p_queue_priorities[TG_VULKAN_QUEUE_TYPE_COUNT] = { 1.0f, 1.0f, 1.0f };
-    VkDeviceQueueCreateInfo p_device_queue_create_infos[TG_VULKAN_QUEUE_TYPE_COUNT] = { 0 };
+    const f32 p_queue_priorities[TGVK_QUEUE_TYPE_COUNT] = { 1.0f, 1.0f, 1.0f };
+    VkDeviceQueueCreateInfo p_device_queue_create_infos[TGVK_QUEUE_TYPE_COUNT] = { 0 };
 
-    for (u8 i = 0; i < TG_VULKAN_QUEUE_TYPE_COUNT; i++)
+    for (u8 i = 0; i < TGVK_QUEUE_TYPE_COUNT; i++)
     {
         p_device_queue_create_infos[i].queueFamilyIndex = TG_U32_MAX;
     }
 
-    u32 p_queue_indices[TG_VULKAN_QUEUE_TYPE_COUNT] = { 0 };
+    u32 p_queue_indices[TGVK_QUEUE_TYPE_COUNT] = { 0 };
     u32 device_queue_create_info_count = 0;
-    for (u8 i = 0; i < TG_VULKAN_QUEUE_TYPE_COUNT; i++)
+    for (u8 i = 0; i < TGVK_QUEUE_TYPE_COUNT; i++)
     {
         p_queue_indices[i] = p_queue_buffer[i].index;
         b32 found = TG_FALSE;
@@ -2597,13 +2597,13 @@ static VkDevice tg__device_create()
     physical_device_features.sparseResidencyAliased = VK_FALSE;
     physical_device_features.variableMultisampleRate = VK_FALSE;
 
-#if TG_VULKAN_VALIDATION_LAYER_COUNT
-    const char* pp_enabled_layer_names[TG_VULKAN_VALIDATION_LAYER_COUNT] = TG_VULKAN_VALIDATION_LAYER_NAMES;
+#if TGVK_VALIDATION_LAYER_COUNT
+    const char* pp_enabled_layer_names[TGVK_VALIDATION_LAYER_COUNT] = TGVK_VALIDATION_LAYER_NAMES;
 #else
     const char** pp_enabled_layer_names = TG_NULL;
 #endif
-#if TG_VULKAN_DEVICE_EXTENSION_COUNT
-    const char* pp_enabled_extension_names[TG_VULKAN_DEVICE_EXTENSION_COUNT] = TG_VULKAN_DEVICE_EXTENSION_NAMES;
+#if TGVK_DEVICE_EXTENSION_COUNT
+    const char* pp_enabled_extension_names[TGVK_DEVICE_EXTENSION_COUNT] = TGVK_DEVICE_EXTENSION_NAMES;
 #else
     const char** pp_enabled_extension_names = TG_NULL;
 #endif
@@ -2614,13 +2614,13 @@ static VkDevice tg__device_create()
     device_create_info.flags = 0;
     device_create_info.queueCreateInfoCount = device_queue_create_info_count;
     device_create_info.pQueueCreateInfos = p_device_queue_create_infos;
-    device_create_info.enabledLayerCount = TG_VULKAN_VALIDATION_LAYER_COUNT;
+    device_create_info.enabledLayerCount = TGVK_VALIDATION_LAYER_COUNT;
     device_create_info.ppEnabledLayerNames = pp_enabled_layer_names;
-    device_create_info.enabledExtensionCount = TG_VULKAN_DEVICE_EXTENSION_COUNT;
+    device_create_info.enabledExtensionCount = TGVK_DEVICE_EXTENSION_COUNT;
     device_create_info.ppEnabledExtensionNames = pp_enabled_extension_names;
     device_create_info.pEnabledFeatures = &physical_device_features;
 
-    VK_CALL(vkCreateDevice(physical_device, &device_create_info, TG_NULL, &device));
+    TGVK_CALL(vkCreateDevice(physical_device, &device_create_info, TG_NULL, &device));
 
     return device;
 }
@@ -2657,13 +2657,13 @@ static void tg__queues_create(u32 count)
 static void tg__swapchain_create()
 {
     VkSurfaceCapabilitiesKHR surface_capabilities;
-    VK_CALL(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device, surface.surface, &surface_capabilities));
+    TGVK_CALL(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device, surface.surface, &surface_capabilities));
 
     u32 surface_format_count;
-    VK_CALL(vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface.surface, &surface_format_count, TG_NULL));
+    TGVK_CALL(vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface.surface, &surface_format_count, TG_NULL));
     const u64 surface_formats_size = surface_format_count * sizeof(VkSurfaceFormatKHR);
     VkSurfaceFormatKHR* p_surface_formats = TG_MEMORY_STACK_ALLOC(surface_formats_size);
-    VK_CALL(vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface.surface, &surface_format_count, p_surface_formats));
+    TGVK_CALL(vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface.surface, &surface_format_count, p_surface_formats));
 
     surface.format = p_surface_formats[0];
     for (u32 i = 0; i < surface_format_count; i++)
@@ -2678,8 +2678,8 @@ static void tg__swapchain_create()
 
     VkPresentModeKHR p_present_modes[9] = { 0 };
     u32 present_mode_count = 0;
-    VK_CALL(vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface.surface, &present_mode_count, TG_NULL));
-    VK_CALL(vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface.surface, &present_mode_count, p_present_modes));
+    TGVK_CALL(vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface.surface, &present_mode_count, TG_NULL));
+    TGVK_CALL(vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface.surface, &present_mode_count, p_present_modes));
 
     VkPresentModeKHR present_mode = VK_PRESENT_MODE_FIFO_KHR;
     for (u32 i = 0; i < present_mode_count; i++)
@@ -2730,14 +2730,14 @@ static void tg__swapchain_create()
     swapchain_create_info.clipped = VK_TRUE;
     swapchain_create_info.oldSwapchain = VK_NULL_HANDLE;
 
-    VK_CALL(vkCreateSwapchainKHR(device, &swapchain_create_info, TG_NULL, &swapchain));
+    TGVK_CALL(vkCreateSwapchainKHR(device, &swapchain_create_info, TG_NULL, &swapchain));
 
     u32 surface_image_count = TG_MAX_SWAPCHAIN_IMAGES;
 #ifdef TG_DEBUG
-    VK_CALL(vkGetSwapchainImagesKHR(device, swapchain, &surface_image_count, TG_NULL));
+    TGVK_CALL(vkGetSwapchainImagesKHR(device, swapchain, &surface_image_count, TG_NULL));
     TG_ASSERT(surface_image_count == TG_MAX_SWAPCHAIN_IMAGES);
 #endif
-    VK_CALL(vkGetSwapchainImagesKHR(device, swapchain, &surface_image_count, p_swapchain_images));
+    TGVK_CALL(vkGetSwapchainImagesKHR(device, swapchain, &surface_image_count, p_swapchain_images));
 
     for (u32 i = 0; i < TG_MAX_SWAPCHAIN_IMAGES; i++)
     {
@@ -2760,24 +2760,23 @@ void tg_graphics_init()
     surface = tg__surface_create();
     physical_device = tg__physical_device_create();
     device = tg__device_create();
-    tg__queues_create(TG_VULKAN_QUEUE_TYPE_COUNT);
+    tg__queues_create(TGVK_QUEUE_TYPE_COUNT);
     for (u32 i = 0; i < TG_WORKER_THREAD_COUNT + 1; i++)
     {
-        p_graphics_command_pool[i] = tg__command_pool_create(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, TG_VULKAN_QUEUE_TYPE_GRAPHICS);
-        p_compute_command_pool[i] = tg__command_pool_create(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, TG_VULKAN_QUEUE_TYPE_COMPUTE);
+        p_graphics_command_pool[i] = tg__command_pool_create(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, TGVK_QUEUE_TYPE_GRAPHICS);
+        p_compute_command_pool[i] = tg__command_pool_create(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, TGVK_QUEUE_TYPE_COMPUTE);
     }
     tg__swapchain_create();
 
-    global_graphics_command_buffer = tgvk_command_buffer_allocate(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
-    global_compute_command_buffer = tgvk_command_buffer_allocate(TG_VULKAN_COMMAND_POOL_TYPE_COMPUTE, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+    global_graphics_command_buffer = tgvk_command_buffer_allocate(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+    global_compute_command_buffer = tgvk_command_buffer_allocate(TGVK_COMMAND_POOL_TYPE_COMPUTE, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
     tgvk_memory_allocator_init(device, physical_device);
-    tgvk_renderer_init_shared_resources();
 }
 
 void tg_graphics_wait_idle()
 {
-    VK_CALL(vkDeviceWaitIdle(device));
+    TGVK_CALL(vkDeviceWaitIdle(device));
 }
 
 void tg_graphics_shutdown()

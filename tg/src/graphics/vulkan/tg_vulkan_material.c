@@ -21,12 +21,12 @@ static tg_material_h tg__create(tgvk_material_type material_type, tg_vertex_shad
 
     switch (material_type)
     {
-    case TG_VULKAN_MATERIAL_TYPE_DEFERRED:
+    case TGVK_MATERIAL_TYPE_DEFERRED:
     {
         graphics_pipeline_create_info.blend_enable = VK_FALSE;
         graphics_pipeline_create_info.render_pass = shared_render_resources.geometry_render_pass;
     } break;
-    case TG_VULKAN_MATERIAL_TYPE_FORWARD:
+    case TGVK_MATERIAL_TYPE_FORWARD:
     {
         graphics_pipeline_create_info.blend_enable = VK_TRUE;
         graphics_pipeline_create_info.render_pass = shared_render_resources.forward_render_pass;
@@ -49,7 +49,7 @@ tg_material_h tg_material_create_deferred(tg_vertex_shader_h h_vertex_shader, tg
 {
     TG_ASSERT(h_vertex_shader && h_fragment_shader);
 
-    tg_material_h h_material = tg__create(TG_VULKAN_MATERIAL_TYPE_DEFERRED, h_vertex_shader, h_fragment_shader);
+    tg_material_h h_material = tg__create(TGVK_MATERIAL_TYPE_DEFERRED, h_vertex_shader, h_fragment_shader);
     return h_material;
 }
 
@@ -57,7 +57,7 @@ tg_material_h tg_material_create_forward(tg_vertex_shader_h h_vertex_shader, tg_
 {
     TG_ASSERT(h_vertex_shader && h_fragment_shader);
 
-    tg_material_h h_material = tg__create(TG_VULKAN_MATERIAL_TYPE_FORWARD, h_vertex_shader, h_fragment_shader);
+    tg_material_h h_material = tg__create(TGVK_MATERIAL_TYPE_FORWARD, h_vertex_shader, h_fragment_shader);
     return h_material;
 }
 
@@ -73,7 +73,7 @@ b32 tg_material_is_deferred(tg_material_h h_material)
 {
     TG_ASSERT(h_material);
 
-    const b32 result = h_material->material_type == TG_VULKAN_MATERIAL_TYPE_DEFERRED;
+    const b32 result = h_material->material_type == TGVK_MATERIAL_TYPE_DEFERRED;
     return result;
 }
 
@@ -81,7 +81,7 @@ b32 tg_material_is_forward(tg_material_h h_material)
 {
     TG_ASSERT(h_material);
 
-    const b32 result = h_material->material_type == TG_VULKAN_MATERIAL_TYPE_FORWARD;
+    const b32 result = h_material->material_type == TGVK_MATERIAL_TYPE_FORWARD;
     return result;
 }
 

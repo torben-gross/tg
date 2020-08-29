@@ -84,7 +84,7 @@ void tg_voxelizer_create(tg_voxelizer* p_voxelizer)
         const VkDeviceSize format_size = (VkDeviceSize)tg_color_image_format_size((tg_color_image_format)p_voxelizer->p_image_3ds[i].format);
         p_voxelizer->p_voxel_buffers[i] = tgvk_buffer_create(TG_SVO_DIMS3 * format_size, VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
     }
-    p_voxelizer->command_buffer = tgvk_command_buffer_allocate(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+    p_voxelizer->command_buffer = tgvk_command_buffer_allocate(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 }
 
 void tg_voxelizer_begin(tg_voxelizer* p_voxelizer)
@@ -187,7 +187,7 @@ void tg_voxelizer_end(tg_voxelizer* p_voxelizer, v3i min_corner_index_3d, tg_vox
     submit_info.signalSemaphoreCount = 0;
     submit_info.pSignalSemaphores = TG_NULL;
 
-    tgvk_queue_submit(TG_VULKAN_QUEUE_TYPE_GRAPHICS, 1, &submit_info, p_voxelizer->fence);
+    tgvk_queue_submit(TGVK_QUEUE_TYPE_GRAPHICS, 1, &submit_info, p_voxelizer->fence);
     tgvk_fence_wait(p_voxelizer->fence);
     tgvk_fence_reset(p_voxelizer->fence);
 
@@ -196,7 +196,7 @@ void tg_voxelizer_end(tg_voxelizer* p_voxelizer, v3i min_corner_index_3d, tg_vox
     ((m4*)p_voxelizer->view_projection_ubo.memory.p_mapped_device_memory)[1] = tgm_m4_inverse(tgm_m4_euler(0.0f, TG_TO_RADIANS(90.0f), 0.0f));
     tgvk_buffer_flush_mapped_memory(&p_voxelizer->view_projection_ubo);
 
-    tgvk_queue_submit(TG_VULKAN_QUEUE_TYPE_GRAPHICS, 1, &submit_info, p_voxelizer->fence);
+    tgvk_queue_submit(TGVK_QUEUE_TYPE_GRAPHICS, 1, &submit_info, p_voxelizer->fence);
     tgvk_fence_wait(p_voxelizer->fence);
     tgvk_fence_reset(p_voxelizer->fence);
 
@@ -205,7 +205,7 @@ void tg_voxelizer_end(tg_voxelizer* p_voxelizer, v3i min_corner_index_3d, tg_vox
     ((m4*)p_voxelizer->view_projection_ubo.memory.p_mapped_device_memory)[1] = tgm_m4_inverse(tgm_m4_euler(TG_TO_RADIANS(90.0f), 0.0f, 0.0f));
     tgvk_buffer_flush_mapped_memory(&p_voxelizer->view_projection_ubo);
 
-    tgvk_queue_submit(TG_VULKAN_QUEUE_TYPE_GRAPHICS, 1, &submit_info, p_voxelizer->fence);
+    tgvk_queue_submit(TGVK_QUEUE_TYPE_GRAPHICS, 1, &submit_info, p_voxelizer->fence);
     tgvk_fence_wait(p_voxelizer->fence);
     tgvk_fence_reset(p_voxelizer->fence);
 

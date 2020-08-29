@@ -836,7 +836,7 @@ void tg_mesh_regenerate_normals(tg_mesh_h h_mesh)
             vkCmdBindDescriptorSets(global_compute_command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute_pipeline.pipeline_layout, 0, 1, &compute_pipeline.descriptor_set, 0, TG_NULL);
             vkCmdDispatch(global_compute_command_buffer, vertex_count, 1, 1);
         }
-        tgvk_command_buffer_end_and_submit(global_compute_command_buffer, TG_VULKAN_QUEUE_TYPE_COMPUTE);
+        tgvk_command_buffer_end_and_submit(global_compute_command_buffer, TGVK_QUEUE_TYPE_COMPUTE);
 
 
 

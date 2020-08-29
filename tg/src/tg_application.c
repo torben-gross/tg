@@ -70,7 +70,7 @@ typedef struct tg_sample_scene
     v3                         probe_translation;
     tg_cube_map_h              h_probe_cube_map;
     tg_render_command_h        h_probe_render_command;
-    tg_terrain                 terrain;
+    tg_terrain*                p_terrain;
     f32                        light_timer;
 } tg_sample_scene;
 
@@ -299,7 +299,7 @@ static void tg__game_3d_create()
     //tg_render_command_h h_my_render_command = tg_render_command_create(scene.h_my_mesh, h_my_material, (v3) { 128.0f, 141.9f, 126.0f }, 1, p_my_handles);
     //tg_list_insert(&scene.render_commands, &h_my_render_command);
 
-    scene.terrain = tg_terrain_create(&scene.camera);
+    scene.p_terrain = tg_terrain_create(&scene.camera);
 }
 
 static void tg__game_3d_update_and_render(f32 dt)
@@ -385,7 +385,7 @@ static void tg__game_3d_update_and_render(f32 dt)
         scene.camera.persp.fov_y_in_radians -= 0.1f * tg_input_get_mouse_wheel_detents(TG_TRUE);
     }
 
-    tg_terrain_update(&scene.terrain, dt);
+    tg_terrain_update(scene.p_terrain, dt);
 
 
     scene.light_timer += dt;
@@ -406,11 +406,11 @@ static void tg__game_3d_update_and_render(f32 dt)
     const v3 c0d = tgm_v3_mulf((v3) { 0.529f, 0.808f, 0.922f }, 2.0f);
     const v3 c0n = tgm_v3_mulf((v3) { 0.992f, 0.369f, 0.325f }, 2.0f);
     //const v3 c0 = tgm_v3_lerp(c0n, c0d, -d0.y);
-    const v3 c0 = V3(1.0f);
+    const v3 c0 = V3(3.0f);
 
     tg_renderer_begin(scene.h_secondary_renderer);
     tg_renderer_push_directional_light(scene.h_secondary_renderer, d0, (v3) { 4.0f, 4.0f, 10.0f });
-    tg_terrain_render(&scene.terrain, scene.h_secondary_renderer);
+    tg_terrain_render(scene.p_terrain, scene.h_secondary_renderer);
     tg_render_command_h* ph_render_commands = TG_LIST_POINTER_TO(scene.render_commands, 0);
     for (u32 i = 0; i < scene.render_commands.count; i++)
     {
@@ -421,7 +421,7 @@ static void tg__game_3d_update_and_render(f32 dt)
     tg_renderer_begin(scene.h_main_renderer);
     tg_renderer_push_directional_light(scene.h_main_renderer, d0, c0);
     //tg_renderer_push_point_light(scene.h_main_renderer, (v3) { lx1, ly1, lz1 }, (v3){ 8.0f, 8.0f, 16.0f });
-    tg_terrain_render(&scene.terrain, scene.h_main_renderer);
+    tg_terrain_render(scene.p_terrain, scene.h_main_renderer);
     ph_render_commands = TG_LIST_POINTER_TO(scene.render_commands, 0);
     for (u32 i = 0; i < scene.render_commands.count; i++)
     {
@@ -463,7 +463,7 @@ static void tg__game_3d_update_and_render(f32 dt)
 
 static void tg__game_3d_destroy()
 {
-    tg_terrain_destroy(&scene.terrain);
+    tg_terrain_destroy(scene.p_terrain);
 
     tg_render_command_destroy(scene.h_quad_render_command);
     tg_material_destroy(scene.h_quad_material);
@@ -480,7 +480,8 @@ static void tg__game_3d_destroy()
 void tg_application_start()
 {
     tg_graphics_init();
-    tg_assets_init();
+    tg_assets_init(); // TODO: convert this to a shader library and initialize it through tg_graphics_init() ?
+    tg_renderer_init_shared_resources();
     tg__game_3d_create();
 
 #ifdef TG_DEBUG

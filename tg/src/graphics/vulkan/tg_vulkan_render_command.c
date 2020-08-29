@@ -18,18 +18,18 @@ static void tg__register(tg_render_command_h h_render_command, tg_renderer_h h_r
         tgvk_descriptor_set_update(p_renderer_info->descriptor_set.descriptor_set, p_global_resources[i], binding);
     }
 
-    p_renderer_info->command_buffer = tgvk_command_buffer_allocate(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_SECONDARY);
+    p_renderer_info->command_buffer = tgvk_command_buffer_allocate(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_SECONDARY);
 
     VkRenderPass render_pass = VK_NULL_HANDLE;
     VkFramebuffer framebuffer = VK_NULL_HANDLE;
-    if (h_render_command->h_material->material_type == TG_VULKAN_MATERIAL_TYPE_DEFERRED)
+    if (h_render_command->h_material->material_type == TGVK_MATERIAL_TYPE_DEFERRED)
     {
         render_pass = shared_render_resources.geometry_render_pass;
         framebuffer = h_renderer->geometry_pass.framebuffer.framebuffer;
     }
     else
     {
-        TG_ASSERT(h_render_command->h_material->material_type == TG_VULKAN_MATERIAL_TYPE_FORWARD);
+        TG_ASSERT(h_render_command->h_material->material_type == TGVK_MATERIAL_TYPE_FORWARD);
         render_pass = shared_render_resources.forward_render_pass;
         framebuffer = h_renderer->forward_pass.framebuffer.framebuffer;
     }
@@ -90,7 +90,7 @@ static void tg__register(tg_render_command_h h_render_command, tg_renderer_h h_r
             vkCmdDraw(p_renderer_info->command_buffer.command_buffer, (u32)h_render_command->h_mesh->vertex_count, 1, 0, 0);
         }
     }
-    VK_CALL(vkEndCommandBuffer(p_renderer_info->command_buffer.command_buffer));
+    TGVK_CALL(vkEndCommandBuffer(p_renderer_info->command_buffer.command_buffer));
 
 
 
@@ -98,37 +98,9 @@ static void tg__register(tg_render_command_h h_render_command, tg_renderer_h h_r
 
     TG_ASSERT(h_render_command->h_mesh->position_buffer.buffer); // TODO: add flag for non shadow casting
 
-    tgvk_graphics_pipeline_create_info pipeline_create_info = { 0 }; // TODO: create this pipeline only once in the shader and reuse for everything? only the command buffer should be cached in the render_command
-    pipeline_create_info.p_vertex_shader = &tg_vertex_shader_get("shaders/shadow.vert")->shader;
-    pipeline_create_info.p_fragment_shader = &tg_fragment_shader_get("shaders/shadow.frag")->shader;
-    pipeline_create_info.cull_mode = VK_CULL_MODE_BACK_BIT;
-    pipeline_create_info.sample_count = 1;
-    pipeline_create_info.depth_test_enable = TG_TRUE;
-    pipeline_create_info.depth_write_enable = TG_TRUE;
-    pipeline_create_info.blend_enable = TG_FALSE;
-    pipeline_create_info.render_pass = shared_render_resources.shadow_render_pass;
-    pipeline_create_info.viewport_size.x = (f32)TG_CASCADED_SHADOW_MAP_SIZE;
-    pipeline_create_info.viewport_size.y = (f32)TG_CASCADED_SHADOW_MAP_SIZE;
-    pipeline_create_info.polygon_mode = VK_POLYGON_MODE_FILL;
-
-    TG_ASSERT(pipeline_create_info.p_vertex_shader->spirv_layout.input_resource_count > 0);
-    TG_ASSERT(tg_vertex_input_attribute_format_get_size(pipeline_create_info.p_vertex_shader->spirv_layout.p_input_resources[0].format) == sizeof(v3));
-
-    VkVertexInputBindingDescription vertex_input_binding_description = { 0 };
-    vertex_input_binding_description.binding = 0;
-    vertex_input_binding_description.stride = tg_vertex_input_attribute_format_get_size(pipeline_create_info.p_vertex_shader->spirv_layout.p_input_resources[0].format);
-    vertex_input_binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-    VkVertexInputAttributeDescription vertex_input_attribute_description = { 0 };
-    vertex_input_attribute_description.location = 0;
-    vertex_input_attribute_description.binding = 0;
-    vertex_input_attribute_description.format = VK_FORMAT_R32G32B32_SFLOAT;
-    vertex_input_attribute_description.offset = 0;
-
     for (u32 i = 0; i < TG_CASCADED_SHADOW_MAPS; i++)
     {
-        p_renderer_info->p_shadow_graphics_pipelines[i] = tgvk_pipeline_create_graphics2(&pipeline_create_info, 1, &vertex_input_binding_description, &vertex_input_attribute_description);
-        p_renderer_info->p_shadow_descriptor_sets[i] = tgvk_descriptor_set_create(&p_renderer_info->p_shadow_graphics_pipelines[i]);
+        p_renderer_info->p_shadow_descriptor_sets[i] = tgvk_descriptor_set_create(&shared_render_resources.shadow_pipeline);
         tgvk_descriptor_set_update_uniform_buffer(p_renderer_info->p_shadow_descriptor_sets[i].descriptor_set, h_render_command->model_ubo.buffer, 0);
         tgvk_descriptor_set_update_uniform_buffer(p_renderer_info->p_shadow_descriptor_sets[i].descriptor_set, h_renderer->shadow_pass.p_lightspace_ubos[i].buffer, 1);
 
@@ -142,17 +114,17 @@ static void tg__register(tg_render_command_h h_render_command, tg_renderer_h h_r
         shadow_command_buffer_inheritance_info.queryFlags = 0;
         shadow_command_buffer_inheritance_info.pipelineStatistics = 0;
         
-        p_renderer_info->p_shadow_command_buffers[i] = tgvk_command_buffer_allocate(TG_VULKAN_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_SECONDARY);
+        p_renderer_info->p_shadow_command_buffers[i] = tgvk_command_buffer_allocate(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_SECONDARY);
         tgvk_command_buffer_begin_secondary(&p_renderer_info->p_shadow_command_buffers[i], VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, shared_render_resources.shadow_render_pass, h_renderer->shadow_pass.p_framebuffers[i].framebuffer);
         {
-            vkCmdBindPipeline(p_renderer_info->p_shadow_command_buffers[i].command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_renderer_info->p_shadow_graphics_pipelines[i].pipeline);
+            vkCmdBindPipeline(p_renderer_info->p_shadow_command_buffers[i].command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shared_render_resources.shadow_pipeline.pipeline);
             const VkDeviceSize vertex_buffer_offset = 0;
             if (h_render_command->h_mesh->index_buffer.memory.size != 0)
             {
                 vkCmdBindIndexBuffer(p_renderer_info->p_shadow_command_buffers[i].command_buffer, h_render_command->h_mesh->index_buffer.buffer, 0, VK_INDEX_TYPE_UINT16);
             }
             vkCmdBindVertexBuffers(p_renderer_info->p_shadow_command_buffers[i].command_buffer, 0, 1, &h_render_command->h_mesh->position_buffer.buffer, &vertex_buffer_offset);
-            vkCmdBindDescriptorSets(p_renderer_info->p_shadow_command_buffers[i].command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_renderer_info->p_shadow_graphics_pipelines[i].layout.pipeline_layout, 0, 1, &p_renderer_info->p_shadow_descriptor_sets[i].descriptor_set, 0, TG_NULL);
+            vkCmdBindDescriptorSets(p_renderer_info->p_shadow_command_buffers[i].command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shared_render_resources.shadow_pipeline.layout.pipeline_layout, 0, 1, &p_renderer_info->p_shadow_descriptor_sets[i].descriptor_set, 0, TG_NULL);
             if (h_render_command->h_mesh->index_count != 0)
             {
                 vkCmdDrawIndexed(p_renderer_info->p_shadow_command_buffers[i].command_buffer, (u32)(h_render_command->h_mesh->index_count), 1, 0, 0, 0); // TODO: u16
@@ -162,7 +134,7 @@ static void tg__register(tg_render_command_h h_render_command, tg_renderer_h h_r
                 vkCmdDraw(p_renderer_info->p_shadow_command_buffers[i].command_buffer, (u32)(h_render_command->h_mesh->vertex_count), 1, 0, 0);
             }
         }
-        VK_CALL(vkEndCommandBuffer(p_renderer_info->p_shadow_command_buffers[i].command_buffer));
+        TGVK_CALL(vkEndCommandBuffer(p_renderer_info->p_shadow_command_buffers[i].command_buffer));
     }
 }
 
@@ -201,7 +173,6 @@ void tg_render_command_destroy(tg_render_command_h h_render_command)
         {
             tgvk_command_buffer_free(&h_render_command->p_renderer_infos[i].p_shadow_command_buffers[j]);
             tgvk_descriptor_set_destroy(&h_render_command->p_renderer_infos[i].p_shadow_descriptor_sets[j]);
-            tgvk_pipeline_destroy(&h_render_command->p_renderer_infos[i].p_shadow_graphics_pipelines[j]);
         }
         tgvk_command_buffer_free(&h_render_command->p_renderer_infos[i].command_buffer);
         tgvk_descriptor_set_destroy(&h_render_command->p_renderer_infos[i].descriptor_set);

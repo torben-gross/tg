@@ -9,9 +9,9 @@
 
 
 #ifdef TG_DEBUG
-#define VK_CALL(x)     TG_ASSERT((x) == VK_SUCCESS) // TODO: how can i make this not be a duplicate?
+#define TGVK_CALL(x)     TG_ASSERT((x) == VK_SUCCESS) // TODO: how can i make this not be a duplicate?
 #else
-#define VK_CALL(x)     x
+#define TGVK_CALL(x)     x
 #endif
 
 #define TG_ROUND(size) ((((size) + memory.page_size - 1) / memory.page_size) * memory.page_size)
@@ -78,7 +78,7 @@ void tgvk_memory_allocator_init(VkDevice device, VkPhysicalDevice physical_devic
 
     memory.page_size = tgm_u64_max(1024, physical_device_properties.limits.bufferImageGranularity);
 
-    const VkDeviceSize heap_size_fraction_denominator = 2;
+    const VkDeviceSize heap_size_fraction_denominator = 4;
     for (u32 i = 0; i < physical_device_memory_properties.memoryHeapCount; i++)
     {
         if (p_memory_types_per_memory_heap[i])
@@ -117,10 +117,10 @@ void tgvk_memory_allocator_init(VkDevice device, VkPhysicalDevice physical_devic
             memory_allocate_info.allocationSize = allocation_size;
             memory_allocate_info.memoryTypeIndex = i;
 
-            VK_CALL(vkAllocateMemory(device, &memory_allocate_info, TG_NULL, &memory.p_pools[memory.pool_count].device_memory));
+            TGVK_CALL(vkAllocateMemory(device, &memory_allocate_info, TG_NULL, &memory.p_pools[memory.pool_count].device_memory));
             if (physical_device_memory_properties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
             {
-                VK_CALL(vkMapMemory(device, memory.p_pools[memory.pool_count].device_memory, 0, VK_WHOLE_SIZE, 0, &memory.p_pools[memory.pool_count].p_mapped_device_memory));
+                TGVK_CALL(vkMapMemory(device, memory.p_pools[memory.pool_count].device_memory, 0, VK_WHOLE_SIZE, 0, &memory.p_pools[memory.pool_count].p_mapped_device_memory));
             }
             else
             {
