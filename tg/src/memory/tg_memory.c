@@ -80,7 +80,6 @@ void tg__insert(void* p_memory, const char* p_filename, u32 line)
 void tg__remove(void* p_memory)
 {
 	u32 hash = TG_MEMORY_HASH(p_memory);
-	u32 original = hash;
 	while (hashmap.pp_keys[hash] != p_memory)
 	{
 		TG_ASSERT(hashmap.pp_keys[hash] != TG_NULL);
@@ -113,7 +112,7 @@ void tg__remove(void* p_memory)
 
 
 
-void tg_memory_init()
+void tg_memory_init(void)
 {
 #ifdef TG_DEBUG
 	h_mutex = TG_MUTEX_CREATE_LOCKED();
@@ -130,7 +129,7 @@ void tg_memory_init()
 #endif
 }
 
-void tg_memory_shutdown()
+void tg_memory_shutdown(void)
 {
 #ifdef TG_DEBUG
 	TG_MUTEX_LOCK(h_mutex);
@@ -242,7 +241,7 @@ void* tg_memory_realloc_impl(u64 size, void* p_memory, const char* p_filename, u
 	return p_reallocated_memory;
 }
 
-void tg_memory_free_impl(void* p_memory, const char* p_filename, u32 line)
+void tg_memory_free_impl(void* p_memory)
 {
 	TG_MUTEX_LOCK(h_mutex);
 	tg__remove(p_memory);
@@ -251,7 +250,7 @@ void tg_memory_free_impl(void* p_memory, const char* p_filename, u32 line)
 	tg_platform_memory_free(p_memory);
 }
 
-u32 tg_memory_active_allocation_count()
+u32 tg_memory_active_allocation_count(void)
 {
 	return hashmap.count;
 }

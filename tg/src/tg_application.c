@@ -103,7 +103,7 @@ static v3 tg__random_dir_hemisphere(tg_random* p_random, v3 normal)
     return result;
 }
 
-static void tg__raycast()
+static void tg__raycast(void)
 {
     v3 p_ray_origins[6] = {
         tgm_v3_sub(scene.probe_translation, (v3) { 128.0f, 140.0f, 128.0f }),
@@ -145,7 +145,7 @@ static void tg__raycast()
     tg_cube_map_set_data(scene.h_probe_cube_map, scene.p_light_values);
 }
 
-static void tg__game_3d_create()
+static void tg__game_3d_create(void)
 {
     scene.render_commands = TG_LIST_CREATE(tg_render_command_h);
     scene.camera.type = TG_CAMERA_TYPE_PERSPECTIVE;
@@ -385,7 +385,7 @@ static void tg__game_3d_update_and_render(f32 dt)
         scene.camera.persp.fov_y_in_radians -= 0.1f * tg_input_get_mouse_wheel_detents(TG_TRUE);
     }
 
-    tg_terrain_update(scene.p_terrain, dt);
+    tg_terrain_update(scene.p_terrain);
 
 
     scene.light_timer += dt;
@@ -461,7 +461,7 @@ static void tg__game_3d_update_and_render(f32 dt)
     tg_renderer_clear(scene.h_main_renderer);
 }
 
-static void tg__game_3d_destroy()
+static void tg__game_3d_destroy(void)
 {
     tg_terrain_destroy(scene.p_terrain);
 
@@ -477,7 +477,7 @@ static void tg__game_3d_destroy()
 
 
 
-void tg_application_start()
+void tg_application_start(void)
 {
     tg_graphics_init();
     tg_assets_init(); // TODO: convert this to a shader library and initialize it through tg_graphics_init() ?
@@ -538,7 +538,7 @@ void tg_application_on_window_resize(u32 width, u32 height)
 {
 }
 
-void tg_application_quit()
+void tg_application_quit(void)
 {
 	running = TG_FALSE;
 }

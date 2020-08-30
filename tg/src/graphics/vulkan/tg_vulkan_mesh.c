@@ -141,7 +141,7 @@ static const char* tg__skip_whitespace(const char* p_iterator, const char* const
 
 
 
-tg_mesh_h tg_mesh_create()
+tg_mesh_h tg_mesh_create(void)
 {
     tg_mesh_h h_mesh = tgvk_handle_take(TG_STRUCTURE_TYPE_MESH);
     return h_mesh;
@@ -420,29 +420,29 @@ tg_mesh_h tg_mesh_create_sphere(f32 radius, u32 sector_count, u32 stack_count, b
 
             if (i == 0)
             {
-                p_indices[it++] = iv0;
-                p_indices[it++] = iv1 - 1;
-                p_indices[it++] = iv2 - 1;
+                p_indices[it++] = (u16)iv0;
+                p_indices[it++] = (u16)iv1 - 1;
+                p_indices[it++] = (u16)iv2 - 1;
             }
             else if (i == stack_count - 1)
             {
-                p_indices[it++] = iv0 - 1;
-                p_indices[it++] = iv1 - 1;
-                p_indices[it++] = iv3 - 1;
+                p_indices[it++] = (u16)iv0 - 1;
+                p_indices[it++] = (u16)iv1 - 1;
+                p_indices[it++] = (u16)iv3 - 1;
             }
             else
             {
-                p_indices[it++] = iv0 - 1;
-                p_indices[it++] = iv1 - 1;
-                p_indices[it++] = iv2 - 1;
-                p_indices[it++] = iv2 - 1;
-                p_indices[it++] = iv3 - 1;
-                p_indices[it++] = iv0 - 1;
+                p_indices[it++] = (u16)iv0 - 1;
+                p_indices[it++] = (u16)iv1 - 1;
+                p_indices[it++] = (u16)iv2 - 1;
+                p_indices[it++] = (u16)iv2 - 1;
+                p_indices[it++] = (u16)iv3 - 1;
+                p_indices[it++] = (u16)iv0 - 1;
             }
         }
     }
 
-    tg_mesh_h h_mesh = tg_mesh_create(vertex_count, p_positions, p_normals, p_uvs, TG_NULL, index_count, p_indices);
+    tg_mesh_h h_mesh = tg_mesh_create();
     tg_mesh_set_indices(h_mesh, index_count, p_indices);
     tg_mesh_set_positions(h_mesh, vertex_count, p_positions);
     if (normals)
@@ -498,7 +498,7 @@ void tg_mesh_copy_indices(tg_mesh_h h_mesh, u32 first, u32 count, u16* p_buffer)
     TG_ASSERT(h_mesh && h_mesh->index_buffer.buffer);
 
     const VkDeviceSize offset = first * sizeof(u16);
-    const VkDeviceSize size = h_mesh->index_count * sizeof(u16);
+    const VkDeviceSize size = tgm_u32_min(count, h_mesh->index_count) * sizeof(u16);
     tg__copy(offset, size, &h_mesh->index_buffer, p_buffer);
 }
 
@@ -507,7 +507,7 @@ void tg_mesh_copy_positions(tg_mesh_h h_mesh, u32 first, u32 count, v3* p_buffer
     TG_ASSERT(h_mesh && h_mesh->position_buffer.buffer);
 
     const VkDeviceSize offset = first * sizeof(v3);
-    const VkDeviceSize size = h_mesh->vertex_count * sizeof(v3);
+    const VkDeviceSize size = tgm_u32_min(count, h_mesh->vertex_count) * sizeof(v3);
     tg__copy(offset, size, &h_mesh->position_buffer, p_buffer);
 }
 
@@ -516,7 +516,7 @@ void tg_mesh_copy_normals(tg_mesh_h h_mesh, u32 first, u32 count, v3* p_buffer)
     TG_ASSERT(h_mesh && h_mesh->normal_buffer.buffer);
 
     const VkDeviceSize offset = first * sizeof(v3);
-    const VkDeviceSize size = h_mesh->vertex_count * sizeof(v3);
+    const VkDeviceSize size = tgm_u32_min(count, h_mesh->vertex_count) * sizeof(v3);
     tg__copy(offset, size, &h_mesh->normal_buffer, p_buffer);
 }
 
@@ -525,7 +525,7 @@ void tg_mesh_copy_uvs(tg_mesh_h h_mesh, u32 first, u32 count, v2* p_buffer)
     TG_ASSERT(h_mesh && h_mesh->uv_buffer.buffer);
 
     const VkDeviceSize offset = first * sizeof(v2);
-    const VkDeviceSize size = h_mesh->vertex_count * sizeof(v2);
+    const VkDeviceSize size = tgm_u32_min(count, h_mesh->vertex_count) * sizeof(v2);
     tg__copy(offset, size, &h_mesh->uv_buffer, p_buffer);
 }
 
@@ -534,7 +534,7 @@ void tg_mesh_copy_tangents(tg_mesh_h h_mesh, u32 first, u32 count, v3* p_buffer)
     TG_ASSERT(h_mesh && h_mesh->tangent_buffer.buffer);
 
     const VkDeviceSize offset = first * sizeof(v3);
-    const VkDeviceSize size = h_mesh->vertex_count * sizeof(v3);
+    const VkDeviceSize size = tgm_u32_min(count, h_mesh->vertex_count) * sizeof(v3);
     tg__copy(offset, size, &h_mesh->tangent_buffer, p_buffer);
 }
 
@@ -543,7 +543,7 @@ void tg_mesh_copy_bitangents(tg_mesh_h h_mesh, u32 first, u32 count, v3* p_buffe
     TG_ASSERT(h_mesh && h_mesh->bitangent_buffer.buffer);
 
     const VkDeviceSize offset = first * sizeof(v3);
-    const VkDeviceSize size = h_mesh->vertex_count * sizeof(v3);
+    const VkDeviceSize size = tgm_u32_min(count, h_mesh->vertex_count) * sizeof(v3);
     tg__copy(offset, size, &h_mesh->bitangent_buffer, p_buffer);
 }
 
@@ -632,9 +632,9 @@ tg_mesh_h tg_mesh_create_sphere_flat(f32 radius, u32 sector_count, u32 stack_cou
                     p_uvs[vertex_count + 2] = uv2;
                 }
 
-                p_indices[index_count] = vertex_count;
-                p_indices[index_count + 1] = vertex_count + 1;
-                p_indices[index_count + 2] = vertex_count + 2;
+                p_indices[index_count] = (u16)vertex_count;
+                p_indices[index_count + 1] = (u16)vertex_count + 1;
+                p_indices[index_count + 2] = (u16)vertex_count + 2;
 
                 vertex_count += 3;
                 index_count += 3;
@@ -652,9 +652,9 @@ tg_mesh_h tg_mesh_create_sphere_flat(f32 radius, u32 sector_count, u32 stack_cou
                     p_uvs[vertex_count + 2] = tgm_v2_divf(tgm_v2_add(uv1, uv2), 2.0f);
                 }
 
-                p_indices[index_count] = vertex_count;
-                p_indices[index_count + 1] = vertex_count + 1;
-                p_indices[index_count + 2] = vertex_count + 2;
+                p_indices[index_count] = (u16)vertex_count;
+                p_indices[index_count + 1] = (u16)vertex_count + 1;
+                p_indices[index_count + 2] = (u16)vertex_count + 2;
 
                 vertex_count += 3;
                 index_count += 3;
@@ -674,12 +674,12 @@ tg_mesh_h tg_mesh_create_sphere_flat(f32 radius, u32 sector_count, u32 stack_cou
                     p_uvs[vertex_count + 3] = uv3;
                 }
 
-                p_indices[index_count] = vertex_count;
-                p_indices[index_count + 1] = vertex_count + 1;
-                p_indices[index_count + 2] = vertex_count + 2;
-                p_indices[index_count + 3] = vertex_count + 2;
-                p_indices[index_count + 4] = vertex_count + 3;
-                p_indices[index_count + 5] = vertex_count;
+                p_indices[index_count] = (u16)vertex_count;
+                p_indices[index_count + 1] = (u16)vertex_count + 1;
+                p_indices[index_count + 2] = (u16)vertex_count + 2;
+                p_indices[index_count + 3] = (u16)vertex_count + 2;
+                p_indices[index_count + 4] = (u16)vertex_count + 3;
+                p_indices[index_count + 5] = (u16)vertex_count;
 
                 vertex_count += 4;
                 index_count += 6;
@@ -687,7 +687,7 @@ tg_mesh_h tg_mesh_create_sphere_flat(f32 radius, u32 sector_count, u32 stack_cou
         }
     }
 
-    tg_mesh_h h_mesh = tg_mesh_create(vertex_count, p_positions, TG_NULL, p_uvs, TG_NULL, index_count, p_indices);
+    tg_mesh_h h_mesh = tg_mesh_create();
     tg_mesh_set_indices(h_mesh, index_count, p_indices);
     tg_mesh_set_positions(h_mesh, vertex_count, p_positions);
     if (normals)

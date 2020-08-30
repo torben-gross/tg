@@ -5,18 +5,18 @@
 
 
 
-#define TG_CELLS_PER_BLOCK_SIDE                  16
-#define TG_CELLS_PER_BLOCK                       4096 // 16^3
-#define TG_VOXELS_PER_BLOCK_SIDE                 17
-#define TG_OCTREE_STRIDE_IN_CELLS                256 // 16 * 16
-#define TG_VOXEL_MAP_STRIDE                      257
-#define TG_VOXEL_MAP_VOXELS                      16974593 // 257^3
-#define TG_VOXEL_MAP_AT(voxel_map, x, y, z)      ((voxel_map)[66049 * (z) + 257 * (y) + (x)]) // 257 * 257 * z + 257 * y + x
-#define TG_VOXEL_MAP_AT_V3I(voxel_map, v)        TG_VOXEL_MAP_AT(voxel_map, (v).x, (v).y, (v).z)
-#define TG_VIEW_DISTANCE_IN_OCTREES              0
-#define TG_TERRAIN_OCTREES                       9 // (1 + 2)^2
-#define TG_TERRAIN_MAX_LOD                       4 // 5 - 1
-#define TG_TERRAIN_NODES_PER_OCTREE              4681 // 8^0 + 8^1 + 8^2 + 8^3 + 8^4
+#define TG_TERRAIN_CELLS_PER_BLOCK_SIDE                16
+#define TG_TERRAIN_CELLS_PER_BLOCK                     4096 // 16^3
+#define TG_TERRAIN_VOXELS_PER_BLOCK_SIDE               17
+#define TG_TERRAIN_OCTREE_STRIDE_IN_CELLS              256 // 16 * 16
+#define TG_TERRAIN_VOXEL_MAP_STRIDE                    257
+#define TG_TERRAIN_VOXEL_MAP_VOXELS                    16974593 // 257^3
+#define TG_TERRAIN_VOXEL_MAP_AT(voxel_map, x, y, z)    ((voxel_map)[66049 * (z) + 257 * (y) + (x)]) // 257 * 257 * z + 257 * y + x
+#define TG_TERRAIN_VOXEL_MAP_AT_V3I(voxel_map, v)      TG_TERRAIN_VOXEL_MAP_AT(voxel_map, (v).x, (v).y, (v).z)
+#define TG_TERRAIN_VIEW_DISTANCE_IN_OCTREES            0
+#define TG_TERRAIN_OCTREES                             9 // (1 + 2)^2
+#define TG_TERRAIN_MAX_LOD                             4 // 5 - 1
+#define TG_TERRAIN_NODES_PER_OCTREE                    4681 // 8^0 + 8^1 + 8^2 + 8^3 + 8^4
 
 
 
@@ -54,7 +54,7 @@ typedef struct tg_terrain
 
 tg_terrain*   tg_terrain_create(tg_camera* p_camera);
 void          tg_terrain_destroy(tg_terrain* p_terrain);
-void          tg_terrain_update(tg_terrain* p_terrain, f32 dt);
+void          tg_terrain_update(tg_terrain* p_terrain);
 void          tg_terrain_render(tg_terrain* p_terrain, tg_renderer_h h_renderer);
 
 #endif

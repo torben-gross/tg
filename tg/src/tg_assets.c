@@ -106,13 +106,13 @@ static void tg__try_load_directory(const char* p_directory)
 
 
 
-void tg_assets_init()
+void tg_assets_init(void)
 {
 	TG_ASSERT(tg_platform_directory_get_size(".") <= TG_MAX_ASSETS_DIRECTORY_SIZE);
 	tg__try_load_directory(".");
 }
 
-void tg_assets_shutdown()
+void tg_assets_shutdown(void)
 {
 	for (u32 i = 0; i < TG_MAX_ASSET_COUNT; i++)
 	{

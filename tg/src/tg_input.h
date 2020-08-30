@@ -105,7 +105,7 @@ typedef enum tg_button
 | Internals                                                   |
 +------------------------------------------------------------*/
 
-void    tg_input_clear();
+void    tg_input_clear(void);
 void    tg_input_on_key_pressed(tg_key key, b32 repeated, u32 additional_key_repeat_count);
 void    tg_input_on_key_released(tg_key key);
 void    tg_input_on_mouse_button_pressed(tg_button button);

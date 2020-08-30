@@ -187,22 +187,22 @@ static void tg__convert_masks_to_format(u32 r_mask, u32 g_mask, u32 b_mask, u32 
 
 	const b32 r_0xff000000 = (r_mask & mask_0xff000000) == mask_0xff000000;
 	const b32 r_0x00ff0000 = (r_mask & mask_0x00ff0000) == mask_0x00ff0000;
-	const b32 r_0x0000ff00 = (r_mask & mask_0x0000ff00) == mask_0x0000ff00;
+	//const b32 r_0x0000ff00 = (r_mask & mask_0x0000ff00) == mask_0x0000ff00;
 	const b32 r_0x000000ff = (r_mask & mask_0x000000ff) == mask_0x000000ff;
 
-	const b32 g_0xff000000 = (g_mask & mask_0xff000000) == mask_0xff000000;
+	//const b32 g_0xff000000 = (g_mask & mask_0xff000000) == mask_0xff000000;
 	const b32 g_0x00ff0000 = (g_mask & mask_0x00ff0000) == mask_0x00ff0000;
 	const b32 g_0x0000ff00 = (g_mask & mask_0x0000ff00) == mask_0x0000ff00;
-	const b32 g_0x000000ff = (g_mask & mask_0x000000ff) == mask_0x000000ff;
+	//const b32 g_0x000000ff = (g_mask & mask_0x000000ff) == mask_0x000000ff;
 
-	const b32 b_0xff000000 = (b_mask & mask_0xff000000) == mask_0xff000000;
+	//const b32 b_0xff000000 = (b_mask & mask_0xff000000) == mask_0xff000000;
 	const b32 b_0x00ff0000 = (b_mask & mask_0x00ff0000) == mask_0x00ff0000;
 	const b32 b_0x0000ff00 = (b_mask & mask_0x0000ff00) == mask_0x0000ff00;
 	const b32 b_0x000000ff = (b_mask & mask_0x000000ff) == mask_0x000000ff;
 
 	const b32 a_0xff000000 = (a_mask & mask_0xff000000) == mask_0xff000000;
-	const b32 a_0x00ff0000 = (a_mask & mask_0x00ff0000) == mask_0x00ff0000;
-	const b32 a_0x0000ff00 = (a_mask & mask_0x0000ff00) == mask_0x0000ff00;
+	//const b32 a_0x00ff0000 = (a_mask & mask_0x00ff0000) == mask_0x00ff0000;
+	//const b32 a_0x0000ff00 = (a_mask & mask_0x0000ff00) == mask_0x0000ff00;
 	const b32 a_0x000000ff = (a_mask & mask_0x000000ff) == mask_0x000000ff;
 
 	if (a_0x000000ff && b_0x0000ff00 && g_0x00ff0000 && r_0xff000000)

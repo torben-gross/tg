@@ -34,7 +34,7 @@ void tg_rectangle_packer_pack(u32 rect_count, tg_rectangle_packer_rect* p_rects,
     tg_rectangle_packer_rect start_rect = { 0 };
     start_rect.left = 0;
     start_rect.bottom = 0;
-    start_rect.width = tgm_u32_max((u32)tgm_f32_ceil(tgm_f32_sqrt((f32)area / 0.95f)), max_width);;
+    start_rect.width = (u16)tgm_u32_max((u32)tgm_f32_ceil(tgm_f32_sqrt((f32)area / 0.95f)), max_width);
     start_rect.height = TG_U16_MAX;
 
     tg_list_insert(&spaces, &start_rect);

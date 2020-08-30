@@ -120,7 +120,7 @@ void tg_platform_debug_log(const char* p_format, ...)
 
 
 
-void tg_platform_handle_events()
+void tg_platform_handle_events(void)
 {
     MSG msg = { 0 };
     while (PeekMessageA(&msg, TG_NULL, 0, 0, PM_REMOVE))
@@ -196,7 +196,7 @@ void tg_platform_get_screen_size(u32* p_width, u32* p_height)
     *p_height = rect.bottom - rect.top;
 }
 
-tg_system_time tg_platform_get_system_time()
+tg_system_time tg_platform_get_system_time(void)
 {
     SYSTEMTIME system_time = { 0 };
     GetSystemTime(&system_time);
@@ -211,7 +211,7 @@ tg_system_time tg_platform_get_system_time()
     return result;
 }
 
-tg_window_h tg_platform_get_window_handle()
+tg_window_h tg_platform_get_window_handle(void)
 {
     return h_window;
 }
@@ -224,7 +224,7 @@ void tg_platform_get_window_size(u32* p_width, u32* p_height)
     *p_height = rect.bottom - rect.top;
 }
 
-f32  tg_platform_get_window_aspect_ratio()
+f32  tg_platform_get_window_aspect_ratio(void)
 {
     u32 width;
     u32 height;
@@ -266,7 +266,10 @@ void tg_platform_file_read(const char* p_filename, u64 buffer_size, char* p_buff
     const u32 size = GetFileSize(h_file, TG_NULL);
     TG_ASSERT(buffer_size >= size);
     u32 number_of_bytes_read = 0;
-    WIN32_CALL(ReadFile(h_file, p_buffer, size, &number_of_bytes_read, TG_NULL));
+#pragma warning(push)
+#pragma warning(disable:6031)
+    WIN32_CALL(ReadFile(h_file, p_buffer, size, (LPDWORD)&number_of_bytes_read, TG_NULL));
+#pragma warning(pop)
 
     CloseHandle(h_file);
 }
@@ -280,7 +283,7 @@ void tg_platform_file_create(const char* p_filename, u32 size, char* p_data, b32
 
     HANDLE h_file = CreateFileA(p_buffer, GENERIC_READ | GENERIC_WRITE, 0, TG_NULL, replace_existing ? CREATE_ALWAYS : CREATE_NEW, FILE_ATTRIBUTE_NORMAL, TG_NULL);
     u32 written_size = 0;
-    WriteFile(h_file, p_data, size, &written_size, TG_NULL);
+    WriteFile(h_file, p_data, size, (LPDWORD)&written_size, TG_NULL);
     CloseHandle(h_file);
 }
 
@@ -458,7 +461,7 @@ void tg_platform_prepend_asset_directory(const char* p_filename, u32 size, char*
 
 
 
-tg_timer_h tg_platform_timer_create()
+tg_timer_h tg_platform_timer_create(void)
 {
     tg_timer_h h_timer = TG_MEMORY_ALLOC(sizeof(*h_timer));
 
@@ -540,7 +543,7 @@ typedef struct tg_work_queue
 static volatile tg_work_queue work_queue = { 0 };
 static volatile u32 p_thread_ids[TG_WORKER_THREAD_COUNT + 1] = { 0 };
 
-static b32 tg__work_queue_execute_entry()
+static b32 tg__work_queue_execute_entry(void)
 {
     b32 result = TG_FALSE;
 
@@ -552,7 +555,7 @@ static b32 tg__work_queue_execute_entry()
         if (work_queue.first != work_queue.one_past_last)
         {
             result = TG_TRUE;
-            _InterlockedIncrement((volatile i32*)&work_queue.active_thread_count);
+            _InterlockedIncrement((volatile LONG*)&work_queue.active_thread_count);
 
             p_work_fn = work_queue.pp_work_fns[work_queue.first];
             p_user_data = work_queue.pp_user_datas[work_queue.first];
@@ -567,14 +570,16 @@ static b32 tg__work_queue_execute_entry()
         if (result)
         {
             p_work_fn(p_user_data); // if this crashes because p_work_fn is TG_NULL, than TG_WORK_QUEUE_MAX_ENTRY_COUNT is too small
-            _InterlockedDecrement((volatile i32*)&work_queue.active_thread_count);
+            _InterlockedDecrement((volatile LONG*)&work_queue.active_thread_count);
         }
     }
 
     return result;
 }
 
-static u32 WINAPI tg__worker_thread_proc(void* p_param)
+#pragma warning(push)
+#pragma warning(disable:4100)
+static DWORD WINAPI tg__worker_thread_proc(LPVOID p_param)
 {
     while (TG_TRUE) // TODO: this could instead check for 'running'
     {
@@ -586,8 +591,9 @@ static u32 WINAPI tg__worker_thread_proc(void* p_param)
     }
     return 0;
 }
+#pragma warning(pop)
 
-u32 tg_platform_get_current_thread_id()
+u32 tg_platform_get_current_thread_id(void)
 {
     u32 result = 0;
 
@@ -617,11 +623,11 @@ void tg_platform_work_queue_add_entry(tg_work_fn* p_work_fn, volatile void* p_us
     ReleaseSemaphore(work_queue.h_semaphore, 1, TG_NULL);
 }
 
-void tg_platform_work_queue_wait_for_completion()
+void tg_platform_work_queue_wait_for_completion(void)
 {
     while (work_queue.first != work_queue.one_past_last || work_queue.active_thread_count)
     {
-        tg__work_queue_execute_entry(tg_platform_get_current_thread_id());
+        tg__work_queue_execute_entry();
     }
 }
 
@@ -629,7 +635,7 @@ void tg_platform_work_queue_wait_for_completion()
 
 
 
-LRESULT CALLBACK tg_platform_win32_window_proc(HWND h_window, UINT message, WPARAM w_param, LPARAM l_param)
+LRESULT CALLBACK tg__window_proc(HWND hwdn, UINT message, WPARAM w_param, LPARAM l_param)
 {
     switch (message)
     {
@@ -641,7 +647,7 @@ LRESULT CALLBACK tg_platform_win32_window_proc(HWND h_window, UINT message, WPAR
     } break;
     case WM_QUIT:
     {
-        DestroyWindow(h_window);
+        DestroyWindow(hwdn);
     } break;
     case WM_SIZE:
     {
@@ -659,7 +665,6 @@ LRESULT CALLBACK tg_platform_win32_window_proc(HWND h_window, UINT message, WPAR
     case WM_XBUTTONUP:   tg_input_on_mouse_button_released((tg_button)HIWORD(w_param)); break;
     case WM_MOUSEWHEEL:
     {
-        char buffer[156] = { 0 };
         const i16 mouse_wheel_delta = GET_WHEEL_DELTA_WPARAM(w_param);
         const f32 mouse_wheel_delta_normalized = (f32)mouse_wheel_delta / (f32)WHEEL_DELTA;
         tg_input_on_mouse_wheel_rotated(mouse_wheel_delta_normalized);
@@ -672,11 +677,13 @@ LRESULT CALLBACK tg_platform_win32_window_proc(HWND h_window, UINT message, WPAR
         tg_input_on_key_pressed(key, repeated, additional_key_repeat_count);
     } break;
     case WM_KEYUP: tg_input_on_key_released((tg_key)w_param);                           break;
-    default: return DefWindowProcA(h_window, message, w_param, l_param);
+    default: return DefWindowProcA(hwdn, message, w_param, l_param);
     }
     return 0;
 }
 
+#pragma warning(push)
+#pragma warning(disable:4100)
 int CALLBACK WinMain(_In_ HINSTANCE h_instance, _In_opt_ HINSTANCE h_prev_instance, _In_ LPSTR cmd_line, _In_ int show_cmd)
 {
     work_queue.h_semaphore = CreateSemaphoreEx(TG_NULL, 0, TG_WORKER_THREAD_COUNT, TG_NULL, 0, SEMAPHORE_ALL_ACCESS);
@@ -687,7 +694,7 @@ int CALLBACK WinMain(_In_ HINSTANCE h_instance, _In_opt_ HINSTANCE h_prev_instan
     for (u8 i = 0; i < TG_WORKER_THREAD_COUNT; i++)
     {
         u32 thread_id = 0;
-        HANDLE h_thread = CreateThread(TG_NULL, 0, tg__worker_thread_proc, TG_NULL, 0, &thread_id);
+        HANDLE h_thread = CreateThread(TG_NULL, 0, tg__worker_thread_proc, TG_NULL, 0, (LPDWORD)&thread_id);
         p_thread_ids[i + 1] = thread_id;
 #pragma warning(push) // TODO: this is ridiculous
 #pragma warning(disable:6001)
@@ -726,7 +733,7 @@ int CALLBACK WinMain(_In_ HINSTANCE h_instance, _In_opt_ HINSTANCE h_prev_instan
     TG_ASSERT(h_window);
 
     ShowWindow(h_window, show_cmd);
-    SetWindowLongPtr(h_window, GWLP_WNDPROC, (LONG_PTR)&tg_platform_win32_window_proc);
+    SetWindowLongPtr(h_window, GWLP_WNDPROC, (LONG_PTR)&tg__window_proc);
 
     tg_application_start();
 
@@ -736,3 +743,4 @@ int CALLBACK WinMain(_In_ HINSTANCE h_instance, _In_opt_ HINSTANCE h_prev_instan
     // ExitProcess(0);
     return EXIT_SUCCESS;
 }
+#pragma warning(pop)

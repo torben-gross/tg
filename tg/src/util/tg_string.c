@@ -52,7 +52,7 @@ void tg_string_format_va(u32 size, char* p_buffer, const char* p_format, char* p
 			{
 			case 'c':
 			{
-				const c = tg_variadic_arg(p_variadic_arguments, char);
+				const char c = tg_variadic_arg(p_variadic_arguments, char);
 				*p_buffer_position++ = c;
 			} break;
 
@@ -72,7 +72,7 @@ void tg_string_format_va(u32 size, char* p_buffer, const char* p_format, char* p
 				for (u32 i = 0; i < integral_digit_count; i++)
 				{
 					const i32 digit = integral_part / integral_pow;
-					*p_buffer_position++ = tgm_i32_abs(digit) + '0';
+					*p_buffer_position++ = (char)tgm_i32_abs(digit) + '0';
 					integral_part -= digit * integral_pow;
 					integral_pow /= 10;
 				}
@@ -85,7 +85,7 @@ void tg_string_format_va(u32 size, char* p_buffer, const char* p_format, char* p
 				for (u32 i = 0; i < decimal_digit_count; i++)
 				{
 					const i32 digit = decimal_part / decimal_pow;
-					*p_buffer_position++ = tgm_i32_abs(digit) + '0';
+					*p_buffer_position++ = (char)tgm_i32_abs(digit) + '0';
 					decimal_part -= digit * decimal_pow;
 					decimal_pow /= 10;
 				}
@@ -105,7 +105,7 @@ void tg_string_format_va(u32 size, char* p_buffer, const char* p_format, char* p
 				for (u32 i = 0; i < digit_count; i++)
 				{
 					const i32 digit = integer / pow;
-					*p_buffer_position++ = tgm_i32_abs(digit) + '0';
+					*p_buffer_position++ = (char)tgm_i32_abs(digit) + '0';
 					integer -= digit * pow;
 					pow /= 10;
 				}
@@ -129,7 +129,7 @@ void tg_string_format_va(u32 size, char* p_buffer, const char* p_format, char* p
 				for (u32 i = 0; i < digit_count; i++)
 				{
 					const u32 digit = integer / pow;
-					*p_buffer_position++ = tgm_i32_abs(digit) + '0';
+					*p_buffer_position++ = (char)tgm_i32_abs(digit) + '0';
 					integer -= digit * pow;
 					pow /= 10;
 				}

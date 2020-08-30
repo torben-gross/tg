@@ -4,7 +4,7 @@
 
 
 
-#define TG_VOXEL_MAP_AT(p_voxel_map, voxel_map_size, sample_x, sample_y, sample_z) \
+#define TG_TERRAIN_VOXEL_MAP_AT(p_voxel_map, voxel_map_size, sample_x, sample_y, sample_z) \
 	(p_voxel_map)[(sample_z) * (voxel_map_size).x * (voxel_map_size).y + (sample_y) * (voxel_map_size).x + (sample_x)]
 
 
@@ -43,14 +43,14 @@ u32 tg_marching_cubes_create_mesh(v3i voxel_map_size, const i8* p_voxel_map, v3 
 				p_positions[6] = tgm_v3_add(position_pad, (v3) {    0.0f, scale.y, scale.z });
 				p_positions[7] = tgm_v3_add(position_pad, (v3) { scale.x, scale.y, scale.z });
 
-				p_samples[0] = TG_VOXEL_MAP_AT(p_voxel_map, voxel_map_size, position.x    , position.y    , position.z    );
-				p_samples[1] = TG_VOXEL_MAP_AT(p_voxel_map, voxel_map_size, position.x + 1, position.y    , position.z    );
-				p_samples[2] = TG_VOXEL_MAP_AT(p_voxel_map, voxel_map_size, position.x    , position.y + 1, position.z    );
-				p_samples[3] = TG_VOXEL_MAP_AT(p_voxel_map, voxel_map_size, position.x + 1, position.y + 1, position.z    );
-				p_samples[4] = TG_VOXEL_MAP_AT(p_voxel_map, voxel_map_size, position.x    , position.y    , position.z + 1);
-				p_samples[5] = TG_VOXEL_MAP_AT(p_voxel_map, voxel_map_size, position.x + 1, position.y    , position.z + 1);
-				p_samples[6] = TG_VOXEL_MAP_AT(p_voxel_map, voxel_map_size, position.x    , position.y + 1, position.z + 1);
-				p_samples[7] = TG_VOXEL_MAP_AT(p_voxel_map, voxel_map_size, position.x + 1, position.y + 1, position.z + 1);
+				p_samples[0] = TG_TERRAIN_VOXEL_MAP_AT(p_voxel_map, voxel_map_size, position.x    , position.y    , position.z    );
+				p_samples[1] = TG_TERRAIN_VOXEL_MAP_AT(p_voxel_map, voxel_map_size, position.x + 1, position.y    , position.z    );
+				p_samples[2] = TG_TERRAIN_VOXEL_MAP_AT(p_voxel_map, voxel_map_size, position.x    , position.y + 1, position.z    );
+				p_samples[3] = TG_TERRAIN_VOXEL_MAP_AT(p_voxel_map, voxel_map_size, position.x + 1, position.y + 1, position.z    );
+				p_samples[4] = TG_TERRAIN_VOXEL_MAP_AT(p_voxel_map, voxel_map_size, position.x    , position.y    , position.z + 1);
+				p_samples[5] = TG_TERRAIN_VOXEL_MAP_AT(p_voxel_map, voxel_map_size, position.x + 1, position.y    , position.z + 1);
+				p_samples[6] = TG_TERRAIN_VOXEL_MAP_AT(p_voxel_map, voxel_map_size, position.x    , position.y + 1, position.z + 1);
+				p_samples[7] = TG_TERRAIN_VOXEL_MAP_AT(p_voxel_map, voxel_map_size, position.x + 1, position.y + 1, position.z + 1);
 
 				const u8 case_code =
 					((p_samples[0] >> 7) & 0x01) |
@@ -79,7 +79,6 @@ u32 tg_marching_cubes_create_mesh(v3i voxel_map_size, const i8* p_voxel_map, v3 
 					{
 						const u16 edge_code = p_regular_vertex_data[case_code][p_cell_data->p_vertex_indices[3 * i + j]];
 						const u8 edge_code_low = edge_code & 0xff;
-						const u8 edge_code_high = (edge_code >> 8) & 0xff;
 
 						const u8 v0 = (edge_code_low >> 4) & 0xf;
 						const u8 v1 = edge_code_low & 0xf;

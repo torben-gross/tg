@@ -130,7 +130,7 @@ typedef struct v4
 */
 typedef struct m2
 {
-	union
+	union m2_u
 	{
 		struct
 		{
@@ -158,7 +158,7 @@ typedef struct m2
 */
 typedef struct m3
 {
-	union
+	union m3_u
 	{
 		struct
 		{
@@ -198,7 +198,7 @@ typedef struct m3
 */
 typedef struct m4
 {
-	union
+	union m4_u
 	{
 		struct
 		{
@@ -412,12 +412,12 @@ v3     tgm_v4_to_v3(v4 v);
 | Matrices                                                    |
 +------------------------------------------------------------*/
 
-m2     tgm_m2_identity();
+m2     tgm_m2_identity(void);
 m2     tgm_m2_multiply(m2 m0, m2 m1);
 v2     tgm_m2_multiply_v2(m2 m, v2 v);
 m2     tgm_m2_transposed(m2 m);
 
-m3     tgm_m3_identity();
+m3     tgm_m3_identity(void);
 m3     tgm_m3_mul(m3 m0, m3 m1);
 v3     tgm_m3_mulv3(m3 m, v3 v);
 m3     tgm_m3_orthographic(f32 left, f32 right, f32 bottom, f32 top);
@@ -426,7 +426,7 @@ m3     tgm_m3_transposed(m3 m);
 m4     tgm_m4_angle_axis(f32 angle_in_radians, v3 axis);
 f32    tgm_m4_determinant(m4 m);
 m4     tgm_m4_euler(f32 pitch_in_radians, f32 yaw_in_radians, f32 roll_in_radians);
-m4     tgm_m4_identity();
+m4     tgm_m4_identity(void);
 m4     tgm_m4_inverse(m4 m);
 m4     tgm_m4_look_at(v3 from, v3 to, v3 up);
 m4     tgm_m4_mul(m4 m0, m4 m1);

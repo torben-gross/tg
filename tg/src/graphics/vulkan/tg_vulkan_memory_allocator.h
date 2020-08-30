@@ -5,7 +5,9 @@
 
 #ifdef TG_VULKAN
 
+#pragma warning(push, 3)
 #include <vulkan/vulkan.h>
+#pragma warning(pop)
 
 typedef struct tgvk_memory_block
 {

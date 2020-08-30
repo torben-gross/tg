@@ -576,7 +576,7 @@ i32 tgm_i32_abs(i32 v)
 {
 	TG_ASSERT(v != TG_I32_MIN);
 
-	const result = v < 0 ? -v : v;
+	const i32 result = v < 0 ? -v : v;
 	return result;
 }
 
@@ -1355,7 +1355,7 @@ v3 tgm_v4_to_v3(v4 v)
 | Matrices                                                    |
 +------------------------------------------------------------*/
 
-m2 tgm_m2_identity()
+m2 tgm_m2_identity(void)
 {
 	m2 result = { 0 };
 
@@ -1405,7 +1405,7 @@ m2 tgm_m2_transposed(m2 m)
 
 
 
-m3 tgm_m3_identity()
+m3 tgm_m3_identity(void)
 {
 	m3 result = { 0 };
 
@@ -1561,7 +1561,7 @@ m4 tgm_m4_euler(f32 pitch_in_radians, f32 yaw_in_radians, f32 roll_in_radians)
 	return zyx;
 }
 
-m4 tgm_m4_identity()
+m4 tgm_m4_identity(void)
 {
 	m4 result = { 0 };
 

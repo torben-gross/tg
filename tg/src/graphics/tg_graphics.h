@@ -185,10 +185,10 @@ typedef struct tg_sampler_create_info
 
 
 
-void                    tg_graphics_init();
+void                    tg_graphics_init(void);
 void                    tg_graphics_on_window_resize(u32 width, u32 height);
-void                    tg_graphics_shutdown();
-void                    tg_graphics_wait_idle();
+void                    tg_graphics_shutdown(void);
+void                    tg_graphics_wait_idle(void);
 
 
 
@@ -224,7 +224,7 @@ void                    tg_material_destroy(tg_material_h h_material);
 b32                     tg_material_is_deferred(tg_material_h h_material);
 b32                     tg_material_is_forward(tg_material_h h_material);
 
-tg_mesh_h               tg_mesh_create();
+tg_mesh_h               tg_mesh_create(void);
 tg_mesh_h               tg_mesh_create2(const char* p_filename, v3 scale); // TODO: scale is temporary
 tg_mesh_h               tg_mesh_create_sphere(f32 radius, u32 sector_count, u32 stack_count, b32 normals, b32 uvs, b32 tangents_bitangents);
 tg_mesh_h               tg_mesh_create_sphere_flat(f32 radius, u32 sector_count, u32 stack_count, b32 normals, b32 uvs, b32 tangents_bitangents);
@@ -251,8 +251,8 @@ tg_render_command_h     tg_render_command_create(tg_mesh_h h_mesh, tg_material_h
 void                    tg_render_command_destroy(tg_render_command_h h_render_command);
 void                    tg_render_command_set_position(tg_render_command_h h_render_command, v3 position);
 
-void                    tg_renderer_init_shared_resources();
-void                    tg_renderer_shutdown_shared_resources(); // TODO: this
+void                    tg_renderer_init_shared_resources(void);
+void                    tg_renderer_shutdown_shared_resources(void); // TODO: this
 tg_renderer_h           tg_renderer_create(tg_camera* p_camera);
 void                    tg_renderer_destroy(tg_renderer_h h_renderer);
 void                    tg_renderer_enable_shadows(tg_renderer_h h_renderer, b32 enable);

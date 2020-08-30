@@ -22,7 +22,7 @@ tg_input input = { 0 };
 
 
 
-void tg_input_clear()
+void tg_input_clear(void)
 {
 	tg_memory_nullify(sizeof(input.pressed_buttons), input.pressed_buttons);
 	tg_memory_nullify(sizeof(input.pressed_keys), input.pressed_keys);

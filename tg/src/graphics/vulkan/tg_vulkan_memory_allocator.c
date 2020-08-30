@@ -154,6 +154,7 @@ void tgvk_memory_allocator_shutdown(VkDevice device)
 tgvk_memory_block tgvk_memory_allocator_alloc(VkDeviceSize alignment, VkDeviceSize size, u32 memory_type_bits, VkMemoryPropertyFlags memory_property_flags)
 {
     TG_ASSERT(memory_type_bits && memory_property_flags);
+    TG_ASSERT(alignment <= memory.page_size); // TODO: consider alignment!
 
     tgvk_memory_block memory_block = { 0 };
 
@@ -164,7 +165,7 @@ tgvk_memory_block tgvk_memory_allocator_alloc(VkDeviceSize alignment, VkDeviceSi
     {
         tgvk_memory_pool* p_pool = &memory.p_pools[i];
 
-        const b32 is_required_memory_type = (memory_type_bits & (1 << p_pool->memory_type_bit)) == (1 << p_pool->memory_type_bit);
+        const b32 is_required_memory_type = (b32)(memory_type_bits & (1 << p_pool->memory_type_bit)) == (1 << p_pool->memory_type_bit);
         const b32 has_required_memory_properties = (p_pool->memory_property_flags & memory_property_flags) == memory_property_flags;
 
         if (is_required_memory_type && has_required_memory_properties && p_pool->reserved_page_count + required_page_count <= p_pool->total_page_count)
@@ -213,7 +214,6 @@ void tgvk_memory_allocator_free(tgvk_memory_block* p_memory_block)
 {
     TG_ASSERT(p_memory_block);
 
-    const u32 first_page = (u32)(p_memory_block->offset / (VkDeviceSize)memory.page_size);
     const u32 page_count = (u32)(p_memory_block->size / memory.page_size);
     memory.p_pools[p_memory_block->pool_index].reserved_page_count -= page_count;
 

@@ -64,11 +64,14 @@ static tg_vertex_shader            p_vertex_shaders[TG_MAX_VERTEX_SHADERS];
 
 
 #ifdef TG_DEBUG
+#pragma warning(push)
+#pragma warning(disable:4100)
 static VKAPI_ATTR VkBool32 VKAPI_CALL tg__debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity, VkDebugUtilsMessageTypeFlagsEXT message_type, const VkDebugUtilsMessengerCallbackDataEXT* p_callback_data, void* user_data)
 {
     TG_DEBUG_LOG("%s\n", p_callback_data->pMessage);
     return VK_TRUE;
 }
+#pragma warning(pop)
 #endif
 
 
@@ -1500,7 +1503,7 @@ void tgvk_framebuffers_destroy(u32 count, tgvk_framebuffer* p_framebuffers)
 
 
 
-VkPhysicalDeviceProperties tgvk_physical_device_get_properties()
+VkPhysicalDeviceProperties tgvk_physical_device_get_properties(void)
 {
     VkPhysicalDeviceProperties physical_device_properties = { 0 };
     vkGetPhysicalDeviceProperties(physical_device, &physical_device_properties);
@@ -1528,7 +1531,7 @@ void tgvk_pipeline_shader_stage_create_infos_create(const tgvk_shader* p_vertex_
     p_pipeline_shader_stage_create_infos[1].pSpecializationInfo = TG_NULL;
 }
 
-VkPipelineInputAssemblyStateCreateInfo tgvk_pipeline_input_assembly_state_create_info_create()
+VkPipelineInputAssemblyStateCreateInfo tgvk_pipeline_input_assembly_state_create_info_create(void)
 {
     VkPipelineInputAssemblyStateCreateInfo pipeline_input_assembly_state_create_info = { 0 };
     pipeline_input_assembly_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -1995,7 +1998,7 @@ void tgvk_render_target_destroy(tg_render_target* p_render_target)
 
 
 
-VkSemaphore tgvk_semaphore_create()
+VkSemaphore tgvk_semaphore_create(void)
 {
     VkSemaphore semaphore = VK_NULL_HANDLE;
 
@@ -2147,10 +2150,10 @@ static void tg__command_pool_destroy(VkCommandPool command_pool)
     vkDestroyCommandPool(device, command_pool, TG_NULL);
 }
 
-static b32 tg__physical_device_supports_required_queue_families(VkPhysicalDevice physical_device)
+static b32 tg__physical_device_supports_required_queue_families(VkPhysicalDevice pd)
 {
     u32 queue_family_property_count;
-    vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_property_count, TG_NULL);
+    vkGetPhysicalDeviceQueueFamilyProperties(pd, &queue_family_property_count, TG_NULL);
     if (queue_family_property_count == 0)
     {
         return TG_FALSE;
@@ -2158,7 +2161,7 @@ static b32 tg__physical_device_supports_required_queue_families(VkPhysicalDevice
 
     const u64 queue_family_properties_size = queue_family_property_count * sizeof(VkQueueFamilyProperties);
     VkQueueFamilyProperties* p_queue_family_properties = TG_MEMORY_STACK_ALLOC(queue_family_properties_size);
-    vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_property_count, p_queue_family_properties);
+    vkGetPhysicalDeviceQueueFamilyProperties(pd, &queue_family_property_count, p_queue_family_properties);
 
     b32 supports_compute_family = TG_FALSE;
     b32 supports_graphics_family = TG_FALSE;
@@ -2168,7 +2171,7 @@ static b32 tg__physical_device_supports_required_queue_families(VkPhysicalDevice
         supports_compute_family |= (p_queue_family_properties[i].queueFlags & VK_QUEUE_COMPUTE_BIT) != 0;
         supports_graphics_family |= (p_queue_family_properties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0;
         VkBool32 spf = VK_FALSE;
-        TGVK_CALL(vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, i, surface.surface, &spf));
+        TGVK_CALL(vkGetPhysicalDeviceSurfaceSupportKHR(pd, i, surface.surface, &spf));
         supports_present_family |= spf != 0;
     }
 
@@ -2177,23 +2180,23 @@ static b32 tg__physical_device_supports_required_queue_families(VkPhysicalDevice
     return result;
 }
 
-static void tg__physical_device_find_queue_family_indices(VkPhysicalDevice physical_device, u32* p_graphics_queue_index, u32* p_present_queue_index, u32* p_compute_queue_index)
+static void tg__physical_device_find_queue_family_indices(VkPhysicalDevice pd, u32* p_graphics_queue_index, u32* p_present_queue_index, u32* p_compute_queue_index)
 {
-    TG_ASSERT(tg__physical_device_supports_required_queue_families(physical_device));
+    TG_ASSERT(tg__physical_device_supports_required_queue_families(pd));
 
     u32 queue_family_property_count;
-    vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_property_count, TG_NULL);
+    vkGetPhysicalDeviceQueueFamilyProperties(pd, &queue_family_property_count, TG_NULL);
     TG_ASSERT(queue_family_property_count);
     const u64 queue_family_properties_size = queue_family_property_count * sizeof(VkQueueFamilyProperties);
     VkQueueFamilyProperties* p_queue_family_properties = TG_MEMORY_STACK_ALLOC(queue_family_properties_size);
-    vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_property_count, p_queue_family_properties);
+    vkGetPhysicalDeviceQueueFamilyProperties(pd, &queue_family_property_count, p_queue_family_properties);
 
     b32 resolved = TG_FALSE;
     for (u32 i = 0; i < queue_family_property_count; i++)
     {
         const b32 supports_graphics_family = (p_queue_family_properties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0;
         VkBool32 spf = VK_FALSE;
-        TGVK_CALL(vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, i, surface.surface, &spf));
+        TGVK_CALL(vkGetPhysicalDeviceSurfaceSupportKHR(pd, i, surface.surface, &spf));
         const b32 supports_present_family = spf != 0;
         const b32 supports_compute_family = (p_queue_family_properties[i].queueFlags & VK_QUEUE_COMPUTE_BIT) != 0;
     
@@ -2226,7 +2229,7 @@ static void tg__physical_device_find_queue_family_indices(VkPhysicalDevice physi
             if (!supports_present_family)
             {
                 VkBool32 spf = VK_FALSE;
-                TGVK_CALL(vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, i, surface.surface, &spf));
+                TGVK_CALL(vkGetPhysicalDeviceSurfaceSupportKHR(pd, i, surface.surface, &spf));
                 supports_present_family |= spf != 0;
                 if (supports_present_family)
                 {
@@ -2254,10 +2257,10 @@ static void tg__physical_device_find_queue_family_indices(VkPhysicalDevice physi
     TG_MEMORY_STACK_FREE(queue_family_properties_size);
 }
 
-static VkSampleCountFlagBits tg__physical_device_find_max_sample_count(VkPhysicalDevice physical_device)
+static VkSampleCountFlagBits tg__physical_device_find_max_sample_count(VkPhysicalDevice pd)
 {
     VkPhysicalDeviceProperties physical_device_properties;
-    vkGetPhysicalDeviceProperties(physical_device, &physical_device_properties);
+    vkGetPhysicalDeviceProperties(pd, &physical_device_properties);
 
     const VkSampleCountFlags sample_count_flags = physical_device_properties.limits.framebufferColorSampleCounts & physical_device_properties.limits.framebufferDepthSampleCounts;
 
@@ -2291,13 +2294,13 @@ static VkSampleCountFlagBits tg__physical_device_find_max_sample_count(VkPhysica
     }
 }
 
-static b32 tg__physical_device_supports_extension(VkPhysicalDevice physical_device)
+static b32 tg__physical_device_supports_extension(VkPhysicalDevice pd)
 {
     u32 device_extension_property_count;
-    TGVK_CALL(vkEnumerateDeviceExtensionProperties(physical_device, TG_NULL, &device_extension_property_count, TG_NULL));
+    TGVK_CALL(vkEnumerateDeviceExtensionProperties(pd, TG_NULL, &device_extension_property_count, TG_NULL));
     const u64 device_extension_properties_size = device_extension_property_count * sizeof(VkExtensionProperties);
     VkExtensionProperties* device_extension_properties = TG_MEMORY_STACK_ALLOC(device_extension_properties_size);
-    TGVK_CALL(vkEnumerateDeviceExtensionProperties(physical_device, TG_NULL, &device_extension_property_count, device_extension_properties));
+    TGVK_CALL(vkEnumerateDeviceExtensionProperties(pd, TG_NULL, &device_extension_property_count, device_extension_properties));
 
     b32 supports_extensions = TG_TRUE;
     for (u32 i = 0; i < TGVK_DEVICE_EXTENSION_COUNT; i++)
@@ -2318,24 +2321,24 @@ static b32 tg__physical_device_supports_extension(VkPhysicalDevice physical_devi
     return supports_extensions;
 }
 
-static u32 tg__physical_device_rate(VkPhysicalDevice physical_device)
+static u32 tg__physical_device_rate(VkPhysicalDevice pd)
 {
     u32 rating = 0;
 
     VkPhysicalDeviceProperties physical_device_properties = { 0 };
-    vkGetPhysicalDeviceProperties(physical_device, &physical_device_properties);
+    vkGetPhysicalDeviceProperties(pd, &physical_device_properties);
 
     VkPhysicalDeviceFeatures physical_device_features = { 0 };
-    vkGetPhysicalDeviceFeatures(physical_device, &physical_device_features);
+    vkGetPhysicalDeviceFeatures(pd, &physical_device_features);
 
     u32 physical_device_surface_format_count;
-    TGVK_CALL(vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface.surface, &physical_device_surface_format_count, TG_NULL));
+    TGVK_CALL(vkGetPhysicalDeviceSurfaceFormatsKHR(pd, surface.surface, &physical_device_surface_format_count, TG_NULL));
 
     u32 physical_device_present_mode_count;
-    TGVK_CALL(vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface.surface, &physical_device_present_mode_count, TG_NULL));
+    TGVK_CALL(vkGetPhysicalDeviceSurfacePresentModesKHR(pd, surface.surface, &physical_device_present_mode_count, TG_NULL));
 
-    if (!tg__physical_device_supports_extension(physical_device) ||
-        !tg__physical_device_supports_required_queue_families(physical_device) ||
+    if (!tg__physical_device_supports_extension(pd) ||
+        !tg__physical_device_supports_required_queue_families(pd) ||
         !physical_device_surface_format_count ||
         !physical_device_present_mode_count)
     {
@@ -2353,7 +2356,7 @@ static u32 tg__physical_device_rate(VkPhysicalDevice physical_device)
     {
         rating += 64;
     }
-    rating += (u32)tg__physical_device_find_max_sample_count(physical_device);
+    rating += (u32)tg__physical_device_find_max_sample_count(pd);
 
     return rating;
 }
@@ -2362,9 +2365,9 @@ static u32 tg__physical_device_rate(VkPhysicalDevice physical_device)
 
 
 
-static VkInstance tg__instance_create()
+static VkInstance tg__instance_create(void)
 {
-    VkInstance instance = VK_NULL_HANDLE;
+    VkInstance inst = VK_NULL_HANDLE;
 
 #ifdef TG_DEBUG
     if (TGVK_VALIDATION_LAYER_COUNT)
@@ -2424,15 +2427,15 @@ static VkInstance tg__instance_create()
     instance_create_info.enabledExtensionCount = TGVK_INSTANCE_EXTENSION_COUNT;
     instance_create_info.ppEnabledExtensionNames = pp_enabled_extension_names;
 
-    TGVK_CALL(vkCreateInstance(&instance_create_info, TG_NULL, &instance));
+    TGVK_CALL(vkCreateInstance(&instance_create_info, TG_NULL, &inst));
 
-    return instance;
+    return inst;
 }
 
 #ifdef TG_DEBUG
-static VkDebugUtilsMessengerEXT tg__debug_utils_manager_create()
+static VkDebugUtilsMessengerEXT tg__debug_utils_manager_create(void)
 {
-    VkDebugUtilsMessengerEXT debug_utils_messenger = VK_NULL_HANDLE;
+    VkDebugUtilsMessengerEXT dum = VK_NULL_HANDLE;
 
     VkDebugUtilsMessengerCreateInfoEXT debug_utils_messenger_create_info = { 0 };
     debug_utils_messenger_create_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
@@ -2445,16 +2448,16 @@ static VkDebugUtilsMessengerEXT tg__debug_utils_manager_create()
 
     PFN_vkCreateDebugUtilsMessengerEXT vkCreateDebugUtilsMessengerEXT = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
     TG_ASSERT(vkCreateDebugUtilsMessengerEXT);
-    TGVK_CALL(vkCreateDebugUtilsMessengerEXT(instance, &debug_utils_messenger_create_info, TG_NULL, &debug_utils_messenger));
+    TGVK_CALL(vkCreateDebugUtilsMessengerEXT(instance, &debug_utils_messenger_create_info, TG_NULL, &dum));
 
-    return debug_utils_messenger;
+    return dum;
 }
 #endif
 
 #ifdef TG_WIN32
-static tgvk_surface tg__surface_create()
+static tgvk_surface tg__surface_create(void)
 {
-    tgvk_surface surface = { 0 };
+    tgvk_surface s = { 0 };
 
     VkWin32SurfaceCreateInfoKHR win32_surface_create_info = { 0 };
     win32_surface_create_info.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
@@ -2463,15 +2466,15 @@ static tgvk_surface tg__surface_create()
     win32_surface_create_info.hinstance = GetModuleHandle(TG_NULL);
     win32_surface_create_info.hwnd = tg_platform_get_window_handle();
 
-    TGVK_CALL(vkCreateWin32SurfaceKHR(instance, &win32_surface_create_info, TG_NULL, &surface.surface));
+    TGVK_CALL(vkCreateWin32SurfaceKHR(instance, &win32_surface_create_info, TG_NULL, &s.surface));
 
-    return surface;
+    return s;
 }
 #endif
 
-static VkPhysicalDevice tg__physical_device_create()
+static VkPhysicalDevice tg__physical_device_create(void)
 {
-    VkPhysicalDevice physical_device = VK_NULL_HANDLE;
+    VkPhysicalDevice pd = VK_NULL_HANDLE;
 
     u32 physical_device_count;
     TGVK_CALL(vkEnumeratePhysicalDevices(instance, &physical_device_count, TG_NULL));
@@ -2493,18 +2496,18 @@ static VkPhysicalDevice tg__physical_device_create()
     }
     TG_ASSERT(best_physical_device_rating != 0);
 
-    physical_device = p_physical_devices[best_physical_device_index];
-    TG_ASSERT(physical_device != VK_NULL_HANDLE);
+    pd = p_physical_devices[best_physical_device_index];
+    TG_ASSERT(pd != VK_NULL_HANDLE);
 
     TG_MEMORY_STACK_FREE(physical_devices_size);
-    tg__physical_device_find_queue_family_indices(physical_device, &p_queue_buffer[0].index, &p_queue_buffer[1].index, &p_queue_buffer[2].index);
+    tg__physical_device_find_queue_family_indices(pd, &p_queue_buffer[0].index, &p_queue_buffer[1].index, &p_queue_buffer[2].index);
 
-    return physical_device;
+    return pd;
 }
 
-static VkDevice tg__device_create()
+static VkDevice tg__device_create(void)
 {
-    VkDevice device = VK_NULL_HANDLE;
+    VkDevice d = VK_NULL_HANDLE;
 
     const f32 p_queue_priorities[TGVK_QUEUE_TYPE_COUNT] = { 1.0f, 1.0f, 1.0f };
     VkDeviceQueueCreateInfo p_device_queue_create_infos[TGVK_QUEUE_TYPE_COUNT] = { 0 };
@@ -2620,9 +2623,9 @@ static VkDevice tg__device_create()
     device_create_info.ppEnabledExtensionNames = pp_enabled_extension_names;
     device_create_info.pEnabledFeatures = &physical_device_features;
 
-    TGVK_CALL(vkCreateDevice(physical_device, &device_create_info, TG_NULL, &device));
+    TGVK_CALL(vkCreateDevice(physical_device, &device_create_info, TG_NULL, &d));
 
-    return device;
+    return d;
 }
 
 static void tg__queues_create(u32 count)
@@ -2654,7 +2657,7 @@ static void tg__queues_create(u32 count)
     }
 }
 
-static void tg__swapchain_create()
+static void tg__swapchain_create(void)
 {
     VkSurfaceCapabilitiesKHR surface_capabilities;
     TGVK_CALL(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device, surface.surface, &surface_capabilities));
@@ -2751,7 +2754,7 @@ static void tg__swapchain_create()
 | Initialization, shutdown and other main functionalities     |
 +------------------------------------------------------------*/
 
-void tg_graphics_init()
+void tg_graphics_init(void)
 {
     instance = tg__instance_create();
 #ifdef TG_DEBUG
@@ -2774,12 +2777,12 @@ void tg_graphics_init()
     tgvk_memory_allocator_init(device, physical_device);
 }
 
-void tg_graphics_wait_idle()
+void tg_graphics_wait_idle(void)
 {
     TGVK_CALL(vkDeviceWaitIdle(device));
 }
 
-void tg_graphics_shutdown()
+void tg_graphics_shutdown(void)
 {
     tgvk_command_buffer_free(&global_compute_command_buffer);
     tgvk_command_buffer_free(&global_graphics_command_buffer);

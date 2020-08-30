@@ -670,8 +670,6 @@ static void tg__init_clear_pass(tg_renderer_h h_renderer)
 
 static void tg__init_present_pass(tg_renderer_h h_renderer)
 {
-    tgvk_buffer staging_buffer = { 0 };
-
     h_renderer->present_pass.image_acquired_semaphore = tgvk_semaphore_create();
 
     for (u32 i = 0; i < TG_MAX_SWAPCHAIN_IMAGES; i++)
@@ -783,7 +781,7 @@ static void tg__init_present_pass(tg_renderer_h h_renderer)
 
 
 
-void tg_renderer_init_shared_resources()
+void tg_renderer_init_shared_resources(void)
 {
     const u16 p_indices[6] = { 0, 1, 2, 2, 3, 0 };
 
@@ -1093,7 +1091,7 @@ void tg_renderer_init_shared_resources()
     {
         VkAttachmentDescription attachment_description = { 0 };
         attachment_description.flags = 0;
-        attachment_description.format = TGVK_LINEAR_FORMAT;
+        attachment_description.format = TGVK_HDR_FORMAT;
         attachment_description.samples = VK_SAMPLE_COUNT_1_BIT;
         attachment_description.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         attachment_description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -1171,7 +1169,7 @@ tg_renderer_h tg_renderer_create(tg_camera* p_camera)
     h_renderer->view_projection_ubo = tgvk_buffer_create(2 * sizeof(m4), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT); // TODO: not the latter one!
 
     h_renderer->render_target = tgvk_render_target_create(
-        swapchain_extent.width, swapchain_extent.height, TGVK_LINEAR_FORMAT, TG_NULL,
+        swapchain_extent.width, swapchain_extent.height, TGVK_HDR_FORMAT, TG_NULL,
         swapchain_extent.width, swapchain_extent.height, VK_FORMAT_D32_SFLOAT, TG_NULL,
         VK_FENCE_CREATE_SIGNALED_BIT
     );
@@ -1404,9 +1402,9 @@ void tg_renderer_end(tg_renderer_h h_renderer, f32 dt, b32 present)
 
                 const m4 ivp = tgm_m4_inverse(tgm_m4_mul(TGVK_CAMERA_PROJ(h_renderer->view_projection_ubo), TGVK_CAMERA_VIEW(h_renderer->view_projection_ubo)));
                 v3 p_corners_ws[8] = { 0 };
-                for (u8 i = 0; i < 8; i++)
+                for (u8 j = 0; j < 8; j++)
                 {
-                    p_corners_ws[i] = tgm_v4_to_v3(tgm_m4_mulv4(ivp, p_corners[i]));
+                    p_corners_ws[j] = tgm_v4_to_v3(tgm_m4_mulv4(ivp, p_corners[j]));
                 }
 
                 const v3 v04 = tgm_v3_sub(p_corners_ws[4], p_corners_ws[0]);
@@ -1421,11 +1419,11 @@ void tg_renderer_end(tg_renderer_h h_renderer, f32 dt, b32 present)
                 p_shading_info->p_shadow_distances[major0].p_data[minor0] = d0;
                 p_shading_info->p_shadow_distances[major1].p_data[minor1] = d1;
 
-                for (u8 i = 0; i < 4; i++)
+                for (u8 j = 0; j < 4; j++)
                 {
-                    const v3 ndir = tgm_v3_normalized(tgm_v3_sub(p_corners_ws[i + 4], p_corners_ws[i]));
-                    p_corners_ws[i + 4] = tgm_v3_add(p_corners_ws[i], tgm_v3_mulf(ndir, d1));
-                    p_corners_ws[i] = tgm_v3_add(p_corners_ws[i], tgm_v3_mulf(ndir, d0));
+                    const v3 ndir = tgm_v3_normalized(tgm_v3_sub(p_corners_ws[j + 4], p_corners_ws[j]));
+                    p_corners_ws[j + 4] = tgm_v3_add(p_corners_ws[j], tgm_v3_mulf(ndir, d1));
+                    p_corners_ws[j] = tgm_v3_add(p_corners_ws[j], tgm_v3_mulf(ndir, d0));
                 }
 
                 v3 center; f32 radius;

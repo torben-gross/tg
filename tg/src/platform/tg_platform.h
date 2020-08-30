@@ -8,7 +8,9 @@
 #define TG_WORKER_THREAD_COUNT    7
 
 #ifdef TG_WIN32
+#pragma warning(push, 3)
 #include <windows.h>
+#pragma warning(pop)
 #undef near
 #undef far
 #undef min
@@ -92,7 +94,7 @@ typedef struct tg_file_properties
 void                  tg_platform_debug_log(const char* p_format, ...);
 #endif
 
-void                  tg_platform_handle_events();
+void                  tg_platform_handle_events(void);
 
 void*                 tg_platform_memory_alloc(u64 size);
 void*                 tg_platform_memory_alloc_nullify(u64 size);
@@ -102,10 +104,10 @@ void                  tg_platform_memory_free(void* p_memory);
 
 void                  tg_platform_get_mouse_position(u32* p_x, u32* p_y);
 void                  tg_platform_get_screen_size(u32* p_width, u32* p_height);
-tg_system_time        tg_platform_get_system_time();
-tg_window_h           tg_platform_get_window_handle();
+tg_system_time        tg_platform_get_system_time(void);
+tg_window_h           tg_platform_get_window_handle(void);
 void                  tg_platform_get_window_size(u32* p_width, u32* p_height);
-f32                   tg_platform_get_window_aspect_ratio();
+f32                   tg_platform_get_window_aspect_ratio(void);
 
 b32                   tg_platform_file_exists(const char* p_filename);
 void                  tg_platform_file_read(const char* p_filename, u64 buffer_size, char* p_buffer);
@@ -117,15 +119,15 @@ u64                   tg_platform_directory_get_size(const char* p_directory);
 i8                    tg_platform_system_time_compare(tg_system_time* p_time0, tg_system_time* p_time1);
 void                  tg_platform_prepend_asset_directory(const char* p_filename, u32 size, char* p_buffer);
 
-tg_timer_h            tg_platform_timer_create();
+tg_timer_h            tg_platform_timer_create(void);
 void                  tg_platform_timer_start(tg_timer_h h_timer);
 void                  tg_platform_timer_stop(tg_timer_h h_timer);
 void                  tg_platform_timer_reset(tg_timer_h h_timer);
 f32                   tg_platform_timer_elapsed_milliseconds(tg_timer_h h_timer);
 void                  tg_platform_timer_destroy(tg_timer_h h_timer);
 
-u32                   tg_platform_get_current_thread_id();
+u32                   tg_platform_get_current_thread_id(void);
 void                  tg_platform_work_queue_add_entry(tg_work_fn* p_work_fn, volatile void* p_user_data);
-void                  tg_platform_work_queue_wait_for_completion();
+void                  tg_platform_work_queue_wait_for_completion(void);
 
 #endif

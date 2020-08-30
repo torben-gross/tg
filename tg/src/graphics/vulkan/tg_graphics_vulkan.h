@@ -9,7 +9,9 @@
 #include "graphics/vulkan/tg_vulkan_memory_allocator.h"
 #include "memory/tg_memory.h"
 #include "platform/tg_platform.h"
+#pragma warning(push, 3)
 #include <vulkan/vulkan.h>
+#pragma warning(pop)
 
 #ifdef TG_WIN32
 #undef near
@@ -23,14 +25,14 @@
 #ifdef TG_DEBUG
 #define TGVK_CALL_NAME2(x, y)    x ## y
 #define TGVK_CALL_NAME(x, y)     TGVK_CALL_NAME2(x, y)
-#define TGVK_CALL(x)                                                                         \
-    const VkResult TGVK_CALL_NAME(vk_call_result, __LINE__) = (x);                           \
-    if (TGVK_CALL_NAME(vk_call_result, __LINE__) != VK_SUCCESS)                              \
-    {                                                                                        \
-        char p_buffer[1024] = { 0 };                                                         \
-        tgvk_vkresult_convert_to_string(p_buffer, TGVK_CALL_NAME(vk_call_result, __LINE__)); \
-        TG_DEBUG_LOG("VkResult: %s\n", p_buffer);                                            \
-    }                                                                                        \
+#define TGVK_CALL(x)                                                                                                   \
+    const VkResult TGVK_CALL_NAME(vk_call_result, __LINE__) = (x);                                                     \
+    if (TGVK_CALL_NAME(vk_call_result, __LINE__) != VK_SUCCESS)                                                        \
+    {                                                                                                                  \
+        char TGVK_CALL_NAME(p_buffer, __LINE__)[1024] = { 0 };                                                         \
+        tgvk_vkresult_convert_to_string(TGVK_CALL_NAME(p_buffer, __LINE__), TGVK_CALL_NAME(vk_call_result, __LINE__)); \
+        TG_DEBUG_LOG("VkResult: %s\n", TGVK_CALL_NAME(p_buffer, __LINE__));                                            \
+    }                                                                                                                  \
     if (TGVK_CALL_NAME(vk_call_result, __LINE__) != VK_SUCCESS) TG_INVALID_CODEPATH()
 
 #else
@@ -535,11 +537,11 @@ tgvk_framebuffer                          tgvk_framebuffer_create(VkRenderPass r
 void                                      tgvk_framebuffer_destroy(tgvk_framebuffer* p_framebuffer);
 void                                      tgvk_framebuffers_destroy(u32 count, tgvk_framebuffer* p_framebuffers);
 
-VkPhysicalDeviceProperties                tgvk_physical_device_get_properties();
+VkPhysicalDeviceProperties                tgvk_physical_device_get_properties(void);
 
 void                                      tgvk_pipeline_shader_stage_create_infos_create(const tgvk_shader* p_vertex_shader, const tgvk_shader* p_fragment_shader, VkPipelineShaderStageCreateInfo* p_pipeline_shader_stage_create_infos);
-VkPipelineInputAssemblyStateCreateInfo    tgvk_pipeline_input_assembly_state_create_info_create();
-VkPipelineInputAssemblyStateCreateInfo    tgvk_pipeline_input_assembly_state_create_info_create();
+VkPipelineInputAssemblyStateCreateInfo    tgvk_pipeline_input_assembly_state_create_info_create(void);
+VkPipelineInputAssemblyStateCreateInfo    tgvk_pipeline_input_assembly_state_create_info_create(void);
 VkViewport                                tgvk_viewport_create(f32 width, f32 height);
 VkPipelineViewportStateCreateInfo         tgvk_pipeline_viewport_state_create_info_create(const VkViewport* p_viewport, const VkRect2D* p_scissors);
 VkPipelineRasterizationStateCreateInfo    tgvk_pipeline_rasterization_state_create_info_create(VkPipelineRasterizationStateCreateInfo* p_next, VkBool32 depth_clamp_enable, VkPolygonMode polygon_mode, VkCullModeFlags cull_mode);
@@ -563,7 +565,7 @@ void                                      tgvk_render_pass_destroy(VkRenderPass 
 tg_render_target                          tgvk_render_target_create(u32 color_width, u32 color_height, VkFormat color_format, const tg_sampler_create_info* p_color_sampler_create_info, u32 depth_width, u32 depth_height, VkFormat depth_format, const tg_sampler_create_info* p_depth_sampler_create_info, VkFenceCreateFlags fence_create_flags);
 void                                      tgvk_render_target_destroy(tg_render_target* p_render_target);
 
-VkSemaphore                               tgvk_semaphore_create();
+VkSemaphore                               tgvk_semaphore_create(void);
 void                                      tgvk_semaphore_destroy(VkSemaphore semaphore);
 
 tgvk_shader                               tgvk_shader_create(const char* p_filename);
