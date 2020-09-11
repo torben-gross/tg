@@ -8,7 +8,7 @@
 #define TG_RECOMPILE_SHADERS_ON_STARTUP 0
 #endif
 
-#include "tg_assets.h"
+#include "graphics/tg_shader_library.h"
 #include "util/tg_string.h"
 
 #if TG_RECOMPILE_SHADERS_ON_STARTUP
@@ -73,7 +73,7 @@ tg_compute_shader_h tg_compute_shader_create(const char* p_filename)
 {
 	TG_ASSERT(p_filename);
 
-	TG_ASSERT(tg_assets_get_asset(p_filename) == TG_NULL);
+	TG_ASSERT(tg_shader_library_get_compute_shader(p_filename) == TG_NULL);
 #if TG_RECOMPILE_SHADERS_ON_STARTUP
 	tg__recompile(p_filename);
 #endif
@@ -125,7 +125,7 @@ tg_compute_shader_h tg_compute_shader_get(const char* p_filename)
 {
 	TG_ASSERT(p_filename);
 
-	tg_compute_shader_h h_compute_shader = tg_assets_get_asset(p_filename);
+	tg_compute_shader_h h_compute_shader = tg_shader_library_get_compute_shader(p_filename);
 	return h_compute_shader;
 }
 
@@ -135,7 +135,7 @@ tg_vertex_shader_h tg_vertex_shader_create(const char* p_filename)
 {
 	TG_ASSERT(p_filename);
 
-	TG_ASSERT(tg_assets_get_asset(p_filename) == TG_NULL);
+	TG_ASSERT(tg_shader_library_get_vertex_shader(p_filename) == TG_NULL);
 #if TG_RECOMPILE_SHADERS_ON_STARTUP
 	tg__recompile(p_filename);
 #endif
@@ -157,7 +157,7 @@ tg_vertex_shader_h tg_vertex_shader_get(const char* p_filename)
 {
     TG_ASSERT(p_filename);
 
-	tg_vertex_shader_h h_vertex_shader = tg_assets_get_asset(p_filename);
+	tg_vertex_shader_h h_vertex_shader = tg_shader_library_get_vertex_shader(p_filename);
 	return h_vertex_shader;
 }
 
@@ -167,7 +167,7 @@ tg_fragment_shader_h tg_fragment_shader_create(const char* p_filename)
 {
 	TG_ASSERT(p_filename);
 
-	TG_ASSERT(tg_assets_get_asset(p_filename) == TG_NULL);
+	TG_ASSERT(tg_shader_library_get_fragment_shader(p_filename) == TG_NULL);
 #if TG_RECOMPILE_SHADERS_ON_STARTUP
 	tg__recompile(p_filename);
 #endif
@@ -189,7 +189,7 @@ tg_fragment_shader_h tg_fragment_shader_get(const char* p_filename)
 {
     TG_ASSERT(p_filename);
 
-	tg_fragment_shader_h h_fragment_shader = tg_assets_get_asset(p_filename);
+	tg_fragment_shader_h h_fragment_shader = tg_shader_library_get_fragment_shader(p_filename);
     return h_fragment_shader;
 }
 

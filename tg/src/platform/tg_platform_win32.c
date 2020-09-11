@@ -3,7 +3,6 @@
 #include "graphics/tg_graphics.h"
 #include "memory/tg_memory.h"
 #include "tg_application.h"
-#include "tg_assets.h"
 #include "tg_input.h"
 #include "util/tg_list.h"
 #include "util/tg_string.h"

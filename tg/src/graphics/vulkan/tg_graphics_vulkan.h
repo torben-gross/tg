@@ -297,7 +297,7 @@ typedef struct tg_material
 typedef struct tg_mesh
 {
     tg_structure_type    type;
-    tg_bounds            bounds;
+    tg_bounds            bounds; // TODO: these are not used! let it be a sphere (radius + position (position because mesh might not be perfectly centered)) for view frustum culling?
     
     u32                  index_count;
     u32                  vertex_count;

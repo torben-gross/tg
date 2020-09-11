@@ -3,6 +3,7 @@
 #ifdef TG_VULKAN
 
 #include "graphics/tg_image_loader.h"
+#include "graphics/tg_shader_library.h"
 #include "util/tg_string.h"
 
 
@@ -83,7 +84,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL tg__debug_callback(VkDebugUtilsMessageSeve
 #define TGVK_QUEUE_TAKE(type, p_queue)    (p_queue) = pp_queues[type]; TG_MUTEX_LOCK((p_queue)->h_mutex)
 #define TGVK_QUEUE_RELEASE(p_queue)       TG_MUTEX_UNLOCK((p_queue)->h_mutex)
 
-#define TGVK_HANDLE_TAKE(p_array, p_result)                                          \
+#define TGVK_HANDLE_TAKE(p_array, p_result)                                        \
     const u32 array_element_count = sizeof(p_array) / sizeof(*(p_array));          \
     for (u32 handle_index = 0; handle_index < array_element_count; handle_index++) \
     {                                                                              \
@@ -2126,9 +2127,7 @@ void tgvk_vkresult_convert_to_string(char* p_buffer, VkResult result)
 
 
 
-/*------------------------------------------------------------+
-| Main utilities                                              |
-+------------------------------------------------------------*/
+
 
 static VkCommandPool tg__command_pool_create(VkCommandPoolCreateFlags command_pool_create_flags, tgvk_queue_type type)
 {
@@ -2750,9 +2749,7 @@ static void tg__swapchain_create(void)
 
 
 
-/*------------------------------------------------------------+
-| Initialization, shutdown and other main functionalities     |
-+------------------------------------------------------------*/
+
 
 void tg_graphics_init(void)
 {
@@ -2775,6 +2772,8 @@ void tg_graphics_init(void)
     global_compute_command_buffer = tgvk_command_buffer_allocate(TGVK_COMMAND_POOL_TYPE_COMPUTE, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
     tgvk_memory_allocator_init(device, physical_device);
+    tg_shader_library_init();
+    tg_renderer_init_shared_resources();
 }
 
 void tg_graphics_wait_idle(void)
@@ -2784,10 +2783,12 @@ void tg_graphics_wait_idle(void)
 
 void tg_graphics_shutdown(void)
 {
+    tg_renderer_shutdown_shared_resources();
+    tg_shader_library_shutdown();
+    tgvk_memory_allocator_shutdown(device);
+
     tgvk_command_buffer_free(&global_compute_command_buffer);
     tgvk_command_buffer_free(&global_graphics_command_buffer);
-
-    tgvk_memory_allocator_shutdown(device);
 
     for (u32 i = 0; i < TG_WORKER_THREAD_COUNT + 1; i++)
     {

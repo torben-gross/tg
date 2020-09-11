@@ -2,7 +2,6 @@
 
 #ifdef TG_VULKAN
 
-#include "tg_assets.h"
 #include "util/tg_string.h"
 
 

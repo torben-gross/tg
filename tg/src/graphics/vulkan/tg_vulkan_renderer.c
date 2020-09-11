@@ -1160,6 +1160,11 @@ void tg_renderer_init_shared_resources(void)
     }
 }
 
+void tg_renderer_shutdown_shared_resources(void)
+{
+    TG_INVALID_CODEPATH();
+}
+
 tg_renderer_h tg_renderer_create(tg_camera* p_camera)
 {
     TG_ASSERT(p_camera);
@@ -1382,7 +1387,7 @@ void tg_renderer_end(tg_renderer_h h_renderer, f32 dt, b32 present)
     {
         TGVK_CALL(vkBeginCommandBuffer(h_renderer->shadow_pass.command_buffer.command_buffer, &command_buffer_begin_info));
         {
-            const f32 p_percentiles[TG_CASCADED_SHADOW_MAPS + 1] = { 0.0f, 0.003f, 0.01f, 0.06f };
+            const f32 p_percentiles[TG_CASCADED_SHADOW_MAPS + 1] = { 0.0f, 0.002f, 0.008f, 0.03f, 0.06f };
 
             for (u32 i = 0; i < TG_CASCADED_SHADOW_MAPS; i++)
             {

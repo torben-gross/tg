@@ -5,7 +5,6 @@
 #include "memory/tg_memory.h"
 #include "physics/tg_physics.h"
 #include "platform/tg_platform.h"
-#include "tg_assets.h"
 #include "tg_input.h"
 #include "tg_transvoxel_terrain.h"
 #include "util/tg_list.h"
@@ -387,7 +386,6 @@ static void tg__game_3d_update_and_render(f32 dt)
 
     tg_terrain_update(scene.p_terrain);
 
-
     scene.light_timer += dt;
     while (scene.light_timer > 32000.0f)
     {
@@ -480,8 +478,6 @@ static void tg__game_3d_destroy(void)
 void tg_application_start(void)
 {
     tg_graphics_init();
-    tg_assets_init(); // TODO: convert this to a shader library and initialize it through tg_graphics_init() ?
-    tg_renderer_init_shared_resources();
     tg__game_3d_create();
 
 #ifdef TG_DEBUG
@@ -530,7 +526,6 @@ void tg_application_start(void)
     tg_platform_timer_destroy(h_timer);
     tg_graphics_wait_idle();
     tg__game_3d_destroy();
-    tg_assets_shutdown();
     tg_graphics_shutdown();
 }
 

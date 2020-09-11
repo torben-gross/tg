@@ -28,7 +28,7 @@
 #define TG_MAX_SHADER_INPUTS              32
 #define TG_SHADER_RESERVED_BINDINGS       2
 
-#define TG_CASCADED_SHADOW_MAPS           3
+#define TG_CASCADED_SHADOW_MAPS           4
 #define TG_CASCADED_SHADOW_MAP_SIZE       1024
 
 #define TG_SSAO_MAP_SIZE                  2048
