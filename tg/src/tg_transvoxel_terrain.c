@@ -180,7 +180,7 @@ static u8 tg__get_transition_mask(v3 camera_position, v3i octree_min_coordinates
 
 
 
-static void tg__build_node(v3i octree_min_coordinates, v3i block_offset_in_octree, u8 lod, const i8* p_voxel_map, u16* p_position_count, v3* p_position_buffer) // TODO: GPU!
+static void tg__build_node(v3i octree_min_coordinates, v3i block_offset_in_octree, u8 lod, const i8* p_voxel_map, u16* p_vertex_count, v3* p_position_buffer, v3* p_normal_buffer) // TODO: GPU!
 {
 	const i32 lod_scale = 1 << lod;
 
@@ -389,11 +389,20 @@ static void tg__build_node(v3i octree_min_coordinates, v3i block_offset_in_octre
 
 					if (magsqr != 0.0f)
 					{
+						const f32 mag = tgm_f32_sqrt(magsqr);
+						const v3 n = { cross_x / mag, cross_y / mag, cross_z / mag };
+
 						p_position_buffer[0] = p_triangle_positions[0];
 						p_position_buffer[1] = p_triangle_positions[1];
 						p_position_buffer[2] = p_triangle_positions[2];
 						p_position_buffer += 3;
-						*p_position_count += 3;
+
+						p_normal_buffer[0] = n;
+						p_normal_buffer[1] = n;
+						p_normal_buffer[2] = n;
+						p_normal_buffer += 3;
+
+						*p_vertex_count += 3;
 					}
 				}
 			}
@@ -401,7 +410,7 @@ static void tg__build_node(v3i octree_min_coordinates, v3i block_offset_in_octre
 	}
 }
 
-static void tg__build_transition_nx(v3i octree_min_coordinates, v3i block_offset_in_octree, u8 lod, const i8* p_voxel_map, u16* p_position_count, v3* p_position_buffer)
+static void tg__build_transition_nx(v3i octree_min_coordinates, v3i block_offset_in_octree, u8 lod, const i8* p_voxel_map, u16* p_vertex_count, v3* p_position_buffer, v3* p_normal_buffer)
 {
 	TG_ASSERT(lod > 0);
 
@@ -587,11 +596,17 @@ static void tg__build_transition_nx(v3i octree_min_coordinates, v3i block_offset
 
 				if (magsqr != 0.0f)
 				{
+					const f32 mag = tgm_f32_sqrt(magsqr);
+					v3 n = { cross_x / mag, cross_y / mag, cross_z / mag };
+
 					if (invert)
 					{
 						p_position_buffer[0] = p_triangle_positions[0];
 						p_position_buffer[1] = p_triangle_positions[2];
 						p_position_buffer[2] = p_triangle_positions[1];
+						n.x = -n.x;
+						n.y = -n.y;
+						n.z = -n.z;
 					}
 					else
 					{
@@ -600,14 +615,20 @@ static void tg__build_transition_nx(v3i octree_min_coordinates, v3i block_offset
 						p_position_buffer[2] = p_triangle_positions[2];
 					}
 					p_position_buffer += 3;
-					*p_position_count += 3;
+
+					p_normal_buffer[0] = n;
+					p_normal_buffer[1] = n;
+					p_normal_buffer[2] = n;
+					p_normal_buffer += 3;
+
+					*p_vertex_count += 3;
 				}
 			}
 		}
 	}
 }
 
-static void tg__build_transition_px(v3i octree_min_coordinates, v3i block_offset_in_octree, u8 lod, const i8* p_voxel_map, u16* p_position_count, v3* p_position_buffer)
+static void tg__build_transition_px(v3i octree_min_coordinates, v3i block_offset_in_octree, u8 lod, const i8* p_voxel_map, u16* p_vertex_count, v3* p_position_buffer, v3* p_normal_buffer)
 {
 	TG_ASSERT(lod > 0);
 
@@ -795,11 +816,17 @@ static void tg__build_transition_px(v3i octree_min_coordinates, v3i block_offset
 
 				if (magsqr != 0.0f)
 				{
+					const f32 mag = tgm_f32_sqrt(magsqr);
+					v3 n = { cross_x / mag, cross_y / mag, cross_z / mag };
+
 					if (invert)
 					{
 						p_position_buffer[0] = p_triangle_positions[0];
 						p_position_buffer[1] = p_triangle_positions[2];
 						p_position_buffer[2] = p_triangle_positions[1];
+						n.x = -n.x;
+						n.y = -n.y;
+						n.z = -n.z;
 					}
 					else
 					{
@@ -808,14 +835,20 @@ static void tg__build_transition_px(v3i octree_min_coordinates, v3i block_offset
 						p_position_buffer[2] = p_triangle_positions[2];
 					}
 					p_position_buffer += 3;
-					*p_position_count += 3;
+
+					p_normal_buffer[0] = n;
+					p_normal_buffer[1] = n;
+					p_normal_buffer[2] = n;
+					p_normal_buffer += 3;
+
+					*p_vertex_count += 3;
 				}
 			}
 		}
 	}
 }
 
-static void tg__build_transition_ny(v3i octree_min_coordinates, v3i block_offset_in_octree, u8 lod, const i8* p_voxel_map, u16* p_position_count, v3* p_position_buffer)
+static void tg__build_transition_ny(v3i octree_min_coordinates, v3i block_offset_in_octree, u8 lod, const i8* p_voxel_map, u16* p_vertex_count, v3* p_position_buffer, v3* p_normal_buffer)
 {
 	TG_ASSERT(lod > 0);
 
@@ -1001,11 +1034,17 @@ static void tg__build_transition_ny(v3i octree_min_coordinates, v3i block_offset
 
 				if (magsqr != 0.0f)
 				{
+					const f32 mag = tgm_f32_sqrt(magsqr);
+					v3 n = { cross_x / mag, cross_y / mag, cross_z / mag };
+
 					if (invert)
 					{
 						p_position_buffer[0] = p_triangle_positions[0];
 						p_position_buffer[1] = p_triangle_positions[2];
 						p_position_buffer[2] = p_triangle_positions[1];
+						n.x = -n.x;
+						n.y = -n.y;
+						n.z = -n.z;
 					}
 					else
 					{
@@ -1014,14 +1053,20 @@ static void tg__build_transition_ny(v3i octree_min_coordinates, v3i block_offset
 						p_position_buffer[2] = p_triangle_positions[2];
 					}
 					p_position_buffer += 3;
-					*p_position_count += 3;
+
+					p_normal_buffer[0] = n;
+					p_normal_buffer[1] = n;
+					p_normal_buffer[2] = n;
+					p_normal_buffer += 3;
+
+					*p_vertex_count += 3;
 				}
 			}
 		}
 	}
 }
 
-static void tg__build_transition_py(v3i octree_min_coordinates, v3i block_offset_in_octree, u8 lod, const i8* p_voxel_map, u16* p_position_count, v3* p_position_buffer)
+static void tg__build_transition_py(v3i octree_min_coordinates, v3i block_offset_in_octree, u8 lod, const i8* p_voxel_map, u16* p_vertex_count, v3* p_position_buffer, v3* p_normal_buffer)
 {
 	TG_ASSERT(lod > 0);
 
@@ -1209,11 +1254,17 @@ static void tg__build_transition_py(v3i octree_min_coordinates, v3i block_offset
 
 				if (magsqr != 0.0f)
 				{
+					const f32 mag = tgm_f32_sqrt(magsqr);
+					v3 n = { cross_x / mag, cross_y / mag, cross_z / mag };
+
 					if (invert)
 					{
 						p_position_buffer[0] = p_triangle_positions[0];
 						p_position_buffer[1] = p_triangle_positions[2];
 						p_position_buffer[2] = p_triangle_positions[1];
+						n.x = -n.x;
+						n.y = -n.y;
+						n.z = -n.z;
 					}
 					else
 					{
@@ -1222,14 +1273,20 @@ static void tg__build_transition_py(v3i octree_min_coordinates, v3i block_offset
 						p_position_buffer[2] = p_triangle_positions[2];
 					}
 					p_position_buffer += 3;
-					*p_position_count += 3;
+
+					p_normal_buffer[0] = n;
+					p_normal_buffer[1] = n;
+					p_normal_buffer[2] = n;
+					p_normal_buffer += 3;
+
+					*p_vertex_count += 3;
 				}
 			}
 		}
 	}
 }
 
-static void tg__build_transition_nz(v3i octree_min_coordinates, v3i block_offset_in_octree, u8 lod, const i8* p_voxel_map, u16* p_position_count, v3* p_position_buffer)
+static void tg__build_transition_nz(v3i octree_min_coordinates, v3i block_offset_in_octree, u8 lod, const i8* p_voxel_map, u16* p_vertex_count, v3* p_position_buffer, v3* p_normal_buffer)
 {
 	TG_ASSERT(lod > 0);
 
@@ -1415,11 +1472,17 @@ static void tg__build_transition_nz(v3i octree_min_coordinates, v3i block_offset
 
 				if (magsqr != 0.0f)
 				{
+					const f32 mag = tgm_f32_sqrt(magsqr);
+					v3 n = { cross_x / mag, cross_y / mag, cross_z / mag };
+
 					if (invert)
 					{
 						p_position_buffer[0] = p_triangle_positions[0];
 						p_position_buffer[1] = p_triangle_positions[2];
 						p_position_buffer[2] = p_triangle_positions[1];
+						n.x = -n.x;
+						n.y = -n.y;
+						n.z = -n.z;
 					}
 					else
 					{
@@ -1428,14 +1491,20 @@ static void tg__build_transition_nz(v3i octree_min_coordinates, v3i block_offset
 						p_position_buffer[2] = p_triangle_positions[2];
 					}
 					p_position_buffer += 3;
-					*p_position_count += 3;
+
+					p_normal_buffer[0] = n;
+					p_normal_buffer[1] = n;
+					p_normal_buffer[2] = n;
+					p_normal_buffer += 3;
+
+					*p_vertex_count += 3;
 				}
 			}
 		}
 	}
 }
 
-static void tg__build_transition_pz(v3i octree_min_coordinates, v3i block_offset_in_octree, u8 lod, const i8* p_voxel_map, u16* p_position_count, v3* p_position_buffer)
+static void tg__build_transition_pz(v3i octree_min_coordinates, v3i block_offset_in_octree, u8 lod, const i8* p_voxel_map, u16* p_vertex_count, v3* p_position_buffer, v3* p_normal_buffer)
 {
 	TG_ASSERT(lod > 0);
 
@@ -1623,11 +1692,17 @@ static void tg__build_transition_pz(v3i octree_min_coordinates, v3i block_offset
 
 				if (magsqr != 0.0f)
 				{
+					const f32 mag = tgm_f32_sqrt(magsqr);
+					v3 n = { cross_x / mag, cross_y / mag, cross_z / mag };
+
 					if (invert)
 					{
 						p_position_buffer[0] = p_triangle_positions[0];
 						p_position_buffer[1] = p_triangle_positions[2];
 						p_position_buffer[2] = p_triangle_positions[1];
+						n.x = -n.x;
+						n.y = -n.y;
+						n.z = -n.z;
 					}
 					else
 					{
@@ -1636,7 +1711,13 @@ static void tg__build_transition_pz(v3i octree_min_coordinates, v3i block_offset
 						p_position_buffer[2] = p_triangle_positions[2];
 					}
 					p_position_buffer += 3;
-					*p_position_count += 3;
+
+					p_normal_buffer[0] = n;
+					p_normal_buffer[1] = n;
+					p_normal_buffer[2] = n;
+					p_normal_buffer += 3;
+
+					*p_vertex_count += 3;
 				}
 			}
 		}
@@ -1654,17 +1735,18 @@ static void tg__build_nodes(tg_terrain* p_terrain, i8* p_voxel_map, u8 octree_in
 	tg_terrain_octree* p_octree = &p_terrain->p_octrees[octree_index];
 	tg_terrain_octree_node* p_node = &p_octree->p_nodes[i];
 
-	const u64 positions_size = 15 * TG_TERRAIN_CELLS_PER_BLOCK * sizeof(v3);
-	v3* p_positions = TG_MEMORY_STACK_ALLOC(positions_size);
+	const u64 vertices_size = 15 * TG_TERRAIN_CELLS_PER_BLOCK * sizeof(v3);
+	v3* p_position_buffer = TG_MEMORY_STACK_ALLOC(vertices_size);
+	v3* p_normal_buffer = TG_MEMORY_STACK_ALLOC(vertices_size);
 
-	u16 position_count = 0;
-	tg__build_node(p_octree->min_coords, node_coords_offset_rel_to_octree, lod, p_voxel_map, &position_count, p_positions);
+	u16 vertex_count = 0;
+	tg__build_node(p_octree->min_coords, node_coords_offset_rel_to_octree, lod, p_voxel_map, &vertex_count, p_position_buffer, p_normal_buffer);
 
-	if (position_count)
+	if (vertex_count)
 	{
 		tg_mesh_h h_mesh = tg_mesh_create();
-		tg_mesh_set_positions(h_mesh, position_count, p_positions);
-		tg_mesh_regenerate_normals(h_mesh);
+		tg_mesh_set_positions(h_mesh, vertex_count, p_position_buffer);
+		tg_mesh_set_normals(h_mesh, vertex_count, p_normal_buffer);
 		p_node->h_block_render_command = tg_render_command_create(h_mesh, p_terrain->h_material, V3(0), 0, TG_NULL);
 	}
 
@@ -1672,81 +1754,82 @@ static void tg__build_nodes(tg_terrain* p_terrain, i8* p_voxel_map, u8 octree_in
 	{
 		u32 transition_index = 0;
 
-		position_count = 0;
-		tg__build_transition_nx(p_octree->min_coords, node_coords_offset_rel_to_octree, lod, p_voxel_map, &position_count, p_positions);
+		vertex_count = 0;
+		tg__build_transition_nx(p_octree->min_coords, node_coords_offset_rel_to_octree, lod, p_voxel_map, &vertex_count, p_position_buffer, p_normal_buffer);
 
 		tg_mesh_h h_mesh = TG_NULL;
-		if (position_count)
+		if (vertex_count)
 		{
 			h_mesh = tg_mesh_create();
-			tg_mesh_set_positions(h_mesh, position_count, p_positions);
-			tg_mesh_regenerate_normals(h_mesh);
+			tg_mesh_set_positions(h_mesh, vertex_count, p_position_buffer);
+			tg_mesh_set_normals(h_mesh, vertex_count, p_normal_buffer);
 			p_node->ph_transition_render_commands[transition_index] = tg_render_command_create(h_mesh, p_terrain->h_material, V3(0), 0, TG_NULL);
 		}
 		transition_index++;
 
-		position_count = 0;
-		tg__build_transition_px(p_octree->min_coords, node_coords_offset_rel_to_octree, lod, p_voxel_map, &position_count, p_positions);
+		vertex_count = 0;
+		tg__build_transition_px(p_octree->min_coords, node_coords_offset_rel_to_octree, lod, p_voxel_map, &vertex_count, p_position_buffer, p_normal_buffer);
 
-		if (position_count)
+		if (vertex_count)
 		{
 			h_mesh = tg_mesh_create();
-			tg_mesh_set_positions(h_mesh, position_count, p_positions);
-			tg_mesh_regenerate_normals(h_mesh);
+			tg_mesh_set_positions(h_mesh, vertex_count, p_position_buffer);
+			tg_mesh_set_normals(h_mesh, vertex_count, p_normal_buffer);
 			p_node->ph_transition_render_commands[transition_index] = tg_render_command_create(h_mesh, p_terrain->h_material, V3(0), 0, TG_NULL);
 		}
 		transition_index++;
 
-		position_count = 0;
-		tg__build_transition_ny(p_octree->min_coords, node_coords_offset_rel_to_octree, lod, p_voxel_map, &position_count, p_positions);
+		vertex_count = 0;
+		tg__build_transition_ny(p_octree->min_coords, node_coords_offset_rel_to_octree, lod, p_voxel_map, &vertex_count, p_position_buffer, p_normal_buffer);
 
-		if (position_count)
+		if (vertex_count)
 		{
 			h_mesh = tg_mesh_create();
-			tg_mesh_set_positions(h_mesh, position_count, p_positions);
-			tg_mesh_regenerate_normals(h_mesh);
+			tg_mesh_set_positions(h_mesh, vertex_count, p_position_buffer);
+			tg_mesh_set_normals(h_mesh, vertex_count, p_normal_buffer);
 			p_node->ph_transition_render_commands[transition_index] = tg_render_command_create(h_mesh, p_terrain->h_material, V3(0), 0, TG_NULL);
 		}
 		transition_index++;
 
-		position_count = 0;
-		tg__build_transition_py(p_octree->min_coords, node_coords_offset_rel_to_octree, lod, p_voxel_map, &position_count, p_positions);
+		vertex_count = 0;
+		tg__build_transition_py(p_octree->min_coords, node_coords_offset_rel_to_octree, lod, p_voxel_map, &vertex_count, p_position_buffer, p_normal_buffer);
 
-		if (position_count)
+		if (vertex_count)
 		{
 			h_mesh = tg_mesh_create();
-			tg_mesh_set_positions(h_mesh, position_count, p_positions);
-			tg_mesh_regenerate_normals(h_mesh);
+			tg_mesh_set_positions(h_mesh, vertex_count, p_position_buffer);
+			tg_mesh_set_normals(h_mesh, vertex_count, p_normal_buffer);
 			p_node->ph_transition_render_commands[transition_index] = tg_render_command_create(h_mesh, p_terrain->h_material, V3(0), 0, TG_NULL);
 		}
 		transition_index++;
 
-		position_count = 0;
-		tg__build_transition_nz(p_octree->min_coords, node_coords_offset_rel_to_octree, lod, p_voxel_map, &position_count, p_positions);
+		vertex_count = 0;
+		tg__build_transition_nz(p_octree->min_coords, node_coords_offset_rel_to_octree, lod, p_voxel_map, &vertex_count, p_position_buffer, p_normal_buffer);
 
-		if (position_count)
+		if (vertex_count)
 		{
 			h_mesh = tg_mesh_create();
-			tg_mesh_set_positions(h_mesh, position_count, p_positions);
-			tg_mesh_regenerate_normals(h_mesh);
+			tg_mesh_set_positions(h_mesh, vertex_count, p_position_buffer);
+			tg_mesh_set_normals(h_mesh, vertex_count, p_normal_buffer);
 			p_node->ph_transition_render_commands[transition_index] = tg_render_command_create(h_mesh, p_terrain->h_material, V3(0), 0, TG_NULL);
 		}
 		transition_index++;
 
-		position_count = 0;
-		tg__build_transition_pz(p_octree->min_coords, node_coords_offset_rel_to_octree, lod, p_voxel_map, &position_count, p_positions);
+		vertex_count = 0;
+		tg__build_transition_pz(p_octree->min_coords, node_coords_offset_rel_to_octree, lod, p_voxel_map, &vertex_count, p_position_buffer, p_normal_buffer);
 
-		if (position_count)
+		if (vertex_count)
 		{
 			h_mesh = tg_mesh_create();
-			tg_mesh_set_positions(h_mesh, position_count, p_positions);
-			tg_mesh_regenerate_normals(h_mesh);
+			tg_mesh_set_positions(h_mesh, vertex_count, p_position_buffer);
+			tg_mesh_set_normals(h_mesh, vertex_count, p_normal_buffer);
 			p_node->ph_transition_render_commands[transition_index] = tg_render_command_create(h_mesh, p_terrain->h_material, V3(0), 0, TG_NULL);
 		}
 		transition_index++;
 	}
 
-	TG_MEMORY_STACK_FREE(positions_size);
+	TG_MEMORY_STACK_FREE(vertices_size);
+	TG_MEMORY_STACK_FREE(vertices_size);
 
 	if (lod > 0)
 	{
