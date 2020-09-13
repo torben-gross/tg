@@ -59,6 +59,9 @@ typedef enum tgvk_queue_type
     TGVK_QUEUE_TYPE_GRAPHICS,
     TGVK_QUEUE_TYPE_PRESENT,
 
+    TGVK_QUEUE_TYPE_COMPUTE_LOW_PRIORITY,
+    TGVK_QUEUE_TYPE_GRAPHICS_LOW_PRIORITY,
+
     TGVK_QUEUE_TYPE_COUNT
 } tgvk_queue_type;
 
@@ -183,7 +186,9 @@ typedef struct tgvk_pipeline
 typedef struct tgvk_queue
 {
     tg_mutex_h    h_mutex;
-    u32           index;
+    u32           queue_family_index;
+    u32           queue_index;
+    f32           priority;
     VkQueue       queue;
 } tgvk_queue;
 

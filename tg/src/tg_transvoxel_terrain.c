@@ -1738,7 +1738,7 @@ typedef struct tg_worker_thread_info
 	u16                        first_index_of_lod;
 } tg_worker_thread_info;
 
-static tg_mutex_h h_mutex = TG_NULL; // TODO: should i mutex the mesh generation directly instread?
+static tg_mutex_h h_mutex = TG_NULL; // TODO: should i mutex the mesh generation directly instead?
 
 void tg__build_cells_work_fn(volatile tg_worker_thread_info* p_info)
 {

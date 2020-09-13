@@ -42,8 +42,7 @@
 static VkDebugUtilsMessengerEXT    debug_utils_messenger = VK_NULL_HANDLE;
 #endif
 
-static tgvk_queue                  p_queue_buffer[TGVK_QUEUE_TYPE_COUNT] = { 0 };
-static tgvk_queue*                 pp_queues[TGVK_QUEUE_TYPE_COUNT] = { 0 };
+static tgvk_queue                  p_queues[TGVK_QUEUE_TYPE_COUNT] = { 0 };
 
 static VkCommandPool               graphics_command_pool;
 static VkCommandPool               compute_command_pool;
@@ -83,7 +82,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL tg__debug_callback(VkDebugUtilsMessageSeve
 | General utilities                                           |
 +------------------------------------------------------------*/
 
-#define TGVK_QUEUE_TAKE(type, p_queue)    (p_queue) = pp_queues[type]; TG_MUTEX_LOCK((p_queue)->h_mutex)
+#define TGVK_QUEUE_TAKE(type, p_queue)    (p_queue) = &p_queues[type]; TG_MUTEX_LOCK((p_queue)->h_mutex)
 #define TGVK_QUEUE_RELEASE(p_queue)       TG_MUTEX_UNLOCK((p_queue)->h_mutex)
 
 #define TGVK_HANDLE_TAKE(p_array, p_result)                                        \
@@ -2152,7 +2151,7 @@ static VkCommandPool tg__command_pool_create(VkCommandPoolCreateFlags command_po
     command_pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     command_pool_create_info.pNext = TG_NULL;
     command_pool_create_info.flags = command_pool_create_flags;
-    command_pool_create_info.queueFamilyIndex = pp_queues[type]->index;
+    command_pool_create_info.queueFamilyIndex = p_queues[type].queue_family_index;
 
     TGVK_CALL(vkCreateCommandPool(device, &command_pool_create_info, TG_NULL, &command_pool));
 
@@ -2194,7 +2193,7 @@ static b32 tg__physical_device_supports_required_queue_families(VkPhysicalDevice
     return result;
 }
 
-static void tg__physical_device_find_queue_family_indices(VkPhysicalDevice pd, u32* p_graphics_queue_index, u32* p_present_queue_index, u32* p_compute_queue_index)
+static void tg__physical_device_find_queue_family_indices(VkPhysicalDevice pd, u32* p_compute_queue_index, u32* p_graphics_queue_index, u32* p_present_queue_index, u32* p_compute_queue_low_prio_index, u32* p_graphics_queue_low_prio_index)
 {
     TG_ASSERT(tg__physical_device_supports_required_queue_families(pd));
 
@@ -2214,11 +2213,13 @@ static void tg__physical_device_find_queue_family_indices(VkPhysicalDevice pd, u
         const b32 supports_present_family = spf != 0;
         const b32 supports_compute_family = (p_queue_family_properties[i].queueFlags & VK_QUEUE_COMPUTE_BIT) != 0;
     
-        if (supports_graphics_family && supports_present_family && supports_compute_family)
+        if (supports_graphics_family && supports_present_family && supports_compute_family && p_queue_family_properties[i].queueCount >= TGVK_QUEUE_TYPE_COUNT)
         {
+            *p_compute_queue_index = i;
             *p_graphics_queue_index = i;
             *p_present_queue_index = i;
-            *p_compute_queue_index = i;
+            *p_compute_queue_low_prio_index = i;
+            *p_graphics_queue_low_prio_index = i;
             resolved = TG_TRUE;
             break;
         }
@@ -2514,7 +2515,14 @@ static VkPhysicalDevice tg__physical_device_create(void)
     TG_ASSERT(pd != VK_NULL_HANDLE);
 
     TG_MEMORY_STACK_FREE(physical_devices_size);
-    tg__physical_device_find_queue_family_indices(pd, &p_queue_buffer[0].index, &p_queue_buffer[1].index, &p_queue_buffer[2].index);
+    tg__physical_device_find_queue_family_indices(
+        pd,
+        &p_queues[0].queue_family_index,
+        &p_queues[1].queue_family_index,
+        &p_queues[2].queue_family_index,
+        &p_queues[3].queue_family_index,
+        &p_queues[4].queue_family_index
+    );
 
     return pd;
 }
@@ -2523,7 +2531,8 @@ static VkDevice tg__device_create(void)
 {
     VkDevice d = VK_NULL_HANDLE;
 
-    const f32 p_queue_priorities[TGVK_QUEUE_TYPE_COUNT] = { 1.0f, 1.0f, 1.0f };
+    const f32 p_queue_priorities[TGVK_QUEUE_TYPE_COUNT] = { 1.0f, 1.0f, 1.0f, 0.5f, 0.5f };
+    f32 pp_queue_priorities[TGVK_QUEUE_TYPE_COUNT][TGVK_QUEUE_TYPE_COUNT] = { 0 };
     VkDeviceQueueCreateInfo p_device_queue_create_infos[TGVK_QUEUE_TYPE_COUNT] = { 0 };
 
     for (u8 i = 0; i < TGVK_QUEUE_TYPE_COUNT; i++)
@@ -2531,29 +2540,47 @@ static VkDevice tg__device_create(void)
         p_device_queue_create_infos[i].queueFamilyIndex = TG_U32_MAX;
     }
 
-    u32 p_queue_indices[TGVK_QUEUE_TYPE_COUNT] = { 0 };
     u32 device_queue_create_info_count = 0;
     for (u8 i = 0; i < TGVK_QUEUE_TYPE_COUNT; i++)
     {
-        p_queue_indices[i] = p_queue_buffer[i].index;
+        p_queues[i].priority = p_queue_priorities[i];
+
         b32 found = TG_FALSE;
         for (u8 j = 0; j < device_queue_create_info_count; j++)
         {
-            if (p_device_queue_create_infos[j].queueFamilyIndex == p_queue_indices[i])
+            if (p_device_queue_create_infos[j].queueFamilyIndex == p_queues[i].queue_family_index)
             {
                 found = TG_TRUE;
+                b32 priority_submitted = TG_FALSE;
+                for (u32 k = 0; k < TGVK_QUEUE_TYPE_COUNT; k++)
+                {
+                    if (p_device_queue_create_infos[j].pQueuePriorities[k] == p_queue_priorities[i])
+                    {
+                        priority_submitted = TG_TRUE;
+                        p_queues[i].queue_index = k;
+                        break;
+                    }
+                }
+                if (!priority_submitted)
+                {
+                    pp_queue_priorities[j][p_device_queue_create_infos[j].queueCount] = p_queue_priorities[i];
+                    p_queues[i].queue_index = p_device_queue_create_infos[j].queueCount++;
+                }
                 break;
             }
         }
+
         if (!found)
         {
-            p_device_queue_create_infos[i].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-            p_device_queue_create_infos[i].pNext = TG_NULL;
-            p_device_queue_create_infos[i].flags = 0;
-            p_device_queue_create_infos[i].queueFamilyIndex = p_queue_indices[i];
-            p_device_queue_create_infos[i].queueCount = 1;
-            p_device_queue_create_infos[i].pQueuePriorities = p_queue_priorities;
+            p_device_queue_create_infos[device_queue_create_info_count].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+            p_device_queue_create_infos[device_queue_create_info_count].pNext = TG_NULL;
+            p_device_queue_create_infos[device_queue_create_info_count].flags = 0;
+            p_device_queue_create_infos[device_queue_create_info_count].queueFamilyIndex = p_queues[i].queue_family_index;
+            p_device_queue_create_infos[device_queue_create_info_count].queueCount = 1;
+            p_device_queue_create_infos[device_queue_create_info_count].pQueuePriorities = pp_queue_priorities[i];
+            pp_queue_priorities[i][0] = p_queue_priorities[i];
 
+            p_queues[i].queue_index = 0;
             device_queue_create_info_count++;
         }
     }
@@ -2646,27 +2673,21 @@ static void tg__queues_create(u32 count)
 {
     for (u32 i = 0; i < count; i++)
     {
-        vkGetDeviceQueue(device, p_queue_buffer[i].index, 0, &p_queue_buffer[i].queue);
+        vkGetDeviceQueue(device, p_queues[i].queue_family_index, p_queues[i].queue_index, &p_queues[i].queue);
 
         b32 found = TG_FALSE;
         for (u32 j = 0; j < i; j++)
         {
-            if (pp_queues[j] == TG_NULL)
-            {
-                break;
-            }
-            if (pp_queues[j]->queue == p_queue_buffer[i].queue)
+            if (p_queues[j].queue == p_queues[i].queue)
             {
                 found = TG_TRUE;
-                pp_queues[i] = pp_queues[j];
+                p_queues[i].h_mutex = p_queues[j].h_mutex;
                 break;
             }
         }
         if (!found)
         {
-            p_queue_buffer[i].queue = p_queue_buffer[i].queue;
-            p_queue_buffer[i].h_mutex = TG_MUTEX_CREATE();
-            pp_queues[i] = &p_queue_buffer[i];
+            p_queues[i].h_mutex = TG_MUTEX_CREATE();
         }
     }
 }
@@ -2726,7 +2747,7 @@ static void tg__swapchain_create(void)
     swapchain_create_info.imageArrayLayers = 1;
     swapchain_create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-    TG_ASSERT(p_queue_buffer[0].index == p_queue_buffer[1].index && p_queue_buffer[1].index == p_queue_buffer[2].index);
+    TG_ASSERT(p_queues[0].queue_family_index == p_queues[1].queue_family_index && p_queues[1].queue_family_index == p_queues[2].queue_family_index);
     // TODO: this may be relevant to implement as well...
     //const u32 p_queue_family_indices[] = { graphics_queue.index, present_queue.index };
     //if (graphics_queue.index != present_queue.index)
