@@ -53,7 +53,7 @@ static void tg__init_shadow_pass(tg_renderer_h h_renderer)
     }
     tgvk_command_buffer_end_and_submit(&global_graphics_command_buffer);
 
-    h_renderer->shadow_pass.command_buffer = tgvk_command_buffer_allocate(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+    h_renderer->shadow_pass.command_buffer = tgvk_command_buffer_create(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
     for (u32 i = 0; i < TG_CASCADED_SHADOW_MAPS; i++)
     {
@@ -85,7 +85,7 @@ static void tg__init_geometry_pass(tg_renderer_h h_renderer)
     p_framebuffer_attachments[TGVK_GEOMETRY_ATTACHMENT_DEPTH] = h_renderer->render_target.depth_attachment.image_view;
 
     h_renderer->geometry_pass.framebuffer = tgvk_framebuffer_create(shared_render_resources.geometry_render_pass, TGVK_GEOMETRY_ATTACHMENT_COUNT, p_framebuffer_attachments, swapchain_extent.width, swapchain_extent.height);
-    h_renderer->geometry_pass.command_buffer = tgvk_command_buffer_allocate(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+    h_renderer->geometry_pass.command_buffer = tgvk_command_buffer_create(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 }
 
 static void tg__init_ssao_pass(tg_renderer_h h_renderer)
@@ -169,7 +169,7 @@ static void tg__init_ssao_pass(tg_renderer_h h_renderer)
 
 
 
-    h_renderer->ssao_pass.command_buffer = tgvk_command_buffer_allocate(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+    h_renderer->ssao_pass.command_buffer = tgvk_command_buffer_create(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     tgvk_command_buffer_begin(&h_renderer->ssao_pass.command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
     {
         tgvk_command_buffer_cmd_transition_color_image_layout(&h_renderer->ssao_pass.command_buffer, &h_renderer->ssao_pass.ssao_attachment, 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
@@ -286,7 +286,7 @@ static void tg__init_shading_pass(tg_renderer_h h_renderer)
     }
     tgvk_descriptor_set_update_image(h_renderer->shading_pass.descriptor_set.descriptor_set, &h_renderer->ssao_pass.blur_attachment, TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT + 2);
 
-    h_renderer->shading_pass.command_buffer = tgvk_command_buffer_allocate(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+    h_renderer->shading_pass.command_buffer = tgvk_command_buffer_create(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
     tgvk_command_buffer_begin(&h_renderer->shading_pass.command_buffer, 0);
     {
@@ -377,7 +377,7 @@ static void tg__init_forward_pass(tg_renderer_h h_renderer)
         h_renderer->render_target.depth_attachment.image_view
     };
     h_renderer->forward_pass.framebuffer = tgvk_framebuffer_create(shared_render_resources.forward_render_pass, 2, p_image_views, swapchain_extent.width, swapchain_extent.height);
-    h_renderer->forward_pass.command_buffer = tgvk_command_buffer_allocate(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+    h_renderer->forward_pass.command_buffer = tgvk_command_buffer_create(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 }
 
 static void tg__init_tone_mapping_pass(tg_renderer_h h_renderer)
@@ -424,7 +424,7 @@ static void tg__init_tone_mapping_pass(tg_renderer_h h_renderer)
 
     h_renderer->tone_mapping_pass.adapt_exposure_graphics_pipeline = tgvk_pipeline_create_graphics(&exposure_graphics_pipeline_create_info);
     h_renderer->tone_mapping_pass.adapt_exposure_descriptor_set = tgvk_descriptor_set_create(&h_renderer->tone_mapping_pass.adapt_exposure_graphics_pipeline);
-    h_renderer->tone_mapping_pass.adapt_exposure_command_buffer = tgvk_command_buffer_allocate(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+    h_renderer->tone_mapping_pass.adapt_exposure_command_buffer = tgvk_command_buffer_create(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
 
 
@@ -512,7 +512,7 @@ static void tg__init_tone_mapping_pass(tg_renderer_h h_renderer)
 
 static void tg__init_blit_pass(tg_renderer_h h_renderer)
 {
-    h_renderer->blit_pass.command_buffer = tgvk_command_buffer_allocate(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+    h_renderer->blit_pass.command_buffer = tgvk_command_buffer_create(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
     tgvk_command_buffer_begin(&h_renderer->blit_pass.command_buffer, 0);
     {
@@ -627,7 +627,7 @@ static void tg__init_blit_pass(tg_renderer_h h_renderer)
 
 static void tg__init_clear_pass(tg_renderer_h h_renderer)
 {
-    h_renderer->clear_pass.command_buffer = tgvk_command_buffer_allocate(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+    h_renderer->clear_pass.command_buffer = tgvk_command_buffer_create(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     tgvk_command_buffer_begin(&h_renderer->clear_pass.command_buffer, 0);
     {
         tgvk_command_buffer_cmd_transition_depth_image_layout(
@@ -693,7 +693,7 @@ static void tg__init_present_pass(tg_renderer_h h_renderer)
     h_renderer->present_pass.graphics_pipeline = tgvk_pipeline_create_graphics(&graphics_pipeline_create_info);
     h_renderer->present_pass.descriptor_set = tgvk_descriptor_set_create(&h_renderer->present_pass.graphics_pipeline);
 
-    tgvk_command_buffers_allocate(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY, TG_MAX_SWAPCHAIN_IMAGES, h_renderer->present_pass.p_command_buffers);
+    tgvk_command_buffers_create(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY, TG_MAX_SWAPCHAIN_IMAGES, h_renderer->present_pass.p_command_buffers);
 
     const VkDeviceSize vertex_buffer_offset = 0;
 
@@ -1162,7 +1162,18 @@ void tg_renderer_init_shared_resources(void)
 
 void tg_renderer_shutdown_shared_resources(void)
 {
-    TG_INVALID_CODEPATH();
+    tgvk_render_pass_destroy(shared_render_resources.present_render_pass);
+    tgvk_render_pass_destroy(shared_render_resources.forward_render_pass);
+    tgvk_render_pass_destroy(shared_render_resources.tone_mapping_render_pass);
+    tgvk_render_pass_destroy(shared_render_resources.shading_render_pass);
+    tgvk_render_pass_destroy(shared_render_resources.ssao_blur_render_pass);
+    tgvk_render_pass_destroy(shared_render_resources.ssao_render_pass);
+    tgvk_render_pass_destroy(shared_render_resources.geometry_render_pass);
+    tgvk_pipeline_destroy(&shared_render_resources.shadow_pipeline);
+    tgvk_render_pass_destroy(shared_render_resources.shadow_render_pass);
+    tgvk_buffer_destroy(&shared_render_resources.screen_quad_uvs_buffer);
+    tgvk_buffer_destroy(&shared_render_resources.screen_quad_positions_buffer);
+    tgvk_buffer_destroy(&shared_render_resources.screen_quad_indices);
 }
 
 tg_renderer_h tg_renderer_create(tg_camera* p_camera)
@@ -1259,8 +1270,74 @@ void tg_renderer_destroy(tg_renderer_h h_renderer)
 {
     TG_ASSERT(h_renderer);
 
-    // TODO: this
-    // TG_INVALID_CODEPATH();
+#if TG_ENABLE_DEBUG_TOOLS == 1
+    TG_INVALID_CODEPATH();
+#endif
+
+    tgvk_command_buffer_destroy(&h_renderer->clear_pass.command_buffer);
+
+    tgvk_command_buffers_destroy(TG_MAX_SWAPCHAIN_IMAGES, h_renderer->present_pass.p_command_buffers);
+    tgvk_descriptor_set_destroy(&h_renderer->present_pass.descriptor_set);
+    tgvk_pipeline_destroy(&h_renderer->present_pass.graphics_pipeline);
+    tgvk_framebuffers_destroy(TG_MAX_SWAPCHAIN_IMAGES, h_renderer->present_pass.p_framebuffers);
+    tgvk_semaphore_destroy(h_renderer->present_pass.image_acquired_semaphore);
+
+    tgvk_command_buffer_destroy(&h_renderer->blit_pass.command_buffer);
+
+    tgvk_command_buffer_destroy(&h_renderer->tone_mapping_pass.adapt_exposure_command_buffer);
+    tgvk_descriptor_set_destroy(&h_renderer->tone_mapping_pass.adapt_exposure_descriptor_set);
+    tgvk_pipeline_destroy(&h_renderer->tone_mapping_pass.adapt_exposure_graphics_pipeline);
+    tgvk_framebuffer_destroy(&h_renderer->tone_mapping_pass.adapt_exposure_framebuffer);
+    tgvk_buffer_destroy(&h_renderer->tone_mapping_pass.finalize_exposure_dt_ubo);
+    tgvk_buffer_destroy(&h_renderer->tone_mapping_pass.finalize_exposure_storage_buffer);
+    tgvk_descriptor_set_destroy(&h_renderer->tone_mapping_pass.finalize_exposure_descriptor_set);
+    tgvk_pipeline_destroy(&h_renderer->tone_mapping_pass.finalize_exposure_compute_pipeline);
+    tgvk_buffer_destroy(&h_renderer->tone_mapping_pass.acquire_exposure_storage_buffer);
+    tgvk_descriptor_set_destroy(&h_renderer->tone_mapping_pass.acquire_exposure_descriptor_set);
+    tgvk_pipeline_destroy(&h_renderer->tone_mapping_pass.acquire_exposure_compute_pipeline);
+    tgvk_buffer_destroy(&h_renderer->tone_mapping_pass.acquire_exposure_clear_storage_buffer);
+
+    tgvk_command_buffer_destroy(&h_renderer->forward_pass.command_buffer);
+    tgvk_framebuffer_destroy(&h_renderer->forward_pass.framebuffer);
+
+    tgvk_buffer_destroy(&h_renderer->shading_pass.shading_info_ubo);
+    tgvk_command_buffer_destroy(&h_renderer->shading_pass.command_buffer);
+    tgvk_descriptor_set_destroy(&h_renderer->shading_pass.descriptor_set);
+    tgvk_pipeline_destroy(&h_renderer->shading_pass.graphics_pipeline);
+    tgvk_framebuffer_destroy(&h_renderer->shading_pass.framebuffer);
+    tgvk_image_destroy(&h_renderer->shading_pass.color_attachment);
+
+    tgvk_command_buffer_destroy(&h_renderer->ssao_pass.command_buffer);
+    tgvk_descriptor_set_destroy(&h_renderer->ssao_pass.blur_descriptor_set);
+    tgvk_pipeline_destroy(&h_renderer->ssao_pass.blur_graphics_pipeline);
+    tgvk_framebuffer_destroy(&h_renderer->ssao_pass.blur_framebuffer);
+    tgvk_image_destroy(&h_renderer->ssao_pass.blur_attachment);
+    tgvk_buffer_destroy(&h_renderer->ssao_pass.ssao_ubo);
+    tgvk_image_destroy(&h_renderer->ssao_pass.ssao_noise_image);
+    tgvk_descriptor_set_destroy(&h_renderer->ssao_pass.ssao_descriptor_set);
+    tgvk_pipeline_destroy(&h_renderer->ssao_pass.ssao_graphics_pipeline);
+    tgvk_framebuffer_destroy(&h_renderer->ssao_pass.ssao_framebuffer);
+    tgvk_image_destroy(&h_renderer->ssao_pass.ssao_attachment);
+
+    tgvk_command_buffer_destroy(&h_renderer->geometry_pass.command_buffer);
+    tgvk_framebuffer_destroy(&h_renderer->geometry_pass.framebuffer);
+    for (u32 i = 0; i < TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT; i++)
+    {
+        tgvk_image_destroy(&h_renderer->geometry_pass.p_color_attachments[i]);
+    }
+
+    tgvk_command_buffer_destroy(&h_renderer->shadow_pass.command_buffer);
+    for (u32 i = 0; i < TG_CASCADED_SHADOW_MAPS; i++)
+    {
+        tgvk_buffer_destroy(&h_renderer->shadow_pass.p_lightspace_ubos[i]);
+        tgvk_framebuffer_destroy(&h_renderer->shadow_pass.p_framebuffers[i]);
+        tgvk_image_destroy(&h_renderer->shadow_pass.p_shadow_maps[i]);
+    }
+
+    tgvk_semaphore_destroy(h_renderer->semaphore);
+    tgvk_render_target_destroy(&h_renderer->render_target);
+    tgvk_buffer_destroy(&h_renderer->view_projection_ubo);
+    tgvk_handle_release(h_renderer);
 }
 
 void tg_renderer_enable_shadows(tg_renderer_h h_renderer, b32 enable)
@@ -1734,7 +1811,7 @@ void tg_renderer_draw_cube_DEBUG(tg_renderer_h h_renderer, v3 position, v3 scale
 
     if (h_renderer->DEBUG.p_cubes[h_renderer->DEBUG.cube_count].command_buffer.command_buffer == VK_NULL_HANDLE)
     {
-        h_renderer->DEBUG.p_cubes[h_renderer->DEBUG.cube_count].command_buffer = tgvk_command_buffer_allocate(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_SECONDARY);
+        h_renderer->DEBUG.p_cubes[h_renderer->DEBUG.cube_count].command_buffer = tgvk_command_buffer_create(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_SECONDARY);
     }
 
     h_renderer->DEBUG.cube_count++;

@@ -55,21 +55,23 @@ typedef struct tg_sample_scene
 
     tg_mesh_h                  h_sponza_mesh;
     tg_render_command_h        h_sponza_render_command;
-    tg_kd_tree*                p_sponza_kd_tree;
     tg_voxel                   p_voxels[TG_SVO_DIMS3];
     tg_uniform_buffer_h        h_sponza_ubo;
-    tg_mesh_h                  h_my_mesh;
-    tg_uniform_buffer_h        h_my_ubo;
+    tg_material_h              h_sponza_material;
 
     u8                         p_light_values[6];
     tg_mesh_h                  h_pbr_sphere_mesh;
     tg_mesh_h                  h_pbr_sphere_mesh2;
     tg_pbr_sphere              p_pbr_spheres[49];
+
     tg_mesh_h                  h_probe_mesh;
     v3                         probe_translation;
     tg_cube_map_h              h_probe_cube_map;
+    tg_material_h              h_probe_material;
     tg_render_command_h        h_probe_render_command;
+
     tg_terrain*                p_terrain;
+    
     f32                        light_timer;
 } tg_sample_scene;
 
@@ -80,73 +82,10 @@ tg_sample_scene scene = { 0 };
 
 
 
-static v3 tg__random_dir_hemisphere(tg_random* p_random, v3 normal)
-{
-    const f32 x = tgm_f32_acos(normal.x);
-    const f32 y = tgm_f32_acos(normal.y);
-    const f32 z = tgm_f32_acos(normal.z);
-
-    const f32 ph = TG_PI / 2.0f;
-    const f32 lx = x - ph;
-    const f32 rx = x + ph;
-    const f32 ly = y - ph;
-    const f32 ry = y + ph;
-    const f32 lz = z - ph;
-    const f32 rz = z + ph;
-
-    v3 result = tgm_v3_normalized((v3) {
-        tgm_f32_cos(tgm_random_next_f32_between(p_random, lx, rx)),
-        tgm_f32_cos(tgm_random_next_f32_between(p_random, ly, ry)),
-        tgm_f32_cos(tgm_random_next_f32_between(p_random, lz, rz))
-    });
-    return result;
-}
-
-static void tg__raycast(void)
-{
-    v3 p_ray_origins[6] = {
-        tgm_v3_sub(scene.probe_translation, (v3) { 128.0f, 140.0f, 128.0f }),
-        tgm_v3_sub(scene.probe_translation, (v3) { 128.0f, 140.0f, 128.0f }),
-        tgm_v3_sub(scene.probe_translation, (v3) { 128.0f, 140.0f, 128.0f }),
-        tgm_v3_sub(scene.probe_translation, (v3) { 128.0f, 140.0f, 128.0f }),
-        tgm_v3_sub(scene.probe_translation, (v3) { 128.0f, 140.0f, 128.0f }),
-        tgm_v3_sub(scene.probe_translation, (v3) { 128.0f, 140.0f, 128.0f })
-    };
-    v3 p_ray_directions[6] = {
-        {  1.0f,  0.0f,  0.0f },
-        { -1.0f,  0.0f,  0.0f },
-        {  0.0f,  1.0f,  0.0f },
-        {  0.0f, -1.0f,  0.0f },
-        {  0.0f,  0.0f,  1.0f },
-        {  0.0f,  0.0f, -1.0f }
-    };
-    b32 p_raycast_results[6] = { 0 };
-    tg_raycast_hit p_raycast_hits[6] = { 0 };
-    u32 ms = (u32)tg_platform_get_system_time().milliseconds;
-    tg_random r = tgm_random_init(ms == 0 ? 1 : ms);
-    for (u8 i = 0; i < 6; i++)
-    {
-        p_ray_directions[i] = tg__random_dir_hemisphere(&r, p_ray_directions[i]);
-        p_raycast_results[i] = tg_raycast_kd_tree(p_ray_origins[i], p_ray_directions[i], scene.p_sponza_kd_tree, &p_raycast_hits[i]);
-        const f32 t = 0.02f;
-        if (p_raycast_results[i])
-        {
-            p_ray_origins[i] = p_raycast_hits[i].hit;
-            p_ray_directions[i] = (v3){ 0.0f, 1.0f, 0.0f };
-            p_raycast_results[i] = tg_raycast_kd_tree(p_ray_origins[i], p_ray_directions[i], scene.p_sponza_kd_tree, &p_raycast_hits[i]);
-            scene.p_light_values[i] = (u8)((1 - t) * (f32)scene.p_light_values[i] + t * (1.0f - (f32)p_raycast_results[i]) * 127.0f);
-        }
-        else
-        {
-            scene.p_light_values[i] = (u8)((1 - t) * scene.p_light_values[i] + t * 255.0f);
-        }
-    }
-    tg_cube_map_set_data(scene.h_probe_cube_map, scene.p_light_values);
-}
-
 static void tg__game_3d_create(void)
 {
     scene.render_commands = TG_LIST_CREATE(tg_render_command_h);
+
     scene.camera.type = TG_CAMERA_TYPE_PERSPECTIVE;
     scene.camera.position = (v3) { 128.0f, 141.0f, 128.0f };
     scene.camera.pitch = 0.0f;
@@ -157,11 +96,11 @@ static void tg__game_3d_create(void)
     scene.camera.persp.n = -0.1f;
     scene.camera.persp.f = -1000.0f;
     tg_input_get_mouse_position(&scene.last_mouse_x, &scene.last_mouse_y);
+
     scene.h_main_renderer = tg_renderer_create(&scene.camera);
     scene.h_secondary_renderer = tg_renderer_create(&scene.camera);
     tg_renderer_enable_shadows(scene.h_main_renderer, TG_FALSE);
     tg_renderer_enable_shadows(scene.h_secondary_renderer, TG_FALSE);
-
 
 
 
@@ -170,6 +109,12 @@ static void tg__game_3d_create(void)
         {  3.2f, -1.8f, 0.0f },
         {  3.2f,  1.8f, 0.0f },
         { -3.2f,  1.8f, 0.0f }
+    };
+    const v3 p_quad_normals[4] = {
+        { 0.0f, 0.0f, -1.0f },
+        { 0.0f, 0.0f, -1.0f },
+        { 0.0f, 0.0f, -1.0f },
+        { 0.0f, 0.0f, -1.0f }
     };
     const v2 p_quad_uvs[4] = {
         { 0.0f, 1.0f },
@@ -184,41 +129,30 @@ static void tg__game_3d_create(void)
     scene.h_quad_mesh = tg_mesh_create();
     tg_mesh_set_indices(scene.h_quad_mesh, 6, p_quad_indices);
     tg_mesh_set_positions(scene.h_quad_mesh, 4, p_quad_positions);
-    tg_mesh_regenerate_normals(scene.h_quad_mesh);
+    tg_mesh_set_normals(scene.h_quad_mesh, 4, p_quad_normals);
     tg_mesh_set_uvs(scene.h_quad_mesh, 4, p_quad_uvs);
     scene.h_quad_color_ubo = tg_uniform_buffer_create(sizeof(v3));
     *((v3*)tg_uniform_buffer_data(scene.h_quad_color_ubo)) = (v3) { 1.0f, 0.0f, 0.0f };
     tg_handle p_custom_handles[2] = { scene.h_quad_color_ubo, tg_renderer_get_render_target(scene.h_secondary_renderer) };
     scene.h_quad_material = tg_material_create_forward(tg_vertex_shader_get("shaders/forward/forward.vert"), tg_fragment_shader_get("shaders/forward/texture.frag"));
-
     scene.h_quad_render_command = tg_render_command_create(scene.h_quad_mesh, scene.h_quad_material, (v3) { 0.0f, 133.0f, 0.0f }, 2, p_custom_handles);
     scene.quad_offset_z = -65.0f;
     tg_list_insert(&scene.render_commands, &scene.h_quad_render_command);
 
 
 
-
-
-
-
-
-
-
-
-
-
     scene.h_probe_mesh = tg_mesh_create_sphere(0.5f, 64, 32, TG_TRUE, TG_TRUE, TG_FALSE);
     scene.probe_translation = (v3){ 128.0f + 7.0f, 153.0f, 128.0f };
     scene.h_probe_cube_map = tg_cube_map_create(1, TG_COLOR_IMAGE_FORMAT_R8, TG_NULL);
-    tg_material_h h_probe_material = tg_material_create_forward(tg_vertex_shader_get("shaders/forward/forward.vert"), tg_fragment_shader_get("shaders/forward/probe.frag"));
+    scene.h_probe_material = tg_material_create_forward(tg_vertex_shader_get("shaders/forward/forward.vert"), tg_fragment_shader_get("shaders/forward/probe.frag"));
     tg_handle p_probe_handles[1] = { scene.h_probe_cube_map };
-    scene.h_probe_render_command = tg_render_command_create(scene.h_probe_mesh, h_probe_material, scene.probe_translation, 1, p_probe_handles);
+    scene.h_probe_render_command = tg_render_command_create(scene.h_probe_mesh, scene.h_probe_material, scene.probe_translation, 1, p_probe_handles);
     tg_list_insert(&scene.render_commands, &scene.h_probe_render_command);
 
 
 
-    scene.h_pbr_sphere_mesh = tg_mesh_create_sphere_flat(0.5f, 128, 64, TG_TRUE, TG_TRUE, TG_FALSE);
-    scene.h_pbr_sphere_mesh2 = tg_mesh_create_sphere_flat(3.0f, 128, 64, TG_TRUE, TG_TRUE, TG_FALSE);
+    scene.h_pbr_sphere_mesh = tg_mesh_create_sphere(0.5f, 128, 64, TG_TRUE, TG_TRUE, TG_FALSE);
+    scene.h_pbr_sphere_mesh2 = tg_mesh_create_sphere(3.0f, 128, 64, TG_TRUE, TG_TRUE, TG_FALSE);
     for (u32 y = 0; y < 7; y++)
     {
         for (u32 x = 0; x < 7; x++)
@@ -244,7 +178,11 @@ static void tg__game_3d_create(void)
             }
             else
             {
-                scene.p_pbr_spheres[i].h_render_command = tg_render_command_create(scene.h_pbr_sphere_mesh, scene.p_pbr_spheres[i].h_material, sphere_translation, 1, p_handles);
+                scene.p_pbr_spheres[i].h_render_command = tg_render_command_create(
+                    scene.h_pbr_sphere_mesh, scene.p_pbr_spheres[i].h_material,
+                    sphere_translation,
+                    1, p_handles
+                );
             }
             tg_list_insert(&scene.render_commands, &scene.p_pbr_spheres[i].h_render_command);
         }
@@ -252,29 +190,16 @@ static void tg__game_3d_create(void)
 
 
 
-
-
-
-
-
     scene.h_sponza_mesh = tg_mesh_create2("meshes/sponza.obj", V3(0.01f));
-    //scene.p_sponza_kd_tree = tg_kd_tree_create(scene.h_sponza_mesh);
-
     scene.h_sponza_ubo = tg_uniform_buffer_create(sizeof(tg_pbr_material));
     ((tg_pbr_material*)tg_uniform_buffer_data(scene.h_sponza_ubo))->albedo = (v4) { 1.0f, 1.0f, 1.0f, 1.0f };
     ((tg_pbr_material*)tg_uniform_buffer_data(scene.h_sponza_ubo))->metallic = 0.1f;
     ((tg_pbr_material*)tg_uniform_buffer_data(scene.h_sponza_ubo))->roughness = 0.4f;
     ((tg_pbr_material*)tg_uniform_buffer_data(scene.h_sponza_ubo))->ao = 1.0f;
-    tg_material_h h_sponza_material = tg_material_create_deferred(tg_vertex_shader_get("shaders/deferred/pbr.vert"), tg_fragment_shader_get("shaders/deferred/pbr.frag"));
-
+    scene.h_sponza_material = tg_material_create_deferred(tg_vertex_shader_get("shaders/deferred/pbr.vert"), tg_fragment_shader_get("shaders/deferred/pbr.frag"));
     tg_handle p_sponza_handles[1] = { scene.h_sponza_ubo };
-    scene.h_sponza_render_command = tg_render_command_create(scene.h_sponza_mesh, h_sponza_material, (v3) { 128.0f, 140.0f, 128.0f }, 1, p_sponza_handles);
+    scene.h_sponza_render_command = tg_render_command_create(scene.h_sponza_mesh, scene.h_sponza_material, (v3) { 128.0f, 140.0f, 128.0f }, 1, p_sponza_handles);
     tg_list_insert(&scene.render_commands, &scene.h_sponza_render_command);
-    //tg__raycast();
-
-    // TODO: remove
-    //const v3i min_corner = { 108, 138, 116 };
-    //const v3i dimensions = { 40, 18, 24 };
     tg_voxelizer* p_voxelizer = TG_MEMORY_STACK_ALLOC(sizeof(*p_voxelizer));
     tg_voxelizer_create(p_voxelizer);
     tg_voxelizer_begin(p_voxelizer);
@@ -283,20 +208,6 @@ static void tg__game_3d_create(void)
     tg_voxelizer_end(p_voxelizer, (v3i) { 1, 2, 1 }, scene.p_voxels);
     tg_voxelizer_destroy(p_voxelizer);
     TG_MEMORY_STACK_FREE(sizeof(*p_voxelizer));
-
-
-
-    //scene.h_my_mesh = tg_mesh_create2("meshes/untitled.obj", V3(0.12f));
-    //scene.h_my_mesh = tg_mesh_create2("meshes/nymph1.obj", V3(1.0f));
-    //scene.h_my_ubo = tg_uniform_buffer_create(sizeof(tg_pbr_material));
-    //((tg_pbr_material*)tg_uniform_buffer_data(scene.h_my_ubo))->albedo = (v4){ 0.816f, 0.506f, 0.024f, 1.0f };
-    //((tg_pbr_material*)tg_uniform_buffer_data(scene.h_my_ubo))->metallic = 1.0f;
-    //((tg_pbr_material*)tg_uniform_buffer_data(scene.h_my_ubo))->roughness = 0.4f;
-    //((tg_pbr_material*)tg_uniform_buffer_data(scene.h_my_ubo))->ao = 1.0f;
-    //tg_material_h h_my_material = tg_material_create_deferred(tg_vertex_shader_get("shaders/deferred/pbr.vert"), tg_fragment_shader_get("shaders/deferred/pbr.frag"));
-    //tg_handle p_my_handles[1] = { scene.h_my_ubo };
-    //tg_render_command_h h_my_render_command = tg_render_command_create(scene.h_my_mesh, h_my_material, (v3) { 128.0f, 141.9f, 126.0f }, 1, p_my_handles);
-    //tg_list_insert(&scene.render_commands, &h_my_render_command);
 
     scene.p_terrain = tg_terrain_create(&scene.camera);
 }
@@ -462,6 +373,25 @@ static void tg__game_3d_update_and_render(f32 dt)
 static void tg__game_3d_destroy(void)
 {
     tg_terrain_destroy(scene.p_terrain);
+
+    tg_render_command_destroy(scene.h_probe_render_command);
+    tg_material_destroy(scene.h_probe_material);
+    tg_cube_map_destroy(scene.h_probe_cube_map);
+    tg_mesh_destroy(scene.h_probe_mesh);
+
+    for (u32 i = 0; i < 49; i++)
+    {
+        tg_render_command_destroy(scene.p_pbr_spheres[i].h_render_command);
+        tg_material_destroy(scene.p_pbr_spheres[i].h_material);
+        tg_uniform_buffer_destroy(scene.p_pbr_spheres[i].h_ubo);
+    }
+    tg_mesh_destroy(scene.h_pbr_sphere_mesh2);
+    tg_mesh_destroy(scene.h_pbr_sphere_mesh);
+
+    tg_material_destroy(scene.h_sponza_material);
+    tg_uniform_buffer_destroy(scene.h_sponza_ubo);
+    tg_render_command_destroy(scene.h_sponza_render_command);
+    tg_mesh_destroy(scene.h_sponza_mesh);
 
     tg_render_command_destroy(scene.h_quad_render_command);
     tg_material_destroy(scene.h_quad_material);

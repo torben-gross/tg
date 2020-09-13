@@ -18,7 +18,7 @@ static void tg__register(tg_render_command_h h_render_command, tg_renderer_h h_r
         tgvk_descriptor_set_update(p_renderer_info->descriptor_set.descriptor_set, p_global_resources[i], binding);
     }
 
-    p_renderer_info->command_buffer = tgvk_command_buffer_allocate(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_SECONDARY);
+    p_renderer_info->command_buffer = tgvk_command_buffer_create(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_SECONDARY);
 
     VkRenderPass render_pass = VK_NULL_HANDLE;
     VkFramebuffer framebuffer = VK_NULL_HANDLE;
@@ -114,7 +114,7 @@ static void tg__register(tg_render_command_h h_render_command, tg_renderer_h h_r
         shadow_command_buffer_inheritance_info.queryFlags = 0;
         shadow_command_buffer_inheritance_info.pipelineStatistics = 0;
         
-        p_renderer_info->p_shadow_command_buffers[i] = tgvk_command_buffer_allocate(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_SECONDARY);
+        p_renderer_info->p_shadow_command_buffers[i] = tgvk_command_buffer_create(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_SECONDARY);
         tgvk_command_buffer_begin_secondary(&p_renderer_info->p_shadow_command_buffers[i], VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, shared_render_resources.shadow_render_pass, h_renderer->shadow_pass.p_framebuffers[i].framebuffer);
         {
             vkCmdBindPipeline(p_renderer_info->p_shadow_command_buffers[i].command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shared_render_resources.shadow_pipeline.pipeline);
@@ -171,18 +171,27 @@ void tg_render_command_destroy(tg_render_command_h h_render_command)
     {
         for (u32 j = 0; j < TG_CASCADED_SHADOW_MAPS; j++)
         {
-            tgvk_command_buffer_free(&h_render_command->p_renderer_infos[i].p_shadow_command_buffers[j]);
+            tgvk_command_buffer_destroy(&h_render_command->p_renderer_infos[i].p_shadow_command_buffers[j]);
             tgvk_descriptor_set_destroy(&h_render_command->p_renderer_infos[i].p_shadow_descriptor_sets[j]);
         }
-        tgvk_command_buffer_free(&h_render_command->p_renderer_infos[i].command_buffer);
+        tgvk_command_buffer_destroy(&h_render_command->p_renderer_infos[i].command_buffer);
         tgvk_descriptor_set_destroy(&h_render_command->p_renderer_infos[i].descriptor_set);
     }
     tgvk_buffer_destroy(&h_render_command->model_ubo);
     tgvk_handle_release(h_render_command);
 }
 
+tg_mesh_h tg_render_command_get_mesh(tg_render_command_h h_render_command)
+{
+    TG_ASSERT(h_render_command);
+
+    return h_render_command->h_mesh;
+}
+
 void tg_render_command_set_position(tg_render_command_h h_render_command, v3 position)
 {
+    TG_ASSERT(h_render_command);
+
     *((m4*)h_render_command->model_ubo.memory.p_mapped_device_memory) = tgm_m4_translate(position);
 }
 

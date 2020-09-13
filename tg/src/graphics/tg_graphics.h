@@ -249,6 +249,7 @@ void                    tg_mesh_destroy(tg_mesh_h h_mesh);
 
 tg_render_command_h     tg_render_command_create(tg_mesh_h h_mesh, tg_material_h h_material, v3 position, u32 global_resource_count, tg_handle* p_global_resources);
 void                    tg_render_command_destroy(tg_render_command_h h_render_command);
+tg_mesh_h               tg_render_command_get_mesh(tg_render_command_h h_render_command);
 void                    tg_render_command_set_position(tg_render_command_h h_render_command, v3 position);
 
 void                    tg_renderer_init_shared_resources(void);

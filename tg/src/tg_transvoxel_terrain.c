@@ -1738,7 +1738,7 @@ typedef struct tg_worker_thread_info
 	u16                        first_index_of_lod;
 } tg_worker_thread_info;
 
-tg_mutex_h h_mutex = TG_NULL; // TODO: should i mutex the mesh generation directly instread?
+static tg_mutex_h h_mutex = TG_NULL; // TODO: should i mutex the mesh generation directly instread?
 
 void tg__build_cells_work_fn(volatile tg_worker_thread_info* p_info)
 {
@@ -1985,39 +1985,6 @@ static void tg__build_octree(tg_terrain* p_terrain, u8 octree_index, i32 x, i32 
 #endif
 }
 
-static void tg__destroy_nodes_recursively(tg_terrain_octree_node* p_node)
-{
-	//if (p_node)
-	//{
-	//	tg_terrain_block* p_block = &p_node->block;
-	//
-	//	if (p_block->h_block_render_command)
-	//	{
-	//		tg_render_command_destroy(p_block->h_block_render_command);
-	//		tg_mesh_destroy(p_block->h_block_mesh);
-	//	}
-	//
-	//	for (u8 i = 0; i < 6; i++)
-	//	{
-	//		if (p_block->ph_transition_render_commands[i])
-	//		{
-	//			tg_render_command_destroy(p_block->ph_transition_render_commands[i]);
-	//			tg_mesh_destroy(p_block->ph_transition_meshes[i]);
-	//		}
-	//	}
-	//
-	//	for (u8 i = 0; i < 8; i++)
-	//	{
-	//		if (p_node->pp_children[i])
-	//		{
-	//			tg__destroy_nodes_recursively(p_node->pp_children[i]);
-	//		}
-	//	}
-	//	
-	//	TG_MEMORY_FREE(p_node);
-	//}
-}
-
 
 
 static void tg__render(tg_terrain* p_terrain, u8 octree_index, u8 x, u8 y, u8 z, u8 lod, u16 first_index_of_lod, tg_renderer_h h_renderer)
@@ -2144,8 +2111,27 @@ void tg_terrain_destroy(tg_terrain* p_terrain)
 	
 	for (u8 i = 0; i < TG_TERRAIN_OCTREES; i++)
 	{
-		tg__destroy_nodes_recursively(p_terrain->p_octrees[i].p_nodes);
+		tg_terrain_octree* p_octree = &p_terrain->p_octrees[i];
+		for (u32 j = 0; j < TG_TERRAIN_NODES_PER_OCTREE; j++)
+		{
+			tg_terrain_octree_node* p_node = &p_octree->p_nodes[j];
+			if (p_node->h_block_render_command)
+			{
+				tg_mesh_destroy(tg_render_command_get_mesh(p_node->h_block_render_command));
+				tg_render_command_destroy(p_node->h_block_render_command);
+			}
+		
+			for (u8 k = 0; k < 6; k++)
+			{
+				if (p_node->ph_transition_render_commands[k])
+				{
+					tg_mesh_destroy(tg_render_command_get_mesh(p_node->ph_transition_render_commands[k]));
+					tg_render_command_destroy(p_node->ph_transition_render_commands[k]);
+				}
+			}
+		}
 	}
+	tg_material_destroy(p_terrain->h_material);
 	TG_MEMORY_FREE(p_terrain);
 }
 

@@ -24,7 +24,7 @@ void tg_color_image_destroy(tg_color_image_h h_color_image)
 {
 	TG_ASSERT(h_color_image);
 
-	tgvk_color_image_destroy(&h_color_image->image);
+	tgvk_image_destroy(&h_color_image->image);
 }
 
 
@@ -150,7 +150,7 @@ void tg_depth_image_destroy(tg_depth_image_h h_depth_image)
 {
 	TG_ASSERT(h_depth_image);
 
-	tgvk_depth_image_destroy(&h_depth_image->image);
+	tgvk_image_destroy(&h_depth_image->image);
 }
 
 #endif

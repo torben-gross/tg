@@ -777,6 +777,8 @@ void tg_mesh_regenerate_normals(tg_mesh_h h_mesh)
 {
     TG_ASSERT(h_mesh);
 
+    TG_INVALID_CODEPATH(); // TODO: create tg_mesh_generate_normals(u32 count, const v3* p_positions, v3* p_normals_buffer); instead!
+
     v3* p_positions = TG_MEMORY_STACK_ALLOC(h_mesh->vertex_count * sizeof(*p_positions));
     tg_mesh_copy_positions(h_mesh, 0, h_mesh->vertex_count, p_positions);
 

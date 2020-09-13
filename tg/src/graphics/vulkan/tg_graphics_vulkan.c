@@ -45,8 +45,10 @@ static VkDebugUtilsMessengerEXT    debug_utils_messenger = VK_NULL_HANDLE;
 static tgvk_queue                  p_queue_buffer[TGVK_QUEUE_TYPE_COUNT] = { 0 };
 static tgvk_queue*                 pp_queues[TGVK_QUEUE_TYPE_COUNT] = { 0 };
 
-static VkCommandPool               p_graphics_command_pool[TG_WORKER_THREAD_COUNT + 1];
-static VkCommandPool               p_compute_command_pool[TG_WORKER_THREAD_COUNT + 1];
+static VkCommandPool               graphics_command_pool;
+static VkCommandPool               compute_command_pool;
+static tg_mutex_h                  h_graphics_command_pool_mutex;
+static tg_mutex_h                  h_compute_command_pool_mutex;
 
 static tg_color_image              p_color_images[TG_MAX_COLOR_IMAGES];
 static tg_color_image_3d           p_color_images_3d[TG_MAX_COLOR_IMAGES_3D];
@@ -433,7 +435,7 @@ tgvk_image tgvk_color_image_create(u32 width, u32 height, VkFormat format, const
     TGVK_CALL(vkBindImageMemory(device, image.image, image.memory.device_memory, image.memory.offset));
 
     // TODO: mipmapping
-    //VkCommandBuffer command_buffer = tgvk_command_buffer_allocate(graphics_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+    //VkCommandBuffer command_buffer = tgvk_command_buffer_create(graphics_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     //tgvk_command_buffer_begin(command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
     //
     //VkImageMemoryBarrier mipmap_image_memory_barrier = { 0 };
@@ -508,7 +510,7 @@ tgvk_image tgvk_color_image_create(u32 width, u32 height, VkFormat format, const
     //
     //vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, TG_NULL, 0, TG_NULL, 1, &image_memory_barrier);
     //tgvk_command_buffer_end_and_submit(command_buffer, &graphics_queue);
-    //tgvk_command_buffer_free(graphics_command_pool, command_buffer);
+    //tgvk_command_buffer_destroy(graphics_command_pool, command_buffer);
     
     image.image_view = tg__image_view_create(image.image, VK_IMAGE_VIEW_TYPE_2D, image.format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
 
@@ -558,14 +560,6 @@ tgvk_image tgvk_color_image_create2(const char* p_filename, const tg_sampler_cre
     tg_image_free(p_data);
 
     return image;
-}
-
-void tgvk_color_image_destroy(tgvk_image* p_image)
-{
-    vkDestroySampler(device, p_image->sampler, TG_NULL);
-    vkDestroyImageView(device, p_image->image_view, TG_NULL);
-    tgvk_memory_allocator_free(&p_image->memory);
-    vkDestroyImage(device, p_image->image, TG_NULL);
 }
 
 
@@ -636,7 +630,7 @@ void tgvk_color_image_3d_destroy(tgvk_image_3d* p_image_3d)
 
 
 
-tgvk_command_buffer tgvk_command_buffer_allocate(tgvk_command_pool_type type, VkCommandBufferLevel level)
+tgvk_command_buffer tgvk_command_buffer_create(tgvk_command_pool_type type, VkCommandBufferLevel level)
 {
     tgvk_command_buffer command_buffer = { 0 };
     command_buffer.command_pool_type = type;
@@ -645,53 +639,71 @@ tgvk_command_buffer tgvk_command_buffer_allocate(tgvk_command_pool_type type, Vk
     VkCommandBufferAllocateInfo command_buffer_allocate_info = { 0 };
     command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     command_buffer_allocate_info.pNext = TG_NULL;
-
-    const u32 thread_id = tg_platform_get_thread_id();
-    switch (type)
-    {
-    case TGVK_COMMAND_POOL_TYPE_COMPUTE:  command_buffer_allocate_info.commandPool = p_compute_command_pool[thread_id];  break;
-    case TGVK_COMMAND_POOL_TYPE_GRAPHICS: command_buffer_allocate_info.commandPool = p_graphics_command_pool[thread_id]; break;
-
-    default: TG_INVALID_CODEPATH(); break;
-    }
-
     command_buffer_allocate_info.level = level;
     command_buffer_allocate_info.commandBufferCount = 1;
 
+    tg_mutex_h h_mutex = TG_NULL;
+
+    switch (type)
+    {
+    case TGVK_COMMAND_POOL_TYPE_COMPUTE:
+    {
+        command_buffer_allocate_info.commandPool = compute_command_pool;
+        h_mutex = h_compute_command_pool_mutex;
+    } break;
+    case TGVK_COMMAND_POOL_TYPE_GRAPHICS:
+    {
+        command_buffer_allocate_info.commandPool = graphics_command_pool;
+        h_mutex = h_graphics_command_pool_mutex;
+    } break;
+    default: TG_INVALID_CODEPATH(); break;
+    }
+
+    TG_MUTEX_LOCK(h_mutex);
     TGVK_CALL(vkAllocateCommandBuffers(device, &command_buffer_allocate_info, &command_buffer.command_buffer));
+    TG_MUTEX_UNLOCK(h_mutex);
 
     return command_buffer;
 }
 
-void tgvk_command_buffers_allocate(tgvk_command_pool_type type, VkCommandBufferLevel level, u32 command_buffer_count, tgvk_command_buffer* p_command_buffers)
+void tgvk_command_buffers_create(tgvk_command_pool_type type, VkCommandBufferLevel level, u32 count, tgvk_command_buffer* p_command_buffers)
 {
-    for (u32 i = 0; i < command_buffer_count; i++)
+    for (u32 i = 0; i < count; i++)
     {
-        p_command_buffers[i] = tgvk_command_buffer_allocate(type, level);
+        p_command_buffers[i] = tgvk_command_buffer_create(type, level);
     }
 }
 
-void tgvk_command_buffer_free(tgvk_command_buffer* p_command_buffer)
+void tgvk_command_buffer_destroy(tgvk_command_buffer* p_command_buffer)
 {
     VkCommandPool command_pool = VK_NULL_HANDLE;
 
-    const u32 thread_id = tg_platform_get_thread_id();
+    tg_mutex_h h_mutex = TG_NULL;
     switch (p_command_buffer->command_pool_type)
     {
-    case TGVK_COMMAND_POOL_TYPE_COMPUTE:  command_pool = p_compute_command_pool[thread_id];  break;
-    case TGVK_COMMAND_POOL_TYPE_GRAPHICS: command_pool = p_graphics_command_pool[thread_id]; break;
-
+    case TGVK_COMMAND_POOL_TYPE_COMPUTE:
+    {
+        command_pool = compute_command_pool;
+        h_mutex = h_compute_command_pool_mutex;
+    } break;
+    case TGVK_COMMAND_POOL_TYPE_GRAPHICS:
+    {
+        command_pool = graphics_command_pool;
+        h_mutex = h_graphics_command_pool_mutex;
+    } break;
     default: TG_INVALID_CODEPATH(); break;
     }
 
+    TG_MUTEX_LOCK(h_mutex);
     vkFreeCommandBuffers(device, command_pool, 1, &p_command_buffer->command_buffer);
+    TG_MUTEX_UNLOCK(h_mutex);
 }
 
-void tgvk_command_buffers_free(u32 command_buffer_count, tgvk_command_buffer* p_command_buffers)
+void tgvk_command_buffers_destroy(u32 count, tgvk_command_buffer* p_command_buffers)
 {
-    for (u32 i = 0; i < command_buffer_count; i++)
+    for (u32 i = 0; i < count; i++)
     {
-        tgvk_command_buffer_free(&p_command_buffers[i]);
+        tgvk_command_buffer_destroy(&p_command_buffers[i]);
     }
 }
 
@@ -1098,7 +1110,10 @@ tgvk_cube_map tgvk_cube_map_create(u32 dimension, VkFormat format, const tg_samp
 
 void tgvk_cube_map_destroy(tgvk_cube_map* p_cube_map)
 {
-    TG_INVALID_CODEPATH();
+    vkDestroySampler(device, p_cube_map->sampler, TG_NULL);
+    vkDestroyImageView(device, p_cube_map->image_view, TG_NULL);
+    tgvk_memory_allocator_free(&p_cube_map->memory);
+    vkDestroyImage(device, p_cube_map->image, TG_NULL);
 }
 
 
@@ -1154,14 +1169,6 @@ tgvk_image tgvk_depth_image_create(u32 width, u32 height, VkFormat format, const
     }
 
     return depth_image;
-}
-
-void tgvk_depth_image_destroy(tgvk_image* p_depth_image)
-{
-    vkDestroySampler(device, p_depth_image->sampler, TG_NULL);
-    vkDestroyImageView(device, p_depth_image->image_view, TG_NULL);
-    tgvk_memory_allocator_free(&p_depth_image->memory);
-    vkDestroyImage(device, p_depth_image->image, TG_NULL);
 }
 
 
@@ -1496,8 +1503,18 @@ void tgvk_framebuffers_destroy(u32 count, tgvk_framebuffer* p_framebuffers)
 {
     for (u32 i = 0; i < count; i++)
     {
-        vkDestroyFramebuffer(device, p_framebuffers[i].framebuffer, TG_NULL);
+        tgvk_framebuffer_destroy(&p_framebuffers[i]);
     }
+}
+
+
+
+void tgvk_image_destroy(tgvk_image* p_image)
+{
+    vkDestroySampler(device, p_image->sampler, TG_NULL);
+    vkDestroyImageView(device, p_image->image_view, TG_NULL);
+    tgvk_memory_allocator_free(&p_image->memory);
+    vkDestroyImage(device, p_image->image, TG_NULL);
 }
 
 
@@ -1989,10 +2006,10 @@ tg_render_target tgvk_render_target_create(u32 color_width, u32 color_height, Vk
 void tgvk_render_target_destroy(tg_render_target* p_render_target)
 {
     tgvk_fence_destroy(p_render_target->fence);
-    tgvk_depth_image_destroy(&p_render_target->depth_attachment_copy);
-    tgvk_color_image_destroy(&p_render_target->color_attachment_copy);
-    tgvk_depth_image_destroy(&p_render_target->depth_attachment);
-    tgvk_color_image_destroy(&p_render_target->color_attachment);
+    tgvk_image_destroy(&p_render_target->depth_attachment_copy);
+    tgvk_image_destroy(&p_render_target->color_attachment_copy);
+    tgvk_image_destroy(&p_render_target->depth_attachment);
+    tgvk_image_destroy(&p_render_target->color_attachment);
 }
 
 
@@ -2759,15 +2776,14 @@ void tg_graphics_init(void)
     physical_device = tg__physical_device_create();
     device = tg__device_create();
     tg__queues_create(TGVK_QUEUE_TYPE_COUNT);
-    for (u32 i = 0; i < TG_WORKER_THREAD_COUNT + 1; i++)
-    {
-        p_graphics_command_pool[i] = tg__command_pool_create(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, TGVK_QUEUE_TYPE_GRAPHICS);
-        p_compute_command_pool[i] = tg__command_pool_create(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, TGVK_QUEUE_TYPE_COMPUTE);
-    }
+    h_graphics_command_pool_mutex = TG_MUTEX_CREATE();
+    h_compute_command_pool_mutex = TG_MUTEX_CREATE();
+    graphics_command_pool = tg__command_pool_create(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, TGVK_QUEUE_TYPE_GRAPHICS);
+    compute_command_pool = tg__command_pool_create(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, TGVK_QUEUE_TYPE_COMPUTE);
     tg__swapchain_create();
 
-    global_graphics_command_buffer = tgvk_command_buffer_allocate(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
-    global_compute_command_buffer = tgvk_command_buffer_allocate(TGVK_COMMAND_POOL_TYPE_COMPUTE, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+    global_graphics_command_buffer = tgvk_command_buffer_create(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+    global_compute_command_buffer = tgvk_command_buffer_create(TGVK_COMMAND_POOL_TYPE_COMPUTE, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
     tgvk_memory_allocator_init(device, physical_device);
     tg_shader_library_init();
@@ -2785,14 +2801,13 @@ void tg_graphics_shutdown(void)
     tg_shader_library_shutdown();
     tgvk_memory_allocator_shutdown(device);
 
-    tgvk_command_buffer_free(&global_compute_command_buffer);
-    tgvk_command_buffer_free(&global_graphics_command_buffer);
+    tgvk_command_buffer_destroy(&global_compute_command_buffer);
+    tgvk_command_buffer_destroy(&global_graphics_command_buffer);
 
-    for (u32 i = 0; i < TG_WORKER_THREAD_COUNT + 1; i++)
-    {
-        tg__command_pool_destroy(p_compute_command_pool[i]);
-        tg__command_pool_destroy(p_graphics_command_pool[i]);
-    }
+    tg__command_pool_destroy(compute_command_pool);
+    tg__command_pool_destroy(graphics_command_pool);
+    TG_MUTEX_DESTROY(h_compute_command_pool_mutex);
+    TG_MUTEX_DESTROY(h_graphics_command_pool_mutex);
     for (u32 i = 0; i < TG_MAX_SWAPCHAIN_IMAGES; i++)
     {
         vkDestroyImageView(device, p_swapchain_image_views[i], TG_NULL);

@@ -116,6 +116,7 @@ void tg_compute_shader_destroy(tg_compute_shader_h h_compute_shader)
 {
 	TG_ASSERT(h_compute_shader);
 
+	tgvk_descriptor_set_destroy(&h_compute_shader->descriptor_set);
 	tgvk_pipeline_destroy(&h_compute_shader->compute_pipeline);
 	tgvk_shader_destroy(&h_compute_shader->shader);
 	tgvk_handle_release(h_compute_shader);

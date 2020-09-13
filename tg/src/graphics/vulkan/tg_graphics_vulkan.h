@@ -479,14 +479,14 @@ void                                      tgvk_buffer_flush_mapped_memory(tgvk_b
 
 tgvk_image                                tgvk_color_image_create(u32 width, u32 height, VkFormat format, const tg_sampler_create_info* p_sampler_create_info);
 tgvk_image                                tgvk_color_image_create2(const char* p_filename, const tg_sampler_create_info* p_sampler_create_info);
-void                                      tgvk_color_image_destroy(tgvk_image* p_image);
+
 tgvk_image_3d                             tgvk_color_image_3d_create(u32 width, u32 height, u32 depth, VkFormat format, const tg_sampler_create_info* p_sampler_create_info);
 void                                      tgvk_color_image_3d_destroy(tgvk_image_3d* p_image_3d);
 
-tgvk_command_buffer                       tgvk_command_buffer_allocate(tgvk_command_pool_type type, VkCommandBufferLevel level);
-void                                      tgvk_command_buffers_allocate(tgvk_command_pool_type type, VkCommandBufferLevel level, u32 command_buffer_count, tgvk_command_buffer* p_command_buffers);
-void                                      tgvk_command_buffer_free(tgvk_command_buffer* p_command_buffer);
-void                                      tgvk_command_buffers_free(u32 command_buffer_count, tgvk_command_buffer* p_command_buffers);
+tgvk_command_buffer                       tgvk_command_buffer_create(tgvk_command_pool_type type, VkCommandBufferLevel level);
+void                                      tgvk_command_buffers_create(tgvk_command_pool_type type, VkCommandBufferLevel level, u32 count, tgvk_command_buffer* p_command_buffers);
+void                                      tgvk_command_buffer_destroy(tgvk_command_buffer* p_command_buffer);
+void                                      tgvk_command_buffers_destroy(u32 count, tgvk_command_buffer* p_command_buffers);
 void                                      tgvk_command_buffer_begin(tgvk_command_buffer* p_command_buffer, VkCommandBufferUsageFlags flags);
 void                                      tgvk_command_buffer_begin_secondary(tgvk_command_buffer* p_command_buffer, VkCommandBufferUsageFlags flags, VkRenderPass render_pass, VkFramebuffer framebuffer);
 void                                      tgvk_command_buffer_cmd_begin_render_pass(tgvk_command_buffer* p_command_buffer, VkRenderPass render_pass, tgvk_framebuffer* p_framebuffer, VkSubpassContents subpass_contents);
@@ -514,7 +514,6 @@ tgvk_descriptor_set                       tgvk_descriptor_set_create(const tgvk_
 void                                      tgvk_descriptor_set_destroy(tgvk_descriptor_set* p_descriptor_set);
 
 tgvk_image                                tgvk_depth_image_create(u32 width, u32 height, VkFormat format, const tg_sampler_create_info* p_sampler_create_info);
-void                                      tgvk_depth_image_destroy(tgvk_image* p_image);
 
 void                                      tgvk_descriptor_set_update(VkDescriptorSet descriptor_set, tg_handle shader_input_element_handle, u32 dst_binding);
 void                                      tgvk_descriptor_set_update_cube_map(VkDescriptorSet descriptor_set, tgvk_cube_map* p_cube_map, u32 dst_binding);
@@ -536,6 +535,8 @@ void                                      tgvk_fence_wait(VkFence fence);
 tgvk_framebuffer                          tgvk_framebuffer_create(VkRenderPass render_pass, u32 attachment_count, const VkImageView* p_attachments, u32 width, u32 height);
 void                                      tgvk_framebuffer_destroy(tgvk_framebuffer* p_framebuffer);
 void                                      tgvk_framebuffers_destroy(u32 count, tgvk_framebuffer* p_framebuffers);
+
+void                                      tgvk_image_destroy(tgvk_image* p_image);
 
 VkPhysicalDeviceProperties                tgvk_physical_device_get_properties(void);
 
