@@ -1,9 +1,12 @@
 #include "tg_transvoxel_terrain.h"
 
+#include "graphics/tg_transvoxel_terrain_internal.h"
 #include "memory/tg_memory.h"
 #include "platform/tg_platform.h"
 #include "tg_transvoxel_lookup_tables.h"
 #include "util/tg_string.h"
+
+#define TG_MULTITHREADED 1
 
 
 
@@ -180,7 +183,7 @@ static u8 tg__get_transition_mask(v3 camera_position, v3i octree_min_coordinates
 
 
 
-static void tg__build_node(v3i octree_min_coordinates, v3i block_offset_in_octree, u8 lod, const i8* p_voxel_map, u16* p_vertex_count, v3* p_position_buffer, v3* p_normal_buffer) // TODO: GPU!
+static void tg__build_cells(v3i octree_min_coordinates, v3i block_offset_in_octree, u8 lod, const i8* p_voxel_map, u16* p_vertex_count, v3* p_position_buffer, v3* p_normal_buffer) // TODO: GPU!
 {
 	const i32 lod_scale = 1 << lod;
 
@@ -1724,7 +1727,54 @@ static void tg__build_transition_pz(v3i octree_min_coordinates, v3i block_offset
 	}
 }
 
-static void tg__build_nodes(tg_terrain* p_terrain, i8* p_voxel_map, u8 octree_index, u8 x, u8 y, u8 z, u8 lod, u16 first_index_of_lod)
+typedef struct tg_worker_thread_info
+{
+	tg_terrain*                p_terrain;
+	tg_terrain_octree*         p_octree;
+	tg_terrain_octree_node*    p_node;
+	i8*                        p_voxel_map;
+	v3i                        node_coords_offset_rel_to_octree;
+	u8                         lod;
+	u16                        first_index_of_lod;
+} tg_worker_thread_info;
+
+tg_mutex_h h_mutex = TG_NULL; // TODO: should i mutex the mesh generation directly instread?
+
+void tg__build_cells_work_fn(volatile tg_worker_thread_info* p_info)
+{
+	const u64 vertices_size = 15 * TG_TERRAIN_CELLS_PER_BLOCK * sizeof(v3);
+
+	v3* p_position_buffer = TG_MEMORY_STACK_ALLOC_ASYNC(vertices_size);
+	v3* p_normal_buffer = TG_MEMORY_STACK_ALLOC_ASYNC(vertices_size);
+
+	u16 vertex_count = 0;
+	tg__build_cells(
+		p_info->p_octree->min_coords,
+		p_info->node_coords_offset_rel_to_octree,
+		p_info->lod,
+		p_info->p_voxel_map,
+		&vertex_count,
+		p_position_buffer,
+		p_normal_buffer
+	);
+
+	if (vertex_count)
+	{
+		TG_MUTEX_LOCK(h_mutex);
+		tg_mesh_h h_mesh = tg_mesh_create();
+		tg_mesh_set_positions(h_mesh, vertex_count, p_position_buffer);
+		tg_mesh_set_normals(h_mesh, vertex_count, p_normal_buffer);
+		p_info->p_node->h_block_render_command = tg_render_command_create(h_mesh, p_info->p_terrain->h_material, V3(0), 0, TG_NULL);
+		TG_MUTEX_UNLOCK(h_mutex);
+	}
+
+	TG_MEMORY_STACK_FREE_ASYNC(vertices_size);
+	TG_MEMORY_STACK_FREE_ASYNC(vertices_size);
+
+	TG_MEMORY_FREE((void*)p_info);
+}
+
+static void tg__build_node(tg_terrain* p_terrain, i8* p_voxel_map, u8 octree_index, u8 x, u8 y, u8 z, u8 lod, u16 first_index_of_lod)
 {
 	const u8 inv_lod = TG_TERRAIN_MAX_LOD - lod;
 	const u8 sqrt_nodes_per_lod = 1 << inv_lod;
@@ -1740,7 +1790,21 @@ static void tg__build_nodes(tg_terrain* p_terrain, i8* p_voxel_map, u8 octree_in
 	v3* p_normal_buffer = TG_MEMORY_STACK_ALLOC(vertices_size);
 
 	u16 vertex_count = 0;
-	tg__build_node(p_octree->min_coords, node_coords_offset_rel_to_octree, lod, p_voxel_map, &vertex_count, p_position_buffer, p_normal_buffer);
+
+#if TG_MULTITHREADED == 1
+	tg_worker_thread_info* p_info = TG_MEMORY_ALLOC(sizeof(*p_info));
+	p_info->p_terrain = p_terrain;
+	p_info->p_octree = p_octree;
+	p_info->p_node = p_node;
+	p_info->p_voxel_map = p_voxel_map;
+	p_info->node_coords_offset_rel_to_octree = node_coords_offset_rel_to_octree;
+	p_info->lod = lod;
+	p_info->first_index_of_lod = first_index_of_lod;
+	tg_platform_work_queue_add_entry(tg__build_cells_work_fn, p_info);
+#else
+
+#if 1
+	tg__build_cells(p_octree->min_coords, node_coords_offset_rel_to_octree, lod, p_voxel_map, &vertex_count, p_position_buffer, p_normal_buffer);
 
 	if (vertex_count)
 	{
@@ -1749,84 +1813,96 @@ static void tg__build_nodes(tg_terrain* p_terrain, i8* p_voxel_map, u8 octree_in
 		tg_mesh_set_normals(h_mesh, vertex_count, p_normal_buffer);
 		p_node->h_block_render_command = tg_render_command_create(h_mesh, p_terrain->h_material, V3(0), 0, TG_NULL);
 	}
-
-	if (lod > 0)
+#else
+	// TODO: GPU, create low priority queues for streaming assets and use that for
+	// terrain generation. this will only be useful if this whole thing runs on another
+	// thread, so it actually does not stall everything else
 	{
-		u32 transition_index = 0;
-
-		vertex_count = 0;
-		tg__build_transition_nx(p_octree->min_coords, node_coords_offset_rel_to_octree, lod, p_voxel_map, &vertex_count, p_position_buffer, p_normal_buffer);
-
-		tg_mesh_h h_mesh = TG_NULL;
-		if (vertex_count)
-		{
-			h_mesh = tg_mesh_create();
-			tg_mesh_set_positions(h_mesh, vertex_count, p_position_buffer);
-			tg_mesh_set_normals(h_mesh, vertex_count, p_normal_buffer);
-			p_node->ph_transition_render_commands[transition_index] = tg_render_command_create(h_mesh, p_terrain->h_material, V3(0), 0, TG_NULL);
-		}
-		transition_index++;
-
-		vertex_count = 0;
-		tg__build_transition_px(p_octree->min_coords, node_coords_offset_rel_to_octree, lod, p_voxel_map, &vertex_count, p_position_buffer, p_normal_buffer);
-
-		if (vertex_count)
-		{
-			h_mesh = tg_mesh_create();
-			tg_mesh_set_positions(h_mesh, vertex_count, p_position_buffer);
-			tg_mesh_set_normals(h_mesh, vertex_count, p_normal_buffer);
-			p_node->ph_transition_render_commands[transition_index] = tg_render_command_create(h_mesh, p_terrain->h_material, V3(0), 0, TG_NULL);
-		}
-		transition_index++;
-
-		vertex_count = 0;
-		tg__build_transition_ny(p_octree->min_coords, node_coords_offset_rel_to_octree, lod, p_voxel_map, &vertex_count, p_position_buffer, p_normal_buffer);
-
-		if (vertex_count)
-		{
-			h_mesh = tg_mesh_create();
-			tg_mesh_set_positions(h_mesh, vertex_count, p_position_buffer);
-			tg_mesh_set_normals(h_mesh, vertex_count, p_normal_buffer);
-			p_node->ph_transition_render_commands[transition_index] = tg_render_command_create(h_mesh, p_terrain->h_material, V3(0), 0, TG_NULL);
-		}
-		transition_index++;
-
-		vertex_count = 0;
-		tg__build_transition_py(p_octree->min_coords, node_coords_offset_rel_to_octree, lod, p_voxel_map, &vertex_count, p_position_buffer, p_normal_buffer);
-
-		if (vertex_count)
-		{
-			h_mesh = tg_mesh_create();
-			tg_mesh_set_positions(h_mesh, vertex_count, p_position_buffer);
-			tg_mesh_set_normals(h_mesh, vertex_count, p_normal_buffer);
-			p_node->ph_transition_render_commands[transition_index] = tg_render_command_create(h_mesh, p_terrain->h_material, V3(0), 0, TG_NULL);
-		}
-		transition_index++;
-
-		vertex_count = 0;
-		tg__build_transition_nz(p_octree->min_coords, node_coords_offset_rel_to_octree, lod, p_voxel_map, &vertex_count, p_position_buffer, p_normal_buffer);
-
-		if (vertex_count)
-		{
-			h_mesh = tg_mesh_create();
-			tg_mesh_set_positions(h_mesh, vertex_count, p_position_buffer);
-			tg_mesh_set_normals(h_mesh, vertex_count, p_normal_buffer);
-			p_node->ph_transition_render_commands[transition_index] = tg_render_command_create(h_mesh, p_terrain->h_material, V3(0), 0, TG_NULL);
-		}
-		transition_index++;
-
-		vertex_count = 0;
-		tg__build_transition_pz(p_octree->min_coords, node_coords_offset_rel_to_octree, lod, p_voxel_map, &vertex_count, p_position_buffer, p_normal_buffer);
-
-		if (vertex_count)
-		{
-			h_mesh = tg_mesh_create();
-			tg_mesh_set_positions(h_mesh, vertex_count, p_position_buffer);
-			tg_mesh_set_normals(h_mesh, vertex_count, p_normal_buffer);
-			p_node->ph_transition_render_commands[transition_index] = tg_render_command_create(h_mesh, p_terrain->h_material, V3(0), 0, TG_NULL);
-		}
-		transition_index++;
+		tg_mesh_h h_mesh = tg_transvoxel_create_regular_mesh(p_octree->min_coords, node_coords_offset_rel_to_octree, lod, p_voxel_map);
+		p_node->h_block_render_command = tg_render_command_create(h_mesh, p_terrain->h_material, V3(0), 0, TG_NULL);
 	}
+#endif
+
+#endif
+
+	// TODO: uncomment
+	//if (lod > 0)
+	//{
+	//	u32 transition_index = 0;
+	//
+	//	vertex_count = 0;
+	//	tg__build_transition_nx(p_octree->min_coords, node_coords_offset_rel_to_octree, lod, p_voxel_map, &vertex_count, p_position_buffer, p_normal_buffer);
+	//
+	//	tg_mesh_h h_mesh = TG_NULL;
+	//	if (vertex_count)
+	//	{
+	//		h_mesh = tg_mesh_create();
+	//		tg_mesh_set_positions(h_mesh, vertex_count, p_position_buffer);
+	//		tg_mesh_set_normals(h_mesh, vertex_count, p_normal_buffer);
+	//		p_node->ph_transition_render_commands[transition_index] = tg_render_command_create(h_mesh, p_terrain->h_material, V3(0), 0, TG_NULL);
+	//	}
+	//	transition_index++;
+	//
+	//	vertex_count = 0;
+	//	tg__build_transition_px(p_octree->min_coords, node_coords_offset_rel_to_octree, lod, p_voxel_map, &vertex_count, p_position_buffer, p_normal_buffer);
+	//
+	//	if (vertex_count)
+	//	{
+	//		h_mesh = tg_mesh_create();
+	//		tg_mesh_set_positions(h_mesh, vertex_count, p_position_buffer);
+	//		tg_mesh_set_normals(h_mesh, vertex_count, p_normal_buffer);
+	//		p_node->ph_transition_render_commands[transition_index] = tg_render_command_create(h_mesh, p_terrain->h_material, V3(0), 0, TG_NULL);
+	//	}
+	//	transition_index++;
+	//
+	//	vertex_count = 0;
+	//	tg__build_transition_ny(p_octree->min_coords, node_coords_offset_rel_to_octree, lod, p_voxel_map, &vertex_count, p_position_buffer, p_normal_buffer);
+	//
+	//	if (vertex_count)
+	//	{
+	//		h_mesh = tg_mesh_create();
+	//		tg_mesh_set_positions(h_mesh, vertex_count, p_position_buffer);
+	//		tg_mesh_set_normals(h_mesh, vertex_count, p_normal_buffer);
+	//		p_node->ph_transition_render_commands[transition_index] = tg_render_command_create(h_mesh, p_terrain->h_material, V3(0), 0, TG_NULL);
+	//	}
+	//	transition_index++;
+	//
+	//	vertex_count = 0;
+	//	tg__build_transition_py(p_octree->min_coords, node_coords_offset_rel_to_octree, lod, p_voxel_map, &vertex_count, p_position_buffer, p_normal_buffer);
+	//
+	//	if (vertex_count)
+	//	{
+	//		h_mesh = tg_mesh_create();
+	//		tg_mesh_set_positions(h_mesh, vertex_count, p_position_buffer);
+	//		tg_mesh_set_normals(h_mesh, vertex_count, p_normal_buffer);
+	//		p_node->ph_transition_render_commands[transition_index] = tg_render_command_create(h_mesh, p_terrain->h_material, V3(0), 0, TG_NULL);
+	//	}
+	//	transition_index++;
+	//
+	//	vertex_count = 0;
+	//	tg__build_transition_nz(p_octree->min_coords, node_coords_offset_rel_to_octree, lod, p_voxel_map, &vertex_count, p_position_buffer, p_normal_buffer);
+	//
+	//	if (vertex_count)
+	//	{
+	//		h_mesh = tg_mesh_create();
+	//		tg_mesh_set_positions(h_mesh, vertex_count, p_position_buffer);
+	//		tg_mesh_set_normals(h_mesh, vertex_count, p_normal_buffer);
+	//		p_node->ph_transition_render_commands[transition_index] = tg_render_command_create(h_mesh, p_terrain->h_material, V3(0), 0, TG_NULL);
+	//	}
+	//	transition_index++;
+	//
+	//	vertex_count = 0;
+	//	tg__build_transition_pz(p_octree->min_coords, node_coords_offset_rel_to_octree, lod, p_voxel_map, &vertex_count, p_position_buffer, p_normal_buffer);
+	//
+	//	if (vertex_count)
+	//	{
+	//		h_mesh = tg_mesh_create();
+	//		tg_mesh_set_positions(h_mesh, vertex_count, p_position_buffer);
+	//		tg_mesh_set_normals(h_mesh, vertex_count, p_normal_buffer);
+	//		p_node->ph_transition_render_commands[transition_index] = tg_render_command_create(h_mesh, p_terrain->h_material, V3(0), 0, TG_NULL);
+	//	}
+	//	transition_index++;
+	//}
 
 	TG_MEMORY_STACK_FREE(vertices_size);
 	TG_MEMORY_STACK_FREE(vertices_size);
@@ -1849,7 +1925,7 @@ static void tg__build_nodes(tg_terrain* p_terrain, i8* p_voxel_map, u8 octree_in
 			{
 				for (u8 ix = x0; ix < x1; ix++)
 				{
-					tg__build_nodes(p_terrain, p_voxel_map, octree_index, ix, iy, iz, lod - 1, child_first_index_of_lod);
+					tg__build_node(p_terrain, p_voxel_map, octree_index, ix, iy, iz, lod - 1, child_first_index_of_lod);
 				}
 			}
 		}
@@ -1866,7 +1942,11 @@ static void tg__build_octree(tg_terrain* p_terrain, u8 octree_index, i32 x, i32 
 	};
 
 	const u64 voxel_map_size = TG_TERRAIN_VOXEL_MAP_VOXELS * sizeof(i8);
+#if TG_MULTITHREADED == 1
+	i8* p_voxel_map = TG_MEMORY_ALLOC(voxel_map_size);
+#else
 	i8* p_voxel_map = TG_MEMORY_STACK_ALLOC(voxel_map_size);
+#endif
 
 	char p_filename_buffer[TG_MAX_PATH] = { 0 };
 	tg_string_format(sizeof(p_filename_buffer), p_filename_buffer, "terrain/octree_%i_%i_%i.txt", x, y, z);
@@ -1893,9 +1973,16 @@ static void tg__build_octree(tg_terrain* p_terrain, u8 octree_index, i32 x, i32 
 		TG_MEMORY_STACK_FREE(file_properties.size);
 	}
 
-	tg__build_nodes(p_terrain, p_voxel_map, octree_index, 0, 0, 0, TG_TERRAIN_MAX_LOD, 0);
+	h_mutex = TG_MUTEX_CREATE();
+	tg__build_node(p_terrain, p_voxel_map, octree_index, 0, 0, 0, TG_TERRAIN_MAX_LOD, 0);
 
+#if TG_MULTITHREADED == 1
+	tg_platform_work_queue_wait_for_completion();
+	TG_MUTEX_DESTROY(h_mutex);
+	TG_MEMORY_FREE(p_voxel_map);
+#else
 	TG_MEMORY_STACK_FREE(voxel_map_size);
+#endif
 }
 
 static void tg__destroy_nodes_recursively(tg_terrain_octree_node* p_node)
@@ -1987,8 +2074,6 @@ static void tg__render(tg_terrain* p_terrain, u8 octree_index, u8 x, u8 y, u8 z,
 	}
 }
 
-
-
 void tg__update(tg_terrain* p_terrain, u8 octree_index, u8 x, u8 y, u8 z, u8 lod, u16 first_index_of_lod)
 {
 	const u8 inv_lod = TG_TERRAIN_MAX_LOD - lod;
@@ -2063,17 +2148,13 @@ void tg_terrain_destroy(tg_terrain* p_terrain)
 	}
 	TG_MEMORY_FREE(p_terrain);
 }
-#include "graphics/vulkan/tg_graphics_vulkan.h"
+
 void tg_terrain_update(tg_terrain* p_terrain)
 {
 	TG_ASSERT(p_terrain);
 
 	for (u8 i = 0; i < TG_TERRAIN_OCTREES; i++)
 	{
-		for (u32 j = 0; j < TG_TERRAIN_NODES_PER_OCTREE; j++)
-		{
-			TG_ASSERT(p_terrain->p_octrees[i].p_nodes[j].h_block_render_command == TG_NULL || p_terrain->p_octrees[i].p_nodes[j].h_block_render_command->type == TG_STRUCTURE_TYPE_RENDER_COMMAND);
-		}
 		tg__update(p_terrain, i, 0, 0, 0, TG_TERRAIN_MAX_LOD, 0);
 	}
 }

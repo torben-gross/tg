@@ -24,6 +24,8 @@
 
 #define TG_MEMORY_STACK_ALLOC(size)                                tg_memory_stack_alloc(size)
 #define TG_MEMORY_STACK_FREE(size)                                 tg_memory_stack_free(size)
+#define TG_MEMORY_STACK_ALLOC_ASYNC(size)                          tg_memory_stack_alloc_async(size)
+#define TG_MEMORY_STACK_FREE_ASYNC(size)                           tg_memory_stack_free_async(size)
 
 
 
@@ -47,5 +49,7 @@ u32        tg_memory_active_allocation_count(void);
 
 void*      tg_memory_stack_alloc(u64 size);
 void       tg_memory_stack_free(u64 size);
+void*      tg_memory_stack_alloc_async(u64 size);
+void       tg_memory_stack_free_async(u64 size);
 
 #endif

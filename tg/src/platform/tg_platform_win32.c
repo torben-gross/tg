@@ -592,7 +592,7 @@ static DWORD WINAPI tg__worker_thread_proc(LPVOID p_param)
 }
 #pragma warning(pop)
 
-u32 tg_platform_get_current_thread_id(void)
+u32 tg_platform_get_thread_id(void)
 {
     u32 result = 0;
 

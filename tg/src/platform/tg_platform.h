@@ -126,7 +126,7 @@ void                  tg_platform_timer_reset(tg_timer_h h_timer);
 f32                   tg_platform_timer_elapsed_milliseconds(tg_timer_h h_timer);
 void                  tg_platform_timer_destroy(tg_timer_h h_timer);
 
-u32                   tg_platform_get_current_thread_id(void);
+u32                   tg_platform_get_thread_id(void);
 void                  tg_platform_work_queue_add_entry(tg_work_fn* p_work_fn, volatile void* p_user_data);
 void                  tg_platform_work_queue_wait_for_completion(void);
 

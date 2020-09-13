@@ -319,7 +319,6 @@ void* tgvk_handle_array(tg_structure_type type)
 
 void* tgvk_handle_take(tg_structure_type type)
 {
-
     void* p_handle = TG_NULL;
 
     switch (type)
@@ -343,7 +342,6 @@ void* tgvk_handle_take(tg_structure_type type)
     *(tg_structure_type*)p_handle = type;
 
     return p_handle;
-
 }
 
 
@@ -648,7 +646,7 @@ tgvk_command_buffer tgvk_command_buffer_allocate(tgvk_command_pool_type type, Vk
     command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     command_buffer_allocate_info.pNext = TG_NULL;
 
-    const u32 thread_id = tg_platform_get_current_thread_id();
+    const u32 thread_id = tg_platform_get_thread_id();
     switch (type)
     {
     case TGVK_COMMAND_POOL_TYPE_COMPUTE:  command_buffer_allocate_info.commandPool = p_compute_command_pool[thread_id];  break;
@@ -677,7 +675,7 @@ void tgvk_command_buffer_free(tgvk_command_buffer* p_command_buffer)
 {
     VkCommandPool command_pool = VK_NULL_HANDLE;
 
-    const u32 thread_id = tg_platform_get_current_thread_id();
+    const u32 thread_id = tg_platform_get_thread_id();
     switch (p_command_buffer->command_pool_type)
     {
     case TGVK_COMMAND_POOL_TYPE_COMPUTE:  command_pool = p_compute_command_pool[thread_id];  break;
