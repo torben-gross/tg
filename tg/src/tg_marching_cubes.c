@@ -14,6 +14,7 @@ u32 tg_marching_cubes_create_mesh(v3i voxel_map_size, const i8* p_voxel_map, v3 
 	TG_ASSERT(voxel_map_size.x && voxel_map_size.y && voxel_map_size.z);
 	TG_ASSERT(p_voxel_map);
 	TG_ASSERT(scale.x && scale.y && scale.z);
+	TG_ASSERT(vertex_buffer_size);
 	TG_ASSERT(vertex_position_offset % 4 == 0);
 	TG_ASSERT(vertex_stride);
 	TG_ASSERT(p_vertex_buffer);

@@ -510,11 +510,14 @@ typedef enum tg_spirv_op
 
 
 
+#pragma warning(push)
+#pragma warning(disable:4100)
 static i32 tg__compare_by_location(const tg_spirv_inout_resource* p_v0, const tg_spirv_inout_resource* p_v1, void* p_user_data)
 {
     const i32 result = p_v0->location - p_v1->location;
     return result;
 }
+#pragma warning(pop)
 
 static void tg__find_type(u32 word_count, const u32* p_words, u32 id, tg_spirv_op* p_type, u32* p_literal)
 {

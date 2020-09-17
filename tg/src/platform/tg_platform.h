@@ -5,7 +5,9 @@
 
 
 
-#define TG_WORKER_THREAD_COUNT    7
+#define TG_WORKER_THREADS             7
+#define TG_MAX_REQUESTABLE_THREADS    4
+#define TG_MAX_THREADS                (1 + TG_WORKER_THREADS + TG_MAX_REQUESTABLE_THREADS)
 
 #ifdef TG_WIN32
 #pragma warning(push, 3)
@@ -24,28 +26,39 @@
 #define TG_MAX_PATH                                                            MAX_PATH
 #define TG_FILE_SEPERATOR                                                      '\\'
 
-#define TG_INTERLOCKED_COMPARE_EXCHANGE(p_destination, exchange, comperand)    _InterlockedCompareExchange((volatile LONG*)(p_destination), (LONG)(exchange), (LONG)(comperand))
-#define TG_INTERLOCKED_INCREMENT_I32(p_append)                                 _InterlockedIncrement((volatile LONG*)(p_append))
-#define TG_INTERLOCKED_DECREMENT_I32(p_append)                                 _InterlockedDecrement((volatile LONG*)(p_append))
-#define TG_INTERLOCKED_INCREMENT_I64(p_append)                                 _InterlockedIncrement64((volatile LONG64*)(p_append))
-#define TG_INTERLOCKED_DECREMENT_I64(p_append)                                 _InterlockedDecrement64((volatile LONG64*)(p_append))
+#define TG_INTERLOCKED_COMPARE_EXCHANGE(p_destination, exchange, comperand)    InterlockedCompareExchange((volatile LONG*)(p_destination), (LONG)(exchange), (LONG)(comperand))
+#define TG_INTERLOCKED_INCREMENT_I32(p_append)                                 InterlockedIncrement((volatile LONG*)(p_append))
+#define TG_INTERLOCKED_DECREMENT_I32(p_append)                                 InterlockedDecrement((volatile LONG*)(p_append))
+#define TG_INTERLOCKED_INCREMENT_I64(p_append)                                 InterlockedIncrement64((volatile LONG64*)(p_append))
+#define TG_INTERLOCKED_DECREMENT_I64(p_append)                                 InterlockedDecrement64((volatile LONG64*)(p_append))
 
 #define TG_MUTEX_CREATE()                                                      ((tg_mutex_h)CreateMutex(TG_NULL, TG_FALSE, TG_NULL))
 #define TG_MUTEX_CREATE_LOCKED()                                               ((tg_mutex_h)CreateMutex(TG_NULL, TG_TRUE, TG_NULL))
-#define TG_MUTEX_DESTROY(h_mutex)                                              CloseHandle((HANDLE)(h_mutex))
 #define TG_MUTEX_TRY_LOCK(h_mutex)                                             (WaitForSingleObject((HANDLE)(h_mutex), 0) == WAIT_OBJECT_0)
 
+#define TG_SEMAPHORE_CREATE(initial_count, maximum_count)                      ((tg_semaphore_h)CreateSemaphoreEx(TG_NULL, 0, maximum_count, TG_NULL, 0, SEMAPHORE_ALL_ACCESS))
+
 #ifdef TG_DEBUG
+#define TG_MUTEX_DESTROY(h_mutex)                                              TG_ASSERT(CloseHandle((HANDLE)(h_mutex)))
 #define TG_MUTEX_LOCK(h_mutex)                                                 TG_ASSERT(WaitForSingleObject((HANDLE)(h_mutex), INFINITE) == WAIT_OBJECT_0)
-#define TG_MUTEX_UNLOCK(h_mutex)                                               TG_ASSERT(ReleaseMutex((HANDLE)(h_mutex)));
+#define TG_MUTEX_UNLOCK(h_mutex)                                               TG_ASSERT(ReleaseMutex((HANDLE)(h_mutex)))
+#define TG_SEMAPHORE_DESTROY(h_semaphore)                                      TG_ASSERT(CloseHandle((HANDLE)(h_semaphore)))
+#define TG_SEMAPHORE_WAIT(h_semaphore)                                         TG_ASSERT(WaitForSingleObject((HANDLE)(h_semaphore), INFINITE) == WAIT_OBJECT_0)
+#define TG_SEMAPHORE_RELEASE(h_semaphore)                                      TG_ASSERT(ReleaseSemaphore((HANDLE)(h_semaphore), 1, TG_NULL))
 #else
+#define TG_MUTEX_DESTROY(h_mutex)                                              CloseHandle((HANDLE)(h_mutex))
 #define TG_MUTEX_LOCK(h_mutex)                                                 WaitForSingleObject((HANDLE)(h_mutex), INFINITE)
 #define TG_MUTEX_UNLOCK(h_mutex)                                               ReleaseMutex((HANDLE)(h_mutex))
+#define TG_SEMAPHORE_DESTROY(h_semaphore)                                      CloseHandle((HANDLE)(h_semaphore))
+#define TG_SEMAPHORE_WAIT(h_semaphore)                                         WaitForSingleObjectEx((HANDLE)(h_semaphore), INFINITE, TG_FALSE)
+#define TG_SEMAPHORE_RELEASE(h_semaphore)                                      ReleaseSemaphore((HANDLE)(h_semaphore), 1, TG_NULL)
 #endif
 
 typedef HANDLE tg_mutex_h;
+typedef HANDLE tg_semaphore_h;
 typedef HANDLE tg_window_h;
 typedef void* tg_file_iterator_h;
+typedef void* tg_thread_h;
 TG_DECLARE_HANDLE(tg_timer);
 
 #endif
@@ -60,7 +73,7 @@ TG_DECLARE_HANDLE(tg_timer);
 
 
 
-typedef void tg_work_fn(volatile void* p_user_data);
+typedef void tg_thread_fn(volatile void* p_user_data);
 
 
 
@@ -126,8 +139,11 @@ void                  tg_platform_timer_reset(tg_timer_h h_timer);
 f32                   tg_platform_timer_elapsed_milliseconds(tg_timer_h h_timer);
 void                  tg_platform_timer_destroy(tg_timer_h h_timer);
 
+tg_thread_h           tg_thread_create(tg_thread_fn* p_thread_fn, volatile void* p_user_data);
+void                  tg_thread_destroy(tg_thread_h h_thread);
+
 u32                   tg_platform_get_thread_id(void);
-void                  tg_platform_work_queue_add_entry(tg_work_fn* p_work_fn, volatile void* p_user_data);
+void                  tg_platform_work_queue_add_entry(tg_thread_fn* p_thread_fn, volatile void* p_user_data);
 void                  tg_platform_work_queue_wait_for_completion(void);
 
 #endif

@@ -44,7 +44,8 @@
 typedef enum tgvk_command_pool_type
 {
     TGVK_COMMAND_POOL_TYPE_COMPUTE,
-    TGVK_COMMAND_POOL_TYPE_GRAPHICS
+    TGVK_COMMAND_POOL_TYPE_GRAPHICS,
+    TGVK_COMMAND_POOL_TYPE_PRESENT
 } tgvk_command_pool_type;
 
 typedef enum tgvk_material_type
@@ -58,10 +59,8 @@ typedef enum tgvk_queue_type
     TGVK_QUEUE_TYPE_COMPUTE,
     TGVK_QUEUE_TYPE_GRAPHICS,
     TGVK_QUEUE_TYPE_PRESENT,
-
     TGVK_QUEUE_TYPE_COMPUTE_LOW_PRIORITY,
     TGVK_QUEUE_TYPE_GRAPHICS_LOW_PRIORITY,
-
     TGVK_QUEUE_TYPE_COUNT
 } tgvk_queue_type;
 
@@ -72,7 +71,6 @@ typedef enum tgvk_geometry_attachment
     TGVK_GEOMETRY_ATTACHMENT_ALBEDO                   = 2,
     TGVK_GEOMETRY_ATTACHMENT_METALLIC_ROUGHNESS_AO    = 3,
     TGVK_GEOMETRY_ATTACHMENT_DEPTH                    = 4,
-
     TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT              = TGVK_GEOMETRY_ATTACHMENT_METALLIC_ROUGHNESS_AO + 1,
     TGVK_GEOMETRY_ATTACHMENT_DEPTH_COUNT              = 1,
     TGVK_GEOMETRY_ATTACHMENT_COUNT                    = TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT + TGVK_GEOMETRY_ATTACHMENT_DEPTH_COUNT
@@ -267,10 +265,11 @@ typedef struct tg_depth_image
 typedef struct tg_render_command
 {
     tg_structure_type                    type;
+    u32                                  renderer_info_count;
+    tg_mutex_h                           h_streaming_mutex;
     tg_mesh_h                            h_mesh;
     tg_material_h                        h_material;
     tgvk_buffer                          model_ubo;
-    u32                                  renderer_info_count;
     tgvk_render_command_renderer_info    p_renderer_infos[TG_MAX_RENDERERS];
 } tg_render_command;
 
@@ -302,7 +301,9 @@ typedef struct tg_material
 typedef struct tg_mesh
 {
     tg_structure_type    type;
-    tg_bounds            bounds; // TODO: these are not used! let it be a sphere (radius + position (position because mesh might not be perfectly centered)) for view frustum culling?
+
+    tg_mutex_h           h_streaming_mutex;
+    tg_bounds            bounds; // TODO: these are not used (actually, in kd-tree...)! let it be a sphere (radius + position (position because mesh might not be perfectly centered)) for view frustum culling?
     
     u32                  index_count;
     u32                  vertex_count;
@@ -461,21 +462,17 @@ tgvk_surface                    surface;
 VkPhysicalDevice                physical_device;
 VkDevice                        device;
 
-
-
 VkSwapchainKHR                  swapchain;
 VkExtent2D                      swapchain_extent;
 VkImage                         p_swapchain_images[TG_MAX_SWAPCHAIN_IMAGES];
 VkImageView                     p_swapchain_image_views[TG_MAX_SWAPCHAIN_IMAGES];
-tgvk_command_buffer             global_graphics_command_buffer;
-tgvk_command_buffer             global_compute_command_buffer;
 tgvk_shared_render_resources    shared_render_resources;
 
 
 
 void*                                     tgvk_handle_array(tg_structure_type type);
 void*                                     tgvk_handle_take(tg_structure_type type);
-#define                                   tgvk_handle_release(handle) TG_ASSERT((handle) && (handle)->type != TG_STRUCTURE_TYPE_INVALID); tg_memory_nullify(sizeof(*(handle)), (handle))
+#define                                   tgvk_handle_release(handle) TG_ASSERT((handle) && (handle)->type != TG_STRUCTURE_TYPE_INVALID); tg_memory_nullify(sizeof(*(handle)) - sizeof((handle)->type), (handle)); handle->type = TG_STRUCTURE_TYPE_INVALID
 
 void                                      tgvk_buffer_copy(VkDeviceSize size, tgvk_buffer* p_src, tgvk_buffer* p_dst);
 tgvk_buffer                               tgvk_buffer_create(VkDeviceSize size, VkBufferUsageFlags buffer_usage_flags, VkMemoryPropertyFlags memory_property_flags);
@@ -488,6 +485,7 @@ tgvk_image                                tgvk_color_image_create2(const char* p
 tgvk_image_3d                             tgvk_color_image_3d_create(u32 width, u32 height, u32 depth, VkFormat format, const tg_sampler_create_info* p_sampler_create_info);
 void                                      tgvk_color_image_3d_destroy(tgvk_image_3d* p_image_3d);
 
+tgvk_command_buffer*                      tgvk_command_buffer_get_global(tgvk_command_pool_type type);
 tgvk_command_buffer                       tgvk_command_buffer_create(tgvk_command_pool_type type, VkCommandBufferLevel level);
 void                                      tgvk_command_buffers_create(tgvk_command_pool_type type, VkCommandBufferLevel level, u32 count, tgvk_command_buffer* p_command_buffers);
 void                                      tgvk_command_buffer_destroy(tgvk_command_buffer* p_command_buffer);
@@ -570,6 +568,8 @@ VkRenderPass                              tgvk_render_pass_create(u32 attachment
 void                                      tgvk_render_pass_destroy(VkRenderPass render_pass);
 tg_render_target                          tgvk_render_target_create(u32 color_width, u32 color_height, VkFormat color_format, const tg_sampler_create_info* p_color_sampler_create_info, u32 depth_width, u32 depth_height, VkFormat depth_format, const tg_sampler_create_info* p_depth_sampler_create_info, VkFenceCreateFlags fence_create_flags);
 void                                      tgvk_render_target_destroy(tg_render_target* p_render_target);
+
+void                                      tgvk_renderer_on_window_resize(tg_renderer_h h_renderer, u32 width, u32 height);
 
 VkSemaphore                               tgvk_semaphore_create(void);
 void                                      tgvk_semaphore_destroy(VkSemaphore semaphore);

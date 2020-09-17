@@ -76,10 +76,13 @@ tg_cube_map_h tg_cube_map_create(u32 dimension, tg_color_image_format format, co
 	TG_ASSERT(dimension);
 
 	tg_cube_map_h h_cube_map = tgvk_handle_take(TG_STRUCTURE_TYPE_CUBE_MAP);
+
 	h_cube_map->cube_map = tgvk_cube_map_create(dimension, (VkFormat)format, p_sampler_create_info);
-	tgvk_command_buffer_begin(&global_graphics_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+
+	tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
+	tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 	tgvk_command_buffer_cmd_transition_cube_map_layout(
-		&global_graphics_command_buffer,
+		p_command_buffer,
 		&h_cube_map->cube_map,
 		0,
 		VK_ACCESS_SHADER_READ_BIT,
@@ -88,7 +91,8 @@ tg_cube_map_h tg_cube_map_create(u32 dimension, tg_color_image_format format, co
 		VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
 		VK_PIPELINE_STAGE_VERTEX_INPUT_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
 	);
-	tgvk_command_buffer_end_and_submit(&global_graphics_command_buffer);
+	tgvk_command_buffer_end_and_submit(p_command_buffer);
+
 	return h_cube_map;
 }
 
@@ -108,9 +112,10 @@ void tg_cube_map_set_data(tg_cube_map_h h_cube_map, void* p_data)
 	tg_memory_copy(size, p_data, staging_buffer.memory.p_mapped_device_memory);
 	tgvk_buffer_flush_mapped_memory(&staging_buffer);
 
-	tgvk_command_buffer_begin(&global_graphics_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+	tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
+	tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 	tgvk_command_buffer_cmd_transition_cube_map_layout(
-		&global_graphics_command_buffer,
+		p_command_buffer,
 		&h_cube_map->cube_map,
 		VK_ACCESS_SHADER_READ_BIT,
 		VK_ACCESS_TRANSFER_WRITE_BIT,
@@ -119,9 +124,9 @@ void tg_cube_map_set_data(tg_cube_map_h h_cube_map, void* p_data)
 		VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
 		VK_PIPELINE_STAGE_TRANSFER_BIT
 	);
-	tgvk_command_buffer_cmd_copy_buffer_to_cube_map(&global_graphics_command_buffer, staging_buffer.buffer, &h_cube_map->cube_map);
+	tgvk_command_buffer_cmd_copy_buffer_to_cube_map(p_command_buffer, staging_buffer.buffer, &h_cube_map->cube_map);
 	tgvk_command_buffer_cmd_transition_cube_map_layout(
-		&global_graphics_command_buffer,
+		p_command_buffer,
 		&h_cube_map->cube_map,
 		VK_ACCESS_TRANSFER_WRITE_BIT,
 		VK_ACCESS_SHADER_READ_BIT,
@@ -130,7 +135,7 @@ void tg_cube_map_set_data(tg_cube_map_h h_cube_map, void* p_data)
 		VK_PIPELINE_STAGE_TRANSFER_BIT,
 		VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
 	);
-	tgvk_command_buffer_end_and_submit(&global_graphics_command_buffer);
+	tgvk_command_buffer_end_and_submit(p_command_buffer);
 
 	tgvk_buffer_destroy(&staging_buffer);
 }

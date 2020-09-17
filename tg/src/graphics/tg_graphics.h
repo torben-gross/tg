@@ -253,7 +253,7 @@ tg_mesh_h               tg_render_command_get_mesh(tg_render_command_h h_render_
 void                    tg_render_command_set_position(tg_render_command_h h_render_command, v3 position);
 
 void                    tg_renderer_init_shared_resources(void);
-void                    tg_renderer_shutdown_shared_resources(void); // TODO: this
+void                    tg_renderer_shutdown_shared_resources(void);
 tg_renderer_h           tg_renderer_create(tg_camera* p_camera);
 void                    tg_renderer_destroy(tg_renderer_h h_renderer);
 void                    tg_renderer_enable_shadows(tg_renderer_h h_renderer, b32 enable);

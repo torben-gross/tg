@@ -8,9 +8,9 @@
 
 
 
-#define TG_MEMORY_MAX_ALLOCATION_COUNT    7919
+#define TG_MEMORY_MAX_ALLOCATION_COUNT    42131
 #define TG_MEMORY_STACK_SIZE              (1LL << 30LL)
-#define TG_MEMORY_STACK_SIZE_ASYNC        (1LL << 21LL)
+#define TG_MEMORY_STACK_SIZE_ASYNC        (1LL << 25LL)
 #define TG_MEMORY_STACK_MAGIC_NUMBER      163ui8
 #define TG_MEMORY_HASH(p_key)             ((u32)((u64)(p_key) >> 3LL) % TG_MEMORY_MAX_ALLOCATION_COUNT)
 
@@ -50,7 +50,7 @@ static void*                             pp_rehash_keys[TG_MEMORY_MAX_ALLOCATION
 static tg_memory_allocator_allocation    p_rehash_values[TG_MEMORY_MAX_ALLOCATION_COUNT] = { 0 };
 #endif
 
-static tg_memory_stack       p_memory_stacks[1 + TG_WORKER_THREAD_COUNT] = { 0 };
+static tg_memory_stack       p_memory_stacks[TG_MAX_THREADS] = { 0 };
 
 
 
@@ -117,14 +117,14 @@ void tg__remove(void* p_memory)
 void tg_memory_init(void)
 {
 #ifdef TG_DEBUG
-	h_mutex = TG_MUTEX_CREATE_LOCKED();
+	h_mutex = TG_MUTEX_CREATE();
 
 	p_memory_stacks[0].exhausted_size = 1;
 	p_memory_stacks[0].p_memory = tg_platform_memory_alloc(TG_MEMORY_STACK_SIZE);
 	TG_ASSERT(p_memory_stacks[0].p_memory);
 	p_memory_stacks[0].p_memory[0] = TG_MEMORY_STACK_MAGIC_NUMBER;
 
-	for (u32 i = 1; i < TG_WORKER_THREAD_COUNT + 1; i++)
+	for (u32 i = 1; i < TG_MAX_THREADS; i++)
 	{
 		p_memory_stacks[i].exhausted_size = 1;
 		p_memory_stacks[i].p_memory = tg_platform_memory_alloc(TG_MEMORY_STACK_SIZE_ASYNC);
@@ -132,12 +132,11 @@ void tg_memory_init(void)
 		p_memory_stacks[i].p_memory[0] = TG_MEMORY_STACK_MAGIC_NUMBER;
 	}
 
-	TG_MUTEX_UNLOCK(h_mutex);
 #else
 	p_memory_stacks[0].exhausted_size = 0;
 	p_memory_stacks[0].p_memory = tg_platform_memory_alloc(TG_MEMORY_STACK_SIZE);
 
-	for (u32 i = 1; i < TG_WORKER_THREAD_COUNT + 1; i++)
+	for (u32 i = 1; i < TG_MAX_THREADS; i++)
 	{
 		p_memory_stacks[i].exhausted_size = 0;
 		p_memory_stacks[i].p_memory = tg_platform_memory_alloc(TG_MEMORY_STACK_SIZE_ASYNC);
@@ -166,7 +165,7 @@ void tg_memory_shutdown(void)
 	TG_ASSERT(p_memory_stacks[0].exhausted_size == 1);
 #endif
 
-	for (u32 i = 0; i < TG_WORKER_THREAD_COUNT + 1; i++)
+	for (u32 i = 0; i < TG_MAX_THREADS; i++)
 	{
 		tg_platform_memory_free(p_memory_stacks[i].p_memory);
 		p_memory_stacks[i].exhausted_size = 0;
@@ -174,6 +173,7 @@ void tg_memory_shutdown(void)
 
 #ifdef TG_DEBUG
 	TG_MUTEX_UNLOCK(h_mutex);
+	TG_MUTEX_DESTROY(h_mutex);
 #endif
 }
 
@@ -316,7 +316,7 @@ void* tg_memory_stack_alloc_async(u64 size)
 	const u32 i = tg_platform_get_thread_id();
 
 #ifdef TG_DEBUG
-	TG_ASSERT(size && p_memory_stacks[i].exhausted_size + size + 1 < TG_MEMORY_STACK_SIZE);
+	TG_ASSERT(size && p_memory_stacks[i].exhausted_size + size + 1 < TG_MEMORY_STACK_SIZE_ASYNC);
 
 	void* memory = &p_memory_stacks[i].p_memory[p_memory_stacks[i].exhausted_size];
 	p_memory_stacks[i].exhausted_size += size + 1;

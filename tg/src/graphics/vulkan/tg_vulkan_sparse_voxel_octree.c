@@ -73,18 +73,19 @@ void tg_voxelizer_create(tg_voxelizer* p_voxelizer)
     p_voxelizer->p_image_3ds[6] = tgvk_color_image_3d_create(TG_SVO_DIMS, TG_SVO_DIMS, TG_SVO_DIMS, VK_FORMAT_R32_UINT, TG_NULL);
     p_voxelizer->p_image_3ds[7] = tgvk_color_image_3d_create(TG_SVO_DIMS, TG_SVO_DIMS, TG_SVO_DIMS, VK_FORMAT_R32_UINT, TG_NULL);
 
-    tgvk_command_buffer_begin(&global_graphics_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+    p_voxelizer->command_buffer = tgvk_command_buffer_create(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+
+    tgvk_command_buffer_begin(&p_voxelizer->command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
     for (u32 i = 0; i < TG_SVO_ATTACHMENTS; i++)
     {
-        tgvk_command_buffer_cmd_transition_color_image_3d_layout(&global_graphics_command_buffer, &p_voxelizer->p_image_3ds[i], 0, VK_ACCESS_SHADER_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+        tgvk_command_buffer_cmd_transition_color_image_3d_layout(&p_voxelizer->command_buffer, &p_voxelizer->p_image_3ds[i], 0, VK_ACCESS_SHADER_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
     }
-    tgvk_command_buffer_end_and_submit(&global_graphics_command_buffer);
+    tgvk_command_buffer_end_and_submit(&p_voxelizer->command_buffer);
     for (u32 i = 0; i < TG_SVO_ATTACHMENTS; i++)
     {
         const VkDeviceSize format_size = (VkDeviceSize)tg_color_image_format_size((tg_color_image_format)p_voxelizer->p_image_3ds[i].format);
         p_voxelizer->p_voxel_buffers[i] = tgvk_buffer_create(TG_SVO_DIMS3 * format_size, VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
     }
-    p_voxelizer->command_buffer = tgvk_command_buffer_create(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 }
 
 void tg_voxelizer_begin(tg_voxelizer* p_voxelizer)
@@ -211,14 +212,14 @@ void tg_voxelizer_end(tg_voxelizer* p_voxelizer, v3i min_corner_index_3d, tg_vox
 
 
 
-    tgvk_command_buffer_begin(&global_graphics_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+    tgvk_command_buffer_begin(&p_voxelizer->command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
     for (u32 i = 0; i < TG_SVO_ATTACHMENTS; i++)
     {
-        tgvk_command_buffer_cmd_transition_color_image_3d_layout(&global_graphics_command_buffer, &p_voxelizer->p_image_3ds[i], VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
-        tgvk_command_buffer_cmd_copy_color_image_3d_to_buffer(&global_graphics_command_buffer, &p_voxelizer->p_image_3ds[i], p_voxelizer->p_voxel_buffers[i].buffer);
-        tgvk_command_buffer_cmd_transition_color_image_3d_layout(&global_graphics_command_buffer, &p_voxelizer->p_image_3ds[i], VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_SHADER_WRITE_BIT, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+        tgvk_command_buffer_cmd_transition_color_image_3d_layout(&p_voxelizer->command_buffer, &p_voxelizer->p_image_3ds[i], VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+        tgvk_command_buffer_cmd_copy_color_image_3d_to_buffer(&p_voxelizer->command_buffer, &p_voxelizer->p_image_3ds[i], p_voxelizer->p_voxel_buffers[i].buffer);
+        tgvk_command_buffer_cmd_transition_color_image_3d_layout(&p_voxelizer->command_buffer, &p_voxelizer->p_image_3ds[i], VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_SHADER_WRITE_BIT, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
     }
-    tgvk_command_buffer_end_and_submit(&global_graphics_command_buffer);
+    tgvk_command_buffer_end_and_submit(&p_voxelizer->command_buffer);
     for (u32 i = 0; i < TG_SVO_ATTACHMENTS; i++)
     {
         tgvk_buffer_flush_mapped_memory(&p_voxelizer->p_voxel_buffers[i]);

@@ -4,11 +4,14 @@
 #include "util/tg_list.h"
 #include "util/tg_qsort.h"
 
+#pragma warning(push)
+#pragma warning(disable:4100)
 static i32 tg__compare(const tg_rectangle_packer_rect* p_r0, const tg_rectangle_packer_rect* p_r1, void* p_user_data)
 {
     const i32 result = p_r0->height - p_r1->height;
     return result;
 }
+#pragma warning(pop)
 
 
 

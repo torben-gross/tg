@@ -50,7 +50,7 @@ typedef struct tg_qsort_user_data
 
 
 
-void tg__work_fn(volatile void* p_user_data);
+static void tg__thread_fn(volatile void* p_user_data);
 static void tg__stack_push(tg_work_thread_info* p_work_thread_info, u32 node_index, tg_bounds bounds, u32 tri_count, tg_construction_triangle* p_tris)
 {
 	TG_MUTEX_LOCK(p_work_thread_info->h_stack_mutex);
@@ -62,7 +62,7 @@ static void tg__stack_push(tg_work_thread_info* p_work_thread_info, u32 node_ind
 	p_stack_node->p_tris = p_tris;
 
 	TG_MUTEX_UNLOCK(p_work_thread_info->h_stack_mutex);
-	tg_platform_work_queue_add_entry(tg__work_fn, p_work_thread_info);
+	tg_platform_work_queue_add_entry(tg__thread_fn, p_work_thread_info);
 }
 
 static void tg__split_count(u32 split_axis, f32 split_position, u32 tri_count, const tg_construction_triangle* p_tris, u32* p_n0, u32* p_n1)
@@ -143,7 +143,7 @@ i32 tg__compare(const tg_construction_triangle* p_tri0, const tg_construction_tr
 
 
 
-void tg__work_fn(volatile void* p_user_data)
+static void tg__thread_fn(volatile void* p_user_data)
 {
 	tg_work_thread_info* p_work_thread_info = (tg_work_thread_info*)p_user_data;
 

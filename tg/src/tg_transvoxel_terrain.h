@@ -17,10 +17,13 @@
 #define TG_TERRAIN_NODES_PER_OCTREE                    4681 // 8^0 + 8^1 + 8^2 + 8^3 + 8^4
 #define TG_TERRAIN_NODES_PER_OCTREE_CEIL               4688
 
-#define TG_TERRAIN_VIEW_DISTANCE_IN_OCTREES            0
+#define TG_TERRAIN_VIEW_DISTANCE_IN_OCTREES            1
 #define TG_TERRAIN_OCTREES                             9 // (1 + 2 * 1)^2
 
 
+
+typedef void* tg_semaphore_h;
+typedef void* tg_thread_h;
 
 typedef struct tg_terrain_octree_node
 {
@@ -39,9 +42,11 @@ typedef struct tg_terrain_octree
 
 typedef struct tg_terrain
 {
-	tg_camera*                p_camera;
-	tg_material_h             h_material;
-	tg_terrain_octree         p_octrees[TG_TERRAIN_OCTREES];
+	tg_camera*                    p_camera;
+	tg_material_h                 h_material;
+	tg_semaphore_h                h_semaphore;
+	tg_thread_h                   h_thread;
+	volatile tg_terrain_octree    p_octrees[TG_TERRAIN_OCTREES];
 } tg_terrain;
 
 

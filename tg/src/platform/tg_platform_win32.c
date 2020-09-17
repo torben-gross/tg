@@ -530,7 +530,7 @@ void tg_platform_timer_destroy(tg_timer_h h_timer)
 typedef struct tg_work_queue
 {
     volatile HANDLE    h_semaphore;
-    tg_work_fn*        pp_work_fns[TG_WORK_QUEUE_MAX_ENTRY_COUNT];
+    tg_thread_fn*      pp_work_fns[TG_WORK_QUEUE_MAX_ENTRY_COUNT];
     volatile void*     pp_user_datas[TG_WORK_QUEUE_MAX_ENTRY_COUNT];
     volatile u32       first;
     volatile u32       one_past_last;
@@ -540,7 +540,8 @@ typedef struct tg_work_queue
 } tg_work_queue;
 
 static volatile tg_work_queue work_queue = { 0 };
-static volatile u32 p_thread_ids[TG_WORKER_THREAD_COUNT + 1] = { 0 };
+static volatile HANDLE h_thread_mutex;
+static volatile u32 p_thread_ids[TG_MAX_THREADS] = { 0 };
 
 static b32 tg__work_queue_execute_entry(void)
 {
@@ -548,7 +549,7 @@ static b32 tg__work_queue_execute_entry(void)
 
     if (WaitForSingleObject(work_queue.h_pop_mutex, 0) == WAIT_OBJECT_0)
     {
-        tg_work_fn* p_work_fn = TG_NULL;
+        tg_thread_fn* p_work_fn = TG_NULL;
         volatile void* p_user_data = TG_NULL;
 
         if (work_queue.first != work_queue.one_past_last)
@@ -568,7 +569,7 @@ static b32 tg__work_queue_execute_entry(void)
 
         if (result)
         {
-            p_work_fn(p_user_data); // if this crashes because p_work_fn is TG_NULL, than TG_WORK_QUEUE_MAX_ENTRY_COUNT is too small
+            p_work_fn(p_user_data); // if this crashes because p_thread_fn is TG_NULL, than TG_WORK_QUEUE_MAX_ENTRY_COUNT is too small
             _InterlockedDecrement((volatile LONG*)&work_queue.active_thread_count);
         }
     }
@@ -584,20 +585,60 @@ static DWORD WINAPI tg__worker_thread_proc(LPVOID p_param)
     {
         if (!tg__work_queue_execute_entry())
         {
-            const DWORD result = WaitForSingleObjectEx(work_queue.h_semaphore, INFINITE, TG_FALSE);
-            TG_ASSERT(result == WAIT_OBJECT_0);
+            TG_SEMAPHORE_WAIT(work_queue.h_semaphore);
         }
     }
     return 0;
 }
 #pragma warning(pop)
 
+tg_thread_h tg_thread_create(tg_thread_fn* p_thread_fn, volatile void* p_user_data)
+{
+    TG_ASSERT(p_thread_fn);
+
+    HANDLE result = TG_NULL;
+    TG_MUTEX_LOCK(h_thread_mutex);
+    for (u32 i = 0; i < TG_MAX_THREADS; i++)
+    {
+        if (p_thread_ids[i] == 0)
+        {
+            u32 thread_id = 0;
+            result = CreateThread(TG_NULL, 0, (LPTHREAD_START_ROUTINE)p_thread_fn, (LPVOID)p_user_data, 0, (LPDWORD)&thread_id);
+            p_thread_ids[i] = thread_id;
+            break;
+        }
+    }
+    TG_MUTEX_UNLOCK(h_thread_mutex);
+    return result;
+}
+
+void tg_thread_destroy(tg_thread_h h_thread)
+{
+    TG_ASSERT(h_thread);
+
+    TG_MUTEX_LOCK(h_thread_mutex);
+    const u32 thread_id = GetThreadId(h_thread);
+    for (u32 i = 0; i < TG_MAX_THREADS; i++)
+    {
+        if (p_thread_ids[i] == thread_id)
+        {
+#pragma warning(push)
+#pragma warning(disable:6001)
+            WaitForSingleObject(h_thread, INFINITE);
+            WIN32_CALL(CloseHandle(h_thread));
+#pragma warning(pop)
+            p_thread_ids[i] = 0;
+        }
+    }
+    TG_MUTEX_UNLOCK(h_thread_mutex);
+}
+
 u32 tg_platform_get_thread_id(void)
 {
     u32 result = 0;
 
     const u32 thread_id = GetThreadId(GetCurrentThread());
-    for (u32 i = 0; i < TG_WORKER_THREAD_COUNT + 1; i++)
+    for (u32 i = 0; i < TG_MAX_THREADS; i++)
     {
         if (p_thread_ids[i] == thread_id)
         {
@@ -609,17 +650,16 @@ u32 tg_platform_get_thread_id(void)
     return result;
 }
 
-void tg_platform_work_queue_add_entry(tg_work_fn* p_work_fn, volatile void* p_user_data)
+void tg_platform_work_queue_add_entry(tg_thread_fn* p_thread_fn, volatile void* p_user_data)
 {
-    TG_ASSERT(p_work_fn);
+    TG_ASSERT(p_thread_fn);
 
     WaitForSingleObject(work_queue.h_push_mutex, INFINITE);
     work_queue.pp_user_datas[work_queue.one_past_last] = p_user_data;
-    work_queue.pp_work_fns[work_queue.one_past_last] = p_work_fn;
+    work_queue.pp_work_fns[work_queue.one_past_last] = p_thread_fn;
     work_queue.one_past_last = tgm_u32_incmod(work_queue.one_past_last, TG_WORK_QUEUE_MAX_ENTRY_COUNT);
-    ReleaseMutex(work_queue.h_push_mutex);
-
-    ReleaseSemaphore(work_queue.h_semaphore, 1, TG_NULL);
+    TG_MUTEX_UNLOCK(work_queue.h_push_mutex);
+    TG_SEMAPHORE_RELEASE(work_queue.h_semaphore);
 }
 
 void tg_platform_work_queue_wait_for_completion(void)
@@ -685,12 +725,13 @@ LRESULT CALLBACK tg__window_proc(HWND hwdn, UINT message, WPARAM w_param, LPARAM
 #pragma warning(disable:4100)
 int CALLBACK WinMain(_In_ HINSTANCE h_instance, _In_opt_ HINSTANCE h_prev_instance, _In_ LPSTR cmd_line, _In_ int show_cmd)
 {
-    work_queue.h_semaphore = CreateSemaphoreEx(TG_NULL, 0, TG_WORKER_THREAD_COUNT, TG_NULL, 0, SEMAPHORE_ALL_ACCESS);
-    work_queue.h_push_mutex = CreateMutex(TG_NULL, TG_FALSE, TG_NULL);
-    work_queue.h_pop_mutex = CreateMutex(TG_NULL, TG_FALSE, TG_NULL);
+    work_queue.h_semaphore = TG_SEMAPHORE_CREATE(0, TG_WORK_QUEUE_MAX_ENTRY_COUNT);
+    work_queue.h_push_mutex = TG_MUTEX_CREATE();
+    work_queue.h_pop_mutex = TG_MUTEX_CREATE(); // TODO: nothing is destroyed...
 
+    h_thread_mutex = TG_MUTEX_CREATE();
     p_thread_ids[0] = GetThreadId(GetCurrentThread());
-    for (u8 i = 0; i < TG_WORKER_THREAD_COUNT; i++)
+    for (u8 i = 0; i < TG_WORKER_THREADS; i++)
     {
         u32 thread_id = 0;
         HANDLE h_thread = CreateThread(TG_NULL, 0, tg__worker_thread_proc, TG_NULL, 0, (LPDWORD)&thread_id);

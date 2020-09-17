@@ -90,11 +90,12 @@ void tg_compute_shader_dispatch(tg_compute_shader_h h_compute_shader, u32 group_
 {
 	TG_ASSERT(h_compute_shader && group_count_x && group_count_y && group_count_z);
 
-	tgvk_command_buffer_begin(&global_compute_command_buffer, 0);
-	vkCmdBindPipeline(global_compute_command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, h_compute_shader->compute_pipeline.pipeline);
-	vkCmdBindDescriptorSets(global_compute_command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, h_compute_shader->compute_pipeline.layout.pipeline_layout, 0, 1, &h_compute_shader->descriptor_set.descriptor_set, 0, TG_NULL);
-	vkCmdDispatch(global_compute_command_buffer.command_buffer, group_count_x, group_count_y, group_count_z);
-	TGVK_CALL(vkEndCommandBuffer(global_compute_command_buffer.command_buffer));
+	tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_global(TGVK_COMMAND_POOL_TYPE_COMPUTE);
+	tgvk_command_buffer_begin(p_command_buffer, 0);
+	vkCmdBindPipeline(p_command_buffer->command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, h_compute_shader->compute_pipeline.pipeline);
+	vkCmdBindDescriptorSets(p_command_buffer->command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, h_compute_shader->compute_pipeline.layout.pipeline_layout, 0, 1, &h_compute_shader->descriptor_set.descriptor_set, 0, TG_NULL);
+	vkCmdDispatch(p_command_buffer->command_buffer, group_count_x, group_count_y, group_count_z);
+	TGVK_CALL(vkEndCommandBuffer(p_command_buffer->command_buffer));
 
 	VkSubmitInfo submit_info = { 0 };// TODO: add fence to compute shader
 	{
@@ -104,7 +105,7 @@ void tg_compute_shader_dispatch(tg_compute_shader_h h_compute_shader, u32 group_
 		submit_info.pWaitSemaphores = TG_NULL;
 		submit_info.pWaitDstStageMask = TG_NULL;
 		submit_info.commandBufferCount = 1;
-		submit_info.pCommandBuffers = &global_compute_command_buffer.command_buffer;
+		submit_info.pCommandBuffers = &p_command_buffer->command_buffer;
 		submit_info.signalSemaphoreCount = 0;
 		submit_info.pSignalSemaphores = TG_NULL;
 	}

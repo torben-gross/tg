@@ -45,16 +45,17 @@ void tg__copy(VkDeviceSize offset, VkDeviceSize size, tgvk_buffer* p_src, void* 
 {
     tgvk_buffer buffer = tgvk_buffer_create(size, VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
     
-    tgvk_command_buffer_begin(&global_graphics_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+    tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
+    tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
     {
         VkBufferCopy buffer_copy = { 0 };
         buffer_copy.srcOffset = offset;
         buffer_copy.dstOffset = 0;
         buffer_copy.size = size;
 
-        vkCmdCopyBuffer(global_graphics_command_buffer.command_buffer, p_src->buffer, buffer.buffer, 1, &buffer_copy);
+        vkCmdCopyBuffer(p_command_buffer->command_buffer, p_src->buffer, buffer.buffer, 1, &buffer_copy);
     }
-    tgvk_command_buffer_end_and_submit(&global_graphics_command_buffer);
+    tgvk_command_buffer_end_and_submit(p_command_buffer);
     tgvk_buffer_flush_mapped_memory(&buffer);
     tg_memory_copy(size, buffer.memory.p_mapped_device_memory, p_dst);
 

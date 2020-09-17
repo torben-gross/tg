@@ -39,6 +39,7 @@ typedef struct tgvk_memory_pool
 
 typedef struct tgvk_memory
 {
+    tg_mutex_h          h_mutex;
     VkDeviceSize        page_size;
     u32                 pool_count;
     tgvk_memory_pool    p_pools[VK_MAX_MEMORY_TYPES];
@@ -46,7 +47,7 @@ typedef struct tgvk_memory
 
 
 
-tgvk_memory    memory;
+tgvk_memory    memory = { 0 };
 
 #ifdef TG_DEBUG
 b32            initialized = TG_FALSE;
@@ -57,6 +58,8 @@ b32            initialized = TG_FALSE;
 void tgvk_memory_allocator_init(VkDevice device, VkPhysicalDevice physical_device)
 {
     TG_ASSERT(!initialized);
+
+    memory.h_mutex = TG_MUTEX_CREATE();
 
     VkPhysicalDeviceProperties physical_device_properties = { 0 };
     vkGetPhysicalDeviceProperties(physical_device, &physical_device_properties);
@@ -149,6 +152,7 @@ void tgvk_memory_allocator_shutdown(VkDevice device)
         vkFreeMemory(device, memory.p_pools[i].device_memory, TG_NULL);
         TG_MEMORY_FREE(memory.p_pools[i].p_entries);
     }
+    TG_MUTEX_DESTROY(memory.h_mutex);
 }
 
 tgvk_memory_block tgvk_memory_allocator_alloc(VkDeviceSize alignment, VkDeviceSize size, u32 memory_type_bits, VkMemoryPropertyFlags memory_property_flags)
@@ -161,6 +165,7 @@ tgvk_memory_block tgvk_memory_allocator_alloc(VkDeviceSize alignment, VkDeviceSi
     const VkDeviceSize aligned_size = TG_ROUND(size);
     const u32 required_page_count = (u32)(aligned_size / memory.page_size);
 
+    TG_MUTEX_LOCK(memory.h_mutex);
     for (u32 i = 0; i < memory.pool_count; i++)
     {
         tgvk_memory_pool* p_pool = &memory.p_pools[i];
@@ -205,6 +210,7 @@ tgvk_memory_block tgvk_memory_allocator_alloc(VkDeviceSize alignment, VkDeviceSi
     }
 
     end:
+    TG_MUTEX_UNLOCK(memory.h_mutex);
     TG_ASSERT(memory_block.device_memory);
 
     return memory_block;
@@ -215,6 +221,7 @@ void tgvk_memory_allocator_free(tgvk_memory_block* p_memory_block)
     TG_ASSERT(p_memory_block);
 
     const u32 page_count = (u32)(p_memory_block->size / memory.page_size);
+    TG_MUTEX_LOCK(memory.h_mutex);
     memory.p_pools[p_memory_block->pool_index].reserved_page_count -= page_count;
 
     tgvk_memory_pool* p_pool = &memory.p_pools[p_memory_block->pool_index];
@@ -258,6 +265,7 @@ void tgvk_memory_allocator_free(tgvk_memory_block* p_memory_block)
             p_pool->entry_count -= left_merge_count + right_merge_count;
         }
     }
+    TG_MUTEX_UNLOCK(memory.h_mutex);
 }
 
 #endif
