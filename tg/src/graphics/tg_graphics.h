@@ -80,6 +80,7 @@ typedef enum tg_color_image_format
     TG_COLOR_IMAGE_FORMAT_R32                    = 98,
 	TG_COLOR_IMAGE_FORMAT_R32G32B32A32_SFLOAT    = 109,
 	TG_COLOR_IMAGE_FORMAT_R8                     = 9,
+	TG_COLOR_IMAGE_FORMAT_R8I                    = 14,
 	TG_COLOR_IMAGE_FORMAT_R8G8                   = 22,
 	TG_COLOR_IMAGE_FORMAT_R8G8B8                 = 29,
 	TG_COLOR_IMAGE_FORMAT_R8G8B8A8               = 43
@@ -200,6 +201,7 @@ u32                     tg_color_image_format_size(tg_color_image_format format)
 
 tg_color_image_3d_h     tg_color_image_3d_create(u32 width, u32 height, u32 depth, tg_color_image_format format, const tg_sampler_create_info* p_sampler_create_info);
 void                    tg_color_image_3d_destroy(tg_color_image_3d_h h_color_image_3d);
+void                    tg_color_image_3d_set_data(tg_color_image_3d_h h_color_image_3d, void* p_data);
 
 void                    tg_compute_shader_bind_input(tg_compute_shader_h h_compute_shader, u32 first_handle_index, u32 handle_count, tg_handle* p_handles);
 tg_compute_shader_h     tg_compute_shader_create(const char* filename);
@@ -239,7 +241,9 @@ void                    tg_mesh_copy_tangents(tg_mesh_h h_mesh, u32 first, u32 c
 void                    tg_mesh_copy_bitangents(tg_mesh_h h_mesh, u32 first, u32 count, v3* p_buffer);
 void                    tg_mesh_set_indices(tg_mesh_h h_mesh, u32 count, const u16* p_indices);
 void                    tg_mesh_set_positions(tg_mesh_h h_mesh, u32 count, const v3* p_positions);
+void                    tg_mesh_set_positions2(tg_mesh_h h_mesh, u32 count, tg_storage_buffer_h h_storage_buffer);
 void                    tg_mesh_set_normals(tg_mesh_h h_mesh, u32 count, const v3* p_normals);
+void                    tg_mesh_set_normals2(tg_mesh_h h_mesh, u32 count, tg_storage_buffer_h h_storage_buffer);
 void                    tg_mesh_set_uvs(tg_mesh_h h_mesh, u32 count, const v2* p_uvs);
 void                    tg_mesh_set_tangents(tg_mesh_h h_mesh, u32 count, const v3* p_tangents);
 void                    tg_mesh_set_bitangents(tg_mesh_h h_mesh, u32 count, const v3* p_bitangents);

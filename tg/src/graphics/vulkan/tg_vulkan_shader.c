@@ -95,22 +95,7 @@ void tg_compute_shader_dispatch(tg_compute_shader_h h_compute_shader, u32 group_
 	vkCmdBindPipeline(p_command_buffer->command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, h_compute_shader->compute_pipeline.pipeline);
 	vkCmdBindDescriptorSets(p_command_buffer->command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, h_compute_shader->compute_pipeline.layout.pipeline_layout, 0, 1, &h_compute_shader->descriptor_set.descriptor_set, 0, TG_NULL);
 	vkCmdDispatch(p_command_buffer->command_buffer, group_count_x, group_count_y, group_count_z);
-	TGVK_CALL(vkEndCommandBuffer(p_command_buffer->command_buffer));
-
-	VkSubmitInfo submit_info = { 0 };// TODO: add fence to compute shader
-	{
-		submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-		submit_info.pNext = TG_NULL;
-		submit_info.waitSemaphoreCount = 0;
-		submit_info.pWaitSemaphores = TG_NULL;
-		submit_info.pWaitDstStageMask = TG_NULL;
-		submit_info.commandBufferCount = 1;
-		submit_info.pCommandBuffers = &p_command_buffer->command_buffer;
-		submit_info.signalSemaphoreCount = 0;
-		submit_info.pSignalSemaphores = TG_NULL;
-	}
-	tgvk_queue_submit(TGVK_QUEUE_TYPE_COMPUTE, 1, &submit_info, VK_NULL_HANDLE);
-	tgvk_queue_wait_idle(TGVK_QUEUE_TYPE_COMPUTE);
+	tgvk_command_buffer_end_and_submit(p_command_buffer);
 }
 
 void tg_compute_shader_destroy(tg_compute_shader_h h_compute_shader)

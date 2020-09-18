@@ -22,6 +22,10 @@
 
 
 
+#define TG_GPU_ACCELERATED 1
+
+
+
 typedef void* tg_semaphore_h;
 typedef void* tg_thread_h;
 
@@ -46,6 +50,16 @@ typedef struct tg_terrain
 	tg_material_h                 h_material;
 	tg_semaphore_h                h_semaphore;
 	tg_thread_h                   h_thread;
+
+#if TG_GPU_ACCELERATED == 1
+	tg_color_image_3d_h           h_voxel_map_image_3d;
+	tg_uniform_buffer_h           h_ubo;
+	tg_storage_buffer_h           h_positions_storage_buffer;
+	tg_storage_buffer_h           h_normals_storage_buffer;
+	tg_storage_buffer_h           h_count_storage_buffer;
+	tg_compute_shader_h           h_compute_shader;
+#endif
+
 	volatile tg_terrain_octree    p_octrees[TG_TERRAIN_OCTREES];
 } tg_terrain;
 

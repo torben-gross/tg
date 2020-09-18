@@ -91,6 +91,27 @@ void tg__set_buffer_data(tgvk_buffer* p_buffer, u64 size, const void* p_data, Vk
     }
 }
 
+void tg__set_buffer_data2(tgvk_buffer* p_buffer, u64 size, tg_storage_buffer_h h_storage_buffer, VkBufferUsageFlagBits buffer_type_flag)
+{
+    if (size && h_storage_buffer)
+    {
+        if (size > p_buffer->memory.size)
+        {
+            if (p_buffer->buffer)
+            {
+                tgvk_buffer_destroy(p_buffer);
+            }
+            *p_buffer = tgvk_buffer_create(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | buffer_type_flag, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        }
+        tgvk_buffer_copy(size, &h_storage_buffer->buffer, p_buffer);
+    }
+    else
+    {
+        tgvk_buffer_destroy(p_buffer);
+        *p_buffer = (tgvk_buffer){ 0 };
+    }
+}
+
 static const char* tg__skip_line(const char* p_iterator, const char* const p_eof)
 {
     while (p_iterator < p_eof && *p_iterator != '\n' && *p_iterator != '\r')
@@ -746,11 +767,27 @@ void tg_mesh_set_positions(tg_mesh_h h_mesh, u32 count, const v3* p_positions) /
     }
 }
 
+void tg_mesh_set_positions2(tg_mesh_h h_mesh, u32 count, tg_storage_buffer_h h_storage_buffer)
+{
+    TG_ASSERT(h_mesh && count && h_storage_buffer && h_storage_buffer->buffer.memory.size >= count * sizeof(v3));
+
+    h_mesh->vertex_count = count;
+    tg__set_buffer_data2(&h_mesh->position_buffer, count * sizeof(v3), h_storage_buffer, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+    // TODO: calc bounds
+}
+
 void tg_mesh_set_normals(tg_mesh_h h_mesh, u32 count, const v3* p_normals)
 {
     TG_ASSERT(h_mesh && ((!count && !p_normals) || (count && p_normals)));
 
     tg__set_buffer_data(&h_mesh->normal_buffer, count * sizeof(*p_normals), (void*)p_normals, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+}
+
+void tg_mesh_set_normals2(tg_mesh_h h_mesh, u32 count, tg_storage_buffer_h h_storage_buffer)
+{
+    TG_ASSERT(h_mesh && count && h_storage_buffer && h_storage_buffer->buffer.memory.size >= count * sizeof(v3));
+
+    tg__set_buffer_data2(&h_mesh->normal_buffer, count * sizeof(v3), h_storage_buffer, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
 }
 
 void tg_mesh_set_uvs(tg_mesh_h h_mesh, u32 count, const v2* p_uvs)

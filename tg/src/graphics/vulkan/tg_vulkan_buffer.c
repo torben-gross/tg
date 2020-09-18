@@ -25,6 +25,7 @@ void tg_storage_buffer_destroy(tg_storage_buffer_h h_storage_buffer)
 	TG_ASSERT(h_storage_buffer);
 
 	tgvk_buffer_destroy(&h_storage_buffer->buffer);
+	tgvk_handle_release(h_storage_buffer);
 }
 
 u64 tg_storage_buffer_size(tg_storage_buffer_h h_storage_buffer)
@@ -57,6 +58,7 @@ void tg_uniform_buffer_destroy(tg_uniform_buffer_h h_uniform_buffer)
 	TG_ASSERT(h_uniform_buffer);
 
 	tgvk_buffer_destroy(&h_uniform_buffer->buffer);
+	tgvk_handle_release(h_uniform_buffer);
 }
 
 u64 tg_uniform_buffer_size(tg_uniform_buffer_h h_uniform_buffer)

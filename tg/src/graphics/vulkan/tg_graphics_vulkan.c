@@ -919,6 +919,26 @@ void tgvk_command_buffer_cmd_copy_buffer_to_color_image(tgvk_command_buffer* p_c
     vkCmdCopyBufferToImage(p_command_buffer->command_buffer, source, p_destination->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &buffer_image_copy);
 }
 
+void tgvk_command_buffer_cmd_copy_buffer_to_color_image_3d(tgvk_command_buffer* p_command_buffer, VkBuffer source, tgvk_image_3d* p_destination)
+{
+    VkBufferImageCopy buffer_image_copy = { 0 };
+    buffer_image_copy.bufferOffset = 0;
+    buffer_image_copy.bufferRowLength = 0;
+    buffer_image_copy.bufferImageHeight = 0;
+    buffer_image_copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    buffer_image_copy.imageSubresource.mipLevel = 0;
+    buffer_image_copy.imageSubresource.baseArrayLayer = 0;
+    buffer_image_copy.imageSubresource.layerCount = 1;
+    buffer_image_copy.imageOffset.x = 0;
+    buffer_image_copy.imageOffset.y = 0;
+    buffer_image_copy.imageOffset.z = 0;
+    buffer_image_copy.imageExtent.width = p_destination->width;
+    buffer_image_copy.imageExtent.height = p_destination->height;
+    buffer_image_copy.imageExtent.depth = p_destination->depth;
+
+    vkCmdCopyBufferToImage(p_command_buffer->command_buffer, source, p_destination->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &buffer_image_copy);
+}
+
 void tgvk_command_buffer_cmd_copy_buffer_to_cube_map(tgvk_command_buffer* p_command_buffer, VkBuffer source, tgvk_cube_map* p_destination)
 {
     VkBufferImageCopy buffer_image_copy = { 0 };
@@ -1293,12 +1313,19 @@ void tgvk_descriptor_set_destroy(tgvk_descriptor_set* p_descriptor_set)
 
 void tgvk_descriptor_set_update(VkDescriptorSet descriptor_set, tg_handle handle, u32 dst_binding)
 {
-    switch (*(tg_structure_type*)handle) // TODO: arrays not supported: see e.g. tgvk_descriptor_set_update_storage_buffer_array
+    const tg_structure_type type = *(tg_structure_type*)handle;
+
+    switch (type) // TODO: arrays not supported: see e.g. tgvk_descriptor_set_update_storage_buffer_array
     {
     case TG_STRUCTURE_TYPE_COLOR_IMAGE:
     {
         tg_color_image_h h_color_image = (tg_color_image_h)handle;
         tgvk_descriptor_set_update_image(descriptor_set, &h_color_image->image, dst_binding);
+    } break;
+    case TG_STRUCTURE_TYPE_COLOR_IMAGE_3D:
+    {
+        tg_color_image_3d_h h_color_image_3d = (tg_color_image_3d_h)handle;
+        tgvk_descriptor_set_update_image_3d(descriptor_set, &h_color_image_3d->image_3d, dst_binding);
     } break;
     case TG_STRUCTURE_TYPE_CUBE_MAP:
     {
