@@ -1145,8 +1145,9 @@ void tgvk_command_buffer_end_and_submit(tgvk_command_buffer* p_command_buffer)
     tgvk_queue* p_queue = TG_NULL;
     TGVK_QUEUE_TAKE(p_command_buffer->command_pool_type, p_queue);
 
-    TGVK_CALL(vkQueueSubmit(p_queue->queue, 1, &submit_info, VK_NULL_HANDLE));
-    TGVK_CALL(vkQueueWaitIdle(p_queue->queue)); // TODO: is this necessary?
+    TGVK_CALL(vkQueueSubmit(p_queue->queue, 1, &submit_info, p_queue->fence));
+    TGVK_CALL(vkWaitForFences(device, 1, &p_queue->fence, VK_FALSE, TG_U64_MAX));
+    TGVK_CALL(vkResetFences(device, 1, &p_queue->fence));
 
     TGVK_QUEUE_RELEASE(p_queue);
 }
@@ -1571,7 +1572,7 @@ void tgvk_fence_reset(VkFence fence)
 
 void tgvk_fence_wait(VkFence fence)
 {
-    TGVK_CALL(vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX));
+    TGVK_CALL(vkWaitForFences(device, 1, &fence, VK_FALSE, UINT64_MAX));
 }
 
 
@@ -2795,6 +2796,7 @@ static void tg__queues_create(u32 count)
         {
             p_queues[i].h_mutex = TG_MUTEX_CREATE();
         }
+        p_queues[i].fence = tgvk_fence_create(0);
     }
 }
 

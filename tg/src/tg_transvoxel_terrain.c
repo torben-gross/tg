@@ -5,6 +5,7 @@
 #include "platform/tg_platform.h"
 #include "tg_transvoxel_lookup_tables.h"
 #include "util/tg_string.h"
+#include <smmintrin.h>
 
 
 
@@ -196,225 +197,281 @@ static void tg__build_cells(v3i octree_min_coordinates, v3i block_offset_in_octr
 {
 	const i32 lod_scale = 1 << lod;
 
-	v3i p_sample_positions[8] = { 0 };
-	i8 p_cell_samples[8] = { 0 };
+	const __m128i lod_scale_4x = _mm_set1_epi32(lod_scale);
+	const __m128i block_offset_in_octree_x_4x = _mm_set1_epi32(block_offset_in_octree.x);
+
+	const __m128i mask_case_code_0_4x = _mm_set1_epi32(0x01);
+	const __m128i mask_case_code_1_4x = _mm_set1_epi32(0x02);
+	const __m128i mask_case_code_2_4x = _mm_set1_epi32(0x04);
+	const __m128i mask_case_code_3_4x = _mm_set1_epi32(0x08);
+	const __m128i mask_case_code_4_4x = _mm_set1_epi32(0x10);
+	const __m128i mask_case_code_5_4x = _mm_set1_epi32(0x20);
+	const __m128i mask_case_code_6_4x = _mm_set1_epi32(0x40);
+	const __m128i mask_case_code_7_4x = _mm_set1_epi32(0x80);
+
+	i32 p_unique_samples[20] = { 0 };
+	__m128i p_cell_samples_4x[8] = { 0 };
+
+	i32 p_sample_positions_x[8] = { 0 };
+	i32 p_sample_positions_y[8] = { 0 };
+	i32 p_sample_positions_z[8] = { 0 };
+
 	v3i p_corner_positions[8] = { 0 };
 	v3 p_triangle_positions[3] = { 0 };
 
-	v3i position = { 0 };
-	for (position.z = 0; position.z < TG_TERRAIN_CELLS_PER_BLOCK_SIDE; position.z++)
+	for (i32 px = 0; px < TG_TERRAIN_CELLS_PER_BLOCK_SIDE; px += 4)
 	{
-		for (position.y = 0; position.y < TG_TERRAIN_CELLS_PER_BLOCK_SIDE; position.y++)
+		const __m128i position_x_4x = _mm_set_epi32(px + 3, px + 2, px + 1, px);
+		const __m128i sample_position_pad_x_4x = _mm_add_epi32(block_offset_in_octree_x_4x, _mm_mullo_epi32(position_x_4x, lod_scale_4x));
+		const __m128i sample_position_x0_4x = sample_position_pad_x_4x;
+		const __m128i sample_position_x1_4x = _mm_add_epi32(sample_position_pad_x_4x, lod_scale_4x);
+
+		for (i32 py = 0; py < TG_TERRAIN_CELLS_PER_BLOCK_SIDE; py++)
 		{
-			for (position.x = 0; position.x < TG_TERRAIN_CELLS_PER_BLOCK_SIDE; position.x++)
+			const i32 sample_position_pad_y = block_offset_in_octree.y + (py * lod_scale);
+			const i32 sample_position_y0 = sample_position_pad_y;
+			const i32 sample_position_y1 = sample_position_pad_y + lod_scale;
+
+			p_unique_samples[0] = TG_TERRAIN_VOXEL_MAP_AT(p_voxel_map, sample_position_x0_4x.m128i_i32[0], sample_position_y0, block_offset_in_octree.z);
+			p_unique_samples[1] = TG_TERRAIN_VOXEL_MAP_AT(p_voxel_map, sample_position_x0_4x.m128i_i32[1], sample_position_y0, block_offset_in_octree.z);
+			p_unique_samples[2] = TG_TERRAIN_VOXEL_MAP_AT(p_voxel_map, sample_position_x0_4x.m128i_i32[2], sample_position_y0, block_offset_in_octree.z);
+			p_unique_samples[3] = TG_TERRAIN_VOXEL_MAP_AT(p_voxel_map, sample_position_x0_4x.m128i_i32[3], sample_position_y0, block_offset_in_octree.z);
+			p_unique_samples[4] = TG_TERRAIN_VOXEL_MAP_AT(p_voxel_map, sample_position_x1_4x.m128i_i32[3], sample_position_y0, block_offset_in_octree.z);
+			p_unique_samples[5] = TG_TERRAIN_VOXEL_MAP_AT(p_voxel_map, sample_position_x0_4x.m128i_i32[0], sample_position_y1, block_offset_in_octree.z);
+			p_unique_samples[6] = TG_TERRAIN_VOXEL_MAP_AT(p_voxel_map, sample_position_x0_4x.m128i_i32[1], sample_position_y1, block_offset_in_octree.z);
+			p_unique_samples[7] = TG_TERRAIN_VOXEL_MAP_AT(p_voxel_map, sample_position_x0_4x.m128i_i32[2], sample_position_y1, block_offset_in_octree.z);
+			p_unique_samples[8] = TG_TERRAIN_VOXEL_MAP_AT(p_voxel_map, sample_position_x0_4x.m128i_i32[3], sample_position_y1, block_offset_in_octree.z);
+			p_unique_samples[9] = TG_TERRAIN_VOXEL_MAP_AT(p_voxel_map, sample_position_x1_4x.m128i_i32[3], sample_position_y1, block_offset_in_octree.z);
+
+			for (i32 pz = 0; pz < TG_TERRAIN_CELLS_PER_BLOCK_SIDE; pz++)
 			{
-				const i32 sample_position_pad_x = block_offset_in_octree.x + position.x * lod_scale;
-				const i32 sample_position_pad_y = block_offset_in_octree.y + position.y * lod_scale;
-				const i32 sample_position_pad_z = block_offset_in_octree.z + position.z * lod_scale;
+				const i32 sample_position_pad_z = block_offset_in_octree.z + (pz * lod_scale);
+				const i32 sample_position_z0 = sample_position_pad_z;
+				const i32 sample_position_z1 = sample_position_pad_z + lod_scale;
 
-				p_sample_positions[0].x = sample_position_pad_x;
-				p_sample_positions[0].y = sample_position_pad_y;
-				p_sample_positions[0].z = sample_position_pad_z;
+				const i32 off1 = (pz & 0x1) * 10;
+				const i32 off0 = 10 - off1;
 
-				p_sample_positions[1].x = sample_position_pad_x + lod_scale;
-				p_sample_positions[1].y = sample_position_pad_y;
-				p_sample_positions[1].z = sample_position_pad_z;
+				p_unique_samples[0 + off0] = TG_TERRAIN_VOXEL_MAP_AT(p_voxel_map, sample_position_x0_4x.m128i_i32[0], sample_position_y0, sample_position_z1);
+				p_unique_samples[1 + off0] = TG_TERRAIN_VOXEL_MAP_AT(p_voxel_map, sample_position_x0_4x.m128i_i32[1], sample_position_y0, sample_position_z1);
+				p_unique_samples[2 + off0] = TG_TERRAIN_VOXEL_MAP_AT(p_voxel_map, sample_position_x0_4x.m128i_i32[2], sample_position_y0, sample_position_z1);
+				p_unique_samples[3 + off0] = TG_TERRAIN_VOXEL_MAP_AT(p_voxel_map, sample_position_x0_4x.m128i_i32[3], sample_position_y0, sample_position_z1);
+				p_unique_samples[4 + off0] = TG_TERRAIN_VOXEL_MAP_AT(p_voxel_map, sample_position_x1_4x.m128i_i32[3], sample_position_y0, sample_position_z1);
+				p_unique_samples[5 + off0] = TG_TERRAIN_VOXEL_MAP_AT(p_voxel_map, sample_position_x0_4x.m128i_i32[0], sample_position_y1, sample_position_z1);
+				p_unique_samples[6 + off0] = TG_TERRAIN_VOXEL_MAP_AT(p_voxel_map, sample_position_x0_4x.m128i_i32[1], sample_position_y1, sample_position_z1);
+				p_unique_samples[7 + off0] = TG_TERRAIN_VOXEL_MAP_AT(p_voxel_map, sample_position_x0_4x.m128i_i32[2], sample_position_y1, sample_position_z1);
+				p_unique_samples[8 + off0] = TG_TERRAIN_VOXEL_MAP_AT(p_voxel_map, sample_position_x0_4x.m128i_i32[3], sample_position_y1, sample_position_z1);
+				p_unique_samples[9 + off0] = TG_TERRAIN_VOXEL_MAP_AT(p_voxel_map, sample_position_x1_4x.m128i_i32[3], sample_position_y1, sample_position_z1);
 
-				p_sample_positions[2].x = sample_position_pad_x;
-				p_sample_positions[2].y = sample_position_pad_y + lod_scale;
-				p_sample_positions[2].z = sample_position_pad_z;
+				p_cell_samples_4x[0] = _mm_load_si128((const __m128i*)&p_unique_samples[0 + off1]);
+				p_cell_samples_4x[1] = _mm_load_si128((const __m128i*)&p_unique_samples[1 + off1]);
+				p_cell_samples_4x[2] = _mm_load_si128((const __m128i*)&p_unique_samples[5 + off1]);
+				p_cell_samples_4x[3] = _mm_load_si128((const __m128i*)&p_unique_samples[6 + off1]);
+				p_cell_samples_4x[4] = _mm_load_si128((const __m128i*)&p_unique_samples[0 + off0]);
+				p_cell_samples_4x[5] = _mm_load_si128((const __m128i*)&p_unique_samples[1 + off0]);
+				p_cell_samples_4x[6] = _mm_load_si128((const __m128i*)&p_unique_samples[5 + off0]);
+				p_cell_samples_4x[7] = _mm_load_si128((const __m128i*)&p_unique_samples[6 + off0]);
 
-				p_sample_positions[3].x = sample_position_pad_x + lod_scale;
-				p_sample_positions[3].y = sample_position_pad_y + lod_scale;
-				p_sample_positions[3].z = sample_position_pad_z;
+				const __m128i case_code_0_4x = _mm_and_si128(_mm_srai_epi32(p_cell_samples_4x[0], 7), mask_case_code_0_4x);
+				const __m128i case_code_1_4x = _mm_and_si128(_mm_srai_epi32(p_cell_samples_4x[1], 6), mask_case_code_1_4x);
+				const __m128i case_code_2_4x = _mm_and_si128(_mm_srai_epi32(p_cell_samples_4x[2], 5), mask_case_code_2_4x);
+				const __m128i case_code_3_4x = _mm_and_si128(_mm_srai_epi32(p_cell_samples_4x[3], 4), mask_case_code_3_4x);
+				const __m128i case_code_4_4x = _mm_and_si128(_mm_srai_epi32(p_cell_samples_4x[4], 3), mask_case_code_4_4x);
+				const __m128i case_code_5_4x = _mm_and_si128(_mm_srai_epi32(p_cell_samples_4x[5], 2), mask_case_code_5_4x);
+				const __m128i case_code_6_4x = _mm_and_si128(_mm_srai_epi32(p_cell_samples_4x[6], 1), mask_case_code_6_4x);
+				const __m128i case_code_7_4x = _mm_and_si128(p_cell_samples_4x[7], mask_case_code_7_4x);
 
-				p_sample_positions[4].x = sample_position_pad_x;
-				p_sample_positions[4].y = sample_position_pad_y;
-				p_sample_positions[4].z = sample_position_pad_z + lod_scale;
+				const __m128i or01 = _mm_or_si128(case_code_0_4x, case_code_1_4x);
+				const __m128i or23 = _mm_or_si128(case_code_2_4x, case_code_3_4x);
+				const __m128i or45 = _mm_or_si128(case_code_4_4x, case_code_5_4x);
+				const __m128i or67 = _mm_or_si128(case_code_6_4x, case_code_7_4x);
+				const __m128i or0123 = _mm_or_si128(or01, or23);
+				const __m128i or4567 = _mm_or_si128(or45, or67);
 
-				p_sample_positions[5].x = sample_position_pad_x + lod_scale;
-				p_sample_positions[5].y = sample_position_pad_y;
-				p_sample_positions[5].z = sample_position_pad_z + lod_scale;
+				const __m128i case_code_4x = _mm_or_si128(or0123, or4567);
 
-				p_sample_positions[6].x = sample_position_pad_x;
-				p_sample_positions[6].y = sample_position_pad_y + lod_scale;
-				p_sample_positions[6].z = sample_position_pad_z + lod_scale;
-
-				p_sample_positions[7].x = sample_position_pad_x + lod_scale;
-				p_sample_positions[7].y = sample_position_pad_y + lod_scale;
-				p_sample_positions[7].z = sample_position_pad_z + lod_scale;
-
-				p_cell_samples[0] = TG_TERRAIN_VOXEL_MAP_AT_V3I(p_voxel_map, p_sample_positions[0]);
-				p_cell_samples[1] = TG_TERRAIN_VOXEL_MAP_AT_V3I(p_voxel_map, p_sample_positions[1]);
-				p_cell_samples[2] = TG_TERRAIN_VOXEL_MAP_AT_V3I(p_voxel_map, p_sample_positions[2]);
-				p_cell_samples[3] = TG_TERRAIN_VOXEL_MAP_AT_V3I(p_voxel_map, p_sample_positions[3]);
-				p_cell_samples[4] = TG_TERRAIN_VOXEL_MAP_AT_V3I(p_voxel_map, p_sample_positions[4]);
-				p_cell_samples[5] = TG_TERRAIN_VOXEL_MAP_AT_V3I(p_voxel_map, p_sample_positions[5]);
-				p_cell_samples[6] = TG_TERRAIN_VOXEL_MAP_AT_V3I(p_voxel_map, p_sample_positions[6]);
-				p_cell_samples[7] = TG_TERRAIN_VOXEL_MAP_AT_V3I(p_voxel_map, p_sample_positions[7]);
-
-				const u8 case_code =
-					((p_cell_samples[0] >> 7) & 0x01) |
-					((p_cell_samples[1] >> 6) & 0x02) |
-					((p_cell_samples[2] >> 5) & 0x04) |
-					((p_cell_samples[3] >> 4) & 0x08) |
-					((p_cell_samples[4] >> 3) & 0x10) |
-					((p_cell_samples[5] >> 2) & 0x20) |
-					((p_cell_samples[6] >> 1) & 0x40) |
-					((p_cell_samples[7] >> 0) & 0x80);
-
-				TG_ASSERT(case_code != 256);
-
-				if (case_code == 0 || case_code == 255)
+				for (u8 simd_idx = 0; simd_idx < 4; simd_idx++)
 				{
-					continue;
-				}
-				
-				const i32 cell_position_base_x = octree_min_coordinates.x + block_offset_in_octree.x + position.x * lod_scale;
-				const i32 cell_position_base_y = octree_min_coordinates.y + block_offset_in_octree.y + position.y * lod_scale;
-				const i32 cell_position_base_z = octree_min_coordinates.z + block_offset_in_octree.z + position.z * lod_scale;
+					const i32 case_code = case_code_4x.m128i_i32[simd_idx];
 
-				p_corner_positions[0].x = cell_position_base_x;
-				p_corner_positions[0].y = cell_position_base_y;
-				p_corner_positions[0].z = cell_position_base_z;
-
-				p_corner_positions[1].x = cell_position_base_x + lod_scale;
-				p_corner_positions[1].y = cell_position_base_y;
-				p_corner_positions[1].z = cell_position_base_z;
-
-				p_corner_positions[2].x = cell_position_base_x;
-				p_corner_positions[2].y = cell_position_base_y + lod_scale;
-				p_corner_positions[2].z = cell_position_base_z;
-
-				p_corner_positions[3].x = cell_position_base_x + lod_scale;
-				p_corner_positions[3].y = cell_position_base_y + lod_scale;
-				p_corner_positions[3].z = cell_position_base_z;
-
-				p_corner_positions[4].x = cell_position_base_x;
-				p_corner_positions[4].y = cell_position_base_y;
-				p_corner_positions[4].z = cell_position_base_z + lod_scale;
-
-				p_corner_positions[5].x = cell_position_base_x + lod_scale;
-				p_corner_positions[5].y = cell_position_base_y;
-				p_corner_positions[5].z = cell_position_base_z + lod_scale;
-
-				p_corner_positions[6].x = cell_position_base_x;
-				p_corner_positions[6].y = cell_position_base_y + lod_scale;
-				p_corner_positions[6].z = cell_position_base_z + lod_scale;
-
-				p_corner_positions[7].x = cell_position_base_x + lod_scale;
-				p_corner_positions[7].y = cell_position_base_y + lod_scale;
-				p_corner_positions[7].z = cell_position_base_z + lod_scale;
-
-				const u8 regular_cell_class_index = p_regular_cell_class[case_code];
-				const tg_regular_cell_data* p_cell_data = &p_regular_cell_data[regular_cell_class_index];
-				const u8 triangle_count = TG_TRANSVOXEL_CELL_GET_TRIANGLE_COUNT(*p_cell_data);
-
-				for (u8 i = 0; i < triangle_count; i++)
-				{
-					for (u8 j = 0; j < 3; j++)
+					if (case_code == 0 || case_code == 255)
 					{
-						const u16 edge_code = p_regular_vertex_data[case_code][p_cell_data->p_vertex_indices[3 * i + j]];
-						const u8 edge_code_low = edge_code & 0xff;
+						continue;
+					}
 
-						const u8 v0 = (edge_code_low >> 4) & 0xf;
-						const u8 v1 = edge_code_low & 0xf;
-						TG_ASSERT(v0 < v1);
+					p_sample_positions_x[0] = sample_position_x0_4x.m128i_i32[simd_idx];
+					p_sample_positions_x[1] = sample_position_x1_4x.m128i_i32[simd_idx];
+					p_sample_positions_x[2] = sample_position_x0_4x.m128i_i32[simd_idx];
+					p_sample_positions_x[3] = sample_position_x1_4x.m128i_i32[simd_idx];
+					p_sample_positions_x[4] = sample_position_x0_4x.m128i_i32[simd_idx];
+					p_sample_positions_x[5] = sample_position_x1_4x.m128i_i32[simd_idx];
+					p_sample_positions_x[6] = sample_position_x0_4x.m128i_i32[simd_idx];
+					p_sample_positions_x[7] = sample_position_x1_4x.m128i_i32[simd_idx];
 
-						v3i i0 = p_sample_positions[v0];
-						v3i i1 = p_sample_positions[v1];
+					p_sample_positions_y[0] = sample_position_y0;
+					p_sample_positions_y[1] = sample_position_y0;
+					p_sample_positions_y[2] = sample_position_y1;
+					p_sample_positions_y[3] = sample_position_y1;
+					p_sample_positions_y[4] = sample_position_y0;
+					p_sample_positions_y[5] = sample_position_y0;
+					p_sample_positions_y[6] = sample_position_y1;
+					p_sample_positions_y[7] = sample_position_y1;
 
-						i32 d0 = p_cell_samples[v0];
-						i32 d1 = p_cell_samples[v1];
+					p_sample_positions_z[0] = sample_position_z0;
+					p_sample_positions_z[1] = sample_position_z0;
+					p_sample_positions_z[2] = sample_position_z0;
+					p_sample_positions_z[3] = sample_position_z0;
+					p_sample_positions_z[4] = sample_position_z1;
+					p_sample_positions_z[5] = sample_position_z1;
+					p_sample_positions_z[6] = sample_position_z1;
+					p_sample_positions_z[7] = sample_position_z1;
+				
+					const i32 cell_position_base_x = octree_min_coordinates.x + block_offset_in_octree.x + position_x_4x.m128i_i32[simd_idx] * lod_scale;
+					const i32 cell_position_base_y = octree_min_coordinates.y + block_offset_in_octree.y + py * lod_scale;
+					const i32 cell_position_base_z = octree_min_coordinates.z + block_offset_in_octree.z + pz * lod_scale;
 
-						v3i p0 = p_corner_positions[v0];
-						v3i p1 = p_corner_positions[v1];
+					p_corner_positions[0].x = cell_position_base_x;
+					p_corner_positions[0].y = cell_position_base_y;
+					p_corner_positions[0].z = cell_position_base_z;
 
-						for (u8 k = 0; k < lod; k++)
+					p_corner_positions[1].x = cell_position_base_x + lod_scale;
+					p_corner_positions[1].y = cell_position_base_y;
+					p_corner_positions[1].z = cell_position_base_z;
+
+					p_corner_positions[2].x = cell_position_base_x;
+					p_corner_positions[2].y = cell_position_base_y + lod_scale;
+					p_corner_positions[2].z = cell_position_base_z;
+
+					p_corner_positions[3].x = cell_position_base_x + lod_scale;
+					p_corner_positions[3].y = cell_position_base_y + lod_scale;
+					p_corner_positions[3].z = cell_position_base_z;
+
+					p_corner_positions[4].x = cell_position_base_x;
+					p_corner_positions[4].y = cell_position_base_y;
+					p_corner_positions[4].z = cell_position_base_z + lod_scale;
+
+					p_corner_positions[5].x = cell_position_base_x + lod_scale;
+					p_corner_positions[5].y = cell_position_base_y;
+					p_corner_positions[5].z = cell_position_base_z + lod_scale;
+
+					p_corner_positions[6].x = cell_position_base_x;
+					p_corner_positions[6].y = cell_position_base_y + lod_scale;
+					p_corner_positions[6].z = cell_position_base_z + lod_scale;
+
+					p_corner_positions[7].x = cell_position_base_x + lod_scale;
+					p_corner_positions[7].y = cell_position_base_y + lod_scale;
+					p_corner_positions[7].z = cell_position_base_z + lod_scale;
+
+					const u8 regular_cell_class_index = p_regular_cell_class[case_code];
+					const tg_regular_cell_data* p_cell_data = &p_regular_cell_data[regular_cell_class_index];
+					const u8 triangle_count = TG_TRANSVOXEL_CELL_GET_TRIANGLE_COUNT(*p_cell_data);
+
+					for (u8 i = 0; i < triangle_count; i++)
+					{
+						for (u8 j = 0; j < 3; j++)
 						{
-							v3i midpoint = { 0 };
-							midpoint.x = (i0.x + i1.x) / 2;
-							midpoint.y = (i0.y + i1.y) / 2;
-							midpoint.z = (i0.z + i1.z) / 2;
-							const i8 imid = TG_TERRAIN_VOXEL_MAP_AT_V3I(p_voxel_map, midpoint);
+							const u16 edge_code = p_regular_vertex_data[case_code][p_cell_data->p_vertex_indices[3 * i + j]];
+							const u8 edge_code_low = edge_code & 0xff;
 
-							if (imid < 0 && d0 < 0 || imid >= 0 && d0 >= 0)
+							const u8 v0 = (edge_code_low >> 4) & 0xf;
+							const u8 v1 = edge_code_low & 0xf;
+							TG_ASSERT(v0 < v1);
+
+							v3i i0 = { p_sample_positions_x[v0], p_sample_positions_y[v0], p_sample_positions_z[v0] };
+							v3i i1 = { p_sample_positions_x[v1], p_sample_positions_y[v1], p_sample_positions_z[v1] };
+
+							i32 d0 = p_cell_samples_4x[v0].m128i_i32[simd_idx];
+							i32 d1 = p_cell_samples_4x[v1].m128i_i32[simd_idx];
+
+							v3i p0 = p_corner_positions[v0];
+							v3i p1 = p_corner_positions[v1];
+
+							for (u8 k = 0; k < lod; k++)
 							{
-								d0 = imid;
-								i0 = midpoint;
-								p0.x = (p0.x + p1.x) / 2;
-								p0.y = (p0.y + p1.y) / 2;
-								p0.z = (p0.z + p1.z) / 2;
+								v3i midpoint = { 0 };
+								midpoint.x = (i0.x + i1.x) / 2;
+								midpoint.y = (i0.y + i1.y) / 2;
+								midpoint.z = (i0.z + i1.z) / 2;
+								const i8 imid = TG_TERRAIN_VOXEL_MAP_AT_V3I(p_voxel_map, midpoint);
+
+								if (imid < 0 && d0 < 0 || imid >= 0 && d0 >= 0)
+								{
+									d0 = imid;
+									i0 = midpoint;
+									p0.x = (p0.x + p1.x) / 2;
+									p0.y = (p0.y + p1.y) / 2;
+									p0.z = (p0.z + p1.z) / 2;
+								}
+								else if (imid < 0 && d1 < 0 || imid >= 0 && d1 >= 0)
+								{
+									d1 = imid;
+									i1 = midpoint;
+									p1.x = (p0.x + p1.x) / 2;
+									p1.y = (p0.y + p1.y) / 2;
+									p1.z = (p0.z + p1.z) / 2;
+								}
 							}
-							else if (imid < 0 && d1 < 0 || imid >= 0 && d1 >= 0)
+
+							TG_ASSERT(d0 != d1);
+
+							const i32 t = (d1 << 8) / (d1 - d0);
+							const f32 t0 = (f32)t / 256.0f;
+							const f32 t1 = (f32)(0x100 - t) / 256.0f;
+
+							if (t & 0xff)
 							{
-								d1 = imid;
-								i1 = midpoint;
-								p1.x = (p0.x + p1.x) / 2;
-								p1.y = (p0.y + p1.y) / 2;
-								p1.z = (p0.z + p1.z) / 2;
-							}
-						}
-
-						TG_ASSERT(d0 != d1);
-
-						const i32 t = (d1 << 8) / (d1 - d0);
-						const f32 t0 = (f32)t / 256.0f;
-						const f32 t1 = (f32)(0x100 - t) / 256.0f;
-
-						if (t & 0xff)
-						{
-							p_triangle_positions[j].x = (f32)p0.x * t0 + (f32)p1.x * t1;
-							p_triangle_positions[j].y = (f32)p0.y * t0 + (f32)p1.y * t1;
-							p_triangle_positions[j].z = (f32)p0.z * t0 + (f32)p1.z * t1;
-						}
-						else
-						{
-							if (t == 0)
-							{
-								p_triangle_positions[j].x = (f32)p1.x;
-								p_triangle_positions[j].y = (f32)p1.y;
-								p_triangle_positions[j].z = (f32)p1.z;
+								p_triangle_positions[j].x = (f32)p0.x * t0 + (f32)p1.x * t1;
+								p_triangle_positions[j].y = (f32)p0.y * t0 + (f32)p1.y * t1;
+								p_triangle_positions[j].z = (f32)p0.z * t0 + (f32)p1.z * t1;
 							}
 							else
 							{
-								p_triangle_positions[j].x = (f32)p0.x;
-								p_triangle_positions[j].y = (f32)p0.y;
-								p_triangle_positions[j].z = (f32)p0.z;
+								if (t == 0)
+								{
+									p_triangle_positions[j].x = (f32)p1.x;
+									p_triangle_positions[j].y = (f32)p1.y;
+									p_triangle_positions[j].z = (f32)p1.z;
+								}
+								else
+								{
+									p_triangle_positions[j].x = (f32)p0.x;
+									p_triangle_positions[j].y = (f32)p0.y;
+									p_triangle_positions[j].z = (f32)p0.z;
+								}
 							}
 						}
-					}
 
-					const f32 v01_x = p_triangle_positions[1].x - p_triangle_positions[0].x;
-					const f32 v01_y = p_triangle_positions[1].y - p_triangle_positions[0].y;
-					const f32 v01_z = p_triangle_positions[1].z - p_triangle_positions[0].z;
+						const f32 v01_x = p_triangle_positions[1].x - p_triangle_positions[0].x;
+						const f32 v01_y = p_triangle_positions[1].y - p_triangle_positions[0].y;
+						const f32 v01_z = p_triangle_positions[1].z - p_triangle_positions[0].z;
 
-					const f32 v02_x = p_triangle_positions[2].x - p_triangle_positions[0].x;
-					const f32 v02_y = p_triangle_positions[2].y - p_triangle_positions[0].y;
-					const f32 v02_z = p_triangle_positions[2].z - p_triangle_positions[0].z;
+						const f32 v02_x = p_triangle_positions[2].x - p_triangle_positions[0].x;
+						const f32 v02_y = p_triangle_positions[2].y - p_triangle_positions[0].y;
+						const f32 v02_z = p_triangle_positions[2].z - p_triangle_positions[0].z;
 
-					const f32 cross_x = v01_y * v02_z - v01_z * v02_y;
-					const f32 cross_y = v01_z * v02_x - v01_x * v02_z;
-					const f32 cross_z = v01_x * v02_y - v01_y * v02_x;
+						const f32 cross_x = v01_y * v02_z - v01_z * v02_y;
+						const f32 cross_y = v01_z * v02_x - v01_x * v02_z;
+						const f32 cross_z = v01_x * v02_y - v01_y * v02_x;
 
-					const f32 magsqr = cross_x * cross_x + cross_y * cross_y + cross_z * cross_z;
+						const f32 magsqr = cross_x * cross_x + cross_y * cross_y + cross_z * cross_z;
 
-					if (magsqr != 0.0f)
-					{
-						const f32 mag = tgm_f32_sqrt(magsqr);
-						const v3 n = { cross_x / mag, cross_y / mag, cross_z / mag };
+						if (magsqr != 0.0f)
+						{
+							const f32 mag = tgm_f32_sqrt(magsqr);
+							const v3 n = { cross_x / mag, cross_y / mag, cross_z / mag };
 
-						p_position_buffer[0] = p_triangle_positions[0];
-						p_position_buffer[1] = p_triangle_positions[1];
-						p_position_buffer[2] = p_triangle_positions[2];
-						p_position_buffer += 3;
+							p_position_buffer[0] = p_triangle_positions[0];
+							p_position_buffer[1] = p_triangle_positions[1];
+							p_position_buffer[2] = p_triangle_positions[2];
+							p_position_buffer += 3;
 
-						p_normal_buffer[0] = n;
-						p_normal_buffer[1] = n;
-						p_normal_buffer[2] = n;
-						p_normal_buffer += 3;
+							p_normal_buffer[0] = n;
+							p_normal_buffer[1] = n;
+							p_normal_buffer[2] = n;
+							p_normal_buffer += 3;
 
-						*p_vertex_count += 3;
+							*p_vertex_count += 3;
+						}
 					}
 				}
 			}
@@ -1748,7 +1805,7 @@ static void tg__build_node(volatile tg_terrain* p_terrain, i8* p_voxel_map, u8 o
 	volatile tg_terrain_octree_node* p_node = &p_octree->p_nodes[i];
 
 	u16 vertex_count = 0;
-#if TG_GPU_ACCELERATED == 1
+#if TG_TERRAIN_GPU_ACCELERATED == 1
 	tg_shader_ubo* p_shader_ubo_data = (tg_shader_ubo*)tg_uniform_buffer_data(p_terrain->h_ubo);
 	p_shader_ubo_data->u_lod = lod;
 	p_shader_ubo_data->u_octree_min_coordinates_x = p_terrain->p_octrees[octree_index].min_coords.x;
@@ -1793,10 +1850,10 @@ static void tg__build_node(volatile tg_terrain* p_terrain, i8* p_voxel_map, u8 o
 	if (lod > 0)
 	{
 		u32 transition_index = 0;
-	
+		
 		vertex_count = 0;
 		tg__build_transition_nx(p_octree->min_coords, node_coords_offset_rel_to_octree, lod, p_voxel_map, &vertex_count, p_position_buffer, p_normal_buffer);
-	
+		
 		tg_mesh_h h_mesh = TG_NULL;
 		if (vertex_count)
 		{
@@ -1806,10 +1863,10 @@ static void tg__build_node(volatile tg_terrain* p_terrain, i8* p_voxel_map, u8 o
 			p_node->ph_transition_render_commands[transition_index] = tg_render_command_create(h_mesh, p_terrain->h_material, V3(0), 0, TG_NULL);
 		}
 		transition_index++;
-	
+		
 		vertex_count = 0;
 		tg__build_transition_px(p_octree->min_coords, node_coords_offset_rel_to_octree, lod, p_voxel_map, &vertex_count, p_position_buffer, p_normal_buffer);
-	
+		
 		if (vertex_count)
 		{
 			h_mesh = tg_mesh_create();
@@ -1818,10 +1875,10 @@ static void tg__build_node(volatile tg_terrain* p_terrain, i8* p_voxel_map, u8 o
 			p_node->ph_transition_render_commands[transition_index] = tg_render_command_create(h_mesh, p_terrain->h_material, V3(0), 0, TG_NULL);
 		}
 		transition_index++;
-	
+		
 		vertex_count = 0;
 		tg__build_transition_ny(p_octree->min_coords, node_coords_offset_rel_to_octree, lod, p_voxel_map, &vertex_count, p_position_buffer, p_normal_buffer);
-	
+		
 		if (vertex_count)
 		{
 			h_mesh = tg_mesh_create();
@@ -1830,10 +1887,10 @@ static void tg__build_node(volatile tg_terrain* p_terrain, i8* p_voxel_map, u8 o
 			p_node->ph_transition_render_commands[transition_index] = tg_render_command_create(h_mesh, p_terrain->h_material, V3(0), 0, TG_NULL);
 		}
 		transition_index++;
-	
+		
 		vertex_count = 0;
 		tg__build_transition_py(p_octree->min_coords, node_coords_offset_rel_to_octree, lod, p_voxel_map, &vertex_count, p_position_buffer, p_normal_buffer);
-	
+		
 		if (vertex_count)
 		{
 			h_mesh = tg_mesh_create();
@@ -1842,10 +1899,10 @@ static void tg__build_node(volatile tg_terrain* p_terrain, i8* p_voxel_map, u8 o
 			p_node->ph_transition_render_commands[transition_index] = tg_render_command_create(h_mesh, p_terrain->h_material, V3(0), 0, TG_NULL);
 		}
 		transition_index++;
-	
+		
 		vertex_count = 0;
 		tg__build_transition_nz(p_octree->min_coords, node_coords_offset_rel_to_octree, lod, p_voxel_map, &vertex_count, p_position_buffer, p_normal_buffer);
-	
+		
 		if (vertex_count)
 		{
 			h_mesh = tg_mesh_create();
@@ -1854,10 +1911,10 @@ static void tg__build_node(volatile tg_terrain* p_terrain, i8* p_voxel_map, u8 o
 			p_node->ph_transition_render_commands[transition_index] = tg_render_command_create(h_mesh, p_terrain->h_material, V3(0), 0, TG_NULL);
 		}
 		transition_index++;
-	
+		
 		vertex_count = 0;
 		tg__build_transition_pz(p_octree->min_coords, node_coords_offset_rel_to_octree, lod, p_voxel_map, &vertex_count, p_position_buffer, p_normal_buffer);
-	
+		
 		if (vertex_count)
 		{
 			h_mesh = tg_mesh_create();
@@ -1928,7 +1985,7 @@ static void tg__build_octree(tg_terrain* p_terrain, u8 octree_index, i32 x, i32 
 		TG_MEMORY_STACK_FREE_ASYNC(file_properties.size);
 	}
 
-#if TG_GPU_ACCELERATED == 1
+#if TG_TERRAIN_GPU_ACCELERATED == 1
 	tg_color_image_3d_set_data(p_terrain->h_voxel_map_image_3d, p_voxel_map);
 #endif
 
@@ -2050,7 +2107,7 @@ static void tg__thread_fn(volatile tg_terrain* p_terrain)
 	sampler_create_info.address_mode_v = TG_IMAGE_ADDRESS_MODE_REPEAT;
 	sampler_create_info.address_mode_w = TG_IMAGE_ADDRESS_MODE_REPEAT;
 
-#if TG_GPU_ACCELERATED == 1
+#if TG_TERRAIN_GPU_ACCELERATED == 1
 	p_terrain->h_voxel_map_image_3d = tg_color_image_3d_create(TG_TERRAIN_VOXEL_MAP_STRIDE, TG_TERRAIN_VOXEL_MAP_STRIDE, TG_TERRAIN_VOXEL_MAP_STRIDE, TG_COLOR_IMAGE_FORMAT_R8I, &sampler_create_info);
 	p_terrain->h_ubo = tg_uniform_buffer_create(sizeof(tg_shader_ubo));
 
@@ -2073,7 +2130,7 @@ static void tg__thread_fn(volatile tg_terrain* p_terrain)
 
 	TG_SEMAPHORE_WAIT(p_terrain->h_semaphore);
 
-#if TG_GPU_ACCELERATED == 1
+#if TG_TERRAIN_GPU_ACCELERATED == 1
 	tg_storage_buffer_destroy(p_terrain->h_count_storage_buffer);
 	tg_storage_buffer_destroy(p_terrain->h_normals_storage_buffer);
 	tg_storage_buffer_destroy(p_terrain->h_positions_storage_buffer);

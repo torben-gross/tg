@@ -188,6 +188,7 @@ typedef struct tgvk_queue
     u32           queue_index;
     f32           priority;
     VkQueue       queue;
+    VkFence       fence;
 } tgvk_queue;
 
 typedef struct tgvk_render_command_renderer_info

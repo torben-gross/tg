@@ -5,6 +5,10 @@
 
 
 
+#define TG_TERRAIN_GPU_ACCELERATED 0
+
+
+
 #define TG_TERRAIN_CELLS_PER_BLOCK_SIDE                16
 #define TG_TERRAIN_CELLS_PER_BLOCK                     4096 // 16^3
 #define TG_TERRAIN_VOXELS_PER_BLOCK_SIDE               17
@@ -22,17 +26,11 @@
 
 
 
-#define TG_GPU_ACCELERATED 1
-
-
-
 typedef void* tg_semaphore_h;
 typedef void* tg_thread_h;
 
 typedef struct tg_terrain_octree_node
 {
-	//tg_mesh_h              h_block_mesh; // TODO: create getter for mesh, so i dont have to save it in here for destruction
-	//tg_mesh_h              ph_transition_meshes[6]; // TODO: create getter for mesh, so i dont have to save it in here for destruction
 	tg_render_command_h    h_block_render_command;
 	tg_render_command_h    ph_transition_render_commands[6];
 } tg_terrain_octree_node;
@@ -51,7 +49,7 @@ typedef struct tg_terrain
 	tg_semaphore_h                h_semaphore;
 	tg_thread_h                   h_thread;
 
-#if TG_GPU_ACCELERATED == 1
+#if TG_TERRAIN_GPU_ACCELERATED == 1
 	tg_color_image_3d_h           h_voxel_map_image_3d;
 	tg_uniform_buffer_h           h_ubo;
 	tg_storage_buffer_h           h_positions_storage_buffer;
