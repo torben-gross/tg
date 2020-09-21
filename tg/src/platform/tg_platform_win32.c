@@ -654,7 +654,7 @@ void tg_platform_work_queue_add_entry(tg_thread_fn* p_thread_fn, volatile void* 
 {
     TG_ASSERT(p_thread_fn);
 
-    WaitForSingleObject(work_queue.h_push_mutex, INFINITE);
+    TG_MUTEX_LOCK(work_queue.h_push_mutex);
     work_queue.pp_user_datas[work_queue.one_past_last] = p_user_data;
     work_queue.pp_work_fns[work_queue.one_past_last] = p_thread_fn;
     work_queue.one_past_last = tgm_u32_incmod(work_queue.one_past_last, TG_WORK_QUEUE_MAX_ENTRY_COUNT);

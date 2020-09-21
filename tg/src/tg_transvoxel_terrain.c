@@ -1,7 +1,6 @@
 #include "tg_transvoxel_terrain.h"
 
 #include "memory/tg_memory.h"
-#include "platform/tg_platform.h"
 #include "tg_transvoxel_lookup_tables.h"
 #include "util/tg_string.h"
 #include <smmintrin.h>
@@ -1024,7 +1023,21 @@ static void tg__thread_fn(volatile tg_terrain* p_terrain)
 				tg_memory_copy(sizeof(p_octree->p_should_split_bitmap_temp), (const void*)p_octree->p_should_split_bitmap_temp, (void*)p_octree->p_should_split_bitmap_stable);
 			}
 		}
+
+		p_terrain->available_for_destruction = TG_TRUE;
 		TG_SEMAPHORE_WAIT(p_terrain->h_semaphore);
+
+		TG_CRITICAL_SECTION_ENTER(p_terrain->critical_section);
+		if (!p_terrain->currently_destructing)
+		{
+			TG_CONDITION_VARIABLE_WAIT(p_terrain->continue_terrain_thread_condition_variable, p_terrain->critical_section);
+		}
+		// TODO: destruction here!
+
+
+		p_terrain->currently_destructing = TG_FALSE;
+		TG_CRITICAL_SECTION_EXIT(p_terrain->critical_section);
+		TG_CONDITION_VARIABLE_WAKE(p_terrain->continue_main_thread_condition_variable);
 	}
 
 	for (u8 i = 0; i < TG_TERRAIN_OCTREES; i++)
@@ -1057,6 +1070,9 @@ tg_terrain* tg_terrain_create(tg_camera* p_camera)
 	p_terrain->p_camera = p_camera;
 	p_terrain->h_material = tg_material_create_deferred(tg_vertex_shader_get("shaders/deferred/terrain.vert"), tg_fragment_shader_get("shaders/deferred/terrain.frag"));
 	p_terrain->h_semaphore = TG_SEMAPHORE_CREATE(1, 1);
+	TG_CONDITION_VARIABLE_INITIALIZE(p_terrain->continue_main_thread_condition_variable);
+	TG_CONDITION_VARIABLE_INITIALIZE(p_terrain->continue_terrain_thread_condition_variable);
+	TG_CRITICAL_SECTION_INITIALIZE(p_terrain->critical_section);
 	p_terrain->h_thread = tg_thread_create(tg__thread_fn, p_terrain);
 
 	return p_terrain;
@@ -1079,7 +1095,23 @@ void tg_terrain_update(tg_terrain* p_terrain)
 {
 	TG_ASSERT(p_terrain);
 
-	TG_SEMAPHORE_TRY_RELEASE(p_terrain->h_semaphore);
+	const b32 result = TG_SEMAPHORE_TRY_RELEASE(p_terrain->h_semaphore);
+	if (result)
+	{
+		TG_CRITICAL_SECTION_ENTER(p_terrain->critical_section);
+		const b32 start_destruction = p_terrain->available_for_destruction;
+		if (start_destruction)
+		{
+			p_terrain->available_for_destruction = TG_FALSE;
+			p_terrain->currently_destructing = TG_TRUE;
+			TG_CONDITION_VARIABLE_WAKE(p_terrain->continue_terrain_thread_condition_variable);
+		}
+		if (start_destruction)
+		{
+			TG_CONDITION_VARIABLE_WAIT(p_terrain->continue_main_thread_condition_variable, p_terrain->critical_section);
+		}
+		TG_CRITICAL_SECTION_EXIT(p_terrain->critical_section);
+	}
 }
 
 void tg_terrain_render(tg_terrain* p_terrain, tg_renderer_h h_renderer)

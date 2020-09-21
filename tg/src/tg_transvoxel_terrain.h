@@ -2,6 +2,7 @@
 #define TG_TRANSVOXEL_TERRAIN_H
 
 #include "graphics/tg_graphics.h"
+#include "platform/tg_platform.h"
 
 
 
@@ -34,6 +35,7 @@ typedef struct tg_terrain_octree_node
 typedef struct tg_terrain_octree
 {
 	v3i                       min_coords;
+	b32                       out_of_critical_section;
 	tg_terrain_octree_node    p_nodes[TG_TERRAIN_NODES_PER_OCTREE];
 	u8                        p_should_split_bitmap_temp[TG_TERRAIN_NODES_PER_OCTREE_CEIL / 8];
 	u8                        p_should_split_bitmap_stable[TG_TERRAIN_NODES_PER_OCTREE_CEIL / 8];
@@ -41,11 +43,18 @@ typedef struct tg_terrain_octree
 
 typedef struct tg_terrain
 {
-	tg_camera*             p_camera;
-	tg_material_h          h_material;
-	tg_semaphore_h         h_semaphore;
-	tg_thread_h            h_thread;
-	tg_terrain_octree      p_octrees[TG_TERRAIN_OCTREES];
+	tg_camera*               p_camera;
+	tg_material_h            h_material;
+	tg_semaphore_h           h_semaphore;
+	tg_thread_h              h_thread;
+
+	tg_condition_variable    continue_main_thread_condition_variable;
+	tg_condition_variable    continue_terrain_thread_condition_variable;
+	tg_critical_section      critical_section;
+	b32                      available_for_destruction;
+	b32                      currently_destructing;
+
+	tg_terrain_octree        p_octrees[TG_TERRAIN_OCTREES];
 } tg_terrain;
 
 
