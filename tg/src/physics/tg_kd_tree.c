@@ -228,8 +228,8 @@ static void tg__thread_fn(volatile void* p_user_data)
 		{
 			p_node->flags = 1 << split_axis;
 			p_node->node.split_position = split_position;
-			p_node->node.p_child_indices[0] = TG_INTERLOCKED_INCREMENT_I32(&p_work_thread_info->p_tree->node_count) - 1;
-			p_node->node.p_child_indices[1] = TG_INTERLOCKED_INCREMENT_I32(&p_work_thread_info->p_tree->node_count) - 1;
+			p_node->node.p_child_indices[0] = TG_ATOMIC_INCREMENT_I32(&p_work_thread_info->p_tree->node_count) - 1;
+			p_node->node.p_child_indices[1] = TG_ATOMIC_INCREMENT_I32(&p_work_thread_info->p_tree->node_count) - 1;
 
 			tg_bounds b0, b1;
 			tg__split_bounds(&bounds, split_axis, split_position, &b0, &b1);

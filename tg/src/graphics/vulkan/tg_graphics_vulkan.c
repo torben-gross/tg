@@ -2966,6 +2966,11 @@ void tg_graphics_shutdown(void)
     }
     vkDestroyCommandPool(device, present_command_pool, TG_NULL);
 
+    for (u32 i = 0; i < TGVK_QUEUE_TYPE_COUNT; i++)
+    {
+        tgvk_fence_destroy(p_queues[i].fence);
+    }
+
     vkDestroyDevice(device, TG_NULL);
 #ifdef TG_DEBUG
     PFN_vkDestroyDebugUtilsMessengerEXT vkDestroyDebugUtilsMessengerEXT = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
