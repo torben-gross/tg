@@ -295,7 +295,7 @@ static void tg__game_3d_update_and_render(f32 dt)
         scene.camera.persp.fov_y_in_radians -= 0.1f * tg_input_get_mouse_wheel_detents(TG_TRUE);
     }
 
-    tg_terrain_update(scene.p_terrain);
+    // TODO: tg_terrain_update_voxel_map...
 
     scene.light_timer += dt;
     while (scene.light_timer > 32000.0f)

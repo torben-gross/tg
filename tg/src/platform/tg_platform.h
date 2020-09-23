@@ -49,6 +49,12 @@
 #define TG_SEMAPHORE_CREATE(initial_count, maximum_count)                   ((tg_semaphore_h)CreateSemaphoreEx(TG_NULL, 0, maximum_count, TG_NULL, 0, SEMAPHORE_ALL_ACCESS))
 #define TG_SEMAPHORE_TRY_RELEASE(h_semaphore)                               ReleaseSemaphore((HANDLE)(h_semaphore), 1, TG_NULL)
 
+#define TG_RWL_CREATE()                                                     (tg_read_write_lock)SRWLOCK_INIT
+#define TG_RWL_LOCK_WRITE(read_write_lock)                                  AcquireSRWLockExclusive((PSRWLOCK)&(read_write_lock))
+#define TG_RWL_LOCK_READ(read_write_lock)                                   AcquireSRWLockShared((PSRWLOCK)&(read_write_lock))
+#define TG_RWL_UNLOCK_WRITE(read_write_lock)                                ReleaseSRWLockExclusive((PSRWLOCK)&(read_write_lock))
+#define TG_RWL_UNLOCK_READ(read_write_lock)                                 ReleaseSRWLockShared((PSRWLOCK)&(read_write_lock))
+
 #ifdef TG_DEBUG
 #define TG_MUTEX_DESTROY(h_mutex)                                           TG_ASSERT(CloseHandle((HANDLE)(h_mutex)))
 #define TG_MUTEX_LOCK(h_mutex)                                              TG_ASSERT(WaitForSingleObject((HANDLE)(h_mutex), INFINITE) == WAIT_OBJECT_0)
@@ -65,6 +71,7 @@
 #define TG_SEMAPHORE_RELEASE(h_semaphore)                                   ReleaseSemaphore((HANDLE)(h_semaphore), 1, TG_NULL)
 #endif
 
+typedef SRWLOCK               tg_read_write_lock;
 typedef CONDITION_VARIABLE    tg_condition_variable;
 typedef CRITICAL_SECTION      tg_critical_section;
 typedef HANDLE                tg_mutex_h;

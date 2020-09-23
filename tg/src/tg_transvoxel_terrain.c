@@ -7,8 +7,8 @@
 
 
 
-#define TG_TERRAIN_SHOULD_SPLIT(p_should_split_bitmap, node_index) \
-	(((p_should_split_bitmap)[(node_index) / 8] & 1 << ((node_index) % 8)) >> ((node_index) % 8))
+#define TG_TERRAIN_SHOULD_RENDER(p_should_render_bitmap, node_index) \
+	(((p_should_render_bitmap)[(node_index) / 8] & 1 << ((node_index) % 8)) >> ((node_index) % 8))
 
 #define TG_TERRAIN_OCTREE_MIN_COORDS_TO_INDEX_3D(min_coords) \
 	((v3i) {                                                 \
@@ -30,6 +30,8 @@
 		(octree_index_3d).y * TG_TERRAIN_OCTREE_STRIDE_IN_CELLS,  \
 		(octree_index_3d).z * TG_TERRAIN_OCTREE_STRIDE_IN_CELLS   \
 	})
+
+
 
 
 
@@ -216,12 +218,12 @@ static u8 tg__get_transition_mask(volatile tg_terrain* p_terrain, volatile tg_te
 		const i32 node_index_4 = first_index_of_lod + nodes_per_lod * node_index_nz + sqrt_nodes_per_lod * node_index_3d.y + node_index_3d.x;
 		const i32 node_index_5 = first_index_of_lod + nodes_per_lod * node_index_pz + sqrt_nodes_per_lod * node_index_3d.y + node_index_3d.x;
 
-		transition_mask |= p_octree_nx ? TG_TERRAIN_SHOULD_SPLIT(p_octree_nx->p_should_split_bitmap_stable, node_index_0)      : 0;
-		transition_mask |= p_octree_px ? TG_TERRAIN_SHOULD_SPLIT(p_octree_px->p_should_split_bitmap_stable, node_index_1) << 1 : 0;
-		transition_mask |= p_octree_ny ? TG_TERRAIN_SHOULD_SPLIT(p_octree_ny->p_should_split_bitmap_stable, node_index_2) << 2 : 0;
-		transition_mask |= p_octree_py ? TG_TERRAIN_SHOULD_SPLIT(p_octree_py->p_should_split_bitmap_stable, node_index_3) << 3 : 0;
-		transition_mask |= p_octree_nz ? TG_TERRAIN_SHOULD_SPLIT(p_octree_nz->p_should_split_bitmap_stable, node_index_4) << 4 : 0;
-		transition_mask |= p_octree_pz ? TG_TERRAIN_SHOULD_SPLIT(p_octree_pz->p_should_split_bitmap_stable, node_index_5) << 5 : 0;
+		transition_mask |= p_octree_nx ? !TG_TERRAIN_SHOULD_RENDER(p_octree_nx->p_should_render_bitmap_stable, node_index_0)      : 0;
+		transition_mask |= p_octree_px ? !TG_TERRAIN_SHOULD_RENDER(p_octree_px->p_should_render_bitmap_stable, node_index_1) << 1 : 0;
+		transition_mask |= p_octree_ny ? !TG_TERRAIN_SHOULD_RENDER(p_octree_ny->p_should_render_bitmap_stable, node_index_2) << 2 : 0;
+		transition_mask |= p_octree_py ? !TG_TERRAIN_SHOULD_RENDER(p_octree_py->p_should_render_bitmap_stable, node_index_3) << 3 : 0;
+		transition_mask |= p_octree_nz ? !TG_TERRAIN_SHOULD_RENDER(p_octree_nz->p_should_render_bitmap_stable, node_index_4) << 4 : 0;
+		transition_mask |= p_octree_pz ? !TG_TERRAIN_SHOULD_RENDER(p_octree_pz->p_should_render_bitmap_stable, node_index_5) << 5 : 0;
 	}
 
 	return transition_mask;
@@ -678,6 +680,7 @@ static void tg__build_transition(v3i octree_min_coords, v3i node_coords_offset_r
 
 			for (u8 i = 0; i < triangle_count; i++)
 			{
+				v3 triangle_gradient = { 0 };
 				for (u8 j = 0; j < 3; j++)
 				{
 					const u16 edge_code = p_transition_vertex_data[case_code][p_cell_data->p_vertex_indices[3 * i + j]];
@@ -724,8 +727,30 @@ static void tg__build_transition(v3i octree_min_coords, v3i node_coords_offset_r
 					}
 					TG_ASSERT(d0 != d1);
 
-					const i32 t = (d1 << 8) / (d1 - d0);
+					const i32 fst = 0;
+					const i32 lst = TG_TERRAIN_VOXEL_MAP_STRIDE - 1;
 
+					const f32 g0_nx = ((f32)TG_TERRAIN_VOXEL_MAP_AT(p_voxel_map, i0.x == fst ? fst : i0.x - 1, i0.y, i0.z) + 127.0f) / 254.0f;
+					const f32 g0_px = ((f32)TG_TERRAIN_VOXEL_MAP_AT(p_voxel_map, i0.x == lst ? lst : i0.x + 1, i0.y, i0.z) + 127.0f) / 254.0f;
+					const f32 g0_ny = ((f32)TG_TERRAIN_VOXEL_MAP_AT(p_voxel_map, i0.x, i0.y == fst ? fst : i0.y - 1, i0.z) + 127.0f) / 254.0f;
+					const f32 g0_py = ((f32)TG_TERRAIN_VOXEL_MAP_AT(p_voxel_map, i0.x, i0.y == lst ? lst : i0.y + 1, i0.z) + 127.0f) / 254.0f;
+					const f32 g0_nz = ((f32)TG_TERRAIN_VOXEL_MAP_AT(p_voxel_map, i0.x, i0.y, i0.z == fst ? fst : i0.z - 1) + 127.0f) / 254.0f;
+					const f32 g0_pz = ((f32)TG_TERRAIN_VOXEL_MAP_AT(p_voxel_map, i0.x, i0.y, i0.z == lst ? lst : i0.z + 1) + 127.0f) / 254.0f;
+					f32 g0_x = g0_px - g0_nx;
+					f32 g0_y = g0_py - g0_ny;
+					f32 g0_z = g0_pz - g0_nz;
+
+					const f32 g1_nx = ((f32)TG_TERRAIN_VOXEL_MAP_AT(p_voxel_map, i1.x == fst ? fst : i1.x - 1, i1.y, i1.z) + 127.0f) / 254.0f;
+					const f32 g1_px = ((f32)TG_TERRAIN_VOXEL_MAP_AT(p_voxel_map, i1.x == lst ? lst : i1.x + 1, i1.y, i1.z) + 127.0f) / 254.0f;
+					const f32 g1_ny = ((f32)TG_TERRAIN_VOXEL_MAP_AT(p_voxel_map, i1.x, i1.y == fst ? fst : i1.y - 1, i1.z) + 127.0f) / 254.0f;
+					const f32 g1_py = ((f32)TG_TERRAIN_VOXEL_MAP_AT(p_voxel_map, i1.x, i1.y == lst ? lst : i1.y + 1, i1.z) + 127.0f) / 254.0f;
+					const f32 g1_nz = ((f32)TG_TERRAIN_VOXEL_MAP_AT(p_voxel_map, i1.x, i1.y, i1.z == fst ? fst : i1.z - 1) + 127.0f) / 254.0f;
+					const f32 g1_pz = ((f32)TG_TERRAIN_VOXEL_MAP_AT(p_voxel_map, i1.x, i1.y, i1.z == lst ? lst : i1.z + 1) + 127.0f) / 254.0f;
+					f32 g1_x = g1_px - g1_nx;
+					f32 g1_y = g1_py - g1_ny;
+					f32 g1_z = g1_pz - g1_nz;
+
+					const i32 t = (d1 << 8) / (d1 - d0);
 					const f32 t0 = (f32)t / 256.0f;
 					const f32 t1 = (f32)(0x100 - t) / 256.0f;
 
@@ -734,6 +759,9 @@ static void tg__build_transition(v3i octree_min_coords, v3i node_coords_offset_r
 						p_triangle_positions[j].x = (f32)p0.x * t0 + (f32)p1.x * t1;
 						p_triangle_positions[j].y = (f32)p0.y * t0 + (f32)p1.y * t1;
 						p_triangle_positions[j].z = (f32)p0.z * t0 + (f32)p1.z * t1;
+						triangle_gradient.x += g0_x * t0 + g1_x * t1;
+						triangle_gradient.y += g0_y * t0 + g1_y * t1;
+						triangle_gradient.z += g0_z * t0 + g1_z * t1;
 					}
 					else
 					{
@@ -742,12 +770,18 @@ static void tg__build_transition(v3i octree_min_coords, v3i node_coords_offset_r
 							p_triangle_positions[j].x = (f32)p1.x;
 							p_triangle_positions[j].y = (f32)p1.y;
 							p_triangle_positions[j].z = (f32)p1.z;
+							triangle_gradient.x += g1_x;
+							triangle_gradient.y += g1_y;
+							triangle_gradient.z += g1_z;
 						}
 						else
 						{
 							p_triangle_positions[j].x = (f32)p0.x;
 							p_triangle_positions[j].y = (f32)p0.y;
 							p_triangle_positions[j].z = (f32)p0.z;
+							triangle_gradient.x += g0_x;
+							triangle_gradient.y += g0_y;
+							triangle_gradient.z += g0_z;
 						}
 					}
 				}
@@ -768,17 +802,11 @@ static void tg__build_transition(v3i octree_min_coords, v3i node_coords_offset_r
 
 				if (magsqr != 0.0f)
 				{
-					const f32 mag = tgm_f32_sqrt(magsqr);
-					v3 n = { cross_x / mag, cross_y / mag, cross_z / mag };
-
 					if (invert)
 					{
 						p_position_buffer[0] = p_triangle_positions[0];
 						p_position_buffer[1] = p_triangle_positions[2];
 						p_position_buffer[2] = p_triangle_positions[1];
-						n.x = -n.x;
-						n.y = -n.y;
-						n.z = -n.z;
 					}
 					else
 					{
@@ -788,9 +816,23 @@ static void tg__build_transition(v3i octree_min_coords, v3i node_coords_offset_r
 					}
 					p_position_buffer += 3;
 
-					p_normal_buffer[0] = n;
-					p_normal_buffer[1] = n;
-					p_normal_buffer[2] = n;
+					const f32 g0_mag = tgm_f32_sqrt(triangle_gradient.x * triangle_gradient.x + triangle_gradient.y * triangle_gradient.y + triangle_gradient.z * triangle_gradient.z);
+					if (g0_mag != 0.0f)
+					{
+						triangle_gradient.x /= g0_mag;
+						triangle_gradient.y /= g0_mag;
+						triangle_gradient.z /= g0_mag;
+					}
+					else
+					{
+						triangle_gradient.x = 0.0f;
+						triangle_gradient.y = 1.0f;
+						triangle_gradient.z = 0.0f;
+					}
+
+					p_normal_buffer[0] = triangle_gradient;
+					p_normal_buffer[1] = triangle_gradient;
+					p_normal_buffer[2] = triangle_gradient;
 					p_normal_buffer += 3;
 
 					*p_vertex_count += 3;
@@ -800,7 +842,7 @@ static void tg__build_transition(v3i octree_min_coords, v3i node_coords_offset_r
 	}
 }
 
-static void tg__build_node(volatile tg_terrain* p_terrain, volatile tg_terrain_octree* p_octree, const i8* p_voxel_map, v3i node_index_3d, u8 lod, u16 first_index_of_lod, v3* p_position_buffer, v3* p_normal_buffer)
+static void tg__build_nodes(tg_material_h h_material, volatile tg_terrain_octree* p_octree, const i8* p_voxel_map, v3i node_index_3d, u8 lod, u16 first_index_of_lod, v3* p_position_buffer, v3* p_normal_buffer)
 {
 	const u8 inv_lod = TG_TERRAIN_MAX_LOD - lod;
 	const u8 sqrt_nodes_per_lod = 1 << inv_lod;
@@ -810,11 +852,16 @@ static void tg__build_node(volatile tg_terrain* p_terrain, volatile tg_terrain_o
 
 	volatile tg_terrain_octree_node* p_node = &p_octree->p_nodes[node_index];
 
-	if (!TG_TERRAIN_SHOULD_SPLIT(p_octree->p_should_split_bitmap_temp, node_index))
+	if (TG_TERRAIN_SHOULD_RENDER(p_octree->p_should_render_bitmap_temp, node_index))
 	{
+		p_node->flags &= ~TG_TERRAIN_FLAG_DESTROY;
+
 		i32 vertex_count = 0;
-		if (!p_node->h_block_render_command)
+		if (!(p_node->flags & TG_TERRAIN_FLAG_CONSTRUCTED))
 		{
+			TG_ASSERT(!p_node->h_block_render_command);
+			p_node->flags |= TG_TERRAIN_FLAG_CONSTRUCTED;
+
 			tg__build_regular(p_octree->min_coords, node_coords_offset_rel_to_octree, lod, p_voxel_map, &vertex_count, p_position_buffer, p_normal_buffer);
 
 			if (vertex_count)
@@ -822,22 +869,25 @@ static void tg__build_node(volatile tg_terrain* p_terrain, volatile tg_terrain_o
 				tg_mesh_h h_mesh = tg_mesh_create();
 				tg_mesh_set_positions(h_mesh, vertex_count, p_position_buffer);
 				tg_mesh_set_normals(h_mesh, vertex_count, p_normal_buffer);
-				p_node->h_block_render_command = tg_render_command_create(h_mesh, p_terrain->h_material, V3(0), 0, TG_NULL);
+				p_node->h_block_render_command = tg_render_command_create(h_mesh, h_material, V3(0), 0, TG_NULL);
 			}
 
 			if (lod > 0)
 			{
 				for (u8 transition_index = 0; transition_index < 6; transition_index++)
 				{
-					vertex_count = 0;
-					tg__build_transition(p_octree->min_coords, node_coords_offset_rel_to_octree, lod, p_voxel_map, transition_index, &vertex_count, p_position_buffer, p_normal_buffer);
-		
-					if (vertex_count)
+					if (!p_node->ph_transition_render_commands[transition_index])
 					{
-						tg_mesh_h h_mesh = tg_mesh_create();
-						tg_mesh_set_positions(h_mesh, vertex_count, p_position_buffer);
-						tg_mesh_set_normals(h_mesh, vertex_count, p_normal_buffer);
-						p_node->ph_transition_render_commands[transition_index] = tg_render_command_create(h_mesh, p_terrain->h_material, V3(0), 0, TG_NULL);
+						vertex_count = 0;
+						tg__build_transition(p_octree->min_coords, node_coords_offset_rel_to_octree, lod, p_voxel_map, transition_index, &vertex_count, p_position_buffer, p_normal_buffer);
+		
+						if (vertex_count)
+						{
+							tg_mesh_h h_mesh = tg_mesh_create();
+							tg_mesh_set_positions(h_mesh, vertex_count, p_position_buffer);
+							tg_mesh_set_normals(h_mesh, vertex_count, p_normal_buffer);
+							p_node->ph_transition_render_commands[transition_index] = tg_render_command_create(h_mesh, h_material, V3(0), 0, TG_NULL);
+						}
 					}
 				}
 			}
@@ -863,7 +913,7 @@ static void tg__build_node(volatile tg_terrain* p_terrain, volatile tg_terrain_o
 				{
 					for (u8 ix = x0; ix < x1; ix++)
 					{
-						tg__build_node(p_terrain, p_octree, p_voxel_map, (v3i) { ix, iy, iz }, lod - 1, child_first_index_of_lod, p_position_buffer, p_normal_buffer);
+						tg__build_nodes(h_material, p_octree, p_voxel_map, (v3i) { ix, iy, iz }, lod - 1, child_first_index_of_lod, p_position_buffer, p_normal_buffer);
 					}
 				}
 			}
@@ -875,76 +925,96 @@ static void tg__build_octree(volatile tg_terrain* p_terrain, volatile tg_terrain
 {
 	const v3i octree_index_3d = TG_TERRAIN_OCTREE_MIN_COORDS_TO_INDEX_3D(p_octree->min_coords);
 
-	const u64 voxel_map_size = TG_TERRAIN_VOXEL_MAP_VOXELS * sizeof(i8);
-	i8* p_voxel_map = TG_MEMORY_STACK_ALLOC_ASYNC(voxel_map_size);
-
-	char p_filename_buffer[TG_MAX_PATH] = { 0 };
-	tg_string_format(sizeof(p_filename_buffer), p_filename_buffer, "terrain/octree_%i_%i_%i.txt", octree_index_3d.x, octree_index_3d.y, octree_index_3d.z);
-	const b32 exists = tg_platform_file_exists(p_filename_buffer);
-	if (!exists)
+	if (!p_octree->p_voxel_map)
 	{
-		tg__fill_voxel_map(p_octree->min_coords, p_voxel_map);
+		const u64 voxel_map_size = TG_TERRAIN_VOXEL_MAP_VOXELS * sizeof(*p_octree->p_voxel_map);
+		p_octree->p_voxel_map = TG_MEMORY_ALLOC(voxel_map_size);
 
-		u32 compressed_voxel_map_size;
-		void* p_compressed_voxel_map_buffer = TG_MEMORY_STACK_ALLOC_ASYNC(voxel_map_size);
-		tg__compress_voxel_map(p_voxel_map, &compressed_voxel_map_size, p_compressed_voxel_map_buffer);
-		tg_platform_file_create(p_filename_buffer, compressed_voxel_map_size, p_compressed_voxel_map_buffer, TG_FALSE);
-		TG_MEMORY_STACK_FREE_ASYNC(voxel_map_size);
-	}
-	else
-	{
-		tg_file_properties file_properties = { 0 };
-		tg_platform_file_get_properties(p_filename_buffer, &file_properties);
-		i8* p_file_data = TG_MEMORY_STACK_ALLOC_ASYNC(file_properties.size);
-		tg_platform_file_read(p_filename_buffer, file_properties.size, p_file_data);
-		tg__decompress_voxel_map(p_file_data, p_voxel_map);
-		TG_MEMORY_STACK_FREE_ASYNC(file_properties.size);
+		char p_filename_buffer[TG_MAX_PATH] = { 0 };
+		tg_string_format(sizeof(p_filename_buffer), p_filename_buffer, "terrain/octree_%i_%i_%i.txt", octree_index_3d.x, octree_index_3d.y, octree_index_3d.z);
+		const b32 exists = tg_platform_file_exists(p_filename_buffer);
+		if (!exists)
+		{
+			tg__fill_voxel_map(p_octree->min_coords, p_octree->p_voxel_map);
+
+			u32 compressed_voxel_map_size;
+			void* p_compressed_voxel_map_buffer = TG_MEMORY_STACK_ALLOC_ASYNC(voxel_map_size);
+			tg__compress_voxel_map(p_octree->p_voxel_map, &compressed_voxel_map_size, p_compressed_voxel_map_buffer);
+			tg_platform_file_create(p_filename_buffer, compressed_voxel_map_size, p_compressed_voxel_map_buffer, TG_FALSE);
+			TG_MEMORY_STACK_FREE_ASYNC(voxel_map_size);
+		}
+		else
+		{
+			tg_file_properties file_properties = { 0 };
+			tg_platform_file_get_properties(p_filename_buffer, &file_properties);
+			i8* p_file_data = TG_MEMORY_STACK_ALLOC_ASYNC(file_properties.size);
+			tg_platform_file_read(p_filename_buffer, file_properties.size, p_file_data);
+			tg__decompress_voxel_map(p_file_data, p_octree->p_voxel_map);
+			TG_MEMORY_STACK_FREE_ASYNC(file_properties.size);
+		}
 	}
 
 	const u64 vertices_size = 15 * TG_TERRAIN_CELLS_PER_BLOCK * sizeof(v3);
 	v3* p_position_buffer = TG_MEMORY_STACK_ALLOC_ASYNC(vertices_size);
 	v3* p_normal_buffer = TG_MEMORY_STACK_ALLOC_ASYNC(vertices_size);
-	tg__build_node(p_terrain, p_octree, p_voxel_map, V3I(0), TG_TERRAIN_MAX_LOD, 0, p_position_buffer, p_normal_buffer);
+	tg__build_nodes(p_terrain->h_material, p_octree, p_octree->p_voxel_map, V3I(0), TG_TERRAIN_MAX_LOD, 0, p_position_buffer, p_normal_buffer);
 	TG_MEMORY_STACK_FREE_ASYNC(vertices_size);
 	TG_MEMORY_STACK_FREE_ASYNC(vertices_size);
-	TG_MEMORY_STACK_FREE_ASYNC(voxel_map_size);
+}
+
+static void tg__destroy_marked_nodes(volatile tg_terrain_octree* p_octree)
+{
+	for (u32 i = 0; i < TG_TERRAIN_NODES_PER_OCTREE; i++)
+	{
+		volatile tg_terrain_octree_node* p_node = &p_octree->p_nodes[i];
+		if (p_node->flags & TG_TERRAIN_FLAG_DESTROY)
+		{
+			p_node->flags = 0;
+
+			if (p_node->h_block_render_command)
+			{
+				tg_mesh_destroy(tg_render_command_get_mesh(p_node->h_block_render_command));
+				tg_render_command_destroy(p_node->h_block_render_command);
+				p_node->h_block_render_command = TG_NULL;
+			}
+
+			for (u8 k = 0; k < 6; k++)
+			{
+				if (p_node->ph_transition_render_commands[k])
+				{
+					tg_mesh_destroy(tg_render_command_get_mesh(p_node->ph_transition_render_commands[k]));
+					tg_render_command_destroy(p_node->ph_transition_render_commands[k]);
+					p_node->ph_transition_render_commands[k] = TG_NULL;
+				}
+			}
+		}
+	}
+}
+
+static void tg__mark_nodes(volatile tg_terrain_octree* p_octree)
+{
+	for (u32 node_index = 0; node_index < TG_TERRAIN_NODES_PER_OCTREE; node_index++)
+	{
+		if (TG_TERRAIN_SHOULD_RENDER(p_octree->p_should_render_bitmap_stable, node_index) && !TG_TERRAIN_SHOULD_RENDER(p_octree->p_should_render_bitmap_temp, node_index))
+		{
+			volatile tg_terrain_octree_node* p_node = &p_octree->p_nodes[node_index];
+			p_node->flags |= TG_TERRAIN_FLAG_DESTROY;
+		}
+	}
 }
 
 
 
-static void tg__render_node(volatile tg_terrain* p_terrain, volatile tg_terrain_octree* p_octree, v3i node_index_3d, u8 lod, u16 first_index_of_lod, tg_renderer_h h_renderer)
+static void tg__render_nodes(volatile tg_terrain* p_terrain, volatile tg_terrain_octree* p_octree, v3i node_index_3d, u8 lod, u16 first_index_of_lod, tg_renderer_h h_renderer)
 {
 	const u8 inv_lod = TG_TERRAIN_MAX_LOD - lod;
 	const u8 sqrt_nodes_per_lod = 1 << inv_lod;
 	const u16 node_index = first_index_of_lod + sqrt_nodes_per_lod * sqrt_nodes_per_lod * (u16)node_index_3d.z + sqrt_nodes_per_lod * (u16)node_index_3d.y + (u16)node_index_3d.x;
 
-	if (TG_TERRAIN_SHOULD_SPLIT(p_octree->p_should_split_bitmap_stable, node_index))
-	{
-		const u16 child_first_index_of_lod = first_index_of_lod + (1 << (3 * inv_lod));
-
-		const u8 x0 = 2 * (u8)node_index_3d.x;
-		const u8 y0 = 2 * (u8)node_index_3d.y;
-		const u8 z0 = 2 * (u8)node_index_3d.z;
-
-		const u8 x1 = x0 + 2;
-		const u8 y1 = y0 + 2;
-		const u8 z1 = z0 + 2;
-
-		for (u8 iz = z0; iz < z1; iz++)
-		{
-			for (u8 iy = y0; iy < y1; iy++)
-			{
-				for (u8 ix = x0; ix < x1; ix++)
-				{
-					tg__render_node(p_terrain, p_octree, (v3i) { ix, iy, iz }, lod - 1, child_first_index_of_lod, h_renderer);
-				}
-			}
-		}
-	}
-	else
+	if (TG_TERRAIN_SHOULD_RENDER(p_octree->p_should_render_bitmap_stable, node_index))
 	{
 		volatile tg_terrain_octree_node* p_node = &p_octree->p_nodes[node_index];
-		
+
 		if (p_node->h_block_render_command)
 		{
 			tg_renderer_exec(h_renderer, p_node->h_block_render_command);
@@ -959,26 +1029,7 @@ static void tg__render_node(volatile tg_terrain* p_terrain, volatile tg_terrain_
 			}
 		}
 	}
-}
-
-static void tg__update_node(volatile tg_terrain* p_terrain, volatile tg_terrain_octree* p_octree, v3i node_index_3d, u8 lod, u16 first_index_of_lod)
-{
-	const u8 inv_lod = TG_TERRAIN_MAX_LOD - lod;
-	const u8 sqrt_nodes_per_lod = 1 << inv_lod;
-	const u16 node_index = first_index_of_lod + sqrt_nodes_per_lod * sqrt_nodes_per_lod * (u16)node_index_3d.z + sqrt_nodes_per_lod * (u16)node_index_3d.y + (u16)node_index_3d.x;
-	const u16 should_split_bitmap_offset = node_index / 8;
-	const u8 should_split_bitmap_bit = node_index % 8;
-	const u8 should_split_bitmap_mask = 1 << should_split_bitmap_bit;
-
-	const i32 scale = TG_TERRAIN_OCTREE_STRIDE_IN_CELLS / sqrt_nodes_per_lod;
-	const v3i node_coords_offset_rel_to_octree = { node_index_3d.x * scale, node_index_3d.y * scale, node_index_3d.z * scale };
-
-	const b32 should_split = tg__should_split_node(p_terrain->p_camera->position, tgm_v3i_add(p_octree->min_coords, node_coords_offset_rel_to_octree), lod);
-	volatile u8* p_bitmask = &p_octree->p_should_split_bitmap_temp[should_split_bitmap_offset];
-	*p_bitmask &= ~should_split_bitmap_mask;
-	*p_bitmask |= (u8)should_split << should_split_bitmap_bit;
-
-	if (should_split && lod > 0)
+	else if (lod > 0)
 	{
 		const u16 child_first_index_of_lod = first_index_of_lod + (1 << (3 * inv_lod));
 
@@ -996,7 +1047,53 @@ static void tg__update_node(volatile tg_terrain* p_terrain, volatile tg_terrain_
 			{
 				for (u8 ix = x0; ix < x1; ix++)
 				{
-					tg__update_node(p_terrain, p_octree, (v3i) { ix, iy, iz }, lod - 1, child_first_index_of_lod);
+					tg__render_nodes(p_terrain, p_octree, (v3i) { ix, iy, iz }, lod - 1, child_first_index_of_lod, h_renderer);
+				}
+			}
+		}
+	}
+}
+
+static void tg__update_nodes(v3 camera_position, volatile tg_terrain_octree* p_octree, v3i node_index_3d, u8 lod, u16 first_index_of_lod, b32 nullify)
+{
+	const u8 inv_lod = TG_TERRAIN_MAX_LOD - lod;
+	const u8 sqrt_nodes_per_lod = 1 << inv_lod;
+	const u16 node_index = first_index_of_lod + sqrt_nodes_per_lod * sqrt_nodes_per_lod * (u16)node_index_3d.z + sqrt_nodes_per_lod * (u16)node_index_3d.y + (u16)node_index_3d.x;
+	const u16 should_render_bitmap_offset = node_index / 8;
+	const u8 should_render_bitmap_bit = node_index % 8;
+	const u8 should_render_bitmap_mask = 1 << should_render_bitmap_bit;
+
+	const i32 scale = TG_TERRAIN_OCTREE_STRIDE_IN_CELLS / sqrt_nodes_per_lod;
+	const v3i node_coords_offset_rel_to_octree = { node_index_3d.x * scale, node_index_3d.y * scale, node_index_3d.z * scale };
+
+	volatile u8* p_bitmask = &p_octree->p_should_render_bitmap_temp[should_render_bitmap_offset];
+	*p_bitmask &= ~should_render_bitmap_mask;
+
+	if (!nullify)
+	{
+		nullify = !tg__should_split_node(camera_position, tgm_v3i_add(p_octree->min_coords, node_coords_offset_rel_to_octree), lod);
+		*p_bitmask |= (u8)nullify << should_render_bitmap_bit;
+	}
+
+	if (lod > 0)
+	{
+		const u16 child_first_index_of_lod = first_index_of_lod + (1 << (3 * inv_lod));
+
+		const u8 x0 = 2 * (u8)node_index_3d.x;
+		const u8 y0 = 2 * (u8)node_index_3d.y;
+		const u8 z0 = 2 * (u8)node_index_3d.z;
+
+		const u8 x1 = x0 + 2;
+		const u8 y1 = y0 + 2;
+		const u8 z1 = z0 + 2;
+
+		for (u8 iz = z0; iz < z1; iz++)
+		{
+			for (u8 iy = y0; iy < y1; iy++)
+			{
+				for (u8 ix = x0; ix < x1; ix++)
+				{
+					tg__update_nodes(camera_position, p_octree, (v3i) { ix, iy, iz }, lod - 1, child_first_index_of_lod, nullify);
 				}
 			}
 		}
@@ -1007,8 +1104,10 @@ static void tg__update_node(volatile tg_terrain* p_terrain, volatile tg_terrain_
 
 static void tg__thread_fn(volatile tg_terrain* p_terrain)
 {
-	while (p_terrain->p_camera)
+	while (p_terrain->is_thread_running)
 	{
+		const v3 stable_camera_position = p_terrain->p_camera->position;
+
 		for (i8 octree_index_z = -TG_TERRAIN_VIEW_DISTANCE_IN_OCTREES; octree_index_z < TG_TERRAIN_VIEW_DISTANCE_IN_OCTREES + 1; octree_index_z++)
 		{
 			for (i8 octree_index_x = -TG_TERRAIN_VIEW_DISTANCE_IN_OCTREES; octree_index_x < TG_TERRAIN_VIEW_DISTANCE_IN_OCTREES + 1; octree_index_x++)
@@ -1018,34 +1117,33 @@ static void tg__thread_fn(volatile tg_terrain* p_terrain)
 				volatile tg_terrain_octree* p_octree = tg__get_octree(p_terrain, (v3i) { octree_index_x, octree_index_y, octree_index_z });
 				p_octree->min_coords = TG_TERRAIN_OCTREE_INDEX_3D_TO_MIN_COORDS(octree_index_x, octree_index_y, octree_index_z);
 				
-				tg__update_node(p_terrain, p_octree, V3I(0), TG_TERRAIN_MAX_LOD, 0);
+				tg__update_nodes(stable_camera_position, p_octree, V3I(0), TG_TERRAIN_MAX_LOD, 0, TG_FALSE);
 				tg__build_octree(p_terrain, p_octree);
-				tg_memory_copy(sizeof(p_octree->p_should_split_bitmap_temp), (const void*)p_octree->p_should_split_bitmap_temp, (void*)p_octree->p_should_split_bitmap_stable);
+				tg__destroy_marked_nodes(p_octree);
+				tg__mark_nodes(p_octree);
 			}
 		}
 
-		p_terrain->available_for_destruction = TG_TRUE;
-		TG_SEMAPHORE_WAIT(p_terrain->h_semaphore);
-
-		TG_CRITICAL_SECTION_ENTER(p_terrain->critical_section);
-		if (!p_terrain->currently_destructing)
+		// TODO: if the terrain gen were fast enough, this copy could happen during the
+		// previous loop. right now - at least in DEBUG mode - octrees can differ by more
+		// than one LOD and thus create cracks.
+		TG_RWL_LOCK_WRITE(p_terrain->read_write_lock);
+		for (u32 i = 0; i < TG_TERRAIN_OCTREES; i++)
 		{
-			TG_CONDITION_VARIABLE_WAIT(p_terrain->continue_terrain_thread_condition_variable, p_terrain->critical_section);
+			volatile tg_terrain_octree* p_octree = &p_terrain->p_octrees[i];
+			tg_memory_copy(sizeof(p_octree->p_should_render_bitmap_temp), (const void*)p_octree->p_should_render_bitmap_temp, (void*)p_octree->p_should_render_bitmap_stable);
 		}
-		// TODO: destruction here!
-
-
-		p_terrain->currently_destructing = TG_FALSE;
-		TG_CRITICAL_SECTION_EXIT(p_terrain->critical_section);
-		TG_CONDITION_VARIABLE_WAKE(p_terrain->continue_main_thread_condition_variable);
+		TG_RWL_UNLOCK_WRITE(p_terrain->read_write_lock);
 	}
 
 	for (u8 i = 0; i < TG_TERRAIN_OCTREES; i++)
 	{
 		volatile tg_terrain_octree* p_octree = &p_terrain->p_octrees[i];
+
 		for (u32 j = 0; j < TG_TERRAIN_NODES_PER_OCTREE; j++)
 		{
 			volatile tg_terrain_octree_node* p_node = &p_octree->p_nodes[j];
+
 			if (p_node->h_block_render_command)
 			{
 				tg_mesh_destroy(tg_render_command_get_mesh(p_node->h_block_render_command));
@@ -1069,10 +1167,8 @@ tg_terrain* tg_terrain_create(tg_camera* p_camera)
 	tg_terrain* p_terrain = TG_MEMORY_ALLOC_NULLIFY(sizeof(*p_terrain));
 	p_terrain->p_camera = p_camera;
 	p_terrain->h_material = tg_material_create_deferred(tg_vertex_shader_get("shaders/deferred/terrain.vert"), tg_fragment_shader_get("shaders/deferred/terrain.frag"));
-	p_terrain->h_semaphore = TG_SEMAPHORE_CREATE(1, 1);
-	TG_CONDITION_VARIABLE_INITIALIZE(p_terrain->continue_main_thread_condition_variable);
-	TG_CONDITION_VARIABLE_INITIALIZE(p_terrain->continue_terrain_thread_condition_variable);
-	TG_CRITICAL_SECTION_INITIALIZE(p_terrain->critical_section);
+	p_terrain->read_write_lock = TG_RWL_CREATE();
+	p_terrain->is_thread_running = TG_TRUE;
 	p_terrain->h_thread = tg_thread_create(tg__thread_fn, p_terrain);
 
 	return p_terrain;
@@ -1082,42 +1178,20 @@ void tg_terrain_destroy(tg_terrain* p_terrain)
 {
 	TG_ASSERT(p_terrain);
 
-	p_terrain->p_camera = TG_NULL;
-	while (!TG_SEMAPHORE_TRY_RELEASE(p_terrain->h_semaphore)); // TODO: this is ugly. have a wait and a destroy
+	p_terrain->is_thread_running = TG_FALSE;
 	tg_thread_destroy(p_terrain->h_thread);
-	TG_SEMAPHORE_DESTROY(p_terrain->h_semaphore);
 	tg_material_destroy(p_terrain->h_material);
 
 	TG_MEMORY_FREE(p_terrain);
 }
 
-void tg_terrain_update(tg_terrain* p_terrain)
-{
-	TG_ASSERT(p_terrain);
-
-	const b32 result = TG_SEMAPHORE_TRY_RELEASE(p_terrain->h_semaphore);
-	if (result)
-	{
-		TG_CRITICAL_SECTION_ENTER(p_terrain->critical_section);
-		const b32 start_destruction = p_terrain->available_for_destruction;
-		if (start_destruction)
-		{
-			p_terrain->available_for_destruction = TG_FALSE;
-			p_terrain->currently_destructing = TG_TRUE;
-			TG_CONDITION_VARIABLE_WAKE(p_terrain->continue_terrain_thread_condition_variable);
-		}
-		if (start_destruction)
-		{
-			TG_CONDITION_VARIABLE_WAIT(p_terrain->continue_main_thread_condition_variable, p_terrain->critical_section);
-		}
-		TG_CRITICAL_SECTION_EXIT(p_terrain->critical_section);
-	}
-}
-
 void tg_terrain_render(tg_terrain* p_terrain, tg_renderer_h h_renderer)
 {
+	TG_RWL_LOCK_READ(p_terrain->read_write_lock);
 	for (u8 i = 0; i < TG_TERRAIN_OCTREES; i++)
 	{
-		tg__render_node(p_terrain, &p_terrain->p_octrees[i], V3I(0), TG_TERRAIN_MAX_LOD, 0, h_renderer);
+		volatile tg_terrain_octree* p_octree = &p_terrain->p_octrees[i];
+		tg__render_nodes(p_terrain, p_octree, V3I(0), TG_TERRAIN_MAX_LOD, 0, h_renderer);
 	}
+	TG_RWL_UNLOCK_READ(p_terrain->read_write_lock);
 }

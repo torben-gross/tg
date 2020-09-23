@@ -50,6 +50,7 @@ typedef enum tgvk_command_pool_type
 
 typedef enum tgvk_material_type
 {
+    TGVK_MATERIAL_TYPE_INVALID = 0,
     TGVK_MATERIAL_TYPE_DEFERRED,
     TGVK_MATERIAL_TYPE_FORWARD
 } tgvk_material_type;

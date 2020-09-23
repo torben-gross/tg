@@ -309,9 +309,10 @@ void main()
         color = color / (color + vec3(1.0));
         color = pow(color, vec3(1.0 / 2.2));
 
-        //vec3  d = u_camera_position - position;
-        //float t = clamp(sqrt(dot(d, d)) / 256.0f, 0.0, 1.0);
-        //color   = mix(color, sky_color.xyz, t);
+        vec3  d = u_camera_position - position;
+        float t = clamp(sqrt(dot(d, d)) / 1024.0f, 0.0, 1.0);
+        t = pow(t, 1.5);
+        color   = mix(color, sky_color.xyz, t);
 
         out_color = vec4(color, 1.0);
     }

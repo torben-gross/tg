@@ -169,6 +169,8 @@ void tg_render_command_destroy(tg_render_command_h h_render_command)
 
     for (u32 i = 0; i < h_render_command->renderer_info_count; i++)
     {
+        // TODO: lock fence
+        //tgvk_fence_wait(h_render_command->p_renderer_infos[i].h_renderer->render_target.fence);
         for (u32 j = 0; j < TG_CASCADED_SHADOW_MAPS; j++)
         {
             tgvk_command_buffer_destroy(&h_render_command->p_renderer_infos[i].p_shadow_command_buffers[j]);

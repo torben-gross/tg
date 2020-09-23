@@ -26,33 +26,36 @@
 typedef void* tg_semaphore_h;
 typedef void* tg_thread_h;
 
+typedef enum tg_terrain_flag
+{
+	TG_TERRAIN_FLAG_CONSTRUCTED    = 0x1,
+	TG_TERRAIN_FLAG_DESTROY        = 0x2
+} tg_terrain_flag;
+
 typedef struct tg_terrain_octree_node
 {
+	u32                    flags;
 	tg_render_command_h    h_block_render_command;
 	tg_render_command_h    ph_transition_render_commands[6];
 } tg_terrain_octree_node;
 
 typedef struct tg_terrain_octree
 {
+	u32                       flags;
 	v3i                       min_coords;
-	b32                       out_of_critical_section;
+	i8*                       p_voxel_map;
 	tg_terrain_octree_node    p_nodes[TG_TERRAIN_NODES_PER_OCTREE];
-	u8                        p_should_split_bitmap_temp[TG_TERRAIN_NODES_PER_OCTREE_CEIL / 8];
-	u8                        p_should_split_bitmap_stable[TG_TERRAIN_NODES_PER_OCTREE_CEIL / 8];
+	u8                        p_should_render_bitmap_temp[TG_TERRAIN_NODES_PER_OCTREE_CEIL / 8];
+	u8                        p_should_render_bitmap_stable[TG_TERRAIN_NODES_PER_OCTREE_CEIL / 8];
 } tg_terrain_octree;
 
 typedef struct tg_terrain
 {
 	tg_camera*               p_camera;
 	tg_material_h            h_material;
-	tg_semaphore_h           h_semaphore;
+	tg_read_write_lock       read_write_lock;
+	b32                      is_thread_running;
 	tg_thread_h              h_thread;
-
-	tg_condition_variable    continue_main_thread_condition_variable;
-	tg_condition_variable    continue_terrain_thread_condition_variable;
-	tg_critical_section      critical_section;
-	b32                      available_for_destruction;
-	b32                      currently_destructing;
 
 	tg_terrain_octree        p_octrees[TG_TERRAIN_OCTREES];
 } tg_terrain;
@@ -61,7 +64,6 @@ typedef struct tg_terrain
 
 tg_terrain*   tg_terrain_create(tg_camera* p_camera);
 void          tg_terrain_destroy(tg_terrain* p_terrain);
-void          tg_terrain_update(tg_terrain* p_terrain);
 void          tg_terrain_render(tg_terrain* p_terrain, tg_renderer_h h_renderer);
 
 #endif
