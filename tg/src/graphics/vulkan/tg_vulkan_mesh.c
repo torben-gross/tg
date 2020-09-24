@@ -75,14 +75,11 @@ void tg__set_buffer_data(tgvk_buffer* p_buffer, u64 size, const void* p_data, Vk
             *p_buffer = tgvk_buffer_create(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | buffer_type_flag, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
         }
 
-        // TODO: i could always save the last staging buffer and see if the required size
-        // is larger and potentially recreate. then i could reuse this staging buffer for
-        // everything! also, resizing would be nice. same applies for the case above.
-        tgvk_buffer staging_buffer = tgvk_buffer_create(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-        tg_memory_copy(size, p_data, staging_buffer.memory.p_mapped_device_memory);
-        tgvk_buffer_flush_mapped_memory(&staging_buffer);
-        tgvk_buffer_copy(size, &staging_buffer, p_buffer);
-        tgvk_buffer_destroy(&staging_buffer);
+        tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take(size);
+        tg_memory_copy(size, p_data, p_staging_buffer->memory.p_mapped_device_memory);
+        tgvk_buffer_flush_mapped_memory(p_staging_buffer);
+        tgvk_buffer_copy(size, p_staging_buffer, p_buffer);
+        tgvk_global_staging_buffer_release();
     }
     else
     {

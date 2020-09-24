@@ -17,7 +17,6 @@
 #define TG_MAX_MATERIALS                  512
 #define TG_MAX_MESHES                     65536
 #define TG_MAX_RENDER_COMMANDS            65536
-#define TG_MAX_RAYTRACERS                 2
 #define TG_MAX_RENDERERS                  4
 #define TG_MAX_STORAGE_BUFFERS            8
 #define TG_MAX_UNIFORM_BUFFERS            64
@@ -95,7 +94,6 @@ typedef enum tg_depth_image_format
 typedef enum tg_structure_type
 {
 	TG_STRUCTURE_TYPE_INVALID = 0,
-	TG_STRUCTURE_TYPE_STORAGE_BUFFER,
 	TG_STRUCTURE_TYPE_COLOR_IMAGE,
 	TG_STRUCTURE_TYPE_COLOR_IMAGE_3D,
 	TG_STRUCTURE_TYPE_COMPUTE_SHADER,
@@ -107,6 +105,7 @@ typedef enum tg_structure_type
 	TG_STRUCTURE_TYPE_RENDER_COMMAND,
 	TG_STRUCTURE_TYPE_RENDER_TARGET,
 	TG_STRUCTURE_TYPE_RENDERER,
+	TG_STRUCTURE_TYPE_STORAGE_BUFFER,
 	TG_STRUCTURE_TYPE_UNIFORM_BUFFER,
 	TG_STRUCTURE_TYPE_VERTEX_SHADER
 } tg_structure_type;

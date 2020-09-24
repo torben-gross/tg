@@ -474,7 +474,7 @@ tgvk_shared_render_resources    shared_render_resources;
 
 void*                                     tgvk_handle_array(tg_structure_type type);
 void*                                     tgvk_handle_take(tg_structure_type type);
-#define                                   tgvk_handle_release(handle) TG_ASSERT((handle) && (handle)->type != TG_STRUCTURE_TYPE_INVALID); tg_memory_nullify(sizeof(*(handle)) - sizeof((handle)->type), (handle)); handle->type = TG_STRUCTURE_TYPE_INVALID
+void                                      tgvk_handle_release(void* p_handle);
 
 void                                      tgvk_buffer_copy(VkDeviceSize size, tgvk_buffer* p_src, tgvk_buffer* p_dst);
 tgvk_buffer                               tgvk_buffer_create(VkDeviceSize size, VkBufferUsageFlags buffer_usage_flags, VkMemoryPropertyFlags memory_property_flags);
@@ -579,6 +579,9 @@ void                                      tgvk_semaphore_destroy(VkSemaphore sem
 
 tgvk_shader                               tgvk_shader_create(const char* p_filename);
 void                                      tgvk_shader_destroy(tgvk_shader* p_shader);
+
+tgvk_buffer*                              tgvk_global_staging_buffer_take(VkDeviceSize size);
+void                                      tgvk_global_staging_buffer_release(void);
 
 VkDescriptorType                          tgvk_structure_type_convert_to_descriptor_type(tg_structure_type type);
 

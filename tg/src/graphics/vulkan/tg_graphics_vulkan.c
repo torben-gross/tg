@@ -58,7 +58,7 @@
 static VkDebugUtilsMessengerEXT    debug_utils_messenger = VK_NULL_HANDLE;
 #endif
 
-static tgvk_queue                  p_queues[TGVK_QUEUE_TYPE_COUNT] = { 0 };
+static tgvk_queue                  p_queues[TGVK_QUEUE_TYPE_COUNT];
 
 //static VkCommandPool               compute_command_pool;
 //static VkCommandPool               graphics_command_pool;
@@ -71,23 +71,52 @@ static VkCommandPool               present_command_pool;
 static tgvk_command_buffer         p_global_compute_command_buffers[TG_MAX_THREADS];
 static tgvk_command_buffer         p_global_graphics_command_buffers[TG_MAX_THREADS];
 
-//static tg_thread_h                 h_streaming_thread;
+static tg_read_write_lock          global_staging_buffer_lock;
+static tgvk_buffer                 global_staging_buffer;
 
-static tg_mutex_h                  h_handle_mutex;
+static tg_read_write_lock          handle_lock;
 
-static tg_color_image              p_color_images[TG_MAX_COLOR_IMAGES];
-static tg_color_image_3d           p_color_images_3d[TG_MAX_COLOR_IMAGES_3D];
-static tg_compute_shader           p_compute_shaders[TG_MAX_COMPUTE_SHADERS];
-static tg_cube_map                 p_cube_maps[TG_MAX_CUBE_MAPS];
-static tg_depth_image              p_depth_images[TG_MAX_DEPTH_IMAGES];
-static tg_fragment_shader          p_fragment_shaders[TG_MAX_FRAGMENT_SHADERS];
-static tg_material                 p_materials[TG_MAX_MATERIALS];
-static tg_mesh                     p_meshes[TG_MAX_MESHES];
-static tg_render_command           p_render_commands[TG_MAX_RENDER_COMMANDS];
-static tg_renderer                 p_renderers[TG_MAX_RENDERERS];
-static tg_storage_buffer           p_storage_buffers[TG_MAX_STORAGE_BUFFERS];
-static tg_uniform_buffer           p_uniform_buffers[TG_MAX_UNIFORM_BUFFERS];
-static tg_vertex_shader            p_vertex_shaders[TG_MAX_VERTEX_SHADERS];
+#define TGVK_STRUCTURE_NAME(name)                    tg_##name
+#define TGVK_STRUCTURE_SIZE_NAME(name)               name##_size
+#define TGVK_STRUCTURE_BUFFER_COUNT_NAME(name)       name##_buffer_count
+#define TGVK_STRUCTURE_BUFFER_NAME(name)             p_##name##_buffer
+#define TGVK_STRUCTURE_FREE_LIST_COUNT_NAME(name)    name##_free_list_count
+#define TGVK_STRUCTURE_FREE_LIST_NAME(name)          p_##name##_free_list
+
+#define TGVK_DEFINE_STRUCTURE_BUFFER(name, count)                                  \
+    static u64 TGVK_STRUCTURE_SIZE_NAME(name) = sizeof(TGVK_STRUCTURE_NAME(name)); \
+    static u16 TGVK_STRUCTURE_BUFFER_COUNT_NAME(name);                             \
+    static TGVK_STRUCTURE_NAME(name) TGVK_STRUCTURE_BUFFER_NAME(name)[count];      \
+    static u16 TGVK_STRUCTURE_FREE_LIST_COUNT_NAME(name);                          \
+    static u16 TGVK_STRUCTURE_FREE_LIST_NAME(name)[count]
+
+TGVK_DEFINE_STRUCTURE_BUFFER(color_image, TG_MAX_COLOR_IMAGES);
+TGVK_DEFINE_STRUCTURE_BUFFER(color_image_3d, TG_MAX_COLOR_IMAGES_3D);
+TGVK_DEFINE_STRUCTURE_BUFFER(compute_shader, TG_MAX_COMPUTE_SHADERS);
+TGVK_DEFINE_STRUCTURE_BUFFER(cube_map, TG_MAX_CUBE_MAPS);
+TGVK_DEFINE_STRUCTURE_BUFFER(depth_image, TG_MAX_DEPTH_IMAGES);
+TGVK_DEFINE_STRUCTURE_BUFFER(fragment_shader, TG_MAX_FRAGMENT_SHADERS);
+TGVK_DEFINE_STRUCTURE_BUFFER(material, TG_MAX_MATERIALS);
+TGVK_DEFINE_STRUCTURE_BUFFER(mesh, TG_MAX_MESHES);
+TGVK_DEFINE_STRUCTURE_BUFFER(render_command, TG_MAX_RENDER_COMMANDS);
+TGVK_DEFINE_STRUCTURE_BUFFER(renderer, TG_MAX_RENDERERS);
+TGVK_DEFINE_STRUCTURE_BUFFER(storage_buffer, TG_MAX_STORAGE_BUFFERS);
+TGVK_DEFINE_STRUCTURE_BUFFER(uniform_buffer, TG_MAX_UNIFORM_BUFFERS);
+TGVK_DEFINE_STRUCTURE_BUFFER(vertex_shader, TG_MAX_VERTEX_SHADERS);
+
+#define TGVK_STRUCTURE_TAKE(name, p_handle)                                                                                               \
+    if (TGVK_STRUCTURE_FREE_LIST_COUNT_NAME(name) > 0)                                                                                    \
+        (p_handle) = &TGVK_STRUCTURE_BUFFER_NAME(name)[TGVK_STRUCTURE_FREE_LIST_NAME(name)[--TGVK_STRUCTURE_FREE_LIST_COUNT_NAME(name)]]; \
+    else                                                                                                                                  \
+        (p_handle) = &TGVK_STRUCTURE_BUFFER_NAME(name)[TGVK_STRUCTURE_BUFFER_COUNT_NAME(name)++]
+
+#define TGVK_STRUCTURE_RELEASE(name, p_handle)                                                                                   \
+    if (&TGVK_STRUCTURE_BUFFER_NAME(name)[TGVK_STRUCTURE_BUFFER_COUNT_NAME(name) - 1] == (TGVK_STRUCTURE_NAME(name)*)(p_handle)) \
+        TGVK_STRUCTURE_BUFFER_COUNT_NAME(name)--;                                                                                \
+    else                                                                                                                         \
+        TGVK_STRUCTURE_FREE_LIST_NAME(name)[TGVK_STRUCTURE_FREE_LIST_COUNT_NAME(name)++] =                                       \
+            (u16)((TGVK_STRUCTURE_NAME(name)*)(p_handle) - TGVK_STRUCTURE_BUFFER_NAME(name));                                    \
+    tg_memory_nullify(TGVK_STRUCTURE_SIZE_NAME(name), p_handle)
 
 
 
@@ -110,20 +139,6 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL tg__debug_callback(VkDebugUtilsMessageSeve
 
 #define TGVK_QUEUE_TAKE(type, p_queue)    (p_queue) = &p_queues[type]; TG_MUTEX_LOCK((p_queue)->h_mutex)
 #define TGVK_QUEUE_RELEASE(p_queue)       TG_MUTEX_UNLOCK((p_queue)->h_mutex)
-
-#define TGVK_HANDLE_TAKE(p_array, p_result)                                        \
-    const u32 array_element_count = sizeof(p_array) / sizeof(*(p_array));          \
-    for (u32 handle_index = 0; handle_index < array_element_count; handle_index++) \
-    {                                                                              \
-        if ((p_array)[handle_index].type == TG_STRUCTURE_TYPE_INVALID)             \
-        {                                                                          \
-            (p_result) = &(p_array)[handle_index];                                 \
-            break;                                                                 \
-        }                                                                          \
-    }                                                                              \
-    TG_ASSERT(p_result)
-
-
 
 
 
@@ -350,19 +365,19 @@ void* tgvk_handle_array(tg_structure_type type)
 
     switch (type)
     {
-    case TG_STRUCTURE_TYPE_STORAGE_BUFFER:  p_array = p_storage_buffers;  break;
-    case TG_STRUCTURE_TYPE_COLOR_IMAGE:     p_array = p_color_images;     break;
-    case TG_STRUCTURE_TYPE_COLOR_IMAGE_3D:  p_array = p_color_images_3d;  break;
-    case TG_STRUCTURE_TYPE_COMPUTE_SHADER:  p_array = p_compute_shaders;  break;
-    case TG_STRUCTURE_TYPE_CUBE_MAP:        p_array = p_cube_maps;        break;
-    case TG_STRUCTURE_TYPE_DEPTH_IMAGE:     p_array = p_depth_images;     break;
-    case TG_STRUCTURE_TYPE_FRAGMENT_SHADER: p_array = p_fragment_shaders; break;
-    case TG_STRUCTURE_TYPE_MATERIAL:        p_array = p_materials;        break;
-    case TG_STRUCTURE_TYPE_MESH:            p_array = p_meshes;           break;
-    case TG_STRUCTURE_TYPE_RENDER_COMMAND:  p_array = p_render_commands;  break;
-    case TG_STRUCTURE_TYPE_RENDERER:        p_array = p_renderers;        break;
-    case TG_STRUCTURE_TYPE_UNIFORM_BUFFER:  p_array = p_uniform_buffers;  break;
-    case TG_STRUCTURE_TYPE_VERTEX_SHADER:   p_array = p_vertex_shaders;   break;
+    case TG_STRUCTURE_TYPE_COLOR_IMAGE:     p_array = TGVK_STRUCTURE_BUFFER_NAME(color_image);     break;
+    case TG_STRUCTURE_TYPE_COLOR_IMAGE_3D:  p_array = TGVK_STRUCTURE_BUFFER_NAME(color_image_3d);  break;
+    case TG_STRUCTURE_TYPE_COMPUTE_SHADER:  p_array = TGVK_STRUCTURE_BUFFER_NAME(compute_shader);  break;
+    case TG_STRUCTURE_TYPE_CUBE_MAP:        p_array = TGVK_STRUCTURE_BUFFER_NAME(cube_map);        break;
+    case TG_STRUCTURE_TYPE_DEPTH_IMAGE:     p_array = TGVK_STRUCTURE_BUFFER_NAME(depth_image);     break;
+    case TG_STRUCTURE_TYPE_FRAGMENT_SHADER: p_array = TGVK_STRUCTURE_BUFFER_NAME(fragment_shader); break;
+    case TG_STRUCTURE_TYPE_MATERIAL:        p_array = TGVK_STRUCTURE_BUFFER_NAME(material);        break;
+    case TG_STRUCTURE_TYPE_MESH:            p_array = TGVK_STRUCTURE_BUFFER_NAME(mesh);            break;
+    case TG_STRUCTURE_TYPE_RENDER_COMMAND:  p_array = TGVK_STRUCTURE_BUFFER_NAME(render_command);  break;
+    case TG_STRUCTURE_TYPE_RENDERER:        p_array = TGVK_STRUCTURE_BUFFER_NAME(renderer);        break;
+    case TG_STRUCTURE_TYPE_STORAGE_BUFFER:  p_array = TGVK_STRUCTURE_BUFFER_NAME(storage_buffer);  break;
+    case TG_STRUCTURE_TYPE_UNIFORM_BUFFER:  p_array = TGVK_STRUCTURE_BUFFER_NAME(uniform_buffer);  break;
+    case TG_STRUCTURE_TYPE_VERTEX_SHADER:   p_array = TGVK_STRUCTURE_BUFFER_NAME(vertex_shader);   break;
 
     default: TG_INVALID_CODEPATH(); break;
     }
@@ -374,29 +389,56 @@ void* tgvk_handle_take(tg_structure_type type)
 {
     void* p_handle = TG_NULL;
 
-    TG_MUTEX_LOCK(h_handle_mutex);
+    TG_RWL_LOCK_WRITE(handle_lock);
     switch (type)
     {
-    case TG_STRUCTURE_TYPE_STORAGE_BUFFER:  { TGVK_HANDLE_TAKE(p_storage_buffers, p_handle);  } break;
-    case TG_STRUCTURE_TYPE_COLOR_IMAGE:     { TGVK_HANDLE_TAKE(p_color_images, p_handle);     } break;
-    case TG_STRUCTURE_TYPE_COLOR_IMAGE_3D:  { TGVK_HANDLE_TAKE(p_color_images_3d, p_handle);  } break;
-    case TG_STRUCTURE_TYPE_COMPUTE_SHADER:  { TGVK_HANDLE_TAKE(p_compute_shaders, p_handle);  } break;
-    case TG_STRUCTURE_TYPE_CUBE_MAP:        { TGVK_HANDLE_TAKE(p_cube_maps, p_handle);        } break;
-    case TG_STRUCTURE_TYPE_DEPTH_IMAGE:     { TGVK_HANDLE_TAKE(p_depth_images, p_handle);     } break;
-    case TG_STRUCTURE_TYPE_FRAGMENT_SHADER: { TGVK_HANDLE_TAKE(p_fragment_shaders, p_handle); } break;
-    case TG_STRUCTURE_TYPE_MATERIAL:        { TGVK_HANDLE_TAKE(p_materials, p_handle);        } break;
-    case TG_STRUCTURE_TYPE_MESH:            { TGVK_HANDLE_TAKE(p_meshes, p_handle);           } break;
-    case TG_STRUCTURE_TYPE_RENDER_COMMAND:  { TGVK_HANDLE_TAKE(p_render_commands, p_handle);  } break;
-    case TG_STRUCTURE_TYPE_RENDERER:        { TGVK_HANDLE_TAKE(p_renderers, p_handle);        } break;
-    case TG_STRUCTURE_TYPE_UNIFORM_BUFFER:  { TGVK_HANDLE_TAKE(p_uniform_buffers, p_handle);  } break;
-    case TG_STRUCTURE_TYPE_VERTEX_SHADER:   { TGVK_HANDLE_TAKE(p_vertex_shaders, p_handle);   } break;
+    case TG_STRUCTURE_TYPE_COLOR_IMAGE:     { TGVK_STRUCTURE_TAKE(color_image, p_handle);     } break;
+    case TG_STRUCTURE_TYPE_COLOR_IMAGE_3D:  { TGVK_STRUCTURE_TAKE(color_image_3d, p_handle);  } break;
+    case TG_STRUCTURE_TYPE_COMPUTE_SHADER:  { TGVK_STRUCTURE_TAKE(compute_shader, p_handle);  } break;
+    case TG_STRUCTURE_TYPE_CUBE_MAP:        { TGVK_STRUCTURE_TAKE(cube_map, p_handle);        } break;
+    case TG_STRUCTURE_TYPE_DEPTH_IMAGE:     { TGVK_STRUCTURE_TAKE(depth_image, p_handle);     } break;
+    case TG_STRUCTURE_TYPE_FRAGMENT_SHADER: { TGVK_STRUCTURE_TAKE(fragment_shader, p_handle); } break;
+    case TG_STRUCTURE_TYPE_MATERIAL:        { TGVK_STRUCTURE_TAKE(material, p_handle);        } break;
+    case TG_STRUCTURE_TYPE_MESH:            { TGVK_STRUCTURE_TAKE(mesh, p_handle);           } break;
+    case TG_STRUCTURE_TYPE_RENDER_COMMAND:  { TGVK_STRUCTURE_TAKE(render_command, p_handle);  } break;
+    case TG_STRUCTURE_TYPE_RENDERER:        { TGVK_STRUCTURE_TAKE(renderer, p_handle);        } break;
+    case TG_STRUCTURE_TYPE_STORAGE_BUFFER:  { TGVK_STRUCTURE_TAKE(storage_buffer, p_handle);  } break;
+    case TG_STRUCTURE_TYPE_UNIFORM_BUFFER:  { TGVK_STRUCTURE_TAKE(uniform_buffer, p_handle);  } break;
+    case TG_STRUCTURE_TYPE_VERTEX_SHADER:   { TGVK_STRUCTURE_TAKE(vertex_shader, p_handle);   } break;
 
     default: TG_INVALID_CODEPATH(); break;
     }
     *(tg_structure_type*)p_handle = type;
-    TG_MUTEX_UNLOCK(h_handle_mutex);
+    TG_RWL_UNLOCK_WRITE(handle_lock);
 
     return p_handle;
+}
+
+void tgvk_handle_release(void* p_handle)
+{
+    TG_ASSERT(p_handle && *(tg_structure_type*)p_handle != TG_STRUCTURE_TYPE_INVALID);
+    
+    const tg_structure_type type = *(tg_structure_type*)p_handle;
+    TG_RWL_LOCK_WRITE(handle_lock);
+    switch (type)
+    {
+    case TG_STRUCTURE_TYPE_COLOR_IMAGE:     { TGVK_STRUCTURE_RELEASE(color_image, p_handle);     } break;
+    case TG_STRUCTURE_TYPE_COLOR_IMAGE_3D:  { TGVK_STRUCTURE_RELEASE(color_image_3d, p_handle);  } break;
+    case TG_STRUCTURE_TYPE_COMPUTE_SHADER:  { TGVK_STRUCTURE_RELEASE(compute_shader, p_handle);  } break;
+    case TG_STRUCTURE_TYPE_CUBE_MAP:        { TGVK_STRUCTURE_RELEASE(cube_map, p_handle);        } break;
+    case TG_STRUCTURE_TYPE_DEPTH_IMAGE:     { TGVK_STRUCTURE_RELEASE(depth_image, p_handle);     } break;
+    case TG_STRUCTURE_TYPE_FRAGMENT_SHADER: { TGVK_STRUCTURE_RELEASE(fragment_shader, p_handle); } break;
+    case TG_STRUCTURE_TYPE_MATERIAL:        { TGVK_STRUCTURE_RELEASE(material, p_handle);        } break;
+    case TG_STRUCTURE_TYPE_MESH:            { TGVK_STRUCTURE_RELEASE(mesh, p_handle);           } break;
+    case TG_STRUCTURE_TYPE_RENDER_COMMAND:  { TGVK_STRUCTURE_RELEASE(render_command, p_handle);  } break;
+    case TG_STRUCTURE_TYPE_RENDERER:        { TGVK_STRUCTURE_RELEASE(renderer, p_handle);        } break;
+    case TG_STRUCTURE_TYPE_STORAGE_BUFFER:  { TGVK_STRUCTURE_RELEASE(storage_buffer, p_handle);  } break;
+    case TG_STRUCTURE_TYPE_UNIFORM_BUFFER:  { TGVK_STRUCTURE_RELEASE(uniform_buffer, p_handle);  } break;
+    case TG_STRUCTURE_TYPE_VERTEX_SHADER:   { TGVK_STRUCTURE_RELEASE(vertex_shader, p_handle);   } break;
+    
+    default: TG_INVALID_CODEPATH(); break;
+    }
+    TG_RWL_UNLOCK_WRITE(handle_lock);
 }
 
 
@@ -413,13 +455,11 @@ tgvk_buffer tgvk_buffer_create(VkDeviceSize size, VkBufferUsageFlags buffer_usag
 {
     tgvk_buffer buffer = { 0 };
 
-    buffer.memory.size = size;
-
     VkBufferCreateInfo buffer_create_info = { 0 };
     buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     buffer_create_info.pNext = TG_NULL;
     buffer_create_info.flags = 0;
-    buffer_create_info.size = size;
+    buffer_create_info.size = tgvk_memory_aligned_size(size);
     buffer_create_info.usage = buffer_usage_flags;
     buffer_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     buffer_create_info.queueFamilyIndexCount = 0;
@@ -2181,6 +2221,33 @@ void tgvk_shader_destroy(tgvk_shader* p_shader)
 }
 
 
+
+tgvk_buffer* tgvk_global_staging_buffer_take(VkDeviceSize size)
+{
+    TG_RWL_LOCK_WRITE(global_staging_buffer_lock);
+
+    if (global_staging_buffer.memory.size < size)
+    {
+        if (global_staging_buffer.buffer)
+        {
+            tgvk_buffer_destroy(&global_staging_buffer);
+        }
+        global_staging_buffer = tgvk_buffer_create(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+    }
+
+    return &global_staging_buffer;
+}
+
+void tgvk_global_staging_buffer_release(void)
+{
+#pragma warning(push)
+#pragma warning(disable:26110)
+    TG_RWL_UNLOCK_WRITE(global_staging_buffer_lock);
+#pragma warning(pop)
+}
+
+
+
 VkDescriptorType tgvk_structure_type_convert_to_descriptor_type(tg_structure_type type)
 {
     VkDescriptorType descriptor_type = -1;
@@ -2934,7 +3001,8 @@ void tg_graphics_init(void)
     tg__swapchain_create();
 
     tgvk_memory_allocator_init(device, physical_device);
-    h_handle_mutex = TG_MUTEX_CREATE();
+    handle_lock = TG_RWL_CREATE();
+    global_staging_buffer_lock = TG_RWL_CREATE();
     tg_shader_library_init();
     tg_renderer_init_shared_resources();
 }
@@ -2948,7 +3016,6 @@ void tg_graphics_shutdown(void)
 {
     tg_renderer_shutdown_shared_resources();
     tg_shader_library_shutdown();
-    TG_MUTEX_DESTROY(h_handle_mutex);
     tgvk_memory_allocator_shutdown(device);
 
     for (u32 i = 0; i < TG_MAX_SWAPCHAIN_IMAGES; i++)
@@ -2993,9 +3060,9 @@ void tg_graphics_on_window_resize(u32 width, u32 height)
     tg__swapchain_create();
     for (u32 i = 0; i < TG_MAX_RENDERERS; i++)
     {
-        if (p_renderers[i].type != TG_STRUCTURE_TYPE_INVALID)
+        if (TGVK_STRUCTURE_BUFFER_NAME(renderer)[i].type != TG_STRUCTURE_TYPE_INVALID)
         {
-            tgvk_renderer_on_window_resize(&p_renderers[i], width, height);
+            tgvk_renderer_on_window_resize(&TGVK_STRUCTURE_BUFFER_NAME(renderer)[i], width, height);
         }
     }
 }

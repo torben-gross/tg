@@ -964,9 +964,11 @@ static void tg__build_octree(volatile tg_terrain* p_terrain, volatile tg_terrain
 
 static void tg__destroy_marked_nodes(volatile tg_terrain_octree* p_octree)
 {
+	volatile tg_terrain_octree_node* p_node = TG_NULL;
+
 	for (u32 i = 0; i < TG_TERRAIN_OCTREE_NODES; i++)
 	{
-		volatile tg_terrain_octree_node* p_node = &p_octree->p_nodes[i];
+		p_node = &p_octree->p_nodes[i];
 		if ((p_node->flags & TG_TERRAIN_FLAG_DESTROY) && (tg_platform_get_seconds_since_startup() - p_node->seconds_since_startup_on_destroy_mark > TG_TERRAIN_NODE_DESTROY_AFTER_SECONDS))
 		{
 			p_node->flags = 0;

@@ -155,6 +155,12 @@ void tgvk_memory_allocator_shutdown(VkDevice device)
     TG_MUTEX_DESTROY(memory.h_mutex);
 }
 
+VkDeviceSize tgvk_memory_aligned_size(VkDeviceSize size)
+{
+    const VkDeviceSize result = TG_ROUND(size);
+    return result;
+}
+
 tgvk_memory_block tgvk_memory_allocator_alloc(VkDeviceSize alignment, VkDeviceSize size, u32 memory_type_bits, VkMemoryPropertyFlags memory_property_flags)
 {
     TG_ASSERT(memory_type_bits && memory_property_flags);
