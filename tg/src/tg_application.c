@@ -296,6 +296,7 @@ static void tg__game_3d_update_and_render(f32 dt)
     }
 
     // TODO: tg_terrain_update_voxel_map...
+    tg_terrain_update(scene.p_terrain);
 
     scene.light_timer += dt;
     while (scene.light_timer > 32000.0f)

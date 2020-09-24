@@ -138,6 +138,7 @@ void                  tg_platform_memory_free(void* p_memory);
 void                  tg_platform_get_mouse_position(u32* p_x, u32* p_y);
 void                  tg_platform_get_screen_size(u32* p_width, u32* p_height);
 tg_system_time        tg_platform_get_system_time(void);
+f32                   tg_platform_get_seconds_since_startup(void);
 tg_window_h           tg_platform_get_window_handle(void);
 void                  tg_platform_get_window_size(u32* p_width, u32* p_height);
 f32                   tg_platform_get_window_aspect_ratio(void);

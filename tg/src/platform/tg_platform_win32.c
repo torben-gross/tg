@@ -28,8 +28,11 @@ typedef struct tg_timer
 
 
 
-static HANDLE    h_process_heap = INVALID_HANDLE_VALUE;
-static HWND      h_window = INVALID_HANDLE_VALUE;
+static HANDLE            h_process_heap = INVALID_HANDLE_VALUE;
+static HWND              h_window = INVALID_HANDLE_VALUE;
+static SYSTEMTIME        startup_system_time = { 0 };
+static FILETIME          startup_file_time = { 0 };
+static ULARGE_INTEGER    startup_time_ularge_integer = { 0 };
 
 
 
@@ -208,6 +211,21 @@ tg_system_time tg_platform_get_system_time(void)
     result.second = system_time.wSecond;
     result.milliseconds = system_time.wMilliseconds;
     return result;
+}
+
+f32 tg_platform_get_seconds_since_startup(void)
+{
+    FILETIME file_time = { 0 };
+    GetSystemTimeAsFileTime(&file_time);
+
+    ULARGE_INTEGER ularge_integer = { 0 };
+    ularge_integer.LowPart = file_time.dwLowDateTime;
+    ularge_integer.HighPart = file_time.dwHighDateTime;
+
+    ularge_integer.QuadPart = ularge_integer.QuadPart - startup_time_ularge_integer.QuadPart;
+    const f32 seconds = (f32)((f64)ularge_integer.QuadPart / 10000000.0);
+
+    return seconds;
 }
 
 tg_window_h tg_platform_get_window_handle(void)
@@ -774,6 +792,11 @@ int CALLBACK WinMain(_In_ HINSTANCE h_instance, _In_opt_ HINSTANCE h_prev_instan
 
     ShowWindow(h_window, show_cmd);
     SetWindowLongPtr(h_window, GWLP_WNDPROC, (LONG_PTR)&tg__window_proc);
+
+    GetSystemTime(&startup_system_time);
+    SystemTimeToFileTime(&startup_system_time, &startup_file_time);
+    startup_time_ularge_integer.LowPart = startup_file_time.dwLowDateTime;
+    startup_time_ularge_integer.HighPart = startup_file_time.dwHighDateTime;
 
     tg_application_start();
 

@@ -12,23 +12,23 @@
 
 #define TG_TERRAIN_OCTREE_MIN_COORDS_TO_INDEX_3D(min_coords) \
 	((v3i) {                                                 \
-		(min_coords).x / TG_TERRAIN_OCTREE_STRIDE_IN_CELLS,  \
-		(min_coords).y / TG_TERRAIN_OCTREE_STRIDE_IN_CELLS,  \
-		(min_coords).z / TG_TERRAIN_OCTREE_STRIDE_IN_CELLS   \
+		(min_coords).x / TG_TERRAIN_OCTREE_CELL_STRIDE,  \
+		(min_coords).y / TG_TERRAIN_OCTREE_CELL_STRIDE,  \
+		(min_coords).z / TG_TERRAIN_OCTREE_CELL_STRIDE   \
 	})
 
 #define TG_TERRAIN_OCTREE_INDEX_3D_TO_MIN_COORDS(octree_index_3d_x, octree_index_3d_y, octree_index_3d_z) \
 	((v3i) {                                                      \
-		(octree_index_3d_x) * TG_TERRAIN_OCTREE_STRIDE_IN_CELLS,  \
-		(octree_index_3d_y) * TG_TERRAIN_OCTREE_STRIDE_IN_CELLS,  \
-		(octree_index_3d_z) * TG_TERRAIN_OCTREE_STRIDE_IN_CELLS   \
+		(octree_index_3d_x) * TG_TERRAIN_OCTREE_CELL_STRIDE,  \
+		(octree_index_3d_y) * TG_TERRAIN_OCTREE_CELL_STRIDE,  \
+		(octree_index_3d_z) * TG_TERRAIN_OCTREE_CELL_STRIDE   \
 	})
 
 #define TG_TERRAIN_OCTREE_INDEX_3D_TO_MIN_COORDS_V3(octree_index_3d) \
 	((v3i) {                                                      \
-		(octree_index_3d).x * TG_TERRAIN_OCTREE_STRIDE_IN_CELLS,  \
-		(octree_index_3d).y * TG_TERRAIN_OCTREE_STRIDE_IN_CELLS,  \
-		(octree_index_3d).z * TG_TERRAIN_OCTREE_STRIDE_IN_CELLS   \
+		(octree_index_3d).x * TG_TERRAIN_OCTREE_CELL_STRIDE,  \
+		(octree_index_3d).y * TG_TERRAIN_OCTREE_CELL_STRIDE,  \
+		(octree_index_3d).z * TG_TERRAIN_OCTREE_CELL_STRIDE   \
 	})
 
 
@@ -167,7 +167,7 @@ static b32 tg__should_split_node(v3 camera_position, v3i absolute_min_coordinate
 
 	if (lod != 0)
 	{
-		const i32 half_stride = TG_TERRAIN_CELLS_PER_BLOCK_SIDE * (1 << (lod - 1)); // 2^lod / 2
+		const i32 half_stride = TG_TERRAIN_NODE_CELL_STRIDE * (1 << (lod - 1)); // 2^lod / 2
 		
 		const f32 center_x = (f32)(absolute_min_coordinates.x + half_stride);
 		const f32 center_y = (f32)(absolute_min_coordinates.y + half_stride);
@@ -178,7 +178,7 @@ static b32 tg__should_split_node(v3 camera_position, v3i absolute_min_coordinate
 		const f32 direction_z = center_z - camera_position.z;
 
 		const f32 distance_sqr = direction_x * direction_x + direction_y * direction_y + direction_z * direction_z;
-		result = distance_sqr / (1 << (lod + lod)) < 4 * TG_TERRAIN_CELLS_PER_BLOCK_SIDE * TG_TERRAIN_CELLS_PER_BLOCK_SIDE;
+		result = distance_sqr / (1 << (lod + lod)) < 4 * TG_TERRAIN_NODE_CELL_STRIDE * TG_TERRAIN_NODE_CELL_STRIDE;
 	}
 
 	return result;
@@ -257,14 +257,14 @@ static void tg__build_regular(v3i octree_min_coords, v3i node_coords_offset_rel_
 	v3i p_corner_positions[8] = { 0 };
 	v3 p_triangle_positions[3] = { 0 };
 
-	for (i32 px = 0; px < TG_TERRAIN_CELLS_PER_BLOCK_SIDE; px += 4)
+	for (i32 px = 0; px < TG_TERRAIN_NODE_CELL_STRIDE; px += 4)
 	{
 		const __m128i position_x_4x = _mm_set_epi32(px + 3, px + 2, px + 1, px);
 		const __m128i sample_position_pad_x_4x = _mm_add_epi32(block_offset_in_octree_x_4x, _mm_mullo_epi32(position_x_4x, lod_scale_4x));
 		const __m128i sample_position_x0_4x = sample_position_pad_x_4x;
 		const __m128i sample_position_x1_4x = _mm_add_epi32(sample_position_pad_x_4x, lod_scale_4x);
 
-		for (i32 py = 0; py < TG_TERRAIN_CELLS_PER_BLOCK_SIDE; py++)
+		for (i32 py = 0; py < TG_TERRAIN_NODE_CELL_STRIDE; py++)
 		{
 			const i32 sample_position_pad_y = node_coords_offset_rel_to_octree.y + (py * lod_scale);
 			const i32 sample_position_y0 = sample_position_pad_y;
@@ -281,7 +281,7 @@ static void tg__build_regular(v3i octree_min_coords, v3i node_coords_offset_rel_
 			p_unique_samples[8] = TG_TERRAIN_VOXEL_MAP_AT(p_voxel_map, sample_position_x0_4x.m128i_i32[3], sample_position_y1, node_coords_offset_rel_to_octree.z);
 			p_unique_samples[9] = TG_TERRAIN_VOXEL_MAP_AT(p_voxel_map, sample_position_x1_4x.m128i_i32[3], sample_position_y1, node_coords_offset_rel_to_octree.z);
 
-			for (i32 pz = 0; pz < TG_TERRAIN_CELLS_PER_BLOCK_SIDE; pz++)
+			for (i32 pz = 0; pz < TG_TERRAIN_NODE_CELL_STRIDE; pz++)
 			{
 				const i32 sample_position_pad_z = node_coords_offset_rel_to_octree.z + (pz * lod_scale);
 				const i32 sample_position_z0 = sample_position_pad_z;
@@ -521,21 +521,21 @@ static void tg__build_transition(v3i octree_min_coords, v3i node_coords_offset_r
 
 	const i32 low_res_lod_scale = 1 << lod;
 	const i32 high_res_lod_scale = 1 << (lod - 1);
-	const i32 z = (transition_index & 1) * low_res_lod_scale * (TG_TERRAIN_VOXELS_PER_BLOCK_SIDE - 1);
+	const i32 z = (transition_index & 1) * low_res_lod_scale * TG_TERRAIN_NODE_CELL_STRIDE;
 
 	v3i p_sample_positions[13] = { 0 };
 	i8 p_cell_samples[13] = { 0 };
 	v3i p_cell_positions[13] = { 0 };
 	v3 p_triangle_positions[3] = { 0 };
 
-	for (u8 y = 0; y < TG_TERRAIN_CELLS_PER_BLOCK_SIDE; y++)
+	for (u8 y = 0; y < TG_TERRAIN_NODE_CELL_STRIDE; y++)
 	{
 		const u8 yd = 2 * y;
 		const i32 yd0 = yd * high_res_lod_scale;
 		const i32 yd1 = yd0 + high_res_lod_scale;
 		const i32 yd2 = yd1 + high_res_lod_scale;
 
-		for (u8 x = 0; x < TG_TERRAIN_CELLS_PER_BLOCK_SIDE; x++)
+		for (u8 x = 0; x < TG_TERRAIN_NODE_CELL_STRIDE; x++)
 		{
 			const u8 xd = 2 * x;
 			const i32 xd0 = xd * high_res_lod_scale;
@@ -847,7 +847,7 @@ static void tg__build_nodes(tg_material_h h_material, volatile tg_terrain_octree
 	const u8 inv_lod = TG_TERRAIN_MAX_LOD - lod;
 	const u8 sqrt_nodes_per_lod = 1 << inv_lod;
 	const u16 node_index = first_index_of_lod + sqrt_nodes_per_lod * sqrt_nodes_per_lod * (u16)node_index_3d.z + sqrt_nodes_per_lod * (u16)node_index_3d.y + (u16)node_index_3d.x;
-	const i32 coord_scale = TG_TERRAIN_OCTREE_STRIDE_IN_CELLS / sqrt_nodes_per_lod;
+	const i32 coord_scale = TG_TERRAIN_OCTREE_CELL_STRIDE / sqrt_nodes_per_lod;
 	const v3i node_coords_offset_rel_to_octree = { node_index_3d.x * coord_scale, node_index_3d.y * coord_scale, node_index_3d.z * coord_scale };
 
 	volatile tg_terrain_octree_node* p_node = &p_octree->p_nodes[node_index];
@@ -954,7 +954,7 @@ static void tg__build_octree(volatile tg_terrain* p_terrain, volatile tg_terrain
 		}
 	}
 
-	const u64 vertices_size = 15 * TG_TERRAIN_CELLS_PER_BLOCK * sizeof(v3);
+	const u64 vertices_size = 15 * TG_TERRAIN_NODE_CELLS * sizeof(v3);
 	v3* p_position_buffer = TG_MEMORY_STACK_ALLOC_ASYNC(vertices_size);
 	v3* p_normal_buffer = TG_MEMORY_STACK_ALLOC_ASYNC(vertices_size);
 	tg__build_nodes(p_terrain->h_material, p_octree, p_octree->p_voxel_map, V3I(0), TG_TERRAIN_MAX_LOD, 0, p_position_buffer, p_normal_buffer);
@@ -964,10 +964,10 @@ static void tg__build_octree(volatile tg_terrain* p_terrain, volatile tg_terrain
 
 static void tg__destroy_marked_nodes(volatile tg_terrain_octree* p_octree)
 {
-	for (u32 i = 0; i < TG_TERRAIN_NODES_PER_OCTREE; i++)
+	for (u32 i = 0; i < TG_TERRAIN_OCTREE_NODES; i++)
 	{
 		volatile tg_terrain_octree_node* p_node = &p_octree->p_nodes[i];
-		if (p_node->flags & TG_TERRAIN_FLAG_DESTROY)
+		if ((p_node->flags & TG_TERRAIN_FLAG_DESTROY) && (tg_platform_get_seconds_since_startup() - p_node->seconds_since_startup_on_destroy_mark > TG_TERRAIN_NODE_DESTROY_AFTER_SECONDS))
 		{
 			p_node->flags = 0;
 
@@ -993,12 +993,13 @@ static void tg__destroy_marked_nodes(volatile tg_terrain_octree* p_octree)
 
 static void tg__mark_nodes(volatile tg_terrain_octree* p_octree)
 {
-	for (u32 node_index = 0; node_index < TG_TERRAIN_NODES_PER_OCTREE; node_index++)
+	for (u32 node_index = 0; node_index < TG_TERRAIN_OCTREE_NODES; node_index++)
 	{
 		if (TG_TERRAIN_SHOULD_RENDER(p_octree->p_should_render_bitmap_stable, node_index) && !TG_TERRAIN_SHOULD_RENDER(p_octree->p_should_render_bitmap_temp, node_index))
 		{
 			volatile tg_terrain_octree_node* p_node = &p_octree->p_nodes[node_index];
 			p_node->flags |= TG_TERRAIN_FLAG_DESTROY;
+			p_node->seconds_since_startup_on_destroy_mark = tg_platform_get_seconds_since_startup();
 		}
 	}
 }
@@ -1063,7 +1064,7 @@ static void tg__update_nodes(v3 camera_position, volatile tg_terrain_octree* p_o
 	const u8 should_render_bitmap_bit = node_index % 8;
 	const u8 should_render_bitmap_mask = 1 << should_render_bitmap_bit;
 
-	const i32 scale = TG_TERRAIN_OCTREE_STRIDE_IN_CELLS / sqrt_nodes_per_lod;
+	const i32 scale = TG_TERRAIN_OCTREE_CELL_STRIDE / sqrt_nodes_per_lod;
 	const v3i node_coords_offset_rel_to_octree = { node_index_3d.x * scale, node_index_3d.y * scale, node_index_3d.z * scale };
 
 	volatile u8* p_bitmask = &p_octree->p_should_render_bitmap_temp[should_render_bitmap_offset];
@@ -1140,7 +1141,7 @@ static void tg__thread_fn(volatile tg_terrain* p_terrain)
 	{
 		volatile tg_terrain_octree* p_octree = &p_terrain->p_octrees[i];
 
-		for (u32 j = 0; j < TG_TERRAIN_NODES_PER_OCTREE; j++)
+		for (u32 j = 0; j < TG_TERRAIN_OCTREE_NODES; j++)
 		{
 			volatile tg_terrain_octree_node* p_node = &p_octree->p_nodes[j];
 
@@ -1159,11 +1160,15 @@ static void tg__thread_fn(volatile tg_terrain* p_terrain)
 				}
 			}
 		}
+
+		TG_MEMORY_FREE(p_octree->p_voxel_map);
 	}
 }
 
 tg_terrain* tg_terrain_create(tg_camera* p_camera)
 {
+	TG_ASSERT(p_camera);
+
 	tg_terrain* p_terrain = TG_MEMORY_ALLOC_NULLIFY(sizeof(*p_terrain));
 	p_terrain->p_camera = p_camera;
 	p_terrain->h_material = tg_material_create_deferred(tg_vertex_shader_get("shaders/deferred/terrain.vert"), tg_fragment_shader_get("shaders/deferred/terrain.frag"));
@@ -1185,8 +1190,15 @@ void tg_terrain_destroy(tg_terrain* p_terrain)
 	TG_MEMORY_FREE(p_terrain);
 }
 
+void tg_terrain_update(tg_terrain* p_terrain)
+{
+	TG_ASSERT(p_terrain);
+}
+
 void tg_terrain_render(tg_terrain* p_terrain, tg_renderer_h h_renderer)
 {
+	TG_ASSERT(p_terrain && h_renderer);
+
 	TG_RWL_LOCK_READ(p_terrain->read_write_lock);
 	for (u8 i = 0; i < TG_TERRAIN_OCTREES; i++)
 	{
