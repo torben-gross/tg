@@ -3016,6 +3016,10 @@ void tg_graphics_shutdown(void)
 {
     tg_renderer_shutdown_shared_resources();
     tg_shader_library_shutdown();
+    if (global_staging_buffer.buffer)
+    {
+        tgvk_buffer_destroy(&global_staging_buffer);
+    }
     tgvk_memory_allocator_shutdown(device);
 
     for (u32 i = 0; i < TG_MAX_SWAPCHAIN_IMAGES; i++)

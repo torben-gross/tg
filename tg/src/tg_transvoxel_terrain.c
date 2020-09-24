@@ -954,12 +954,7 @@ static void tg__build_octree(volatile tg_terrain* p_terrain, volatile tg_terrain
 		}
 	}
 
-	const u64 vertices_size = 15 * TG_TERRAIN_NODE_CELLS * sizeof(v3);
-	v3* p_position_buffer = TG_MEMORY_STACK_ALLOC_ASYNC(vertices_size);
-	v3* p_normal_buffer = TG_MEMORY_STACK_ALLOC_ASYNC(vertices_size);
-	tg__build_nodes(p_terrain->h_material, p_octree, p_octree->p_voxel_map, V3I(0), TG_TERRAIN_MAX_LOD, 0, p_position_buffer, p_normal_buffer);
-	TG_MEMORY_STACK_FREE_ASYNC(vertices_size);
-	TG_MEMORY_STACK_FREE_ASYNC(vertices_size);
+	tg__build_nodes(p_terrain->h_material, p_octree, p_octree->p_voxel_map, V3I(0), TG_TERRAIN_MAX_LOD, 0, p_terrain->p_position_buffer, p_terrain->p_normal_buffer);
 }
 
 static void tg__destroy_marked_nodes(volatile tg_terrain_octree* p_octree)
@@ -1172,9 +1167,15 @@ tg_terrain* tg_terrain_create(tg_camera* p_camera)
 	TG_ASSERT(p_camera);
 
 	tg_terrain* p_terrain = TG_MEMORY_ALLOC_NULLIFY(sizeof(*p_terrain));
+	
 	p_terrain->p_camera = p_camera;
 	p_terrain->h_material = tg_material_create_deferred(tg_vertex_shader_get("shaders/deferred/terrain.vert"), tg_fragment_shader_get("shaders/deferred/terrain.frag"));
 	p_terrain->read_write_lock = TG_RWL_CREATE();
+
+	const u64 vertices_size = 15 * TG_TERRAIN_NODE_CELLS * sizeof(v3);
+	p_terrain->p_position_buffer = TG_MEMORY_ALLOC(2 * vertices_size);
+	p_terrain->p_normal_buffer = (v3*)&((u8*)p_terrain->p_position_buffer)[vertices_size];
+	
 	p_terrain->is_thread_running = TG_TRUE;
 	p_terrain->h_thread = tg_thread_create(tg__thread_fn, p_terrain);
 
@@ -1187,6 +1188,7 @@ void tg_terrain_destroy(tg_terrain* p_terrain)
 
 	p_terrain->is_thread_running = TG_FALSE;
 	tg_thread_destroy(p_terrain->h_thread);
+	TG_MEMORY_FREE(p_terrain->p_position_buffer);
 	tg_material_destroy(p_terrain->h_material);
 
 	TG_MEMORY_FREE(p_terrain);

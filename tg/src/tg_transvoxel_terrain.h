@@ -55,6 +55,8 @@ typedef struct tg_terrain
 	tg_camera*               p_camera;
 	tg_material_h            h_material;
 	tg_read_write_lock       read_write_lock;
+	v3*                      p_position_buffer;
+	v3*                      p_normal_buffer;
 	b32                      is_thread_running;
 	tg_thread_h              h_thread;
 
