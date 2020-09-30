@@ -111,7 +111,7 @@ void tg_voxelizer_begin(tg_voxelizer* p_voxelizer)
         {
             *p_it++ = 0;
         }
-        tgvk_buffer_flush_mapped_memory(&p_voxelizer->p_voxel_buffers[i]);
+        tgvk_buffer_flush_host_to_device(&p_voxelizer->p_voxel_buffers[i]);
     }
 
     tgvk_command_buffer_begin(&p_voxelizer->command_buffer, 0);
@@ -175,7 +175,7 @@ void tg_voxelizer_end(tg_voxelizer* p_voxelizer, v3i min_corner_index_3d, tg_vox
 
 
     ((m4*)p_voxelizer->view_projection_ubo.memory.p_mapped_device_memory)[1] = tgm_m4_inverse(tgm_m4_euler(0.0f, 0.0f, 0.0f));
-    tgvk_buffer_flush_mapped_memory(&p_voxelizer->view_projection_ubo);
+    tgvk_buffer_flush_host_to_device(&p_voxelizer->view_projection_ubo);
 
     VkSubmitInfo submit_info = { 0 };
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -195,7 +195,7 @@ void tg_voxelizer_end(tg_voxelizer* p_voxelizer, v3i min_corner_index_3d, tg_vox
 
 
     ((m4*)p_voxelizer->view_projection_ubo.memory.p_mapped_device_memory)[1] = tgm_m4_inverse(tgm_m4_euler(0.0f, TG_TO_RADIANS(90.0f), 0.0f));
-    tgvk_buffer_flush_mapped_memory(&p_voxelizer->view_projection_ubo);
+    tgvk_buffer_flush_host_to_device(&p_voxelizer->view_projection_ubo);
 
     tgvk_queue_submit(TGVK_QUEUE_TYPE_GRAPHICS, 1, &submit_info, p_voxelizer->fence);
     tgvk_fence_wait(p_voxelizer->fence);
@@ -204,7 +204,7 @@ void tg_voxelizer_end(tg_voxelizer* p_voxelizer, v3i min_corner_index_3d, tg_vox
 
 
     ((m4*)p_voxelizer->view_projection_ubo.memory.p_mapped_device_memory)[1] = tgm_m4_inverse(tgm_m4_euler(TG_TO_RADIANS(90.0f), 0.0f, 0.0f));
-    tgvk_buffer_flush_mapped_memory(&p_voxelizer->view_projection_ubo);
+    tgvk_buffer_flush_host_to_device(&p_voxelizer->view_projection_ubo);
 
     tgvk_queue_submit(TGVK_QUEUE_TYPE_GRAPHICS, 1, &submit_info, p_voxelizer->fence);
     tgvk_fence_wait(p_voxelizer->fence);
@@ -222,7 +222,7 @@ void tg_voxelizer_end(tg_voxelizer* p_voxelizer, v3i min_corner_index_3d, tg_vox
     tgvk_command_buffer_end_and_submit(&p_voxelizer->command_buffer);
     for (u32 i = 0; i < TG_SVO_ATTACHMENTS; i++)
     {
-        tgvk_buffer_flush_mapped_memory(&p_voxelizer->p_voxel_buffers[i]);
+        tgvk_buffer_flush_host_to_device(&p_voxelizer->p_voxel_buffers[i]);
     }
     
     const u32* p_albedo_r_it  = (u32*)p_voxelizer->p_voxel_buffers[0].memory.p_mapped_device_memory;

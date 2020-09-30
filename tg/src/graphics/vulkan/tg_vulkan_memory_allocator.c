@@ -14,8 +14,6 @@
 #define TGVK_CALL(x)     x
 #endif
 
-#define TG_ROUND(size) ((((size) + memory.page_size - 1) / memory.page_size) * memory.page_size)
-
 
 
 typedef struct tgvk_memory_entry
@@ -87,7 +85,7 @@ void tgvk_memory_allocator_init(VkDevice device, VkPhysicalDevice physical_devic
         if (p_memory_types_per_memory_heap[i])
         {
             const VkDeviceSize size_per_allocation = (physical_device_memory_properties.memoryHeaps[i].size / heap_size_fraction_denominator) / p_memory_types_per_memory_heap[i];
-            const VkDeviceSize aligned_size_per_allocation = TG_ROUND(size_per_allocation);
+            const VkDeviceSize aligned_size_per_allocation = TG_CEIL_TO_MULTIPLE(size_per_allocation, memory.page_size);
             p_allocation_size_per_memory_heap[i] = aligned_size_per_allocation;
         }
     }
@@ -157,7 +155,7 @@ void tgvk_memory_allocator_shutdown(VkDevice device)
 
 VkDeviceSize tgvk_memory_aligned_size(VkDeviceSize size)
 {
-    const VkDeviceSize result = TG_ROUND(size);
+    const VkDeviceSize result = TG_CEIL_TO_MULTIPLE(size, memory.page_size);
     return result;
 }
 
@@ -168,7 +166,7 @@ tgvk_memory_block tgvk_memory_allocator_alloc(VkDeviceSize alignment, VkDeviceSi
 
     tgvk_memory_block memory_block = { 0 };
 
-    const VkDeviceSize aligned_size = TG_ROUND(size);
+    const VkDeviceSize aligned_size = TG_CEIL_TO_MULTIPLE(size, memory.page_size);
     const u32 required_page_count = (u32)(aligned_size / memory.page_size);
 
     TG_MUTEX_LOCK(memory.h_mutex);

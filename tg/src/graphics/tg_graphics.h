@@ -196,6 +196,7 @@ tg_color_image_h        tg_color_image_create(u32 width, u32 height, tg_color_im
 tg_color_image_h        tg_color_image_create2(const char* p_filename, const tg_sampler_create_info* p_sampler_create_info);
 void                    tg_color_image_destroy(tg_color_image_h h_color_image);
 
+u32                     tg_color_image_format_channels(tg_color_image_format format);
 u32                     tg_color_image_format_size(tg_color_image_format format);
 
 tg_color_image_3d_h     tg_color_image_3d_create(u32 width, u32 height, u32 depth, tg_color_image_format format, const tg_sampler_create_info* p_sampler_create_info);
@@ -267,6 +268,7 @@ void                    tg_renderer_exec(tg_renderer_h h_renderer, tg_render_com
 void                    tg_renderer_end(tg_renderer_h h_renderer, f32 dt, b32 present);
 void                    tg_renderer_clear(tg_renderer_h h_renderer);
 tg_render_target_h      tg_renderer_get_render_target(tg_renderer_h h_renderer);
+v3                      tg_renderer_screen_to_world(tg_renderer_h h_renderer, u32 x, u32 y);
 #if TG_ENABLE_DEBUG_TOOLS == 1
 void                    tg_renderer_draw_cube_DEBUG(tg_renderer_h h_renderer, v3 position, v3 scale, v4 color);
 #else

@@ -242,7 +242,7 @@ static void tg__game_3d_update_and_render(f32 dt)
     u32 mouse_x;
     u32 mouse_y;
     tg_input_get_mouse_position(&mouse_x, &mouse_y);
-    if (tg_input_is_mouse_button_down(TG_BUTTON_LEFT))
+    if (tg_input_is_mouse_button_down(TG_BUTTON_RIGHT))
     {
         scene.camera.yaw += TG_TO_RADIANS(0.064f * (f32)((i32)scene.last_mouse_x - (i32)mouse_x));
         scene.camera.pitch += TG_TO_RADIANS(0.064f * (f32)((i32)scene.last_mouse_y - (i32)mouse_y));
@@ -294,9 +294,6 @@ static void tg__game_3d_update_and_render(f32 dt)
     {
         scene.camera.persp.fov_y_in_radians -= 0.1f * tg_input_get_mouse_wheel_detents(TG_TRUE);
     }
-
-    // TODO: tg_terrain_update_voxel_map...
-    tg_terrain_update(scene.p_terrain);
 
     scene.light_timer += dt;
     while (scene.light_timer > 32000.0f)
@@ -366,6 +363,12 @@ static void tg__game_3d_update_and_render(f32 dt)
 #endif
 
     tg_renderer_end(scene.h_main_renderer, dt, TG_TRUE);
+
+    if (tg_input_is_mouse_button_pressed(TG_BUTTON_LEFT, TG_TRUE))
+    {
+        const v3 world_position = tg_renderer_screen_to_world(scene.h_main_renderer, mouse_x, mouse_y);
+        tg_terrain_shape(scene.p_terrain, world_position, 10.0f, 100);
+    }
 
     tg_renderer_clear(scene.h_secondary_renderer);
     tg_renderer_clear(scene.h_main_renderer);

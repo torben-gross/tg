@@ -53,6 +53,7 @@ typedef struct tg_terrain_octree
 typedef struct tg_terrain
 {
 	tg_camera*               p_camera;
+	v3                       last_camera_position;
 	tg_material_h            h_material;
 	tg_read_write_lock       read_write_lock;
 	v3*                      p_position_buffer;
@@ -67,7 +68,7 @@ typedef struct tg_terrain
 
 tg_terrain*   tg_terrain_create(tg_camera* p_camera);
 void          tg_terrain_destroy(tg_terrain* p_terrain);
-void          tg_terrain_update(tg_terrain* p_terrain);
+void          tg_terrain_shape(tg_terrain* p_terrain, v3 position, f32 radius_in_meters, i8 change_per_second);
 void          tg_terrain_render(tg_terrain* p_terrain, tg_renderer_h h_renderer);
 
 #endif

@@ -481,7 +481,7 @@ void tgvk_buffer_destroy(tgvk_buffer* p_buffer)
     vkDestroyBuffer(device, p_buffer->buffer, TG_NULL);
 }
 
-void tgvk_buffer_flush_mapped_memory(tgvk_buffer* p_buffer)
+void tgvk_buffer_flush_device_to_host(tgvk_buffer* p_buffer)
 {
     VkMappedMemoryRange mapped_memory_range = { 0 };
     mapped_memory_range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
@@ -489,6 +489,52 @@ void tgvk_buffer_flush_mapped_memory(tgvk_buffer* p_buffer)
     mapped_memory_range.memory = p_buffer->memory.device_memory;
     mapped_memory_range.offset = p_buffer->memory.offset;
     mapped_memory_range.size = p_buffer->memory.size;
+
+    TGVK_CALL(vkInvalidateMappedMemoryRanges(device, 1, &mapped_memory_range));
+}
+
+void tgvk_buffer_flush_device_to_host_range(tgvk_buffer* p_buffer, VkDeviceSize offset, VkDeviceSize size)
+{
+    TG_ASSERT(size <= p_buffer->memory.size);
+
+    VkPhysicalDeviceProperties physical_device_properties = { 0 };
+    vkGetPhysicalDeviceProperties(physical_device, &physical_device_properties);
+
+    VkMappedMemoryRange mapped_memory_range = { 0 };
+    mapped_memory_range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+    mapped_memory_range.pNext = TG_NULL;
+    mapped_memory_range.memory = p_buffer->memory.device_memory;
+    mapped_memory_range.offset = p_buffer->memory.offset + offset;
+    mapped_memory_range.size = TG_CEIL_TO_MULTIPLE(size, physical_device_properties.limits.nonCoherentAtomSize);
+
+    TGVK_CALL(vkInvalidateMappedMemoryRanges(device, 1, &mapped_memory_range));
+}
+
+void tgvk_buffer_flush_host_to_device(tgvk_buffer* p_buffer)
+{
+    VkMappedMemoryRange mapped_memory_range = { 0 };
+    mapped_memory_range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+    mapped_memory_range.pNext = TG_NULL;
+    mapped_memory_range.memory = p_buffer->memory.device_memory;
+    mapped_memory_range.offset = p_buffer->memory.offset;
+    mapped_memory_range.size = p_buffer->memory.size;
+
+    TGVK_CALL(vkFlushMappedMemoryRanges(device, 1, &mapped_memory_range));
+}
+
+void tgvk_buffer_flush_host_to_device_range(tgvk_buffer* p_buffer, VkDeviceSize offset, VkDeviceSize size)
+{
+    TG_ASSERT(size <= p_buffer->memory.size);
+
+    VkPhysicalDeviceProperties physical_device_properties = { 0 };
+    vkGetPhysicalDeviceProperties(physical_device, &physical_device_properties);
+
+    VkMappedMemoryRange mapped_memory_range = { 0 };
+    mapped_memory_range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+    mapped_memory_range.pNext = TG_NULL;
+    mapped_memory_range.memory = p_buffer->memory.device_memory;
+    mapped_memory_range.offset = p_buffer->memory.offset + offset;
+    mapped_memory_range.size = TG_CEIL_TO_MULTIPLE(size, physical_device_properties.limits.nonCoherentAtomSize);
 
     TGVK_CALL(vkFlushMappedMemoryRanges(device, 1, &mapped_memory_range));
 }
@@ -741,6 +787,7 @@ tgvk_command_buffer* tgvk_command_buffer_get_global(tgvk_command_pool_type type)
         p_command_buffer = &p_global_graphics_command_buffers[thread_id];
     } break;
     case TGVK_COMMAND_POOL_TYPE_PRESENT:
+
     default: TG_INVALID_CODEPATH(); break;
     }
 
@@ -1079,6 +1126,26 @@ void tgvk_command_buffer_cmd_copy_color_image_3d_to_buffer(tgvk_command_buffer* 
     buffer_image_copy.imageExtent.width = p_source->width;
     buffer_image_copy.imageExtent.height = p_source->height;
     buffer_image_copy.imageExtent.depth = p_source->depth;
+
+    vkCmdCopyImageToBuffer(p_command_buffer->command_buffer, p_source->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, destination, 1, &buffer_image_copy);
+}
+
+void tgvk_command_buffer_cmd_copy_depth_image_pixel_to_buffer(tgvk_command_buffer* p_command_buffer, tgvk_image* p_source, VkBuffer destination, u32 x, u32 y)
+{
+    VkBufferImageCopy buffer_image_copy = { 0 };
+    buffer_image_copy.bufferOffset = 0;
+    buffer_image_copy.bufferRowLength = 0;
+    buffer_image_copy.bufferImageHeight = 0;
+    buffer_image_copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    buffer_image_copy.imageSubresource.mipLevel = 0;
+    buffer_image_copy.imageSubresource.baseArrayLayer = 0;
+    buffer_image_copy.imageSubresource.layerCount = 1;
+    buffer_image_copy.imageOffset.x = x;
+    buffer_image_copy.imageOffset.y = y;
+    buffer_image_copy.imageOffset.z = 0;
+    buffer_image_copy.imageExtent.width = 1;
+    buffer_image_copy.imageExtent.height = 1;
+    buffer_image_copy.imageExtent.depth = 1;
 
     vkCmdCopyImageToBuffer(p_command_buffer->command_buffer, p_source->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, destination, 1, &buffer_image_copy);
 }
@@ -2232,7 +2299,7 @@ tgvk_buffer* tgvk_global_staging_buffer_take(VkDeviceSize size)
         {
             tgvk_buffer_destroy(&global_staging_buffer);
         }
-        global_staging_buffer = tgvk_buffer_create(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+        global_staging_buffer = tgvk_buffer_create(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
     }
 
     return &global_staging_buffer;

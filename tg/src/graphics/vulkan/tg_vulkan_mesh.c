@@ -56,7 +56,7 @@ void tg__copy(VkDeviceSize offset, VkDeviceSize size, tgvk_buffer* p_src, void* 
         vkCmdCopyBuffer(p_command_buffer->command_buffer, p_src->buffer, buffer.buffer, 1, &buffer_copy);
     }
     tgvk_command_buffer_end_and_submit(p_command_buffer);
-    tgvk_buffer_flush_mapped_memory(&buffer);
+    tgvk_buffer_flush_host_to_device(&buffer);
     tg_memory_copy(size, buffer.memory.p_mapped_device_memory, p_dst);
 
     tgvk_buffer_destroy(&buffer);
@@ -77,7 +77,7 @@ void tg__set_buffer_data(tgvk_buffer* p_buffer, u64 size, const void* p_data, Vk
 
         tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take(size);
         tg_memory_copy(size, p_data, p_staging_buffer->memory.p_mapped_device_memory);
-        tgvk_buffer_flush_mapped_memory(p_staging_buffer);
+        tgvk_buffer_flush_host_to_device_range(p_staging_buffer, 0, size);
         tgvk_buffer_copy(size, p_staging_buffer, p_buffer);
         tgvk_global_staging_buffer_release();
     }

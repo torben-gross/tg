@@ -4,14 +4,15 @@
 
 
 
-#define TGVK_CAMERA_VIEW(view_projection_ubo)             (((m4*)(view_projection_ubo).memory.p_mapped_device_memory)[0])
-#define TGVK_CAMERA_PROJ(view_projection_ubo)             (((m4*)(view_projection_ubo).memory.p_mapped_device_memory)[1])
+#define TGVK_CAMERA_VIEW(view_projection_ubo)                         (((m4*)(view_projection_ubo).memory.p_mapped_device_memory)[0])
+#define TGVK_CAMERA_PROJ(view_projection_ubo)                         (((m4*)(view_projection_ubo).memory.p_mapped_device_memory)[1])
+#define TG_INVERSE_VIEW_PROJECTION(projection_matrix, view_matrix)    tgm_m4_inverse(tgm_m4_mul(projection_matrix, view_matrix))
 
-#define TGVK_SHADING_ATTACHMENT_COUNT                     1
-#define TGVK_HDR_FORMAT                                   VK_FORMAT_R16G16B16A16_SFLOAT
-#define TGVK_LINEAR_FORMAT                                VK_FORMAT_B8G8R8A8_UNORM
+#define TGVK_SHADING_ATTACHMENT_COUNT                                 1
+#define TGVK_HDR_FORMAT                                               VK_FORMAT_R16G16B16A16_SFLOAT
+#define TGVK_LINEAR_FORMAT                                            VK_FORMAT_B8G8R8A8_UNORM
 
-#define TGVK_GEOMETRY_FORMATS(var)                        const VkFormat var[TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT] = { VK_FORMAT_R32G32B32A32_SFLOAT, TGVK_HDR_FORMAT, TGVK_HDR_FORMAT, TGVK_HDR_FORMAT }
+#define TGVK_GEOMETRY_FORMATS(var)                                    const VkFormat var[TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT] = { VK_FORMAT_R32G32B32A32_SFLOAT, TGVK_HDR_FORMAT, TGVK_HDR_FORMAT, TGVK_HDR_FORMAT }
 
 
 
@@ -801,17 +802,17 @@ void tg_renderer_init_shared_resources(void)
     tgvk_buffer staging_buffer = tgvk_buffer_create(tgm_u64_max(sizeof(p_indices), tgm_u64_max(sizeof(p_positions), sizeof(p_uvs))), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 
     tg_memory_copy(sizeof(p_indices), p_indices, staging_buffer.memory.p_mapped_device_memory);
-    tgvk_buffer_flush_mapped_memory(&staging_buffer);
+    tgvk_buffer_flush_host_to_device(&staging_buffer);
     shared_render_resources.screen_quad_indices = tgvk_buffer_create(sizeof(p_indices), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     tgvk_buffer_copy(sizeof(p_indices), &staging_buffer, &shared_render_resources.screen_quad_indices);
 
     tg_memory_copy(sizeof(p_positions), p_positions, staging_buffer.memory.p_mapped_device_memory);
-    tgvk_buffer_flush_mapped_memory(&staging_buffer);
+    tgvk_buffer_flush_host_to_device(&staging_buffer);
     shared_render_resources.screen_quad_positions_buffer = tgvk_buffer_create(sizeof(p_positions), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     tgvk_buffer_copy(sizeof(p_positions), &staging_buffer, &shared_render_resources.screen_quad_positions_buffer);
 
     tg_memory_copy(sizeof(p_uvs), p_uvs, staging_buffer.memory.p_mapped_device_memory);
-    tgvk_buffer_flush_mapped_memory(&staging_buffer);
+    tgvk_buffer_flush_host_to_device(&staging_buffer);
     shared_render_resources.screen_quad_uvs_buffer = tgvk_buffer_create(sizeof(p_uvs), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     tgvk_buffer_copy(sizeof(p_uvs), &staging_buffer, &shared_render_resources.screen_quad_uvs_buffer);
 
@@ -1243,7 +1244,7 @@ tg_renderer_h tg_renderer_create(tg_camera* p_camera)
     *p_pit++ = (v3) {  0.5f,  0.5f,  0.5f };
     *p_pit++ = (v3) { -0.5f,  0.5f,  0.5f };
 
-    tgvk_buffer_flush_mapped_memory(&staging_buffer);
+    tgvk_buffer_flush_host_to_device(&staging_buffer);
     h_renderer->DEBUG.cube_position_buffer = tgvk_buffer_create(24 * sizeof(v3), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     tgvk_buffer_copy(24 * sizeof(v3), &staging_buffer, &h_renderer->DEBUG.cube_position_buffer);
 
@@ -1258,7 +1259,7 @@ tg_renderer_h tg_renderer_create(tg_camera* p_camera)
         *p_iit++ = 4 * i + 0;
     }
 
-    tgvk_buffer_flush_mapped_memory(&staging_buffer);
+    tgvk_buffer_flush_host_to_device(&staging_buffer);
     h_renderer->DEBUG.cube_index_buffer = tgvk_buffer_create(36 * sizeof(u16), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     tgvk_buffer_copy(36 * sizeof(u16), &staging_buffer, &h_renderer->DEBUG.cube_index_buffer);
     tgvk_buffer_destroy(&staging_buffer);
@@ -1487,7 +1488,7 @@ void tg_renderer_end(tg_renderer_h h_renderer, f32 dt, b32 present)
                     {  1.0f, -1.0f,  1.0f,  1.0f }
                 };
 
-                const m4 ivp = tgm_m4_inverse(tgm_m4_mul(TGVK_CAMERA_PROJ(h_renderer->view_projection_ubo), TGVK_CAMERA_VIEW(h_renderer->view_projection_ubo)));
+                const m4 ivp = TG_INVERSE_VIEW_PROJECTION(TGVK_CAMERA_PROJ(h_renderer->view_projection_ubo), TGVK_CAMERA_VIEW(h_renderer->view_projection_ubo));
                 v3 p_corners_ws[8] = { 0 };
                 for (u8 j = 0; j < 8; j++)
                 {
@@ -1533,7 +1534,7 @@ void tg_renderer_end(tg_renderer_h h_renderer, f32 dt, b32 present)
                 p_shading_info->p_lightspace_matrices[i] = *(m4*)h_renderer->shadow_pass.p_lightspace_ubos[i].memory.p_mapped_device_memory;
             }
 
-            tgvk_buffer_flush_mapped_memory(&h_renderer->shading_pass.shading_info_ubo);
+            tgvk_buffer_flush_host_to_device(&h_renderer->shading_pass.shading_info_ubo);
         }
         TGVK_CALL(vkEndCommandBuffer(h_renderer->shadow_pass.command_buffer.command_buffer));
 
@@ -1552,7 +1553,7 @@ void tg_renderer_end(tg_renderer_h h_renderer, f32 dt, b32 present)
     }
     else
     {
-        tgvk_buffer_flush_mapped_memory(&h_renderer->shading_pass.shading_info_ubo);
+        tgvk_buffer_flush_host_to_device(&h_renderer->shading_pass.shading_info_ubo);
     }
 
 
@@ -1778,7 +1779,77 @@ void tg_renderer_clear(tg_renderer_h h_renderer)
 
 tg_render_target_h tg_renderer_get_render_target(tg_renderer_h h_renderer)
 {
+    TG_ASSERT(h_renderer);
+
     return &h_renderer->render_target;
+}
+
+v3 tg_renderer_screen_to_world(tg_renderer_h h_renderer, u32 x, u32 y)
+{
+    TG_ASSERT(h_renderer && x < h_renderer->render_target.depth_attachment_copy.width && y < h_renderer->render_target.depth_attachment_copy.height);
+
+    v3 result = { 0 };
+
+    tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
+    tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take(sizeof(f32));
+
+    tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+    {
+        tgvk_command_buffer_cmd_transition_depth_image_layout(
+            p_command_buffer,
+            &h_renderer->render_target.depth_attachment_copy,
+            VK_ACCESS_SHADER_READ_BIT,
+            VK_ACCESS_TRANSFER_READ_BIT,
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+            VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+            VK_PIPELINE_STAGE_TRANSFER_BIT
+        );
+        tgvk_command_buffer_cmd_copy_depth_image_pixel_to_buffer(p_command_buffer, &h_renderer->render_target.depth_attachment_copy, p_staging_buffer->buffer, x, y);
+        tgvk_command_buffer_cmd_transition_depth_image_layout(
+            p_command_buffer,
+            &h_renderer->render_target.depth_attachment_copy,
+            VK_ACCESS_TRANSFER_READ_BIT,
+            VK_ACCESS_SHADER_READ_BIT,
+            VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            VK_PIPELINE_STAGE_TRANSFER_BIT,
+            VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
+        );
+    }
+    TGVK_CALL(vkEndCommandBuffer(p_command_buffer->command_buffer));
+
+    tgvk_fence_wait(h_renderer->render_target.fence);
+    tgvk_fence_reset(h_renderer->render_target.fence);
+
+    VkSubmitInfo submit_info = { 0 };
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.pNext = TG_NULL;
+    submit_info.waitSemaphoreCount = 0;
+    submit_info.pWaitSemaphores = TG_NULL;
+    submit_info.pWaitDstStageMask = TG_NULL;
+    submit_info.commandBufferCount = 1;
+    submit_info.pCommandBuffers = &p_command_buffer->command_buffer;
+    submit_info.signalSemaphoreCount = 0;
+    submit_info.pSignalSemaphores = TG_NULL;
+
+    tgvk_queue_submit(TGVK_QUEUE_TYPE_GRAPHICS, 1, &submit_info, h_renderer->render_target.fence);
+
+    tgvk_fence_wait(h_renderer->render_target.fence);
+    tgvk_buffer_flush_device_to_host_range(p_staging_buffer, 0, sizeof(f32));
+    const f32 depth = *(f32*)p_staging_buffer->memory.p_mapped_device_memory;
+    tgvk_global_staging_buffer_release();
+
+    const f32 rel_x = ((f32)x / (f32)h_renderer->render_target.depth_attachment_copy.width) * 2.0f - 1.0f;
+    const f32 rel_y = ((f32)y / (f32)h_renderer->render_target.depth_attachment_copy.height) * 2.0f - 1.0f;
+    
+    const v4 screen = { rel_x, rel_y, depth, 1.0f };
+    // TODO: cache the ivp in the renderer instead of calculating it here again
+    const m4 inverse_view_projection_matrix = TG_INVERSE_VIEW_PROJECTION(TGVK_CAMERA_PROJ(h_renderer->view_projection_ubo), TGVK_CAMERA_VIEW(h_renderer->view_projection_ubo));
+    const v4 world = tgm_m4_mulv4(inverse_view_projection_matrix, screen);
+    result = tgm_v4_to_v3(world);
+
+    return result;
 }
 
 #if TG_ENABLE_DEBUG_TOOLS == 1
@@ -1793,7 +1864,7 @@ void tg_renderer_draw_cube_DEBUG(tg_renderer_h h_renderer, v3 position, v3 scale
 
     *((m4*)h_renderer->DEBUG.p_cubes[h_renderer->DEBUG.cube_count].ubo.memory.p_mapped_device_memory) = tgm_m4_mul(tgm_m4_translate(position), tgm_m4_scale(scale));
     *(v4*)(((m4*)h_renderer->DEBUG.p_cubes[h_renderer->DEBUG.cube_count].ubo.memory.p_mapped_device_memory) + 1) = color;
-    tgvk_buffer_flush_mapped_memory(&h_renderer->DEBUG.p_cubes[h_renderer->DEBUG.cube_count].ubo);
+    tgvk_buffer_flush_host_to_device(&h_renderer->DEBUG.p_cubes[h_renderer->DEBUG.cube_count].ubo);
 
     if (h_renderer->DEBUG.p_cubes[h_renderer->DEBUG.cube_count].graphics_pipeline.pipeline == VK_NULL_HANDLE)
     {

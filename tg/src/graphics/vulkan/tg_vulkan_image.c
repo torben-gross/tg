@@ -29,27 +29,50 @@ void tg_color_image_destroy(tg_color_image_h h_color_image)
 
 
 
-u32 tg_color_image_format_size(tg_color_image_format format)
+u32 tg_color_image_format_channels(tg_color_image_format format)
 {
-	u32 size = 0;
+	u32 result = 0;
 
 	switch (format)
 	{
-	case TG_COLOR_IMAGE_FORMAT_A8B8G8R8:               size =  4; break;
-	case TG_COLOR_IMAGE_FORMAT_B8G8R8A8:               size =  4; break;
-	case TG_COLOR_IMAGE_FORMAT_R16G16B16A16_SFLOAT:    size =  8; break;
-	case TG_COLOR_IMAGE_FORMAT_R32G32B32A32_SFLOAT:    size = 16; break;
-	case TG_COLOR_IMAGE_FORMAT_R32:                    size =  4; break;
-	case TG_COLOR_IMAGE_FORMAT_R8:                     size =  1; break;
-	case TG_COLOR_IMAGE_FORMAT_R8I:                    size =  1; break;
-	case TG_COLOR_IMAGE_FORMAT_R8G8:                   size =  2; break;
-	case TG_COLOR_IMAGE_FORMAT_R8G8B8:                 size =  3; break;
-	case TG_COLOR_IMAGE_FORMAT_R8G8B8A8:               size =  4; break;
+	case TG_COLOR_IMAGE_FORMAT_A8B8G8R8:               result = 4; break;
+	case TG_COLOR_IMAGE_FORMAT_B8G8R8A8:               result = 4; break;
+	case TG_COLOR_IMAGE_FORMAT_R16G16B16A16_SFLOAT:    result = 4; break;
+	case TG_COLOR_IMAGE_FORMAT_R32G32B32A32_SFLOAT:    result = 4; break;
+	case TG_COLOR_IMAGE_FORMAT_R32:                    result = 1; break;
+	case TG_COLOR_IMAGE_FORMAT_R8:                     result = 1; break;
+	case TG_COLOR_IMAGE_FORMAT_R8I:                    result = 1; break;
+	case TG_COLOR_IMAGE_FORMAT_R8G8:                   result = 2; break;
+	case TG_COLOR_IMAGE_FORMAT_R8G8B8:                 result = 3; break;
+	case TG_COLOR_IMAGE_FORMAT_R8G8B8A8:               result = 4; break;
 
 	default: TG_INVALID_CODEPATH(); break;
 	}
 
-	return size;
+	return result;
+}
+
+u32 tg_color_image_format_size(tg_color_image_format format)
+{
+	u32 result = 0;
+
+	switch (format)
+	{
+	case TG_COLOR_IMAGE_FORMAT_A8B8G8R8:               result =  4; break;
+	case TG_COLOR_IMAGE_FORMAT_B8G8R8A8:               result =  4; break;
+	case TG_COLOR_IMAGE_FORMAT_R16G16B16A16_SFLOAT:    result =  8; break;
+	case TG_COLOR_IMAGE_FORMAT_R32G32B32A32_SFLOAT:    result = 16; break;
+	case TG_COLOR_IMAGE_FORMAT_R32:                    result =  4; break;
+	case TG_COLOR_IMAGE_FORMAT_R8:                     result =  1; break;
+	case TG_COLOR_IMAGE_FORMAT_R8I:                    result =  1; break;
+	case TG_COLOR_IMAGE_FORMAT_R8G8:                   result =  2; break;
+	case TG_COLOR_IMAGE_FORMAT_R8G8B8:                 result =  3; break;
+	case TG_COLOR_IMAGE_FORMAT_R8G8B8A8:               result =  4; break;
+
+	default: TG_INVALID_CODEPATH(); break;
+	}
+
+	return result;
 }
 
 
@@ -93,7 +116,7 @@ void tg_color_image_3d_set_data(tg_color_image_3d_h h_color_image_3d, void* p_da
 	const u64 size = (u64)h_color_image_3d->image_3d.width * (u64)h_color_image_3d->image_3d.height * (u64)h_color_image_3d->image_3d.depth * (u64)tg_color_image_format_size((tg_color_image_format)h_color_image_3d->image_3d.format);
 	tgvk_buffer staging_buffer = tgvk_buffer_create(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 	tg_memory_copy(size, p_data, staging_buffer.memory.p_mapped_device_memory);
-	tgvk_buffer_flush_mapped_memory(&staging_buffer);
+	tgvk_buffer_flush_host_to_device(&staging_buffer);
 
 	tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
 	tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
@@ -164,7 +187,7 @@ void tg_cube_map_set_data(tg_cube_map_h h_cube_map, void* p_data)
 	const VkDeviceSize size = 6LL * (VkDeviceSize)h_cube_map->cube_map.dimension * (VkDeviceSize)h_cube_map->cube_map.dimension * tg_color_image_format_size((tg_color_image_format)h_cube_map->cube_map.format);
 	tgvk_buffer staging_buffer = tgvk_buffer_create(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 	tg_memory_copy(size, p_data, staging_buffer.memory.p_mapped_device_memory);
-	tgvk_buffer_flush_mapped_memory(&staging_buffer);
+	tgvk_buffer_flush_host_to_device(&staging_buffer);
 
 	tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
 	tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);

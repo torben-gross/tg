@@ -5,18 +5,19 @@
 
 
 
-#define TG_PI                     3.14159274f
-#define TG_GOLDEN_RATIO           1.61803401f
-#define TG_MAX(v0, v1)            ((v0) > (v1) ? (v0) : (v1))
-#define TG_MIN(v0, v1)            ((v0) < (v1) ? (v0) : (v1))
-#define TG_TO_DEGREES(radians)    (radians * (360.0f / (TG_PI * 2.0f)))
-#define TG_TO_RADIANS(degrees)    (degrees * ((TG_PI * 2.0f) / 360.0f))
+#define TG_PI                                      3.14159274f
+#define TG_GOLDEN_RATIO                            1.61803401f
+#define TG_CEIL_TO_MULTIPLE(value, multiple_of)    ((((value) + (multiple_of) - 1) / (multiple_of)) * (multiple_of))
+#define TG_MAX(v0, v1)                             ((v0) > (v1) ? (v0) : (v1))
+#define TG_MIN(v0, v1)                             ((v0) < (v1) ? (v0) : (v1))
+#define TG_TO_DEGREES(radians)                     (radians * (360.0f / (TG_PI * 2.0f)))
+#define TG_TO_RADIANS(degrees)                     (degrees * ((TG_PI * 2.0f) / 360.0f))
 
-#define V2(f)                     ((v2) { (f), (f) })
-#define V2I(i)                    ((v2i) { (i), (i) })
-#define V3(f)                     ((v3) { (f), (f), (f) })
-#define V3I(i)                    ((v3i) { (i), (i), (i) })
-#define V4(f)                     ((v4) { (f), (f), (f), (f) })
+#define V2(f)                                      ((v2) { (f), (f) })
+#define V2I(i)                                     ((v2i) { (i), (i) })
+#define V3(f)                                      ((v3) { (f), (f), (f) })
+#define V3I(i)                                     ((v3i) { (i), (i), (i) })
+#define V4(f)                                      ((v4) { (f), (f), (f), (f) })
 
 
 
