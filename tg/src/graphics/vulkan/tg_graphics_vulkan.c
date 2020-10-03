@@ -389,7 +389,7 @@ void* tgvk_handle_take(tg_structure_type type)
 {
     void* p_handle = TG_NULL;
 
-    TG_RWL_LOCK_WRITE(handle_lock);
+    TG_RWL_LOCK_FOR_WRITE(handle_lock);
     switch (type)
     {
     case TG_STRUCTURE_TYPE_COLOR_IMAGE:     { TGVK_STRUCTURE_TAKE(color_image, p_handle);     } break;
@@ -409,7 +409,7 @@ void* tgvk_handle_take(tg_structure_type type)
     default: TG_INVALID_CODEPATH(); break;
     }
     *(tg_structure_type*)p_handle = type;
-    TG_RWL_UNLOCK_WRITE(handle_lock);
+    TG_RWL_UNLOCK_FOR_WRITE(handle_lock);
 
     return p_handle;
 }
@@ -419,7 +419,7 @@ void tgvk_handle_release(void* p_handle)
     TG_ASSERT(p_handle && *(tg_structure_type*)p_handle != TG_STRUCTURE_TYPE_INVALID);
     
     const tg_structure_type type = *(tg_structure_type*)p_handle;
-    TG_RWL_LOCK_WRITE(handle_lock);
+    TG_RWL_LOCK_FOR_WRITE(handle_lock);
     switch (type)
     {
     case TG_STRUCTURE_TYPE_COLOR_IMAGE:     { TGVK_STRUCTURE_RELEASE(color_image, p_handle);     } break;
@@ -438,7 +438,7 @@ void tgvk_handle_release(void* p_handle)
     
     default: TG_INVALID_CODEPATH(); break;
     }
-    TG_RWL_UNLOCK_WRITE(handle_lock);
+    TG_RWL_UNLOCK_FOR_WRITE(handle_lock);
 }
 
 
@@ -2291,7 +2291,7 @@ void tgvk_shader_destroy(tgvk_shader* p_shader)
 
 tgvk_buffer* tgvk_global_staging_buffer_take(VkDeviceSize size)
 {
-    TG_RWL_LOCK_WRITE(global_staging_buffer_lock);
+    TG_RWL_LOCK_FOR_WRITE(global_staging_buffer_lock);
 
     if (global_staging_buffer.memory.size < size)
     {
@@ -2309,7 +2309,7 @@ void tgvk_global_staging_buffer_release(void)
 {
 #pragma warning(push)
 #pragma warning(disable:26110)
-    TG_RWL_UNLOCK_WRITE(global_staging_buffer_lock);
+    TG_RWL_UNLOCK_FOR_WRITE(global_staging_buffer_lock);
 #pragma warning(pop)
 }
 

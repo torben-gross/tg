@@ -23,57 +23,149 @@
 
 #ifdef TG_WIN32
 
-#define TG_MAX_PATH                                                         MAX_PATH
-#define TG_FILE_SEPERATOR                                                   '\\'
+#define TG_MAX_PATH                                              MAX_PATH
+#define TG_FILE_SEPERATOR                                        '\\'
 
-#define TG_ATOMIC_ADD_I32(p_append, value)                                  InterlockedExchangeAdd((volatile LONG*)(p_append), (LONG)(value))
-#define TG_ATOMIC_COMPARE_EXCHANGE(p_destination, exchange, comperand)      InterlockedCompareExchange((volatile LONG*)(p_destination), (LONG)(exchange), (LONG)(comperand))
-#define TG_ATOMIC_DECREMENT_I32(p_append)                                   InterlockedDecrement((volatile LONG*)(p_append))
-#define TG_ATOMIC_DECREMENT_I64(p_append)                                   InterlockedDecrement64((volatile LONG64*)(p_append))
-#define TG_ATOMIC_INCREMENT_I32(p_append)                                   InterlockedIncrement((volatile LONG*)(p_append))
-#define TG_ATOMIC_INCREMENT_I64(p_append)                                   InterlockedIncrement64((volatile LONG64*)(p_append))
 
-#define TG_CRITICAL_SECTION_INITIALIZE(critical_section)                    InitializeCriticalSection((PCRITICAL_SECTION)&(critical_section))
-#define TG_CRITICAL_SECTION_ENTER(critical_section)                         EnterCriticalSection((PCRITICAL_SECTION)&(critical_section))
-#define TG_CRITICAL_SECTION_EXIT(critical_section)                          LeaveCriticalSection((PCRITICAL_SECTION)&(critical_section))
 
-#define TG_CONDITION_VARIABLE_INITIALIZE(condition_variable)                InitializeConditionVariable((PCONDITION_VARIABLE)&(condition_variable))
-#define TG_CONDITION_VARIABLE_WAKE(condition_variable)                      WakeConditionVariable((PCONDITION_VARIABLE)&(condition_variable))
-#define TG_CONDITION_VARIABLE_WAKE_ALL(condition_variable)                  WakeAllConditionVariable((PCONDITION_VARIABLE)&(condition_variable))
-#define TG_CONDITION_VARIABLE_WAIT(condition_variable, critical_section)    ((void)(SleepConditionVariableCS((PCONDITION_VARIABLE)&(condition_variable), (PCRITICAL_SECTION)&(critical_section), INFINITE)))
+#define TG_ATOMIC_ADD_I32(p_append, value) \
+    InterlockedExchangeAdd((volatile LONG*)(p_append), (LONG)(value))
 
-#define TG_MUTEX_CREATE()                                                   ((tg_mutex_h)CreateMutex(TG_NULL, TG_FALSE, TG_NULL))
-#define TG_MUTEX_CREATE_LOCKED()                                            ((tg_mutex_h)CreateMutex(TG_NULL, TG_TRUE, TG_NULL))
-#define TG_MUTEX_TRY_LOCK(h_mutex)                                          (WaitForSingleObject((HANDLE)(h_mutex), 0) == WAIT_OBJECT_0)
+#define TG_ATOMIC_COMPARE_EXCHANGE(p_destination, exchange, comperand) \
+    InterlockedCompareExchange((volatile LONG*)(p_destination), (LONG)(exchange), (LONG)(comperand))
 
-#define TG_SEMAPHORE_CREATE(initial_count, maximum_count)                   ((tg_semaphore_h)CreateSemaphoreEx(TG_NULL, 0, maximum_count, TG_NULL, 0, SEMAPHORE_ALL_ACCESS))
-#define TG_SEMAPHORE_TRY_RELEASE(h_semaphore)                               ReleaseSemaphore((HANDLE)(h_semaphore), 1, TG_NULL)
+#define TG_ATOMIC_DECREMENT_I32(p_append) \
+    InterlockedDecrement((volatile LONG*)(p_append))
 
-#define TG_RWL_CREATE()                                                     (tg_read_write_lock)SRWLOCK_INIT
-#define TG_RWL_LOCK_WRITE(read_write_lock)                                  AcquireSRWLockExclusive((PSRWLOCK)&(read_write_lock))
-#define TG_RWL_LOCK_READ(read_write_lock)                                   AcquireSRWLockShared((PSRWLOCK)&(read_write_lock))
-#define TG_RWL_UNLOCK_WRITE(read_write_lock)                                ReleaseSRWLockExclusive((PSRWLOCK)&(read_write_lock))
-#define TG_RWL_UNLOCK_READ(read_write_lock)                                 ReleaseSRWLockShared((PSRWLOCK)&(read_write_lock))
+#define TG_ATOMIC_DECREMENT_I64(p_append) \
+    InterlockedDecrement64((volatile LONG64*)(p_append))
+
+#define TG_ATOMIC_INCREMENT_I32(p_append) \
+    InterlockedIncrement((volatile LONG*)(p_append))
+
+#define TG_ATOMIC_INCREMENT_I64(p_append) \
+    InterlockedIncrement64((volatile LONG64*)(p_append))
+
+
+
+#define TG_CONDITION_VARIABLE_CREATE() \
+    ((tg_condition_variable)CONDITION_VARIABLE_INIT)
+
+#define TG_CONDITION_VARIABLE_WAKE(condition_variable) \
+    WakeConditionVariable((PCONDITION_VARIABLE)&(condition_variable))
+
+#define TG_CONDITION_VARIABLE_WAKE_ALL(condition_variable) \
+    WakeAllConditionVariable((PCONDITION_VARIABLE)&(condition_variable))
+
+#define TG_CONDITION_VARIABLE_WAIT_RWL(condition_variable, read_write_lock, is_locked_for_read) \
+    ((void)(SleepConditionVariableSRW((PCONDITION_VARIABLE)&(condition_variable), (PSRWLOCK)&(read_write_lock), INFINITE, (ULONG)(is_locked_for_read))))
+
+
+
+#define TG_EVENT_CREATE() \
+    ((tg_event_h)CreateEvent(NULL, FALSE, FALSE, NULL))
+
+#define TG_EVENT_DESTROY(h_event) \
+    CloseHandle((HANDLE)(h_event))
+
+#define TG_EVENT_TRY_SIGNAL(h_event) \
+    (SetEvent((HANDLE)(h_event)) == TRUE)
 
 #ifdef TG_DEBUG
-#define TG_MUTEX_DESTROY(h_mutex)                                           TG_ASSERT(CloseHandle((HANDLE)(h_mutex)))
-#define TG_MUTEX_LOCK(h_mutex)                                              TG_ASSERT(WaitForSingleObject((HANDLE)(h_mutex), INFINITE) == WAIT_OBJECT_0)
-#define TG_MUTEX_UNLOCK(h_mutex)                                            TG_ASSERT(ReleaseMutex((HANDLE)(h_mutex)))
-#define TG_SEMAPHORE_DESTROY(h_semaphore)                                   TG_ASSERT(CloseHandle((HANDLE)(h_semaphore)))
-#define TG_SEMAPHORE_WAIT(h_semaphore)                                      TG_ASSERT(WaitForSingleObject((HANDLE)(h_semaphore), INFINITE) == WAIT_OBJECT_0)
-#define TG_SEMAPHORE_RELEASE(h_semaphore)                                   TG_ASSERT(ReleaseSemaphore((HANDLE)(h_semaphore), 1, TG_NULL))
+#define TG_EVENT_SIGNAL(h_event) \
+    TG_ASSERT(SetEvent((HANDLE)(h_event)) == TRUE)
+
+#define TG_EVENT_WAIT(h_event) \
+    TG_ASSERT(WaitForSingleObject((HANDLE)(h_event), INFINITE) == WAIT_OBJECT_0)
 #else
-#define TG_MUTEX_DESTROY(h_mutex)                                           CloseHandle((HANDLE)(h_mutex))
-#define TG_MUTEX_LOCK(h_mutex)                                              WaitForSingleObject((HANDLE)(h_mutex), INFINITE)
-#define TG_MUTEX_UNLOCK(h_mutex)                                            ReleaseMutex((HANDLE)(h_mutex))
-#define TG_SEMAPHORE_DESTROY(h_semaphore)                                   CloseHandle((HANDLE)(h_semaphore))
-#define TG_SEMAPHORE_WAIT(h_semaphore)                                      WaitForSingleObjectEx((HANDLE)(h_semaphore), INFINITE, TG_FALSE)
-#define TG_SEMAPHORE_RELEASE(h_semaphore)                                   ReleaseSemaphore((HANDLE)(h_semaphore), 1, TG_NULL)
+#define TG_EVENT_SIGNAL(h_event) \
+    SetEvent((HANDLE)(h_event))
+
+#define TG_EVENT_WAIT(h_event) \
+    WaitForSingleObject((HANDLE)(h_event), INFINITE)
 #endif
+
+
+
+#define TG_MUTEX_CREATE() \
+    ((tg_mutex_h)CreateMutex(NULL, FALSE, NULL))
+
+#define TG_MUTEX_CREATE_LOCKED() \
+    ((tg_mutex_h)CreateMutex(NULL, TRUE, NULL))
+
+#define TG_MUTEX_TRY_LOCK(h_mutex) \
+    (WaitForSingleObject((HANDLE)(h_mutex), 0) == WAIT_OBJECT_0)
+
+#ifdef TG_DEBUG
+#define TG_MUTEX_DESTROY(h_mutex) \
+    TG_ASSERT(CloseHandle((HANDLE)(h_mutex)) == TRUE)
+
+#define TG_MUTEX_LOCK(h_mutex) \
+    TG_ASSERT(WaitForSingleObject((HANDLE)(h_mutex), INFINITE) == WAIT_OBJECT_0)
+
+#define TG_MUTEX_UNLOCK(h_mutex) \
+    TG_ASSERT(ReleaseMutex((HANDLE)(h_mutex)) == TRUE)
+#else
+#define TG_MUTEX_DESTROY(h_mutex) \
+    CloseHandle((HANDLE)(h_mutex))
+
+#define TG_MUTEX_LOCK(h_mutex) \
+    WaitForSingleObject((HANDLE)(h_mutex), INFINITE)
+
+#define TG_MUTEX_UNLOCK(h_mutex) \
+    ReleaseMutex((HANDLE)(h_mutex))
+#endif
+
+
+
+#define TG_SEMAPHORE_CREATE(initial_count, maximum_count) \
+    ((tg_semaphore_h)CreateSemaphoreEx(NULL, 0, maximum_count, NULL, 0, SEMAPHORE_ALL_ACCESS))
+
+#define TG_SEMAPHORE_TRY_RELEASE(h_semaphore) \
+    ReleaseSemaphore((HANDLE)(h_semaphore), 1, NULL)
+
+#ifdef TG_DEBUG
+#define TG_SEMAPHORE_DESTROY(h_semaphore) \
+    TG_ASSERT(CloseHandle((HANDLE)(h_semaphore)) == TRUE)
+
+#define TG_SEMAPHORE_WAIT(h_semaphore) \
+    TG_ASSERT(WaitForSingleObject((HANDLE)(h_semaphore), INFINITE) == WAIT_OBJECT_0)
+
+#define TG_SEMAPHORE_RELEASE(h_semaphore) \
+    TG_ASSERT(ReleaseSemaphore((HANDLE)(h_semaphore), 1, NULL) == TRUE)
+#else
+#define TG_SEMAPHORE_DESTROY(h_semaphore) \
+    CloseHandle((HANDLE)(h_semaphore))
+
+#define TG_SEMAPHORE_WAIT(h_semaphore) \
+    WaitForSingleObjectEx((HANDLE)(h_semaphore), INFINITE, FALSE)
+
+#define TG_SEMAPHORE_RELEASE(h_semaphore) \
+    ReleaseSemaphore((HANDLE)(h_semaphore), 1, NULL)
+#endif
+
+
+
+#define TG_RWL_CREATE() \
+    ((tg_read_write_lock)SRWLOCK_INIT)
+
+#define TG_RWL_LOCK_FOR_WRITE(read_write_lock) \
+    AcquireSRWLockExclusive((PSRWLOCK)&(read_write_lock))
+
+#define TG_RWL_LOCK_FOR_READ(read_write_lock) \
+    AcquireSRWLockShared((PSRWLOCK)&(read_write_lock))
+
+#define TG_RWL_UNLOCK_FOR_WRITE(read_write_lock) \
+    ReleaseSRWLockExclusive((PSRWLOCK)&(read_write_lock))
+
+#define TG_RWL_UNLOCK_FOR_READ(read_write_lock) \
+    ReleaseSRWLockShared((PSRWLOCK)&(read_write_lock))
+
+
 
 typedef SRWLOCK               tg_read_write_lock;
 typedef CONDITION_VARIABLE    tg_condition_variable;
-typedef CRITICAL_SECTION      tg_critical_section;
+typedef HANDLE                tg_event_h;
 typedef HANDLE                tg_mutex_h;
 typedef HANDLE                tg_semaphore_h;
 typedef HANDLE                tg_window_h;
@@ -86,7 +178,7 @@ TG_DECLARE_HANDLE(tg_timer);
 
 
 #ifdef TG_DEBUG
-#define TG_DEBUG_LOG(x, ...)                                                   tg_platform_debug_log(x, __VA_ARGS__)
+#define TG_DEBUG_LOG(x, ...) tg_platform_debug_log(x, __VA_ARGS__)
 #else
 #define TG_DEBUG_LOG(x, ...)
 #endif

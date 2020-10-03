@@ -242,7 +242,7 @@ static void tg__game_3d_update_and_render(f32 dt)
     u32 mouse_x;
     u32 mouse_y;
     tg_input_get_mouse_position(&mouse_x, &mouse_y);
-    if (tg_input_is_mouse_button_down(TG_BUTTON_RIGHT))
+    if (tg_input_is_mouse_button_down(TG_BUTTON_MIDDLE))
     {
         scene.camera.yaw += TG_TO_RADIANS(0.064f * (f32)((i32)scene.last_mouse_x - (i32)mouse_x));
         scene.camera.pitch += TG_TO_RADIANS(0.064f * (f32)((i32)scene.last_mouse_y - (i32)mouse_y));
@@ -364,14 +364,26 @@ static void tg__game_3d_update_and_render(f32 dt)
 
     tg_renderer_end(scene.h_main_renderer, dt, TG_TRUE);
 
-    if (tg_input_is_mouse_button_pressed(TG_BUTTON_LEFT, TG_TRUE))
-    {
-        const v3 world_position = tg_renderer_screen_to_world(scene.h_main_renderer, mouse_x, mouse_y);
-        tg_terrain_shape(scene.p_terrain, world_position, 10.0f, 100);
-    }
-
     tg_renderer_clear(scene.h_secondary_renderer);
     tg_renderer_clear(scene.h_main_renderer);
+
+    i8 delta = 0;
+    if (tg_input_is_mouse_button_down(TG_BUTTON_LEFT))
+    {
+        delta += 20;
+    }
+    if (tg_input_is_mouse_button_down(TG_BUTTON_RIGHT))
+    {
+        delta -= 20;
+    }
+    if (delta)
+    {
+        const v3 world_position = tg_renderer_screen_to_world(scene.h_main_renderer, mouse_x, mouse_y);
+        if (tgm_v3_magsqr(tgm_v3_sub(world_position, scene.camera.position)) < 0.9f * scene.camera.persp.f * scene.camera.persp.f)
+        {
+            tg_terrain_shape(scene.p_terrain, world_position, 1.5f, delta); // TODO: why does this not work with a radius of less than 1.0f, e.g. TG_PI * 0.25f?
+        }
+    }
 }
 
 static void tg__game_3d_destroy(void)

@@ -24,12 +24,15 @@
 #define TG_TERRAIN_VIEW_DISTANCE_IN_OCTREES            3
 #define TG_TERRAIN_OCTREES                             (1 + 4 * TG_TERRAIN_VIEW_DISTANCE_IN_OCTREES * (1 + TG_TERRAIN_VIEW_DISTANCE_IN_OCTREES))
 
+#define TG_TERRAIN_DESTROY_RENDER_COMMAND_COUNT        1024
+
 
 
 typedef enum tg_terrain_flag
 {
 	TG_TERRAIN_FLAG_CONSTRUCTED    = 0x1,
-	TG_TERRAIN_FLAG_DESTROY        = 0x2
+	TG_TERRAIN_FLAG_DESTROY        = 0x2,
+	TG_TERRAIN_FLAG_UPDATE         = 0x4
 } tg_terrain_flag;
 
 typedef struct tg_terrain_octree_node
@@ -52,23 +55,27 @@ typedef struct tg_terrain_octree
 
 typedef struct tg_terrain
 {
-	tg_camera*               p_camera;
-	v3                       last_camera_position;
-	tg_material_h            h_material;
-	tg_read_write_lock       read_write_lock;
-	v3*                      p_position_buffer;
-	v3*                      p_normal_buffer;
-	b32                      is_thread_running;
-	tg_thread_h              h_thread;
+	tg_camera*                   p_camera;
+	v3                           last_camera_position;
+	tg_material_h                h_material;
+	tg_read_write_lock           render_read_write_lock;
+	v3*                          p_position_buffer;
+	v3*                          p_normal_buffer;
+	b32                          is_thread_running;
+	tg_thread_h                  h_thread;
+	tg_terrain_octree            p_octrees[TG_TERRAIN_OCTREES];
 
-	tg_terrain_octree        p_octrees[TG_TERRAIN_OCTREES];
+	i32                          update_node_count;
+	tg_event_h                   h_event;
+	u8                           destroy_render_command_count;
+	tg_render_command_h          ph_destroy_render_commands[TG_TERRAIN_DESTROY_RENDER_COMMAND_COUNT];
 } tg_terrain;
 
 
 
 tg_terrain*   tg_terrain_create(tg_camera* p_camera);
 void          tg_terrain_destroy(tg_terrain* p_terrain);
-void          tg_terrain_shape(tg_terrain* p_terrain, v3 position, f32 radius_in_meters, i8 change_per_second);
 void          tg_terrain_render(tg_terrain* p_terrain, tg_renderer_h h_renderer);
+void          tg_terrain_shape(tg_terrain* p_terrain, v3 position, f32 radius_in_meters, i8 change_per_second);
 
 #endif
