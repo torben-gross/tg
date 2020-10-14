@@ -8,6 +8,11 @@
 
 
 
+#define TG_PI64                            3.1415926
+#define TG_SUN_ANGULAR_RADIUS              (0.00935 / 2.0)
+#define TG_SUN_SOLIG_ANGLE                 (TG_PI64 * TG_SUN_ANGULAR_RADIUS * TG_SUN_ANGULAR_RADIUS)
+#define TG_LENGTH_UNIT_IN_METERS           1000.0
+
 #define TG_DOPSON_UNIT                     2.687e20
 #define TG_MAX_OZONE_NUMBER_DENSITY        (300.0 * TG_DOPSON_UNIT / 15000.0)
 #define TG_CONSTANT_SOLAR_IRRADIANCE       1.5
@@ -80,6 +85,20 @@ typedef struct tg_model
 } tg_model;
 
 
+
+static const char TG_VERTEX_SHADER[] =
+    "#version 330"
+	""
+    "uniform mat4 model_from_view;"
+    "uniform mat4 view_from_clip;"
+    "layout(location = 0) in vec4 vertex;"
+    "out vec3 view_ray;"
+	""
+    "void main()"
+	"{"
+	"    view_ray = (model_from_view * vec4((view_from_clip * vertex).xyz, 0.0)).xyz;"
+    "    gl_Position = vertex;"
+	"}";
 
 static const f64 p_solar_irradiance[48] = {
 	1.11776, 1.14259, 1.01249, 1.14716, 1.72765, 1.73054, 1.68870, 1.61253,
@@ -207,69 +226,6 @@ static const f64 p_xyz_to_srgb[9] = {
 
 
 
-void tg__glsl_header_factory(b32 combine_scattering_textures, u32 size, char* p_buffer)
-{
-#define PUSH(p_string)  ((void)(i += tg_string_copy_no_nul(size, &p_buffer[i], p_string)))
-#define PUSH_I32(value) ((void)(i += tg_string_parse_i32_no_nul(size, &p_buffer[i], value)))
-
-	u32 i = 0;
-
-	PUSH("#version 330\n");
-	PUSH("\n");
-	PUSH("#define IN(x) const in x\n");
-	PUSH("#define OUT(x) out x\n");
-	PUSH("#define TEMPLATE(x)\n");
-	PUSH("#define TEMPLATE_ARGUMENT(x)\n");
-	PUSH("#define assert(x)\n");
-	PUSH("\n");
-	PUSH("const int TG_TRANSMITTANCE_TEXTURE_WIDTH  = "); PUSH_I32(TG_TRANSMITTANCE_TEXTURE_WIDTH); PUSH(";\n");
-	PUSH("const int TG_TRANSMITTANCE_TEXTURE_HEIGHT = "); PUSH_I32(TG_TRANSMITTANCE_TEXTURE_HEIGHT); PUSH(";\n");
-	PUSH("const int TG_SCATTERING_TEXTURE_R_SIZE    = "); PUSH_I32(TG_SCATTERING_TEXTURE_R_SIZE); PUSH(";\n");
-	PUSH("const int TG_SCATTERING_TEXTURE_MU_SIZE   = "); PUSH_I32(TG_SCATTERING_TEXTURE_MU_SIZE); PUSH(";\n");
-	PUSH("const int TG_SCATTERING_TEXTURE_MU_S_SIZE = "); PUSH_I32(TG_SCATTERING_TEXTURE_MU_S_SIZE); PUSH(";\n");
-	PUSH("const int TG_SCATTERING_TEXTURE_NU_SIZE   = "); PUSH_I32(TG_SCATTERING_TEXTURE_NU_SIZE); PUSH(";\n");
-	PUSH("const int TG_IRRADIANCE_TEXTURE_WIDTH     = "); PUSH_I32(TG_IRRADIANCE_TEXTURE_WIDTH); PUSH(";\n");
-	PUSH("const int TG_IRRADIANCE_TEXTURE_HEIGHT    = "); PUSH_I32(TG_IRRADIANCE_TEXTURE_HEIGHT); PUSH(";\n");
-	PUSH("\n");
-
-	if (combine_scattering_textures)
-	{
-		PUSH("#define TG_COMBINED_SCATTERING_TEXTURES\n");
-		PUSH("\n");
-	}
-	// + definitions_glsl
-
-	//PUSH("const tg_atmosphere_parameters ATMOSPHERE = tg_atmosphere_parameters(\n");
-	//PUSH("\t"); to_string(solar_irradiance, lambdas, 1.0) + ",\n" +
-	//	std::to_string(sun_angular_radius) + ",\n" +
-	//	std::to_string(bottom_radius / length_unit_in_meters) + ",\n" +
-	//	std::to_string(top_radius / length_unit_in_meters) + ",\n" +
-	//	density_profile(rayleigh_density) + ",\n" +
-	//	to_string(
-	//		rayleigh_scattering, lambdas, length_unit_in_meters) + ",\n" +
-	//	density_profile(mie_density) + ",\n" +
-	//	to_string(mie_scattering, lambdas, length_unit_in_meters) + ",\n" +
-	//	to_string(mie_extinction, lambdas, length_unit_in_meters) + ",\n" +
-	//	std::to_string(mie_phase_function_g) + ",\n" +
-	//	density_profile(absorption_density) + ",\n" +
-	//	to_string(
-	//		absorption_extinction, lambdas, length_unit_in_meters) + ",\n" +
-	//	to_string(ground_albedo, lambdas, 1.0) + ",\n" +
-	//	std::to_string(cos(max_sun_zenith_angle)) + ");\n" +
-	//	"const vec3 SKY_SPECTRAL_RADIANCE_TO_LUMINANCE = vec3(" +
-	//	std::to_string(sky_k_r) + "," +
-	//	std::to_string(sky_k_g) + "," +
-	//	std::to_string(sky_k_b) + ");\n" +
-	//	"const vec3 SUN_SPECTRAL_RADIANCE_TO_LUMINANCE = vec3(" +
-	//	std::to_string(sun_k_r) + "," +
-	//	std::to_string(sun_k_g) + "," +
-	//	std::to_string(sun_k_b) + ");\n" +
-	//	functions_glsl;
-
-#undef PUSH_I32
-#undef PUSH
-}
-
 f64 tg__interpolate(u32 count, const f64* p_wavelengths, const f64* p_wavelength_function, f64 wavelength)
 {
 	f64 result = 0.0;
@@ -300,6 +256,128 @@ f64 tg__interpolate(u32 count, const f64* p_wavelengths, const f64* p_wavelength
 	}
 
 	return result;
+}
+
+void tg__glsl_header_factory(
+	b32                                combine_scattering_textures,
+	const f64*                         p_wavelengths,
+	const tg_density_profile_layer*    p_rayleigh_density,
+	const f64*                         p_solar_irrad,
+	u32                                size,
+	char*                              p_buffer
+)
+{
+#define PUSH(p_string)     ((void)(i += tg_string_copy_no_nul(size, &p_buffer[i], p_string)))
+#define PUSH_F32(value)    ((void)(i += tg_string_parse_f32_no_nul(size, &p_buffer[i], value)))
+#define PUSH_F64(value)    ((void)(i += tg_string_parse_f64_no_nul(size, &p_buffer[i], value)))
+#define PUSH_I32(value)    ((void)(i += tg_string_parse_i32_no_nul(size, &p_buffer[i], value)))
+
+#define TO_STRING(p_v, scale)                                                                     \
+	{                                                                                             \
+		const f64 r = tg__interpolate(48, p_wavelengths, p_v, TG_LAMBDA_R) * scale;               \
+		const f64 g = tg__interpolate(48, p_wavelengths, p_v, TG_LAMBDA_G) * scale;               \
+		const f64 b = tg__interpolate(48, p_wavelengths, p_v, TG_LAMBDA_B) * scale;               \
+		PUSH("vec3("); PUSH_F64(r); PUSH(", "); PUSH_F64(g); PUSH(", "); PUSH_F64(b); PUSH(")");  \
+	}
+
+#define LAYER_COUNT 2
+
+#define DENSITY_LAYER(density_profile_layer)                                                  \
+	{                                                                                         \
+		PUSH("tg_density_profile_layer(");                                                    \
+		PUSH_F64((density_profile_layer).width / TG_LENGTH_UNIT_IN_METERS);       PUSH(", "); \
+		PUSH_F64((density_profile_layer).exp_term);                               PUSH(", "); \
+		PUSH_F64((density_profile_layer).exp_scale * TG_LENGTH_UNIT_IN_METERS);   PUSH(", "); \
+		PUSH_F64((density_profile_layer).linear_term * TG_LENGTH_UNIT_IN_METERS); PUSH(", "); \
+		PUSH_F64((density_profile_layer).constant_term);                          PUSH(")");  \
+	}
+#define DENSITY_PROFILE(count, p_density_profile_layers)               \
+	{                                                                  \
+		TG_ASSERT(count);                                              \
+		PUSH("tg_density_profile(tg_density_profile_layer[2](");       \
+		tg_density_profile_layer empty_density_profile_layer =  { 0 }; \
+		for (u32 idx = 0; idx < LAYER_COUNT - count; idx++)            \
+		{                                                              \
+			DENSITY_LAYER(empty_density_profile_layer); PUSH(", ");    \
+		}                                                              \
+		for (u32 idx = 0; idx < count; idx++)                          \
+		{                                                              \
+			DENSITY_LAYER((p_density_profile_layers)[idx]);            \
+			if (i < LAYER_COUNT - 1)                                   \
+			{                                                          \
+				PUSH(", ");                                            \
+			}                                                          \
+			else                                                       \
+			{                                                          \
+				PUSH("))");                                            \
+			}                                                          \
+		}                                                              \
+	}
+
+	u32 i = 0;
+
+	tg_density_profile_layer p_temp_density_profile_layers[LAYER_COUNT] = { 0 };
+
+	PUSH("#version 330\n");
+	PUSH("\n");
+	PUSH("#define TG_IN(x) const in x\n");
+	PUSH("#define TG_OUT(x) out x\n");
+	PUSH("#define TG_TEMPLATE(x)\n");
+	PUSH("#define TG_TEMPLATE_ARGUMENT(x)\n");
+	PUSH("#define TG_ASSERT(x)\n");
+	PUSH("\n");
+	PUSH("const int TG_TRANSMITTANCE_TEXTURE_WIDTH  = "); PUSH_I32(TG_TRANSMITTANCE_TEXTURE_WIDTH); PUSH(";\n");
+	PUSH("const int TG_TRANSMITTANCE_TEXTURE_HEIGHT = "); PUSH_I32(TG_TRANSMITTANCE_TEXTURE_HEIGHT); PUSH(";\n");
+	PUSH("const int TG_SCATTERING_TEXTURE_R_SIZE    = "); PUSH_I32(TG_SCATTERING_TEXTURE_R_SIZE); PUSH(";\n");
+	PUSH("const int TG_SCATTERING_TEXTURE_MU_SIZE   = "); PUSH_I32(TG_SCATTERING_TEXTURE_MU_SIZE); PUSH(";\n");
+	PUSH("const int TG_SCATTERING_TEXTURE_MU_S_SIZE = "); PUSH_I32(TG_SCATTERING_TEXTURE_MU_S_SIZE); PUSH(";\n");
+	PUSH("const int TG_SCATTERING_TEXTURE_NU_SIZE   = "); PUSH_I32(TG_SCATTERING_TEXTURE_NU_SIZE); PUSH(";\n");
+	PUSH("const int TG_IRRADIANCE_TEXTURE_WIDTH     = "); PUSH_I32(TG_IRRADIANCE_TEXTURE_WIDTH); PUSH(";\n");
+	PUSH("const int TG_IRRADIANCE_TEXTURE_HEIGHT    = "); PUSH_I32(TG_IRRADIANCE_TEXTURE_HEIGHT); PUSH(";\n");
+	PUSH("\n");
+
+	if (combine_scattering_textures)
+	{
+		PUSH("#define TG_COMBINED_SCATTERING_TEXTURES\n");
+		PUSH("\n");
+	}
+	// + definitions_glsl
+
+	PUSH("const tg_atmosphere_parameters ATMOSPHERE = tg_atmosphere_parameters(\n");
+	PUSH("    "); TO_STRING(p_solar_irrad, 1.0); PUSH(",\n");
+	PUSH("    "); PUSH_F64(TG_SUN_ANGULAR_RADIUS); PUSH(",\n");
+	PUSH("    "); PUSH_F64(TG_BOTTOM_RADIUS / TG_LENGTH_UNIT_IN_METERS); PUSH(",\n");
+	PUSH("    "); PUSH_F64(TG_TOP_RADIUS / TG_LENGTH_UNIT_IN_METERS); PUSH(",\n");
+	PUSH("    "); p_temp_density_profile_layers[0] = *p_rayleigh_density; DENSITY_PROFILE(1, p_temp_density_profile_layers); PUSH(",\n");
+
+	//	density_profile(rayleigh_density) + ",\n" +
+	//	to_string(
+	//		rayleigh_scattering, lambdas, length_unit_in_meters) + ",\n" +
+	//	density_profile(mie_density) + ",\n" +
+	//	to_string(mie_scattering, lambdas, length_unit_in_meters) + ",\n" +
+	//	to_string(mie_extinction, lambdas, length_unit_in_meters) + ",\n" +
+	//	std::to_string(mie_phase_function_g) + ",\n" +
+	//	density_profile(absorption_density) + ",\n" +
+	//	to_string(
+	//		absorption_extinction, lambdas, length_unit_in_meters) + ",\n" +
+	//	to_string(ground_albedo, lambdas, 1.0) + ",\n" +
+	//	std::to_string(cos(max_sun_zenith_angle)) + ");\n" +
+	//	"const vec3 SKY_SPECTRAL_RADIANCE_TO_LUMINANCE = vec3(" +
+	//	std::to_string(sky_k_r) + "," +
+	//	std::to_string(sky_k_g) + "," +
+	//	std::to_string(sky_k_b) + ");\n" +
+	//	"const vec3 SUN_SPECTRAL_RADIANCE_TO_LUMINANCE = vec3(" +
+	//	std::to_string(sun_k_r) + "," +
+	//	std::to_string(sun_k_g) + "," +
+	//	std::to_string(sun_k_b) + ");\n" +
+	//	functions_glsl;
+
+	int bh = 0;
+
+#undef PUSH_I32
+#undef PUSH_F64
+#undef PUSH_F32
+#undef PUSH
 }
 
 f64 tg__cie_color_matching_function_table_value(f64 wavelength, i32 column)
@@ -414,7 +492,7 @@ void tg_atmosphere_precompute(void)
 		f64 mie = TG_MIE_ANGSTROM_BETA / TG_MIE_SCALE_HEIGHT * tgm_f64_pow(lambda, -TG_MIE_ANGSTROM_ALPHA);
 
 		p_wavelengths[i] = l;
-		p_solar_irrad[i] = use_constant_solar_spectrum ? TG_CONSTANT_SOLAR_IRRADIANCE : p_solar_irrad[(l - TG_LAMBDA_MIN) / 10];
+		p_solar_irrad[i] = use_constant_solar_spectrum ? TG_CONSTANT_SOLAR_IRRADIANCE : p_solar_irradiance[(l - TG_LAMBDA_MIN) / 10];
 		p_rayleigh_scattering[i] = TG_RAYLEIGH * tgm_f64_pow(lambda, -4.0);
 		p_mie_scattering[i] = mie * TG_MIE_SINGLE_SCATTERING_ALBEDO;
 		p_mie_extinction[i] = mie;
@@ -490,7 +568,7 @@ void tg_atmosphere_precompute(void)
 	);
 
 	char p_shader_buffer[1024] = { 0 };
-	tg__glsl_header_factory(combine_scattering_textures, 1024, p_shader_buffer);
+	tg__glsl_header_factory(combine_scattering_textures, p_wavelengths, &rayleigh_layer, p_solar_irradiance, 1024, p_shader_buffer);
 }
 
 

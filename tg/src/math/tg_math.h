@@ -287,6 +287,9 @@ f32    tgm_u32_log10(u32 v);
 f32    tgm_u32_log2(u32 v);
 u32    tgm_u32_pow(u32 base, u32 exponent);
 
+f64    tgm_u64_log10(u64 v);
+u64    tgm_u64_pow(u64 base, u64 exponent);
+
 
 
 /*------------------------------------------------------------+
@@ -322,6 +325,7 @@ b32    tgm_u32_is_power_of_two(u32 v);
 u32    tgm_u32_max(u32 v0, u32 v1);
 u32    tgm_u32_min(u32 v0, u32 v1);
 
+u32    tgm_u64_digits(u64 v);
 u64    tgm_u64_max(u64 v0, u64 v1);
 u64    tgm_u64_min(u64 v0, u64 v1);
 

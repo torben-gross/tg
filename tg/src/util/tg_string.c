@@ -178,7 +178,15 @@ u32 tg_string_length(const char* p_string)
 	return result;
 }
 
-u32 tg_string_parse_i32(u32 size, char* p_buffer, i32 v)
+u32 tg_string_parse_f32(u32 size, char* p_buffer, f32 v)
+{
+	const u32 result = tg_string_parse_f32_no_nul(size, p_buffer, v) + 1;
+	TG_ASSERT(result <= size);
+	p_buffer[result - 1] = '\0';
+	return result;
+}
+
+u32 tg_string_parse_f32_no_nul(u32 size, char* p_buffer, f32 v)
 {
 	u32 count = 0;
 
@@ -186,21 +194,60 @@ u32 tg_string_parse_i32(u32 size, char* p_buffer, i32 v)
 	{
 		TG_ASSERT(count + 1 < size);
 		p_buffer[count++] = '-';
+		v *= -1.0f;
 	}
 
-	const u32 digit_count = tgm_i32_digits(v);
-	TG_ASSERT(count + 1 + digit_count < size);
-	i32 pow = tgm_i32_pow(10, digit_count - 1);
-	for (u32 i = 0; i < digit_count; i++)
-	{
-		const i32 digit = v / pow;
-		p_buffer[count++] = '0' + (char)tgm_i32_abs(digit);
-		v -= digit * pow;
-		pow /= 10;
-	}
-	p_buffer[count++] = '\0';
+	u32 integral_part = (u32)v;
+	count += tg_string_parse_u32_no_nul(size - count, &p_buffer[count], integral_part);
+
+	p_buffer[count++] = '.';
+
+	u32 decimal_part = (u32)((v - (f64)((u32)v)) * tgm_f64_pow(10.0f, 9.0f));
+	count += tg_string_parse_u32_no_nul(size - count, &p_buffer[count], decimal_part);
+
+	TG_ASSERT(count < size);
+	p_buffer[count++] = 'f';
 
 	return count;
+}
+
+u32 tg_string_parse_f64(u32 size, char* p_buffer, f64 v)
+{
+	const u32 result = tg_string_parse_f64_no_nul(size, p_buffer, v) + 1;
+	TG_ASSERT(result <= size);
+	p_buffer[result - 1] = '\0';
+	return result;
+}
+
+u32 tg_string_parse_f64_no_nul(u32 size, char* p_buffer, f64 v)
+{
+	u32 count = 0;
+
+	if (v < 0)
+	{
+		TG_ASSERT(count + 1 < size);
+		p_buffer[count++] = '-';
+		v *= -1.0f;
+	}
+
+	u64 integral_part = (u64)v;
+	count += tg_string_parse_u64_no_nul(size - count, &p_buffer[count], integral_part);
+
+	p_buffer[count++] = '.';
+
+	// TODO(torben): this will create rounding errors beginning at a certain value... try e.g. -1.2 as input. same goes for the f32 version
+	u64 decimal_part = (u64)((v - (f64)((u64)v)) * tgm_f64_pow(10.0, 9.0));
+	count += tg_string_parse_u64_no_nul(size - count, &p_buffer[count], decimal_part);
+
+	return count;
+}
+
+u32 tg_string_parse_i32(u32 size, char* p_buffer, i32 v)
+{
+	const u32 result = tg_string_parse_i32_no_nul(size, p_buffer, v) + 1;
+	TG_ASSERT(result <= size);
+	p_buffer[result - 1] = '\0';
+	return result;
 }
 
 u32 tg_string_parse_i32_no_nul(u32 size, char* p_buffer, i32 v)
@@ -211,15 +258,59 @@ u32 tg_string_parse_i32_no_nul(u32 size, char* p_buffer, i32 v)
 	{
 		TG_ASSERT(count < size);
 		p_buffer[count++] = '-';
+		v *= -1;
+
+	}
+	count += tg_string_parse_u32_no_nul(size - count, &p_buffer[count], (u32)v);
+
+	return count;
+}
+
+u32 tg_string_parse_u32(u32 size, char* p_buffer, u32 v)
+{
+	const u32 result = tg_string_parse_u32_no_nul(size, p_buffer, v) + 1;
+	TG_ASSERT(result <= size);
+	p_buffer[result - 1] = '\0';
+	return result;
+}
+
+u32 tg_string_parse_u32_no_nul(u32 size, char* p_buffer, u32 v)
+{
+	const u32 count = tgm_u32_digits(v);
+
+	TG_ASSERT(count <= size);
+	u32 pow = tgm_u32_pow(10, count - 1);
+	TG_ASSERT(pow != 0);
+	for (u32 i = 0; i < count; i++)
+	{
+		const u32 digit = v / pow;
+		p_buffer[i] = '0' + (char)digit;
+		v -= digit * pow;
+		pow /= 10;
 	}
 
-	const u32 digit_count = tgm_i32_digits(v);
-	TG_ASSERT(count + digit_count < size);
-	i32 pow = tgm_i32_pow(10, digit_count - 1);
-	for (u32 i = 0; i < digit_count; i++)
+	return count;
+}
+
+u32 tg_string_parse_u64(u32 size, char* p_buffer, u64 v)
+{
+	const u32 result = tg_string_parse_u64_no_nul(size, p_buffer, v) + 1;
+	TG_ASSERT(result <= size);
+	p_buffer[result - 1] = '\0';
+	return result;
+}
+
+u32 tg_string_parse_u64_no_nul(u32 size, char* p_buffer, u64 v)
+{
+	const u32 count = tgm_u64_digits(v);
+
+	TG_ASSERT(count <= size);
+	u32 pow = tgm_u32_pow(10, count - 1);
+	TG_ASSERT(pow != 0i64);
+	for (u32 i = 0; i < count; i++)
 	{
-		const i32 digit = v / pow;
-		p_buffer[count++] = '0' + (char)tgm_i32_abs(digit);
+		const u64 digit = (u32)(v / (u64)pow);
+		p_buffer[i] = '0' + (char)digit;
 		v -= digit * pow;
 		pow /= 10;
 	}

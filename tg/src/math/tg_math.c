@@ -344,6 +344,7 @@ f32 cosf(f32 v);
 f32 coshf(f32 v);
 f64 floor(f64 v);
 f32 floorf(f32 v);
+f64 log10(f64 v);
 f32 log10f(f32 v);
 f32 logf(f32 v);
 f64 pow(f64 base, f64 exponent);
@@ -513,6 +514,20 @@ u32 tgm_u32_pow(u32 base, u32 exponent)
 
 
 
+f64 tgm_u64_log10(u64 v)
+{
+	const f64 result = log10((f64)v);
+	return result;
+}
+
+u64 tgm_u64_pow(u64 base, u64 exponent)
+{
+	const u64 result = (u64)pow((f64)base, (f64)exponent);
+	return result;
+}
+
+
+
 /*------------------------------------------------------------+
 | Functional                                                  |
 +------------------------------------------------------------*/
@@ -670,6 +685,12 @@ u32 tgm_u32_max(u32 v0, u32 v1)
 u32 tgm_u32_min(u32 v0, u32 v1)
 {
 	const u32 result = v0 < v1 ? v0 : v1;
+	return result;
+}
+
+u32 tgm_u64_digits(u64 v)
+{
+	const u32 result = v == 0 ? 1 : (u32)tgm_f32_floor((f32)tgm_u64_log10(v)) + 1;
 	return result;
 }
 
