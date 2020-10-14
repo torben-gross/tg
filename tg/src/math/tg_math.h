@@ -303,6 +303,8 @@ f32    tgm_f32_round(f32 v);
 i32    tgm_f32_round_to_i32(f32 v);
 f32    tgm_f32_tlerp(f32 v000, f32 v001, f32 v010, f32 v011, f32 v100, f32 v101, f32 v110, f32 v111, f32 tx, f32 ty, f32 tz);
 
+i32    tgm_f64_floor_to_i32(f64 v);
+
 i32    tgm_i32_abs(i32 v);
 i32    tgm_i32_clamp(i32 v, i32 low, i32 high);
 u32    tgm_i32_digits(i32 v);

@@ -2,7 +2,7 @@
 
 #ifdef TG_VULKAN
 
-#if defined(TG_DEBUG) || !defined(TG_DISTRIBUTE)
+#if !defined(TG_DISTRIBUTE)
 #define TG_RECOMPILE_SHADERS_ON_STARTUP 1
 #else
 #define TG_RECOMPILE_SHADERS_ON_STARTUP 0

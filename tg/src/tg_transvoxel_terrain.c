@@ -1256,13 +1256,13 @@ void tg_terrain_shape(tg_terrain* p_terrain, v3 position, f32 radius_in_meters, 
 	const v3 rounded_position = tgm_v3_round(position);
 	const i32 ceil_radius = (i32)tgm_f32_ceil(radius_in_meters);
 
-	for (i32 z = -ceil_radius; z < ceil_radius; z++)
+	for (i32 sample_z = -ceil_radius; sample_z < ceil_radius; sample_z++)
 	{
-		for (i32 y = -ceil_radius; y < ceil_radius; y++)
+		for (i32 sample_y = -ceil_radius; sample_y < ceil_radius; sample_y++)
 		{
-			for (i32 x = -ceil_radius; x < ceil_radius; x++)
+			for (i32 sample_x = -ceil_radius; sample_x < ceil_radius; sample_x++)
 			{
-				const v3 sample_position = tgm_v3_add(rounded_position, (v3) { (f32)x, (f32)y, (f32)z });
+				const v3 sample_position = tgm_v3_add(rounded_position, (v3) { (f32)sample_x, (f32)sample_y, (f32)sample_z });
 				const v3i octree_index_3d = TG_TERRAIN_POSITION_TO_OCTREE_INDEX_3D(sample_position);
 				volatile tg_terrain_octree* p_octree = tg__get_octree(p_terrain, octree_index_3d);
 
@@ -1285,30 +1285,41 @@ void tg_terrain_shape(tg_terrain* p_terrain, v3 position, f32 radius_in_meters, 
 							if (old_sample != new_sample)
 							{
 								TG_TERRAIN_VOXEL_MAP_AT_V3I(p_octree->p_voxel_map, voxel_map_position) = new_sample;
-							
-								u16 first_index_of_lod = 0;
-								u8 lod = TG_TERRAIN_MAX_LOD;
-								u8 inv_lod = TG_TERRAIN_MAX_LOD - lod;
-								u8 sqrt_nodes_per_lod = 1 << inv_lod;
-								v3i node_index_3d = { 0 };
-								u16 node_index = 0;
-
-								TG_RWL_LOCK_FOR_READ(p_terrain->render_read_write_lock);
-								while (!TG_TERRAIN_SHOULD_RENDER(p_octree->p_should_render_bitmap_stable, node_index))
+								
+								for (i32 cell_z = -1; cell_z <= 1; cell_z++)
 								{
-									first_index_of_lod += (1 << (3 * inv_lod));
-									lod--;
-									inv_lod++;
-									sqrt_nodes_per_lod = 1 << inv_lod;
-									node_index_3d = tgm_v3i_divi(voxel_map_position, TG_TERRAIN_OCTREE_CELL_STRIDE / (i32)sqrt_nodes_per_lod);
-									node_index = first_index_of_lod + sqrt_nodes_per_lod * sqrt_nodes_per_lod * (u16)node_index_3d.z + sqrt_nodes_per_lod * (u16)node_index_3d.y + (u16)node_index_3d.x;
-								}
-								TG_RWL_UNLOCK_FOR_READ(p_terrain->render_read_write_lock);
+									for (i32 cell_y = -1; cell_y <= 1; cell_y++)
+									{
+										for (i32 cell_x = -1; cell_x <= 1; cell_x++)
+										{
+											const v3i cell_position = { voxel_map_position.x + cell_x, voxel_map_position.y + cell_y, voxel_map_position.z + cell_z };
 
-								if (!(p_octree->p_nodes[node_index].flags & TG_TERRAIN_FLAG_UPDATE))
-								{
-									TG_ATOMIC_INCREMENT_I32(&p_terrain->update_node_count);
-									p_octree->p_nodes[node_index].flags |= TG_TERRAIN_FLAG_UPDATE;
+											u16 first_index_of_lod = 0;
+											u8 lod = TG_TERRAIN_MAX_LOD;
+											u8 inv_lod = TG_TERRAIN_MAX_LOD - lod;
+											u8 sqrt_nodes_per_lod = 1 << inv_lod;
+											v3i node_index_3d = { 0 };
+											u16 node_index = 0;
+
+											TG_RWL_LOCK_FOR_READ(p_terrain->render_read_write_lock);
+											while (!TG_TERRAIN_SHOULD_RENDER(p_octree->p_should_render_bitmap_stable, node_index))
+											{
+												first_index_of_lod += (1 << (3 * inv_lod));
+												lod--;
+												inv_lod++;
+												sqrt_nodes_per_lod = 1 << inv_lod;
+												node_index_3d = tgm_v3i_divi(cell_position, TG_TERRAIN_OCTREE_CELL_STRIDE / (i32)sqrt_nodes_per_lod);
+												node_index = first_index_of_lod + sqrt_nodes_per_lod * sqrt_nodes_per_lod * (u16)node_index_3d.z + sqrt_nodes_per_lod * (u16)node_index_3d.y + (u16)node_index_3d.x;
+											}
+											TG_RWL_UNLOCK_FOR_READ(p_terrain->render_read_write_lock);
+
+											if (!(p_octree->p_nodes[node_index].flags & TG_TERRAIN_FLAG_UPDATE))
+											{
+												TG_ATOMIC_INCREMENT_I32(&p_terrain->update_node_count);
+												p_octree->p_nodes[node_index].flags |= TG_TERRAIN_FLAG_UPDATE;
+											}
+										}
+									}
 								}
 							}
 						}

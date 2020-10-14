@@ -342,6 +342,7 @@ f32 atanhf(f32 v);
 f32 ceilf(f32 v);
 f32 cosf(f32 v);
 f32 coshf(f32 v);
+f64 floor(f64 v);
 f32 floorf(f32 v);
 f32 log10f(f32 v);
 f32 logf(f32 v);
@@ -569,6 +570,12 @@ f32 tgm_f32_tlerp(f32 v000, f32 v001, f32 v010, f32 v011, f32 v100, f32 v101, f3
 	const f32 lz0 = tgm_f32_blerp(v000, v010, v100, v110, tx, ty);
 	const f32 lz1 = tgm_f32_blerp(v001, v011, v101, v111, tx, ty);
 	const f32 result = tgm_f32_lerp(lz0, lz1, tz);
+	return result;
+}
+
+i32 tgm_f64_floor_to_i32(f64 v)
+{
+	const i32 result = (i32)floor(v);
 	return result;
 }
 

@@ -15,18 +15,16 @@ void main()
 
     float d = dot(out_normal.xyz, vec3(0.0, 1.0, 0.0));
     
-    vec3 color_grass0 = vec3(204.0/255.0, 255.0/255.0, 0.0/255.0) * 0.1;
-    vec3 color_grass1 = vec3(204.0/255.0, 255.0/255.0, 0.0/255.0) * 0.7;
-    vec3 color_grass = mix(color_grass0, color_grass1, clamp((v_position.y - 100.0) / (130.0 - 100.0), 0.0, 1.0));
-    vec3 color_stone = vec3(0.5, 0.2, 0.2);
+    //vec3 color_grass = vec3(204.0/255.0, 255.0/255.0, 0.0/255.0);
+    vec3 color_grass = vec3(255.0/255.0, 192.0/255.0, 0.0/255.0);
+    //vec3 color_stone = vec3(0.5, 0.2, 0.2);
+    vec3 color_stone = vec3(129.0/255.0, 110.0/255.0, 100.0/255.0);
 
-    float t0 = max(0.0, (1.0 - pow(d, 4)));
-    float t1 = clamp(0.2 * (v_position.y - 130.0), 1.0, 10.0);
-    float t = clamp(t0 * t1, 0.0, 1.0);
-    out_albedo = vec4(mix(color_grass, color_stone, t), 1.0);
+    float t = d < 0.5 ? 0.0 : 1.0;
+    out_albedo = vec4(mix(color_stone, color_grass, t), 1.0);
 
     float roughness_grass = 1.0;
     float roughness_stone = 0.5;
-    float roughness = mix(roughness_grass, roughness_stone, t);
+    float roughness = mix(roughness_stone, roughness_grass, t);
     out_metallic_roughness_ao = vec4(0.0, roughness, 1.0, 0.0);
 }

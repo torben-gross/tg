@@ -268,7 +268,6 @@ typedef struct tg_render_command
 {
     tg_structure_type                    type;
     u32                                  renderer_info_count;
-    tg_mutex_h                           h_streaming_mutex;
     tg_mesh_h                            h_mesh;
     tg_material_h                        h_material;
     tgvk_buffer                          model_ubo;
@@ -304,7 +303,6 @@ typedef struct tg_mesh
 {
     tg_structure_type    type;
 
-    tg_mutex_h           h_streaming_mutex;
     tg_bounds            bounds; // TODO: these are not used (actually, in kd-tree...)! let it be a sphere (radius + position (position because mesh might not be perfectly centered)) for view frustum culling?
     
     u32                  index_count;

@@ -2,16 +2,35 @@
 
 #include "math/tg_math.h"
 
-void tg_string_copy(u32 size, char* p_buffer, const char* p_string)
+u32 tg_string_copy(u32 size, char* p_buffer, const char* p_string)
 {
-	for (u32 i = 0; i < size; i++)
+	u32 i = 0;
+	for (; i < size; i++)
 	{
 		p_buffer[i] = p_string[i];
 		if (p_string[i] == '\0')
 		{
+			i++;
 			break;
 		}
 	}
+	TG_ASSERT(p_string[i - 1] == '\0');
+	return i;
+}
+
+u32 tg_string_copy_no_nul(u32 size, char* p_buffer, const char* p_string)
+{
+	u32 i = 0;
+	for (; i < size; i++)
+	{
+		if (p_string[i] == '\0')
+		{
+			break;
+		}
+		p_buffer[i] = p_string[i];
+	}
+	TG_ASSERT(p_string[i] == '\0');
+	return i;
 }
 
 b32 tg_string_equal(const char* p_s0, const char* p_s1)
@@ -157,6 +176,55 @@ u32 tg_string_length(const char* p_string)
 	}
 	const u32 result = (u32)(p_it - p_string);
 	return result;
+}
+
+u32 tg_string_parse_i32(u32 size, char* p_buffer, i32 v)
+{
+	u32 count = 0;
+
+	if (v < 0)
+	{
+		TG_ASSERT(count + 1 < size);
+		p_buffer[count++] = '-';
+	}
+
+	const u32 digit_count = tgm_i32_digits(v);
+	TG_ASSERT(count + 1 + digit_count < size);
+	i32 pow = tgm_i32_pow(10, digit_count - 1);
+	for (u32 i = 0; i < digit_count; i++)
+	{
+		const i32 digit = v / pow;
+		p_buffer[count++] = '0' + (char)tgm_i32_abs(digit);
+		v -= digit * pow;
+		pow /= 10;
+	}
+	p_buffer[count++] = '\0';
+
+	return count;
+}
+
+u32 tg_string_parse_i32_no_nul(u32 size, char* p_buffer, i32 v)
+{
+	u32 count = 0;
+
+	if (v < 0)
+	{
+		TG_ASSERT(count < size);
+		p_buffer[count++] = '-';
+	}
+
+	const u32 digit_count = tgm_i32_digits(v);
+	TG_ASSERT(count + digit_count < size);
+	i32 pow = tgm_i32_pow(10, digit_count - 1);
+	for (u32 i = 0; i < digit_count; i++)
+	{
+		const i32 digit = v / pow;
+		p_buffer[count++] = '0' + (char)tgm_i32_abs(digit);
+		v -= digit * pow;
+		pow /= 10;
+	}
+
+	return count;
 }
 
 void tg_string_replace_characters(char* p_string, char replace, char with)

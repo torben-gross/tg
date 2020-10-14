@@ -24,7 +24,8 @@ vec3 aces_film(vec3 x)
 void main()
 {
 	vec3 hdr = texture(u_present_texture, v_uv).xyz;
-    vec3 linear = hdr / vec3(u_exposure);
-	vec3 tone_mapped = aces_film(linear);
+    vec3 adapted = hdr / vec3(u_exposure);
+	//vec3 tone_mapped = aces_film(adapted);
+    vec3 tone_mapped = adapted;
     out_color = vec4(tone_mapped, 1.0);
 }

@@ -302,17 +302,17 @@ void main()
             lo += (k_diffuse * albedo / TG_PI + specular) * radiance * ndl;
         }
 
-        vec3 ambient = vec3(0.01) * albedo * ao;
+        vec3 ambient = vec3(0.1) * albedo * ao;
         //ambient = vec3(0.0);
         vec3 color   = ambient + lo;
 
         color = color / (color + vec3(1.0));
         color = pow(color, vec3(1.0 / 2.2));
 
-        vec3  d = u_camera_position - position;
-        float t = clamp(sqrt(dot(d, d)) / 1024.0f, 0.0, 1.0);
-        t = pow(t, 1.5);
-        color   = mix(color, sky_color.xyz, t);
+        //vec3  d = u_camera_position - position;
+        //float t = clamp(sqrt(dot(d, d)) / 1024.0f, 0.0, 1.0);
+        //t = pow(t, 1.5);
+        //color   = mix(color, sky_color.xyz, t);
 
         out_color = vec4(color, 1.0);
     }

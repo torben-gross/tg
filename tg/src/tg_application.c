@@ -43,6 +43,7 @@ typedef struct tg_sample_scene
     tg_renderer_h              h_secondary_renderer;
     u32                        last_mouse_x;
     u32                        last_mouse_y;
+
     struct quad
     {
         tg_mesh_h              h_quad_mesh;
@@ -52,6 +53,11 @@ typedef struct tg_sample_scene
         f32                    quad_offset_z;
         f32                    quad_delta_time_sum_looped;
     };
+
+    tg_mesh_h                  h_tree_mesh;
+    tg_color_image_h           h_tree_color_lut;
+    tg_material_h              h_tree_material;
+    tg_render_command_h        h_tree_render_command;
 
     tg_mesh_h                  h_sponza_mesh;
     tg_render_command_h        h_sponza_render_command;
@@ -102,6 +108,8 @@ static void tg__game_3d_create(void)
     tg_renderer_enable_shadows(scene.h_main_renderer, TG_FALSE);
     tg_renderer_enable_shadows(scene.h_secondary_renderer, TG_FALSE);
 
+    tg_atmosphere_precompute();
+
     scene.p_terrain = tg_terrain_create(&scene.camera);
 
 
@@ -151,6 +159,18 @@ static void tg__game_3d_create(void)
     scene.h_probe_render_command = tg_render_command_create(scene.h_probe_mesh, scene.h_probe_material, scene.probe_translation, 1, p_probe_handles);
     tg_list_insert(&scene.render_commands, &scene.h_probe_render_command);
 
+
+    scene.h_tree_mesh = tg_mesh_create2("meshes/tree.obj", V3(1.0f));
+    tg_sampler_create_info tree_sampler_create_info = { 0 };
+    tree_sampler_create_info.min_filter = TG_IMAGE_FILTER_NEAREST;
+    tree_sampler_create_info.mag_filter = TG_IMAGE_FILTER_NEAREST;
+    tree_sampler_create_info.address_mode_u = TG_IMAGE_ADDRESS_MODE_CLAMP_TO_BORDER;
+    tree_sampler_create_info.address_mode_v = TG_IMAGE_ADDRESS_MODE_CLAMP_TO_BORDER;
+    tree_sampler_create_info.address_mode_w = TG_IMAGE_ADDRESS_MODE_CLAMP_TO_BORDER;
+    scene.h_tree_color_lut = tg_color_image_create2("textures/tree_color_palette.bmp", &tree_sampler_create_info);
+    scene.h_tree_material = tg_material_create_deferred(tg_vertex_shader_get("shaders/deferred/pbr.vert"), tg_fragment_shader_get("shaders/deferred/tree.frag"));
+    scene.h_tree_render_command = tg_render_command_create(scene.h_tree_mesh, scene.h_tree_material, (v3) { 100.0f, 141.0f, 100.0f }, 1, &scene.h_tree_color_lut);
+    tg_list_insert(&scene.render_commands, &scene.h_tree_render_command);
 
 
     scene.h_pbr_sphere_mesh = tg_mesh_create_sphere(0.5f, 128, 64, TG_TRUE, TG_TRUE, TG_FALSE);
@@ -403,6 +423,11 @@ static void tg__game_3d_destroy(void)
     }
     tg_mesh_destroy(scene.h_pbr_sphere_mesh2);
     tg_mesh_destroy(scene.h_pbr_sphere_mesh);
+
+    tg_mesh_destroy(scene.h_tree_mesh);
+    tg_color_image_destroy(scene.h_tree_color_lut);
+    tg_material_destroy(scene.h_tree_material);
+    tg_render_command_destroy(scene.h_tree_render_command);
 
     tg_material_destroy(scene.h_sponza_material);
     tg_uniform_buffer_destroy(scene.h_sponza_ubo);

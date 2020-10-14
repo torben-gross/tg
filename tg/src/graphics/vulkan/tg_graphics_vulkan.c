@@ -38,32 +38,12 @@
 
 
 
-//#define TG_STREAMING_QUEUE_LENGTH 1024
-//
-//typedef struct tg_streaming_queue
-//{
-//    volatile tg_semaphore_h    h_semaphore;
-//    tg_thread_fn*              p_thread_fns[TG_STREAMING_QUEUE_LENGTH];
-//    volatile void*             p_user_datas[TG_STREAMING_QUEUE_LENGTH];
-//    volatile b32               running;
-//    volatile u16               current;
-//    volatile u16               one_past_last;
-//} tg_streaming_queue;
-//
-//static tg_streaming_queue          streaming_queue = { 0 };
-
-
-
 #ifdef TG_DEBUG
 static VkDebugUtilsMessengerEXT    debug_utils_messenger = VK_NULL_HANDLE;
 #endif
 
 static tgvk_queue                  p_queues[TGVK_QUEUE_TYPE_COUNT];
 
-//static VkCommandPool               compute_command_pool;
-//static VkCommandPool               graphics_command_pool;
-//static VkCommandPool               streaming_compute_command_pool;
-//static VkCommandPool               streaming_graphics_command_pool;
 static VkCommandPool               p_compute_command_pools[TG_MAX_THREADS];
 static VkCommandPool               p_graphics_command_pools[TG_MAX_THREADS];
 static VkCommandPool               present_command_pool;
@@ -277,32 +257,6 @@ static void tg__sampler_destroy(VkSampler sampler)
 {
     vkDestroySampler(device, sampler, TG_NULL);
 }
-
-
-
-//#pragma warning(push)
-//#pragma warning(disable:4100)
-//static void tg__streaming_thread_fn(volatile void* p_user_data)
-//{
-//    while (streaming_queue.running)
-//    {
-//        TG_SEMAPHORE_WAIT(streaming_queue.h_semaphore);
-//        tg_thread_fn* p_streaming_thread_fn = streaming_queue.p_thread_fns[streaming_queue.current];
-//        volatile void* p_streaming_user_data = streaming_queue.p_user_datas[streaming_queue.current];
-//        if (p_streaming_thread_fn)
-//        {
-//            p_streaming_thread_fn(p_streaming_user_data);
-//        }
-//#ifdef TG_DEBUG
-//        else
-//        {
-//            TG_ASSERT(!streaming_queue.running);
-//        }
-//#endif
-//        streaming_queue.current = (streaming_queue.current + 1) % TG_STREAMING_QUEUE_LENGTH;
-//    }
-//}
-//#pragma warning(pop)
 
 
 
@@ -675,8 +629,6 @@ tgvk_image tgvk_color_image_create(u32 width, u32 height, VkFormat format, const
 
 tgvk_image tgvk_color_image_create2(const char* p_filename, const tg_sampler_create_info* p_sampler_create_info)
 {
-    TG_INVALID_CODEPATH(); // TODO: this needs to be tested!
-
     u32 w, h;
     tg_color_image_format f;
     u32* p_data = TG_NULL;
@@ -684,19 +636,18 @@ tgvk_image tgvk_color_image_create2(const char* p_filename, const tg_sampler_cre
     //h_color_image->mip_levels = TG_IMAGE_MAX_MIP_LEVELS(h_color_image->width, h_color_image->height);// TODO: mipmapping
     const u64 size = (u64)w * (u64)h * sizeof(*p_data);
 
-    tgvk_buffer staging_buffer = { 0 };
-    staging_buffer = tgvk_buffer_create(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-    tg_memory_copy(size, p_data, staging_buffer.memory.p_mapped_device_memory);
+    tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take(size);
+    tg_memory_copy(size, p_data, p_staging_buffer->memory.p_mapped_device_memory);
 
     tgvk_image image = tgvk_color_image_create(w, h, (VkFormat)f, p_sampler_create_info);
 
-    const u32 thread_id = tg_platform_get_thread_id();
-    tgvk_command_buffer_begin(&p_global_graphics_command_buffers[thread_id], VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-    tgvk_command_buffer_cmd_transition_color_image_layout(&p_global_graphics_command_buffers[thread_id], &image, 0, 0, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
-    tgvk_command_buffer_cmd_copy_buffer_to_color_image(&p_global_graphics_command_buffers[thread_id], staging_buffer.buffer, &image);
-    //tgvk_command_buffer_cmd_transition_color_image_layout(command_buffer, &image, 0, 0, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, TG_VULKAN_COLOR_IMAGE_LAYOUT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);// TODO: how to handle image layouts?
-    tgvk_command_buffer_end_and_submit(&p_global_graphics_command_buffers[thread_id]);
-    tgvk_buffer_destroy(&staging_buffer);
+    tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
+    tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+    tgvk_command_buffer_cmd_transition_color_image_layout(p_command_buffer, &image, 0, 0, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+    tgvk_command_buffer_cmd_copy_buffer_to_color_image(p_command_buffer, p_staging_buffer->buffer, &image);
+    tgvk_command_buffer_cmd_transition_color_image_layout(p_command_buffer, &image, 0, 0, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+    tgvk_command_buffer_end_and_submit(p_command_buffer);
+    tgvk_global_staging_buffer_release();
 
     tg_image_free(p_data);
 
@@ -2698,7 +2649,7 @@ static VkDebugUtilsMessengerEXT tg__debug_utils_manager_create(void)
     debug_utils_messenger_create_info.pNext = TG_NULL;
     debug_utils_messenger_create_info.flags = 0;
     debug_utils_messenger_create_info.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-    debug_utils_messenger_create_info.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+    debug_utils_messenger_create_info.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
     debug_utils_messenger_create_info.pfnUserCallback = tg__debug_callback;
     debug_utils_messenger_create_info.pUserData = TG_NULL;
 
