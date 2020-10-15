@@ -467,7 +467,7 @@ f32 tgm_f32_tanh(f32 v)
 
 
 
-f64 tgm_f64_cos(f32 v)
+f64 tgm_f64_cos(f64 v)
 {
 	const f64 result = cos(v);
 	return result;

@@ -1,4 +1,33 @@
-// source: http://www-evasion.imag.fr/Membres/Eric.Bruneton/
+/**
+ * Copyright (c) 2017 Eric Bruneton
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the copyright holders nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
+ * THE POSSIBILITY OF SUCH DAMAGE.
+ */
+ 
+ // source: http://www-evasion.imag.fr/Membres/Eric.Bruneton/
 
 #include "graphics/vulkan/tg_graphics_vulkan.h"
 
@@ -87,200 +116,211 @@ typedef struct tg_model
 
 
 static const char TG_VERTEX_SHADER[] =
-	"#version 330"
-	""
-	"layout(location = 0) in vec4 vertex;"
-	""
-	"uniform mat4 model_from_view;"
-	"uniform mat4 view_from_clip;"
-	""
-	"out vec3 view_ray;"
-	""
-	"void main()"
-	"{"
-	"    view_ray = (model_from_view * vec4((view_from_clip * vertex).xyz, 0.0)).xyz;"
-	"    gl_Position = vertex;"
-	"}";
+	"#version 330\n"
+	"\n"
+	"layout(location = 0) in vec4 vertex;\n"
+	"\n"
+	"uniform mat4 model_from_view;\n"
+	"uniform mat4 view_from_clip;\n"
+	"\n"
+	"out vec3 view_ray;\n"
+	"\n"
+	"void main()\n"
+	"{\n"
+	"    view_ray = (model_from_view * vec4((view_from_clip * vertex).xyz, 0.0)).xyz;\n"
+	"    gl_Position = vertex;\n"
+	"}\n"
+	"\n";
 
 const char TG_COMPUTE_TRANSMITTANCE_SHADER[] =
-	"layout(location = 0) out vec3 transmittance;"
-	""
-	"void main()"
-	"{"
-	"    transmittance = tg_compute_transmittance_to_top_atmosphere_boundary_texture(ATMOSPHERE, gl_FragCoord.xy);"
-	"}";
+	"layout(location = 0) out vec3 transmittance;\n"
+	"\n"
+	"void main()\n"
+	"{\n"
+	"    transmittance = tg_compute_transmittance_to_top_atmosphere_boundary_texture(ATMOSPHERE, gl_FragCoord.xy);\n"
+	"}\n"
+	"\n";
 
 const char TG_COMPUTE_DIRECT_IRRADIANCE_SHADER[] =
-	"layout(location = 0) out vec3 delta_irradiance;"
-	"layout(location = 1) out vec3 irradiance;"
-	""
-	"uniform sampler2D transmittance_texture;"
-	""
-	"void main()"
-	"{"
-	"    delta_irradiance = tg_compute_direction_irradiance_texture(ATMOSPHERE, transmittance_texture, gl_FragCoord.xy);"
-	"    irradiance = vec3(0.0);"
-	"}";
+	"layout(location = 0) out vec3 delta_irradiance;\n"
+	"layout(location = 1) out vec3 irradiance;\n"
+	"\n"
+	"uniform sampler2D transmittance_texture;\n"
+	"\n"
+	"void main()\n"
+	"{\n"
+	"    delta_irradiance = tg_compute_direction_irradiance_texture(ATMOSPHERE, transmittance_texture, gl_FragCoord.xy);\n"
+	"    irradiance = vec3(0.0);\n"
+	"}\n"
+	"\n";
 
 const char TG_COMPUTE_SINGLE_SCATTERING_SHADER[] =
-	"uniform mat3 luminance_from_radiance;"
-	"uniform sampler2D transmittance_texture;"
-	""
-	"layout(location = 0) out vec3 delta_rayleigh;"
-	"layout(location = 1) out vec3 delta_mie;"
-	"layout(location = 2) out vec4 scattering;"
-	"layout(location = 3) out vec3 single_mie_scattering;"
-	"uniform int layer;"
-	""
-	"void main()"
-	"{"
-	"    tg_compute_single_scattering_texture(ATMOSPHERE, transmittance_texture, vec3(gl_FragCoord.xy, layer + 0.5), delta_rayleigh, delta_mie);"
-	"    scattering = vec4(luminance_from_radiance * delta_rayleigh.rgb, (luminance_from_radiance * delta_mie).r);"
-	"    single_mie_scattering = luminance_from_radiance * delta_mie;"
-	"}";
+	"uniform mat3 luminance_from_radiance;\n"
+	"uniform sampler2D transmittance_texture;\n"
+	"\n"
+	"layout(location = 0) out vec3 delta_rayleigh;\n"
+	"layout(location = 1) out vec3 delta_mie;\n"
+	"layout(location = 2) out vec4 scattering;\n"
+	"layout(location = 3) out vec3 single_mie_scattering;\n"
+	"uniform int layer;\n"
+	"\n"
+	"void main()\n"
+	"{\n"
+	"    tg_compute_single_scattering_texture(ATMOSPHERE, transmittance_texture, vec3(gl_FragCoord.xy, layer + 0.5), delta_rayleigh, delta_mie);\n"
+	"    scattering = vec4(luminance_from_radiance * delta_rayleigh.rgb, (luminance_from_radiance * delta_mie).r);\n"
+	"    single_mie_scattering = luminance_from_radiance * delta_mie;\n"
+	"}\n"
+	"\n";
 
 const char TG_COMPUTE_SCATTERING_DENSITY_SHADER[] =
-	"uniform sampler2D transmittance_texture;"
-	"uniform sampler3D single_rayleigh_scattering_texture;"
-	"uniform sampler3D single_mie_scattering_texture;"
-	"uniform sampler3D multiple_scattering_texture;"
-	"uniform sampler2D irradiance_texture;"
-	"uniform int scattering_order;"
-	"uniform int layer;"
-	""
-	"layout(location = 0) out vec3 scattering_density;"
-	""
-	"void main()"
-	"{"
-	"    scattering_density = ComputeScatteringDensityTexture("
-	"        ATMOSPHERE, transmittance_texture, single_rayleigh_scattering_texture,"
-	"        single_mie_scattering_texture, multiple_scattering_texture,"
-	"        irradiance_texture, vec3(gl_FragCoord.xy, layer + 0.5),"
-	"        scattering_order"
-	"    );"
-	"}";
+	"uniform sampler2D transmittance_texture;\n"
+	"uniform sampler3D single_rayleigh_scattering_texture;\n"
+	"uniform sampler3D single_mie_scattering_texture;\n"
+	"uniform sampler3D multiple_scattering_texture;\n"
+	"uniform sampler2D irradiance_texture;\n"
+	"uniform int scattering_order;\n"
+	"uniform int layer;\n"
+	"\n"
+	"layout(location = 0) out vec3 scattering_density;\n"
+	"\n"
+	"void main()\n"
+	"{\n"
+	"    scattering_density = tg_compute_scattering_density_texture(\n"
+	"        ATMOSPHERE, transmittance_texture, single_rayleigh_scattering_texture,\n"
+	"        single_mie_scattering_texture, multiple_scattering_texture,\n"
+	"        irradiance_texture, vec3(gl_FragCoord.xy, layer + 0.5),\n"
+	"        scattering_order\n"
+	"    );\n"
+	"}\n"
+	"\n";
 
 const char TG_COMPUTE_INDIRECT_IRRADIANCE_SHADER[] =
-	"uniform mat3 luminance_from_radiance;"
-	"uniform sampler3D single_rayleigh_scattering_texture;"
-	"uniform sampler3D single_mie_scattering_texture;"
-	"uniform sampler3D multiple_scattering_texture;"
-	"uniform int scattering_order;"
-	""
-	"layout(location = 0) out vec3 delta_irradiance;"
-	"layout(location = 1) out vec3 irradiance;"
-	""
-	"void main()"
-	"{"
-	"    delta_irradiance = ComputeIndirectIrradianceTexture("
-	"        ATMOSPHERE, single_rayleigh_scattering_texture,"
-	"        single_mie_scattering_texture, multiple_scattering_texture,"
-	"        gl_FragCoord.xy, scattering_order"
-	"    );"
-	"    irradiance = luminance_from_radiance * delta_irradiance;"
-	"}";
+	"uniform mat3 luminance_from_radiance;\n"
+	"uniform sampler3D single_rayleigh_scattering_texture;\n"
+	"uniform sampler3D single_mie_scattering_texture;\n"
+	"uniform sampler3D multiple_scattering_texture;\n"
+	"uniform int scattering_order;\n"
+	"\n"
+	"layout(location = 0) out vec3 delta_irradiance;\n"
+	"layout(location = 1) out vec3 irradiance;\n"
+	"\n"
+	"void main()\n"
+	"{\n"
+	"    delta_irradiance = tg_compute_indirect_irradiance_texture(\n"
+	"        ATMOSPHERE, single_rayleigh_scattering_texture,\n"
+	"        single_mie_scattering_texture, multiple_scattering_texture,\n"
+	"        gl_FragCoord.xy, scattering_order\n"
+	"    );\n"
+	"    irradiance = luminance_from_radiance * delta_irradiance;\n"
+	"}\n"
+	"\n";
 
 const char TG_COMPUTE_MULTIPLE_SCATTERING_SHADER[] =
-	"uniform mat3 luminance_from_radiance;"
-	"uniform sampler2D transmittance_texture;"
-	"uniform sampler3D scattering_density_texture;"
-	"uniform int layer;"
-	""
-	"layout(location = 0) out vec3 delta_multiple_scattering;"
-	"layout(location = 1) out vec4 scattering;"
-	""
-	"void main()"
-	"{"
-	"    float nu;"
-	"    delta_multiple_scattering = ComputeMultipleScatteringTexture("
-	"        ATMOSPHERE, transmittance_texture, scattering_density_texture,"
-	"        vec3(gl_FragCoord.xy, layer + 0.5), nu"
-	"    );"
-	"    scattering = vec4(luminance_from_radiance * delta_multiple_scattering.rgb / RayleighPhaseFunction(nu), 0.0);"
-	"}";
+	"uniform mat3 luminance_from_radiance;\n"
+	"uniform sampler2D transmittance_texture;\n"
+	"uniform sampler3D scattering_density_texture;\n"
+	"uniform int layer;\n"
+	"\n"
+	"layout(location = 0) out vec3 delta_multiple_scattering;\n"
+	"layout(location = 1) out vec4 scattering;\n"
+	"\n"
+	"void main()\n"
+	"{\n"
+	"    float nu;\n"
+	"    delta_multiple_scattering = tg_compute_multiple_scattering_texture(\n"
+	"        ATMOSPHERE, transmittance_texture, scattering_density_texture,\n"
+	"        vec3(gl_FragCoord.xy, layer + 0.5), nu\n"
+	"    );\n"
+	"    scattering = vec4(luminance_from_radiance * delta_multiple_scattering.rgb / tg_rayleigh_phase_function(nu), 0.0);\n"
+	"}\n"
+	"\n";
 
 const char TG_ATMOSPHRE_SHADER[] =
-    "uniform sampler2D transmittance_texture;"
-    "uniform sampler3D scattering_texture;"
-    "uniform sampler3D single_mie_scattering_texture;"
-    "uniform sampler2D irradiance_texture;"
-	""
-    "#ifdef RADIANCE_API_ENABLED"
-	""
-    "tg_radiance_spectrum tg_get_solar_radiance()"
-	"{"
-	"    return ATMOSPHERE.solar_irradiance / (PI * ATMOSPHERE.sun_angular_radius * ATMOSPHERE.sun_angular_radius);"
-    "}"
-	""
-    "tg_radiance_spectrum tg_get_sky_radiance("
-	"    tg_position camera, tg_direction view_ray, tg_length shadow_length,"
+    "uniform sampler2D transmittance_texture;\n"
+    "uniform sampler3D scattering_texture;\n"
+    "uniform sampler3D single_mie_scattering_texture;\n"
+    "uniform sampler2D irradiance_texture;\n"
+	"\n"
+    "#ifdef TG_RADIANCE_API_ENABLED\n"
+	"\n"
+    "tg_radiance_spectrum tg_get_solar_radiance()\n"
+	"{\n"
+	"    return ATMOSPHERE.solar_irradiance / (PI * ATMOSPHERE.sun_angular_radius * ATMOSPHERE.sun_angular_radius);\n"
+    "}\n"
+	"\n"
+    "tg_radiance_spectrum tg_get_sky_radiance(\n"
+	"    tg_position camera, tg_direction view_ray, tg_length shadow_length,\n"
+	"    tg_direction sun_direction, out tg_dimensionless_spectrum transmittance\n"
+	")\n"
+	"{\n"
+	"    return tg_get_sky_radiance(\n"
+	"        ATMOSPHERE, transmittance_texture,\n"
+	"        scattering_texture, single_mie_scattering_texture,\n"
+	"        camera, view_ray, shadow_length, sun_direction, transmittance\n"
+	"    );\n"
+    "}\n"
+	"\n"
+    "tg_radiance_spectrum tg_get_sky_radiance_to_point(\n"
+	"    tg_position camera, tg_position point, tg_length shadow_length,\n"
+	"    tg_direction sun_direction, out tg_dimensionless_spectrum transmittance\n"
+	")\n"
+	"{\n"
+	"    return tg_get_sky_radiance_to_point(\n"
+	"        ATMOSPHERE, transmittance_texture,\n"
+	"        scattering_texture, single_mie_scattering_texture,\n"
+	"        camera, point, shadow_length, sun_direction, transmittance\n"
+	"    );\n"
+    "}\n"
+	"\n"
+    "tg_irradiance_spectrum tg_get_sun_and_sky_irradiance(\n"
+	"    tg_position p, tg_direction normal, tg_direction sun_direction,\n"
+	"    out tg_irradiance_spectrum sky_irradiance\n"
+	")\n"
+	"{\n"
+	"    return tg_get_sun_and_sky_irradiance(ATMOSPHERE, transmittance_texture, irradiance_texture, p, normal, sun_direction, sky_irradiance);\n"
+    "}\n"
+	"\n"
+    "#endif\n"
+	"\n"
+    "tg_luminance3 tg_get_solar_luminance()\n"
+	"{\n"
+	"    return ATMOSPHERE.solar_irradiance / (PI * ATMOSPHERE.sun_angular_radius * ATMOSPHERE.sun_angular_radius) * TG_SUN_SPECTRAL_RADIANCE_TO_LUMINANCE;\n"
+    "}\n"
+	"\n"
+    "tg_luminance3 tg_get_sky_luminance(\n"
+	"    tg_position camera, tg_direction view_ray, tg_length shadow_length,\n"
 	"    tg_direction sun_direction, out tg_dimensionless_spectrum transmittance"
-	")"
-	"{"
-	"    return GetSkyRadiance("
-	"        ATMOSPHERE, transmittance_texture,"
-	"        scattering_texture, single_mie_scattering_texture,"
-	"        camera, view_ray, shadow_length, sun_direction, transmittance"
-	"    );"
-    "}"
-	""
-    "tg_radiance_spectrum tg_get_sky_radiance_to_point("
-	"    tg_position camera, tg_position point, tg_length shadow_length,"
+	")\n"
+	"{\n"
+	"    return tg_get_sky_radiance(\n"
+	"        ATMOSPHERE, transmittance_texture, scattering_texture, single_mie_scattering_texture,\n"
+	"        camera, view_ray, shadow_length, sun_direction, transmittance\n"
+	"    ) * TG_SKY_SPECTRAL_RADIANCE_TO_LUMINANCE;\n"
+    "}\n"
+	"\n"
+    "tg_luminance3 tg_get_sky_luminance_to_point(\n"
+	"    tg_position camera, tg_position point, tg_length shadow_length,\n"
 	"    tg_direction sun_direction, out tg_dimensionless_spectrum transmittance"
-	")"
-	"{"
-	"    return tg_get_sky_radiance_to_point("
-	"        ATMOSPHERE, transmittance_texture,"
-	"        scattering_texture, single_mie_scattering_texture,"
-	"        camera, point, shadow_length, sun_direction, transmittance"
-	"    );"
-    "}"
-	""
-    "tg_irradiance_spectrum tg_get_sun_and_sky_irradiance("
-	"    tg_position p, tg_direction normal, tg_direction sun_direction,"
-	"    out tg_irradiance_spectrum sky_irradiance"
-	")"
-	"{"
-	"    return tg_get_sun_and_sky_irradiance(ATMOSPHERE, transmittance_texture, irradiance_texture, p, normal, sun_direction, sky_irradiance);"
-    "}"
-	""
-    "#endif"
-	""
-    "tg_luminance3 tg_get_solar_luminance()"
-	"{"
-	"    return ATMOSPHERE.solar_irradiance / (PI * ATMOSPHERE.sun_angular_radius * ATMOSPHERE.sun_angular_radius) * TG_SUN_SPECTRAL_RADIANCE_TO_LUMINANCE;"
-    "}"
-	""
-    "tg_luminance3 tg_get_sky_luminance("
-	"    tg_position camera, tg_direction view_ray, tg_length shadow_length,"
-	"    tg_direction sun_direction, out tg_dimensionless_spectrum transmittance)"
-	"{"
-	"    return tg_get_sky_radiance("
-	"        ATMOSPHERE, transmittance_texture, scattering_texture, single_mie_scattering_texture,"
-	"        camera, view_ray, shadow_length, sun_direction, transmittance"
-	"    ) * TG_SKY_SPECTRAL_RADIANCE_TO_LUMINANCE;"
-    "}"
-	""
-    "tg_luminance3 tg_get_sky_luminance_to_point("
-	"    tg_position camera, tg_position point, tg_length shadow_length,"
-	"    tg_direction sun_direction, out tg_dimensionless_spectrum transmittance)"
-	"{"
-	"    return GetSkyRadianceToPoint("
-	"        ATMOSPHERE, transmittance_texture, scattering_texture, single_mie_scattering_texture,"
-	"        camera, point, shadow_length, sun_direction, transmittance"
-	"    ) * TG_SKY_SPECTRAL_RADIANCE_TO_LUMINANCE;"
-    "}"
-	""
-    "tg_illuminance3 tg_get_sun_and_sky_illuminance("
-	"    tg_position p, tg_direction normal, tg_direction sun_direction,"
-	"    out tg_irradianceSpectrum sky_irradiance)"
-	"{"
-	"    tg_irradiance_spectrum sun_irradiance = tg_get_sun_and_sky_irradiance("
-	"        ATMOSPHERE, transmittance_texture, irradiance_texture, p, normal, sun_direction, sky_irradiance"
-	"    );"
-	"    sky_irradiance *= TG_SKY_SPECTRAL_RADIANCE_TO_LUMINANCE;"
-	"    return sun_irradiance * TG_SUN_SPECTRAL_RADIANCE_TO_LUMINANCE;"
-    "}";
+	")\n"
+	"{\n"
+	"    return GetSkyRadianceToPoint(\n"
+	"        ATMOSPHERE, transmittance_texture, scattering_texture, single_mie_scattering_texture,\n"
+	"        camera, point, shadow_length, sun_direction, transmittance\n"
+	"    ) * TG_SKY_SPECTRAL_RADIANCE_TO_LUMINANCE;\n"
+    "}\n"
+	"\n"
+    "tg_illuminance3 tg_get_sun_and_sky_illuminance(\n"
+	"    tg_position p, tg_direction normal, tg_direction sun_direction,\n"
+	"    out tg_irradianceSpectrum sky_irradiance"
+	")\n"
+	"{\n"
+	"    tg_irradiance_spectrum sun_irradiance = tg_get_sun_and_sky_irradiance(\n"
+	"        ATMOSPHERE, transmittance_texture, irradiance_texture, p, normal, sun_direction, sky_irradiance\n"
+	"    );\n"
+	"    sky_irradiance *= TG_SKY_SPECTRAL_RADIANCE_TO_LUMINANCE;\n"
+	"    return sun_irradiance * TG_SUN_SPECTRAL_RADIANCE_TO_LUMINANCE;\n"
+    "}\n"
+	"\n";
 
 static const f64 p_solar_irradiance[48] = {
 	1.11776, 1.14259, 1.01249, 1.14716, 1.72765, 1.73054, 1.68870, 1.61253,
@@ -468,6 +508,7 @@ void tg__glsl_header_factory(
 )
 {
 #pragma warning(push)
+#pragma warning(disable:4296)
 #pragma warning(disable:6294)
 
 #define PUSH(p_string)     ((void)(i += tg_string_copy_no_nul(size - i, &p_buffer[i], p_string)))
@@ -542,6 +583,7 @@ void tg__glsl_header_factory(
 		PUSH("#define TG_COMBINED_SCATTERING_TEXTURES\n");
 		PUSH("\n");
 	}
+
 	// + definitions_glsl
 
 	PUSH("const tg_atmosphere_parameters ATMOSPHERE = tg_atmosphere_parameters(\n");
@@ -566,7 +608,7 @@ void tg__glsl_header_factory(
 
 	// + functions_glsl
 
-	int bh = 0;
+	PUSH("\n\0");
 
 #undef DENSITY_PROFILE
 #undef LAYER_COUNT
@@ -767,7 +809,7 @@ void tg_atmosphere_precompute(void)
 		TG_NULL
 	);
 
-	char p_shader_buffer[4096] = { 0 };
+	char p_shader_header_buffer[4096] = { 0 };
 	tg__glsl_header_factory(
 		use_half_precision,
 		combine_scattering_textures,
@@ -791,9 +833,22 @@ void tg_atmosphere_precompute(void)
 		sun_k_g,
 		sun_k_b,
 
-		(u32)sizeof(p_shader_buffer),
-		p_shader_buffer
+		(u32)sizeof(p_shader_header_buffer),
+		p_shader_header_buffer
 	);
+
+	char p_shader_buffer[8192] = { 0 };
+	u32 count = 0;
+	count += tg_string_copy_no_nul(sizeof(p_shader_buffer) - count, &p_shader_buffer[count], p_shader_header_buffer);
+	if (precompute_illuminance)
+	{
+		count += tg_string_copy_no_nul(sizeof(p_shader_buffer) - count, &p_shader_buffer[count], "#define TG_RADIANCE_API_ENABLED\n\n");
+	}
+	count += tg_string_copy_no_nul(sizeof(p_shader_buffer) - count, &p_shader_buffer[count], TG_ATMOSPHRE_SHADER);
+
+	tg_platform_file_create("shaders/atmosphere/atmosphere.frag", count, p_shader_buffer, TG_TRUE);
+
+	int bh = 0;
 }
 
 
