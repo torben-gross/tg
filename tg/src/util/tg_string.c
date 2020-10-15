@@ -197,13 +197,20 @@ u32 tg_string_parse_f32_no_nul(u32 size, char* p_buffer, f32 v)
 		v *= -1.0f;
 	}
 
-	u32 integral_part = (u32)v;
+	const u32 integral_part = (u32)v;
 	count += tg_string_parse_u32_no_nul(size - count, &p_buffer[count], integral_part);
 
 	p_buffer[count++] = '.';
 
-	u32 decimal_part = (u32)((v - (f64)((u32)v)) * tgm_f64_pow(10.0f, 9.0f));
-	count += tg_string_parse_u32_no_nul(size - count, &p_buffer[count], decimal_part);
+	TG_ASSERT(count + 8 < size);
+	f32 decimal_part = v - (f32)(u32)v;
+	for (u32 i = 0; i < 8; i++)
+	{
+		decimal_part *= 10.0f;
+		const u32 digit = (u32)decimal_part;
+		p_buffer[count++] = '0' + (char)digit;
+		decimal_part -= (f32)digit;
+	}
 
 	TG_ASSERT(count < size);
 	p_buffer[count++] = 'f';
@@ -230,14 +237,20 @@ u32 tg_string_parse_f64_no_nul(u32 size, char* p_buffer, f64 v)
 		v *= -1.0f;
 	}
 
-	u64 integral_part = (u64)v;
+	const u64 integral_part = (u64)v;
 	count += tg_string_parse_u64_no_nul(size - count, &p_buffer[count], integral_part);
 
 	p_buffer[count++] = '.';
 
-	// TODO(torben): this will create rounding errors beginning at a certain value... try e.g. -1.2 as input. same goes for the f32 version
-	u64 decimal_part = (u64)((v - (f64)((u64)v)) * tgm_f64_pow(10.0, 9.0));
-	count += tg_string_parse_u64_no_nul(size - count, &p_buffer[count], decimal_part);
+	TG_ASSERT(count + 16 < size);
+	f64 decimal_part = v - (f64)(u64)v;
+	for (u32 i = 0; i < 16; i++)
+	{
+		decimal_part *= 10.0;
+		const u32 digit = (u32)decimal_part;
+		p_buffer[count++] = '0' + (char)digit;
+		decimal_part -= (f64)digit;
+	}
 
 	return count;
 }

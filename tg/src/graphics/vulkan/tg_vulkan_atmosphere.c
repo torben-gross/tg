@@ -30,7 +30,7 @@
 
 #define TG_GROUND_ALBEDO                   0.1
 #define TG_MAX_SUN_ZENITH_ANGLE(use_half_precision) \
-	(TG_TO_RADIANS((use_half_precision) ? 102.0 : 120.0))
+	(((use_half_precision) ? 102.0 : 120.0) / 180.0 * TG_PI64)
 
 #define TG_LAMBDA_MIN                      360
 #define TG_LAMBDA_MAX                      830
@@ -87,18 +87,200 @@ typedef struct tg_model
 
 
 static const char TG_VERTEX_SHADER[] =
-    "#version 330"
+	"#version 330"
 	""
-    "uniform mat4 model_from_view;"
-    "uniform mat4 view_from_clip;"
-    "layout(location = 0) in vec4 vertex;"
-    "out vec3 view_ray;"
+	"layout(location = 0) in vec4 vertex;"
 	""
-    "void main()"
+	"uniform mat4 model_from_view;"
+	"uniform mat4 view_from_clip;"
+	""
+	"out vec3 view_ray;"
+	""
+	"void main()"
 	"{"
 	"    view_ray = (model_from_view * vec4((view_from_clip * vertex).xyz, 0.0)).xyz;"
-    "    gl_Position = vertex;"
+	"    gl_Position = vertex;"
 	"}";
+
+const char TG_COMPUTE_TRANSMITTANCE_SHADER[] =
+	"layout(location = 0) out vec3 transmittance;"
+	""
+	"void main()"
+	"{"
+	"    transmittance = tg_compute_transmittance_to_top_atmosphere_boundary_texture(ATMOSPHERE, gl_FragCoord.xy);"
+	"}";
+
+const char TG_COMPUTE_DIRECT_IRRADIANCE_SHADER[] =
+	"layout(location = 0) out vec3 delta_irradiance;"
+	"layout(location = 1) out vec3 irradiance;"
+	""
+	"uniform sampler2D transmittance_texture;"
+	""
+	"void main()"
+	"{"
+	"    delta_irradiance = tg_compute_direction_irradiance_texture(ATMOSPHERE, transmittance_texture, gl_FragCoord.xy);"
+	"    irradiance = vec3(0.0);"
+	"}";
+
+const char TG_COMPUTE_SINGLE_SCATTERING_SHADER[] =
+	"uniform mat3 luminance_from_radiance;"
+	"uniform sampler2D transmittance_texture;"
+	""
+	"layout(location = 0) out vec3 delta_rayleigh;"
+	"layout(location = 1) out vec3 delta_mie;"
+	"layout(location = 2) out vec4 scattering;"
+	"layout(location = 3) out vec3 single_mie_scattering;"
+	"uniform int layer;"
+	""
+	"void main()"
+	"{"
+	"    tg_compute_single_scattering_texture(ATMOSPHERE, transmittance_texture, vec3(gl_FragCoord.xy, layer + 0.5), delta_rayleigh, delta_mie);"
+	"    scattering = vec4(luminance_from_radiance * delta_rayleigh.rgb, (luminance_from_radiance * delta_mie).r);"
+	"    single_mie_scattering = luminance_from_radiance * delta_mie;"
+	"}";
+
+const char TG_COMPUTE_SCATTERING_DENSITY_SHADER[] =
+	"uniform sampler2D transmittance_texture;"
+	"uniform sampler3D single_rayleigh_scattering_texture;"
+	"uniform sampler3D single_mie_scattering_texture;"
+	"uniform sampler3D multiple_scattering_texture;"
+	"uniform sampler2D irradiance_texture;"
+	"uniform int scattering_order;"
+	"uniform int layer;"
+	""
+	"layout(location = 0) out vec3 scattering_density;"
+	""
+	"void main()"
+	"{"
+	"    scattering_density = ComputeScatteringDensityTexture("
+	"        ATMOSPHERE, transmittance_texture, single_rayleigh_scattering_texture,"
+	"        single_mie_scattering_texture, multiple_scattering_texture,"
+	"        irradiance_texture, vec3(gl_FragCoord.xy, layer + 0.5),"
+	"        scattering_order"
+	"    );"
+	"}";
+
+const char TG_COMPUTE_INDIRECT_IRRADIANCE_SHADER[] =
+	"uniform mat3 luminance_from_radiance;"
+	"uniform sampler3D single_rayleigh_scattering_texture;"
+	"uniform sampler3D single_mie_scattering_texture;"
+	"uniform sampler3D multiple_scattering_texture;"
+	"uniform int scattering_order;"
+	""
+	"layout(location = 0) out vec3 delta_irradiance;"
+	"layout(location = 1) out vec3 irradiance;"
+	""
+	"void main()"
+	"{"
+	"    delta_irradiance = ComputeIndirectIrradianceTexture("
+	"        ATMOSPHERE, single_rayleigh_scattering_texture,"
+	"        single_mie_scattering_texture, multiple_scattering_texture,"
+	"        gl_FragCoord.xy, scattering_order"
+	"    );"
+	"    irradiance = luminance_from_radiance * delta_irradiance;"
+	"}";
+
+const char TG_COMPUTE_MULTIPLE_SCATTERING_SHADER[] =
+	"uniform mat3 luminance_from_radiance;"
+	"uniform sampler2D transmittance_texture;"
+	"uniform sampler3D scattering_density_texture;"
+	"uniform int layer;"
+	""
+	"layout(location = 0) out vec3 delta_multiple_scattering;"
+	"layout(location = 1) out vec4 scattering;"
+	""
+	"void main()"
+	"{"
+	"    float nu;"
+	"    delta_multiple_scattering = ComputeMultipleScatteringTexture("
+	"        ATMOSPHERE, transmittance_texture, scattering_density_texture,"
+	"        vec3(gl_FragCoord.xy, layer + 0.5), nu"
+	"    );"
+	"    scattering = vec4(luminance_from_radiance * delta_multiple_scattering.rgb / RayleighPhaseFunction(nu), 0.0);"
+	"}";
+
+const char TG_ATMOSPHRE_SHADER[] =
+    "uniform sampler2D transmittance_texture;"
+    "uniform sampler3D scattering_texture;"
+    "uniform sampler3D single_mie_scattering_texture;"
+    "uniform sampler2D irradiance_texture;"
+	""
+    "#ifdef RADIANCE_API_ENABLED"
+	""
+    "tg_radiance_spectrum tg_get_solar_radiance()"
+	"{"
+	"    return ATMOSPHERE.solar_irradiance / (PI * ATMOSPHERE.sun_angular_radius * ATMOSPHERE.sun_angular_radius);"
+    "}"
+	""
+    "tg_radiance_spectrum tg_get_sky_radiance("
+	"    tg_position camera, tg_direction view_ray, tg_length shadow_length,"
+	"    tg_direction sun_direction, out tg_dimensionless_spectrum transmittance"
+	")"
+	"{"
+	"    return GetSkyRadiance("
+	"        ATMOSPHERE, transmittance_texture,"
+	"        scattering_texture, single_mie_scattering_texture,"
+	"        camera, view_ray, shadow_length, sun_direction, transmittance"
+	"    );"
+    "}"
+	""
+    "tg_radiance_spectrum tg_get_sky_radiance_to_point("
+	"    tg_position camera, tg_position point, tg_length shadow_length,"
+	"    tg_direction sun_direction, out tg_dimensionless_spectrum transmittance"
+	")"
+	"{"
+	"    return tg_get_sky_radiance_to_point("
+	"        ATMOSPHERE, transmittance_texture,"
+	"        scattering_texture, single_mie_scattering_texture,"
+	"        camera, point, shadow_length, sun_direction, transmittance"
+	"    );"
+    "}"
+	""
+    "tg_irradiance_spectrum tg_get_sun_and_sky_irradiance("
+	"    tg_position p, tg_direction normal, tg_direction sun_direction,"
+	"    out tg_irradiance_spectrum sky_irradiance"
+	")"
+	"{"
+	"    return tg_get_sun_and_sky_irradiance(ATMOSPHERE, transmittance_texture, irradiance_texture, p, normal, sun_direction, sky_irradiance);"
+    "}"
+	""
+    "#endif"
+	""
+    "tg_luminance3 tg_get_solar_luminance()"
+	"{"
+	"    return ATMOSPHERE.solar_irradiance / (PI * ATMOSPHERE.sun_angular_radius * ATMOSPHERE.sun_angular_radius) * TG_SUN_SPECTRAL_RADIANCE_TO_LUMINANCE;"
+    "}"
+	""
+    "tg_luminance3 tg_get_sky_luminance("
+	"    tg_position camera, tg_direction view_ray, tg_length shadow_length,"
+	"    tg_direction sun_direction, out tg_dimensionless_spectrum transmittance)"
+	"{"
+	"    return tg_get_sky_radiance("
+	"        ATMOSPHERE, transmittance_texture, scattering_texture, single_mie_scattering_texture,"
+	"        camera, view_ray, shadow_length, sun_direction, transmittance"
+	"    ) * TG_SKY_SPECTRAL_RADIANCE_TO_LUMINANCE;"
+    "}"
+	""
+    "tg_luminance3 tg_get_sky_luminance_to_point("
+	"    tg_position camera, tg_position point, tg_length shadow_length,"
+	"    tg_direction sun_direction, out tg_dimensionless_spectrum transmittance)"
+	"{"
+	"    return GetSkyRadianceToPoint("
+	"        ATMOSPHERE, transmittance_texture, scattering_texture, single_mie_scattering_texture,"
+	"        camera, point, shadow_length, sun_direction, transmittance"
+	"    ) * TG_SKY_SPECTRAL_RADIANCE_TO_LUMINANCE;"
+    "}"
+	""
+    "tg_illuminance3 tg_get_sun_and_sky_illuminance("
+	"    tg_position p, tg_direction normal, tg_direction sun_direction,"
+	"    out tg_irradianceSpectrum sky_irradiance)"
+	"{"
+	"    tg_irradiance_spectrum sun_irradiance = tg_get_sun_and_sky_irradiance("
+	"        ATMOSPHERE, transmittance_texture, irradiance_texture, p, normal, sun_direction, sky_irradiance"
+	"    );"
+	"    sky_irradiance *= TG_SKY_SPECTRAL_RADIANCE_TO_LUMINANCE;"
+	"    return sun_irradiance * TG_SUN_SPECTRAL_RADIANCE_TO_LUMINANCE;"
+    "}";
 
 static const f64 p_solar_irradiance[48] = {
 	1.11776, 1.14259, 1.01249, 1.14716, 1.72765, 1.73054, 1.68870, 1.61253,
@@ -259,19 +441,39 @@ f64 tg__interpolate(u32 count, const f64* p_wavelengths, const f64* p_wavelength
 }
 
 void tg__glsl_header_factory(
+	b32                                use_half_precision,
 	b32                                combine_scattering_textures,
-	const f64*                         p_wavelengths,
-	const tg_density_profile_layer*    p_rayleigh_density,
-	const f64*                         p_solar_irrad,
+
+	const f64*                         p_wavelengths,           // 48
+	const f64*                         p_solar_irrad,           // 48
+	const f64*                         p_rayleigh_scattering,   // 48
+	const f64*                         p_mie_scattering,        // 48
+	const f64*                         p_mie_extinction,        // 48
+	const f64*                         p_absorption_extinction, // 48
+	const f64*                         p_ground_albedo,         // 48
+
+	const tg_density_profile_layer*    p_rayleigh_density,      // 1
+	const tg_density_profile_layer*    p_mie_density,           // 1
+	const tg_density_profile_layer*    p_absorption_density,    // 2
+
+	f64 sky_k_r,
+	f64 sky_k_g,
+	f64 sky_k_b,
+	f64 sun_k_r,
+	f64 sun_k_g,
+	f64 sun_k_b,
+
 	u32                                size,
 	char*                              p_buffer
 )
 {
-#define PUSH(p_string)     ((void)(i += tg_string_copy_no_nul(size, &p_buffer[i], p_string)))
-#define PUSH_F32(value)    ((void)(i += tg_string_parse_f32_no_nul(size, &p_buffer[i], value)))
-#define PUSH_F64(value)    ((void)(i += tg_string_parse_f64_no_nul(size, &p_buffer[i], value)))
-#define PUSH_I32(value)    ((void)(i += tg_string_parse_i32_no_nul(size, &p_buffer[i], value)))
+#pragma warning(push)
+#pragma warning(disable:6294)
 
+#define PUSH(p_string)     ((void)(i += tg_string_copy_no_nul(size - i, &p_buffer[i], p_string)))
+#define PUSH_F32(value)    ((void)(i += tg_string_parse_f32_no_nul(size - i, &p_buffer[i], value)))
+#define PUSH_F64(value)    ((void)(i += tg_string_parse_f64_no_nul(size - i, &p_buffer[i], value)))
+#define PUSH_I32(value)    ((void)(i += tg_string_parse_i32_no_nul(size - i, &p_buffer[i], value)))
 #define TO_STRING(p_v, scale)                                                                     \
 	{                                                                                             \
 		const f64 r = tg__interpolate(48, p_wavelengths, p_v, TG_LAMBDA_R) * scale;               \
@@ -279,44 +481,43 @@ void tg__glsl_header_factory(
 		const f64 b = tg__interpolate(48, p_wavelengths, p_v, TG_LAMBDA_B) * scale;               \
 		PUSH("vec3("); PUSH_F64(r); PUSH(", "); PUSH_F64(g); PUSH(", "); PUSH_F64(b); PUSH(")");  \
 	}
-
-#define LAYER_COUNT 2
-
 #define DENSITY_LAYER(density_profile_layer)                                                  \
 	{                                                                                         \
-		PUSH("tg_density_profile_layer(");                                                    \
+		PUSH("            tg_density_profile_layer(");                                        \
 		PUSH_F64((density_profile_layer).width / TG_LENGTH_UNIT_IN_METERS);       PUSH(", "); \
 		PUSH_F64((density_profile_layer).exp_term);                               PUSH(", "); \
 		PUSH_F64((density_profile_layer).exp_scale * TG_LENGTH_UNIT_IN_METERS);   PUSH(", "); \
 		PUSH_F64((density_profile_layer).linear_term * TG_LENGTH_UNIT_IN_METERS); PUSH(", "); \
 		PUSH_F64((density_profile_layer).constant_term);                          PUSH(")");  \
 	}
+#define LAYER_COUNT 2
 #define DENSITY_PROFILE(count, p_density_profile_layers)               \
 	{                                                                  \
 		TG_ASSERT(count);                                              \
-		PUSH("tg_density_profile(tg_density_profile_layer[2](");       \
+		PUSH("    tg_density_profile(\n");                             \
+		PUSH("        tg_density_profile_layer[2](\n");                \
 		tg_density_profile_layer empty_density_profile_layer =  { 0 }; \
 		for (u32 idx = 0; idx < LAYER_COUNT - count; idx++)            \
 		{                                                              \
-			DENSITY_LAYER(empty_density_profile_layer); PUSH(", ");    \
+			DENSITY_LAYER(empty_density_profile_layer); PUSH(",\n");   \
 		}                                                              \
 		for (u32 idx = 0; idx < count; idx++)                          \
 		{                                                              \
 			DENSITY_LAYER((p_density_profile_layers)[idx]);            \
-			if (i < LAYER_COUNT - 1)                                   \
+			if (idx < count - 1)                                       \
 			{                                                          \
-				PUSH(", ");                                            \
+				PUSH(",\n");                                           \
 			}                                                          \
 			else                                                       \
 			{                                                          \
-				PUSH("))");                                            \
+				PUSH("\n");                                            \
+				PUSH("        )\n");                                   \
+				PUSH("    )");                                         \
 			}                                                          \
 		}                                                              \
 	}
 
 	u32 i = 0;
-
-	tg_density_profile_layer p_temp_density_profile_layers[LAYER_COUNT] = { 0 };
 
 	PUSH("#version 330\n");
 	PUSH("\n");
@@ -348,36 +549,35 @@ void tg__glsl_header_factory(
 	PUSH("    "); PUSH_F64(TG_SUN_ANGULAR_RADIUS); PUSH(",\n");
 	PUSH("    "); PUSH_F64(TG_BOTTOM_RADIUS / TG_LENGTH_UNIT_IN_METERS); PUSH(",\n");
 	PUSH("    "); PUSH_F64(TG_TOP_RADIUS / TG_LENGTH_UNIT_IN_METERS); PUSH(",\n");
-	PUSH("    "); p_temp_density_profile_layers[0] = *p_rayleigh_density; DENSITY_PROFILE(1, p_temp_density_profile_layers); PUSH(",\n");
+	DENSITY_PROFILE(1, p_rayleigh_density); PUSH(",\n");
+	PUSH("    "); TO_STRING(p_rayleigh_scattering, TG_LENGTH_UNIT_IN_METERS); PUSH(",\n");
+	DENSITY_PROFILE(1, p_mie_density); PUSH(",\n");
+	PUSH("    "); TO_STRING(p_mie_scattering, TG_LENGTH_UNIT_IN_METERS); PUSH(",\n");
+	PUSH("    "); TO_STRING(p_mie_extinction, TG_LENGTH_UNIT_IN_METERS); PUSH(",\n");
+	PUSH("    "); PUSH_F64(TG_MIE_PHASE_FUNCTION_G); PUSH(",\n");
+	DENSITY_PROFILE(2, p_absorption_density); PUSH(",\n");
+	PUSH("    "); TO_STRING(p_absorption_extinction, TG_LENGTH_UNIT_IN_METERS); PUSH(",\n");
+	PUSH("    "); TO_STRING(p_ground_albedo, 1.0); PUSH(",\n");
+	PUSH("    "); PUSH_F64(tgm_f64_cos(TG_MAX_SUN_ZENITH_ANGLE(use_half_precision))); PUSH("\n");
+	PUSH("};\n");
+	PUSH("\n");
+	PUSH("const vec3 TG_SKY_SPECTRAL_RADIANCE_TO_LUMINANCE = vec3("); PUSH_F64(sky_k_r); PUSH(", "); PUSH_F64(sky_k_g); PUSH(", "); PUSH_F64(sky_k_b); PUSH(");\n");
+	PUSH("const vec3 TG_SUN_SPECTRAL_RADIANCE_TO_LUMINANCE = vec3("); PUSH_F64(sun_k_r); PUSH(", "); PUSH_F64(sun_k_g); PUSH(", "); PUSH_F64(sun_k_b); PUSH(");\n");
 
-	//	density_profile(rayleigh_density) + ",\n" +
-	//	to_string(
-	//		rayleigh_scattering, lambdas, length_unit_in_meters) + ",\n" +
-	//	density_profile(mie_density) + ",\n" +
-	//	to_string(mie_scattering, lambdas, length_unit_in_meters) + ",\n" +
-	//	to_string(mie_extinction, lambdas, length_unit_in_meters) + ",\n" +
-	//	std::to_string(mie_phase_function_g) + ",\n" +
-	//	density_profile(absorption_density) + ",\n" +
-	//	to_string(
-	//		absorption_extinction, lambdas, length_unit_in_meters) + ",\n" +
-	//	to_string(ground_albedo, lambdas, 1.0) + ",\n" +
-	//	std::to_string(cos(max_sun_zenith_angle)) + ");\n" +
-	//	"const vec3 SKY_SPECTRAL_RADIANCE_TO_LUMINANCE = vec3(" +
-	//	std::to_string(sky_k_r) + "," +
-	//	std::to_string(sky_k_g) + "," +
-	//	std::to_string(sky_k_b) + ");\n" +
-	//	"const vec3 SUN_SPECTRAL_RADIANCE_TO_LUMINANCE = vec3(" +
-	//	std::to_string(sun_k_r) + "," +
-	//	std::to_string(sun_k_g) + "," +
-	//	std::to_string(sun_k_b) + ");\n" +
-	//	functions_glsl;
+	// + functions_glsl
 
 	int bh = 0;
 
+#undef DENSITY_PROFILE
+#undef LAYER_COUNT
+#undef DENSITY_LAYER
+#undef TO_STRING
 #undef PUSH_I32
 #undef PUSH_F64
 #undef PUSH_F32
 #undef PUSH
+
+#pragma warning(pop)
 }
 
 f64 tg__cie_color_matching_function_table_value(f64 wavelength, i32 column)
@@ -567,8 +767,33 @@ void tg_atmosphere_precompute(void)
 		TG_NULL
 	);
 
-	char p_shader_buffer[1024] = { 0 };
-	tg__glsl_header_factory(combine_scattering_textures, p_wavelengths, &rayleigh_layer, p_solar_irradiance, 1024, p_shader_buffer);
+	char p_shader_buffer[4096] = { 0 };
+	tg__glsl_header_factory(
+		use_half_precision,
+		combine_scattering_textures,
+		
+		p_wavelengths,
+		p_solar_irrad,
+		p_rayleigh_scattering,
+		p_mie_scattering,
+		p_mie_extinction,
+		p_absorption_extinction,
+		p_ground_albedo,
+
+		&rayleigh_layer,
+		&mie_layer,
+		p_ozone_density,
+
+		sky_k_r,
+		sky_k_g,
+		sky_k_b,
+		sun_k_r,
+		sun_k_g,
+		sun_k_b,
+
+		(u32)sizeof(p_shader_buffer),
+		p_shader_buffer
+	);
 }
 
 

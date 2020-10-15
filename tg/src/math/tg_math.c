@@ -341,6 +341,7 @@ f32 asinhf(f32 v);
 f32 atanhf(f32 v);
 f32 ceilf(f32 v);
 f32 cosf(f32 v);
+f64 cos(f64 v);
 f32 coshf(f32 v);
 f64 floor(f64 v);
 f32 floorf(f32 v);
@@ -465,6 +466,12 @@ f32 tgm_f32_tanh(f32 v)
 }
 
 
+
+f64 tgm_f64_cos(f32 v)
+{
+	const f64 result = cos(v);
+	return result;
+}
 
 f64 tgm_f64_pow(f64 base, f64 exponent)
 {

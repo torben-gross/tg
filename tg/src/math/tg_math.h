@@ -277,6 +277,7 @@ f32    tgm_f32_sqrt(f32 v);
 f32    tgm_f32_tan(f32 v);
 f32    tgm_f32_tanh(f32 v);
 
+f64    tgm_f64_cos(f32 v);
 f64    tgm_f64_pow(f64 base, f64 exponent);
 
 f32    tgm_i32_log10(i32 v);
