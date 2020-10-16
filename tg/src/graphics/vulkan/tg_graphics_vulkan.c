@@ -184,8 +184,6 @@ static tgvk_pipeline_layout tg__pipeline_layout_create(u32 shader_count, const t
         }
     }
 
-    TG_ASSERT(pipeline_layout.global_resource_count);
-
     for (u32 i = 0; i < pipeline_layout.global_resource_count; i++)
     {
         pipeline_layout.p_descriptor_set_layout_bindings[i].binding = pipeline_layout.p_global_resources[i].binding;

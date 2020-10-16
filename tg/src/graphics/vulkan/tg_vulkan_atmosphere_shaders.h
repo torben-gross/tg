@@ -30,7 +30,7 @@
 #ifndef TG_VULKAN_ATMOSPHERE_SHADERS_H
 #define TG_VULKAN_ATMOSPHERE_SHADERS_H
 
-static const char TG_VERTEX_SHADER[] =
+static const char p_atmosphere_demo_vertex_shader[] =
 	"#version 450\r\n"
 	"\r\n"
 	"layout(location = 0) in vec4 vertex;\r\n"
@@ -41,7 +41,7 @@ static const char TG_VERTEX_SHADER[] =
 	"    mat4 view_from_clip;\r\n"
 	"};\r\n"
 	"\r\n"
-	"out vec3 view_ray;\r\n"
+	"layout(location = 0) out vec3 view_ray;\r\n"
 	"\r\n"
 	"void main()\r\n"
 	"{\r\n"
@@ -49,7 +49,47 @@ static const char TG_VERTEX_SHADER[] =
 	"    gl_Position = vertex;\r\n"
 	"}\r\n";
 
-const char TG_COMPUTE_TRANSMITTANCE_SHADER[] =
+
+
+const char p_atmosphere_vertex_shader[] =
+    "#version 450\r\n"
+	"\r\n"
+    "layout(location = 0) in vec2 vertex;\r\n"
+	"\r\n"
+    "void main()\r\n"
+	"{\r\n"
+	"    gl_Position = vec4(vertex, 0.0, 1.0);\r\n"
+    "}\r\n";
+
+const char p_atmosphere_geometry_shader[] =
+    "#version 450\r\n"
+	"\r\n"
+    "layout(triangles) in;\r\n"
+	"\r\n"
+    "layout(set = 0, binding = 0) uniform ubo\r\n"
+	"{\r\n"
+	"    int layer;\r\n"
+	"};\r\n"
+	"\r\n"
+    "layout(triangle_strip, max_vertices = 3) out;\r\n"
+    "\r\n"
+	"void main()\r\n"
+	"{\r\n"
+    "    gl_Position = gl_in[0].gl_Position;\r\n"
+    "    gl_Layer = layer;\r\n"
+    "    EmitVertex();\r\n"
+    "    gl_Position = gl_in[1].gl_Position;\r\n"
+    "    gl_Layer = layer;\r\n"
+    "    EmitVertex();\r\n"
+    "    gl_Position = gl_in[2].gl_Position;\r\n"
+    "    gl_Layer = layer;\r\n"
+    "    EmitVertex();\r\n"
+    "    EndPrimitive();\r\n"
+    "}\r\n";
+
+
+
+const char p_atmosphere_compute_transmittance_shader[] =
 	"layout(location = 0) out vec3 transmittance;\r\n"
 	"\r\n"
 	"void main()\r\n"
@@ -57,7 +97,7 @@ const char TG_COMPUTE_TRANSMITTANCE_SHADER[] =
 	"    transmittance = tg_compute_transmittance_to_top_atmosphere_boundary_texture(ATMOSPHERE, gl_FragCoord.xy);\r\n"
 	"}\r\n";
 
-const char TG_COMPUTE_DIRECT_IRRADIANCE_SHADER[] =
+const char p_atmosphere_compute_direct_irradiance_shader[] =
 	"layout(set = 0, binding = 1) uniform sampler2D transmittance_texture;\r\n"
 	"\r\n"
 	"layout(location = 0) out vec3 delta_irradiance;\r\n"
@@ -69,7 +109,7 @@ const char TG_COMPUTE_DIRECT_IRRADIANCE_SHADER[] =
 	"    irradiance = vec3(0.0);\r\n"
 	"}\r\n";
 
-const char TG_COMPUTE_SINGLE_SCATTERING_SHADER[] =
+const char p_atmosphere_compute_single_scattering_shader[] =
 	"layout(set = 0, binding = 1) uniform ubo\r\n"
 	"{\r\n"
 	"    mat3 luminance_from_radiance;\r\n"
@@ -90,7 +130,7 @@ const char TG_COMPUTE_SINGLE_SCATTERING_SHADER[] =
 	"    single_mie_scattering = luminance_from_radiance * delta_mie;\r\n"
 	"}\r\n";
 
-const char TG_COMPUTE_SCATTERING_DENSITY_SHADER[] =
+const char p_atmosphere_compute_scattering_density_shader[] =
 	"layout(set = 0, binding = 1) uniform ubo\r\n"
 	"{\r\n"
 	"    int scattering_order;\r\n"
@@ -115,7 +155,7 @@ const char TG_COMPUTE_SCATTERING_DENSITY_SHADER[] =
 	"    );\r\n"
 	"}\r\n";
 
-const char TG_COMPUTE_INDIRECT_IRRADIANCE_SHADER[] =
+const char p_atmosphere_compute_indirect_irradiance_shader[] =
 	"layout(set = 0, binding = 1) uniform ubo\r\n"
 	"{\r\n"
 	"    mat3 luminance_from_radiance;\r\n"
@@ -139,7 +179,7 @@ const char TG_COMPUTE_INDIRECT_IRRADIANCE_SHADER[] =
 	"    irradiance = luminance_from_radiance * delta_irradiance;\r\n"
 	"}\r\n";
 
-const char TG_COMPUTE_MULTIPLE_SCATTERING_SHADER[] =
+const char p_atmosphere_compute_multiple_scattering_shader[] =
 	"layout(set = 0, binding = 1) uniform ubo\r\n"
 	"{\r\n"
 	"    mat3 luminance_from_radiance;\r\n"
@@ -162,7 +202,7 @@ const char TG_COMPUTE_MULTIPLE_SCATTERING_SHADER[] =
 	"    scattering = vec4(luminance_from_radiance * delta_multiple_scattering.rgb / tg_rayleigh_phase_function(nu), 0.0);\r\n"
 	"}\r\n";
 
-const char TG_ATMOSPHRE_SHADER[] =
+const char p_atmosphere_shader[] =
     "layout(set = 0, binding = 0) uniform sampler2D transmittance_texture;\r\n"
     "layout(set = 0, binding = 1) uniform sampler3D scattering_texture;\r\n"
     "layout(set = 0, binding = 2) uniform sampler3D single_mie_scattering_texture;\r\n"

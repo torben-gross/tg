@@ -280,7 +280,7 @@ u32 tg__glsl_header_factory(const tg_model* p_model, u32 size, char* p_buffer)
 		PUSH("\r\n");
 	}
 
-	PUSH(TG_DEFINITIONS);
+	PUSH(p_atmosphere_definitions);
 	PUSH("\r\n");
 
 	PUSH("const tg_atmosphere_parameters ATMOSPHERE = tg_atmosphere_parameters(\r\n");
@@ -304,7 +304,7 @@ u32 tg__glsl_header_factory(const tg_model* p_model, u32 size, char* p_buffer)
 	PUSH("const vec3 TG_SUN_SPECTRAL_RADIANCE_TO_LUMINANCE = vec3("); PUSH_F64(p_model->sun_k_r); PUSH(", "); PUSH_F64(p_model->sun_k_g); PUSH(", "); PUSH_F64(p_model->sun_k_b); PUSH(");\r\n");
 	PUSH("\r\n");
 
-	PUSH(TG_FUNCTIONS);
+	PUSH(p_atmosphere_functions);
 	PUSH("\0");
 
 	return i;
@@ -419,27 +419,116 @@ void tg__precompute(tg_model* p_model)
 		const u32 buffer_size = 1 << 16;
 		char* p_buffer = TG_MEMORY_STACK_ALLOC((u64)buffer_size);
 
+		tg_strcpy(buffer_size, p_buffer, p_atmosphere_vertex_shader);
+		tgvk_shader vertex_shader = tgvk_shader_create_from_glsl(TG_SHADER_TYPE_VERTEX, p_buffer);
+
 		u32 header_count = 0;
 		header_count = tg_strncpy_no_nul(buffer_size, p_buffer, p_model->shader.header_count, p_model->shader.p_source);
 		header_count += tg_strcpy_no_nul(buffer_size - header_count, &p_buffer[header_count], "\r\n");
 
-		tg_strcpy(buffer_size - header_count, &p_buffer[header_count], TG_COMPUTE_TRANSMITTANCE_SHADER);
+		tg_strcpy(buffer_size - header_count, &p_buffer[header_count], p_atmosphere_compute_transmittance_shader);
 		tgvk_shader compute_transmittance_fragment_shader = tgvk_shader_create_from_glsl(TG_SHADER_TYPE_FRAGMENT, p_buffer);
-
-		tg_strcpy(buffer_size - header_count, &p_buffer[header_count], TG_COMPUTE_DIRECT_IRRADIANCE_SHADER);
+		tg_strcpy(buffer_size - header_count, &p_buffer[header_count], p_atmosphere_compute_direct_irradiance_shader);
 		tgvk_shader compute_direct_irradiance_fragment_shader = tgvk_shader_create_from_glsl(TG_SHADER_TYPE_FRAGMENT, p_buffer);
-
-		tg_strcpy(buffer_size - header_count, &p_buffer[header_count], TG_COMPUTE_SINGLE_SCATTERING_SHADER);
+		tg_strcpy(buffer_size - header_count, &p_buffer[header_count], p_atmosphere_compute_single_scattering_shader);
 		tgvk_shader compute_single_scattering_fragment_shader = tgvk_shader_create_from_glsl(TG_SHADER_TYPE_FRAGMENT, p_buffer);
-
-		tg_strcpy(buffer_size - header_count, &p_buffer[header_count], TG_COMPUTE_SCATTERING_DENSITY_SHADER);
+		tg_strcpy(buffer_size - header_count, &p_buffer[header_count], p_atmosphere_compute_scattering_density_shader);
 		tgvk_shader compute_scattering_density_fragment_shader = tgvk_shader_create_from_glsl(TG_SHADER_TYPE_FRAGMENT, p_buffer);
-
-		tg_strcpy(buffer_size - header_count, &p_buffer[header_count], TG_COMPUTE_INDIRECT_IRRADIANCE_SHADER);
+		tg_strcpy(buffer_size - header_count, &p_buffer[header_count], p_atmosphere_compute_indirect_irradiance_shader);
 		tgvk_shader compute_indirect_irradiance_fragment_shader = tgvk_shader_create_from_glsl(TG_SHADER_TYPE_FRAGMENT, p_buffer);
-
-		tg_strcpy(buffer_size - header_count, &p_buffer[header_count], TG_COMPUTE_MULTIPLE_SCATTERING_SHADER);
+		tg_strcpy(buffer_size - header_count, &p_buffer[header_count], p_atmosphere_compute_multiple_scattering_shader);
 		tgvk_shader compute_multiple_scattering_fragment_shader = tgvk_shader_create_from_glsl(TG_SHADER_TYPE_FRAGMENT, p_buffer);
+
+		VkAttachmentDescription attachment_description = { 0 };
+
+		attachment_description.flags = 0;
+		attachment_description.format = p_model->transmittance_texture.format;
+		attachment_description.samples = VK_SAMPLE_COUNT_1_BIT;
+		attachment_description.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		attachment_description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+		attachment_description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		attachment_description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		attachment_description.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		attachment_description.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+		VkAttachmentReference color_attachment_reference = { 0 };
+		color_attachment_reference.attachment = 0;
+		color_attachment_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+		VkSubpassDescription subpass_description = { 0 };
+		subpass_description.flags = 0;
+		subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+		subpass_description.inputAttachmentCount = 0;
+		subpass_description.pInputAttachments = TG_NULL;
+		subpass_description.colorAttachmentCount = 1;
+		subpass_description.pColorAttachments = &color_attachment_reference;
+		subpass_description.pResolveAttachments = TG_NULL;
+		subpass_description.pDepthStencilAttachment = TG_NULL;
+		subpass_description.preserveAttachmentCount = 0;
+		subpass_description.pPreserveAttachments = TG_NULL;
+
+		VkSubpassDependency subpass_dependency = { 0 };
+		subpass_dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+		subpass_dependency.dstSubpass = 0;
+		subpass_dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		subpass_dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		subpass_dependency.srcAccessMask = 0;
+		subpass_dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+		VkRenderPass transmittance_render_pass = tgvk_render_pass_create(1, &attachment_description, 1, &subpass_description, 1, &subpass_dependency);
+		tgvk_framebuffer transmittance_framebuffer = tgvk_framebuffer_create(transmittance_render_pass, 1, &p_model->transmittance_texture.image_view, TG_TRANSMITTANCE_TEXTURE_WIDTH, TG_TRANSMITTANCE_TEXTURE_HEIGHT);
+		VkSemaphore transmittance_semaphore = tgvk_semaphore_create();
+		tgvk_command_buffer transmittance_command_buffer = tgvk_command_buffer_create(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+
+		tgvk_graphics_pipeline_create_info transmittance_graphics_pipeline_create_info = { 0 };
+		transmittance_graphics_pipeline_create_info.p_vertex_shader = &vertex_shader;
+		transmittance_graphics_pipeline_create_info.p_fragment_shader = &compute_transmittance_fragment_shader;
+		transmittance_graphics_pipeline_create_info.cull_mode = VK_CULL_MODE_NONE;
+		transmittance_graphics_pipeline_create_info.sample_count = VK_SAMPLE_COUNT_1_BIT;
+		transmittance_graphics_pipeline_create_info.depth_test_enable = VK_FALSE;
+		transmittance_graphics_pipeline_create_info.depth_write_enable = VK_FALSE;
+		transmittance_graphics_pipeline_create_info.blend_enable = VK_FALSE;
+		transmittance_graphics_pipeline_create_info.render_pass = transmittance_render_pass;
+		transmittance_graphics_pipeline_create_info.viewport_size = (v2){ TG_TRANSMITTANCE_TEXTURE_WIDTH, TG_TRANSMITTANCE_TEXTURE_HEIGHT };
+		transmittance_graphics_pipeline_create_info.polygon_mode = VK_POLYGON_MODE_FILL;
+
+		tgvk_pipeline transmittance_pipeline = tgvk_pipeline_create_graphics(&transmittance_graphics_pipeline_create_info);
+
+		//p_renderer_info->descriptor_set = tgvk_descriptor_set_create(&h_render_command->h_material->pipeline);
+		//tgvk_descriptor_set_update_uniform_buffer(p_renderer_info->descriptor_set.descriptor_set, h_render_command->model_ubo.buffer, 0);
+
+		tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
+		tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+		{
+			tgvk_command_buffer_cmd_begin_render_pass(p_command_buffer, transmittance_render_pass, &transmittance_framebuffer, VK_SUBPASS_CONTENTS_INLINE);
+
+			vkCmdBindPipeline(p_command_buffer->command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, transmittance_pipeline.pipeline);
+			vkCmdBindIndexBuffer(p_command_buffer->command_buffer, shared_render_resources.screen_quad_indices.buffer, 0, VK_INDEX_TYPE_UINT16);
+
+			const VkDeviceSize vertex_buffer_offset = 0;
+			vkCmdBindVertexBuffers(p_command_buffer->command_buffer, 0, 1, &shared_render_resources.screen_quad_positions_buffer.buffer, &vertex_buffer_offset);
+			vkCmdBindVertexBuffers(p_command_buffer->command_buffer, 1, 1, &shared_render_resources.screen_quad_uvs_buffer.buffer, &vertex_buffer_offset);
+			// vkCmdBindDescriptorSets(p_renderer_info->command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, h_render_command->h_material->pipeline.layout.pipeline_layout, 0, 1, &p_renderer_info->descriptor_set.descriptor_set, 0, TG_NULL);
+
+			vkCmdDrawIndexed(p_command_buffer->command_buffer, 6, 1, 0, 0, 0);
+
+			vkCmdEndRenderPass(p_command_buffer->command_buffer);
+		}
+		tgvk_command_buffer_end_and_submit(p_command_buffer);
+
+		tgvk_pipeline_destroy(&transmittance_pipeline);
+		tgvk_command_buffer_destroy(&transmittance_command_buffer);
+		tgvk_semaphore_destroy(transmittance_semaphore);
+		tgvk_framebuffer_destroy(&transmittance_framebuffer);
+		tgvk_render_pass_destroy(transmittance_render_pass);
+
+		tgvk_shader_destroy(&compute_multiple_scattering_fragment_shader);
+		tgvk_shader_destroy(&compute_indirect_irradiance_fragment_shader);
+		tgvk_shader_destroy(&compute_scattering_density_fragment_shader);
+		tgvk_shader_destroy(&compute_single_scattering_fragment_shader);
+		tgvk_shader_destroy(&compute_direct_irradiance_fragment_shader);
+		tgvk_shader_destroy(&compute_transmittance_fragment_shader);
+		tgvk_shader_destroy(&vertex_shader);
 
 		TG_MEMORY_STACK_FREE(buffer_size);
 	}
@@ -448,6 +537,23 @@ void tg__precompute(tg_model* p_model)
 		// This is not yet supported...
 		TG_INVALID_CODEPATH();
 	}
+
+	// After the above iterations, the transmittance texture contains the
+	// transmittance for the 3 wavelengths used at the last iteration. But we
+	// want the transmittance at kLambdaR, kLambdaG, kLambdaB instead, so we
+	// must recompute it here for these 3 wavelengths:
+	//std::string header = glsl_header_factory_({ kLambdaR, kLambdaG, kLambdaB });
+	//Program compute_transmittance(kVertexShader, header + kComputeTransmittanceShader);
+	//glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, transmittance_texture_, 0);
+	//glDrawBuffer(GL_COLOR_ATTACHMENT0);
+	//glViewport(0, 0, TRANSMITTANCE_TEXTURE_WIDTH, TRANSMITTANCE_TEXTURE_HEIGHT);
+	//compute_transmittance.Use();
+	//DrawQuad({}, full_screen_quad_vao_);
+
+	tgvk_color_image_3d_destroy(&delta_scattering_density_texture);
+	tgvk_color_image_3d_destroy(&delta_mie_scattering_texture);
+	tgvk_color_image_3d_destroy(&delta_rayleigh_scattering_texture);
+	tgvk_image_destroy(&delta_irradiance_texture);
 }
 
 void tg_atmosphere_precompute(void)
@@ -535,7 +641,7 @@ void tg_atmosphere_precompute(void)
 	{
 		model.shader.total_count += tg_strcpy_no_nul(model.shader.capacity - model.shader.total_count, &model.shader.p_source[model.shader.total_count], "#define TG_RADIANCE_API_ENABLED\r\n\r\n");
 	}
-	model.shader.total_count += tg_strcpy_no_nul(model.shader.capacity - model.shader.total_count, &model.shader.p_source[model.shader.total_count], TG_ATMOSPHRE_SHADER);
+	model.shader.total_count += tg_strcpy_no_nul(model.shader.capacity - model.shader.total_count, &model.shader.p_source[model.shader.total_count], p_atmosphere_shader);
 
 	tg_platform_file_create("shaders/atmosphere/atmosphere.generated.inc", model.shader.total_count, model.shader.p_source, TG_TRUE);
 
@@ -548,8 +654,8 @@ void tg_atmosphere_precompute(void)
 		TG_SCATTERING_TEXTURE_HEIGHT,
 		TG_SCATTERING_TEXTURE_DEPTH,
 		model.use_half_precision ?
-		(!model.combine_scattering_textures && model.rgb_format_supported ? VK_FORMAT_R16G16B16_SFLOAT : VK_FORMAT_R16G16B16A16_SFLOAT) :
-		(!model.combine_scattering_textures && model.rgb_format_supported ? VK_FORMAT_R32G32B32_SFLOAT : VK_FORMAT_R32G32B32A32_SFLOAT),
+			(!model.combine_scattering_textures && model.rgb_format_supported ? VK_FORMAT_R16G16B16_SFLOAT : VK_FORMAT_R16G16B16A16_SFLOAT) :
+			(!model.combine_scattering_textures && model.rgb_format_supported ? VK_FORMAT_R32G32B32_SFLOAT : VK_FORMAT_R32G32B32A32_SFLOAT),
 		TG_NULL
 	);
 
@@ -560,15 +666,42 @@ void tg_atmosphere_precompute(void)
 			TG_SCATTERING_TEXTURE_HEIGHT,
 			TG_SCATTERING_TEXTURE_DEPTH,
 			model.use_half_precision ?
-			(model.rgb_format_supported ? VK_FORMAT_R16G16B16_SFLOAT : VK_FORMAT_R16G16B16A16_SFLOAT) :
-			(model.rgb_format_supported ? VK_FORMAT_R32G32B32_SFLOAT : VK_FORMAT_R32G32B32A32_SFLOAT),
-			TG_NULL
-		);
+				(model.rgb_format_supported ? VK_FORMAT_R16G16B16_SFLOAT : VK_FORMAT_R16G16B16A16_SFLOAT) :
+				(model.rgb_format_supported ? VK_FORMAT_R32G32B32_SFLOAT : VK_FORMAT_R32G32B32A32_SFLOAT),
+			TG_NULL);
 	}
 
 	model.irradiance_texture = tgvk_color_image_create(TG_IRRADIANCE_TEXTURE_WIDTH, TG_IRRADIANCE_TEXTURE_HEIGHT, VK_FORMAT_R32G32B32A32_SFLOAT, TG_NULL);
 
+	tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
+	tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+	{
+		tgvk_command_buffer_cmd_transition_color_image_layout(
+			p_command_buffer,
+			&model.transmittance_texture,
+			0,
+			VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+			VK_IMAGE_LAYOUT_UNDEFINED,
+			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
+		);
+	}
+	tgvk_command_buffer_end_and_submit(p_command_buffer);
+
+
+
 	tg__precompute(&model);
+
+
+
+	tgvk_image_destroy(&model.transmittance_texture);
+	tgvk_color_image_3d_destroy(&model.scattering_texture);
+	if (model.combine_scattering_textures)
+	{
+		tgvk_color_image_3d_destroy(&model.optional_single_mie_scatterin_texture);
+	}
+	tgvk_image_destroy(&model.irradiance_texture);
 
 	TG_MEMORY_STACK_FREE(model.shader.capacity);
 }

@@ -30,7 +30,7 @@
 #ifndef TG_VULKAN_ATMOSPHERE_DEFINITIONS_H
 #define TG_VULKAN_ATMOSPHERE_DEFINITIONS_H
 
-static const char TG_DEFINITIONS[] =
+static const char p_atmosphere_definitions[] =
 "#define tg_length            float\r\n"
 "#define tg_wavelength        float\r\n"
 "#define tg_angle             float\r\n"
