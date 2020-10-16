@@ -1,59 +1,156 @@
-/**
- * Copyright (c) 2017 Eric Bruneton
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holders nor the names of its
- *    contributors may be used to endorse or promote products derived from
- *    this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. TG_IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER TG_IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING TG_IN ANY WAY TG_OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
- * THE POSSIBILITY OF SUCH DAMAGE.
- *
- * Precomputed Atmospheric Scattering
- * Copyright (c) 2008 INRIA
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holders nor the names of its
- *    contributors may be used to endorse or promote products derived from
- *    this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. TG_IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER TG_IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING TG_IN ANY WAY TG_OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
- * THE POSSIBILITY OF SUCH DAMAGE.
- */
+#version 450
+
+#define TG_IN(x) const in x
+#define TG_OUT(x) out x
+#define TG_TEMPLATE(x)
+#define TG_TEMPLATE_ARGUMENT(x)
+#define TG_ASSERT(x)
+
+const int TG_TRANSMITTANCE_TEXTURE_WIDTH  = 256;
+const int TG_TRANSMITTANCE_TEXTURE_HEIGHT = 64;
+const int TG_SCATTERING_TEXTURE_R_SIZE    = 32;
+const int TG_SCATTERING_TEXTURE_MU_SIZE   = 128;
+const int TG_SCATTERING_TEXTURE_MU_S_SIZE = 32;
+const int TG_SCATTERING_TEXTURE_NU_SIZE   = 8;
+const int TG_IRRADIANCE_TEXTURE_WIDTH     = 64;
+const int TG_IRRADIANCE_TEXTURE_HEIGHT    = 16;
+
+#define TG_COMBINED_SCATTERING_TEXTURES
+
+#define tg_length            float
+#define tg_wavelength        float
+#define tg_angle             float
+#define tg_solid_angle       float
+#define tg_power             float
+#define tg_luminous_power    float
+
+#define tg_number                       float
+#define tg_inverse_length               float
+#define tg_area                         float
+#define tg_volume                       float
+#define tg_number_density               float
+#define tg_irradiance                   float
+#define tg_radiance                     float
+#define tg_spectral_power               float
+#define tg_spectral_irradiance          float
+#define tg_spectral_radiance            float
+#define tg_spectral_radiance_density    float
+#define tg_scattering_coefficient       float
+#define tg_inverse_solid_angle          float
+#define tg_luminous_intensity           float
+#define tg_luminance                    float
+#define tg_illuminance                  float
+
+#define tg_abstract_spectrum            vec3
+#define tg_dimensionless_spectrum       vec3
+#define tg_power_spectrum               vec3
+#define tg_irradiance_spectrum          vec3
+#define tg_radiance_spectrum            vec3
+#define tg_radiance_density_spectrum    vec3
+#define tg_scattering_spectrum          vec3
+
+#define tg_position        vec3
+#define tg_direction       vec3
+#define tg_luminance3      vec3
+#define tg_illuminance3    vec3
+
+#define tg_transmittance_texture          sampler2D
+#define tg_abstract_scattering_texture    sampler3D
+#define tg_reduced_scattering_texture     sampler3D
+#define tg_scattering_texture             sampler3D
+#define tg_scattering_density_texture     sampler3D
+#define tg_irradiance_texture             sampler2D
+
+const tg_length            m    = 1.0;
+const tg_wavelength        nm   = 1.0;
+const tg_angle             rad  = 1.0;
+const tg_solid_angle       sr   = 1.0;
+const tg_power             watt = 1.0;
+const tg_luminous_power    lm   = 1.0;
+
+const float TG_PI = 3.14159265358979323846;
+
+const tg_length                       km                                  = 1000.0 * m;
+const tg_area                         m2                                  = m * m;
+const tg_volume                       m3                                  = m * m * m;
+const tg_angle                        pi                                  = TG_PI * rad;
+const tg_angle                        deg                                 = pi / 180.0;
+const tg_irradiance                   watt_per_square_meter               = watt / m2;
+const tg_radiance                     watt_per_square_meter_per_sr        = watt / (m2 * sr);
+const tg_spectral_irradiance          watt_per_square_meter_per_nm        = watt / (m2 * nm);
+const tg_spectral_radiance            watt_per_square_meter_per_sr_per_nm = watt / (m2 * sr * nm);
+const tg_spectral_radiance_density    watt_per_cubic_meter_per_sr_per_nm  = watt / (m3 * sr * nm);
+const tg_luminous_intensity           cd                                  = lm / sr;
+const tg_luminous_intensity           kcd                                 = 1000.0 * cd;
+const tg_luminance                    cd_per_square_meter                 = cd / m2;
+const tg_luminance                    kcd_per_square_meter                = kcd / m2;
+
+struct tg_density_profile_layer
+{
+    tg_length            width;
+    tg_number            exp_term;
+    tg_inverse_length    exp_scale;
+    tg_inverse_length    linear_term;
+    tg_number            constant_term;
+};
+
+struct tg_density_profile
+{
+    tg_density_profile_layer    layers[2];
+};
+
+struct tg_atmosphere_parameters
+{
+    tg_irradiance_spectrum       solar_irradiance;
+    tg_angle                     sun_angular_radius;
+    tg_length                    bottom_radius;
+    tg_length                    top_radius;
+    tg_density_profile           rayleigh_density;
+    tg_scattering_spectrum       rayleigh_scattering;
+    tg_density_profile           mie_density;
+    tg_scattering_spectrum       mie_scattering;
+    tg_scattering_spectrum       mie_extinction;
+    tg_number                    mie_phase_function_g;
+    tg_density_profile           absorption_density;
+    tg_scattering_spectrum       absorption_extinction;
+    tg_dimensionless_spectrum    ground_albedo;
+    tg_number                    mu_s_min;
+};
+
+const tg_atmosphere_parameters ATMOSPHERE = tg_atmosphere_parameters(
+    vec3(1.4740000000000000, 1.8504000000000001, 1.9119799999999999),
+    0.0046750000000000,
+    6360.0000000000000000,
+    6420.0000000000000000,
+    tg_density_profile(
+        tg_density_profile_layer[2](
+            tg_density_profile_layer(0.0000000000000000, 0.0000000000000000, 0.0000000000000000, 0.0000000000000000, 0.0000000000000000),
+            tg_density_profile_layer(0.0000000000000000, 1.0000000000000000, -0.1250000000000000, 0.0000000000000000, 0.0000000000000000)
+        )
+    ),
+    vec3(0.0058023393817123, 0.0135577624479202, 0.0331000059763677),
+    tg_density_profile(
+        tg_density_profile_layer[2](
+            tg_density_profile_layer(0.0000000000000000, 0.0000000000000000, 0.0000000000000000, 0.0000000000000000, 0.0000000000000000),
+            tg_density_profile_layer(0.0000000000000000, 1.0000000000000000, -0.8333333333333333, 0.0000000000000000, 0.0000000000000000)
+        )
+    ),
+    vec3(0.0039960000000000, 0.0039960000000000, 0.0039960000000000),
+    vec3(0.0044399999999999, 0.0044399999999999, 0.0044399999999999),
+    0.8000000000000000,
+    tg_density_profile(
+        tg_density_profile_layer[2](
+            tg_density_profile_layer(25.0000000000000000, 0.0000000000000000, 0.0000000000000000, 0.0666666666666666, -0.6666666666666666),
+            tg_density_profile_layer(0.0000000000000000, 0.0000000000000000, 0.0000000000000000, -0.0666666666666666, 2.6666666666666665)
+        )
+    ),
+    vec3(0.0006497165999999, 0.0018808999999999, 0.0000850166799999),
+    vec3(0.1000000000000000, 0.1000000000000000, 0.1000000000000000),
+    -0.2079116611138134
+);
+
+const vec3 TG_SKY_SPECTRAL_RADIANCE_TO_LUMINANCE = vec3(114974.9164374851388856, 71305.9548161142738536, 65310.5485546073396108);
+const vec3 TG_SUN_SPECTRAL_RADIANCE_TO_LUMINANCE = vec3(98242.7862217522051651, 69954.3981115113710984, 66475.0123543682711897);
 
 tg_number tg_clamp_cosine(tg_number mu)
 {
@@ -970,4 +1067,89 @@ tg_irradiance_spectrum tg_get_sun_and_sky_irradiance(
         tg_get_transmittance_to_sun(
             atmosphere, transmittance_texture, r, mu_s) *
         max(dot(normal, sun_direction), 0.0);
+}
+
+layout(set = 0, binding = 0) uniform sampler2D transmittance_texture;
+layout(set = 0, binding = 1) uniform sampler3D scattering_texture;
+layout(set = 0, binding = 2) uniform sampler3D single_mie_scattering_texture;
+layout(set = 0, binding = 3) uniform sampler2D irradiance_texture;
+
+#ifdef TG_RADIANCE_API_ENABLED
+
+tg_radiance_spectrum tg_get_solar_radiance()
+{
+    return ATMOSPHERE.solar_irradiance / (TG_PI * ATMOSPHERE.sun_angular_radius * ATMOSPHERE.sun_angular_radius);
+}
+
+tg_radiance_spectrum tg_get_sky_radiance(
+    tg_position camera, tg_direction view_ray, tg_length shadow_length,
+    tg_direction sun_direction, out tg_dimensionless_spectrum transmittance
+)
+{
+    return tg_get_sky_radiance(
+        ATMOSPHERE, transmittance_texture,
+        scattering_texture, single_mie_scattering_texture,
+        camera, view_ray, shadow_length, sun_direction, transmittance
+    );
+}
+
+tg_radiance_spectrum tg_get_sky_radiance_to_point(
+    tg_position camera, tg_position point, tg_length shadow_length,
+    tg_direction sun_direction, out tg_dimensionless_spectrum transmittance
+)
+{
+    return tg_get_sky_radiance_to_point(
+        ATMOSPHERE, transmittance_texture,
+        scattering_texture, single_mie_scattering_texture,
+        camera, point, shadow_length, sun_direction, transmittance
+    );
+}
+
+tg_irradiance_spectrum tg_get_sun_and_sky_irradiance(
+    tg_position p, tg_direction normal, tg_direction sun_direction,
+    out tg_irradiance_spectrum sky_irradiance
+)
+{
+    return tg_get_sun_and_sky_irradiance(ATMOSPHERE, transmittance_texture, irradiance_texture, p, normal, sun_direction, sky_irradiance);
+}
+
+#endif
+
+tg_luminance3 tg_get_solar_luminance()
+{
+    return ATMOSPHERE.solar_irradiance / (TG_PI * ATMOSPHERE.sun_angular_radius * ATMOSPHERE.sun_angular_radius) * TG_SUN_SPECTRAL_RADIANCE_TO_LUMINANCE;
+}
+
+tg_luminance3 tg_get_sky_luminance(
+    tg_position camera, tg_direction view_ray, tg_length shadow_length,
+    tg_direction sun_direction, out tg_dimensionless_spectrum transmittance
+)
+{
+    return tg_get_sky_radiance(
+        ATMOSPHERE, transmittance_texture, scattering_texture, single_mie_scattering_texture,
+        camera, view_ray, shadow_length, sun_direction, transmittance
+    ) * TG_SKY_SPECTRAL_RADIANCE_TO_LUMINANCE;
+}
+
+tg_luminance3 tg_get_sky_luminance_to_point(
+    tg_position camera, tg_position point, tg_length shadow_length,
+    tg_direction sun_direction, out tg_dimensionless_spectrum transmittance
+)
+{
+    return tg_get_sky_radiance_to_point(
+        ATMOSPHERE, transmittance_texture, scattering_texture, single_mie_scattering_texture,
+        camera, point, shadow_length, sun_direction, transmittance
+    ) * TG_SKY_SPECTRAL_RADIANCE_TO_LUMINANCE;
+}
+
+tg_illuminance3 tg_get_sun_and_sky_illuminance(
+    tg_position p, tg_direction normal, tg_direction sun_direction,
+    out tg_irradiance_spectrum sky_irradiance
+)
+{
+    tg_irradiance_spectrum sun_irradiance = tg_get_sun_and_sky_irradiance(
+        ATMOSPHERE, transmittance_texture, irradiance_texture, p, normal, sun_direction, sky_irradiance
+    );
+    sky_irradiance *= TG_SKY_SPECTRAL_RADIANCE_TO_LUMINANCE;
+    return sun_irradiance * TG_SUN_SPECTRAL_RADIANCE_TO_LUMINANCE;
 }

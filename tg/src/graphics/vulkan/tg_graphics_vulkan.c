@@ -5,6 +5,7 @@
 #include "graphics/tg_image_loader.h"
 #include "graphics/tg_shader_library.h"
 #include "util/tg_string.h"
+#include <shaderc/shaderc.h>
 
 
 
@@ -2202,9 +2203,7 @@ void tgvk_semaphore_destroy(VkSemaphore semaphore)
 
 tgvk_shader tgvk_shader_create(const char* p_filename)
 {
-    tgvk_shader shader = { 0 };
-
-    char p_filename_buffer[256] = { 0 };
+    char p_filename_buffer[TG_MAX_PATH] = { 0 };
     tg_string_format(sizeof(p_filename_buffer), p_filename_buffer, "%s.spv", p_filename);
 
     // TODO: shader recompilation here
@@ -2215,8 +2214,59 @@ tgvk_shader tgvk_shader_create(const char* p_filename)
     char* p_content = TG_MEMORY_STACK_ALLOC(file_properties.size);
     tg_platform_file_read(p_filename_buffer, file_properties.size, p_content);
 
-    const u32 word_count = (u32)(file_properties.size / 4);
-    const u32* p_words = (u32*)p_content;
+    const tgvk_shader shader = tgvk_shader_create_from_spirv((u32)file_properties.size, p_content);
+
+    TG_MEMORY_STACK_FREE(file_properties.size);
+
+    return shader;
+}
+
+tgvk_shader tgvk_shader_create_from_glsl(tg_shader_type type, const char* p_source)
+{
+    TG_ASSERT(p_source[tg_strlen_no_nul(p_source)] == '\0');
+
+    shaderc_compiler_t compiler = shaderc_compiler_initialize();
+    TG_ASSERT(compiler);
+
+    shaderc_shader_kind shader_kind = 0;
+    switch (type)
+    {
+    case TG_SHADER_TYPE_VERTEX: shader_kind = shaderc_vertex_shader; break;
+    case TG_SHADER_TYPE_GEOMETRY: shader_kind = shaderc_geometry_shader; break;
+    case TG_SHADER_TYPE_FRAGMENT: shader_kind = shaderc_fragment_shader; break;
+    case TG_SHADER_TYPE_COMPUTE: shader_kind = shaderc_compute_shader; break;
+
+    default: TG_INVALID_CODEPATH(); break;
+    }
+    const shaderc_compilation_result_t result = shaderc_compile_into_spv(compiler, p_source, tg_strlen_no_nul(p_source), shader_kind, "", "main", TG_NULL);
+    TG_ASSERT(result);
+
+    TG_DEBUG_EXEC(
+        if (shaderc_result_get_num_warnings(result) || shaderc_result_get_num_errors(result))
+        {
+            const char* p_error_message = shaderc_result_get_error_message(result);
+            TG_DEBUG_LOG(p_error_message);
+            TG_INVALID_CODEPATH();
+        }
+    );
+
+    const size_t length = shaderc_result_get_length(result);
+    const char* p_bytes = shaderc_result_get_bytes(result);
+
+    const tgvk_shader shader = tgvk_shader_create_from_spirv((u32)length, p_bytes);
+
+    shaderc_result_release(result);
+    shaderc_compiler_release(compiler);
+
+    return shader;
+}
+
+tgvk_shader tgvk_shader_create_from_spirv(u32 size, const char* p_source)
+{
+    tgvk_shader shader = { 0 };
+
+    const u32 word_count = size / 4;
+    const u32* p_words = (u32*)p_source;
 
     tg_spirv_fill_layout(word_count, p_words, &shader.spirv_layout);
 
@@ -2224,11 +2274,10 @@ tgvk_shader tgvk_shader_create(const char* p_filename)
     shader_module_create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     shader_module_create_info.pNext = TG_NULL;
     shader_module_create_info.flags = 0;
-    shader_module_create_info.codeSize = file_properties.size;
-    shader_module_create_info.pCode = (const u32*)p_content;
+    shader_module_create_info.codeSize = (size_t)size;
+    shader_module_create_info.pCode = (const u32*)p_source;
 
     TGVK_CALL(vkCreateShaderModule(device, &shader_module_create_info, TG_NULL, &shader.shader_module));
-    TG_MEMORY_STACK_FREE(file_properties.size);
 
     return shader;
 }

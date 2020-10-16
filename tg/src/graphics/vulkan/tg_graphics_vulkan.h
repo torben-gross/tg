@@ -580,6 +580,8 @@ VkSemaphore                               tgvk_semaphore_create(void);
 void                                      tgvk_semaphore_destroy(VkSemaphore semaphore);
 
 tgvk_shader                               tgvk_shader_create(const char* p_filename);
+tgvk_shader                               tgvk_shader_create_from_glsl(tg_shader_type type, const char* p_source);
+tgvk_shader                               tgvk_shader_create_from_spirv(u32 size, const char* p_source);
 void                                      tgvk_shader_destroy(tgvk_shader* p_shader);
 
 tgvk_buffer*                              tgvk_global_staging_buffer_take(VkDeviceSize size);

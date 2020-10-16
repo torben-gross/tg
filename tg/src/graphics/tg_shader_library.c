@@ -44,7 +44,7 @@ tg_vertex_shader_hashmap vertex_shader_hashmap = { 0 };
 
 static u32 tg__hash(const char* p_filename)
 {
-	const char* p_it = &p_filename[tg_string_length(p_filename) - 1];
+	const char* p_it = &p_filename[tg_strlen_no_nul(p_filename) - 1];
 	while (*p_it != '/' && *p_it != '\\')
 	{
 		if (p_it-- == p_filename)
@@ -64,7 +64,7 @@ static u32 tg__hash(const char* p_filename)
 
 static void tg__prepare_filename(const char* p_filename, char* p_buffer)
 {
-	tg_string_copy(TG_MAX_PATH, p_buffer, p_filename);
+	tg_strcpy(TG_MAX_PATH, p_buffer, p_filename);
 #ifdef TG_WIN32
 	tg_string_replace_characters(p_buffer, '/', TG_FILE_SEPERATOR);
 #else

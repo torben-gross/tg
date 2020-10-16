@@ -300,7 +300,7 @@ void tg_string_hashmap_insert(tg_string_hashmap* p_string_hashmap, const char* p
 	}
 
 	p_string_hashmap->element_count++;
-	u64 key_size = ((u64)tg_string_length(p_key) + 1) * sizeof(char);
+	u64 key_size = ((u64)tg_strlen_no_nul(p_key) + 1) * sizeof(char);
 	char* p_key_copy = TG_MEMORY_ALLOC(key_size);
 	tg_memory_copy(key_size, p_key, p_key_copy);
 	tg_list_insert(&p_bucket->keys, &p_key_copy);

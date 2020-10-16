@@ -68,7 +68,7 @@
 #define tg_abstract_scattering_texture    sampler3D
 #define tg_reduced_scattering_texture     sampler3D
 #define tg_scattering_texture             sampler3D
-#define tg_scatteringDensity_texture      sampler3D
+#define tg_scattering_density_texture     sampler3D
 #define tg_irradiance_texture             sampler2D
 
 const tg_length            m    = 1.0;
@@ -83,7 +83,7 @@ const float TG_PI = 3.14159265358979323846;
 const tg_length                       km                                  = 1000.0 * m;
 const tg_area                         m2                                  = m * m;
 const tg_volume                       m3                                  = m * m * m;
-const tg_angle                        pi                                  = PI * rad;
+const tg_angle                        pi                                  = TG_PI * rad;
 const tg_angle                        deg                                 = pi / 180.0;
 const tg_irradiance                   watt_per_square_meter               = watt / m2;
 const tg_radiance                     watt_per_square_meter_per_sr        = watt / (m2 * sr);
@@ -97,32 +97,32 @@ const tg_luminance                    kcd_per_square_meter                = kcd 
 
 struct tg_density_profile_layer
 {
-  tg_length            width;
-  tg_number            exp_term;
-  tg_inverse_length    exp_scale;
-  tg_inverse_length    linear_term;
-  tg_number            constant_term;
+    tg_length            width;
+    tg_number            exp_term;
+    tg_inverse_length    exp_scale;
+    tg_inverse_length    linear_term;
+    tg_number            constant_term;
 };
 
 struct tg_density_profile
 {
-  tg_density_profile_layer    layers[2];
+    tg_density_profile_layer    layers[2];
 };
 
 struct tg_atmosphere_parameters
 {
-  tg_irradiance_spectrum       solar_irradiance;
-  tg_angle                     sun_angular_radius;
-  tg_length                    bottom_radius;
-  tg_length                    top_radius;
-  tg_density_profile           rayleigh_density;
-  tg_scattering_spectrum       rayleigh_scattering;
-  tg_density_profile           mie_density;
-  tg_scattering_spectrum       mie_scattering;
-  tg_scattering_spectrum       mie_extinction;
-  tg_number                    mie_phase_function_g;
-  tg_density_profile           absorption_density;
-  tg_scattering_spectrum       absorption_extinction;
-  tg_dimensionless_spectrum    ground_albedo;
-  tg_number                    mu_s_min;
+    tg_irradiance_spectrum       solar_irradiance;
+    tg_angle                     sun_angular_radius;
+    tg_length                    bottom_radius;
+    tg_length                    top_radius;
+    tg_density_profile           rayleigh_density;
+    tg_scattering_spectrum       rayleigh_scattering;
+    tg_density_profile           mie_density;
+    tg_scattering_spectrum       mie_scattering;
+    tg_scattering_spectrum       mie_extinction;
+    tg_number                    mie_phase_function_g;
+    tg_density_profile           absorption_density;
+    tg_scattering_spectrum       absorption_extinction;
+    tg_dimensionless_spectrum    ground_albedo;
+    tg_number                    mu_s_min;
 };

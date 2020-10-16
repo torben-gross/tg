@@ -91,6 +91,29 @@ typedef enum tg_depth_image_format
 	TG_DEPTH_IMAGE_FORMAT_D32_SFLOAT    = 126
 } tg_depth_image_format;
 
+typedef enum tg_image_address_mode
+{
+	TG_IMAGE_ADDRESS_MODE_CLAMP_TO_BORDER = 3,
+	TG_IMAGE_ADDRESS_MODE_CLAMP_TO_EDGE = 2,
+	TG_IMAGE_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE = 4,
+	TG_IMAGE_ADDRESS_MODE_MIRRORED_REPEAT = 1,
+	TG_IMAGE_ADDRESS_MODE_REPEAT = 0
+} tg_image_address_mode;
+
+typedef enum tg_image_filter
+{
+	TG_IMAGE_FILTER_LINEAR = 1,
+	TG_IMAGE_FILTER_NEAREST = 0
+} tg_image_filter;
+
+typedef enum tg_shader_type
+{
+	TG_SHADER_TYPE_VERTEX,
+	TG_SHADER_TYPE_GEOMETRY,
+	TG_SHADER_TYPE_FRAGMENT,
+	TG_SHADER_TYPE_COMPUTE
+} tg_shader_type;
+
 typedef enum tg_structure_type
 {
 	TG_STRUCTURE_TYPE_INVALID = 0,
@@ -109,21 +132,6 @@ typedef enum tg_structure_type
 	TG_STRUCTURE_TYPE_UNIFORM_BUFFER,
 	TG_STRUCTURE_TYPE_VERTEX_SHADER
 } tg_structure_type;
-
-typedef enum tg_image_address_mode
-{
-	TG_IMAGE_ADDRESS_MODE_CLAMP_TO_BORDER         = 3,
-	TG_IMAGE_ADDRESS_MODE_CLAMP_TO_EDGE           = 2,
-	TG_IMAGE_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE    = 4,
-	TG_IMAGE_ADDRESS_MODE_MIRRORED_REPEAT         = 1,
-	TG_IMAGE_ADDRESS_MODE_REPEAT                  = 0
-} tg_image_address_mode;
-
-typedef enum tg_image_filter
-{
-	TG_IMAGE_FILTER_LINEAR     = 1,
-	TG_IMAGE_FILTER_NEAREST    = 0
-} tg_image_filter;
 
 typedef enum tg_vertex_input_attribute_format
 {

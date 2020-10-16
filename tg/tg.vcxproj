@@ -71,7 +71,7 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>C:\VulkanSDK\1.2.141.2\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>vulkan-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>shaderc_combined.lib;vulkan-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
@@ -148,10 +148,14 @@
     <ClCompile Include="src\util\tg_string.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\graphics\vulkan\tg_vulkan_atmosphere_definitions.h" />
+    <ClInclude Include="src\graphics\vulkan\tg_vulkan_atmosphere_functions.h" />
+    <ClInclude Include="src\graphics\tg_atmosphere_lookup_tables.h" />
     <ClInclude Include="src\graphics\tg_graphics.h" />
     <ClInclude Include="src\graphics\tg_sparse_voxel_octree.h" />
     <ClInclude Include="src\graphics\tg_spirv.h" />
     <ClInclude Include="src\graphics\vulkan\tg_graphics_vulkan.h" />
+    <ClInclude Include="src\graphics\vulkan\tg_vulkan_atmosphere_shaders.h" />
     <ClInclude Include="src\graphics\vulkan\tg_vulkan_memory_allocator.h" />
     <ClInclude Include="src\graphics\tg_shader_library.h" />
     <ClInclude Include="src\physics\tg_kd_tree.h" />

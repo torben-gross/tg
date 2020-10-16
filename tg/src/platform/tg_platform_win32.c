@@ -82,15 +82,15 @@ static void tg__fill_file_properties(const char* p_directory, WIN32_FIND_DATAA* 
     if (*p_directory == '.')
     {
         TG_ASSERT(p_directory[1] == '\0');
-        tg_string_copy(MAX_PATH, p_properties->p_filename, p_find_data->cFileName);
+        tg_strcpy(MAX_PATH, p_properties->p_filename, p_find_data->cFileName);
         p_properties->p_short_filename = p_properties->p_filename;
     }
     else
     {
         tg_string_format(MAX_PATH, p_properties->p_filename, "%s%c%s", p_directory, TG_FILE_SEPERATOR, p_find_data->cFileName);
-        p_properties->p_short_filename = &p_properties->p_filename[tg_string_length(p_directory) + 1];
+        p_properties->p_short_filename = &p_properties->p_filename[tg_strlen_no_nul(p_directory) + 1];
     }
-    tg_string_copy(MAX_PATH, p_properties->p_directory, p_directory);
+    tg_strcpy(MAX_PATH, p_properties->p_directory, p_directory);
     if (p_properties->is_directory)
     {
         p_properties->p_extension = TG_NULL;

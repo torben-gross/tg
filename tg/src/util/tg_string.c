@@ -2,7 +2,7 @@
 
 #include "math/tg_math.h"
 
-u32 tg_string_copy(u32 size, char* p_buffer, const char* p_string)
+u32 tg_strcpy(u32 size, char* p_buffer, const char* p_string)
 {
 	u32 i = 0;
 	for (; i < size; i++)
@@ -18,7 +18,7 @@ u32 tg_string_copy(u32 size, char* p_buffer, const char* p_string)
 	return i;
 }
 
-u32 tg_string_copy_no_nul(u32 size, char* p_buffer, const char* p_string)
+u32 tg_strcpy_no_nul(u32 size, char* p_buffer, const char* p_string)
 {
 	u32 i = 0;
 	for (; i < size; i++)
@@ -30,6 +30,40 @@ u32 tg_string_copy_no_nul(u32 size, char* p_buffer, const char* p_string)
 		p_buffer[i] = p_string[i];
 	}
 	TG_ASSERT(p_string[i] == '\0');
+	return i;
+}
+
+u32 tg_strncpy(u32 size, char* p_buffer, u32 size_to_copy, const char* p_string)
+{
+	TG_ASSERT(size >= size_to_copy + 1);
+
+	u32 i = 0;
+	for (; i < size_to_copy; i++)
+	{
+		p_buffer[i] = p_string[i];
+		if (p_string[i] == '\0')
+		{
+			i++;
+			break;
+		}
+	}
+	p_buffer[size_to_copy] = '\0';
+	return i;
+}
+
+u32 tg_strncpy_no_nul(u32 size, char* p_buffer, u32 size_to_copy, const char* p_string)
+{
+	TG_ASSERT(size >= size_to_copy);
+
+	u32 i = 0;
+	for (; i < size_to_copy; i++)
+	{
+		if (p_string[i] == '\0')
+		{
+			break;
+		}
+		p_buffer[i] = p_string[i];
+	}
 	return i;
 }
 
@@ -165,7 +199,7 @@ void tg_string_format_va(u32 size, char* p_buffer, const char* p_format, char* p
 	*p_buffer_position = '\0';
 }
 
-u32 tg_string_length(const char* p_string)
+u32 tg_strlen_no_nul(const char* p_string)
 {
 	TG_ASSERT(p_string);
 
