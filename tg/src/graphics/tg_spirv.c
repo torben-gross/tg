@@ -821,7 +821,7 @@ void tg_spirv_fill_layout(u32 word_count, const u32* p_words, tg_spirv_layout* p
                 const char* p_entry_point_name = (char*)&p_words[processed_word_count + 3];
                 const u32 entry_point_length = tg_strlen_no_nul(p_entry_point_name);
                 TG_ASSERT(entry_point_length + 1 <= TG_SPIRV_MAX_NAME);
-                tg_memory_copy((u64)entry_point_length + 1, p_entry_point_name, p_layout->p_entry_point_name);
+                tg_memcpy((u64)entry_point_length + 1, p_entry_point_name, p_layout->p_entry_point_name);
             }
             processed_word_count += op_word_count;
         }

@@ -62,7 +62,7 @@ void tg__extract_directory(char* p_buffer, const char* p_filename)
         p_it++;
     }
 
-    tg_memory_copy((u64)character_count, p_filename, p_buffer);
+    tg_memcpy((u64)character_count, p_filename, p_buffer);
     p_buffer[character_count] = '\0';
 }
 
@@ -87,7 +87,7 @@ static void tg__fill_file_properties(const char* p_directory, WIN32_FIND_DATAA* 
     }
     else
     {
-        tg_string_format(MAX_PATH, p_properties->p_filename, "%s%c%s", p_directory, TG_FILE_SEPERATOR, p_find_data->cFileName);
+        tg_stringf(MAX_PATH, p_properties->p_filename, "%s%c%s", p_directory, TG_FILE_SEPERATOR, p_find_data->cFileName);
         p_properties->p_short_filename = &p_properties->p_filename[tg_strlen_no_nul(p_directory) + 1];
     }
     tg_strcpy(MAX_PATH, p_properties->p_directory, p_directory);
@@ -113,7 +113,7 @@ void tg_platform_debug_log(const char* p_format, ...)
     char p_buffer[4096] = { 0 };
     va_list va = TG_NULL;
     tg_variadic_start(va, p_format);
-    tg_string_format_va(sizeof(p_buffer), p_buffer, p_format, va);
+    tg_stringf_va(sizeof(p_buffer), p_buffer, p_format, va);
 
     OutputDebugStringA(p_buffer);
 }
@@ -291,17 +291,55 @@ void tg_platform_file_read(const char* p_filename, u64 buffer_size, char* p_buff
     CloseHandle(h_file);
 }
 
-void tg_platform_file_create(const char* p_filename, u32 size, char* p_data, b32 replace_existing)
+b32 tg_platform_file_create(const char* p_filename, u32 size, char* p_data, b32 replace_existing)
 {
     TG_ASSERT(p_filename && size && p_data);
+
+    b32 result = TG_FALSE;
 
     char p_buffer[MAX_PATH] = { 0 };
     tg_platform_prepend_asset_directory(p_filename, MAX_PATH, p_buffer);
 
     HANDLE h_file = CreateFileA(p_buffer, GENERIC_READ | GENERIC_WRITE, 0, TG_NULL, replace_existing ? CREATE_ALWAYS : CREATE_NEW, FILE_ATTRIBUTE_NORMAL, TG_NULL);
-    u32 written_size = 0;
-    WriteFile(h_file, p_data, size, (LPDWORD)&written_size, TG_NULL);
-    CloseHandle(h_file);
+    if (h_file != INVALID_HANDLE_VALUE)
+    {
+        u32 written_size = 0;
+        const BOOL write_result = WriteFile(h_file, p_data, size, (LPDWORD)&written_size, TG_NULL);
+        TG_ASSERT(write_result);
+
+        const BOOL close_result = CloseHandle(h_file);
+        TG_ASSERT(close_result);
+
+        result = TG_TRUE;
+    }
+    else
+    {
+        TG_DEBUG_EXEC(
+            const DWORD last_error = GetLastError();
+            if (replace_existing)
+            {
+                LPVOID p_message_buffer = TG_NULL;
+                FormatMessageA(
+                    FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+                    NULL,
+                    last_error,
+                    MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US),
+                    (LPSTR)&p_message_buffer,
+                    0, NULL
+                );
+                TG_DEBUG_LOG(p_message_buffer);
+                TG_INVALID_CODEPATH();
+            }
+            else
+            {
+                TG_ASSERT(last_error == ERROR_FILE_EXISTS);
+            }
+        );
+
+        result = TG_FALSE;
+    }
+
+    return result;
 }
 
 b32 tg_platform_file_get_properties(const char* p_filename, tg_file_properties* p_properties)
@@ -330,7 +368,7 @@ tg_file_iterator_h tg_platform_directory_begin_iteration(const char* p_directory
     TG_ASSERT(p_directory && p_properties);
 
     char p_postfix_buffer[MAX_PATH] = { 0 };
-    tg_string_format(MAX_PATH, p_postfix_buffer, "%s%c%c", p_directory, TG_FILE_SEPERATOR, '*');
+    tg_stringf(MAX_PATH, p_postfix_buffer, "%s%c%c", p_directory, TG_FILE_SEPERATOR, '*');
 
     char p_buffer[MAX_PATH] = { 0 };
     tg_platform_prepend_asset_directory(p_postfix_buffer, MAX_PATH, p_buffer);
@@ -391,7 +429,7 @@ u64 tg_platform_directory_get_size(const char* p_directory)
             else
             {
                 char p_buffer[MAX_PATH] = { 0 };
-                tg_string_format(MAX_PATH, p_buffer, "%s%c%s", p_directory, TG_FILE_SEPERATOR, file_properties.p_short_filename);
+                tg_stringf(MAX_PATH, p_buffer, "%s%c%s", p_directory, TG_FILE_SEPERATOR, file_properties.p_short_filename);
                 size += tg_platform_directory_get_size(p_buffer);
             }
         }
@@ -473,7 +511,7 @@ i8 tg_platform_system_time_compare(tg_system_time* p_time0, tg_system_time* p_ti
 
 void tg_platform_prepend_asset_directory(const char* p_filename, u32 size, char* p_buffer)
 {
-    tg_string_format(size, p_buffer, "%s%c%s", "assets", TG_FILE_SEPERATOR, p_filename);
+    tg_stringf(size, p_buffer, "%s%c%s", "assets", TG_FILE_SEPERATOR, p_filename);
 }
 
 

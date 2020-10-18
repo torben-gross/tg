@@ -41,6 +41,9 @@
 #define TG_INVALID_CODEPATH()
 #endif
 
+#define TG_INOUT
+#define TG_OUT
+
 #define TG_DECLARE_HANDLE(structure)       typedef struct structure* structure##_h
 #define TG_DECLARE_TYPE(structure)         typedef struct structure structure
 

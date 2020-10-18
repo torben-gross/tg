@@ -583,7 +583,15 @@ f32 tgm_f32_round(f32 v)
 
 i32 tgm_f32_round_to_i32(f32 v)
 {
-	const i32 result = v >= 0.0f ? (i32)(v + 0.5f) : (i32)(-(tgm_f32_abs(v) + 0.5f));
+	const i32 result = v >= 0.0f ? (i32)(v + 0.5f) : (i32)(-(TG_ABS(v) + 0.5f));
+	return result;
+}
+
+u8 tgm_f32_round_to_u8(f32 v)
+{
+	TG_ASSERT(v <= (f32)TG_U8_MAX);
+
+	const u8 result = v >= 0.0f ? (u8)(v + 0.5f) : (u8)(-(TG_ABS(v) + 0.5f));
 	return result;
 }
 
@@ -640,6 +648,24 @@ i32 tgm_i32_max(i32 v0, i32 v1)
 i32 tgm_i32_min(i32 v0, i32 v1)
 {
 	const i32 result = v0 < v1 ? v0 : v1;
+	return result;
+}
+
+u16 tgm_u16_clamp(u16 v, u16 low, u16 high)
+{
+	const u16 result = TG_CLAMP(v, low, high);
+	return result;
+}
+
+u16 tgm_u16_max(u16 v0, u16 v1)
+{
+	const u16 result = v0 > v1 ? v0 : v1;
+	return result;
+}
+
+u16 tgm_u16_min(u16 v0, u16 v1)
+{
+	const u16 result = v0 < v1 ? v0 : v1;
 	return result;
 }
 

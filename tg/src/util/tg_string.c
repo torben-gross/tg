@@ -78,17 +78,17 @@ b32 tg_string_equal(const char* p_s0, const char* p_s1)
 	return result;
 }
 
-void tg_string_format(u32 size, char* p_buffer, const char* p_format, ...)
+void tg_stringf(u32 size, char* p_buffer, const char* p_format, ...)
 {
 	TG_ASSERT(size && p_buffer && p_format);
 
 	char* p_variadic_arguments = TG_NULL;
 	tg_variadic_start(p_variadic_arguments, p_format);
-	tg_string_format_va(size, p_buffer, p_format, p_variadic_arguments);
+	tg_stringf_va(size, p_buffer, p_format, p_variadic_arguments);
 	tg_variadic_end(p_variadic_arguments);
 }
 
-void tg_string_format_va(u32 size, char* p_buffer, const char* p_format, char* p_variadic_arguments)
+void tg_stringf_va(u32 size, char* p_buffer, const char* p_format, char* p_variadic_arguments)
 {
 	TG_ASSERT(size && p_buffer && p_format);
 

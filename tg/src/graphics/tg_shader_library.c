@@ -86,7 +86,7 @@ static void tg__try_load(const tg_file_properties* p_properties)
 			index++;
 		}
 		compute_shader_hashmap.ph_shaders[index] = tg_compute_shader_create(p_properties->p_filename);
-		tg_memory_copy(TG_MAX_PATH, p_properties->p_filename, compute_shader_hashmap.pp_filenames[index]);
+		tg_memcpy(TG_MAX_PATH, p_properties->p_filename, compute_shader_hashmap.pp_filenames[index]);
 #ifdef TG_DEBUG
 		compute_shader_hashmap.count++;
 #endif
@@ -101,7 +101,7 @@ static void tg__try_load(const tg_file_properties* p_properties)
 			index++;
 		}
 		fragment_shader_hashmap.ph_shaders[index] = tg_fragment_shader_create(p_properties->p_filename);
-		tg_memory_copy(TG_MAX_PATH, p_properties->p_filename, fragment_shader_hashmap.pp_filenames[index]);
+		tg_memcpy(TG_MAX_PATH, p_properties->p_filename, fragment_shader_hashmap.pp_filenames[index]);
 #ifdef TG_DEBUG
 		fragment_shader_hashmap.count++;
 #endif
@@ -116,7 +116,7 @@ static void tg__try_load(const tg_file_properties* p_properties)
 			index++;
 		}
 		vertex_shader_hashmap.ph_shaders[index] = tg_vertex_shader_create(p_properties->p_filename);
-		tg_memory_copy(TG_MAX_PATH, p_properties->p_filename, vertex_shader_hashmap.pp_filenames[index]);
+		tg_memcpy(TG_MAX_PATH, p_properties->p_filename, vertex_shader_hashmap.pp_filenames[index]);
 #ifdef TG_DEBUG
 		vertex_shader_hashmap.count++;
 #endif

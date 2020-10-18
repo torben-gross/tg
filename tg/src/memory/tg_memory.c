@@ -76,7 +76,7 @@ void tg__insert(void* p_memory, const char* p_filename, u32 line)
 
 	hashmap.pp_keys[hash] = p_memory;
 	hashmap.p_values[hash].line = line;
-	tg_memory_copy(tg_strlen_no_nul(p_filename) * sizeof(*p_filename), p_filename, hashmap.p_values[hash].p_filename);
+	tg_memcpy(tg_strlen_no_nul(p_filename) * sizeof(*p_filename), p_filename, hashmap.p_values[hash].p_filename);
 }
 
 void tg__remove(void* p_memory)
@@ -179,7 +179,7 @@ void tg_memory_shutdown(void)
 
 
 
-void tg_memory_copy(u64 size, const void* p_source, void* p_destination)
+void tg_memcpy(u64 size, const void* p_source, void* p_destination)
 {
 	for (u64 i = 0; i < size; i++)
 	{

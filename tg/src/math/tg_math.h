@@ -10,8 +10,10 @@
 #define TG_CEIL_TO_MULTIPLE(value, multiple_of)    ((((value) + (multiple_of) - 1) / (multiple_of)) * (multiple_of))
 #define TG_MAX(v0, v1)                             ((v0) > (v1) ? (v0) : (v1))
 #define TG_MIN(v0, v1)                             ((v0) < (v1) ? (v0) : (v1))
+#define TG_CLAMP(v, low, high)                     ((v) < (low) ? low : ((v) > (high) ? (high) : (v)))
 #define TG_TO_DEGREES(radians)                     (radians * (360.0f / (TG_PI * 2.0f)))
 #define TG_TO_RADIANS(degrees)                     (degrees * ((TG_PI * 2.0f) / 360.0f))
+#define TG_ABS(v)                                  ((v) < 0 ? -(v) : (v))
 
 #define V2(f)                                      ((v2) { (f), (f) })
 #define V2I(i)                                     ((v2i) { (i), (i) })
@@ -305,6 +307,7 @@ f32    tgm_f32_max(f32 v0, f32 v1);
 f32    tgm_f32_min(f32 v0, f32 v1);
 f32    tgm_f32_round(f32 v);
 i32    tgm_f32_round_to_i32(f32 v);
+u8     tgm_f32_round_to_u8(f32 v);
 f32    tgm_f32_tlerp(f32 v000, f32 v001, f32 v010, f32 v011, f32 v100, f32 v101, f32 v110, f32 v111, f32 tx, f32 ty, f32 tz);
 
 i32    tgm_f64_floor_to_i32(f64 v);
@@ -315,6 +318,10 @@ u32    tgm_i32_digits(i32 v);
 b32    tgm_i32_is_power_of_two(i32 v);
 i32    tgm_i32_max(i32 v0, i32 v1);
 i32    tgm_i32_min(i32 v0, i32 v1);
+
+u16    tgm_u16_clamp(u16 v, u16 low, u16 high);
+u16    tgm_u16_max(u16 v0, u16 v1);
+u16    tgm_u16_min(u16 v0, u16 v1);
 
 u8     tgm_u8_max(u8 v0, u8 v1);
 u8     tgm_u8_min(u8 v0, u8 v1);

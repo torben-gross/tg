@@ -2,7 +2,7 @@
 
 #ifdef TG_VULKAN
 
-#include "graphics/tg_image_loader.h"
+#include "graphics/tg_image_io.h"
 #include "graphics/tg_shader_library.h"
 #include "util/tg_string.h"
 #include <shaderc/shaderc.h>
@@ -400,7 +400,7 @@ void tgvk_buffer_copy(VkDeviceSize size, tgvk_buffer* p_src, tgvk_buffer* p_dst)
 {
     const u32 thread_id = tg_platform_get_thread_id();
     tgvk_command_buffer_begin(&p_global_graphics_command_buffers[thread_id], VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-    tgvk_command_buffer_cmd_copy_buffer(&p_global_graphics_command_buffers[thread_id], size, p_src, p_dst);
+    tgvk_cmd_copy_buffer(&p_global_graphics_command_buffers[thread_id], size, p_src, p_dst);
     tgvk_command_buffer_end_and_submit(&p_global_graphics_command_buffers[thread_id]);
 }
 
@@ -490,6 +490,367 @@ void tgvk_buffer_flush_host_to_device_range(tgvk_buffer* p_buffer, VkDeviceSize 
     mapped_memory_range.size = TG_CEIL_TO_MULTIPLE(size, physical_device_properties.limits.nonCoherentAtomSize);
 
     TGVK_CALL(vkFlushMappedMemoryRanges(device, 1, &mapped_memory_range));
+}
+
+
+
+void tgvk_cmd_begin_render_pass(tgvk_command_buffer* p_command_buffer, VkRenderPass render_pass, tgvk_framebuffer* p_framebuffer, VkSubpassContents subpass_contents)
+{
+    VkRenderPassBeginInfo render_pass_begin_info = { 0 };
+    render_pass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    render_pass_begin_info.pNext = TG_NULL;
+    render_pass_begin_info.renderPass = render_pass;
+    render_pass_begin_info.framebuffer = p_framebuffer->framebuffer;
+    render_pass_begin_info.renderArea.offset = (VkOffset2D){ 0, 0 };
+    render_pass_begin_info.renderArea.extent = (VkExtent2D){ p_framebuffer->width, p_framebuffer->height };
+    render_pass_begin_info.clearValueCount = 0;
+    render_pass_begin_info.pClearValues = TG_NULL;
+
+    vkCmdBeginRenderPass(p_command_buffer->command_buffer, &render_pass_begin_info, subpass_contents);
+}
+
+void tgvk_cmd_blit_image(tgvk_command_buffer* p_command_buffer, tgvk_image* p_source, tgvk_image* p_destination, const VkImageBlit* p_region)
+{
+    VkImageBlit region = { 0 };
+    if (p_region)
+    {
+        region = *p_region;
+    }
+    else
+    {
+        region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        region.srcSubresource.mipLevel = 0;
+        region.srcSubresource.baseArrayLayer = 0;
+        region.srcSubresource.layerCount = 1;
+        region.srcOffsets[0].x = 0;
+        region.srcOffsets[0].y = 0;
+        region.srcOffsets[0].z = 0;
+        region.srcOffsets[1].x = p_source->width;
+        region.srcOffsets[1].y = p_source->height;
+        region.srcOffsets[1].z = 1;
+        region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        region.dstSubresource.mipLevel = 0;
+        region.dstSubresource.baseArrayLayer = 0;
+        region.dstSubresource.layerCount = 1;
+        region.dstOffsets[0].x = 0;
+        region.dstOffsets[0].y = 0;
+        region.dstOffsets[0].z = 0;
+        region.dstOffsets[1].x = p_destination->width;
+        region.dstOffsets[1].y = p_destination->height;
+        region.dstOffsets[1].z = 1;
+    }
+
+    vkCmdBlitImage(p_command_buffer->command_buffer, p_source->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, p_destination->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region, VK_FILTER_NEAREST);
+}
+
+void tgvk_cmd_clear_color_image(tgvk_command_buffer* p_command_buffer, tgvk_image* p_color_image)
+{
+    VkImageSubresourceRange image_subresource_range = { 0 };
+    image_subresource_range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    image_subresource_range.baseMipLevel = 0;
+    image_subresource_range.levelCount = 1;
+    image_subresource_range.baseArrayLayer = 0;
+    image_subresource_range.layerCount = 1;
+
+    VkClearColorValue clear_color_value = { 0 };
+    clear_color_value.float32[0] = 0.0f;
+    clear_color_value.float32[1] = 0.0f;
+    clear_color_value.float32[2] = 0.0f;
+    clear_color_value.float32[3] = 0.0f;
+
+    vkCmdClearColorImage(p_command_buffer->command_buffer, p_color_image->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color_value, 1, &image_subresource_range);
+}
+
+void tgvk_cmd_clear_color_image_3d(tgvk_command_buffer* p_command_buffer, tgvk_image_3d* p_color_image_3d)
+{
+    VkImageSubresourceRange image_subresource_range = { 0 };
+    image_subresource_range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    image_subresource_range.baseMipLevel = 0;
+    image_subresource_range.levelCount = 1;
+    image_subresource_range.baseArrayLayer = 0;
+    image_subresource_range.layerCount = 1;
+
+    VkClearColorValue clear_color_value = { 0 };
+    clear_color_value.float32[0] = 0.0f;
+    clear_color_value.float32[1] = 0.0f;
+    clear_color_value.float32[2] = 0.0f;
+    clear_color_value.float32[3] = 0.0f;
+
+    vkCmdClearColorImage(p_command_buffer->command_buffer, p_color_image_3d->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color_value, 1, &image_subresource_range);
+}
+
+void tgvk_cmd_clear_depth_image(tgvk_command_buffer* p_command_buffer, tgvk_image* p_depth_image)
+{
+    VkImageSubresourceRange image_subresource_range = { 0 };
+    image_subresource_range.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    image_subresource_range.baseMipLevel = 0;
+    image_subresource_range.levelCount = 1;
+    image_subresource_range.baseArrayLayer = 0;
+    image_subresource_range.layerCount = 1;
+
+    VkClearDepthStencilValue clear_depth_stencil_value = { 0 };
+    clear_depth_stencil_value.depth = 1.0f;
+    clear_depth_stencil_value.stencil = 0;
+
+    vkCmdClearDepthStencilImage(p_command_buffer->command_buffer, p_depth_image->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_depth_stencil_value, 1, &image_subresource_range);
+}
+
+void tgvk_cmd_copy_buffer(tgvk_command_buffer* p_command_buffer, VkDeviceSize size, tgvk_buffer* p_src, tgvk_buffer* p_dst)
+{
+    VkBufferCopy buffer_copy = { 0 };
+    buffer_copy.srcOffset = 0;
+    buffer_copy.dstOffset = 0;
+    buffer_copy.size = size;
+
+    vkCmdCopyBuffer(p_command_buffer->command_buffer, p_src->buffer, p_dst->buffer, 1, &buffer_copy);
+}
+
+void tgvk_cmd_copy_buffer_to_color_image(tgvk_command_buffer* p_command_buffer, VkBuffer source, tgvk_image* p_destination)
+{
+    VkBufferImageCopy buffer_image_copy = { 0 };
+    buffer_image_copy.bufferOffset = 0;
+    buffer_image_copy.bufferRowLength = 0;
+    buffer_image_copy.bufferImageHeight = 0;
+    buffer_image_copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    buffer_image_copy.imageSubresource.mipLevel = 0;
+    buffer_image_copy.imageSubresource.baseArrayLayer = 0;
+    buffer_image_copy.imageSubresource.layerCount = 1;
+    buffer_image_copy.imageOffset.x = 0;
+    buffer_image_copy.imageOffset.y = 0;
+    buffer_image_copy.imageOffset.z = 0;
+    buffer_image_copy.imageExtent.width = p_destination->width;
+    buffer_image_copy.imageExtent.height = p_destination->height;
+    buffer_image_copy.imageExtent.depth = 1;
+
+    vkCmdCopyBufferToImage(p_command_buffer->command_buffer, source, p_destination->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &buffer_image_copy);
+}
+
+void tgvk_cmd_copy_buffer_to_color_image_3d(tgvk_command_buffer* p_command_buffer, VkBuffer source, tgvk_image_3d* p_destination)
+{
+    VkBufferImageCopy buffer_image_copy = { 0 };
+    buffer_image_copy.bufferOffset = 0;
+    buffer_image_copy.bufferRowLength = 0;
+    buffer_image_copy.bufferImageHeight = 0;
+    buffer_image_copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    buffer_image_copy.imageSubresource.mipLevel = 0;
+    buffer_image_copy.imageSubresource.baseArrayLayer = 0;
+    buffer_image_copy.imageSubresource.layerCount = 1;
+    buffer_image_copy.imageOffset.x = 0;
+    buffer_image_copy.imageOffset.y = 0;
+    buffer_image_copy.imageOffset.z = 0;
+    buffer_image_copy.imageExtent.width = p_destination->width;
+    buffer_image_copy.imageExtent.height = p_destination->height;
+    buffer_image_copy.imageExtent.depth = p_destination->depth;
+
+    vkCmdCopyBufferToImage(p_command_buffer->command_buffer, source, p_destination->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &buffer_image_copy);
+}
+
+void tgvk_cmd_copy_buffer_to_cube_map(tgvk_command_buffer* p_command_buffer, VkBuffer source, tgvk_cube_map* p_destination)
+{
+    VkBufferImageCopy buffer_image_copy = { 0 };
+    buffer_image_copy.bufferOffset = 0;
+    buffer_image_copy.bufferRowLength = 0;
+    buffer_image_copy.bufferImageHeight = 0;
+    buffer_image_copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    buffer_image_copy.imageSubresource.mipLevel = 0;
+    buffer_image_copy.imageSubresource.baseArrayLayer = 0;
+    buffer_image_copy.imageSubresource.layerCount = 6;
+    buffer_image_copy.imageOffset.x = 0;
+    buffer_image_copy.imageOffset.y = 0;
+    buffer_image_copy.imageOffset.z = 0;
+    buffer_image_copy.imageExtent.width = p_destination->dimension;
+    buffer_image_copy.imageExtent.height = p_destination->dimension;
+    buffer_image_copy.imageExtent.depth = 1;
+
+    vkCmdCopyBufferToImage(p_command_buffer->command_buffer, source, p_destination->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &buffer_image_copy);
+}
+
+void tgvk_cmd_copy_buffer_to_depth_image(tgvk_command_buffer* p_command_buffer, VkBuffer source, tgvk_image* p_destination)
+{
+    VkBufferImageCopy buffer_image_copy = { 0 };
+    buffer_image_copy.bufferOffset = 0;
+    buffer_image_copy.bufferRowLength = 0;
+    buffer_image_copy.bufferImageHeight = 0;
+    buffer_image_copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    buffer_image_copy.imageSubresource.mipLevel = 0;
+    buffer_image_copy.imageSubresource.baseArrayLayer = 0;
+    buffer_image_copy.imageSubresource.layerCount = 1;
+    buffer_image_copy.imageOffset.x = 0;
+    buffer_image_copy.imageOffset.y = 0;
+    buffer_image_copy.imageOffset.z = 0;
+    buffer_image_copy.imageExtent.width = p_destination->width;
+    buffer_image_copy.imageExtent.height = p_destination->height;
+    buffer_image_copy.imageExtent.depth = 1;
+
+    vkCmdCopyBufferToImage(p_command_buffer->command_buffer, source, p_destination->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &buffer_image_copy);
+}
+
+void tgvk_cmd_copy_color_image(tgvk_command_buffer* p_command_buffer, tgvk_image* p_source, tgvk_image* p_destination)
+{
+    VkImageCopy image_copy = { 0 };
+    image_copy.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    image_copy.srcSubresource.mipLevel = 0;
+    image_copy.srcSubresource.baseArrayLayer = 0;
+    image_copy.srcSubresource.layerCount = 1;
+    image_copy.srcOffset.x = 0;
+    image_copy.srcOffset.y = 0;
+    image_copy.srcOffset.z = 0;
+    image_copy.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    image_copy.dstSubresource.mipLevel = 0;
+    image_copy.dstSubresource.baseArrayLayer = 0;
+    image_copy.dstSubresource.layerCount = 1;
+    image_copy.dstOffset.x = 0;
+    image_copy.dstOffset.y = 0;
+    image_copy.dstOffset.z = 0;
+    image_copy.extent.width = p_source->width;
+    image_copy.extent.height = p_source->height;
+    image_copy.extent.depth = 1;
+
+    vkCmdCopyImage(p_command_buffer->command_buffer, p_source->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, p_destination->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &image_copy);
+}
+
+void tgvk_cmd_copy_color_image_to_buffer(tgvk_command_buffer* p_command_buffer, tgvk_image* p_source, VkBuffer destination)
+{
+    VkBufferImageCopy buffer_image_copy = { 0 };
+    buffer_image_copy.bufferOffset = 0;
+    buffer_image_copy.bufferRowLength = 0;
+    buffer_image_copy.bufferImageHeight = 0;
+    buffer_image_copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    buffer_image_copy.imageSubresource.mipLevel = 0;
+    buffer_image_copy.imageSubresource.baseArrayLayer = 0;
+    buffer_image_copy.imageSubresource.layerCount = 1;
+    buffer_image_copy.imageOffset.x = 0;
+    buffer_image_copy.imageOffset.y = 0;
+    buffer_image_copy.imageOffset.z = 0;
+    buffer_image_copy.imageExtent.width = p_source->width;
+    buffer_image_copy.imageExtent.height = p_source->height;
+    buffer_image_copy.imageExtent.depth = 1;
+
+    vkCmdCopyImageToBuffer(p_command_buffer->command_buffer, p_source->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, destination, 1, &buffer_image_copy);
+}
+
+void tgvk_cmd_copy_color_image_3d_to_buffer(tgvk_command_buffer* p_command_buffer, tgvk_image_3d* p_source, VkBuffer destination)
+{
+    VkBufferImageCopy buffer_image_copy = { 0 };
+    buffer_image_copy.bufferOffset = 0;
+    buffer_image_copy.bufferRowLength = 0;
+    buffer_image_copy.bufferImageHeight = 0;
+    buffer_image_copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    buffer_image_copy.imageSubresource.mipLevel = 0;
+    buffer_image_copy.imageSubresource.baseArrayLayer = 0;
+    buffer_image_copy.imageSubresource.layerCount = 1;
+    buffer_image_copy.imageOffset.x = 0;
+    buffer_image_copy.imageOffset.y = 0;
+    buffer_image_copy.imageOffset.z = 0;
+    buffer_image_copy.imageExtent.width = p_source->width;
+    buffer_image_copy.imageExtent.height = p_source->height;
+    buffer_image_copy.imageExtent.depth = p_source->depth;
+
+    vkCmdCopyImageToBuffer(p_command_buffer->command_buffer, p_source->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, destination, 1, &buffer_image_copy);
+}
+
+void tgvk_cmd_copy_depth_image_pixel_to_buffer(tgvk_command_buffer* p_command_buffer, tgvk_image* p_source, VkBuffer destination, u32 x, u32 y)
+{
+    VkBufferImageCopy buffer_image_copy = { 0 };
+    buffer_image_copy.bufferOffset = 0;
+    buffer_image_copy.bufferRowLength = 0;
+    buffer_image_copy.bufferImageHeight = 0;
+    buffer_image_copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    buffer_image_copy.imageSubresource.mipLevel = 0;
+    buffer_image_copy.imageSubresource.baseArrayLayer = 0;
+    buffer_image_copy.imageSubresource.layerCount = 1;
+    buffer_image_copy.imageOffset.x = x;
+    buffer_image_copy.imageOffset.y = y;
+    buffer_image_copy.imageOffset.z = 0;
+    buffer_image_copy.imageExtent.width = 1;
+    buffer_image_copy.imageExtent.height = 1;
+    buffer_image_copy.imageExtent.depth = 1;
+
+    vkCmdCopyImageToBuffer(p_command_buffer->command_buffer, p_source->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, destination, 1, &buffer_image_copy);
+}
+
+void tgvk_cmd_transition_color_image_layout(tgvk_command_buffer* p_command_buffer, tgvk_image* p_image, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits)
+{
+    VkImageMemoryBarrier image_memory_barrier = { 0 };
+    image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    image_memory_barrier.pNext = TG_NULL;
+    image_memory_barrier.srcAccessMask = src_access_mask;
+    image_memory_barrier.dstAccessMask = dst_access_mask;
+    image_memory_barrier.oldLayout = old_layout;
+    image_memory_barrier.newLayout = new_layout;
+    image_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    image_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    image_memory_barrier.image = p_image->image;
+    image_memory_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    image_memory_barrier.subresourceRange.baseMipLevel = 0;
+    image_memory_barrier.subresourceRange.levelCount = 1;
+    image_memory_barrier.subresourceRange.baseArrayLayer = 0;
+    image_memory_barrier.subresourceRange.layerCount = 1;
+
+    vkCmdPipelineBarrier(p_command_buffer->command_buffer, src_stage_bits, dst_stage_bits, 0, 0, TG_NULL, 0, TG_NULL, 1, &image_memory_barrier);
+}
+
+void tgvk_cmd_transition_color_image_3d_layout(tgvk_command_buffer* p_command_buffer, tgvk_image_3d* p_image_3d, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits)
+{
+    VkImageMemoryBarrier image_memory_barrier = { 0 };
+    image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    image_memory_barrier.pNext = TG_NULL;
+    image_memory_barrier.srcAccessMask = src_access_mask;
+    image_memory_barrier.dstAccessMask = dst_access_mask;
+    image_memory_barrier.oldLayout = old_layout;
+    image_memory_barrier.newLayout = new_layout;
+    image_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    image_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    image_memory_barrier.image = p_image_3d->image;
+    image_memory_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    image_memory_barrier.subresourceRange.baseMipLevel = 0;
+    image_memory_barrier.subresourceRange.levelCount = 1;
+    image_memory_barrier.subresourceRange.baseArrayLayer = 0;
+    image_memory_barrier.subresourceRange.layerCount = 1;
+
+    vkCmdPipelineBarrier(p_command_buffer->command_buffer, src_stage_bits, dst_stage_bits, 0, 0, TG_NULL, 0, TG_NULL, 1, &image_memory_barrier);
+}
+
+void tgvk_cmd_transition_cube_map_layout(tgvk_command_buffer* p_command_buffer, tgvk_cube_map* p_cube_map, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits)
+{
+    VkImageMemoryBarrier image_memory_barrier = { 0 };
+    image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    image_memory_barrier.pNext = TG_NULL;
+    image_memory_barrier.srcAccessMask = src_access_mask;
+    image_memory_barrier.dstAccessMask = dst_access_mask;
+    image_memory_barrier.oldLayout = old_layout;
+    image_memory_barrier.newLayout = new_layout;
+    image_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    image_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    image_memory_barrier.image = p_cube_map->image;
+    image_memory_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    image_memory_barrier.subresourceRange.baseMipLevel = 0;
+    image_memory_barrier.subresourceRange.levelCount = 1;
+    image_memory_barrier.subresourceRange.baseArrayLayer = 0;
+    image_memory_barrier.subresourceRange.layerCount = 6;
+
+    vkCmdPipelineBarrier(p_command_buffer->command_buffer, src_stage_bits, dst_stage_bits, 0, 0, TG_NULL, 0, TG_NULL, 1, &image_memory_barrier);
+}
+
+void tgvk_cmd_transition_depth_image_layout(tgvk_command_buffer* p_command_buffer, tgvk_image* p_image, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits)
+{
+    VkImageMemoryBarrier image_memory_barrier = { 0 };
+    image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    image_memory_barrier.pNext = TG_NULL;
+    image_memory_barrier.srcAccessMask = src_access_mask;
+    image_memory_barrier.dstAccessMask = dst_access_mask;
+    image_memory_barrier.oldLayout = old_layout;
+    image_memory_barrier.newLayout = new_layout;
+    image_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    image_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    image_memory_barrier.image = p_image->image;
+    image_memory_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    image_memory_barrier.subresourceRange.baseMipLevel = 0;
+    image_memory_barrier.subresourceRange.levelCount = 1;
+    image_memory_barrier.subresourceRange.baseArrayLayer = 0;
+    image_memory_barrier.subresourceRange.layerCount = 1;
+
+    vkCmdPipelineBarrier(p_command_buffer->command_buffer, src_stage_bits, dst_stage_bits, 0, 0, TG_NULL, 0, TG_NULL, 1, &image_memory_barrier);
 }
 
 
@@ -636,15 +997,15 @@ tgvk_image tgvk_color_image_create2(const char* p_filename, const tg_sampler_cre
     const u64 size = (u64)w * (u64)h * sizeof(*p_data);
 
     tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take(size);
-    tg_memory_copy(size, p_data, p_staging_buffer->memory.p_mapped_device_memory);
+    tg_memcpy(size, p_data, p_staging_buffer->memory.p_mapped_device_memory);
 
     tgvk_image image = tgvk_color_image_create(w, h, (VkFormat)f, p_sampler_create_info);
 
     tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
     tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-    tgvk_command_buffer_cmd_transition_color_image_layout(p_command_buffer, &image, 0, 0, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
-    tgvk_command_buffer_cmd_copy_buffer_to_color_image(p_command_buffer, p_staging_buffer->buffer, &image);
-    tgvk_command_buffer_cmd_transition_color_image_layout(p_command_buffer, &image, 0, 0, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+    tgvk_cmd_transition_color_image_layout(p_command_buffer, &image, 0, 0, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+    tgvk_cmd_copy_buffer_to_color_image(p_command_buffer, p_staging_buffer->buffer, &image);
+    tgvk_cmd_transition_color_image_layout(p_command_buffer, &image, 0, 0, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
     tgvk_command_buffer_end_and_submit(p_command_buffer);
     tgvk_global_staging_buffer_release();
 
@@ -852,336 +1213,6 @@ void tgvk_command_buffer_begin_secondary(tgvk_command_buffer* p_command_buffer, 
     command_buffer_begin_info.pInheritanceInfo = &command_buffer_inheritance_info;
 
     TGVK_CALL(vkBeginCommandBuffer(p_command_buffer->command_buffer, &command_buffer_begin_info));
-}
-
-void tgvk_command_buffer_cmd_begin_render_pass(tgvk_command_buffer* p_command_buffer, VkRenderPass render_pass, tgvk_framebuffer* p_framebuffer, VkSubpassContents subpass_contents)
-{
-    VkRenderPassBeginInfo render_pass_begin_info = { 0 };
-    render_pass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    render_pass_begin_info.pNext = TG_NULL;
-    render_pass_begin_info.renderPass = render_pass;
-    render_pass_begin_info.framebuffer = p_framebuffer->framebuffer;
-    render_pass_begin_info.renderArea.offset = (VkOffset2D) { 0, 0 };
-    render_pass_begin_info.renderArea.extent = (VkExtent2D) { p_framebuffer->width, p_framebuffer->height };
-    render_pass_begin_info.clearValueCount = 0;
-    render_pass_begin_info.pClearValues = TG_NULL;
-
-    vkCmdBeginRenderPass(p_command_buffer->command_buffer, &render_pass_begin_info, subpass_contents);
-}
-
-void tgvk_command_buffer_cmd_blit_image(tgvk_command_buffer* p_command_buffer, tgvk_image* p_source, tgvk_image* p_destination, const VkImageBlit* p_region)
-{
-    vkCmdBlitImage(p_command_buffer->command_buffer, p_source->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, p_destination->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, p_region, VK_FILTER_NEAREST);
-}
-
-void tgvk_command_buffer_cmd_clear_color_image(tgvk_command_buffer* p_command_buffer, tgvk_image* p_color_image)
-{
-    VkImageSubresourceRange image_subresource_range = { 0 };
-    image_subresource_range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    image_subresource_range.baseMipLevel = 0;
-    image_subresource_range.levelCount = 1;
-    image_subresource_range.baseArrayLayer = 0;
-    image_subresource_range.layerCount = 1;
-
-    VkClearColorValue clear_color_value = { 0 };
-    clear_color_value.float32[0] = 0.0f;
-    clear_color_value.float32[1] = 0.0f;
-    clear_color_value.float32[2] = 0.0f;
-    clear_color_value.float32[3] = 0.0f;
-
-    vkCmdClearColorImage(p_command_buffer->command_buffer, p_color_image->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color_value, 1, &image_subresource_range);
-}
-
-void tgvk_command_buffer_cmd_clear_color_image_3d(tgvk_command_buffer* p_command_buffer, tgvk_image_3d* p_color_image_3d)
-{
-    VkImageSubresourceRange image_subresource_range = { 0 };
-    image_subresource_range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    image_subresource_range.baseMipLevel = 0;
-    image_subresource_range.levelCount = 1;
-    image_subresource_range.baseArrayLayer = 0;
-    image_subresource_range.layerCount = 1;
-
-    VkClearColorValue clear_color_value = { 0 };
-    clear_color_value.float32[0] = 0.0f;
-    clear_color_value.float32[1] = 0.0f;
-    clear_color_value.float32[2] = 0.0f;
-    clear_color_value.float32[3] = 0.0f;
-
-    vkCmdClearColorImage(p_command_buffer->command_buffer, p_color_image_3d->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color_value, 1, &image_subresource_range);
-}
-
-void tgvk_command_buffer_cmd_clear_depth_image(tgvk_command_buffer* p_command_buffer, tgvk_image* p_depth_image)
-{
-    VkImageSubresourceRange image_subresource_range = { 0 };
-    image_subresource_range.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-    image_subresource_range.baseMipLevel = 0;
-    image_subresource_range.levelCount = 1;
-    image_subresource_range.baseArrayLayer = 0;
-    image_subresource_range.layerCount = 1;
-
-    VkClearDepthStencilValue clear_depth_stencil_value = { 0 };
-    clear_depth_stencil_value.depth = 1.0f;
-    clear_depth_stencil_value.stencil = 0;
-
-    vkCmdClearDepthStencilImage(p_command_buffer->command_buffer, p_depth_image->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_depth_stencil_value, 1, &image_subresource_range);
-}
-
-void tgvk_command_buffer_cmd_copy_buffer(tgvk_command_buffer* p_command_buffer, VkDeviceSize size, tgvk_buffer* p_src, tgvk_buffer* p_dst)
-{
-    VkBufferCopy buffer_copy = { 0 };
-    buffer_copy.srcOffset = 0;
-    buffer_copy.dstOffset = 0;
-    buffer_copy.size = size;
-
-    vkCmdCopyBuffer(p_command_buffer->command_buffer, p_src->buffer, p_dst->buffer, 1, &buffer_copy);
-}
-
-void tgvk_command_buffer_cmd_copy_buffer_to_color_image(tgvk_command_buffer* p_command_buffer, VkBuffer source, tgvk_image* p_destination)
-{
-    VkBufferImageCopy buffer_image_copy = { 0 };
-    buffer_image_copy.bufferOffset = 0;
-    buffer_image_copy.bufferRowLength = 0;
-    buffer_image_copy.bufferImageHeight = 0;
-    buffer_image_copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    buffer_image_copy.imageSubresource.mipLevel = 0;
-    buffer_image_copy.imageSubresource.baseArrayLayer = 0;
-    buffer_image_copy.imageSubresource.layerCount = 1;
-    buffer_image_copy.imageOffset.x = 0;
-    buffer_image_copy.imageOffset.y = 0;
-    buffer_image_copy.imageOffset.z = 0;
-    buffer_image_copy.imageExtent.width = p_destination->width;
-    buffer_image_copy.imageExtent.height = p_destination->height;
-    buffer_image_copy.imageExtent.depth = 1;
-
-    vkCmdCopyBufferToImage(p_command_buffer->command_buffer, source, p_destination->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &buffer_image_copy);
-}
-
-void tgvk_command_buffer_cmd_copy_buffer_to_color_image_3d(tgvk_command_buffer* p_command_buffer, VkBuffer source, tgvk_image_3d* p_destination)
-{
-    VkBufferImageCopy buffer_image_copy = { 0 };
-    buffer_image_copy.bufferOffset = 0;
-    buffer_image_copy.bufferRowLength = 0;
-    buffer_image_copy.bufferImageHeight = 0;
-    buffer_image_copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    buffer_image_copy.imageSubresource.mipLevel = 0;
-    buffer_image_copy.imageSubresource.baseArrayLayer = 0;
-    buffer_image_copy.imageSubresource.layerCount = 1;
-    buffer_image_copy.imageOffset.x = 0;
-    buffer_image_copy.imageOffset.y = 0;
-    buffer_image_copy.imageOffset.z = 0;
-    buffer_image_copy.imageExtent.width = p_destination->width;
-    buffer_image_copy.imageExtent.height = p_destination->height;
-    buffer_image_copy.imageExtent.depth = p_destination->depth;
-
-    vkCmdCopyBufferToImage(p_command_buffer->command_buffer, source, p_destination->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &buffer_image_copy);
-}
-
-void tgvk_command_buffer_cmd_copy_buffer_to_cube_map(tgvk_command_buffer* p_command_buffer, VkBuffer source, tgvk_cube_map* p_destination)
-{
-    VkBufferImageCopy buffer_image_copy = { 0 };
-    buffer_image_copy.bufferOffset = 0;
-    buffer_image_copy.bufferRowLength = 0;
-    buffer_image_copy.bufferImageHeight = 0;
-    buffer_image_copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    buffer_image_copy.imageSubresource.mipLevel = 0;
-    buffer_image_copy.imageSubresource.baseArrayLayer = 0;
-    buffer_image_copy.imageSubresource.layerCount = 6;
-    buffer_image_copy.imageOffset.x = 0;
-    buffer_image_copy.imageOffset.y = 0;
-    buffer_image_copy.imageOffset.z = 0;
-    buffer_image_copy.imageExtent.width = p_destination->dimension;
-    buffer_image_copy.imageExtent.height = p_destination->dimension;
-    buffer_image_copy.imageExtent.depth = 1;
-
-    vkCmdCopyBufferToImage(p_command_buffer->command_buffer, source, p_destination->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &buffer_image_copy);
-}
-
-void tgvk_command_buffer_cmd_copy_buffer_to_depth_image(tgvk_command_buffer* p_command_buffer, VkBuffer source, tgvk_image* p_destination)
-{
-    VkBufferImageCopy buffer_image_copy = { 0 };
-    buffer_image_copy.bufferOffset = 0;
-    buffer_image_copy.bufferRowLength = 0;
-    buffer_image_copy.bufferImageHeight = 0;
-    buffer_image_copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-    buffer_image_copy.imageSubresource.mipLevel = 0;
-    buffer_image_copy.imageSubresource.baseArrayLayer = 0;
-    buffer_image_copy.imageSubresource.layerCount = 1;
-    buffer_image_copy.imageOffset.x = 0;
-    buffer_image_copy.imageOffset.y = 0;
-    buffer_image_copy.imageOffset.z = 0;
-    buffer_image_copy.imageExtent.width = p_destination->width;
-    buffer_image_copy.imageExtent.height = p_destination->height;
-    buffer_image_copy.imageExtent.depth = 1;
-
-    vkCmdCopyBufferToImage(p_command_buffer->command_buffer, source, p_destination->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &buffer_image_copy);
-}
-
-void tgvk_command_buffer_cmd_copy_color_image(tgvk_command_buffer* p_command_buffer, tgvk_image* p_source, tgvk_image* p_destination)
-{
-    VkImageCopy image_copy = { 0 };
-    image_copy.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    image_copy.srcSubresource.mipLevel = 0;
-    image_copy.srcSubresource.baseArrayLayer = 0;
-    image_copy.srcSubresource.layerCount = 1;
-    image_copy.srcOffset.x = 0;
-    image_copy.srcOffset.y = 0;
-    image_copy.srcOffset.z = 0;
-    image_copy.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    image_copy.dstSubresource.mipLevel = 0;
-    image_copy.dstSubresource.baseArrayLayer = 0;
-    image_copy.dstSubresource.layerCount = 1;
-    image_copy.dstOffset.x = 0;
-    image_copy.dstOffset.y = 0;
-    image_copy.dstOffset.z = 0;
-    image_copy.extent.width = p_source->width;
-    image_copy.extent.height = p_source->height;
-    image_copy.extent.depth = 1;
-
-    vkCmdCopyImage(p_command_buffer->command_buffer, p_source->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, p_destination->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &image_copy);
-}
-
-void tgvk_command_buffer_cmd_copy_color_image_to_buffer(tgvk_command_buffer* p_command_buffer, tgvk_image* p_source, VkBuffer destination)
-{
-    VkBufferImageCopy buffer_image_copy = { 0 };
-    buffer_image_copy.bufferOffset = 0;
-    buffer_image_copy.bufferRowLength = 0;
-    buffer_image_copy.bufferImageHeight = 0;
-    buffer_image_copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    buffer_image_copy.imageSubresource.mipLevel = 0;
-    buffer_image_copy.imageSubresource.baseArrayLayer = 0;
-    buffer_image_copy.imageSubresource.layerCount = 1;
-    buffer_image_copy.imageOffset.x = 0;
-    buffer_image_copy.imageOffset.y = 0;
-    buffer_image_copy.imageOffset.z = 0;
-    buffer_image_copy.imageExtent.width = p_source->width;
-    buffer_image_copy.imageExtent.height = p_source->height;
-    buffer_image_copy.imageExtent.depth = 1;
-
-    vkCmdCopyImageToBuffer(p_command_buffer->command_buffer, p_source->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, destination, 1, &buffer_image_copy);
-}
-
-void tgvk_command_buffer_cmd_copy_color_image_3d_to_buffer(tgvk_command_buffer* p_command_buffer, tgvk_image_3d* p_source, VkBuffer destination)
-{
-    VkBufferImageCopy buffer_image_copy = { 0 };
-    buffer_image_copy.bufferOffset = 0;
-    buffer_image_copy.bufferRowLength = 0;
-    buffer_image_copy.bufferImageHeight = 0;
-    buffer_image_copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    buffer_image_copy.imageSubresource.mipLevel = 0;
-    buffer_image_copy.imageSubresource.baseArrayLayer = 0;
-    buffer_image_copy.imageSubresource.layerCount = 1;
-    buffer_image_copy.imageOffset.x = 0;
-    buffer_image_copy.imageOffset.y = 0;
-    buffer_image_copy.imageOffset.z = 0;
-    buffer_image_copy.imageExtent.width = p_source->width;
-    buffer_image_copy.imageExtent.height = p_source->height;
-    buffer_image_copy.imageExtent.depth = p_source->depth;
-
-    vkCmdCopyImageToBuffer(p_command_buffer->command_buffer, p_source->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, destination, 1, &buffer_image_copy);
-}
-
-void tgvk_command_buffer_cmd_copy_depth_image_pixel_to_buffer(tgvk_command_buffer* p_command_buffer, tgvk_image* p_source, VkBuffer destination, u32 x, u32 y)
-{
-    VkBufferImageCopy buffer_image_copy = { 0 };
-    buffer_image_copy.bufferOffset = 0;
-    buffer_image_copy.bufferRowLength = 0;
-    buffer_image_copy.bufferImageHeight = 0;
-    buffer_image_copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-    buffer_image_copy.imageSubresource.mipLevel = 0;
-    buffer_image_copy.imageSubresource.baseArrayLayer = 0;
-    buffer_image_copy.imageSubresource.layerCount = 1;
-    buffer_image_copy.imageOffset.x = x;
-    buffer_image_copy.imageOffset.y = y;
-    buffer_image_copy.imageOffset.z = 0;
-    buffer_image_copy.imageExtent.width = 1;
-    buffer_image_copy.imageExtent.height = 1;
-    buffer_image_copy.imageExtent.depth = 1;
-
-    vkCmdCopyImageToBuffer(p_command_buffer->command_buffer, p_source->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, destination, 1, &buffer_image_copy);
-}
-
-void tgvk_command_buffer_cmd_transition_color_image_layout(tgvk_command_buffer* p_command_buffer, tgvk_image* p_image, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits)
-{
-    VkImageMemoryBarrier image_memory_barrier = { 0 };
-    image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    image_memory_barrier.pNext = TG_NULL;
-    image_memory_barrier.srcAccessMask = src_access_mask;
-    image_memory_barrier.dstAccessMask = dst_access_mask;
-    image_memory_barrier.oldLayout = old_layout;
-    image_memory_barrier.newLayout = new_layout;
-    image_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    image_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    image_memory_barrier.image = p_image->image;
-    image_memory_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    image_memory_barrier.subresourceRange.baseMipLevel = 0;
-    image_memory_barrier.subresourceRange.levelCount = 1;
-    image_memory_barrier.subresourceRange.baseArrayLayer = 0;
-    image_memory_barrier.subresourceRange.layerCount = 1;
-
-    vkCmdPipelineBarrier(p_command_buffer->command_buffer, src_stage_bits, dst_stage_bits, 0, 0, TG_NULL, 0, TG_NULL, 1, &image_memory_barrier);
-}
-
-void tgvk_command_buffer_cmd_transition_color_image_3d_layout(tgvk_command_buffer* p_command_buffer, tgvk_image_3d* p_image_3d, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits)
-{
-    VkImageMemoryBarrier image_memory_barrier = { 0 };
-    image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    image_memory_barrier.pNext = TG_NULL;
-    image_memory_barrier.srcAccessMask = src_access_mask;
-    image_memory_barrier.dstAccessMask = dst_access_mask;
-    image_memory_barrier.oldLayout = old_layout;
-    image_memory_barrier.newLayout = new_layout;
-    image_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    image_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    image_memory_barrier.image = p_image_3d->image;
-    image_memory_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    image_memory_barrier.subresourceRange.baseMipLevel = 0;
-    image_memory_barrier.subresourceRange.levelCount = 1;
-    image_memory_barrier.subresourceRange.baseArrayLayer = 0;
-    image_memory_barrier.subresourceRange.layerCount = 1;
-
-    vkCmdPipelineBarrier(p_command_buffer->command_buffer, src_stage_bits, dst_stage_bits, 0, 0, TG_NULL, 0, TG_NULL, 1, &image_memory_barrier);
-}
-
-void tgvk_command_buffer_cmd_transition_cube_map_layout(tgvk_command_buffer* p_command_buffer, tgvk_cube_map* p_cube_map, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits)
-{
-    VkImageMemoryBarrier image_memory_barrier = { 0 };
-    image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    image_memory_barrier.pNext = TG_NULL;
-    image_memory_barrier.srcAccessMask = src_access_mask;
-    image_memory_barrier.dstAccessMask = dst_access_mask;
-    image_memory_barrier.oldLayout = old_layout;
-    image_memory_barrier.newLayout = new_layout;
-    image_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    image_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    image_memory_barrier.image = p_cube_map->image;
-    image_memory_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    image_memory_barrier.subresourceRange.baseMipLevel = 0;
-    image_memory_barrier.subresourceRange.levelCount = 1;
-    image_memory_barrier.subresourceRange.baseArrayLayer = 0;
-    image_memory_barrier.subresourceRange.layerCount = 6;
-
-    vkCmdPipelineBarrier(p_command_buffer->command_buffer, src_stage_bits, dst_stage_bits, 0, 0, TG_NULL, 0, TG_NULL, 1, &image_memory_barrier);
-}
-
-void tgvk_command_buffer_cmd_transition_depth_image_layout(tgvk_command_buffer* p_command_buffer, tgvk_image* p_image, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits)
-{
-    VkImageMemoryBarrier image_memory_barrier = { 0 };
-    image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    image_memory_barrier.pNext = TG_NULL;
-    image_memory_barrier.srcAccessMask = src_access_mask;
-    image_memory_barrier.dstAccessMask = dst_access_mask;
-    image_memory_barrier.oldLayout = old_layout;
-    image_memory_barrier.newLayout = new_layout;
-    image_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    image_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    image_memory_barrier.image = p_image->image;
-    image_memory_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-    image_memory_barrier.subresourceRange.baseMipLevel = 0;
-    image_memory_barrier.subresourceRange.levelCount = 1;
-    image_memory_barrier.subresourceRange.baseArrayLayer = 0;
-    image_memory_barrier.subresourceRange.layerCount = 1;
-
-    vkCmdPipelineBarrier(p_command_buffer->command_buffer, src_stage_bits, dst_stage_bits, 0, 0, TG_NULL, 0, TG_NULL, 1, &image_memory_barrier);
 }
 
 void tgvk_command_buffer_end_and_submit(tgvk_command_buffer* p_command_buffer)
@@ -1674,8 +1705,14 @@ void tgvk_framebuffers_destroy(u32 count, tgvk_framebuffer* p_framebuffers)
 
 void tgvk_image_destroy(tgvk_image* p_image)
 {
-    vkDestroySampler(device, p_image->sampler, TG_NULL);
-    vkDestroyImageView(device, p_image->image_view, TG_NULL);
+    if (p_image->sampler)
+    {
+        vkDestroySampler(device, p_image->sampler, TG_NULL);
+    }
+    if (p_image->image_view)
+    {
+        vkDestroyImageView(device, p_image->image_view, TG_NULL);
+    }
     tgvk_memory_allocator_free(&p_image->memory);
     vkDestroyImage(device, p_image->image, TG_NULL);
 }
@@ -2156,10 +2193,10 @@ tg_render_target tgvk_render_target_create(u32 color_width, u32 color_height, Vk
 
     const u32 thread_id = tg_platform_get_thread_id();
     tgvk_command_buffer_begin(&p_global_graphics_command_buffers[thread_id], VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-    tgvk_command_buffer_cmd_transition_color_image_layout(&p_global_graphics_command_buffers[thread_id], &render_target.color_attachment, 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
-    tgvk_command_buffer_cmd_transition_color_image_layout(&p_global_graphics_command_buffers[thread_id], &render_target.color_attachment_copy, 0, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-    tgvk_command_buffer_cmd_transition_depth_image_layout(&p_global_graphics_command_buffers[thread_id], &render_target.depth_attachment, 0, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT);
-    tgvk_command_buffer_cmd_transition_depth_image_layout(&p_global_graphics_command_buffers[thread_id], &render_target.depth_attachment_copy, 0, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+    tgvk_cmd_transition_color_image_layout(&p_global_graphics_command_buffers[thread_id], &render_target.color_attachment, 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+    tgvk_cmd_transition_color_image_layout(&p_global_graphics_command_buffers[thread_id], &render_target.color_attachment_copy, 0, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+    tgvk_cmd_transition_depth_image_layout(&p_global_graphics_command_buffers[thread_id], &render_target.depth_attachment, 0, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT);
+    tgvk_cmd_transition_depth_image_layout(&p_global_graphics_command_buffers[thread_id], &render_target.depth_attachment_copy, 0, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
     tgvk_command_buffer_end_and_submit(&p_global_graphics_command_buffers[thread_id]);
 
     render_target.fence = tgvk_fence_create(fence_create_flags);
@@ -2202,7 +2239,7 @@ void tgvk_semaphore_destroy(VkSemaphore semaphore)
 tgvk_shader tgvk_shader_create(const char* p_filename)
 {
     char p_filename_buffer[TG_MAX_PATH] = { 0 };
-    tg_string_format(sizeof(p_filename_buffer), p_filename_buffer, "%s.spv", p_filename);
+    tg_stringf(sizeof(p_filename_buffer), p_filename_buffer, "%s.spv", p_filename);
 
     // TODO: shader recompilation here
 
@@ -2335,45 +2372,45 @@ void tgvk_vkresult_convert_to_string(char* p_buffer, VkResult result)
 {
     switch (result)
     {
-    case VK_SUCCESS:                                            { const char p_string[] = "VK_SUCCESS";                                            tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_NOT_READY:                                          { const char p_string[] = "VK_NOT_READY";                                          tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_TIMEOUT:                                            { const char p_string[] = "VK_TIMEOUT";                                            tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_EVENT_SET:                                          { const char p_string[] = "VK_EVENT_SET";                                          tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_EVENT_RESET:                                        { const char p_string[] = "VK_EVENT_RESET";                                        tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_INCOMPLETE:                                         { const char p_string[] = "VK_INCOMPLETE";                                         tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_OUT_OF_HOST_MEMORY:                           { const char p_string[] = "VK_ERROR_OUT_OF_HOST_MEMORY";                           tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_OUT_OF_DEVICE_MEMORY:                         { const char p_string[] = "VK_ERROR_OUT_OF_DEVICE_MEMORY";                         tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_INITIALIZATION_FAILED:                        { const char p_string[] = "VK_ERROR_INITIALIZATION_FAILED";                        tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_DEVICE_LOST:                                  { const char p_string[] = "VK_ERROR_DEVICE_LOST";                                  tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_MEMORY_MAP_FAILED:                            { const char p_string[] = "VK_ERROR_MEMORY_MAP_FAILED";                            tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_LAYER_NOT_PRESENT:                            { const char p_string[] = "VK_ERROR_LAYER_NOT_PRESENT";                            tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_EXTENSION_NOT_PRESENT:                        { const char p_string[] = "VK_ERROR_EXTENSION_NOT_PRESENT";                        tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_FEATURE_NOT_PRESENT:                          { const char p_string[] = "VK_ERROR_FEATURE_NOT_PRESENT";                          tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_INCOMPATIBLE_DRIVER:                          { const char p_string[] = "VK_ERROR_INCOMPATIBLE_DRIVER";                          tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_TOO_MANY_OBJECTS:                             { const char p_string[] = "VK_ERROR_TOO_MANY_OBJECTS";                             tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_FORMAT_NOT_SUPPORTED:                         { const char p_string[] = "VK_ERROR_FORMAT_NOT_SUPPORTED";                         tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_FRAGMENTED_POOL:                              { const char p_string[] = "VK_ERROR_FRAGMENTED_POOL";                              tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_UNKNOWN:                                      { const char p_string[] = "VK_ERROR_UNKNOWN";                                      tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_OUT_OF_POOL_MEMORY:                           { const char p_string[] = "VK_ERROR_OUT_OF_POOL_MEMORY";                           tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_INVALID_EXTERNAL_HANDLE:                      { const char p_string[] = "VK_ERROR_INVALID_EXTERNAL_HANDLE";                      tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_FRAGMENTATION:                                { const char p_string[] = "VK_ERROR_FRAGMENTATION";                                tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_INVALID_OPAQUE_CAPTURE_ADDRESS:               { const char p_string[] = "VK_ERROR_INVALID_OPAQUE_CAPTURE_ADDRESS";               tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_SURFACE_LOST_KHR:                             { const char p_string[] = "VK_ERROR_SURFACE_LOST_KHR";                             tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_NATIVE_WINDOW_IN_USE_KHR:                     { const char p_string[] = "VK_ERROR_NATIVE_WINDOW_IN_USE_KHR";                     tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_SUBOPTIMAL_KHR:                                     { const char p_string[] = "VK_SUBOPTIMAL_KHR";                                     tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_OUT_OF_DATE_KHR:                              { const char p_string[] = "VK_ERROR_OUT_OF_DATE_KHR";                              tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_INCOMPATIBLE_DISPLAY_KHR:                     { const char p_string[] = "VK_ERROR_INCOMPATIBLE_DISPLAY_KHR";                     tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_VALIDATION_FAILED_EXT:                        { const char p_string[] = "VK_ERROR_VALIDATION_FAILED_EXT";                        tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_INVALID_SHADER_NV:                            { const char p_string[] = "VK_ERROR_INVALID_SHADER_NV";                            tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_INCOMPATIBLE_VERSION_KHR:                     { const char p_string[] = "VK_ERROR_INCOMPATIBLE_VERSION_KHR";                     tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_INVALID_DRM_FORMAT_MODIFIER_PLANE_LAYOUT_EXT: { const char p_string[] = "VK_ERROR_INVALID_DRM_FORMAT_MODIFIER_PLANE_LAYOUT_EXT"; tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_NOT_PERMITTED_EXT:                            { const char p_string[] = "VK_ERROR_NOT_PERMITTED_EXT";                            tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT:          { const char p_string[] = "VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT";          tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_THREAD_IDLE_KHR:                                    { const char p_string[] = "VK_THREAD_IDLE_KHR";                                    tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_THREAD_DONE_KHR:                                    { const char p_string[] = "VK_THREAD_DONE_KHR";                                    tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_OPERATION_DEFERRED_KHR:                             { const char p_string[] = "VK_OPERATION_DEFERRED_KHR";                             tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_OPERATION_NOT_DEFERRED_KHR:                         { const char p_string[] = "VK_OPERATION_NOT_DEFERRED_KHR";                         tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_PIPELINE_COMPILE_REQUIRED_EXT:                      { const char p_string[] = "VK_PIPELINE_COMPILE_REQUIRED_EXT";                      tg_memory_copy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_SUCCESS:                                            { const char p_string[] = "VK_SUCCESS";                                            tg_memcpy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_NOT_READY:                                          { const char p_string[] = "VK_NOT_READY";                                          tg_memcpy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_TIMEOUT:                                            { const char p_string[] = "VK_TIMEOUT";                                            tg_memcpy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_EVENT_SET:                                          { const char p_string[] = "VK_EVENT_SET";                                          tg_memcpy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_EVENT_RESET:                                        { const char p_string[] = "VK_EVENT_RESET";                                        tg_memcpy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_INCOMPLETE:                                         { const char p_string[] = "VK_INCOMPLETE";                                         tg_memcpy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_OUT_OF_HOST_MEMORY:                           { const char p_string[] = "VK_ERROR_OUT_OF_HOST_MEMORY";                           tg_memcpy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_OUT_OF_DEVICE_MEMORY:                         { const char p_string[] = "VK_ERROR_OUT_OF_DEVICE_MEMORY";                         tg_memcpy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_INITIALIZATION_FAILED:                        { const char p_string[] = "VK_ERROR_INITIALIZATION_FAILED";                        tg_memcpy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_DEVICE_LOST:                                  { const char p_string[] = "VK_ERROR_DEVICE_LOST";                                  tg_memcpy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_MEMORY_MAP_FAILED:                            { const char p_string[] = "VK_ERROR_MEMORY_MAP_FAILED";                            tg_memcpy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_LAYER_NOT_PRESENT:                            { const char p_string[] = "VK_ERROR_LAYER_NOT_PRESENT";                            tg_memcpy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_EXTENSION_NOT_PRESENT:                        { const char p_string[] = "VK_ERROR_EXTENSION_NOT_PRESENT";                        tg_memcpy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_FEATURE_NOT_PRESENT:                          { const char p_string[] = "VK_ERROR_FEATURE_NOT_PRESENT";                          tg_memcpy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_INCOMPATIBLE_DRIVER:                          { const char p_string[] = "VK_ERROR_INCOMPATIBLE_DRIVER";                          tg_memcpy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_TOO_MANY_OBJECTS:                             { const char p_string[] = "VK_ERROR_TOO_MANY_OBJECTS";                             tg_memcpy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_FORMAT_NOT_SUPPORTED:                         { const char p_string[] = "VK_ERROR_FORMAT_NOT_SUPPORTED";                         tg_memcpy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_FRAGMENTED_POOL:                              { const char p_string[] = "VK_ERROR_FRAGMENTED_POOL";                              tg_memcpy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_UNKNOWN:                                      { const char p_string[] = "VK_ERROR_UNKNOWN";                                      tg_memcpy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_OUT_OF_POOL_MEMORY:                           { const char p_string[] = "VK_ERROR_OUT_OF_POOL_MEMORY";                           tg_memcpy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_INVALID_EXTERNAL_HANDLE:                      { const char p_string[] = "VK_ERROR_INVALID_EXTERNAL_HANDLE";                      tg_memcpy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_FRAGMENTATION:                                { const char p_string[] = "VK_ERROR_FRAGMENTATION";                                tg_memcpy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_INVALID_OPAQUE_CAPTURE_ADDRESS:               { const char p_string[] = "VK_ERROR_INVALID_OPAQUE_CAPTURE_ADDRESS";               tg_memcpy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_SURFACE_LOST_KHR:                             { const char p_string[] = "VK_ERROR_SURFACE_LOST_KHR";                             tg_memcpy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_NATIVE_WINDOW_IN_USE_KHR:                     { const char p_string[] = "VK_ERROR_NATIVE_WINDOW_IN_USE_KHR";                     tg_memcpy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_SUBOPTIMAL_KHR:                                     { const char p_string[] = "VK_SUBOPTIMAL_KHR";                                     tg_memcpy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_OUT_OF_DATE_KHR:                              { const char p_string[] = "VK_ERROR_OUT_OF_DATE_KHR";                              tg_memcpy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_INCOMPATIBLE_DISPLAY_KHR:                     { const char p_string[] = "VK_ERROR_INCOMPATIBLE_DISPLAY_KHR";                     tg_memcpy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_VALIDATION_FAILED_EXT:                        { const char p_string[] = "VK_ERROR_VALIDATION_FAILED_EXT";                        tg_memcpy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_INVALID_SHADER_NV:                            { const char p_string[] = "VK_ERROR_INVALID_SHADER_NV";                            tg_memcpy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_INCOMPATIBLE_VERSION_KHR:                     { const char p_string[] = "VK_ERROR_INCOMPATIBLE_VERSION_KHR";                     tg_memcpy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_INVALID_DRM_FORMAT_MODIFIER_PLANE_LAYOUT_EXT: { const char p_string[] = "VK_ERROR_INVALID_DRM_FORMAT_MODIFIER_PLANE_LAYOUT_EXT"; tg_memcpy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_NOT_PERMITTED_EXT:                            { const char p_string[] = "VK_ERROR_NOT_PERMITTED_EXT";                            tg_memcpy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT:          { const char p_string[] = "VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT";          tg_memcpy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_THREAD_IDLE_KHR:                                    { const char p_string[] = "VK_THREAD_IDLE_KHR";                                    tg_memcpy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_THREAD_DONE_KHR:                                    { const char p_string[] = "VK_THREAD_DONE_KHR";                                    tg_memcpy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_OPERATION_DEFERRED_KHR:                             { const char p_string[] = "VK_OPERATION_DEFERRED_KHR";                             tg_memcpy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_OPERATION_NOT_DEFERRED_KHR:                         { const char p_string[] = "VK_OPERATION_NOT_DEFERRED_KHR";                         tg_memcpy(sizeof(p_string), p_string, p_buffer); } break;
+    case VK_PIPELINE_COMPILE_REQUIRED_EXT:                      { const char p_string[] = "VK_PIPELINE_COMPILE_REQUIRED_EXT";                      tg_memcpy(sizeof(p_string), p_string, p_buffer); } break;
     default: TG_INVALID_CODEPATH(); break;
     }
 }

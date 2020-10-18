@@ -153,7 +153,7 @@ static void tg__game_3d_create(void)
 
     scene.h_probe_mesh = tg_mesh_create_sphere(0.5f, 64, 32, TG_TRUE, TG_TRUE, TG_FALSE);
     scene.probe_translation = (v3){ 128.0f + 7.0f, 153.0f, 128.0f };
-    scene.h_probe_cube_map = tg_cube_map_create(1, TG_COLOR_IMAGE_FORMAT_R8, TG_NULL);
+    scene.h_probe_cube_map = tg_cube_map_create(1, TG_COLOR_IMAGE_FORMAT_R8_UNORM, TG_NULL);
     scene.h_probe_material = tg_material_create_forward(tg_vertex_shader_get("shaders/forward/forward.vert"), tg_fragment_shader_get("shaders/forward/probe.frag"));
     tg_handle p_probe_handles[1] = { scene.h_probe_cube_map };
     scene.h_probe_render_command = tg_render_command_create(scene.h_probe_mesh, scene.h_probe_material, scene.probe_translation, 1, p_probe_handles);
@@ -234,7 +234,25 @@ static void tg__game_3d_create(void)
 
 static void tg__game_3d_update_and_render(f32 dt)
 {
-    //tg__raycast();
+    if (tg_input_is_key_pressed(TG_KEY_F11, TG_TRUE))
+    {
+        tg_system_time system_time = tg_platform_get_system_time();
+        char p_filename_buffer[TG_MAX_PATH] = { 0 };
+        tg_stringf(
+            sizeof(p_filename_buffer),
+            p_filename_buffer,
+            "screenshot_%u_%u_%u_%u_%u_%u_%u.bmp",
+            system_time.year,
+            system_time.month,
+            system_time.day,
+            system_time.hour,
+            system_time.minute,
+            system_time.second,
+            system_time.milliseconds
+        );
+        tg_renderer_screenshot(scene.h_main_renderer, p_filename_buffer);
+    }
+
     if (tg_input_is_key_down(TG_KEY_K))
     {
         scene.quad_offset_z += 0.01f * dt;

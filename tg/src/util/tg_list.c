@@ -4,7 +4,7 @@
 
 
 
-#define TG_LIST_SET_AT(list, index, p_value)    tg_memory_copy((list).element_size, p_value, TG_LIST_POINTER_TO(list, index))
+#define TG_LIST_SET_AT(list, index, p_value)    tg_memcpy((list).element_size, p_value, TG_LIST_POINTER_TO(list, index))
 
 
 

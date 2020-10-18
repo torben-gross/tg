@@ -169,7 +169,7 @@ typedef struct tg_model
 
 
 
-f64 tg__interpolate(u32 count, const f64* p_wavelengths, const f64* p_wavelength_function, f64 wavelength)
+static f64 tg__interpolate(u32 count, const f64* p_wavelengths, const f64* p_wavelength_function, f64 wavelength)
 {
 	f64 result = 0.0;
 
@@ -201,7 +201,7 @@ f64 tg__interpolate(u32 count, const f64* p_wavelengths, const f64* p_wavelength
 	return result;
 }
 
-u32 tg__glsl_header_factory(const tg_model* p_model, u32 size, char* p_buffer)
+static u32 tg__glsl_header_factory(const tg_model* p_model, u32 size, char* p_buffer)
 {
 #pragma warning(push)
 #pragma warning(disable:4296)
@@ -321,7 +321,7 @@ u32 tg__glsl_header_factory(const tg_model* p_model, u32 size, char* p_buffer)
 #pragma warning(pop)
 }
 
-f64 tg__cie_color_matching_function_table_value(f64 wavelength, i32 column)
+static f64 tg__cie_color_matching_function_table_value(f64 wavelength, i32 column)
 {
 	f64 result = 0.0;
 
@@ -340,7 +340,7 @@ f64 tg__cie_color_matching_function_table_value(f64 wavelength, i32 column)
 	return result;
 }
 
-void tg__compute_spectral_radiance_to_luminance_factors(const f64* p_wavelengths, f64 lambda_power, f64* p_k_r, f64* p_k_g, f64* p_k_b)
+static void tg__compute_spectral_radiance_to_luminance_factors(const f64* p_wavelengths, f64 lambda_power, f64* p_k_r, f64* p_k_g, f64* p_k_b)
 {
 	*p_k_r = 0.0;
 	*p_k_g = 0.0;
@@ -375,7 +375,7 @@ void tg__compute_spectral_radiance_to_luminance_factors(const f64* p_wavelengths
 
 
 
-void tg__precompute(tg_model* p_model)
+static void tg__precompute(tg_model* p_model)
 {
 	tgvk_image delta_irradiance_texture = tgvk_color_image_create(TG_SCATTERING_TEXTURE_WIDTH, TG_SCATTERING_TEXTURE_HEIGHT, VK_FORMAT_R32G32B32A32_SFLOAT, TG_NULL);
 
@@ -500,7 +500,7 @@ void tg__precompute(tg_model* p_model)
 		tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
 		tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 		{
-			tgvk_command_buffer_cmd_begin_render_pass(p_command_buffer, transmittance_render_pass, &transmittance_framebuffer, VK_SUBPASS_CONTENTS_INLINE);
+			tgvk_cmd_begin_render_pass(p_command_buffer, transmittance_render_pass, &transmittance_framebuffer, VK_SUBPASS_CONTENTS_INLINE);
 
 			vkCmdBindPipeline(p_command_buffer->command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, transmittance_pipeline.pipeline);
 			vkCmdBindIndexBuffer(p_command_buffer->command_buffer, shared_render_resources.screen_quad_indices.buffer, 0, VK_INDEX_TYPE_UINT16);
@@ -676,7 +676,7 @@ void tg_atmosphere_precompute(void)
 	tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
 	tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 	{
-		tgvk_command_buffer_cmd_transition_color_image_layout(
+		tgvk_cmd_transition_color_image_layout(
 			p_command_buffer,
 			&model.transmittance_texture,
 			0,

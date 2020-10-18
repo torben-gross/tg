@@ -997,7 +997,7 @@ static void tg__build_octree(volatile tg_terrain* p_terrain, volatile tg_terrain
 		p_octree->p_voxel_map = TG_MEMORY_ALLOC(voxel_map_size);
 
 		char p_filename_buffer[TG_MAX_PATH] = { 0 };
-		tg_string_format(sizeof(p_filename_buffer), p_filename_buffer, "terrain/octree_%i_%i_%i.txt", octree_index_3d.x, octree_index_3d.y, octree_index_3d.z);
+		tg_stringf(sizeof(p_filename_buffer), p_filename_buffer, "terrain/octree_%i_%i_%i.txt", octree_index_3d.x, octree_index_3d.y, octree_index_3d.z);
 		const b32 exists = tg_platform_file_exists(p_filename_buffer);
 		if (!exists)
 		{
@@ -1178,7 +1178,7 @@ static void tg__thread_fn(volatile tg_terrain* p_terrain)
 		for (u32 i = 0; i < TG_TERRAIN_OCTREES; i++)
 		{
 			volatile tg_terrain_octree* p_octree = &p_terrain->p_octrees[i];
-			tg_memory_copy(sizeof(p_octree->p_should_render_bitmap_temp), (const void*)p_octree->p_should_render_bitmap_temp, (void*)p_octree->p_should_render_bitmap_stable);
+			tg_memcpy(sizeof(p_octree->p_should_render_bitmap_temp), (const void*)p_octree->p_should_render_bitmap_temp, (void*)p_octree->p_should_render_bitmap_stable);
 		}
 		TG_RWL_UNLOCK_FOR_WRITE(p_terrain->render_read_write_lock);
 	}
