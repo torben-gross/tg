@@ -545,6 +545,7 @@ tgvk_framebuffer                          tgvk_framebuffer_create(VkRenderPass r
 void                                      tgvk_framebuffer_destroy(tgvk_framebuffer* p_framebuffer);
 void                                      tgvk_framebuffers_destroy(u32 count, tgvk_framebuffer* p_framebuffers);
 
+b32                                       tgvk_image_store_to_disc(tgvk_image* p_image, const char* p_filename, b32 replace_existing);
 void                                      tgvk_image_destroy(tgvk_image* p_image);
 
 VkPhysicalDeviceProperties                tgvk_physical_device_get_properties(void);

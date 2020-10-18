@@ -377,6 +377,43 @@ static void tg__compute_spectral_radiance_to_luminance_factors(const f64* p_wave
 
 static void tg__precompute(tg_model* p_model)
 {
+#ifdef TG_DEBUG
+#define TG_DEBUG_STORE_TEXTURE(texture, p_filename)                                              \
+	tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);    \
+	{                                                                                            \
+		tgvk_cmd_transition_color_image_layout(                                                  \
+			p_command_buffer,                                                                    \
+			&(texture),                                                                          \
+			VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,                                                \
+			VK_ACCESS_TRANSFER_READ_BIT,                                                         \
+			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,                                            \
+			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,                                                \
+			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,                                       \
+			VK_PIPELINE_STAGE_TRANSFER_BIT                                                       \
+		);                                                                                       \
+	}                                                                                            \
+	tgvk_command_buffer_end_and_submit(p_command_buffer);                                        \
+                                                                                                 \
+	tgvk_image_store_to_disc(&(texture), p_filename, TG_FALSE);                                  \
+                                                                                                 \
+	tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);    \
+	{                                                                                            \
+		tgvk_cmd_transition_color_image_layout(                                                  \
+			p_command_buffer,                                                                    \
+			&(texture),                                                                          \
+			VK_ACCESS_TRANSFER_READ_BIT,                                                         \
+			VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,                                                \
+			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,                                                \
+			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,                                            \
+			VK_PIPELINE_STAGE_TRANSFER_BIT,                                                      \
+			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT                                        \
+		);                                                                                       \
+	}                                                                                            \
+	tgvk_command_buffer_end_and_submit(p_command_buffer);
+#else
+#define TG_DEBUG_STORE_TEXTURE(texture, p_filename)
+#endif
+
 	tgvk_image delta_irradiance_texture = tgvk_color_image_create(TG_SCATTERING_TEXTURE_WIDTH, TG_SCATTERING_TEXTURE_HEIGHT, VK_FORMAT_R32G32B32A32_SFLOAT, TG_NULL);
 
 	tgvk_image_3d delta_rayleigh_scattering_texture = tgvk_color_image_3d_create(
@@ -515,6 +552,7 @@ static void tg__precompute(tg_model* p_model)
 			vkCmdEndRenderPass(p_command_buffer->command_buffer);
 		}
 		tgvk_command_buffer_end_and_submit(p_command_buffer);
+		TG_DEBUG_STORE_TEXTURE(p_model->transmittance_texture, "textures/atmosphere/transmittance_texture.bmp");
 
 		tgvk_pipeline_destroy(&transmittance_pipeline);
 		tgvk_command_buffer_destroy(&transmittance_command_buffer);
@@ -554,6 +592,8 @@ static void tg__precompute(tg_model* p_model)
 	tgvk_color_image_3d_destroy(&delta_mie_scattering_texture);
 	tgvk_color_image_3d_destroy(&delta_rayleigh_scattering_texture);
 	tgvk_image_destroy(&delta_irradiance_texture);
+
+#undef TG_DEBUG_STORE_TEXTURE
 }
 
 void tg_atmosphere_precompute(void)

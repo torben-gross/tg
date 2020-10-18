@@ -1703,6 +1703,56 @@ void tgvk_framebuffers_destroy(u32 count, tgvk_framebuffer* p_framebuffers)
 
 
 
+b32 tgvk_image_store_to_disc(tgvk_image* p_image, const char* p_filename, b32 replace_existing)
+{
+    const u32 width = p_image->width;
+    const u32 height = p_image->height;
+
+    tgvk_image blit_image = tgvk_color_image_create(width, height, (VkFormat)TG_COLOR_IMAGE_FORMAT_B8G8R8A8_UNORM, TG_NULL);
+
+    const u32 staging_buffer_size = width * height * tg_color_image_format_size((tg_color_image_format)blit_image.format);
+    tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take((u64)staging_buffer_size);
+
+    tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
+    tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+    {
+        tgvk_cmd_transition_color_image_layout(
+            p_command_buffer,
+            &blit_image,
+            0,
+            VK_ACCESS_TRANSFER_WRITE_BIT,
+            VK_IMAGE_LAYOUT_UNDEFINED,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+            VK_PIPELINE_STAGE_TRANSFER_BIT
+        );
+
+        tgvk_cmd_blit_image(p_command_buffer, p_image, &blit_image, TG_NULL);
+
+        tgvk_cmd_transition_color_image_layout(
+            p_command_buffer,
+            &blit_image,
+            VK_ACCESS_TRANSFER_WRITE_BIT,
+            VK_ACCESS_TRANSFER_READ_BIT,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+            VK_PIPELINE_STAGE_TRANSFER_BIT,
+            VK_PIPELINE_STAGE_TRANSFER_BIT
+        );
+
+        tgvk_cmd_copy_color_image_to_buffer(p_command_buffer, &blit_image, p_staging_buffer->buffer);
+    }
+
+    tgvk_command_buffer_end_and_submit(p_command_buffer);
+    tgvk_buffer_flush_device_to_host(p_staging_buffer);
+    const b32 result = tg_image_store_to_disc(p_filename, width, height, (tg_color_image_format)blit_image.format, p_staging_buffer->memory.p_mapped_device_memory, replace_existing);
+
+    tgvk_global_staging_buffer_release();
+    tgvk_image_destroy(&blit_image);
+
+    return result;
+}
+
 void tgvk_image_destroy(tgvk_image* p_image)
 {
     if (p_image->sampler)

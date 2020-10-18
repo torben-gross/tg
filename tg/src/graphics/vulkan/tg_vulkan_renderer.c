@@ -1858,18 +1858,7 @@ void tg_renderer_screenshot(tg_renderer_h h_renderer, const char* p_filename)
 {
     TG_ASSERT(h_renderer && p_filename);
 
-    const u32 width = h_renderer->render_target.color_attachment_copy.width;
-    const u32 height = h_renderer->render_target.color_attachment_copy.height;
-
-    tgvk_image blit_image = tgvk_color_image_create(
-        h_renderer->render_target.color_attachment_copy.width,
-        h_renderer->render_target.color_attachment_copy.height,
-        (VkFormat)TG_COLOR_IMAGE_FORMAT_B8G8R8A8_UNORM,
-        TG_NULL
-    );
-
-    const u32 staging_buffer_size = width * height * tg_color_image_format_size((tg_color_image_format)blit_image.format);
-    tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take((u64)staging_buffer_size);
+    tgvk_fence_wait(h_renderer->render_target.fence);
 
     tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
     tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
@@ -1884,20 +1873,13 @@ void tg_renderer_screenshot(tg_renderer_h h_renderer, const char* p_filename)
             VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
             VK_PIPELINE_STAGE_TRANSFER_BIT
         );
+    }
+    tgvk_command_buffer_end_and_submit(p_command_buffer);
 
-        tgvk_cmd_transition_color_image_layout(
-            p_command_buffer,
-            &blit_image,
-            0,
-            VK_ACCESS_TRANSFER_WRITE_BIT,
-            VK_IMAGE_LAYOUT_UNDEFINED,
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-            VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-            VK_PIPELINE_STAGE_TRANSFER_BIT
-        );
+    tgvk_image_store_to_disc(&h_renderer->render_target.color_attachment_copy, p_filename, TG_FALSE);
 
-        tgvk_cmd_blit_image(p_command_buffer, &h_renderer->render_target.color_attachment_copy, &blit_image, TG_NULL);
-
+    tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+    {
         tgvk_cmd_transition_color_image_layout(
             p_command_buffer,
             &h_renderer->render_target.color_attachment_copy,
@@ -1908,44 +1890,8 @@ void tg_renderer_screenshot(tg_renderer_h h_renderer, const char* p_filename)
             VK_PIPELINE_STAGE_TRANSFER_BIT,
             VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
         );
-
-        tgvk_cmd_transition_color_image_layout(
-            p_command_buffer,
-            &blit_image,
-            VK_ACCESS_TRANSFER_WRITE_BIT,
-            VK_ACCESS_TRANSFER_READ_BIT,
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-            VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-            VK_PIPELINE_STAGE_TRANSFER_BIT,
-            VK_PIPELINE_STAGE_TRANSFER_BIT
-        );
-
-        tgvk_cmd_copy_color_image_to_buffer(p_command_buffer, &blit_image, p_staging_buffer->buffer);
     }
-    TGVK_CALL(vkEndCommandBuffer(p_command_buffer->command_buffer));
-
-    tgvk_fence_wait(h_renderer->render_target.fence);
-    tgvk_fence_reset(h_renderer->render_target.fence);
-
-    VkSubmitInfo submit_info = { 0 };
-    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submit_info.pNext = TG_NULL;
-    submit_info.waitSemaphoreCount = 0;
-    submit_info.pWaitSemaphores = TG_NULL;
-    submit_info.pWaitDstStageMask = TG_NULL;
-    submit_info.commandBufferCount = 1;
-    submit_info.pCommandBuffers = &p_command_buffer->command_buffer;
-    submit_info.signalSemaphoreCount = 0;
-    submit_info.pSignalSemaphores = TG_NULL;
-
-    tgvk_queue_submit(TGVK_QUEUE_TYPE_GRAPHICS, 1, &submit_info, h_renderer->render_target.fence);
-
-    tgvk_fence_wait(h_renderer->render_target.fence);
-    const b32 store_result = tg_image_store_to_disc(p_filename, width, height, (tg_color_image_format)blit_image.format, p_staging_buffer->memory.p_mapped_device_memory, TG_TRUE);
-    TG_ASSERT(store_result);
-
-    tgvk_global_staging_buffer_release();
-    tgvk_image_destroy(&blit_image);
+    tgvk_command_buffer_end_and_submit(p_command_buffer);
 }
 
 #if TG_ENABLE_DEBUG_TOOLS == 1
