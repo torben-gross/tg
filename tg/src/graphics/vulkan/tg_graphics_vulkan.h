@@ -177,6 +177,7 @@ typedef struct tgvk_image_extent
 
 typedef struct tgvk_pipeline
 {
+    b32                     is_graphics_pipeline;
     tgvk_pipeline_layout    layout;
     VkPipeline              pipeline;
 } tgvk_pipeline;
@@ -482,6 +483,9 @@ void                                      tgvk_buffer_flush_host_to_device(tgvk_
 void                                      tgvk_buffer_flush_host_to_device_range(tgvk_buffer* p_buffer, VkDeviceSize offset, VkDeviceSize size);
 
 void                                      tgvk_cmd_begin_render_pass(tgvk_command_buffer* p_command_buffer, VkRenderPass render_pass, tgvk_framebuffer* p_framebuffer, VkSubpassContents subpass_contents);
+void                                      tgvk_cmd_bind_descriptor_set(tgvk_command_buffer* p_command_buffer, tgvk_pipeline* p_pipeline, u32 binding, tgvk_descriptor_set* p_descriptor_set);
+void                                      tgvk_cmd_bind_pipeline(tgvk_command_buffer* p_command_buffer, tgvk_pipeline* p_pipeline);
+void                                      tgvk_cmd_bind_vertex_buffer(tgvk_command_buffer* p_command_buffer, u32 binding, const tgvk_buffer* p_buffer);
 void                                      tgvk_cmd_blit_image(tgvk_command_buffer* p_command_buffer, tgvk_image* p_source, tgvk_image* p_destination, const VkImageBlit* p_region);
 void                                      tgvk_cmd_clear_color_image(tgvk_command_buffer* p_command_buffer, tgvk_image* p_image);
 void                                      tgvk_cmd_clear_color_image_3d(tgvk_command_buffer* p_command_buffer, tgvk_image_3d* p_image_3d);
@@ -570,6 +574,7 @@ void                                      tgvk_queue_present(VkPresentInfoKHR* p
 void                                      tgvk_queue_submit(tgvk_queue_type type, u32 submit_count, VkSubmitInfo* p_submit_infos, VkFence fence);
 void                                      tgvk_queue_wait_idle(tgvk_queue_type type);
 
+// TODO: is the attachment_count == p_subpasses[0].colorAttachmentCount ?
 VkRenderPass                              tgvk_render_pass_create(u32 attachment_count, const VkAttachmentDescription* p_attachments, u32 subpass_count, const VkSubpassDescription* p_subpasses, u32 additional_dependency_count, const VkSubpassDependency* p_additional_dependencies);
 void                                      tgvk_render_pass_destroy(VkRenderPass render_pass);
 tg_render_target                          tgvk_render_target_create(u32 color_width, u32 color_height, VkFormat color_format, const tg_sampler_create_info* p_color_sampler_create_info, u32 depth_width, u32 depth_height, VkFormat depth_format, const tg_sampler_create_info* p_depth_sampler_create_info, VkFenceCreateFlags fence_create_flags);

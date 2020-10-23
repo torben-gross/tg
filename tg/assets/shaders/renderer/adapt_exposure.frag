@@ -43,9 +43,11 @@ void main()
     vec3 adapted = hdr / vec3(u_exposure);
 
 #if defined(TG_TONE_MAP_ACES_FILM)
+
 	vec3 tone_mapped = tg_aces_film(adapted);
 	
 #elif defined(TG_TONE_MAP_UNCHARTED_2)
+
     const float exposure_bias = 2.0;
     vec3 tone_mapped = tg_uncharted_2(exposure_bias * adapted);
     const float w = 11.2;
@@ -53,8 +55,11 @@ void main()
     tone_mapped.x = pow(tone_mapped.x, 1 / 2.2);
     tone_mapped.y = pow(tone_mapped.y, 1 / 2.2);
     tone_mapped.z = pow(tone_mapped.z, 1 / 2.2);
+
 #else
+
     vec3 tone_mapped = adapted;
+
 #endif
 
     out_color = vec4(tone_mapped, 1.0);

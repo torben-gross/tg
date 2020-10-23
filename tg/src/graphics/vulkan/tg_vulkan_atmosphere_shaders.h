@@ -98,7 +98,7 @@ const char p_atmosphere_compute_transmittance_shader[] =
 	"}\r\n";
 
 const char p_atmosphere_compute_direct_irradiance_shader[] =
-	"layout(set = 0, binding = 1) uniform sampler2D transmittance_texture;\r\n"
+	"layout(set = 0, binding = 0) uniform sampler2D transmittance_texture;\r\n"
 	"\r\n"
 	"layout(location = 0) out vec3 delta_irradiance;\r\n"
 	"layout(location = 1) out vec3 irradiance;\r\n"

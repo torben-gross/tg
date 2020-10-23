@@ -237,7 +237,7 @@ f32                   tg_platform_get_window_aspect_ratio(void);
 
 b32                   tg_platform_file_exists(const char* p_filename);
 void                  tg_platform_file_read(const char* p_filename, u64 buffer_size, char* p_buffer);
-b32                   tg_platform_file_create(const char* p_filename, u32 size, char* p_data, b32 replace_existing);
+b32                   tg_platform_file_create(const char* p_filename, u32 size, const char* p_data, b32 replace_existing);
 b32                   tg_platform_file_get_properties(const char* p_filename, tg_file_properties* p_properties);
 tg_file_iterator_h    tg_platform_directory_begin_iteration(const char* p_directory, tg_file_properties* p_properties);
 b32                   tg_platform_directory_continue_iteration(tg_file_iterator_h h_file_iterator, const char* p_directory, tg_file_properties* p_properties);

@@ -510,6 +510,35 @@ void tgvk_cmd_begin_render_pass(tgvk_command_buffer* p_command_buffer, VkRenderP
     vkCmdBeginRenderPass(p_command_buffer->command_buffer, &render_pass_begin_info, subpass_contents);
 }
 
+void tgvk_cmd_bind_descriptor_set(tgvk_command_buffer* p_command_buffer, tgvk_pipeline* p_pipeline, u32 binding, tgvk_descriptor_set* p_descriptor_set)
+{
+    vkCmdBindDescriptorSets(
+        p_command_buffer->command_buffer,
+        p_pipeline->is_graphics_pipeline ? VK_PIPELINE_BIND_POINT_GRAPHICS : VK_PIPELINE_BIND_POINT_COMPUTE,
+        p_pipeline->layout.pipeline_layout,
+        binding,
+        1,
+        &p_descriptor_set->descriptor_set,
+        0,
+        TG_NULL
+    );
+}
+
+void tgvk_cmd_bind_pipeline(tgvk_command_buffer* p_command_buffer, tgvk_pipeline* p_pipeline)
+{
+    vkCmdBindPipeline(
+        p_command_buffer->command_buffer,
+        p_pipeline->is_graphics_pipeline ? VK_PIPELINE_BIND_POINT_GRAPHICS : VK_PIPELINE_BIND_POINT_COMPUTE,
+        p_pipeline->pipeline
+    );
+}
+
+void tgvk_cmd_bind_vertex_buffer(tgvk_command_buffer* p_command_buffer, u32 binding, const tgvk_buffer* p_buffer)
+{
+    const VkDeviceSize vertex_buffer_offset = 0;
+    vkCmdBindVertexBuffers(p_command_buffer->command_buffer, binding, 1, &p_buffer->buffer, &vertex_buffer_offset);
+}
+
 void tgvk_cmd_blit_image(tgvk_command_buffer* p_command_buffer, tgvk_image* p_source, tgvk_image* p_destination, const VkImageBlit* p_region)
 {
     VkImageBlit region = { 0 };
@@ -1957,6 +1986,7 @@ tgvk_pipeline tgvk_pipeline_create_compute(const tgvk_shader* p_compute_shader)
 {
     tgvk_pipeline compute_pipeline = { 0 };
 
+    compute_pipeline.is_graphics_pipeline = TG_FALSE;
     compute_pipeline.layout = tg__pipeline_layout_create(1, &p_compute_shader);
 
     VkPipelineShaderStageCreateInfo pipeline_shader_stage_create_info = { 0 };
@@ -2007,6 +2037,7 @@ tgvk_pipeline tgvk_pipeline_create_graphics2(const tgvk_graphics_pipeline_create
 {
     tgvk_pipeline graphics_pipeline = { 0 };
 
+    graphics_pipeline.is_graphics_pipeline = TG_TRUE;
     graphics_pipeline.layout = tg__pipeline_layout_create(2, &p_create_info->p_vertex_shader);
 
     VkPipelineShaderStageCreateInfo p_pipeline_shader_stage_create_infos[2] = { 0 };

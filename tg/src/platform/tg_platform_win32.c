@@ -291,7 +291,7 @@ void tg_platform_file_read(const char* p_filename, u64 buffer_size, char* p_buff
     CloseHandle(h_file);
 }
 
-b32 tg_platform_file_create(const char* p_filename, u32 size, char* p_data, b32 replace_existing)
+b32 tg_platform_file_create(const char* p_filename, u32 size, const char* p_data, b32 replace_existing)
 {
     TG_ASSERT(p_filename && size && p_data);
 
