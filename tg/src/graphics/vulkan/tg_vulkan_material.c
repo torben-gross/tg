@@ -15,7 +15,6 @@ static tg_material_h tg__create(tgvk_material_type material_type, tg_vertex_shad
     graphics_pipeline_create_info.p_vertex_shader = &h_vertex_shader->shader;
     graphics_pipeline_create_info.p_fragment_shader = &h_fragment_shader->shader;
     graphics_pipeline_create_info.cull_mode = VK_CULL_MODE_BACK_BIT;
-    graphics_pipeline_create_info.sample_count = VK_SAMPLE_COUNT_1_BIT;
     graphics_pipeline_create_info.depth_test_enable = VK_TRUE;
     graphics_pipeline_create_info.depth_write_enable = VK_TRUE;
 

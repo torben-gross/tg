@@ -15,10 +15,8 @@ void main()
 
     float d = dot(out_normal.xyz, vec3(0.0, 1.0, 0.0));
     
-    //vec3 color_grass = vec3(204.0/255.0, 255.0/255.0, 0.0/255.0);
-    vec3 color_grass = vec3(255.0/255.0, 192.0/255.0, 0.0/255.0);
-    //vec3 color_stone = vec3(0.5, 0.2, 0.2);
-    vec3 color_stone = vec3(129.0/255.0, 110.0/255.0, 100.0/255.0);
+    vec3 color_grass = vec3(160.0/255.0, 150.0/255.0, 40.0/255.0);
+    vec3 color_stone = vec3(247.0/255.0, 226.0/255.0, 164.0/255.0);
 
     float t = d < 0.5 ? 0.0 : 1.0;
     out_albedo = vec4(mix(color_stone, color_grass, t), 1.0);

@@ -184,7 +184,7 @@ static void tg__game_3d_create(void)
 
             const v3 sphere_translation = { 128.0f - 7.0f + (f32)x * 2.0f, 143.0f + (f32)y * 2.0f, 112.0f };
             scene.p_pbr_spheres[i].h_ubo = tg_uniform_buffer_create(sizeof(tg_pbr_material));
-            ((tg_pbr_material*)tg_uniform_buffer_data(scene.p_pbr_spheres[i].h_ubo))->albedo = (v4){ 1.0f, 1.0f, 1.0f, 1.0f };
+            ((tg_pbr_material*)tg_uniform_buffer_data(scene.p_pbr_spheres[i].h_ubo))->albedo = (v4){ 4.0f, 2.0f, 1.0f, 1.0f };
             ((tg_pbr_material*)tg_uniform_buffer_data(scene.p_pbr_spheres[i].h_ubo))->metallic = (f32)x / 6.0f;
             ((tg_pbr_material*)tg_uniform_buffer_data(scene.p_pbr_spheres[i].h_ubo))->roughness = ((f32)y + 0.1f) / 6.5f;
             ((tg_pbr_material*)tg_uniform_buffer_data(scene.p_pbr_spheres[i].h_ubo))->ao = 1.0f;
@@ -341,9 +341,9 @@ static void tg__game_3d_update_and_render(f32 dt)
     //const f32 lx0 = tgm_f32_sin(scene.light_timer / 32000.0f * 2.0f * TG_PI);
     //const f32 ly0 = tgm_f32_sin(scene.light_timer / 32000.0f * 2.0f * TG_PI) * 0.5f - 0.5f;
     //const f32 lz0 = tgm_f32_cos(scene.light_timer / 32000.0f * 2.0f * TG_PI);
-    //const f32 lx1 = 127.0f + 5.0f * tgm_f32_cos(scene.light_timer / 4000.0f * 2.0f * TG_PI);
-    //const f32 ly1 = 149.0f + 5.0f * tgm_f32_sin(scene.light_timer / 4000.0f * 2.0f * TG_PI);
-    //const f32 lz1 = 112.0f + 2.0f;
+    const f32 lx1 = 127.0f + 5.0f * tgm_f32_cos(scene.light_timer / 4000.0f * 2.0f * TG_PI);
+    const f32 ly1 = 149.0f + 5.0f * tgm_f32_sin(scene.light_timer / 4000.0f * 2.0f * TG_PI);
+    const f32 lz1 = 112.0f + 2.0f;
 
 
     //const v3 d0 = tgm_v3_normalized((v3) { lx0, ly0, lz0 });
@@ -365,7 +365,7 @@ static void tg__game_3d_update_and_render(f32 dt)
 
     tg_renderer_begin(scene.h_main_renderer);
     tg_renderer_push_directional_light(scene.h_main_renderer, d0, c0);
-    //tg_renderer_push_point_light(scene.h_main_renderer, (v3) { lx1, ly1, lz1 }, (v3){ 8.0f, 8.0f, 16.0f });
+    tg_renderer_push_point_light(scene.h_main_renderer, (v3) { lx1, ly1, lz1 }, (v3){ 8.0f, 8.0f, 16.0f });
     tg_terrain_render(scene.p_terrain, scene.h_main_renderer);
     ph_render_commands = TG_LIST_POINTER_TO(scene.render_commands, 0);
     for (u32 i = 0; i < scene.render_commands.count; i++)

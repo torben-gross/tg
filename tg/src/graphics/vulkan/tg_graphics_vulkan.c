@@ -107,6 +107,7 @@ TGVK_DEFINE_STRUCTURE_BUFFER(vertex_shader, TG_MAX_VERTEX_SHADERS);
 static VKAPI_ATTR VkBool32 VKAPI_CALL tg__debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity, VkDebugUtilsMessageTypeFlagsEXT message_type, const VkDebugUtilsMessengerCallbackDataEXT* p_callback_data, void* user_data)
 {
     TG_DEBUG_LOG("%s\n", p_callback_data->pMessage);
+    tg_platform_file_create("tg_last_error.txt", tg_strlen_no_nul(p_callback_data->pMessage), p_callback_data->pMessage, TG_TRUE);
     return VK_TRUE;
 }
 #pragma warning(pop)
@@ -2073,9 +2074,9 @@ tgvk_pipeline tgvk_pipeline_create_graphics2(const tgvk_graphics_pipeline_create
     pipeline_multisample_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     pipeline_multisample_state_create_info.pNext = TG_NULL;
     pipeline_multisample_state_create_info.flags = 0;
-    pipeline_multisample_state_create_info.rasterizationSamples = p_create_info->sample_count;
-    pipeline_multisample_state_create_info.sampleShadingEnable = p_create_info->sample_count == VK_SAMPLE_COUNT_1_BIT ? VK_FALSE : VK_TRUE;
-    pipeline_multisample_state_create_info.minSampleShading = p_create_info->sample_count == VK_SAMPLE_COUNT_1_BIT ? 0.0f : 1.0f;
+    pipeline_multisample_state_create_info.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+    pipeline_multisample_state_create_info.sampleShadingEnable = VK_FALSE;
+    pipeline_multisample_state_create_info.minSampleShading = 0.0f;
     pipeline_multisample_state_create_info.pSampleMask = TG_NULL;
     pipeline_multisample_state_create_info.alphaToCoverageEnable = VK_FALSE;
     pipeline_multisample_state_create_info.alphaToOneEnable = VK_FALSE;
@@ -2204,8 +2205,12 @@ void tgvk_queue_wait_idle(tgvk_queue_type type)
 
 
 
-VkRenderPass tgvk_render_pass_create(u32 attachment_count, const VkAttachmentDescription* p_attachments, u32 subpass_count, const VkSubpassDescription* p_subpasses, u32 dependency_count, const VkSubpassDependency* p_dependencies)
+VkRenderPass tgvk_render_pass_create(u32 attachment_count, const VkAttachmentDescription* p_attachments, u32 subpass_count, const VkSubpassDescription* p_subpasses, u32 additional_dependency_count, const VkSubpassDependency* p_additional_dependencies)
 {
+    TG_ASSERT(subpass_count);
+    TG_ASSERT(subpass_count - 1 <= additional_dependency_count);
+    TG_ASSERT(subpass_count + 2 >= additional_dependency_count);
+
     VkRenderPass render_pass = VK_NULL_HANDLE;
 
     VkRenderPassCreateInfo render_pass_create_info = { 0 };
@@ -2216,8 +2221,8 @@ VkRenderPass tgvk_render_pass_create(u32 attachment_count, const VkAttachmentDes
     render_pass_create_info.pAttachments = p_attachments;
     render_pass_create_info.subpassCount = subpass_count;
     render_pass_create_info.pSubpasses = p_subpasses;
-    render_pass_create_info.dependencyCount = dependency_count;
-    render_pass_create_info.pDependencies = p_dependencies;
+    render_pass_create_info.dependencyCount = additional_dependency_count;
+    render_pass_create_info.pDependencies = p_additional_dependencies;
 
     TGVK_CALL(vkCreateRenderPass(device, &render_pass_create_info, TG_NULL, &render_pass));
 

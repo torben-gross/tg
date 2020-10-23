@@ -63,18 +63,17 @@ const vec2 shadow_poisson_disk[16] = vec2[](
 
 
 
-float distribution_ggx(vec3 n, vec3 h, float roughness)
+float tg_distribution_ggx(float clamped_n_dot_h, float roughness)
 {
-    float a       = roughness * roughness;
-    float a_sqr   = a * a;
-    float ndh     = max(dot(n, h), 0.0);
-    float denom = (ndh * ndh * (a_sqr - 1.0) + 1.0);
-    denom       = TG_PI * denom * denom;
+    float a = roughness * roughness;
+    float a_sqr = a * a;
+    float denom = (clamped_n_dot_h * clamped_n_dot_h * (a_sqr - 1.0) + 1.0);
+    denom = TG_PI * denom * denom;
 	
     return a_sqr / denom;
 }
 
-float geometry_schlick_ggf(float n_dot_v, float roughness)
+float tg_geometry_schlick_ggf(float n_dot_v, float roughness)
 {
     float r = (roughness + 1.0);
     float k = (r * r) / 8.0;
@@ -83,29 +82,28 @@ float geometry_schlick_ggf(float n_dot_v, float roughness)
     return n_dot_v / denom;
 }
 
-float geometry_smith(vec3 n, vec3 v, vec3 l, float roughness)
+float tg_geometry_smith(float clamped_n_dot_v, float clamped_n_dot_l, float roughness)
 {
-    float ndv = max(dot(n, v), 0.0);
-    float ndl = max(dot(n, l), 0.0);
-    float ggx2  = geometry_schlick_ggf(ndv, roughness);
-    float ggx1  = geometry_schlick_ggf(ndl, roughness);
+    float ggx2 = tg_geometry_schlick_ggf(clamped_n_dot_v, roughness);
+    float ggx1 = tg_geometry_schlick_ggf(clamped_n_dot_l, roughness);
 	
     return ggx1 * ggx2;
 }
 
-vec3 fresnel_schlick(float cos_theta, vec3 f0)
+float tg_fresnel_schlick(float u, float roughness)
 {
-    return f0 + (1.0 - f0) * pow(1.0 - cos_theta, 5.0);
+    float f_lambda = 1.0 - roughness;
+    return f_lambda + (1.0 - f_lambda) * pow(1.0 - u, 5.0);
 }
 
-float random(vec3 seed, int i)
+float tg_random(vec3 seed, int i)
 {
     vec4 seed4 = vec4(seed, float(i));
     float dot_product = dot(seed4, vec4(12.9898, 78.233, 45.164, 94.673));
     return fract(sin(dot_product) * 43758.5453);
 }
 
-float shadow_factor()
+float tg_shadow_factor()
 {
     float shadow = 1.0;
 
@@ -187,7 +185,7 @@ float shadow_factor()
             //float shadow_sum = 0.0;
             //for (int i = 0; i < TG_SHADOW_SAMPLE_COUNT; i++)
             //{
-		    //    int index = int(16.0 * random(floor(position * TG_CASCADED_SHADOW_MAP_SIZE_F), i)) % 16;
+		    //    int index = int(16.0 * tg_random(floor(position * TG_CASCADED_SHADOW_MAP_SIZE_F), i)) % 16;
             //    vec2 uv = clamp(proj.xy + (shadow_poisson_disk[index] / vec2(TG_CASCADED_SHADOW_MAP_SIZE_F)), vec2(0.0), vec2(1.0));
             //    float depth = texture(u_shadow_maps[shadow_map_index], uv).x;
             //    if (proj.z - TG_SHADOW_BIAS >= depth)
@@ -204,7 +202,7 @@ float shadow_factor()
             //    float secondary_shadow = 1.0;
             //    for (int i = 0; i < TG_SHADOW_SAMPLE_COUNT; i++)
             //    {
-		    //        int index = int(16.0 * random(floor(position * TG_CASCADED_SHADOW_MAP_SIZE_F), i)) % 16;
+		    //        int index = int(16.0 * tg_random(floor(position * TG_CASCADED_SHADOW_MAP_SIZE_F), i)) % 16;
             //        vec2 uv = clamp(secondary_proj.xy + shadow_poisson_disk[index] / vec2(TG_CASCADED_SHADOW_MAP_SIZE_F), vec2(0.0), vec2(1.0));
             //        float depth = texture(u_shadow_maps[secondary], uv).x;
             //        secondary_shadow += secondary_proj.z - TG_SHADOW_BIAS < depth ? 1.0 : 0.0;
@@ -229,14 +227,41 @@ float shadow_factor()
     return shadow;
 }
 
+vec3 tg_shade(vec3 n, vec3 v, vec3 l, vec3 diffuse_albedo, vec3 specular_albedo, float metallic, float roughness, vec3 radiance)
+{
+    vec3 h = normalize(v + l);
+
+    float h_dot_n = dot(h, n);
+    float h_dot_v = dot(h, v);
+    float l_dot_n = dot(n, l);
+    float n_dot_v = dot(n, v);
+
+    float clamped_h_dot_n = clamp(h_dot_n, 0.0, 1.0);
+    float clamped_h_dot_v = clamp(h_dot_v, 0.0, 1.0);
+    float clamped_l_dot_n = clamp(l_dot_n, 0.0, 1.0);
+    float clamped_n_dot_v = clamp(n_dot_v, 0.0, 1.0);
+
+    float d = tg_distribution_ggx(clamped_h_dot_n, roughness);
+    float f = tg_fresnel_schlick(clamped_n_dot_v, roughness);
+    float g = tg_geometry_smith(clamped_n_dot_v, clamped_l_dot_n, roughness);
+    float dfg = d * f * g;
+    float denominator = 4.0 * clamped_n_dot_v * clamped_l_dot_n;
+    vec3 specular = specular_albedo * (dfg / max(denominator, 0.001));
+
+    vec3 diffuse = (1.0 - f) * (1.0 - metallic) * diffuse_albedo / TG_PI;
+
+    float shadow = tg_shadow_factor();
+    return (diffuse + specular) * radiance * clamped_l_dot_n * shadow;
+}
+
 void main()
 {
-    vec3  position            = texture(u_position, v_uv).xyz;
-    vec3  normal              = texture(u_normal, v_uv).xyz;
-    vec3  albedo              = texture(u_albedo, v_uv).xyz;
-    float metallic            = texture(u_metallic_roughness_ao, v_uv).x;
-    float roughness           = texture(u_metallic_roughness_ao, v_uv).y;
-    float ao                  = texture(u_ssao, v_uv).x * texture(u_metallic_roughness_ao, v_uv).z;
+    vec3  position     = texture(u_position, v_uv).xyz;
+    vec3  normal       = texture(u_normal, v_uv).xyz;
+    vec3  albedo       = texture(u_albedo, v_uv).xyz;
+    float metallic     = texture(u_metallic_roughness_ao, v_uv).x;
+    float roughness    = texture(u_metallic_roughness_ao, v_uv).y;
+    float ao           = texture(u_ssao, v_uv).x * texture(u_metallic_roughness_ao, v_uv).z;
 
     vec4 sky_color = 0.7 * u_directional_light_colors[0];
     if (dot(normal, normal) < 0.5) // TODO: sky
@@ -247,72 +272,38 @@ void main()
     {
         vec3 n = normalize(normal);
         vec3 v = normalize(u_camera_position - position);
+        vec3 specular_albedo = mix(vec3(0.04), albedo, metallic);
 
         vec3 lo = vec3(0.0);
 
         for (int i = 0; i < u_directional_light_count; i++)
         {
             vec3 l = normalize(-u_directional_light_directions[i].xyz);
-            vec3 h = normalize(v + l);
-            
-            float attenuation = 1.0;
-            vec3  radiance    = u_directional_light_colors[i].xyz * attenuation;
 
-            vec3 f0 = mix(vec3(0.04), albedo, metallic);
-
-            float ndf = distribution_ggx(n, h, roughness);
-            float g   = geometry_smith(n, v, l, roughness);
-            vec3  f   = fresnel_schlick(max(dot(h, v), 0.0), f0);
-
-            vec3  numerator   = ndf * g * f;
-            float denominator = 4.0 * max(dot(n, v), 0.0) * max(dot(n, l), 0.0);
-            vec3  specular    = numerator / max(denominator, 0.001);
-
-            vec3 k_specular = f;
-            vec3 k_diffuse  = (vec3(1.0) - k_specular) * (1.0 - metallic);
-        
-            float ndl = max(dot(n, l), 0.0);
-            float shadow = i == 0 ? shadow_factor() : 1.0;
-            lo += (k_diffuse * albedo / TG_PI + specular) * radiance * ndl * shadow;
+            lo += tg_shade(n, v, l, albedo, specular_albedo, metallic, roughness, u_directional_light_colors[i].xyz);
         }
 
         for (int i = 0; i < u_point_light_count; i++)
         {
             vec3 l = normalize(u_point_light_positions[i].xyz - position);
-            vec3 h = normalize(v + l);
-            
-            float distance    = length(u_point_light_positions[i].xyz - position);
+
+            float distance = length(u_point_light_positions[i].xyz - position);
             float attenuation = 1.0 / (distance * distance);
-            vec3  radiance    = u_point_light_colors[i].xyz * attenuation;
-
-            vec3 f0 = mix(vec3(0.04), albedo, metallic);
-
-            float ndf = distribution_ggx(n, h, roughness);
-            float g   = geometry_smith(n, v, l, roughness);
-            vec3  f   = fresnel_schlick(max(dot(h, v), 0.0), f0);
-
-            vec3  numerator   = ndf * g * f;
-            float denominator = 4.0 * max(dot(n, v), 0.0) * max(dot(n, l), 0.0);
-            vec3  specular    = numerator / max(denominator, 0.001);
-
-            vec3 k_specular = f;
-            vec3 k_diffuse  = (vec3(1.0) - k_specular) * (1.0 - metallic);
-        
-            float ndl = max(dot(n, l), 0.0);
-            lo += (k_diffuse * albedo / TG_PI + specular) * radiance * ndl;
+            if (attenuation > 0.0)
+            {
+                vec3 radiance = u_point_light_colors[i].xyz * attenuation;
+                lo += tg_shade(n, v, l, albedo, specular_albedo, metallic, roughness, radiance);
+            }
         }
 
         vec3 ambient = vec3(0.1) * albedo * ao;
         //ambient = vec3(0.0);
-        vec3 color   = ambient + lo;
-
-        color = color / (color + vec3(1.0));
-        color = pow(color, vec3(1.0 / 2.2));
+        vec3 color = ambient + lo;
 
         //vec3  d = u_camera_position - position;
         //float t = clamp(sqrt(dot(d, d)) / 1024.0f, 0.0, 1.0);
         //t = pow(t, 1.5);
-        //color   = mix(color, sky_color.xyz, t);
+        //color = mix(color, sky_color.xyz, t);
 
         out_color = vec4(color, 1.0);
     }

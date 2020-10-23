@@ -504,15 +504,7 @@ static void tg__precompute(tg_model* p_model)
 		subpass_description.preserveAttachmentCount = 0;
 		subpass_description.pPreserveAttachments = TG_NULL;
 
-		VkSubpassDependency subpass_dependency = { 0 };
-		subpass_dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-		subpass_dependency.dstSubpass = 0;
-		subpass_dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		subpass_dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		subpass_dependency.srcAccessMask = 0;
-		subpass_dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-		VkRenderPass transmittance_render_pass = tgvk_render_pass_create(1, &attachment_description, 1, &subpass_description, 1, &subpass_dependency);
+		VkRenderPass transmittance_render_pass = tgvk_render_pass_create(1, &attachment_description, 1, &subpass_description, 0, TG_NULL);
 		tgvk_framebuffer transmittance_framebuffer = tgvk_framebuffer_create(transmittance_render_pass, 1, &p_model->transmittance_texture.image_view, TG_TRANSMITTANCE_TEXTURE_WIDTH, TG_TRANSMITTANCE_TEXTURE_HEIGHT);
 		VkSemaphore transmittance_semaphore = tgvk_semaphore_create();
 		tgvk_command_buffer transmittance_command_buffer = tgvk_command_buffer_create(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
@@ -521,7 +513,6 @@ static void tg__precompute(tg_model* p_model)
 		transmittance_graphics_pipeline_create_info.p_vertex_shader = &vertex_shader;
 		transmittance_graphics_pipeline_create_info.p_fragment_shader = &compute_transmittance_fragment_shader;
 		transmittance_graphics_pipeline_create_info.cull_mode = VK_CULL_MODE_NONE;
-		transmittance_graphics_pipeline_create_info.sample_count = VK_SAMPLE_COUNT_1_BIT;
 		transmittance_graphics_pipeline_create_info.depth_test_enable = VK_FALSE;
 		transmittance_graphics_pipeline_create_info.depth_write_enable = VK_FALSE;
 		transmittance_graphics_pipeline_create_info.blend_enable = VK_FALSE;

@@ -101,7 +101,6 @@ static void tg__init_ssao_pass(tg_renderer_h h_renderer)
     ssao_pipeline_create_info.p_vertex_shader = &tg_vertex_shader_get("shaders/renderer/screen_quad.vert")->shader;
     ssao_pipeline_create_info.p_fragment_shader = &tg_fragment_shader_get("shaders/renderer/ssao.frag")->shader;
     ssao_pipeline_create_info.cull_mode = VK_CULL_MODE_NONE;
-    ssao_pipeline_create_info.sample_count = VK_SAMPLE_COUNT_1_BIT;
     ssao_pipeline_create_info.depth_test_enable = VK_FALSE;
     ssao_pipeline_create_info.depth_write_enable = VK_FALSE;
     ssao_pipeline_create_info.blend_enable = VK_FALSE;
@@ -158,7 +157,6 @@ static void tg__init_ssao_pass(tg_renderer_h h_renderer)
     blur_pipeline_create_info.p_vertex_shader = &tg_vertex_shader_get("shaders/renderer/screen_quad.vert")->shader;
     blur_pipeline_create_info.p_fragment_shader = &tg_fragment_shader_get("shaders/renderer/ssao_blur.frag")->shader;
     blur_pipeline_create_info.cull_mode = VK_CULL_MODE_NONE;
-    blur_pipeline_create_info.sample_count = VK_SAMPLE_COUNT_1_BIT;
     blur_pipeline_create_info.depth_test_enable = VK_FALSE;
     blur_pipeline_create_info.depth_write_enable = VK_FALSE;
     blur_pipeline_create_info.blend_enable = VK_FALSE;
@@ -269,7 +267,6 @@ static void tg__init_shading_pass(tg_renderer_h h_renderer)
     graphics_pipeline_create_info.p_vertex_shader = &tg_vertex_shader_get("shaders/renderer/screen_quad.vert")->shader;
     graphics_pipeline_create_info.p_fragment_shader = &tg_fragment_shader_get("shaders/renderer/shading.frag")->shader;
     graphics_pipeline_create_info.cull_mode = VK_CULL_MODE_NONE;
-    graphics_pipeline_create_info.sample_count = VK_SAMPLE_COUNT_1_BIT;
     graphics_pipeline_create_info.depth_test_enable = VK_FALSE;
     graphics_pipeline_create_info.depth_write_enable = VK_FALSE;
     graphics_pipeline_create_info.blend_enable = VK_FALSE;
@@ -417,7 +414,6 @@ static void tg__init_tone_mapping_pass(tg_renderer_h h_renderer)
     exposure_graphics_pipeline_create_info.p_vertex_shader = &tg_vertex_shader_get("shaders/renderer/screen_quad.vert")->shader;
     exposure_graphics_pipeline_create_info.p_fragment_shader = &tg_fragment_shader_get("shaders/renderer/adapt_exposure.frag")->shader;
     exposure_graphics_pipeline_create_info.cull_mode = VK_CULL_MODE_NONE;
-    exposure_graphics_pipeline_create_info.sample_count = VK_SAMPLE_COUNT_1_BIT;
     exposure_graphics_pipeline_create_info.depth_test_enable = VK_FALSE;
     exposure_graphics_pipeline_create_info.depth_write_enable = VK_FALSE;
     exposure_graphics_pipeline_create_info.blend_enable = VK_FALSE;
@@ -685,7 +681,6 @@ static void tg__init_present_pass(tg_renderer_h h_renderer)
     graphics_pipeline_create_info.p_vertex_shader = &tg_vertex_shader_get("shaders/renderer/screen_quad.vert")->shader;
     graphics_pipeline_create_info.p_fragment_shader = &tg_fragment_shader_get("shaders/renderer/present.frag")->shader;
     graphics_pipeline_create_info.cull_mode = VK_CULL_MODE_NONE;
-    graphics_pipeline_create_info.sample_count = VK_SAMPLE_COUNT_1_BIT;
     graphics_pipeline_create_info.depth_test_enable = VK_FALSE;
     graphics_pipeline_create_info.depth_write_enable = VK_FALSE;
     graphics_pipeline_create_info.blend_enable = VK_FALSE;
@@ -849,15 +844,7 @@ void tg_renderer_init_shared_resources(void)
         subpass_description.preserveAttachmentCount = 0;
         subpass_description.pPreserveAttachments = TG_NULL;
 
-        VkSubpassDependency subpass_dependency = { 0 };
-        subpass_dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-        subpass_dependency.dstSubpass = 0;
-        subpass_dependency.srcStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-        subpass_dependency.dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-        subpass_dependency.srcAccessMask = 0;
-        subpass_dependency.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-
-        shared_render_resources.shadow_render_pass = tgvk_render_pass_create(1, &attachment_description, 1, &subpass_description, 1, &subpass_dependency);
+        shared_render_resources.shadow_render_pass = tgvk_render_pass_create(1, &attachment_description, 1, &subpass_description, 0, TG_NULL);
 
 
 
@@ -865,7 +852,6 @@ void tg_renderer_init_shared_resources(void)
         pipeline_create_info.p_vertex_shader = &tg_vertex_shader_get("shaders/shadow.vert")->shader;
         pipeline_create_info.p_fragment_shader = &tg_fragment_shader_get("shaders/shadow.frag")->shader;
         pipeline_create_info.cull_mode = VK_CULL_MODE_BACK_BIT;
-        pipeline_create_info.sample_count = 1;
         pipeline_create_info.depth_test_enable = TG_TRUE;
         pipeline_create_info.depth_write_enable = TG_TRUE;
         pipeline_create_info.blend_enable = TG_FALSE;
@@ -944,15 +930,7 @@ void tg_renderer_init_shared_resources(void)
         subpass_description.preserveAttachmentCount = 0;
         subpass_description.pPreserveAttachments = TG_NULL;
 
-        VkSubpassDependency subpass_dependency = { 0 };
-        subpass_dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-        subpass_dependency.dstSubpass = 0;
-        subpass_dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        subpass_dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        subpass_dependency.srcAccessMask = 0;
-        subpass_dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-        shared_render_resources.geometry_render_pass = tgvk_render_pass_create(TGVK_GEOMETRY_ATTACHMENT_COUNT, p_attachment_descriptions, 1, &subpass_description, 1, &subpass_dependency);
+        shared_render_resources.geometry_render_pass = tgvk_render_pass_create(TGVK_GEOMETRY_ATTACHMENT_COUNT, p_attachment_descriptions, 1, &subpass_description, 0, TG_NULL);
     }
 
     // ssao pass
@@ -984,16 +962,8 @@ void tg_renderer_init_shared_resources(void)
         subpass_description.preserveAttachmentCount = 0;
         subpass_description.pPreserveAttachments = TG_NULL;
 
-        VkSubpassDependency subpass_dependency = { 0 };
-        subpass_dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-        subpass_dependency.dstSubpass = 0;
-        subpass_dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        subpass_dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        subpass_dependency.srcAccessMask = 0;
-        subpass_dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-        shared_render_resources.ssao_render_pass = tgvk_render_pass_create(1, &attachment_description, 1, &subpass_description, 1, &subpass_dependency);
-        shared_render_resources.ssao_blur_render_pass = tgvk_render_pass_create(1, &attachment_description, 1, &subpass_description, 1, &subpass_dependency);
+        shared_render_resources.ssao_render_pass = tgvk_render_pass_create(1, &attachment_description, 1, &subpass_description, 0, TG_NULL);
+        shared_render_resources.ssao_blur_render_pass = tgvk_render_pass_create(1, &attachment_description, 1, &subpass_description, 0, TG_NULL);
     }
 
     // shading pass
@@ -1025,15 +995,7 @@ void tg_renderer_init_shared_resources(void)
         subpass_description.preserveAttachmentCount = 0;
         subpass_description.pPreserveAttachments = TG_NULL;
 
-        VkSubpassDependency subpass_dependency = { 0 };
-        subpass_dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-        subpass_dependency.dstSubpass = 0;
-        subpass_dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        subpass_dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        subpass_dependency.srcAccessMask = 0;
-        subpass_dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-        shared_render_resources.shading_render_pass = tgvk_render_pass_create(TGVK_SHADING_ATTACHMENT_COUNT, &attachment_description, 1, &subpass_description, 1, &subpass_dependency);
+        shared_render_resources.shading_render_pass = tgvk_render_pass_create(TGVK_SHADING_ATTACHMENT_COUNT, &attachment_description, 1, &subpass_description, 0, TG_NULL);
     }
 
     // forward pass
@@ -1080,15 +1042,7 @@ void tg_renderer_init_shared_resources(void)
         subpass_description.preserveAttachmentCount = 0;
         subpass_description.pPreserveAttachments = TG_NULL;
 
-        VkSubpassDependency subpass_dependency = { 0 };
-        subpass_dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-        subpass_dependency.dstSubpass = 0;
-        subpass_dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        subpass_dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        subpass_dependency.srcAccessMask = 0;
-        subpass_dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-        shared_render_resources.forward_render_pass = tgvk_render_pass_create(2, p_attachment_descriptions, 1, &subpass_description, 1, &subpass_dependency);
+        shared_render_resources.forward_render_pass = tgvk_render_pass_create(2, p_attachment_descriptions, 1, &subpass_description, 0, TG_NULL);
     }
 
     // tone mapping pass
@@ -1120,15 +1074,7 @@ void tg_renderer_init_shared_resources(void)
         subpass_description.preserveAttachmentCount = 0;
         subpass_description.pPreserveAttachments = TG_NULL;
 
-        VkSubpassDependency subpass_dependency = { 0 };
-        subpass_dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-        subpass_dependency.dstSubpass = 0;
-        subpass_dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        subpass_dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        subpass_dependency.srcAccessMask = 0;
-        subpass_dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-        shared_render_resources.tone_mapping_render_pass = tgvk_render_pass_create(TGVK_SHADING_ATTACHMENT_COUNT, &attachment_description, 1, &subpass_description, 1, &subpass_dependency);
+        shared_render_resources.tone_mapping_render_pass = tgvk_render_pass_create(TGVK_SHADING_ATTACHMENT_COUNT, &attachment_description, 1, &subpass_description, 0, TG_NULL);
     }
 
     // present pass

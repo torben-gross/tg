@@ -159,7 +159,6 @@ typedef struct tgvk_graphics_pipeline_create_info
     const tgvk_shader*       p_vertex_shader;
     const tgvk_shader*       p_fragment_shader;
     VkCullModeFlagBits       cull_mode;
-    VkSampleCountFlagBits    sample_count;
     VkBool32                 depth_test_enable;
     VkBool32                 depth_write_enable;
     VkBool32                 blend_enable;
@@ -571,7 +570,7 @@ void                                      tgvk_queue_present(VkPresentInfoKHR* p
 void                                      tgvk_queue_submit(tgvk_queue_type type, u32 submit_count, VkSubmitInfo* p_submit_infos, VkFence fence);
 void                                      tgvk_queue_wait_idle(tgvk_queue_type type);
 
-VkRenderPass                              tgvk_render_pass_create(u32 attachment_count, const VkAttachmentDescription* p_attachments, u32 subpass_count, const VkSubpassDescription* p_subpasses, u32 dependency_count, const VkSubpassDependency* p_dependencies);
+VkRenderPass                              tgvk_render_pass_create(u32 attachment_count, const VkAttachmentDescription* p_attachments, u32 subpass_count, const VkSubpassDescription* p_subpasses, u32 additional_dependency_count, const VkSubpassDependency* p_additional_dependencies);
 void                                      tgvk_render_pass_destroy(VkRenderPass render_pass);
 tg_render_target                          tgvk_render_target_create(u32 color_width, u32 color_height, VkFormat color_format, const tg_sampler_create_info* p_color_sampler_create_info, u32 depth_width, u32 depth_height, VkFormat depth_format, const tg_sampler_create_info* p_depth_sampler_create_info, VkFenceCreateFlags fence_create_flags);
 void                                      tgvk_render_target_destroy(tg_render_target* p_render_target);
