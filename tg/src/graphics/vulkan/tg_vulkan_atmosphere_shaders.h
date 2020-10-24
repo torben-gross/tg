@@ -110,13 +110,13 @@ const char p_atmosphere_compute_direct_irradiance_shader[] =
 	"}\r\n";
 
 const char p_atmosphere_compute_single_scattering_shader[] =
-	"layout(set = 0, binding = 1) uniform ubo\r\n"
+	"layout(set = 0, binding = 0) uniform ubo\r\n"
 	"{\r\n"
-	"    mat3 luminance_from_radiance;\r\n"
+	"    mat4 luminance_from_radiance;\r\n"
 	"    int layer;\r\n"
 	"};\r\n"
 	"\r\n"
-	"layout(set = 0, binding = 2) uniform sampler2D transmittance_texture;\r\n"
+	"layout(set = 0, binding = 1) uniform sampler2D transmittance_texture;\r\n"
 	"\r\n"
 	"layout(location = 0) out vec3 delta_rayleigh;\r\n"
 	"layout(location = 1) out vec3 delta_mie;\r\n"
@@ -125,9 +125,10 @@ const char p_atmosphere_compute_single_scattering_shader[] =
 	"\r\n"
 	"void main()\r\n"
 	"{\r\n"
+	"    mat3 lum_from_rad = mat3(luminance_from_radiance);"
 	"    tg_compute_single_scattering_texture(ATMOSPHERE, transmittance_texture, vec3(gl_FragCoord.xy, layer + 0.5), delta_rayleigh, delta_mie);\r\n"
-	"    scattering = vec4(luminance_from_radiance * delta_rayleigh.rgb, (luminance_from_radiance * delta_mie).r);\r\n"
-	"    single_mie_scattering = luminance_from_radiance * delta_mie;\r\n"
+	"    scattering = vec4(lum_from_rad * delta_rayleigh.rgb, (lum_from_rad * delta_mie).r);\r\n"
+	"    single_mie_scattering = lum_from_rad * delta_mie;\r\n"
 	"}\r\n";
 
 const char p_atmosphere_compute_scattering_density_shader[] =

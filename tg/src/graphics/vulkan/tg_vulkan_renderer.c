@@ -103,7 +103,7 @@ static void tg__init_ssao_pass(tg_renderer_h h_renderer)
     ssao_pipeline_create_info.cull_mode = VK_CULL_MODE_NONE;
     ssao_pipeline_create_info.depth_test_enable = VK_FALSE;
     ssao_pipeline_create_info.depth_write_enable = VK_FALSE;
-    ssao_pipeline_create_info.blend_enable = VK_FALSE;
+    ssao_pipeline_create_info.p_blend_enable = TG_NULL;
     ssao_pipeline_create_info.render_pass = shared_render_resources.ssao_render_pass;
     ssao_pipeline_create_info.viewport_size.x = (f32)TG_SSAO_MAP_SIZE;
     ssao_pipeline_create_info.viewport_size.y = (f32)TG_SSAO_MAP_SIZE;
@@ -159,7 +159,7 @@ static void tg__init_ssao_pass(tg_renderer_h h_renderer)
     blur_pipeline_create_info.cull_mode = VK_CULL_MODE_NONE;
     blur_pipeline_create_info.depth_test_enable = VK_FALSE;
     blur_pipeline_create_info.depth_write_enable = VK_FALSE;
-    blur_pipeline_create_info.blend_enable = VK_FALSE;
+    blur_pipeline_create_info.p_blend_enable = TG_NULL;
     blur_pipeline_create_info.render_pass = shared_render_resources.ssao_blur_render_pass;
     blur_pipeline_create_info.viewport_size.x = (f32)TG_SSAO_MAP_SIZE;
     blur_pipeline_create_info.viewport_size.y = (f32)TG_SSAO_MAP_SIZE;
@@ -269,7 +269,7 @@ static void tg__init_shading_pass(tg_renderer_h h_renderer)
     graphics_pipeline_create_info.cull_mode = VK_CULL_MODE_NONE;
     graphics_pipeline_create_info.depth_test_enable = VK_FALSE;
     graphics_pipeline_create_info.depth_write_enable = VK_FALSE;
-    graphics_pipeline_create_info.blend_enable = VK_FALSE;
+    graphics_pipeline_create_info.p_blend_enable = TG_NULL;
     graphics_pipeline_create_info.render_pass = shared_render_resources.shading_render_pass;
     graphics_pipeline_create_info.viewport_size.x = (f32)h_renderer->shading_pass.framebuffer.width;
     graphics_pipeline_create_info.viewport_size.y = (f32)h_renderer->shading_pass.framebuffer.height;
@@ -416,7 +416,7 @@ static void tg__init_tone_mapping_pass(tg_renderer_h h_renderer)
     exposure_graphics_pipeline_create_info.cull_mode = VK_CULL_MODE_NONE;
     exposure_graphics_pipeline_create_info.depth_test_enable = VK_FALSE;
     exposure_graphics_pipeline_create_info.depth_write_enable = VK_FALSE;
-    exposure_graphics_pipeline_create_info.blend_enable = VK_FALSE;
+    exposure_graphics_pipeline_create_info.p_blend_enable = TG_NULL;
     exposure_graphics_pipeline_create_info.render_pass = shared_render_resources.tone_mapping_render_pass;
     exposure_graphics_pipeline_create_info.viewport_size.x = (f32)h_renderer->tone_mapping_pass.adapt_exposure_framebuffer.width;
     exposure_graphics_pipeline_create_info.viewport_size.y = (f32)h_renderer->tone_mapping_pass.adapt_exposure_framebuffer.height;
@@ -683,7 +683,7 @@ static void tg__init_present_pass(tg_renderer_h h_renderer)
     graphics_pipeline_create_info.cull_mode = VK_CULL_MODE_NONE;
     graphics_pipeline_create_info.depth_test_enable = VK_FALSE;
     graphics_pipeline_create_info.depth_write_enable = VK_FALSE;
-    graphics_pipeline_create_info.blend_enable = VK_FALSE;
+    graphics_pipeline_create_info.p_blend_enable = TG_NULL;
     graphics_pipeline_create_info.render_pass = shared_render_resources.present_render_pass;
     graphics_pipeline_create_info.viewport_size.x = (f32)swapchain_extent.width;
     graphics_pipeline_create_info.viewport_size.y = (f32)swapchain_extent.height;
@@ -854,14 +854,14 @@ void tg_renderer_init_shared_resources(void)
         pipeline_create_info.cull_mode = VK_CULL_MODE_BACK_BIT;
         pipeline_create_info.depth_test_enable = TG_TRUE;
         pipeline_create_info.depth_write_enable = TG_TRUE;
-        pipeline_create_info.blend_enable = TG_FALSE;
+        pipeline_create_info.p_blend_enable = TG_NULL;
         pipeline_create_info.render_pass = shared_render_resources.shadow_render_pass;
         pipeline_create_info.viewport_size.x = (f32)TG_CASCADED_SHADOW_MAP_SIZE;
         pipeline_create_info.viewport_size.y = (f32)TG_CASCADED_SHADOW_MAP_SIZE;
         pipeline_create_info.polygon_mode = VK_POLYGON_MODE_FILL;
 
-        TG_ASSERT(pipeline_create_info.p_vertex_shader->spirv_layout.input_resource_count > 0);
-        TG_ASSERT(tg_vertex_input_attribute_format_get_size(pipeline_create_info.p_vertex_shader->spirv_layout.p_input_resources[0].format) == sizeof(v3));
+        TG_ASSERT(pipeline_create_info.p_vertex_shader->spirv_layout.vertex_shader_input.count > 0);
+        TG_ASSERT(tg_vertex_input_attribute_format_get_size(pipeline_create_info.p_vertex_shader->spirv_layout.vertex_shader_input.p_resources[0].format) == sizeof(v3));
 
         VkVertexInputBindingDescription vertex_input_binding_description = { 0 };
         vertex_input_binding_description.binding = 0;

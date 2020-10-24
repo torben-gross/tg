@@ -107,10 +107,10 @@ typedef enum tg_image_filter
 
 typedef enum tg_shader_type
 {
-	TG_SHADER_TYPE_VERTEX,
-	TG_SHADER_TYPE_GEOMETRY,
+	TG_SHADER_TYPE_COMPUTE,
 	TG_SHADER_TYPE_FRAGMENT,
-	TG_SHADER_TYPE_COMPUTE
+	TG_SHADER_TYPE_GEOMETRY,
+	TG_SHADER_TYPE_VERTEX
 } tg_shader_type;
 
 typedef enum tg_structure_type

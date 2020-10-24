@@ -11,16 +11,16 @@
 
 // Source: https://www.khronos.org/registry/spir-v/specs/1.0/SPIRV.html
 
-typedef enum tg_spirv_execution_model
+typedef enum tg_spirv_execution_mode
 {
-    TG_SPIRV_EXECUTION_MODEL_VERTEX                     = 0,
-    TG_SPIRV_EXECUTION_MODEL_TESSELLATION_CONTROL       = 1,
-    TG_SPIRV_EXECUTION_MODEL_TESSELLATION_EVALUATION    = 2,
-    TG_SPIRV_EXECUTION_MODEL_GEOMETRY                   = 3,
-    TG_SPIRV_EXECUTION_MODEL_FRAGMENT                   = 4,
-    TG_SPIRV_EXECUTION_MODEL_GL_COMPUTE                 = 5,
-    TG_SPIRV_EXECUTION_MODEL_KERNEL                     = 6
-} tg_spirv_execution_model;
+    TG_SPIRV_EXECUTION_MODE_VERTEX                     = 0,
+    TG_SPIRV_EXECUTION_MODE_TESSELLATION_CONTROL       = 1,
+    TG_SPIRV_EXECUTION_MODE_TESSELLATION_EVALUATION    = 2,
+    TG_SPIRV_EXECUTION_MODE_GEOMETRY                   = 3,
+    TG_SPIRV_EXECUTION_MODE_FRAGMENT                   = 4,
+    TG_SPIRV_EXECUTION_MODE_GL_COMPUTE                 = 5,
+    TG_SPIRV_EXECUTION_MODE_KERNEL                     = 6
+} tg_spirv_execution_mode;
 
 typedef enum tg_spirv_storage_class
 {
@@ -812,16 +812,18 @@ void tg_spirv_fill_layout(u32 word_count, const u32* p_words, tg_spirv_layout* p
             {
                 switch (p_words[processed_word_count + 1])
                 {
-                case TG_SPIRV_EXECUTION_MODEL_VERTEX:     p_layout->shader_type = TG_SPIRV_SHADER_TYPE_VERTEX;   break;
-                case TG_SPIRV_EXECUTION_MODEL_FRAGMENT:   p_layout->shader_type = TG_SPIRV_SHADER_TYPE_FRAGMENT; break;
-                case TG_SPIRV_EXECUTION_MODEL_GL_COMPUTE: p_layout->shader_type = TG_SPIRV_SHADER_TYPE_COMPUTE;  break;
+                case TG_SPIRV_EXECUTION_MODE_VERTEX:     p_layout->shader_type = TG_SPIRV_SHADER_TYPE_VERTEX;   break;
+                case TG_SPIRV_EXECUTION_MODE_GEOMETRY:   p_layout->shader_type = TG_SPIRV_SHADER_TYPE_GEOMETRY; break;
+                case TG_SPIRV_EXECUTION_MODE_FRAGMENT:   p_layout->shader_type = TG_SPIRV_SHADER_TYPE_FRAGMENT; break;
+                case TG_SPIRV_EXECUTION_MODE_GL_COMPUTE: p_layout->shader_type = TG_SPIRV_SHADER_TYPE_COMPUTE;  break;
 
                 default: TG_INVALID_CODEPATH(); break;
                 }
-                const char* p_entry_point_name = (char*)&p_words[processed_word_count + 3];
-                const u32 entry_point_length = tg_strlen_no_nul(p_entry_point_name);
-                TG_ASSERT(entry_point_length + 1 <= TG_SPIRV_MAX_NAME);
-                tg_memcpy((u64)entry_point_length + 1, p_entry_point_name, p_layout->p_entry_point_name);
+
+                TG_DEBUG_EXEC(
+                    const char* p_entry_point_name = (char*)&p_words[processed_word_count + 3];
+                    tg_string_equal(p_entry_point_name, "main");
+                );
             }
             processed_word_count += op_word_count;
         }
@@ -840,41 +842,32 @@ void tg_spirv_fill_layout(u32 word_count, const u32* p_words, tg_spirv_layout* p
 
             if (storage_class == TG_SPIRV_STORAGE_CLASS_UNIFORM_CONSTANT || storage_class == TG_SPIRV_STORAGE_CLASS_UNIFORM)
             {
-                TG_ASSERT(p_layout->global_resource_count < TG_MAX_SHADER_GLOBAL_RESOURCES);
-                tg__fill_global_resource(word_count, p_words, variable_id, &p_layout->p_global_resources[p_layout->global_resource_count]);
-                tg__fill_global_resource(word_count, p_words, points_to_id, &p_layout->p_global_resources[p_layout->global_resource_count]);
-                p_layout->global_resource_count++;
+                TG_ASSERT(p_layout->global_resources.count < TG_MAX_SHADER_GLOBAL_RESOURCES);
+                tg__fill_global_resource(word_count, p_words, variable_id, &p_layout->global_resources.p_resources[p_layout->global_resources.count]);
+                tg__fill_global_resource(word_count, p_words, points_to_id, &p_layout->global_resources.p_resources[p_layout->global_resources.count]);
+                p_layout->global_resources.count++;
             }
-            else if (storage_class == TG_SPIRV_STORAGE_CLASS_INPUT && p_layout->shader_type == TG_SPIRV_SHADER_TYPE_VERTEX)
+            else if (p_layout->shader_type == TG_SPIRV_SHADER_TYPE_VERTEX && storage_class == TG_SPIRV_STORAGE_CLASS_INPUT)
             {
-                TG_ASSERT(p_layout->input_resource_count < TG_MAX_SHADER_INPUTS);
-                tg__fill_inout_resource(word_count, p_words, variable_id, &p_layout->p_input_resources[p_layout->input_resource_count]);
-                tg__fill_inout_resource(word_count, p_words, points_to_id, &p_layout->p_input_resources[p_layout->input_resource_count]);
-                p_layout->input_resource_count++;
+                TG_ASSERT(p_layout->vertex_shader_input.count < TG_MAX_SHADER_INPUTS);
+                tg__fill_inout_resource(word_count, p_words, variable_id, &p_layout->vertex_shader_input.p_resources[p_layout->vertex_shader_input.count]);
+                tg__fill_inout_resource(word_count, p_words, points_to_id, &p_layout->vertex_shader_input.p_resources[p_layout->vertex_shader_input.count]);
+                p_layout->vertex_shader_input.count++;
             }
-            else if (storage_class == TG_SPIRV_STORAGE_CLASS_OUTPUT && p_layout->shader_type == TG_SPIRV_SHADER_TYPE_FRAGMENT)
+            else if (p_layout->shader_type == TG_SPIRV_SHADER_TYPE_FRAGMENT && storage_class == TG_SPIRV_STORAGE_CLASS_OUTPUT)
             {
-                TG_ASSERT(p_layout->output_resource_count < TG_MAX_SHADER_INPUTS);
-                tg__fill_inout_resource(word_count, p_words, variable_id, &p_layout->p_output_resources[p_layout->output_resource_count]);
-                tg__fill_inout_resource(word_count, p_words, points_to_id, &p_layout->p_output_resources[p_layout->output_resource_count]);
-                p_layout->output_resource_count++;
+                TG_ASSERT(p_layout->fragment_shader_output.count < TG_MAX_SHADER_INPUTS);
+                tg__fill_inout_resource(word_count, p_words, variable_id, &p_layout->fragment_shader_output.p_resources[p_layout->fragment_shader_output.count]);
+                tg__fill_inout_resource(word_count, p_words, points_to_id, &p_layout->fragment_shader_output.p_resources[p_layout->fragment_shader_output.count]);
+                p_layout->fragment_shader_output.count++;
             }
         }
 
         processed_word_count += op_word_count;
     }
 
-    if (p_layout->input_resource_count != 0)
+    if (p_layout->shader_type == TG_SPIRV_SHADER_TYPE_VERTEX && p_layout->vertex_shader_input.count != 0)
     {
-        TG_QSORT(p_layout->input_resource_count, p_layout->p_input_resources, tg__compare_by_location, TG_NULL);
-
-        // TODO: this must consider alignment rules! this only works as long as there is no 64 bit value in here somewhere
-        u32 offset = 0;
-        for (u8 i = 0; i < p_layout->input_resource_count; i++)
-        {
-            p_layout->p_input_resources[i].offset = offset;
-            offset += tg_vertex_input_attribute_format_get_size(p_layout->p_input_resources[i].format);
-        }
-        p_layout->vertex_stride = offset;
+        TG_QSORT(p_layout->vertex_shader_input.count, p_layout->vertex_shader_input.p_resources, tg__compare_by_location, TG_NULL);
     }
 }

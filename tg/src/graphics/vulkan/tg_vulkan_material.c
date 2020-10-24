@@ -18,16 +18,24 @@ static tg_material_h tg__create(tgvk_material_type material_type, tg_vertex_shad
     graphics_pipeline_create_info.depth_test_enable = VK_TRUE;
     graphics_pipeline_create_info.depth_write_enable = VK_TRUE;
 
+    VkBool32 p_blend_enable[TG_MAX_SHADER_INPUTS] = { 0 };
+    graphics_pipeline_create_info.p_blend_enable = p_blend_enable;
     switch (material_type)
     {
     case TGVK_MATERIAL_TYPE_DEFERRED:
     {
-        graphics_pipeline_create_info.blend_enable = VK_FALSE;
+        for (u32 i = 0; i < h_fragment_shader->shader.spirv_layout.fragment_shader_output.count; i++)
+        {
+            p_blend_enable[i] = VK_FALSE;
+        }
         graphics_pipeline_create_info.render_pass = shared_render_resources.geometry_render_pass;
     } break;
     case TGVK_MATERIAL_TYPE_FORWARD:
     {
-        graphics_pipeline_create_info.blend_enable = VK_TRUE;
+        for (u32 i = 0; i < h_fragment_shader->shader.spirv_layout.fragment_shader_output.count; i++)
+        {
+            p_blend_enable[i] = VK_TRUE;
+        }
         graphics_pipeline_create_info.render_pass = shared_render_resources.forward_render_pass;
     } break;
     default: TG_INVALID_CODEPATH(); break;
