@@ -72,7 +72,6 @@ static tg_read_write_lock          handle_lock;
     static u16 TGVK_STRUCTURE_FREE_LIST_NAME(name)[count]
 
 TGVK_DEFINE_STRUCTURE_BUFFER(color_image, TG_MAX_COLOR_IMAGES);
-TGVK_DEFINE_STRUCTURE_BUFFER(color_image_3d, TG_MAX_COLOR_IMAGES_3D);
 TGVK_DEFINE_STRUCTURE_BUFFER(compute_shader, TG_MAX_COMPUTE_SHADERS);
 TGVK_DEFINE_STRUCTURE_BUFFER(cube_map, TG_MAX_CUBE_MAPS);
 TGVK_DEFINE_STRUCTURE_BUFFER(depth_image, TG_MAX_DEPTH_IMAGES);
@@ -82,6 +81,7 @@ TGVK_DEFINE_STRUCTURE_BUFFER(mesh, TG_MAX_MESHES);
 TGVK_DEFINE_STRUCTURE_BUFFER(render_command, TG_MAX_RENDER_COMMANDS);
 TGVK_DEFINE_STRUCTURE_BUFFER(renderer, TG_MAX_RENDERERS);
 TGVK_DEFINE_STRUCTURE_BUFFER(storage_buffer, TG_MAX_STORAGE_BUFFERS);
+TGVK_DEFINE_STRUCTURE_BUFFER(storage_image_3d, TG_MAX_STORAGE_IMAGES_3D);
 TGVK_DEFINE_STRUCTURE_BUFFER(uniform_buffer, TG_MAX_UNIFORM_BUFFERS);
 TGVK_DEFINE_STRUCTURE_BUFFER(vertex_shader, TG_MAX_VERTEX_SHADERS);
 
@@ -322,19 +322,19 @@ void* tgvk_handle_array(tg_structure_type type)
 
     switch (type)
     {
-    case TG_STRUCTURE_TYPE_COLOR_IMAGE:     p_array = TGVK_STRUCTURE_BUFFER_NAME(color_image);     break;
-    case TG_STRUCTURE_TYPE_COLOR_IMAGE_3D:  p_array = TGVK_STRUCTURE_BUFFER_NAME(color_image_3d);  break;
-    case TG_STRUCTURE_TYPE_COMPUTE_SHADER:  p_array = TGVK_STRUCTURE_BUFFER_NAME(compute_shader);  break;
-    case TG_STRUCTURE_TYPE_CUBE_MAP:        p_array = TGVK_STRUCTURE_BUFFER_NAME(cube_map);        break;
-    case TG_STRUCTURE_TYPE_DEPTH_IMAGE:     p_array = TGVK_STRUCTURE_BUFFER_NAME(depth_image);     break;
-    case TG_STRUCTURE_TYPE_FRAGMENT_SHADER: p_array = TGVK_STRUCTURE_BUFFER_NAME(fragment_shader); break;
-    case TG_STRUCTURE_TYPE_MATERIAL:        p_array = TGVK_STRUCTURE_BUFFER_NAME(material);        break;
-    case TG_STRUCTURE_TYPE_MESH:            p_array = TGVK_STRUCTURE_BUFFER_NAME(mesh);            break;
-    case TG_STRUCTURE_TYPE_RENDER_COMMAND:  p_array = TGVK_STRUCTURE_BUFFER_NAME(render_command);  break;
-    case TG_STRUCTURE_TYPE_RENDERER:        p_array = TGVK_STRUCTURE_BUFFER_NAME(renderer);        break;
-    case TG_STRUCTURE_TYPE_STORAGE_BUFFER:  p_array = TGVK_STRUCTURE_BUFFER_NAME(storage_buffer);  break;
-    case TG_STRUCTURE_TYPE_UNIFORM_BUFFER:  p_array = TGVK_STRUCTURE_BUFFER_NAME(uniform_buffer);  break;
-    case TG_STRUCTURE_TYPE_VERTEX_SHADER:   p_array = TGVK_STRUCTURE_BUFFER_NAME(vertex_shader);   break;
+    case TG_STRUCTURE_TYPE_COLOR_IMAGE:      p_array = TGVK_STRUCTURE_BUFFER_NAME(color_image);      break;
+    case TG_STRUCTURE_TYPE_COMPUTE_SHADER:   p_array = TGVK_STRUCTURE_BUFFER_NAME(compute_shader);   break;
+    case TG_STRUCTURE_TYPE_CUBE_MAP:         p_array = TGVK_STRUCTURE_BUFFER_NAME(cube_map);         break;
+    case TG_STRUCTURE_TYPE_DEPTH_IMAGE:      p_array = TGVK_STRUCTURE_BUFFER_NAME(depth_image);      break;
+    case TG_STRUCTURE_TYPE_FRAGMENT_SHADER:  p_array = TGVK_STRUCTURE_BUFFER_NAME(fragment_shader);  break;
+    case TG_STRUCTURE_TYPE_MATERIAL:         p_array = TGVK_STRUCTURE_BUFFER_NAME(material);         break;
+    case TG_STRUCTURE_TYPE_MESH:             p_array = TGVK_STRUCTURE_BUFFER_NAME(mesh);             break;
+    case TG_STRUCTURE_TYPE_RENDER_COMMAND:   p_array = TGVK_STRUCTURE_BUFFER_NAME(render_command);   break;
+    case TG_STRUCTURE_TYPE_RENDERER:         p_array = TGVK_STRUCTURE_BUFFER_NAME(renderer);         break;
+    case TG_STRUCTURE_TYPE_STORAGE_BUFFER:   p_array = TGVK_STRUCTURE_BUFFER_NAME(storage_buffer);   break;
+    case TG_STRUCTURE_TYPE_STORAGE_IMAGE_3D: p_array = TGVK_STRUCTURE_BUFFER_NAME(storage_image_3d); break;
+    case TG_STRUCTURE_TYPE_UNIFORM_BUFFER:   p_array = TGVK_STRUCTURE_BUFFER_NAME(uniform_buffer);   break;
+    case TG_STRUCTURE_TYPE_VERTEX_SHADER:    p_array = TGVK_STRUCTURE_BUFFER_NAME(vertex_shader);    break;
 
     default: TG_INVALID_CODEPATH(); break;
     }
@@ -349,19 +349,19 @@ void* tgvk_handle_take(tg_structure_type type)
     TG_RWL_LOCK_FOR_WRITE(handle_lock);
     switch (type)
     {
-    case TG_STRUCTURE_TYPE_COLOR_IMAGE:     { TGVK_STRUCTURE_TAKE(color_image, p_handle);     } break;
-    case TG_STRUCTURE_TYPE_COLOR_IMAGE_3D:  { TGVK_STRUCTURE_TAKE(color_image_3d, p_handle);  } break;
-    case TG_STRUCTURE_TYPE_COMPUTE_SHADER:  { TGVK_STRUCTURE_TAKE(compute_shader, p_handle);  } break;
-    case TG_STRUCTURE_TYPE_CUBE_MAP:        { TGVK_STRUCTURE_TAKE(cube_map, p_handle);        } break;
-    case TG_STRUCTURE_TYPE_DEPTH_IMAGE:     { TGVK_STRUCTURE_TAKE(depth_image, p_handle);     } break;
-    case TG_STRUCTURE_TYPE_FRAGMENT_SHADER: { TGVK_STRUCTURE_TAKE(fragment_shader, p_handle); } break;
-    case TG_STRUCTURE_TYPE_MATERIAL:        { TGVK_STRUCTURE_TAKE(material, p_handle);        } break;
-    case TG_STRUCTURE_TYPE_MESH:            { TGVK_STRUCTURE_TAKE(mesh, p_handle);           } break;
-    case TG_STRUCTURE_TYPE_RENDER_COMMAND:  { TGVK_STRUCTURE_TAKE(render_command, p_handle);  } break;
-    case TG_STRUCTURE_TYPE_RENDERER:        { TGVK_STRUCTURE_TAKE(renderer, p_handle);        } break;
-    case TG_STRUCTURE_TYPE_STORAGE_BUFFER:  { TGVK_STRUCTURE_TAKE(storage_buffer, p_handle);  } break;
-    case TG_STRUCTURE_TYPE_UNIFORM_BUFFER:  { TGVK_STRUCTURE_TAKE(uniform_buffer, p_handle);  } break;
-    case TG_STRUCTURE_TYPE_VERTEX_SHADER:   { TGVK_STRUCTURE_TAKE(vertex_shader, p_handle);   } break;
+    case TG_STRUCTURE_TYPE_COLOR_IMAGE:      { TGVK_STRUCTURE_TAKE(color_image, p_handle);      } break;
+    case TG_STRUCTURE_TYPE_COMPUTE_SHADER:   { TGVK_STRUCTURE_TAKE(compute_shader, p_handle);   } break;
+    case TG_STRUCTURE_TYPE_CUBE_MAP:         { TGVK_STRUCTURE_TAKE(cube_map, p_handle);         } break;
+    case TG_STRUCTURE_TYPE_DEPTH_IMAGE:      { TGVK_STRUCTURE_TAKE(depth_image, p_handle);      } break;
+    case TG_STRUCTURE_TYPE_FRAGMENT_SHADER:  { TGVK_STRUCTURE_TAKE(fragment_shader, p_handle);  } break;
+    case TG_STRUCTURE_TYPE_MATERIAL:         { TGVK_STRUCTURE_TAKE(material, p_handle);         } break;
+    case TG_STRUCTURE_TYPE_MESH:             { TGVK_STRUCTURE_TAKE(mesh, p_handle);             } break;
+    case TG_STRUCTURE_TYPE_RENDER_COMMAND:   { TGVK_STRUCTURE_TAKE(render_command, p_handle);   } break;
+    case TG_STRUCTURE_TYPE_RENDERER:         { TGVK_STRUCTURE_TAKE(renderer, p_handle);         } break;
+    case TG_STRUCTURE_TYPE_STORAGE_BUFFER:   { TGVK_STRUCTURE_TAKE(storage_buffer, p_handle);   } break;
+    case TG_STRUCTURE_TYPE_STORAGE_IMAGE_3D: { TGVK_STRUCTURE_TAKE(storage_image_3d, p_handle); } break;
+    case TG_STRUCTURE_TYPE_UNIFORM_BUFFER:   { TGVK_STRUCTURE_TAKE(uniform_buffer, p_handle);   } break;
+    case TG_STRUCTURE_TYPE_VERTEX_SHADER:    { TGVK_STRUCTURE_TAKE(vertex_shader, p_handle);    } break;
 
     default: TG_INVALID_CODEPATH(); break;
     }
@@ -379,19 +379,19 @@ void tgvk_handle_release(void* p_handle)
     TG_RWL_LOCK_FOR_WRITE(handle_lock);
     switch (type)
     {
-    case TG_STRUCTURE_TYPE_COLOR_IMAGE:     { TGVK_STRUCTURE_RELEASE(color_image, p_handle);     } break;
-    case TG_STRUCTURE_TYPE_COLOR_IMAGE_3D:  { TGVK_STRUCTURE_RELEASE(color_image_3d, p_handle);  } break;
-    case TG_STRUCTURE_TYPE_COMPUTE_SHADER:  { TGVK_STRUCTURE_RELEASE(compute_shader, p_handle);  } break;
-    case TG_STRUCTURE_TYPE_CUBE_MAP:        { TGVK_STRUCTURE_RELEASE(cube_map, p_handle);        } break;
-    case TG_STRUCTURE_TYPE_DEPTH_IMAGE:     { TGVK_STRUCTURE_RELEASE(depth_image, p_handle);     } break;
-    case TG_STRUCTURE_TYPE_FRAGMENT_SHADER: { TGVK_STRUCTURE_RELEASE(fragment_shader, p_handle); } break;
-    case TG_STRUCTURE_TYPE_MATERIAL:        { TGVK_STRUCTURE_RELEASE(material, p_handle);        } break;
-    case TG_STRUCTURE_TYPE_MESH:            { TGVK_STRUCTURE_RELEASE(mesh, p_handle);           } break;
-    case TG_STRUCTURE_TYPE_RENDER_COMMAND:  { TGVK_STRUCTURE_RELEASE(render_command, p_handle);  } break;
-    case TG_STRUCTURE_TYPE_RENDERER:        { TGVK_STRUCTURE_RELEASE(renderer, p_handle);        } break;
-    case TG_STRUCTURE_TYPE_STORAGE_BUFFER:  { TGVK_STRUCTURE_RELEASE(storage_buffer, p_handle);  } break;
-    case TG_STRUCTURE_TYPE_UNIFORM_BUFFER:  { TGVK_STRUCTURE_RELEASE(uniform_buffer, p_handle);  } break;
-    case TG_STRUCTURE_TYPE_VERTEX_SHADER:   { TGVK_STRUCTURE_RELEASE(vertex_shader, p_handle);   } break;
+    case TG_STRUCTURE_TYPE_COLOR_IMAGE:      { TGVK_STRUCTURE_RELEASE(color_image, p_handle);      } break;
+    case TG_STRUCTURE_TYPE_COMPUTE_SHADER:   { TGVK_STRUCTURE_RELEASE(compute_shader, p_handle);   } break;
+    case TG_STRUCTURE_TYPE_CUBE_MAP:         { TGVK_STRUCTURE_RELEASE(cube_map, p_handle);         } break;
+    case TG_STRUCTURE_TYPE_DEPTH_IMAGE:      { TGVK_STRUCTURE_RELEASE(depth_image, p_handle);      } break;
+    case TG_STRUCTURE_TYPE_FRAGMENT_SHADER:  { TGVK_STRUCTURE_RELEASE(fragment_shader, p_handle);  } break;
+    case TG_STRUCTURE_TYPE_MATERIAL:         { TGVK_STRUCTURE_RELEASE(material, p_handle);         } break;
+    case TG_STRUCTURE_TYPE_MESH:             { TGVK_STRUCTURE_RELEASE(mesh, p_handle);             } break;
+    case TG_STRUCTURE_TYPE_RENDER_COMMAND:   { TGVK_STRUCTURE_RELEASE(render_command, p_handle);   } break;
+    case TG_STRUCTURE_TYPE_RENDERER:         { TGVK_STRUCTURE_RELEASE(renderer, p_handle);         } break;
+    case TG_STRUCTURE_TYPE_STORAGE_BUFFER:   { TGVK_STRUCTURE_RELEASE(storage_buffer, p_handle);   } break;
+    case TG_STRUCTURE_TYPE_UNIFORM_BUFFER:   { TGVK_STRUCTURE_RELEASE(uniform_buffer, p_handle);   } break;
+    case TG_STRUCTURE_TYPE_STORAGE_IMAGE_3D: { TGVK_STRUCTURE_RELEASE(storage_image_3d, p_handle); } break;
+    case TG_STRUCTURE_TYPE_VERTEX_SHADER:    { TGVK_STRUCTURE_RELEASE(vertex_shader, p_handle);    } break;
     
     default: TG_INVALID_CODEPATH(); break;
     }
@@ -599,24 +599,6 @@ void tgvk_cmd_clear_color_image(tgvk_command_buffer* p_command_buffer, tgvk_imag
     vkCmdClearColorImage(p_command_buffer->command_buffer, p_color_image->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color_value, 1, &image_subresource_range);
 }
 
-void tgvk_cmd_clear_color_image_3d(tgvk_command_buffer* p_command_buffer, tgvk_image_3d* p_color_image_3d)
-{
-    VkImageSubresourceRange image_subresource_range = { 0 };
-    image_subresource_range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    image_subresource_range.baseMipLevel = 0;
-    image_subresource_range.levelCount = 1;
-    image_subresource_range.baseArrayLayer = 0;
-    image_subresource_range.layerCount = 1;
-
-    VkClearColorValue clear_color_value = { 0 };
-    clear_color_value.float32[0] = 0.0f;
-    clear_color_value.float32[1] = 0.0f;
-    clear_color_value.float32[2] = 0.0f;
-    clear_color_value.float32[3] = 0.0f;
-
-    vkCmdClearColorImage(p_command_buffer->command_buffer, p_color_image_3d->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color_value, 1, &image_subresource_range);
-}
-
 void tgvk_cmd_clear_depth_image(tgvk_command_buffer* p_command_buffer, tgvk_image* p_depth_image)
 {
     VkImageSubresourceRange image_subresource_range = { 0 };
@@ -631,6 +613,24 @@ void tgvk_cmd_clear_depth_image(tgvk_command_buffer* p_command_buffer, tgvk_imag
     clear_depth_stencil_value.stencil = 0;
 
     vkCmdClearDepthStencilImage(p_command_buffer->command_buffer, p_depth_image->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_depth_stencil_value, 1, &image_subresource_range);
+}
+
+void tgvk_cmd_clear_storage_image_3d(tgvk_command_buffer* p_command_buffer, tgvk_image_3d* p_storage_image_3d)
+{
+    VkImageSubresourceRange image_subresource_range = { 0 };
+    image_subresource_range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    image_subresource_range.baseMipLevel = 0;
+    image_subresource_range.levelCount = 1;
+    image_subresource_range.baseArrayLayer = 0;
+    image_subresource_range.layerCount = 1;
+
+    VkClearColorValue clear_color_value = { 0 };
+    clear_color_value.float32[0] = 0.0f;
+    clear_color_value.float32[1] = 0.0f;
+    clear_color_value.float32[2] = 0.0f;
+    clear_color_value.float32[3] = 0.0f;
+
+    vkCmdClearColorImage(p_command_buffer->command_buffer, p_storage_image_3d->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color_value, 1, &image_subresource_range);
 }
 
 void tgvk_cmd_copy_buffer(tgvk_command_buffer* p_command_buffer, VkDeviceSize size, tgvk_buffer* p_src, tgvk_buffer* p_dst)
@@ -659,26 +659,6 @@ void tgvk_cmd_copy_buffer_to_color_image(tgvk_command_buffer* p_command_buffer, 
     buffer_image_copy.imageExtent.width = p_destination->width;
     buffer_image_copy.imageExtent.height = p_destination->height;
     buffer_image_copy.imageExtent.depth = 1;
-
-    vkCmdCopyBufferToImage(p_command_buffer->command_buffer, source, p_destination->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &buffer_image_copy);
-}
-
-void tgvk_cmd_copy_buffer_to_color_image_3d(tgvk_command_buffer* p_command_buffer, VkBuffer source, tgvk_image_3d* p_destination)
-{
-    VkBufferImageCopy buffer_image_copy = { 0 };
-    buffer_image_copy.bufferOffset = 0;
-    buffer_image_copy.bufferRowLength = 0;
-    buffer_image_copy.bufferImageHeight = 0;
-    buffer_image_copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    buffer_image_copy.imageSubresource.mipLevel = 0;
-    buffer_image_copy.imageSubresource.baseArrayLayer = 0;
-    buffer_image_copy.imageSubresource.layerCount = 1;
-    buffer_image_copy.imageOffset.x = 0;
-    buffer_image_copy.imageOffset.y = 0;
-    buffer_image_copy.imageOffset.z = 0;
-    buffer_image_copy.imageExtent.width = p_destination->width;
-    buffer_image_copy.imageExtent.height = p_destination->height;
-    buffer_image_copy.imageExtent.depth = p_destination->depth;
 
     vkCmdCopyBufferToImage(p_command_buffer->command_buffer, source, p_destination->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &buffer_image_copy);
 }
@@ -719,6 +699,26 @@ void tgvk_cmd_copy_buffer_to_depth_image(tgvk_command_buffer* p_command_buffer, 
     buffer_image_copy.imageExtent.width = p_destination->width;
     buffer_image_copy.imageExtent.height = p_destination->height;
     buffer_image_copy.imageExtent.depth = 1;
+
+    vkCmdCopyBufferToImage(p_command_buffer->command_buffer, source, p_destination->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &buffer_image_copy);
+}
+
+void tgvk_cmd_copy_buffer_to_storage_image_3d(tgvk_command_buffer* p_command_buffer, VkBuffer source, tgvk_image_3d* p_destination)
+{
+    VkBufferImageCopy buffer_image_copy = { 0 };
+    buffer_image_copy.bufferOffset = 0;
+    buffer_image_copy.bufferRowLength = 0;
+    buffer_image_copy.bufferImageHeight = 0;
+    buffer_image_copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    buffer_image_copy.imageSubresource.mipLevel = 0;
+    buffer_image_copy.imageSubresource.baseArrayLayer = 0;
+    buffer_image_copy.imageSubresource.layerCount = 1;
+    buffer_image_copy.imageOffset.x = 0;
+    buffer_image_copy.imageOffset.y = 0;
+    buffer_image_copy.imageOffset.z = 0;
+    buffer_image_copy.imageExtent.width = p_destination->width;
+    buffer_image_copy.imageExtent.height = p_destination->height;
+    buffer_image_copy.imageExtent.depth = p_destination->depth;
 
     vkCmdCopyBufferToImage(p_command_buffer->command_buffer, source, p_destination->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &buffer_image_copy);
 }
@@ -767,26 +767,6 @@ void tgvk_cmd_copy_color_image_to_buffer(tgvk_command_buffer* p_command_buffer, 
     vkCmdCopyImageToBuffer(p_command_buffer->command_buffer, p_source->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, destination, 1, &buffer_image_copy);
 }
 
-void tgvk_cmd_copy_color_image_3d_to_buffer(tgvk_command_buffer* p_command_buffer, tgvk_image_3d* p_source, VkBuffer destination)
-{
-    VkBufferImageCopy buffer_image_copy = { 0 };
-    buffer_image_copy.bufferOffset = 0;
-    buffer_image_copy.bufferRowLength = 0;
-    buffer_image_copy.bufferImageHeight = 0;
-    buffer_image_copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    buffer_image_copy.imageSubresource.mipLevel = 0;
-    buffer_image_copy.imageSubresource.baseArrayLayer = 0;
-    buffer_image_copy.imageSubresource.layerCount = 1;
-    buffer_image_copy.imageOffset.x = 0;
-    buffer_image_copy.imageOffset.y = 0;
-    buffer_image_copy.imageOffset.z = 0;
-    buffer_image_copy.imageExtent.width = p_source->width;
-    buffer_image_copy.imageExtent.height = p_source->height;
-    buffer_image_copy.imageExtent.depth = p_source->depth;
-
-    vkCmdCopyImageToBuffer(p_command_buffer->command_buffer, p_source->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, destination, 1, &buffer_image_copy);
-}
-
 void tgvk_cmd_copy_depth_image_pixel_to_buffer(tgvk_command_buffer* p_command_buffer, tgvk_image* p_source, VkBuffer destination, u32 x, u32 y)
 {
     VkBufferImageCopy buffer_image_copy = { 0 };
@@ -803,6 +783,26 @@ void tgvk_cmd_copy_depth_image_pixel_to_buffer(tgvk_command_buffer* p_command_bu
     buffer_image_copy.imageExtent.width = 1;
     buffer_image_copy.imageExtent.height = 1;
     buffer_image_copy.imageExtent.depth = 1;
+
+    vkCmdCopyImageToBuffer(p_command_buffer->command_buffer, p_source->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, destination, 1, &buffer_image_copy);
+}
+
+void tgvk_cmd_copy_storage_image_3d_to_buffer(tgvk_command_buffer* p_command_buffer, tgvk_image_3d* p_source, VkBuffer destination)
+{
+    VkBufferImageCopy buffer_image_copy = { 0 };
+    buffer_image_copy.bufferOffset = 0;
+    buffer_image_copy.bufferRowLength = 0;
+    buffer_image_copy.bufferImageHeight = 0;
+    buffer_image_copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    buffer_image_copy.imageSubresource.mipLevel = 0;
+    buffer_image_copy.imageSubresource.baseArrayLayer = 0;
+    buffer_image_copy.imageSubresource.layerCount = 1;
+    buffer_image_copy.imageOffset.x = 0;
+    buffer_image_copy.imageOffset.y = 0;
+    buffer_image_copy.imageOffset.z = 0;
+    buffer_image_copy.imageExtent.width = p_source->width;
+    buffer_image_copy.imageExtent.height = p_source->height;
+    buffer_image_copy.imageExtent.depth = p_source->depth;
 
     vkCmdCopyImageToBuffer(p_command_buffer->command_buffer, p_source->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, destination, 1, &buffer_image_copy);
 }
@@ -824,27 +824,6 @@ void tgvk_cmd_transition_color_image_layout(tgvk_command_buffer* p_command_buffe
     image_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     image_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     image_memory_barrier.image = p_image->image;
-    image_memory_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    image_memory_barrier.subresourceRange.baseMipLevel = 0;
-    image_memory_barrier.subresourceRange.levelCount = 1;
-    image_memory_barrier.subresourceRange.baseArrayLayer = 0;
-    image_memory_barrier.subresourceRange.layerCount = 1;
-
-    vkCmdPipelineBarrier(p_command_buffer->command_buffer, src_stage_bits, dst_stage_bits, 0, 0, TG_NULL, 0, TG_NULL, 1, &image_memory_barrier);
-}
-
-void tgvk_cmd_transition_color_image_3d_layout(tgvk_command_buffer* p_command_buffer, tgvk_image_3d* p_image_3d, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits)
-{
-    VkImageMemoryBarrier image_memory_barrier = { 0 };
-    image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    image_memory_barrier.pNext = TG_NULL;
-    image_memory_barrier.srcAccessMask = src_access_mask;
-    image_memory_barrier.dstAccessMask = dst_access_mask;
-    image_memory_barrier.oldLayout = old_layout;
-    image_memory_barrier.newLayout = new_layout;
-    image_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    image_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    image_memory_barrier.image = p_image_3d->image;
     image_memory_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     image_memory_barrier.subresourceRange.baseMipLevel = 0;
     image_memory_barrier.subresourceRange.levelCount = 1;
@@ -896,11 +875,33 @@ void tgvk_cmd_transition_depth_image_layout(tgvk_command_buffer* p_command_buffe
     vkCmdPipelineBarrier(p_command_buffer->command_buffer, src_stage_bits, dst_stage_bits, 0, 0, TG_NULL, 0, TG_NULL, 1, &image_memory_barrier);
 }
 
+void tgvk_cmd_transition_storage_image_3d_layout(tgvk_command_buffer* p_command_buffer, tgvk_image_3d* p_storage_image_3d, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits)
+{
+    VkImageMemoryBarrier image_memory_barrier = { 0 };
+    image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    image_memory_barrier.pNext = TG_NULL;
+    image_memory_barrier.srcAccessMask = src_access_mask;
+    image_memory_barrier.dstAccessMask = dst_access_mask;
+    image_memory_barrier.oldLayout = old_layout;
+    image_memory_barrier.newLayout = new_layout;
+    image_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    image_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    image_memory_barrier.image = p_storage_image_3d->image;
+    image_memory_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    image_memory_barrier.subresourceRange.baseMipLevel = 0;
+    image_memory_barrier.subresourceRange.levelCount = 1;
+    image_memory_barrier.subresourceRange.baseArrayLayer = 0;
+    image_memory_barrier.subresourceRange.layerCount = 1;
+
+    vkCmdPipelineBarrier(p_command_buffer->command_buffer, src_stage_bits, dst_stage_bits, 0, 0, TG_NULL, 0, TG_NULL, 1, &image_memory_barrier);
+}
+
 
 
 tgvk_image tgvk_color_image_create(u32 width, u32 height, VkFormat format, const tg_sampler_create_info* p_sampler_create_info)
 {
     tgvk_image image = { 0 };
+    image.type = TGVK_IMAGE_TYPE_COLOR;
     image.width = width;
     image.height = height;
     image.format = format;
@@ -1055,72 +1056,6 @@ tgvk_image tgvk_color_image_create2(const char* p_filename, const tg_sampler_cre
     tg_image_free(p_data);
 
     return image;
-}
-
-
-
-tgvk_image_3d tgvk_color_image_3d_create(u32 width, u32 height, u32 depth, VkFormat format, const tg_sampler_create_info* p_sampler_create_info)
-{
-    tgvk_image_3d image_3d = { 0 };
-    image_3d.width = width;
-    image_3d.height = height;
-    image_3d.depth = depth;
-    image_3d.format = format;
-
-    VkImageCreateInfo image_create_info = { 0 };
-    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    image_create_info.pNext = TG_NULL;
-    image_create_info.flags = 0;
-    image_create_info.imageType = VK_IMAGE_TYPE_3D;
-    image_create_info.format = format;
-    image_create_info.extent.width = width;
-    image_create_info.extent.height = height;
-    image_create_info.extent.depth = depth;
-    image_create_info.mipLevels = 1;
-    image_create_info.arrayLayers = 1;
-    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
-    image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
-    image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-    image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    image_create_info.queueFamilyIndexCount = 0;
-    image_create_info.pQueueFamilyIndices = TG_NULL;
-    image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-
-    TGVK_CALL(vkCreateImage(device, &image_create_info, TG_NULL, &image_3d.image));
-
-    VkMemoryRequirements memory_requirements = { 0 };
-    vkGetImageMemoryRequirements(device, image_3d.image, &memory_requirements);
-    image_3d.memory = tgvk_memory_allocator_alloc(memory_requirements.alignment, memory_requirements.size, memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    TGVK_CALL(vkBindImageMemory(device, image_3d.image, image_3d.memory.device_memory, image_3d.memory.offset));
-
-    image_3d.image_view = tg__image_view_create(image_3d.image, VK_IMAGE_VIEW_TYPE_3D, image_3d.format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
-
-    if (p_sampler_create_info)
-    {
-        // TODO: mip levels, also above and below, once respectively
-        image_3d.sampler = tg__sampler_create_custom(
-            1,
-            p_sampler_create_info->min_filter,
-            p_sampler_create_info->mag_filter,
-            p_sampler_create_info->address_mode_u,
-            p_sampler_create_info->address_mode_v,
-            p_sampler_create_info->address_mode_w
-        );
-    }
-    else
-    {
-        image_3d.sampler = tg__sampler_create(1);
-    }
-
-    return image_3d;
-}
-
-void tgvk_color_image_3d_destroy(tgvk_image_3d* p_image_3d)
-{
-    vkDestroySampler(device, p_image_3d->sampler, TG_NULL);
-    vkDestroyImageView(device, p_image_3d->image_view, TG_NULL);
-    tgvk_memory_allocator_free(&p_image_3d->memory);
-    vkDestroyImage(device, p_image_3d->image, TG_NULL);
 }
 
 
@@ -1349,19 +1284,20 @@ void tgvk_cube_map_destroy(tgvk_cube_map* p_cube_map)
 
 tgvk_image tgvk_depth_image_create(u32 width, u32 height, VkFormat format, const tg_sampler_create_info* p_sampler_create_info)
 {
-    tgvk_image depth_image = { 0 };
-    depth_image.width = width;
-    depth_image.height = height;
-    depth_image.format = format;
+    tgvk_image image = { 0 };
+    image.type = TGVK_IMAGE_TYPE_DEPTH;
+    image.width = width;
+    image.height = height;
+    image.format = format;
 
     VkImageCreateInfo image_create_info = { 0 };
     image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     image_create_info.pNext = TG_NULL;
     image_create_info.flags = 0;
     image_create_info.imageType = VK_IMAGE_TYPE_2D;
-    image_create_info.format = depth_image.format;
-    image_create_info.extent.width = depth_image.width;
-    image_create_info.extent.height = depth_image.height;
+    image_create_info.format = image.format;
+    image_create_info.extent.width = image.width;
+    image_create_info.extent.height = image.height;
     image_create_info.extent.depth = 1;
     image_create_info.mipLevels = 1;
     image_create_info.arrayLayers = 1;
@@ -1373,18 +1309,18 @@ tgvk_image tgvk_depth_image_create(u32 width, u32 height, VkFormat format, const
     image_create_info.pQueueFamilyIndices = TG_NULL;
     image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-    TGVK_CALL(vkCreateImage(device, &image_create_info, TG_NULL, &depth_image.image));
+    TGVK_CALL(vkCreateImage(device, &image_create_info, TG_NULL, &image.image));
 
     VkMemoryRequirements memory_requirements = { 0 };
-    vkGetImageMemoryRequirements(device, depth_image.image, &memory_requirements);
-    depth_image.memory = tgvk_memory_allocator_alloc(memory_requirements.alignment, memory_requirements.size, memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    TGVK_CALL(vkBindImageMemory(device, depth_image.image, depth_image.memory.device_memory, depth_image.memory.offset));
+    vkGetImageMemoryRequirements(device, image.image, &memory_requirements);
+    image.memory = tgvk_memory_allocator_alloc(memory_requirements.alignment, memory_requirements.size, memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    TGVK_CALL(vkBindImageMemory(device, image.image, image.memory.device_memory, image.memory.offset));
 
-    depth_image.image_view = tg__image_view_create(depth_image.image, VK_IMAGE_VIEW_TYPE_2D, depth_image.format, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
+    image.image_view = tg__image_view_create(image.image, VK_IMAGE_VIEW_TYPE_2D, image.format, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
 
     if (p_sampler_create_info)
     {
-        depth_image.sampler = tg__sampler_create_custom(
+        image.sampler = tg__sampler_create_custom(
             1,
             p_sampler_create_info->min_filter,
             p_sampler_create_info->mag_filter,
@@ -1395,10 +1331,10 @@ tgvk_image tgvk_depth_image_create(u32 width, u32 height, VkFormat format, const
     }
     else
     {
-        depth_image.sampler = tg__sampler_create(1);
+        image.sampler = tg__sampler_create(1);
     }
 
-    return depth_image;
+    return image;
 }
 
 
@@ -1454,10 +1390,10 @@ void tgvk_descriptor_set_update(VkDescriptorSet descriptor_set, tg_handle handle
         tg_color_image_h h_color_image = (tg_color_image_h)handle;
         tgvk_descriptor_set_update_image(descriptor_set, &h_color_image->image, dst_binding);
     } break;
-    case TG_STRUCTURE_TYPE_COLOR_IMAGE_3D:
+    case TG_STRUCTURE_TYPE_STORAGE_IMAGE_3D:
     {
-        tg_color_image_3d_h h_color_image_3d = (tg_color_image_3d_h)handle;
-        tgvk_descriptor_set_update_image_3d(descriptor_set, &h_color_image_3d->image_3d, dst_binding);
+        tg_storage_image_3d_h h_storage_image_3d = (tg_storage_image_3d_h)handle;
+        tgvk_descriptor_set_update_storage_image_3d(descriptor_set, &h_storage_image_3d->storage_image_3d, dst_binding);
     } break;
     case TG_STRUCTURE_TYPE_CUBE_MAP:
     {
@@ -1503,28 +1439,6 @@ void tgvk_descriptor_set_update_image(VkDescriptorSet descriptor_set, tgvk_image
     write_descriptor_set.dstArrayElement = 0;
     write_descriptor_set.descriptorCount = 1;
     write_descriptor_set.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    write_descriptor_set.pImageInfo = &descriptor_image_info;
-    write_descriptor_set.pBufferInfo = TG_NULL;
-    write_descriptor_set.pTexelBufferView = TG_NULL;
-
-    vkUpdateDescriptorSets(device, 1, &write_descriptor_set, 0, TG_NULL);
-}
-
-void tgvk_descriptor_set_update_image_3d(VkDescriptorSet descriptor_set, tgvk_image_3d* p_image_3d, u32 dst_binding)
-{
-    VkDescriptorImageInfo descriptor_image_info = { 0 };
-    descriptor_image_info.sampler = p_image_3d->sampler;
-    descriptor_image_info.imageView = p_image_3d->image_view;
-    descriptor_image_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-
-    VkWriteDescriptorSet write_descriptor_set = { 0 };
-    write_descriptor_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    write_descriptor_set.pNext = TG_NULL;
-    write_descriptor_set.dstSet = descriptor_set;
-    write_descriptor_set.dstBinding = dst_binding;
-    write_descriptor_set.dstArrayElement = 0;
-    write_descriptor_set.descriptorCount = 1;
-    write_descriptor_set.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
     write_descriptor_set.pImageInfo = &descriptor_image_info;
     write_descriptor_set.pBufferInfo = TG_NULL;
     write_descriptor_set.pTexelBufferView = TG_NULL;
@@ -1626,6 +1540,28 @@ void tgvk_descriptor_set_update_storage_buffer_array(VkDescriptorSet descriptor_
     vkUpdateDescriptorSets(device, 1, &write_descriptor_set, 0, TG_NULL);
 }
 
+void tgvk_descriptor_set_update_storage_image_3d(VkDescriptorSet descriptor_set, tgvk_image_3d* p_storage_image_3d, u32 dst_binding)
+{
+    VkDescriptorImageInfo descriptor_image_info = { 0 };
+    descriptor_image_info.sampler = p_storage_image_3d->sampler;
+    descriptor_image_info.imageView = p_storage_image_3d->image_view;
+    descriptor_image_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+
+    VkWriteDescriptorSet write_descriptor_set = { 0 };
+    write_descriptor_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    write_descriptor_set.pNext = TG_NULL;
+    write_descriptor_set.dstSet = descriptor_set;
+    write_descriptor_set.dstBinding = dst_binding;
+    write_descriptor_set.dstArrayElement = 0;
+    write_descriptor_set.descriptorCount = 1;
+    write_descriptor_set.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    write_descriptor_set.pImageInfo = &descriptor_image_info;
+    write_descriptor_set.pBufferInfo = TG_NULL;
+    write_descriptor_set.pTexelBufferView = TG_NULL;
+
+    vkUpdateDescriptorSets(device, 1, &write_descriptor_set, 0, TG_NULL);
+}
+
 void tgvk_descriptor_set_update_uniform_buffer(VkDescriptorSet descriptor_set, VkBuffer buffer, u32 dst_binding)
 {
     VkDescriptorBufferInfo descriptor_buffer_info = { 0 };
@@ -1661,6 +1597,28 @@ void tgvk_descriptor_set_update_uniform_buffer_array(VkDescriptorSet descriptor_
     write_descriptor_set.dstSet = descriptor_set;
     write_descriptor_set.dstBinding = dst_binding;
     write_descriptor_set.dstArrayElement = array_index;
+    write_descriptor_set.descriptorCount = 1;
+    write_descriptor_set.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    write_descriptor_set.pImageInfo = TG_NULL;
+    write_descriptor_set.pBufferInfo = &descriptor_buffer_info;
+    write_descriptor_set.pTexelBufferView = TG_NULL;
+
+    vkUpdateDescriptorSets(device, 1, &write_descriptor_set, 0, TG_NULL);
+}
+
+void tgvk_descriptor_set_update_uniform_buffer_range(VkDescriptorSet descriptor_set, VkDeviceSize offset, VkDeviceSize range, VkBuffer buffer, u32 dst_binding)
+{
+    VkDescriptorBufferInfo descriptor_buffer_info = { 0 };
+    descriptor_buffer_info.buffer = buffer;
+    descriptor_buffer_info.offset = offset;
+    descriptor_buffer_info.range = range;
+
+    VkWriteDescriptorSet write_descriptor_set = { 0 };
+    write_descriptor_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    write_descriptor_set.pNext = TG_NULL;
+    write_descriptor_set.dstSet = descriptor_set;
+    write_descriptor_set.dstBinding = dst_binding;
+    write_descriptor_set.dstArrayElement = 0;
     write_descriptor_set.descriptorCount = 1;
     write_descriptor_set.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     write_descriptor_set.pImageInfo = TG_NULL;
@@ -2271,11 +2229,13 @@ void tgvk_queue_wait_idle(tgvk_queue_type type)
 
 
 
-VkRenderPass tgvk_render_pass_create(u32 attachment_count, const VkAttachmentDescription* p_attachments, u32 subpass_count, const VkSubpassDescription* p_subpasses, u32 additional_dependency_count, const VkSubpassDependency* p_additional_dependencies)
+VkRenderPass tgvk_render_pass_create(const VkAttachmentDescription* p_attachment_description, const VkSubpassDescription* p_subpass_description)
 {
-    TG_ASSERT(subpass_count);
-    TG_ASSERT(subpass_count - 1 <= additional_dependency_count);
-    TG_ASSERT(subpass_count + 2 >= additional_dependency_count);
+    TG_ASSERT(!p_subpass_description->inputAttachmentCount);
+    TG_ASSERT(!p_subpass_description->pInputAttachments);
+    TG_ASSERT(!p_subpass_description->pResolveAttachments);
+    TG_ASSERT(!p_subpass_description->preserveAttachmentCount);
+    TG_ASSERT(!p_subpass_description->pPreserveAttachments);
 
     VkRenderPass render_pass = VK_NULL_HANDLE;
 
@@ -2283,12 +2243,12 @@ VkRenderPass tgvk_render_pass_create(u32 attachment_count, const VkAttachmentDes
     render_pass_create_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     render_pass_create_info.pNext = TG_NULL;
     render_pass_create_info.flags = 0;
-    render_pass_create_info.attachmentCount = attachment_count;
-    render_pass_create_info.pAttachments = p_attachments;
-    render_pass_create_info.subpassCount = subpass_count;
-    render_pass_create_info.pSubpasses = p_subpasses;
-    render_pass_create_info.dependencyCount = additional_dependency_count;
-    render_pass_create_info.pDependencies = p_additional_dependencies;
+    render_pass_create_info.attachmentCount = p_subpass_description->colorAttachmentCount + (u32)(p_subpass_description->pDepthStencilAttachment != TG_NULL);
+    render_pass_create_info.pAttachments = p_attachment_description;
+    render_pass_create_info.subpassCount = 1;
+    render_pass_create_info.pSubpasses = p_subpass_description;
+    render_pass_create_info.dependencyCount = 0;
+    render_pass_create_info.pDependencies = TG_NULL;
 
     TGVK_CALL(vkCreateRenderPass(device, &render_pass_create_info, TG_NULL, &render_pass));
 
@@ -2441,6 +2401,73 @@ tgvk_shader tgvk_shader_create_from_spirv(u32 size, const char* p_source)
 void tgvk_shader_destroy(tgvk_shader* p_shader)
 {
     vkDestroyShaderModule(device, p_shader->shader_module, TG_NULL);
+}
+
+
+
+tgvk_image_3d tgvk_storage_image_3d_create(u32 width, u32 height, u32 depth, VkFormat format, const tg_sampler_create_info* p_sampler_create_info)
+{
+    tgvk_image_3d image_3d = { 0 };
+    image_3d.type = TGVK_IMAGE_TYPE_STORAGE;
+    image_3d.width = width;
+    image_3d.height = height;
+    image_3d.depth = depth;
+    image_3d.format = format;
+
+    VkImageCreateInfo image_create_info = { 0 };
+    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_create_info.pNext = TG_NULL;
+    image_create_info.flags = 0;
+    image_create_info.imageType = VK_IMAGE_TYPE_3D;
+    image_create_info.format = format;
+    image_create_info.extent.width = width;
+    image_create_info.extent.height = height;
+    image_create_info.extent.depth = depth;
+    image_create_info.mipLevels = 1;
+    image_create_info.arrayLayers = 1;
+    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
+    image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+    image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    image_create_info.queueFamilyIndexCount = 0;
+    image_create_info.pQueueFamilyIndices = TG_NULL;
+    image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+    TGVK_CALL(vkCreateImage(device, &image_create_info, TG_NULL, &image_3d.image));
+
+    VkMemoryRequirements memory_requirements = { 0 };
+    vkGetImageMemoryRequirements(device, image_3d.image, &memory_requirements);
+    image_3d.memory = tgvk_memory_allocator_alloc(memory_requirements.alignment, memory_requirements.size, memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    TGVK_CALL(vkBindImageMemory(device, image_3d.image, image_3d.memory.device_memory, image_3d.memory.offset));
+
+    image_3d.image_view = tg__image_view_create(image_3d.image, VK_IMAGE_VIEW_TYPE_3D, image_3d.format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+
+    if (p_sampler_create_info)
+    {
+        // TODO: mip levels, also above and below, once respectively
+        image_3d.sampler = tg__sampler_create_custom(
+            1,
+            p_sampler_create_info->min_filter,
+            p_sampler_create_info->mag_filter,
+            p_sampler_create_info->address_mode_u,
+            p_sampler_create_info->address_mode_v,
+            p_sampler_create_info->address_mode_w
+        );
+    }
+    else
+    {
+        image_3d.sampler = tg__sampler_create(1);
+    }
+
+    return image_3d;
+}
+
+void tgvk_storage_image_3d_destroy(tgvk_image_3d* p_storage_image_3d)
+{
+    vkDestroySampler(device, p_storage_image_3d->sampler, TG_NULL);
+    vkDestroyImageView(device, p_storage_image_3d->image_view, TG_NULL);
+    tgvk_memory_allocator_free(&p_storage_image_3d->memory);
+    vkDestroyImage(device, p_storage_image_3d->image, TG_NULL);
 }
 
 

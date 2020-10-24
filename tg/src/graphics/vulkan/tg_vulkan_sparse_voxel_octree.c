@@ -20,7 +20,7 @@ void tg_voxelizer_create(tg_voxelizer* p_voxelizer)
     subpass_description.preserveAttachmentCount = 0;
     subpass_description.pPreserveAttachments = TG_NULL;
 
-    p_voxelizer->render_pass = tgvk_render_pass_create(0, TG_NULL, 1, &subpass_description, 0, TG_NULL);
+    p_voxelizer->render_pass = tgvk_render_pass_create(TG_NULL, &subpass_description);
     p_voxelizer->framebuffer = tgvk_framebuffer_create(p_voxelizer->render_pass, 0, TG_NULL, TG_SVO_DIMS, TG_SVO_DIMS);
 
     tgvk_graphics_pipeline_create_info graphics_pipeline_create_info = { 0 };
@@ -63,21 +63,21 @@ void tg_voxelizer_create(tg_voxelizer* p_voxelizer)
 
     p_voxelizer->view_projection_ubo = tgvk_buffer_create(3 * sizeof(m4), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 
-    p_voxelizer->p_image_3ds[0] = tgvk_color_image_3d_create(TG_SVO_DIMS, TG_SVO_DIMS, TG_SVO_DIMS, (VkFormat)TG_COLOR_IMAGE_FORMAT_R32_UINT, TG_NULL);
-    p_voxelizer->p_image_3ds[1] = tgvk_color_image_3d_create(TG_SVO_DIMS, TG_SVO_DIMS, TG_SVO_DIMS, (VkFormat)TG_COLOR_IMAGE_FORMAT_R32_UINT, TG_NULL);
-    p_voxelizer->p_image_3ds[2] = tgvk_color_image_3d_create(TG_SVO_DIMS, TG_SVO_DIMS, TG_SVO_DIMS, (VkFormat)TG_COLOR_IMAGE_FORMAT_R32_UINT, TG_NULL);
-    p_voxelizer->p_image_3ds[3] = tgvk_color_image_3d_create(TG_SVO_DIMS, TG_SVO_DIMS, TG_SVO_DIMS, (VkFormat)TG_COLOR_IMAGE_FORMAT_R32_UINT, TG_NULL);
-    p_voxelizer->p_image_3ds[4] = tgvk_color_image_3d_create(TG_SVO_DIMS, TG_SVO_DIMS, TG_SVO_DIMS, (VkFormat)TG_COLOR_IMAGE_FORMAT_R32_UINT, TG_NULL);
-    p_voxelizer->p_image_3ds[5] = tgvk_color_image_3d_create(TG_SVO_DIMS, TG_SVO_DIMS, TG_SVO_DIMS, (VkFormat)TG_COLOR_IMAGE_FORMAT_R32_UINT, TG_NULL);
-    p_voxelizer->p_image_3ds[6] = tgvk_color_image_3d_create(TG_SVO_DIMS, TG_SVO_DIMS, TG_SVO_DIMS, (VkFormat)TG_COLOR_IMAGE_FORMAT_R32_UINT, TG_NULL);
-    p_voxelizer->p_image_3ds[7] = tgvk_color_image_3d_create(TG_SVO_DIMS, TG_SVO_DIMS, TG_SVO_DIMS, (VkFormat)TG_COLOR_IMAGE_FORMAT_R32_UINT, TG_NULL);
+    p_voxelizer->p_image_3ds[0] = tgvk_storage_image_3d_create(TG_SVO_DIMS, TG_SVO_DIMS, TG_SVO_DIMS, (VkFormat)TG_COLOR_IMAGE_FORMAT_R32_UINT, TG_NULL);
+    p_voxelizer->p_image_3ds[1] = tgvk_storage_image_3d_create(TG_SVO_DIMS, TG_SVO_DIMS, TG_SVO_DIMS, (VkFormat)TG_COLOR_IMAGE_FORMAT_R32_UINT, TG_NULL);
+    p_voxelizer->p_image_3ds[2] = tgvk_storage_image_3d_create(TG_SVO_DIMS, TG_SVO_DIMS, TG_SVO_DIMS, (VkFormat)TG_COLOR_IMAGE_FORMAT_R32_UINT, TG_NULL);
+    p_voxelizer->p_image_3ds[3] = tgvk_storage_image_3d_create(TG_SVO_DIMS, TG_SVO_DIMS, TG_SVO_DIMS, (VkFormat)TG_COLOR_IMAGE_FORMAT_R32_UINT, TG_NULL);
+    p_voxelizer->p_image_3ds[4] = tgvk_storage_image_3d_create(TG_SVO_DIMS, TG_SVO_DIMS, TG_SVO_DIMS, (VkFormat)TG_COLOR_IMAGE_FORMAT_R32_UINT, TG_NULL);
+    p_voxelizer->p_image_3ds[5] = tgvk_storage_image_3d_create(TG_SVO_DIMS, TG_SVO_DIMS, TG_SVO_DIMS, (VkFormat)TG_COLOR_IMAGE_FORMAT_R32_UINT, TG_NULL);
+    p_voxelizer->p_image_3ds[6] = tgvk_storage_image_3d_create(TG_SVO_DIMS, TG_SVO_DIMS, TG_SVO_DIMS, (VkFormat)TG_COLOR_IMAGE_FORMAT_R32_UINT, TG_NULL);
+    p_voxelizer->p_image_3ds[7] = tgvk_storage_image_3d_create(TG_SVO_DIMS, TG_SVO_DIMS, TG_SVO_DIMS, (VkFormat)TG_COLOR_IMAGE_FORMAT_R32_UINT, TG_NULL);
 
     p_voxelizer->command_buffer = tgvk_command_buffer_create(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
     tgvk_command_buffer_begin(&p_voxelizer->command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
     for (u32 i = 0; i < TG_SVO_ATTACHMENTS; i++)
     {
-        tgvk_cmd_transition_color_image_3d_layout(&p_voxelizer->command_buffer, &p_voxelizer->p_image_3ds[i], 0, VK_ACCESS_SHADER_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+        tgvk_cmd_transition_storage_image_3d_layout(&p_voxelizer->command_buffer, &p_voxelizer->p_image_3ds[i], 0, VK_ACCESS_SHADER_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
     }
     tgvk_command_buffer_end_and_submit(&p_voxelizer->command_buffer);
     for (u32 i = 0; i < TG_SVO_ATTACHMENTS; i++)
@@ -96,9 +96,9 @@ void tg_voxelizer_begin(tg_voxelizer* p_voxelizer)
     tgvk_command_buffer_begin(&p_voxelizer->command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
     for (u32 i = 0; i < TG_SVO_ATTACHMENTS; i++)
     {
-        tgvk_cmd_transition_color_image_3d_layout(&p_voxelizer->command_buffer, &p_voxelizer->p_image_3ds[i], VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
-        tgvk_cmd_clear_color_image_3d(&p_voxelizer->command_buffer, &p_voxelizer->p_image_3ds[i]);
-        tgvk_cmd_transition_color_image_3d_layout(&p_voxelizer->command_buffer, &p_voxelizer->p_image_3ds[i], VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_WRITE_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+        tgvk_cmd_transition_storage_image_3d_layout(&p_voxelizer->command_buffer, &p_voxelizer->p_image_3ds[i], VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+        tgvk_cmd_clear_storage_image_3d(&p_voxelizer->command_buffer, &p_voxelizer->p_image_3ds[i]);
+        tgvk_cmd_transition_storage_image_3d_layout(&p_voxelizer->command_buffer, &p_voxelizer->p_image_3ds[i], VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_WRITE_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
     }
     tgvk_command_buffer_end_and_submit(&p_voxelizer->command_buffer);
 
@@ -132,7 +132,7 @@ void tg_voxelizer_exec(tg_voxelizer* p_voxelizer, tg_render_command_h h_render_c
     tgvk_descriptor_set_update_uniform_buffer(p_descriptor_set->descriptor_set, p_voxelizer->view_projection_ubo.buffer, 1);
     for (u32 i = 0; i < TG_SVO_ATTACHMENTS; i++)
     {
-        tgvk_descriptor_set_update_image_3d(p_descriptor_set->descriptor_set, &p_voxelizer->p_image_3ds[i], 2 + i);
+        tgvk_descriptor_set_update_storage_image_3d(p_descriptor_set->descriptor_set, &p_voxelizer->p_image_3ds[i], 2 + i);
     }
 
     vkCmdBindPipeline(p_voxelizer->command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_voxelizer->pipeline.pipeline);
@@ -214,9 +214,9 @@ void tg_voxelizer_end(tg_voxelizer* p_voxelizer, v3i min_corner_index_3d, tg_vox
     tgvk_command_buffer_begin(&p_voxelizer->command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
     for (u32 i = 0; i < TG_SVO_ATTACHMENTS; i++)
     {
-        tgvk_cmd_transition_color_image_3d_layout(&p_voxelizer->command_buffer, &p_voxelizer->p_image_3ds[i], VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
-        tgvk_cmd_copy_color_image_3d_to_buffer(&p_voxelizer->command_buffer, &p_voxelizer->p_image_3ds[i], p_voxelizer->p_voxel_buffers[i].buffer);
-        tgvk_cmd_transition_color_image_3d_layout(&p_voxelizer->command_buffer, &p_voxelizer->p_image_3ds[i], VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_SHADER_WRITE_BIT, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+        tgvk_cmd_transition_storage_image_3d_layout(&p_voxelizer->command_buffer, &p_voxelizer->p_image_3ds[i], VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+        tgvk_cmd_copy_storage_image_3d_to_buffer(&p_voxelizer->command_buffer, &p_voxelizer->p_image_3ds[i], p_voxelizer->p_voxel_buffers[i].buffer);
+        tgvk_cmd_transition_storage_image_3d_layout(&p_voxelizer->command_buffer, &p_voxelizer->p_image_3ds[i], VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_SHADER_WRITE_BIT, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
     }
     tgvk_command_buffer_end_and_submit(&p_voxelizer->command_buffer);
     for (u32 i = 0; i < TG_SVO_ATTACHMENTS; i++)
@@ -255,7 +255,7 @@ void tg_voxelizer_destroy(tg_voxelizer* p_voxelizer)
     for (u32 i = 0; i < TG_SVO_ATTACHMENTS; i++)
     {
         tgvk_buffer_destroy(&p_voxelizer->p_voxel_buffers[i]);
-        tgvk_color_image_3d_destroy(&p_voxelizer->p_image_3ds[i]);
+        tgvk_storage_image_3d_destroy(&p_voxelizer->p_image_3ds[i]);
     }
     tgvk_buffer_destroy(&p_voxelizer->view_projection_ubo);
     tgvk_pipeline_destroy(&p_voxelizer->pipeline);

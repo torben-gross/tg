@@ -9,7 +9,6 @@
 #define TG_MAX_SWAPCHAIN_IMAGES           2
 
 #define TG_MAX_COLOR_IMAGES               32
-#define TG_MAX_COLOR_IMAGES_3D            16
 #define TG_MAX_COMPUTE_SHADERS            16
 #define TG_MAX_CUBE_MAPS                  16
 #define TG_MAX_DEPTH_IMAGES               8
@@ -19,6 +18,7 @@
 #define TG_MAX_RENDER_COMMANDS            65536
 #define TG_MAX_RENDERERS                  4
 #define TG_MAX_STORAGE_BUFFERS            8
+#define TG_MAX_STORAGE_IMAGES_3D          16
 #define TG_MAX_UNIFORM_BUFFERS            64
 #define TG_MAX_VERTEX_SHADERS             32
 
@@ -47,7 +47,6 @@
 
 
 TG_DECLARE_HANDLE(tg_color_image);
-TG_DECLARE_HANDLE(tg_color_image_3d);
 TG_DECLARE_HANDLE(tg_compute_shader);
 TG_DECLARE_HANDLE(tg_cube_map);
 TG_DECLARE_HANDLE(tg_depth_image);
@@ -58,6 +57,7 @@ TG_DECLARE_HANDLE(tg_render_command);
 TG_DECLARE_HANDLE(tg_render_target);
 TG_DECLARE_HANDLE(tg_renderer);
 TG_DECLARE_HANDLE(tg_storage_buffer);
+TG_DECLARE_HANDLE(tg_storage_image_3d);
 TG_DECLARE_HANDLE(tg_uniform_buffer);
 TG_DECLARE_HANDLE(tg_vertex_shader);
 
@@ -117,7 +117,6 @@ typedef enum tg_structure_type
 {
 	TG_STRUCTURE_TYPE_INVALID = 0,
 	TG_STRUCTURE_TYPE_COLOR_IMAGE,
-	TG_STRUCTURE_TYPE_COLOR_IMAGE_3D,
 	TG_STRUCTURE_TYPE_COMPUTE_SHADER,
     TG_STRUCTURE_TYPE_CUBE_MAP,
 	TG_STRUCTURE_TYPE_DEPTH_IMAGE,
@@ -128,6 +127,7 @@ typedef enum tg_structure_type
 	TG_STRUCTURE_TYPE_RENDER_TARGET,
 	TG_STRUCTURE_TYPE_RENDERER,
 	TG_STRUCTURE_TYPE_STORAGE_BUFFER,
+	TG_STRUCTURE_TYPE_STORAGE_IMAGE_3D,
 	TG_STRUCTURE_TYPE_UNIFORM_BUFFER,
 	TG_STRUCTURE_TYPE_VERTEX_SHADER
 } tg_structure_type;
@@ -208,9 +208,9 @@ void                     tg_color_image_destroy(tg_color_image_h h_color_image);
 u32                      tg_color_image_format_channels(tg_color_image_format format);
 u32                      tg_color_image_format_size(tg_color_image_format format);
 
-tg_color_image_3d_h      tg_color_image_3d_create(u32 width, u32 height, u32 depth, tg_color_image_format format, const tg_sampler_create_info* p_sampler_create_info);
-void                     tg_color_image_3d_destroy(tg_color_image_3d_h h_color_image_3d);
-void                     tg_color_image_3d_set_data(tg_color_image_3d_h h_color_image_3d, void* p_data);
+tg_storage_image_3d_h    tg_storage_image_3d_create(u32 width, u32 height, u32 depth, tg_color_image_format format, const tg_sampler_create_info* p_sampler_create_info);
+void                     tg_storage_image_3d_destroy(tg_storage_image_3d_h h_storage_image_3d);
+void                     tg_storage_image_3d_set_data(tg_storage_image_3d_h h_storage_image_3d, void* p_data);
 
 void                     tg_compute_shader_bind_input(tg_compute_shader_h h_compute_shader, u32 first_handle_index, u32 handle_count, tg_handle* p_handles);
 tg_compute_shader_h      tg_compute_shader_create(const char* filename);

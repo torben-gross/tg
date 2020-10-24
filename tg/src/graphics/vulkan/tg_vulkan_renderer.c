@@ -844,7 +844,7 @@ void tg_renderer_init_shared_resources(void)
         subpass_description.preserveAttachmentCount = 0;
         subpass_description.pPreserveAttachments = TG_NULL;
 
-        shared_render_resources.shadow_render_pass = tgvk_render_pass_create(1, &attachment_description, 1, &subpass_description, 0, TG_NULL);
+        shared_render_resources.shadow_render_pass = tgvk_render_pass_create(&attachment_description, &subpass_description);
 
 
 
@@ -930,7 +930,7 @@ void tg_renderer_init_shared_resources(void)
         subpass_description.preserveAttachmentCount = 0;
         subpass_description.pPreserveAttachments = TG_NULL;
 
-        shared_render_resources.geometry_render_pass = tgvk_render_pass_create(TGVK_GEOMETRY_ATTACHMENT_COUNT, p_attachment_descriptions, 1, &subpass_description, 0, TG_NULL);
+        shared_render_resources.geometry_render_pass = tgvk_render_pass_create(p_attachment_descriptions, &subpass_description);
     }
 
     // ssao pass
@@ -962,8 +962,8 @@ void tg_renderer_init_shared_resources(void)
         subpass_description.preserveAttachmentCount = 0;
         subpass_description.pPreserveAttachments = TG_NULL;
 
-        shared_render_resources.ssao_render_pass = tgvk_render_pass_create(1, &attachment_description, 1, &subpass_description, 0, TG_NULL);
-        shared_render_resources.ssao_blur_render_pass = tgvk_render_pass_create(1, &attachment_description, 1, &subpass_description, 0, TG_NULL);
+        shared_render_resources.ssao_render_pass = tgvk_render_pass_create(&attachment_description, &subpass_description);
+        shared_render_resources.ssao_blur_render_pass = tgvk_render_pass_create(&attachment_description, &subpass_description);
     }
 
     // shading pass
@@ -995,7 +995,7 @@ void tg_renderer_init_shared_resources(void)
         subpass_description.preserveAttachmentCount = 0;
         subpass_description.pPreserveAttachments = TG_NULL;
 
-        shared_render_resources.shading_render_pass = tgvk_render_pass_create(TGVK_SHADING_ATTACHMENT_COUNT, &attachment_description, 1, &subpass_description, 0, TG_NULL);
+        shared_render_resources.shading_render_pass = tgvk_render_pass_create(&attachment_description, &subpass_description);
     }
 
     // forward pass
@@ -1042,7 +1042,7 @@ void tg_renderer_init_shared_resources(void)
         subpass_description.preserveAttachmentCount = 0;
         subpass_description.pPreserveAttachments = TG_NULL;
 
-        shared_render_resources.forward_render_pass = tgvk_render_pass_create(2, p_attachment_descriptions, 1, &subpass_description, 0, TG_NULL);
+        shared_render_resources.forward_render_pass = tgvk_render_pass_create(p_attachment_descriptions, &subpass_description);
     }
 
     // tone mapping pass
@@ -1074,7 +1074,7 @@ void tg_renderer_init_shared_resources(void)
         subpass_description.preserveAttachmentCount = 0;
         subpass_description.pPreserveAttachments = TG_NULL;
 
-        shared_render_resources.tone_mapping_render_pass = tgvk_render_pass_create(TGVK_SHADING_ATTACHMENT_COUNT, &attachment_description, 1, &subpass_description, 0, TG_NULL);
+        shared_render_resources.tone_mapping_render_pass = tgvk_render_pass_create(&attachment_description, &subpass_description);
     }
 
     // present pass
@@ -1106,7 +1106,7 @@ void tg_renderer_init_shared_resources(void)
         subpass_description.preserveAttachmentCount = 0;
         subpass_description.pPreserveAttachments = TG_NULL;
 
-        shared_render_resources.present_render_pass = tgvk_render_pass_create(1, &attachment_description, 1, &subpass_description, 0, TG_NULL);
+        shared_render_resources.present_render_pass = tgvk_render_pass_create(&attachment_description, &subpass_description);
     }
 }
 

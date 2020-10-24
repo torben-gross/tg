@@ -75,18 +75,18 @@ u32 tg_color_image_format_size(tg_color_image_format format)
 
 
 
-tg_color_image_3d_h tg_color_image_3d_create(u32 width, u32 height, u32 depth, tg_color_image_format format, const tg_sampler_create_info* p_sampler_create_info)
+tg_storage_image_3d_h tg_storage_image_3d_create(u32 width, u32 height, u32 depth, tg_color_image_format format, const tg_sampler_create_info* p_sampler_create_info)
 {
 	TG_ASSERT(width && height && depth);
 
-	tg_color_image_3d_h h_color_image_3d = tgvk_handle_take(TG_STRUCTURE_TYPE_COLOR_IMAGE_3D);
-	h_color_image_3d->image_3d = tgvk_color_image_3d_create(width, height, depth, (VkFormat)format, p_sampler_create_info);
+	tg_storage_image_3d_h h_storage_image_3d = tgvk_handle_take(TG_STRUCTURE_TYPE_STORAGE_IMAGE_3D);
+	h_storage_image_3d->storage_image_3d = tgvk_storage_image_3d_create(width, height, depth, (VkFormat)format, p_sampler_create_info);
 
 	tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
 	tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-	tgvk_cmd_transition_color_image_3d_layout(
+	tgvk_cmd_transition_storage_image_3d_layout(
 		p_command_buffer,
-		&h_color_image_3d->image_3d,
+		&h_storage_image_3d->storage_image_3d,
 		0,
 		VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
 		VK_IMAGE_LAYOUT_UNDEFINED,
@@ -96,31 +96,31 @@ tg_color_image_3d_h tg_color_image_3d_create(u32 width, u32 height, u32 depth, t
 	);
 	tgvk_command_buffer_end_and_submit(p_command_buffer);
 
-	return h_color_image_3d;
+	return h_storage_image_3d;
 }
 
-void tg_color_image_3d_destroy(tg_color_image_3d_h h_color_image_3d)
+void tg_storage_image_3d_destroy(tg_storage_image_3d_h h_storage_image_3d)
 {
-	TG_ASSERT(h_color_image_3d);
+	TG_ASSERT(h_storage_image_3d);
 
-	tgvk_color_image_3d_destroy(&h_color_image_3d->image_3d);
-	tgvk_handle_release(h_color_image_3d);
+	tgvk_storage_image_3d_destroy(&h_storage_image_3d->storage_image_3d);
+	tgvk_handle_release(h_storage_image_3d);
 }
 
-void tg_color_image_3d_set_data(tg_color_image_3d_h h_color_image_3d, void* p_data)
+void tg_storage_image_3d_set_data(tg_storage_image_3d_h h_storage_image_3d, void* p_data)
 {
-	TG_ASSERT(h_color_image_3d && p_data);
+	TG_ASSERT(h_storage_image_3d && p_data);
 
-	const u64 size = (u64)h_color_image_3d->image_3d.width * (u64)h_color_image_3d->image_3d.height * (u64)h_color_image_3d->image_3d.depth * (u64)tg_color_image_format_size((tg_color_image_format)h_color_image_3d->image_3d.format);
+	const u64 size = (u64)h_storage_image_3d->storage_image_3d.width * (u64)h_storage_image_3d->storage_image_3d.height * (u64)h_storage_image_3d->storage_image_3d.depth * (u64)tg_color_image_format_size((tg_color_image_format)h_storage_image_3d->storage_image_3d.format);
 	tgvk_buffer staging_buffer = tgvk_buffer_create(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 	tg_memcpy(size, p_data, staging_buffer.memory.p_mapped_device_memory);
 	tgvk_buffer_flush_host_to_device(&staging_buffer);
 
 	tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
 	tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-	tgvk_cmd_transition_color_image_3d_layout(
+	tgvk_cmd_transition_storage_image_3d_layout(
 		p_command_buffer,
-		&h_color_image_3d->image_3d,
+		&h_storage_image_3d->storage_image_3d,
 		VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
 		VK_ACCESS_TRANSFER_WRITE_BIT,
 		VK_IMAGE_LAYOUT_GENERAL,
@@ -128,10 +128,10 @@ void tg_color_image_3d_set_data(tg_color_image_3d_h h_color_image_3d, void* p_da
 		VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
 		VK_PIPELINE_STAGE_TRANSFER_BIT
 	);
-	tgvk_cmd_copy_buffer_to_color_image_3d(p_command_buffer, staging_buffer.buffer, &h_color_image_3d->image_3d);
-	tgvk_cmd_transition_color_image_3d_layout(
+	tgvk_cmd_copy_buffer_to_storage_image_3d(p_command_buffer, staging_buffer.buffer, &h_storage_image_3d->storage_image_3d);
+	tgvk_cmd_transition_storage_image_3d_layout(
 		p_command_buffer,
-		&h_color_image_3d->image_3d,
+		&h_storage_image_3d->storage_image_3d,
 		VK_ACCESS_TRANSFER_WRITE_BIT,
 		VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
 		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
