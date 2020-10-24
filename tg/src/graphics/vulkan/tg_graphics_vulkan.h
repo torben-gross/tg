@@ -171,7 +171,7 @@ typedef struct tgvk_graphics_pipeline_create_info
     VkCullModeFlagBits       cull_mode;
     VkBool32                 depth_test_enable;
     VkBool32                 depth_write_enable;
-    VkBool32*                p_blend_enable;     // TG_NULL disables blending for every attachment
+    const VkBool32*          p_blend_enable;     // TG_NULL disables blending for every attachment
     VkRenderPass             render_pass;
     v2                       viewport_size;
     VkPolygonMode            polygon_mode;
@@ -449,8 +449,8 @@ typedef struct tg_storage_buffer
 
 typedef struct tg_storage_image_3d
 {
-    tg_structure_type        type;
-    tgvk_image_3d    storage_image_3d;
+    tg_structure_type    type;
+    tgvk_image_3d        image_3d;
 } tg_storage_image_3d;
 
 typedef struct tg_uniform_buffer
@@ -480,135 +480,114 @@ tgvk_shared_render_resources    shared_render_resources;
 
 
 
-void*                                     tgvk_handle_array(tg_structure_type type);
-void*                                     tgvk_handle_take(tg_structure_type type);
-void                                      tgvk_handle_release(void* p_handle);
+void*                   tgvk_handle_array(tg_structure_type type);
+void*                   tgvk_handle_take(tg_structure_type type);
+void                    tgvk_handle_release(void* p_handle);
 
-void                                      tgvk_buffer_copy(VkDeviceSize size, tgvk_buffer* p_src, tgvk_buffer* p_dst);
-tgvk_buffer                               tgvk_buffer_create(VkDeviceSize size, VkBufferUsageFlags buffer_usage_flags, VkMemoryPropertyFlags memory_property_flags);
-void                                      tgvk_buffer_destroy(tgvk_buffer* p_buffer);
-void                                      tgvk_buffer_flush_device_to_host(tgvk_buffer* p_buffer);
-void                                      tgvk_buffer_flush_device_to_host_range(tgvk_buffer* p_buffer, VkDeviceSize offset, VkDeviceSize size);
-void                                      tgvk_buffer_flush_host_to_device(tgvk_buffer* p_buffer);
-void                                      tgvk_buffer_flush_host_to_device_range(tgvk_buffer* p_buffer, VkDeviceSize offset, VkDeviceSize size);
+void                    tgvk_buffer_copy(VkDeviceSize size, tgvk_buffer* p_src, tgvk_buffer* p_dst);
+tgvk_buffer             tgvk_buffer_create(VkDeviceSize size, VkBufferUsageFlags buffer_usage_flags, VkMemoryPropertyFlags memory_property_flags);
+void                    tgvk_buffer_destroy(tgvk_buffer* p_buffer);
+void                    tgvk_buffer_flush_device_to_host(tgvk_buffer* p_buffer);
+void                    tgvk_buffer_flush_device_to_host_range(tgvk_buffer* p_buffer, VkDeviceSize offset, VkDeviceSize size);
+void                    tgvk_buffer_flush_host_to_device(tgvk_buffer* p_buffer);
+void                    tgvk_buffer_flush_host_to_device_range(tgvk_buffer* p_buffer, VkDeviceSize offset, VkDeviceSize size);
 
-void                                      tgvk_cmd_begin_render_pass(tgvk_command_buffer* p_command_buffer, VkRenderPass render_pass, tgvk_framebuffer* p_framebuffer, VkSubpassContents subpass_contents);
-void                                      tgvk_cmd_bind_descriptor_set(tgvk_command_buffer* p_command_buffer, tgvk_pipeline* p_pipeline, tgvk_descriptor_set* p_descriptor_set);
-void                                      tgvk_cmd_bind_index_buffer(tgvk_command_buffer* p_command_buffer, tgvk_buffer* p_buffer);
-void                                      tgvk_cmd_bind_pipeline(tgvk_command_buffer* p_command_buffer, tgvk_pipeline* p_pipeline);
-void                                      tgvk_cmd_bind_vertex_buffer(tgvk_command_buffer* p_command_buffer, u32 binding, const tgvk_buffer* p_buffer);
-void                                      tgvk_cmd_blit_image(tgvk_command_buffer* p_command_buffer, tgvk_image* p_source, tgvk_image* p_destination, const VkImageBlit* p_region);
-void                                      tgvk_cmd_clear_color_image(tgvk_command_buffer* p_command_buffer, tgvk_image* p_image);
-void                                      tgvk_cmd_clear_depth_image(tgvk_command_buffer* p_command_buffer, tgvk_image* p_image);
-void                                      tgvk_cmd_clear_storage_image_3d(tgvk_command_buffer* p_command_buffer, tgvk_image_3d* p_storage_image_3d);
-void                                      tgvk_cmd_copy_buffer(tgvk_command_buffer* p_command_buffer, VkDeviceSize size, tgvk_buffer* p_src, tgvk_buffer* p_dst);
-void                                      tgvk_cmd_copy_buffer_to_color_image(tgvk_command_buffer* p_command_buffer, VkBuffer source, tgvk_image* p_destination);
-void                                      tgvk_cmd_copy_buffer_to_cube_map(tgvk_command_buffer* p_command_buffer, VkBuffer source, tgvk_cube_map* p_destination);
-void                                      tgvk_cmd_copy_buffer_to_depth_image(tgvk_command_buffer* p_command_buffer, VkBuffer source, tgvk_image* p_destination);
-void                                      tgvk_cmd_copy_buffer_to_storage_image_3d(tgvk_command_buffer* p_command_buffer, VkBuffer source, tgvk_image_3d* p_destination);
-void                                      tgvk_cmd_copy_color_image(tgvk_command_buffer* p_command_buffer, tgvk_image* p_source, tgvk_image* p_destination);
-void                                      tgvk_cmd_copy_color_image_to_buffer(tgvk_command_buffer* p_command_buffer, tgvk_image* p_source, VkBuffer destination);
-void                                      tgvk_cmd_copy_depth_image_pixel_to_buffer(tgvk_command_buffer* p_command_buffer, tgvk_image* p_source, VkBuffer destination, u32 x, u32 y);
-void                                      tgvk_cmd_copy_storage_image_3d_to_buffer(tgvk_command_buffer* p_command_buffer, tgvk_image_3d* p_source, VkBuffer destination);
-void                                      tgvk_cmd_draw_indexed(tgvk_command_buffer* p_command_buffer, u32 index_count);
-void                                      tgvk_cmd_transition_color_image_layout(tgvk_command_buffer* p_command_buffer, tgvk_image* p_image, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits);
-void                                      tgvk_cmd_transition_cube_map_layout(tgvk_command_buffer* p_command_buffer, tgvk_cube_map* p_cube_map, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits);
-void                                      tgvk_cmd_transition_depth_image_layout(tgvk_command_buffer* p_command_buffer, tgvk_image* p_image, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits);
-void                                      tgvk_cmd_transition_storage_image_3d_layout(tgvk_command_buffer* p_command_buffer, tgvk_image_3d* p_storage_image_3d, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits);
+void                    tgvk_cmd_begin_render_pass(tgvk_command_buffer* p_command_buffer, VkRenderPass render_pass, tgvk_framebuffer* p_framebuffer, VkSubpassContents subpass_contents);
+void                    tgvk_cmd_bind_descriptor_set(tgvk_command_buffer* p_command_buffer, tgvk_pipeline* p_pipeline, tgvk_descriptor_set* p_descriptor_set);
+void                    tgvk_cmd_bind_index_buffer(tgvk_command_buffer* p_command_buffer, tgvk_buffer* p_buffer);
+void                    tgvk_cmd_bind_pipeline(tgvk_command_buffer* p_command_buffer, tgvk_pipeline* p_pipeline);
+void                    tgvk_cmd_bind_vertex_buffer(tgvk_command_buffer* p_command_buffer, u32 binding, const tgvk_buffer* p_buffer);
+void                    tgvk_cmd_blit_image(tgvk_command_buffer* p_command_buffer, tgvk_image* p_source, tgvk_image* p_destination, const VkImageBlit* p_region);
+void                    tgvk_cmd_clear_image(tgvk_command_buffer* p_command_buffer, tgvk_image* p_image);
+void                    tgvk_cmd_clear_image_3d(tgvk_command_buffer* p_command_buffer, tgvk_image_3d* p_image_3d);
+void                    tgvk_cmd_copy_buffer(tgvk_command_buffer* p_command_buffer, VkDeviceSize size, tgvk_buffer* p_src, tgvk_buffer* p_dst);
+void                    tgvk_cmd_copy_buffer_to_color_image(tgvk_command_buffer* p_command_buffer, VkBuffer source, tgvk_image* p_destination);
+void                    tgvk_cmd_copy_buffer_to_cube_map(tgvk_command_buffer* p_command_buffer, VkBuffer source, tgvk_cube_map* p_destination);
+void                    tgvk_cmd_copy_buffer_to_depth_image(tgvk_command_buffer* p_command_buffer, VkBuffer source, tgvk_image* p_destination);
+void                    tgvk_cmd_copy_buffer_to_image_3d(tgvk_command_buffer* p_command_buffer, VkBuffer source, tgvk_image_3d* p_destination);
+void                    tgvk_cmd_copy_color_image(tgvk_command_buffer* p_command_buffer, tgvk_image* p_source, tgvk_image* p_destination);
+void                    tgvk_cmd_copy_color_image_to_buffer(tgvk_command_buffer* p_command_buffer, tgvk_image* p_source, VkBuffer destination);
+void                    tgvk_cmd_copy_depth_image_pixel_to_buffer(tgvk_command_buffer* p_command_buffer, tgvk_image* p_source, VkBuffer destination, u32 x, u32 y);
+void                    tgvk_cmd_copy_image_3d_to_buffer(tgvk_command_buffer* p_command_buffer, tgvk_image_3d* p_source, VkBuffer destination);
+void                    tgvk_cmd_draw_indexed(tgvk_command_buffer* p_command_buffer, u32 index_count);
+void                    tgvk_cmd_transition_image_layout(tgvk_command_buffer* p_command_buffer, tgvk_image* p_image, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits);
+void                    tgvk_cmd_transition_image_3d_layout(tgvk_command_buffer* p_command_buffer, tgvk_image_3d* p_image_3d, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits);
+void                    tgvk_cmd_transition_cube_map_layout(tgvk_command_buffer* p_command_buffer, tgvk_cube_map* p_cube_map, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits);
 
-tgvk_image                                tgvk_color_image_create(u32 width, u32 height, VkFormat format, const tg_sampler_create_info* p_sampler_create_info);
-tgvk_image                                tgvk_color_image_create2(const char* p_filename, const tg_sampler_create_info* p_sampler_create_info);
+tgvk_command_buffer*    tgvk_command_buffer_get_global(tgvk_command_pool_type type);
+tgvk_command_buffer     tgvk_command_buffer_create(tgvk_command_pool_type type, VkCommandBufferLevel level);
+void                    tgvk_command_buffers_create(tgvk_command_pool_type type, VkCommandBufferLevel level, u32 count, tgvk_command_buffer* p_command_buffers);
+void                    tgvk_command_buffer_destroy(tgvk_command_buffer* p_command_buffer);
+void                    tgvk_command_buffers_destroy(u32 count, tgvk_command_buffer* p_command_buffers);
+void                    tgvk_command_buffer_begin(tgvk_command_buffer* p_command_buffer, VkCommandBufferUsageFlags flags);
+void                    tgvk_command_buffer_begin_secondary(tgvk_command_buffer* p_command_buffer, VkCommandBufferUsageFlags flags, VkRenderPass render_pass, VkFramebuffer framebuffer);
+void                    tgvk_command_buffer_end_and_submit(tgvk_command_buffer* p_command_buffer);
 
-tgvk_command_buffer*                      tgvk_command_buffer_get_global(tgvk_command_pool_type type);
-tgvk_command_buffer                       tgvk_command_buffer_create(tgvk_command_pool_type type, VkCommandBufferLevel level);
-void                                      tgvk_command_buffers_create(tgvk_command_pool_type type, VkCommandBufferLevel level, u32 count, tgvk_command_buffer* p_command_buffers);
-void                                      tgvk_command_buffer_destroy(tgvk_command_buffer* p_command_buffer);
-void                                      tgvk_command_buffers_destroy(u32 count, tgvk_command_buffer* p_command_buffers);
-void                                      tgvk_command_buffer_begin(tgvk_command_buffer* p_command_buffer, VkCommandBufferUsageFlags flags);
-void                                      tgvk_command_buffer_begin_secondary(tgvk_command_buffer* p_command_buffer, VkCommandBufferUsageFlags flags, VkRenderPass render_pass, VkFramebuffer framebuffer);
-void                                      tgvk_command_buffer_end_and_submit(tgvk_command_buffer* p_command_buffer);
+tgvk_cube_map           tgvk_cube_map_create(u32 dimension, VkFormat format, const tg_sampler_create_info* p_sampler_create_info);
+void                    tgvk_cube_map_destroy(tgvk_cube_map* p_cube_map);
 
-tgvk_cube_map                             tgvk_cube_map_create(u32 dimension, VkFormat format, const tg_sampler_create_info* p_sampler_create_info);
-void                                      tgvk_cube_map_destroy(tgvk_cube_map* p_cube_map);
+tgvk_descriptor_set     tgvk_descriptor_set_create(const tgvk_pipeline* p_pipeline);
+void                    tgvk_descriptor_set_destroy(tgvk_descriptor_set* p_descriptor_set);
 
-tgvk_descriptor_set                       tgvk_descriptor_set_create(const tgvk_pipeline* p_pipeline);
-void                                      tgvk_descriptor_set_destroy(tgvk_descriptor_set* p_descriptor_set);
+void                    tgvk_descriptor_set_update(VkDescriptorSet descriptor_set, tg_handle shader_input_element_handle, u32 dst_binding);
+void                    tgvk_descriptor_set_update_cube_map(VkDescriptorSet descriptor_set, tgvk_cube_map* p_cube_map, u32 dst_binding);
+void                    tgvk_descriptor_set_update_image(VkDescriptorSet descriptor_set, tgvk_image* p_image, u32 dst_binding);
+void                    tgvk_descriptor_set_update_image_array(VkDescriptorSet descriptor_set, tgvk_image* p_image, u32 dst_binding, u32 array_index);
+void                    tgvk_descriptor_set_update_image_3d(VkDescriptorSet descriptor_set, tgvk_image_3d* p_image_3d, u32 dst_binding);
+void                    tgvk_descriptor_set_update_render_target(VkDescriptorSet descriptor_set, tg_render_target* p_render_target, u32 dst_binding);
+void                    tgvk_descriptor_set_update_storage_buffer(VkDescriptorSet descriptor_set, VkBuffer buffer, u32 dst_binding);
+void                    tgvk_descriptor_set_update_storage_buffer_array(VkDescriptorSet descriptor_set, VkBuffer buffer, u32 dst_binding, u32 array_index);
+void                    tgvk_descriptor_set_update_uniform_buffer(VkDescriptorSet descriptor_set, VkBuffer buffer, u32 dst_binding);
+void                    tgvk_descriptor_set_update_uniform_buffer_array(VkDescriptorSet descriptor_set, VkBuffer buffer, u32 dst_binding, u32 array_index);
+void                    tgvk_descriptor_set_update_uniform_buffer_range(VkDescriptorSet descriptor_set, VkDeviceSize offset, VkDeviceSize range, VkBuffer buffer, u32 dst_binding);
+void                    tgvk_descriptor_sets_update(u32 write_descriptor_set_count, const VkWriteDescriptorSet* p_write_descriptor_sets);
 
-tgvk_image                                tgvk_depth_image_create(u32 width, u32 height, VkFormat format, const tg_sampler_create_info* p_sampler_create_info);
+VkFence                 tgvk_fence_create(VkFenceCreateFlags fence_create_flags);
+void                    tgvk_fence_destroy(VkFence fence);
+void                    tgvk_fence_reset(VkFence fence);
+void                    tgvk_fence_wait(VkFence fence);
 
-void                                      tgvk_descriptor_set_update(VkDescriptorSet descriptor_set, tg_handle shader_input_element_handle, u32 dst_binding);
-void                                      tgvk_descriptor_set_update_cube_map(VkDescriptorSet descriptor_set, tgvk_cube_map* p_cube_map, u32 dst_binding);
-void                                      tgvk_descriptor_set_update_image(VkDescriptorSet descriptor_set, tgvk_image* p_image, u32 dst_binding);
-void                                      tgvk_descriptor_set_update_image_array(VkDescriptorSet descriptor_set, tgvk_image* p_image, u32 dst_binding, u32 array_index);
-void                                      tgvk_descriptor_set_update_render_target(VkDescriptorSet descriptor_set, tg_render_target* p_render_target, u32 dst_binding);
-void                                      tgvk_descriptor_set_update_storage_buffer(VkDescriptorSet descriptor_set, VkBuffer buffer, u32 dst_binding);
-void                                      tgvk_descriptor_set_update_storage_buffer_array(VkDescriptorSet descriptor_set, VkBuffer buffer, u32 dst_binding, u32 array_index);
-void                                      tgvk_descriptor_set_update_storage_image_3d(VkDescriptorSet descriptor_set, tgvk_image_3d* p_storage_image_3d, u32 dst_binding);
-void                                      tgvk_descriptor_set_update_uniform_buffer(VkDescriptorSet descriptor_set, VkBuffer buffer, u32 dst_binding);
-void                                      tgvk_descriptor_set_update_uniform_buffer_array(VkDescriptorSet descriptor_set, VkBuffer buffer, u32 dst_binding, u32 array_index);
-void                                      tgvk_descriptor_set_update_uniform_buffer_range(VkDescriptorSet descriptor_set, VkDeviceSize offset, VkDeviceSize range, VkBuffer buffer, u32 dst_binding);
-void                                      tgvk_descriptor_sets_update(u32 write_descriptor_set_count, const VkWriteDescriptorSet* p_write_descriptor_sets);
+tgvk_framebuffer        tgvk_framebuffer_create(VkRenderPass render_pass, u32 attachment_count, const VkImageView* p_attachments, u32 width, u32 height);
+void                    tgvk_framebuffer_destroy(tgvk_framebuffer* p_framebuffer);
+void                    tgvk_framebuffers_destroy(u32 count, tgvk_framebuffer* p_framebuffers);
 
-VkFence                                   tgvk_fence_create(VkFenceCreateFlags fence_create_flags);
-void                                      tgvk_fence_destroy(VkFence fence);
-void                                      tgvk_fence_reset(VkFence fence);
-void                                      tgvk_fence_wait(VkFence fence);
+tgvk_image              tgvk_image_create(tgvk_image_type type, u32 width, u32 height, VkFormat format, const tg_sampler_create_info* p_sampler_create_info);
+tgvk_image              tgvk_image_create2(tgvk_image_type type, const char* p_filename, const tg_sampler_create_info* p_sampler_create_info);
+b32                     tgvk_image_store_to_disc(tgvk_image* p_image, const char* p_filename, b32 replace_existing);
+void                    tgvk_image_destroy(tgvk_image* p_image);
 
-tgvk_framebuffer                          tgvk_framebuffer_create(VkRenderPass render_pass, u32 attachment_count, const VkImageView* p_attachments, u32 width, u32 height);
-void                                      tgvk_framebuffer_destroy(tgvk_framebuffer* p_framebuffer);
-void                                      tgvk_framebuffers_destroy(u32 count, tgvk_framebuffer* p_framebuffers);
+tgvk_image_3d           tgvk_image_3d_create(tgvk_image_type type, u32 width, u32 height, u32 depth, VkFormat format, const tg_sampler_create_info* p_sampler_create_info);
+void                    tgvk_image_3d_destroy(tgvk_image_3d* p_storage_image_3d);
 
-b32                                       tgvk_image_store_to_disc(tgvk_image* p_image, const char* p_filename, b32 replace_existing);
-void                                      tgvk_image_destroy(tgvk_image* p_image);
+tgvk_pipeline           tgvk_pipeline_create_compute(const tgvk_shader* p_compute_shader);
+tgvk_pipeline           tgvk_pipeline_create_graphics(const tgvk_graphics_pipeline_create_info* p_create_info);
+void                    tgvk_pipeline_destroy(tgvk_pipeline* p_pipeline);
 
-VkPhysicalDeviceProperties                tgvk_physical_device_get_properties(void);
+void                    tgvk_queue_present(VkPresentInfoKHR* p_present_info);
+void                    tgvk_queue_submit(tgvk_queue_type type, u32 submit_count, VkSubmitInfo* p_submit_infos, VkFence fence);
+void                    tgvk_queue_wait_idle(tgvk_queue_type type);
 
-void                                      tgvk_pipeline_shader_stage_create_infos_create(const tgvk_shader* p_vertex_shader, const tgvk_shader* p_fragment_shader, VkPipelineShaderStageCreateInfo* p_pipeline_shader_stage_create_infos);
-VkPipelineInputAssemblyStateCreateInfo    tgvk_pipeline_input_assembly_state_create_info_create(void);
-VkPipelineInputAssemblyStateCreateInfo    tgvk_pipeline_input_assembly_state_create_info_create(void);
-VkViewport                                tgvk_viewport_create(f32 width, f32 height);
-VkPipelineViewportStateCreateInfo         tgvk_pipeline_viewport_state_create_info_create(const VkViewport* p_viewport, const VkRect2D* p_scissors);
-VkPipelineRasterizationStateCreateInfo    tgvk_pipeline_rasterization_state_create_info_create(VkPipelineRasterizationStateCreateInfo* p_next, VkBool32 depth_clamp_enable, VkPolygonMode polygon_mode, VkCullModeFlags cull_mode);
-VkPipelineMultisampleStateCreateInfo      tgvk_pipeline_multisample_state_create_info_create(u32 rasterization_samples, VkBool32 sample_shading_enable, f32 min_sample_shading);
-VkPipelineDepthStencilStateCreateInfo     tgvk_pipeline_depth_stencil_state_create_info_create(VkBool32 depth_test_enable, VkBool32 depth_write_enable);
-void                                      tgvk_pipeline_color_blend_attachmen_states_create(VkBool32 blend_enable, u32 count, VkPipelineColorBlendAttachmentState* p_pipeline_color_blend_attachment_states);
-VkPipelineColorBlendStateCreateInfo       tgvk_pipeline_color_blend_state_create_info_create(u32 attachment_count, VkPipelineColorBlendAttachmentState* p_pipeline_color_blend_attachmen_states);
-VkPipelineVertexInputStateCreateInfo      tgvk_pipeline_vertex_input_state_create_info_create(u32 vertex_binding_description_count, VkVertexInputBindingDescription* p_vertex_binding_descriptions, u32 vertex_attribute_description_count, VkVertexInputAttributeDescription* p_vertex_attribute_descriptions);
+VkRenderPass            tgvk_render_pass_create(const VkAttachmentDescription* p_attachment_description, const VkSubpassDescription* p_subpass_description);
+void                    tgvk_render_pass_destroy(VkRenderPass render_pass);
+tg_render_target        tgvk_render_target_create(u32 color_width, u32 color_height, VkFormat color_format, const tg_sampler_create_info* p_color_sampler_create_info, u32 depth_width, u32 depth_height, VkFormat depth_format, const tg_sampler_create_info* p_depth_sampler_create_info, VkFenceCreateFlags fence_create_flags);
+void                    tgvk_render_target_destroy(tg_render_target* p_render_target);
 
-tgvk_pipeline                             tgvk_pipeline_create_compute(const tgvk_shader* p_compute_shader);
-tgvk_pipeline                             tgvk_pipeline_create_graphics(const tgvk_graphics_pipeline_create_info* p_create_info);
-tgvk_pipeline                             tgvk_pipeline_create_graphics2(const tgvk_graphics_pipeline_create_info* p_create_info, u32 vertex_attrib_count, VkVertexInputBindingDescription* p_vertex_bindings, VkVertexInputAttributeDescription* p_vertex_attribs);
-void                                      tgvk_pipeline_destroy(tgvk_pipeline* p_pipeline);
+void                    tgvk_renderer_on_window_resize(tg_renderer_h h_renderer, u32 width, u32 height);
 
-void                                      tgvk_queue_present(VkPresentInfoKHR* p_present_info);
-void                                      tgvk_queue_submit(tgvk_queue_type type, u32 submit_count, VkSubmitInfo* p_submit_infos, VkFence fence);
-void                                      tgvk_queue_wait_idle(tgvk_queue_type type);
+VkSemaphore             tgvk_semaphore_create(void);
+void                    tgvk_semaphore_destroy(VkSemaphore semaphore);
 
-// TODO: is the attachment_count == p_subpasses[0].colorAttachmentCount ?
-VkRenderPass                              tgvk_render_pass_create(const VkAttachmentDescription* p_attachment_description, const VkSubpassDescription* p_subpass_description);
-void                                      tgvk_render_pass_destroy(VkRenderPass render_pass);
-tg_render_target                          tgvk_render_target_create(u32 color_width, u32 color_height, VkFormat color_format, const tg_sampler_create_info* p_color_sampler_create_info, u32 depth_width, u32 depth_height, VkFormat depth_format, const tg_sampler_create_info* p_depth_sampler_create_info, VkFenceCreateFlags fence_create_flags);
-void                                      tgvk_render_target_destroy(tg_render_target* p_render_target);
+tgvk_shader             tgvk_shader_create(const char* p_filename);
+tgvk_shader             tgvk_shader_create_from_glsl(tg_shader_type type, const char* p_source);
+tgvk_shader             tgvk_shader_create_from_spirv(u32 size, const char* p_source);
+void                    tgvk_shader_destroy(tgvk_shader* p_shader);
 
-void                                      tgvk_renderer_on_window_resize(tg_renderer_h h_renderer, u32 width, u32 height);
+tgvk_buffer*            tgvk_global_staging_buffer_take(VkDeviceSize size);
+void                    tgvk_global_staging_buffer_release(void);
 
-VkSemaphore                               tgvk_semaphore_create(void);
-void                                      tgvk_semaphore_destroy(VkSemaphore semaphore);
+VkDescriptorType        tgvk_structure_type_convert_to_descriptor_type(tg_structure_type type);
 
-tgvk_shader                               tgvk_shader_create(const char* p_filename);
-tgvk_shader                               tgvk_shader_create_from_glsl(tg_shader_type type, const char* p_source);
-tgvk_shader                               tgvk_shader_create_from_spirv(u32 size, const char* p_source);
-void                                      tgvk_shader_destroy(tgvk_shader* p_shader);
-
-tgvk_image_3d                             tgvk_storage_image_3d_create(u32 width, u32 height, u32 depth, VkFormat format, const tg_sampler_create_info* p_sampler_create_info);
-void                                      tgvk_storage_image_3d_destroy(tgvk_image_3d* p_storage_image_3d);
-
-tgvk_buffer*                              tgvk_global_staging_buffer_take(VkDeviceSize size);
-void                                      tgvk_global_staging_buffer_release(void);
-
-VkDescriptorType                          tgvk_structure_type_convert_to_descriptor_type(tg_structure_type type);
-
-void                                      tgvk_vkresult_convert_to_string(char* p_buffer, VkResult result);
+void                    tgvk_vkresult_convert_to_string(char* p_buffer, VkResult result);
 
 #endif
 

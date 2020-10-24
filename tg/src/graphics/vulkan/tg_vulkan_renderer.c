@@ -46,7 +46,7 @@ static void tg__init_shadow_pass(tg_renderer_h h_renderer)
     h_renderer->shadow_pass.enabled = TG_TRUE;
     for (u32 i = 0; i < TG_CASCADED_SHADOW_MAPS; i++)
     {
-        h_renderer->shadow_pass.p_shadow_maps[i] = tgvk_depth_image_create(TG_CASCADED_SHADOW_MAP_SIZE, TG_CASCADED_SHADOW_MAP_SIZE, VK_FORMAT_D32_SFLOAT, TG_NULL);
+        h_renderer->shadow_pass.p_shadow_maps[i] = tgvk_image_create(TGVK_IMAGE_TYPE_DEPTH, TG_CASCADED_SHADOW_MAP_SIZE, TG_CASCADED_SHADOW_MAP_SIZE, VK_FORMAT_D32_SFLOAT, TG_NULL);
     }
 
     h_renderer->shadow_pass.command_buffer = tgvk_command_buffer_create(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
@@ -54,7 +54,7 @@ static void tg__init_shadow_pass(tg_renderer_h h_renderer)
     tgvk_command_buffer_begin(&h_renderer->shadow_pass.command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
     for (u32 i = 0; i < TG_CASCADED_SHADOW_MAPS; i++)
     {
-        tgvk_cmd_transition_depth_image_layout(&h_renderer->shadow_pass.command_buffer, &h_renderer->shadow_pass.p_shadow_maps[i], 0, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT);
+        tgvk_cmd_transition_image_layout(&h_renderer->shadow_pass.command_buffer, &h_renderer->shadow_pass.p_shadow_maps[i], 0, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT);
     }
     tgvk_command_buffer_end_and_submit(&h_renderer->shadow_pass.command_buffer);
 
@@ -70,7 +70,7 @@ static void tg__init_geometry_pass(tg_renderer_h h_renderer)
     TGVK_GEOMETRY_FORMATS(p_formats);
     for (u32 i = 0; i < TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT; i++)
     {
-        h_renderer->geometry_pass.p_color_attachments[i] = tgvk_color_image_create(swapchain_extent.width, swapchain_extent.height, p_formats[i], TG_NULL);
+        h_renderer->geometry_pass.p_color_attachments[i] = tgvk_image_create(TGVK_IMAGE_TYPE_COLOR, swapchain_extent.width, swapchain_extent.height, p_formats[i], TG_NULL);
     }
 
     h_renderer->geometry_pass.command_buffer = tgvk_command_buffer_create(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
@@ -78,7 +78,7 @@ static void tg__init_geometry_pass(tg_renderer_h h_renderer)
     tgvk_command_buffer_begin(&h_renderer->geometry_pass.command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
     for (u32 i = 0; i < TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT; i++)
     {
-        tgvk_cmd_transition_color_image_layout(&h_renderer->geometry_pass.command_buffer, &h_renderer->geometry_pass.p_color_attachments[i], 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+        tgvk_cmd_transition_image_layout(&h_renderer->geometry_pass.command_buffer, &h_renderer->geometry_pass.p_color_attachments[i], 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
     }
     tgvk_command_buffer_end_and_submit(&h_renderer->geometry_pass.command_buffer);
 
@@ -94,7 +94,7 @@ static void tg__init_geometry_pass(tg_renderer_h h_renderer)
 
 static void tg__init_ssao_pass(tg_renderer_h h_renderer)
 {
-    h_renderer->ssao_pass.ssao_attachment = tgvk_color_image_create(TG_SSAO_MAP_SIZE, TG_SSAO_MAP_SIZE, VK_FORMAT_R32_SFLOAT, TG_NULL);
+    h_renderer->ssao_pass.ssao_attachment = tgvk_image_create(TGVK_IMAGE_TYPE_COLOR, TG_SSAO_MAP_SIZE, TG_SSAO_MAP_SIZE, VK_FORMAT_R32_SFLOAT, TG_NULL);
     h_renderer->ssao_pass.ssao_framebuffer = tgvk_framebuffer_create(shared_render_resources.ssao_render_pass, 1, &h_renderer->ssao_pass.ssao_attachment.image_view, TG_SSAO_MAP_SIZE, TG_SSAO_MAP_SIZE);
 
     tgvk_graphics_pipeline_create_info ssao_pipeline_create_info = { 0 };
@@ -141,7 +141,7 @@ static void tg__init_ssao_pass(tg_renderer_h h_renderer)
     ssao_noise_sampler_create_info.address_mode_v = VK_SAMPLER_ADDRESS_MODE_REPEAT;
     ssao_noise_sampler_create_info.address_mode_w = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 
-    h_renderer->ssao_pass.ssao_noise_image = tgvk_color_image_create(4, 4, VK_FORMAT_R32G32_SFLOAT, &ssao_noise_sampler_create_info);
+    h_renderer->ssao_pass.ssao_noise_image = tgvk_image_create(TGVK_IMAGE_TYPE_COLOR, 4, 4, VK_FORMAT_R32G32_SFLOAT, &ssao_noise_sampler_create_info);
 
     tgvk_descriptor_set_update_image(h_renderer->ssao_pass.ssao_descriptor_set.descriptor_set, &h_renderer->geometry_pass.p_color_attachments[TGVK_GEOMETRY_ATTACHMENT_POSITION], 0);
     tgvk_descriptor_set_update_image(h_renderer->ssao_pass.ssao_descriptor_set.descriptor_set, &h_renderer->geometry_pass.p_color_attachments[TGVK_GEOMETRY_ATTACHMENT_NORMAL], 1);
@@ -150,7 +150,7 @@ static void tg__init_ssao_pass(tg_renderer_h h_renderer)
 
 
     
-    h_renderer->ssao_pass.blur_attachment = tgvk_color_image_create(TG_SSAO_MAP_SIZE, TG_SSAO_MAP_SIZE, VK_FORMAT_R32_SFLOAT, TG_NULL);
+    h_renderer->ssao_pass.blur_attachment = tgvk_image_create(TGVK_IMAGE_TYPE_COLOR, TG_SSAO_MAP_SIZE, TG_SSAO_MAP_SIZE, VK_FORMAT_R32_SFLOAT, TG_NULL);
     h_renderer->ssao_pass.blur_framebuffer = tgvk_framebuffer_create(shared_render_resources.ssao_blur_render_pass, 1, &h_renderer->ssao_pass.blur_attachment.image_view, TG_SSAO_MAP_SIZE, TG_SSAO_MAP_SIZE);
 
     tgvk_graphics_pipeline_create_info blur_pipeline_create_info = { 0 };
@@ -174,11 +174,11 @@ static void tg__init_ssao_pass(tg_renderer_h h_renderer)
     h_renderer->ssao_pass.command_buffer = tgvk_command_buffer_create(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     tgvk_command_buffer_begin(&h_renderer->ssao_pass.command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
     {
-        tgvk_cmd_transition_color_image_layout(&h_renderer->ssao_pass.command_buffer, &h_renderer->ssao_pass.ssao_attachment, 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
-        tgvk_cmd_transition_color_image_layout(&h_renderer->ssao_pass.command_buffer, &h_renderer->ssao_pass.ssao_noise_image, 0, VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+        tgvk_cmd_transition_image_layout(&h_renderer->ssao_pass.command_buffer, &h_renderer->ssao_pass.ssao_attachment, 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+        tgvk_cmd_transition_image_layout(&h_renderer->ssao_pass.command_buffer, &h_renderer->ssao_pass.ssao_noise_image, 0, VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
         tgvk_cmd_copy_buffer_to_color_image(&h_renderer->ssao_pass.command_buffer, staging_buffer.buffer, &h_renderer->ssao_pass.ssao_noise_image);
-        tgvk_cmd_transition_color_image_layout(&h_renderer->ssao_pass.command_buffer, &h_renderer->ssao_pass.ssao_noise_image, 0, 0, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-        tgvk_cmd_transition_color_image_layout(&h_renderer->ssao_pass.command_buffer, &h_renderer->ssao_pass.blur_attachment, 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+        tgvk_cmd_transition_image_layout(&h_renderer->ssao_pass.command_buffer, &h_renderer->ssao_pass.ssao_noise_image, 0, 0, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+        tgvk_cmd_transition_image_layout(&h_renderer->ssao_pass.command_buffer, &h_renderer->ssao_pass.blur_attachment, 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
     }
     tgvk_command_buffer_end_and_submit(&h_renderer->ssao_pass.command_buffer);
     tgvk_buffer_destroy(&staging_buffer);
@@ -187,7 +187,7 @@ static void tg__init_ssao_pass(tg_renderer_h h_renderer)
     {
         for (u32 i = 0; i < TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT; i++)
         {
-            tgvk_cmd_transition_color_image_layout(
+            tgvk_cmd_transition_image_layout(
                 &h_renderer->ssao_pass.command_buffer,
                 &h_renderer->geometry_pass.p_color_attachments[i],
                 VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
@@ -207,7 +207,7 @@ static void tg__init_ssao_pass(tg_renderer_h h_renderer)
         vkCmdDrawIndexed(h_renderer->ssao_pass.command_buffer.command_buffer, 6, 1, 0, 0, 0);
         vkCmdEndRenderPass(h_renderer->ssao_pass.command_buffer.command_buffer);
 
-        tgvk_cmd_transition_color_image_layout(
+        tgvk_cmd_transition_image_layout(
             &h_renderer->ssao_pass.command_buffer, &h_renderer->ssao_pass.ssao_attachment,
             VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
             VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
@@ -223,7 +223,7 @@ static void tg__init_ssao_pass(tg_renderer_h h_renderer)
         vkCmdDrawIndexed(h_renderer->ssao_pass.command_buffer.command_buffer, 6, 1, 0, 0, 0);
         vkCmdEndRenderPass(h_renderer->ssao_pass.command_buffer.command_buffer);
 
-        tgvk_cmd_transition_color_image_layout(
+        tgvk_cmd_transition_image_layout(
             &h_renderer->ssao_pass.command_buffer, &h_renderer->ssao_pass.ssao_attachment,
             VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
@@ -232,7 +232,7 @@ static void tg__init_ssao_pass(tg_renderer_h h_renderer)
 
         for (u32 i = 0; i < TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT; i++)
         {
-            tgvk_cmd_transition_color_image_layout(
+            tgvk_cmd_transition_image_layout(
                 &h_renderer->ssao_pass.command_buffer,
                 &h_renderer->geometry_pass.p_color_attachments[i],
                 VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
@@ -253,12 +253,12 @@ static void tg__init_shading_pass(tg_renderer_h h_renderer)
     p_shading_info->directional_light_count = 0;
     p_shading_info->point_light_count = 0;
 
-    h_renderer->shading_pass.color_attachment = tgvk_color_image_create(swapchain_extent.width, swapchain_extent.height, TGVK_HDR_FORMAT, TG_NULL);
+    h_renderer->shading_pass.color_attachment = tgvk_image_create(TGVK_IMAGE_TYPE_COLOR, swapchain_extent.width, swapchain_extent.height, TGVK_HDR_FORMAT, TG_NULL);
 
     h_renderer->shading_pass.command_buffer = tgvk_command_buffer_create(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
     tgvk_command_buffer_begin(&h_renderer->shading_pass.command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-    tgvk_cmd_transition_color_image_layout(&h_renderer->shading_pass.command_buffer, &h_renderer->shading_pass.color_attachment, 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+    tgvk_cmd_transition_image_layout(&h_renderer->shading_pass.command_buffer, &h_renderer->shading_pass.color_attachment, 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
     tgvk_command_buffer_end_and_submit(&h_renderer->shading_pass.command_buffer);
 
     h_renderer->shading_pass.framebuffer = tgvk_framebuffer_create(shared_render_resources.shading_render_pass, TGVK_SHADING_ATTACHMENT_COUNT, &h_renderer->shading_pass.color_attachment.image_view, swapchain_extent.width, swapchain_extent.height);
@@ -293,7 +293,7 @@ static void tg__init_shading_pass(tg_renderer_h h_renderer)
     {
         for (u32 i = 0; i < TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT; i++)
         {
-            tgvk_cmd_transition_color_image_layout(
+            tgvk_cmd_transition_image_layout(
                 &h_renderer->shading_pass.command_buffer,
                 &h_renderer->geometry_pass.p_color_attachments[i],
                 VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
@@ -303,7 +303,7 @@ static void tg__init_shading_pass(tg_renderer_h h_renderer)
         }
         for (u32 i = 0; i < TG_CASCADED_SHADOW_MAPS; i++)
         {
-            tgvk_cmd_transition_depth_image_layout(
+            tgvk_cmd_transition_image_layout(
                 &h_renderer->shading_pass.command_buffer,
                 &h_renderer->shadow_pass.p_shadow_maps[i],
                 VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
@@ -311,7 +311,7 @@ static void tg__init_shading_pass(tg_renderer_h h_renderer)
                 VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
             );
         }
-        tgvk_cmd_transition_color_image_layout(
+        tgvk_cmd_transition_image_layout(
             &h_renderer->shading_pass.command_buffer,
             &h_renderer->ssao_pass.blur_attachment,
             VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
@@ -334,15 +334,15 @@ static void tg__init_shading_pass(tg_renderer_h h_renderer)
         // TODO: skydome!!! then remove the clearing of all color images
         for (u32 i = 0; i < TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT; i++)
         {
-            tgvk_cmd_transition_color_image_layout(
+            tgvk_cmd_transition_image_layout(
                 &h_renderer->shading_pass.command_buffer,
                 &h_renderer->geometry_pass.p_color_attachments[i],
                 VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                 VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT
             );
-            tgvk_cmd_clear_color_image(&h_renderer->shading_pass.command_buffer, &h_renderer->geometry_pass.p_color_attachments[i]);
-            tgvk_cmd_transition_color_image_layout(
+            tgvk_cmd_clear_image(&h_renderer->shading_pass.command_buffer, &h_renderer->geometry_pass.p_color_attachments[i]);
+            tgvk_cmd_transition_image_layout(
                 &h_renderer->shading_pass.command_buffer,
                 &h_renderer->geometry_pass.p_color_attachments[i],
                 VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
@@ -352,7 +352,7 @@ static void tg__init_shading_pass(tg_renderer_h h_renderer)
         }
         for (u32 i = 0; i < TG_CASCADED_SHADOW_MAPS; i++)
         {
-            tgvk_cmd_transition_depth_image_layout(
+            tgvk_cmd_transition_image_layout(
                 &h_renderer->shading_pass.command_buffer,
                 &h_renderer->shadow_pass.p_shadow_maps[i],
                 VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
@@ -360,7 +360,7 @@ static void tg__init_shading_pass(tg_renderer_h h_renderer)
                 VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT
             );
         }
-        tgvk_cmd_transition_color_image_layout(
+        tgvk_cmd_transition_image_layout(
             &h_renderer->shading_pass.command_buffer,
             &h_renderer->ssao_pass.blur_attachment,
             VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
@@ -442,7 +442,7 @@ static void tg__init_tone_mapping_pass(tg_renderer_h h_renderer)
     {
         tgvk_cmd_copy_buffer(&h_renderer->tone_mapping_pass.adapt_exposure_command_buffer, exposure_sum_buffer_size, &h_renderer->tone_mapping_pass.acquire_exposure_clear_storage_buffer, &h_renderer->tone_mapping_pass.acquire_exposure_storage_buffer);
 
-        tgvk_cmd_transition_color_image_layout(
+        tgvk_cmd_transition_image_layout(
             &h_renderer->tone_mapping_pass.adapt_exposure_command_buffer,
             &h_renderer->shading_pass.color_attachment,
             VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
@@ -477,7 +477,7 @@ static void tg__init_tone_mapping_pass(tg_renderer_h h_renderer)
             0, 1, &memory_barrier, 0, TG_NULL, 0, TG_NULL
         );
 
-        tgvk_cmd_transition_color_image_layout(
+        tgvk_cmd_transition_image_layout(
             &h_renderer->tone_mapping_pass.adapt_exposure_command_buffer,
             &h_renderer->shading_pass.color_attachment,
             VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_SHADER_READ_BIT,
@@ -498,7 +498,7 @@ static void tg__init_tone_mapping_pass(tg_renderer_h h_renderer)
         vkCmdDrawIndexed(h_renderer->tone_mapping_pass.adapt_exposure_command_buffer.command_buffer, 6, 1, 0, 0, 0);
         vkCmdEndRenderPass(h_renderer->tone_mapping_pass.adapt_exposure_command_buffer.command_buffer);
 
-        tgvk_cmd_transition_color_image_layout(
+        tgvk_cmd_transition_image_layout(
             &h_renderer->tone_mapping_pass.adapt_exposure_command_buffer,
             &h_renderer->shading_pass.color_attachment,
             VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
@@ -516,28 +516,28 @@ static void tg__init_blit_pass(tg_renderer_h h_renderer)
 
     tgvk_command_buffer_begin(&h_renderer->blit_pass.command_buffer, 0);
     {
-        tgvk_cmd_transition_color_image_layout(
+        tgvk_cmd_transition_image_layout(
             &h_renderer->blit_pass.command_buffer,
             &h_renderer->render_target.color_attachment,
             VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT,
             VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT
         );
-        tgvk_cmd_transition_color_image_layout(
+        tgvk_cmd_transition_image_layout(
             &h_renderer->blit_pass.command_buffer,
             &h_renderer->render_target.color_attachment_copy,
             VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT
         );
-        tgvk_cmd_transition_depth_image_layout(
+        tgvk_cmd_transition_image_layout(
             &h_renderer->blit_pass.command_buffer,
             &h_renderer->render_target.depth_attachment,
             VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT,
             VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
             VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT
         );
-        tgvk_cmd_transition_depth_image_layout(
+        tgvk_cmd_transition_image_layout(
             &h_renderer->blit_pass.command_buffer,
             &h_renderer->render_target.depth_attachment_copy,
             VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
@@ -593,28 +593,28 @@ static void tg__init_blit_pass(tg_renderer_h h_renderer)
 
         tgvk_cmd_blit_image(&h_renderer->blit_pass.command_buffer, &h_renderer->render_target.depth_attachment, &h_renderer->render_target.depth_attachment_copy, &depth_image_blit);
 
-        tgvk_cmd_transition_color_image_layout(
+        tgvk_cmd_transition_image_layout(
             &h_renderer->blit_pass.command_buffer,
             &h_renderer->render_target.color_attachment,
             VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
             VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
             VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
         );
-        tgvk_cmd_transition_color_image_layout(
+        tgvk_cmd_transition_image_layout(
             &h_renderer->blit_pass.command_buffer,
             &h_renderer->render_target.color_attachment_copy,
             VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
         );
-        tgvk_cmd_transition_depth_image_layout(
+        tgvk_cmd_transition_image_layout(
             &h_renderer->blit_pass.command_buffer,
             &h_renderer->render_target.depth_attachment,
             VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
             VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
             VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT
         );
-        tgvk_cmd_transition_depth_image_layout(
+        tgvk_cmd_transition_image_layout(
             &h_renderer->blit_pass.command_buffer,
             &h_renderer->render_target.depth_attachment_copy,
             VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
@@ -630,15 +630,15 @@ static void tg__init_clear_pass(tg_renderer_h h_renderer)
     h_renderer->clear_pass.command_buffer = tgvk_command_buffer_create(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     tgvk_command_buffer_begin(&h_renderer->clear_pass.command_buffer, 0);
     {
-        tgvk_cmd_transition_depth_image_layout(
+        tgvk_cmd_transition_image_layout(
             &h_renderer->clear_pass.command_buffer,
             &h_renderer->render_target.depth_attachment,
             VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
             VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT
         );
-        tgvk_cmd_clear_depth_image(&h_renderer->clear_pass.command_buffer, &h_renderer->render_target.depth_attachment);
-        tgvk_cmd_transition_depth_image_layout(
+        tgvk_cmd_clear_image(&h_renderer->clear_pass.command_buffer, &h_renderer->render_target.depth_attachment);
+        tgvk_cmd_transition_image_layout(
             &h_renderer->clear_pass.command_buffer,
             &h_renderer->render_target.depth_attachment,
             VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
@@ -648,15 +648,15 @@ static void tg__init_clear_pass(tg_renderer_h h_renderer)
 
         for (u32 i = 0; i < TG_CASCADED_SHADOW_MAPS; i++)
         {
-            tgvk_cmd_transition_depth_image_layout(
+            tgvk_cmd_transition_image_layout(
                 &h_renderer->clear_pass.command_buffer,
                 &h_renderer->shadow_pass.p_shadow_maps[i],
                 VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
                 VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                 VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT
             );
-            tgvk_cmd_clear_depth_image(&h_renderer->clear_pass.command_buffer, &h_renderer->shadow_pass.p_shadow_maps[i]);
-            tgvk_cmd_transition_depth_image_layout(
+            tgvk_cmd_clear_image(&h_renderer->clear_pass.command_buffer, &h_renderer->shadow_pass.p_shadow_maps[i]);
+            tgvk_cmd_transition_image_layout(
                 &h_renderer->clear_pass.command_buffer,
                 &h_renderer->shadow_pass.p_shadow_maps[i],
                 VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
@@ -719,7 +719,7 @@ static void tg__init_present_pass(tg_renderer_h h_renderer)
     {
         tgvk_command_buffer_begin(&h_renderer->present_pass.p_command_buffers[i], 0);
         {
-            tgvk_cmd_transition_color_image_layout(
+            tgvk_cmd_transition_image_layout(
                 &h_renderer->present_pass.p_command_buffers[i],
                 &h_renderer->render_target.color_attachment,
                 VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
@@ -737,7 +737,7 @@ static void tg__init_present_pass(tg_renderer_h h_renderer)
             vkCmdDrawIndexed(h_renderer->present_pass.p_command_buffers[i].command_buffer, 6, 1, 0, 0, 0);
             vkCmdEndRenderPass(h_renderer->present_pass.p_command_buffers[i].command_buffer);
 
-            tgvk_cmd_transition_color_image_layout(
+            tgvk_cmd_transition_image_layout(
                 &h_renderer->present_pass.p_command_buffers[i],
                 &h_renderer->render_target.color_attachment,
                 VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
@@ -745,7 +745,7 @@ static void tg__init_present_pass(tg_renderer_h h_renderer)
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                 VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT
             );
-            tgvk_cmd_transition_depth_image_layout(
+            tgvk_cmd_transition_image_layout(
                 &h_renderer->present_pass.p_command_buffers[i],
                 &h_renderer->render_target.depth_attachment,
                 VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
@@ -754,10 +754,10 @@ static void tg__init_present_pass(tg_renderer_h h_renderer)
                 VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT
             );
 
-            tgvk_cmd_clear_color_image(&h_renderer->present_pass.p_command_buffers[i], &h_renderer->render_target.color_attachment);
-            tgvk_cmd_clear_depth_image(&h_renderer->present_pass.p_command_buffers[i], &h_renderer->render_target.depth_attachment);
+            tgvk_cmd_clear_image(&h_renderer->present_pass.p_command_buffers[i], &h_renderer->render_target.color_attachment);
+            tgvk_cmd_clear_image(&h_renderer->present_pass.p_command_buffers[i], &h_renderer->render_target.depth_attachment);
 
-            tgvk_cmd_transition_color_image_layout(
+            tgvk_cmd_transition_image_layout(
                 &h_renderer->present_pass.p_command_buffers[i],
                 &h_renderer->render_target.color_attachment,
                 VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
@@ -765,7 +765,7 @@ static void tg__init_present_pass(tg_renderer_h h_renderer)
                 VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                 VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
             );
-            tgvk_cmd_transition_depth_image_layout(
+            tgvk_cmd_transition_image_layout(
                 &h_renderer->present_pass.p_command_buffers[i],
                 &h_renderer->render_target.depth_attachment,
                 VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
@@ -860,21 +860,10 @@ void tg_renderer_init_shared_resources(void)
         pipeline_create_info.viewport_size.y = (f32)TG_CASCADED_SHADOW_MAP_SIZE;
         pipeline_create_info.polygon_mode = VK_POLYGON_MODE_FILL;
 
-        TG_ASSERT(pipeline_create_info.p_vertex_shader->spirv_layout.vertex_shader_input.count > 0);
+        TG_ASSERT(pipeline_create_info.p_vertex_shader->spirv_layout.vertex_shader_input.count == 1);
         TG_ASSERT(tg_vertex_input_attribute_format_get_size(pipeline_create_info.p_vertex_shader->spirv_layout.vertex_shader_input.p_resources[0].format) == sizeof(v3));
 
-        VkVertexInputBindingDescription vertex_input_binding_description = { 0 };
-        vertex_input_binding_description.binding = 0;
-        vertex_input_binding_description.stride = 12;
-        vertex_input_binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-        VkVertexInputAttributeDescription vertex_input_attribute_description = { 0 };
-        vertex_input_attribute_description.location = 0;
-        vertex_input_attribute_description.binding = 0;
-        vertex_input_attribute_description.format = VK_FORMAT_R32G32B32_SFLOAT;
-        vertex_input_attribute_description.offset = 0;
-
-        shared_render_resources.shadow_pipeline = tgvk_pipeline_create_graphics2(&pipeline_create_info, 1, &vertex_input_binding_description, &vertex_input_attribute_description);
+        shared_render_resources.shadow_pipeline = tgvk_pipeline_create_graphics(&pipeline_create_info);
     }
 
     // geometry pass
@@ -1743,7 +1732,7 @@ v3 tg_renderer_screen_to_world(tg_renderer_h h_renderer, u32 x, u32 y)
 
     tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
     {
-        tgvk_cmd_transition_depth_image_layout(
+        tgvk_cmd_transition_image_layout(
             p_command_buffer,
             &h_renderer->render_target.depth_attachment_copy,
             VK_ACCESS_SHADER_READ_BIT,
@@ -1754,7 +1743,7 @@ v3 tg_renderer_screen_to_world(tg_renderer_h h_renderer, u32 x, u32 y)
             VK_PIPELINE_STAGE_TRANSFER_BIT
         );
         tgvk_cmd_copy_depth_image_pixel_to_buffer(p_command_buffer, &h_renderer->render_target.depth_attachment_copy, p_staging_buffer->buffer, x, y);
-        tgvk_cmd_transition_depth_image_layout(
+        tgvk_cmd_transition_image_layout(
             p_command_buffer,
             &h_renderer->render_target.depth_attachment_copy,
             VK_ACCESS_TRANSFER_READ_BIT,
@@ -1809,7 +1798,7 @@ void tg_renderer_screenshot(tg_renderer_h h_renderer, const char* p_filename)
     tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
     tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
     {
-        tgvk_cmd_transition_color_image_layout(
+        tgvk_cmd_transition_image_layout(
             p_command_buffer,
             &h_renderer->render_target.color_attachment_copy,
             VK_ACCESS_SHADER_READ_BIT,
@@ -1826,7 +1815,7 @@ void tg_renderer_screenshot(tg_renderer_h h_renderer, const char* p_filename)
 
     tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
     {
-        tgvk_cmd_transition_color_image_layout(
+        tgvk_cmd_transition_image_layout(
             p_command_buffer,
             &h_renderer->render_target.color_attachment_copy,
             VK_ACCESS_TRANSFER_READ_BIT,
@@ -1856,14 +1845,15 @@ void tg_renderer_draw_cube_DEBUG(tg_renderer_h h_renderer, v3 position, v3 scale
 
     if (h_renderer->DEBUG.p_cubes[h_renderer->DEBUG.cube_count].graphics_pipeline.pipeline == VK_NULL_HANDLE)
     {
+        const VkBool32 blend_enable = VK_TRUE;
+
         tgvk_graphics_pipeline_create_info graphics_pipeline_create_info = { 0 };
         graphics_pipeline_create_info.p_vertex_shader = &tg_vertex_shader_get("shaders/renderer/debug/forward.vert")->shader;
         graphics_pipeline_create_info.p_fragment_shader = &tg_fragment_shader_get("shaders/renderer/debug/forward.frag")->shader;
         graphics_pipeline_create_info.cull_mode = VK_CULL_MODE_NONE;
-        graphics_pipeline_create_info.sample_count = VK_SAMPLE_COUNT_1_BIT;
         graphics_pipeline_create_info.depth_test_enable = TG_TRUE;
         graphics_pipeline_create_info.depth_write_enable = TG_TRUE;
-        graphics_pipeline_create_info.blend_enable = VK_TRUE;
+        graphics_pipeline_create_info.p_blend_enable = &blend_enable;
         graphics_pipeline_create_info.render_pass = shared_render_resources.forward_render_pass;
         graphics_pipeline_create_info.viewport_size.x = (f32)h_renderer->forward_pass.framebuffer.width;
         graphics_pipeline_create_info.viewport_size.y = (f32)h_renderer->forward_pass.framebuffer.height;

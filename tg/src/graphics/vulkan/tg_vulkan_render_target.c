@@ -45,7 +45,7 @@ void tg_render_target_get_color_data_copy(tg_render_target_h h_render_target, TG
 		tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take(required_size);
 		tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 		{
-			tgvk_cmd_transition_color_image_layout(
+			tgvk_cmd_transition_image_layout(
 				p_command_buffer,
 				&h_render_target->color_attachment_copy,
 				VK_ACCESS_SHADER_READ_BIT,
@@ -56,7 +56,7 @@ void tg_render_target_get_color_data_copy(tg_render_target_h h_render_target, TG
 				VK_PIPELINE_STAGE_TRANSFER_BIT
 			);
 			tgvk_cmd_copy_color_image_to_buffer(p_command_buffer, &h_render_target->color_attachment_copy, p_staging_buffer->buffer);
-			tgvk_cmd_transition_color_image_layout(
+			tgvk_cmd_transition_image_layout(
 				p_command_buffer,
 				&h_render_target->color_attachment_copy,
 				VK_ACCESS_TRANSFER_READ_BIT,

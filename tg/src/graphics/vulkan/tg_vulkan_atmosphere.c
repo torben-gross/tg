@@ -381,7 +381,7 @@ static void tg__precompute(tg_model* p_model)
 #define TG_DEBUG_STORE_TEXTURE(texture, p_filename)                                              \
 	tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);    \
 	{                                                                                            \
-		tgvk_cmd_transition_color_image_layout(                                                  \
+		tgvk_cmd_transition_image_layout(                                                  \
 			p_command_buffer,                                                                    \
 			&(texture),                                                                          \
 			VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,                                                \
@@ -398,7 +398,7 @@ static void tg__precompute(tg_model* p_model)
                                                                                                  \
 	tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);    \
 	{                                                                                            \
-		tgvk_cmd_transition_color_image_layout(                                                  \
+		tgvk_cmd_transition_image_layout(                                                  \
 			p_command_buffer,                                                                    \
 			&(texture),                                                                          \
 			VK_ACCESS_TRANSFER_READ_BIT,                                                         \
@@ -415,7 +415,7 @@ static void tg__precompute(tg_model* p_model)
 #endif
 
 #define TO_COLOR_ATTACHMENT_LAYOUT(texture)           \
-	tgvk_cmd_transition_color_image_layout(           \
+	tgvk_cmd_transition_image_layout(           \
 		p_command_buffer,                             \
 		&(texture),                                   \
 		0,                                            \
@@ -427,7 +427,7 @@ static void tg__precompute(tg_model* p_model)
 	)
 
 #define TO_COLOR_ATTACHMENT_LAYOUT_3D(texture)        \
-	tgvk_cmd_transition_storage_image_3d_layout(        \
+	tgvk_cmd_transition_image_3d_layout(        \
 		p_command_buffer,                             \
 		&(texture),                                   \
 		0,                                            \
@@ -438,9 +438,10 @@ static void tg__precompute(tg_model* p_model)
 		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT \
 	)
 
-	tgvk_image delta_irradiance_texture = tgvk_color_image_create(TG_IRRADIANCE_TEXTURE_WIDTH, TG_IRRADIANCE_TEXTURE_HEIGHT, VK_FORMAT_R32G32B32A32_SFLOAT, TG_NULL);
+	tgvk_image delta_irradiance_texture = tgvk_image_create(TGVK_IMAGE_TYPE_COLOR, TG_IRRADIANCE_TEXTURE_WIDTH, TG_IRRADIANCE_TEXTURE_HEIGHT, VK_FORMAT_R32G32B32A32_SFLOAT, TG_NULL);
 
-	tgvk_image_3d delta_rayleigh_scattering_texture = tgvk_storage_image_3d_create(
+	tgvk_image_3d delta_rayleigh_scattering_texture = tgvk_image_3d_create(
+		TGVK_IMAGE_TYPE_COLOR,
 		TG_SCATTERING_TEXTURE_WIDTH,
 		TG_SCATTERING_TEXTURE_HEIGHT,
 		TG_SCATTERING_TEXTURE_DEPTH,
@@ -450,7 +451,8 @@ static void tg__precompute(tg_model* p_model)
 		TG_NULL
 	);
 
-	tgvk_image_3d delta_mie_scattering_texture = tgvk_storage_image_3d_create(
+	tgvk_image_3d delta_mie_scattering_texture = tgvk_image_3d_create(
+		TGVK_IMAGE_TYPE_COLOR,
 		TG_SCATTERING_TEXTURE_WIDTH,
 		TG_SCATTERING_TEXTURE_HEIGHT,
 		TG_SCATTERING_TEXTURE_DEPTH,
@@ -460,7 +462,8 @@ static void tg__precompute(tg_model* p_model)
 		TG_NULL
 	);
 
-	tgvk_image_3d delta_scattering_density_texture = tgvk_storage_image_3d_create(
+	tgvk_image_3d delta_scattering_density_texture = tgvk_image_3d_create(
+		TGVK_IMAGE_TYPE_COLOR,
 		TG_SCATTERING_TEXTURE_WIDTH,
 		TG_SCATTERING_TEXTURE_HEIGHT,
 		TG_SCATTERING_TEXTURE_DEPTH,
@@ -634,7 +637,7 @@ static void tg__precompute(tg_model* p_model)
 
 		tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 		{
-			tgvk_cmd_transition_color_image_layout(
+			tgvk_cmd_transition_image_layout(
 				p_command_buffer,
 				&p_model->transmittance_texture,
 				VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
@@ -778,10 +781,10 @@ static void tg__precompute(tg_model* p_model)
 		scattering_density_descriptor_set = tgvk_descriptor_set_create(&scattering_density_pipeline);
 		tgvk_descriptor_set_update_uniform_buffer_range(scattering_density_descriptor_set.descriptor_set, 0, 2 * sizeof(i32), ubo.buffer, 0);
 		tgvk_descriptor_set_update_image(scattering_density_descriptor_set.descriptor_set, &p_model->transmittance_texture, 1);
-		//tgvk_descriptor_set_update_image_3d(scattering_density_descriptor_set.descriptor_set, &delta_rayleigh_scattering_texture, 2);
-		//tgvk_descriptor_set_update_image_3d(scattering_density_descriptor_set.descriptor_set, &delta_mie_scattering_texture, 3);
-		//tgvk_descriptor_set_update_image_3d(scattering_density_descriptor_set.descriptor_set, p_delta_multiple_scattering_texture, 4);
-		//tgvk_descriptor_set_update_image(scattering_density_descriptor_set.descriptor_set, &delta_irradiance_texture, 5);
+		tgvk_descriptor_set_update_image_3d(scattering_density_descriptor_set.descriptor_set, &delta_rayleigh_scattering_texture, 2);
+		tgvk_descriptor_set_update_image_3d(scattering_density_descriptor_set.descriptor_set, &delta_mie_scattering_texture, 3);
+		tgvk_descriptor_set_update_image_3d(scattering_density_descriptor_set.descriptor_set, p_delta_multiple_scattering_texture, 4);
+		tgvk_descriptor_set_update_image(scattering_density_descriptor_set.descriptor_set, &delta_irradiance_texture, 5);
 
 		for (u32 scattering_order = 2; scattering_order <= 4; scattering_order++)
 		{
@@ -827,9 +830,9 @@ static void tg__precompute(tg_model* p_model)
 	//compute_transmittance.Use();
 	//DrawQuad({}, full_screen_quad_vao_);
 
-	tgvk_storage_image_3d_destroy(&delta_scattering_density_texture);
-	tgvk_storage_image_3d_destroy(&delta_mie_scattering_texture);
-	tgvk_storage_image_3d_destroy(&delta_rayleigh_scattering_texture);
+	tgvk_image_3d_destroy(&delta_scattering_density_texture);
+	tgvk_image_3d_destroy(&delta_mie_scattering_texture);
+	tgvk_image_3d_destroy(&delta_rayleigh_scattering_texture);
 	tgvk_image_destroy(&delta_irradiance_texture);
 
 #undef TO_COLOR_ATTACHMENT_LAYOUT
@@ -925,9 +928,10 @@ void tg_atmosphere_precompute(void)
 
 
 
-	model.transmittance_texture = tgvk_color_image_create(TG_TRANSMITTANCE_TEXTURE_WIDTH, TG_TRANSMITTANCE_TEXTURE_HEIGHT, VK_FORMAT_R32G32B32A32_SFLOAT, TG_NULL);
+	model.transmittance_texture = tgvk_image_create(TGVK_IMAGE_TYPE_COLOR, TG_TRANSMITTANCE_TEXTURE_WIDTH, TG_TRANSMITTANCE_TEXTURE_HEIGHT, VK_FORMAT_R32G32B32A32_SFLOAT, TG_NULL);
 
-	model.scattering_texture = tgvk_storage_image_3d_create(
+	model.scattering_texture = tgvk_image_3d_create(
+		TGVK_IMAGE_TYPE_COLOR,
 		TG_SCATTERING_TEXTURE_WIDTH,
 		TG_SCATTERING_TEXTURE_HEIGHT,
 		TG_SCATTERING_TEXTURE_DEPTH,
@@ -939,7 +943,8 @@ void tg_atmosphere_precompute(void)
 
 	if (model.combine_scattering_textures)
 	{
-		model.optional_single_mie_scattering_texture = tgvk_storage_image_3d_create(
+		model.optional_single_mie_scattering_texture = tgvk_image_3d_create(
+			TGVK_IMAGE_TYPE_COLOR,
 			TG_SCATTERING_TEXTURE_WIDTH,
 			TG_SCATTERING_TEXTURE_HEIGHT,
 			TG_SCATTERING_TEXTURE_DEPTH,
@@ -949,7 +954,7 @@ void tg_atmosphere_precompute(void)
 			TG_NULL);
 	}
 
-	model.irradiance_texture = tgvk_color_image_create(TG_IRRADIANCE_TEXTURE_WIDTH, TG_IRRADIANCE_TEXTURE_HEIGHT, VK_FORMAT_R32G32B32A32_SFLOAT, TG_NULL);
+	model.irradiance_texture = tgvk_image_create(TGVK_IMAGE_TYPE_COLOR, TG_IRRADIANCE_TEXTURE_WIDTH, TG_IRRADIANCE_TEXTURE_HEIGHT, VK_FORMAT_R32G32B32A32_SFLOAT, TG_NULL);
 
 
 
@@ -958,10 +963,10 @@ void tg_atmosphere_precompute(void)
 
 
 	tgvk_image_destroy(&model.transmittance_texture);
-	tgvk_storage_image_3d_destroy(&model.scattering_texture);
+	tgvk_image_3d_destroy(&model.scattering_texture);
 	if (model.combine_scattering_textures)
 	{
-		tgvk_storage_image_3d_destroy(&model.optional_single_mie_scattering_texture);
+		tgvk_image_3d_destroy(&model.optional_single_mie_scattering_texture);
 	}
 	tgvk_image_destroy(&model.irradiance_texture);
 

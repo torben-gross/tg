@@ -581,56 +581,84 @@ void tgvk_cmd_blit_image(tgvk_command_buffer* p_command_buffer, tgvk_image* p_so
     vkCmdBlitImage(p_command_buffer->command_buffer, p_source->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, p_destination->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region, VK_FILTER_NEAREST);
 }
 
-void tgvk_cmd_clear_color_image(tgvk_command_buffer* p_command_buffer, tgvk_image* p_color_image)
+void tgvk_cmd_clear_image(tgvk_command_buffer* p_command_buffer, tgvk_image* p_image)
 {
-    VkImageSubresourceRange image_subresource_range = { 0 };
-    image_subresource_range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    image_subresource_range.baseMipLevel = 0;
-    image_subresource_range.levelCount = 1;
-    image_subresource_range.baseArrayLayer = 0;
-    image_subresource_range.layerCount = 1;
+    if (p_image->type == TGVK_IMAGE_TYPE_COLOR || p_image->type == TGVK_IMAGE_TYPE_STORAGE)
+    {
+        VkImageSubresourceRange image_subresource_range = { 0 };
+        image_subresource_range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        image_subresource_range.baseMipLevel = 0;
+        image_subresource_range.levelCount = 1;
+        image_subresource_range.baseArrayLayer = 0;
+        image_subresource_range.layerCount = 1;
 
-    VkClearColorValue clear_color_value = { 0 };
-    clear_color_value.float32[0] = 0.0f;
-    clear_color_value.float32[1] = 0.0f;
-    clear_color_value.float32[2] = 0.0f;
-    clear_color_value.float32[3] = 0.0f;
+        VkClearColorValue clear_color_value = { 0 };
+        clear_color_value.float32[0] = 0.0f;
+        clear_color_value.float32[1] = 0.0f;
+        clear_color_value.float32[2] = 0.0f;
+        clear_color_value.float32[3] = 0.0f;
 
-    vkCmdClearColorImage(p_command_buffer->command_buffer, p_color_image->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color_value, 1, &image_subresource_range);
+        vkCmdClearColorImage(p_command_buffer->command_buffer, p_image->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color_value, 1, &image_subresource_range);
+    }
+    else if (p_image->type == TGVK_IMAGE_TYPE_DEPTH)
+    {
+        VkImageSubresourceRange image_subresource_range = { 0 };
+        image_subresource_range.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+        image_subresource_range.baseMipLevel = 0;
+        image_subresource_range.levelCount = 1;
+        image_subresource_range.baseArrayLayer = 0;
+        image_subresource_range.layerCount = 1;
+
+        VkClearDepthStencilValue clear_depth_stencil_value = { 0 };
+        clear_depth_stencil_value.depth = 1.0f;
+        clear_depth_stencil_value.stencil = 0;
+
+        vkCmdClearDepthStencilImage(p_command_buffer->command_buffer, p_image->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_depth_stencil_value, 1, &image_subresource_range);
+    }
+    else
+    {
+        TG_INVALID_CODEPATH();
+    }
 }
 
-void tgvk_cmd_clear_depth_image(tgvk_command_buffer* p_command_buffer, tgvk_image* p_depth_image)
+void tgvk_cmd_clear_image_3d(tgvk_command_buffer* p_command_buffer, tgvk_image_3d* p_image_3d)
 {
-    VkImageSubresourceRange image_subresource_range = { 0 };
-    image_subresource_range.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-    image_subresource_range.baseMipLevel = 0;
-    image_subresource_range.levelCount = 1;
-    image_subresource_range.baseArrayLayer = 0;
-    image_subresource_range.layerCount = 1;
+    if (p_image_3d->type == TGVK_IMAGE_TYPE_COLOR || p_image_3d->type == TGVK_IMAGE_TYPE_STORAGE)
+    {
+        VkImageSubresourceRange image_subresource_range = { 0 };
+        image_subresource_range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        image_subresource_range.baseMipLevel = 0;
+        image_subresource_range.levelCount = 1;
+        image_subresource_range.baseArrayLayer = 0;
+        image_subresource_range.layerCount = 1;
 
-    VkClearDepthStencilValue clear_depth_stencil_value = { 0 };
-    clear_depth_stencil_value.depth = 1.0f;
-    clear_depth_stencil_value.stencil = 0;
+        VkClearColorValue clear_color_value = { 0 };
+        clear_color_value.float32[0] = 0.0f;
+        clear_color_value.float32[1] = 0.0f;
+        clear_color_value.float32[2] = 0.0f;
+        clear_color_value.float32[3] = 0.0f;
 
-    vkCmdClearDepthStencilImage(p_command_buffer->command_buffer, p_depth_image->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_depth_stencil_value, 1, &image_subresource_range);
-}
+        vkCmdClearColorImage(p_command_buffer->command_buffer, p_image_3d->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color_value, 1, &image_subresource_range);
+    }
+    else if (p_image_3d->type == TGVK_IMAGE_TYPE_DEPTH)
+    {
+        VkImageSubresourceRange image_subresource_range = { 0 };
+        image_subresource_range.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+        image_subresource_range.baseMipLevel = 0;
+        image_subresource_range.levelCount = 1;
+        image_subresource_range.baseArrayLayer = 0;
+        image_subresource_range.layerCount = 1;
 
-void tgvk_cmd_clear_storage_image_3d(tgvk_command_buffer* p_command_buffer, tgvk_image_3d* p_storage_image_3d)
-{
-    VkImageSubresourceRange image_subresource_range = { 0 };
-    image_subresource_range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    image_subresource_range.baseMipLevel = 0;
-    image_subresource_range.levelCount = 1;
-    image_subresource_range.baseArrayLayer = 0;
-    image_subresource_range.layerCount = 1;
+        VkClearDepthStencilValue clear_depth_stencil_value = { 0 };
+        clear_depth_stencil_value.depth = 1.0f;
+        clear_depth_stencil_value.stencil = 0;
 
-    VkClearColorValue clear_color_value = { 0 };
-    clear_color_value.float32[0] = 0.0f;
-    clear_color_value.float32[1] = 0.0f;
-    clear_color_value.float32[2] = 0.0f;
-    clear_color_value.float32[3] = 0.0f;
-
-    vkCmdClearColorImage(p_command_buffer->command_buffer, p_storage_image_3d->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color_value, 1, &image_subresource_range);
+        vkCmdClearDepthStencilImage(p_command_buffer->command_buffer, p_image_3d->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_depth_stencil_value, 1, &image_subresource_range);
+    }
+    else
+    {
+        TG_INVALID_CODEPATH();
+    }
 }
 
 void tgvk_cmd_copy_buffer(tgvk_command_buffer* p_command_buffer, VkDeviceSize size, tgvk_buffer* p_src, tgvk_buffer* p_dst)
@@ -703,13 +731,13 @@ void tgvk_cmd_copy_buffer_to_depth_image(tgvk_command_buffer* p_command_buffer, 
     vkCmdCopyBufferToImage(p_command_buffer->command_buffer, source, p_destination->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &buffer_image_copy);
 }
 
-void tgvk_cmd_copy_buffer_to_storage_image_3d(tgvk_command_buffer* p_command_buffer, VkBuffer source, tgvk_image_3d* p_destination)
+void tgvk_cmd_copy_buffer_to_image_3d(tgvk_command_buffer* p_command_buffer, VkBuffer source, tgvk_image_3d* p_destination)
 {
     VkBufferImageCopy buffer_image_copy = { 0 };
     buffer_image_copy.bufferOffset = 0;
     buffer_image_copy.bufferRowLength = 0;
     buffer_image_copy.bufferImageHeight = 0;
-    buffer_image_copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    buffer_image_copy.imageSubresource.aspectMask = p_destination->type == TGVK_IMAGE_TYPE_DEPTH ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
     buffer_image_copy.imageSubresource.mipLevel = 0;
     buffer_image_copy.imageSubresource.baseArrayLayer = 0;
     buffer_image_copy.imageSubresource.layerCount = 1;
@@ -787,13 +815,13 @@ void tgvk_cmd_copy_depth_image_pixel_to_buffer(tgvk_command_buffer* p_command_bu
     vkCmdCopyImageToBuffer(p_command_buffer->command_buffer, p_source->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, destination, 1, &buffer_image_copy);
 }
 
-void tgvk_cmd_copy_storage_image_3d_to_buffer(tgvk_command_buffer* p_command_buffer, tgvk_image_3d* p_source, VkBuffer destination)
+void tgvk_cmd_copy_image_3d_to_buffer(tgvk_command_buffer* p_command_buffer, tgvk_image_3d* p_source, VkBuffer destination)
 {
     VkBufferImageCopy buffer_image_copy = { 0 };
     buffer_image_copy.bufferOffset = 0;
     buffer_image_copy.bufferRowLength = 0;
     buffer_image_copy.bufferImageHeight = 0;
-    buffer_image_copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    buffer_image_copy.imageSubresource.aspectMask = p_source->type == TGVK_IMAGE_TYPE_DEPTH ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
     buffer_image_copy.imageSubresource.mipLevel = 0;
     buffer_image_copy.imageSubresource.baseArrayLayer = 0;
     buffer_image_copy.imageSubresource.layerCount = 1;
@@ -812,7 +840,7 @@ void tgvk_cmd_draw_indexed(tgvk_command_buffer* p_command_buffer, u32 index_coun
     vkCmdDrawIndexed(p_command_buffer->command_buffer, index_count, 1, 0, 0, 0);
 }
 
-void tgvk_cmd_transition_color_image_layout(tgvk_command_buffer* p_command_buffer, tgvk_image* p_image, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits)
+void tgvk_cmd_transition_image_layout(tgvk_command_buffer* p_command_buffer, tgvk_image* p_image, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits)
 {
     VkImageMemoryBarrier image_memory_barrier = { 0 };
     image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -824,7 +852,28 @@ void tgvk_cmd_transition_color_image_layout(tgvk_command_buffer* p_command_buffe
     image_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     image_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     image_memory_barrier.image = p_image->image;
-    image_memory_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    image_memory_barrier.subresourceRange.aspectMask = p_image->type == TGVK_IMAGE_TYPE_DEPTH ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+    image_memory_barrier.subresourceRange.baseMipLevel = 0;
+    image_memory_barrier.subresourceRange.levelCount = 1;
+    image_memory_barrier.subresourceRange.baseArrayLayer = 0;
+    image_memory_barrier.subresourceRange.layerCount = 1;
+
+    vkCmdPipelineBarrier(p_command_buffer->command_buffer, src_stage_bits, dst_stage_bits, 0, 0, TG_NULL, 0, TG_NULL, 1, &image_memory_barrier);
+}
+
+void tgvk_cmd_transition_image_3d_layout(tgvk_command_buffer* p_command_buffer, tgvk_image_3d* p_image_3d, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits)
+{
+    VkImageMemoryBarrier image_memory_barrier = { 0 };
+    image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    image_memory_barrier.pNext = TG_NULL;
+    image_memory_barrier.srcAccessMask = src_access_mask;
+    image_memory_barrier.dstAccessMask = dst_access_mask;
+    image_memory_barrier.oldLayout = old_layout;
+    image_memory_barrier.newLayout = new_layout;
+    image_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    image_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    image_memory_barrier.image = p_image_3d->image;
+    image_memory_barrier.subresourceRange.aspectMask = p_image_3d->type == TGVK_IMAGE_TYPE_DEPTH ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
     image_memory_barrier.subresourceRange.baseMipLevel = 0;
     image_memory_barrier.subresourceRange.levelCount = 1;
     image_memory_barrier.subresourceRange.baseArrayLayer = 0;
@@ -852,210 +901,6 @@ void tgvk_cmd_transition_cube_map_layout(tgvk_command_buffer* p_command_buffer, 
     image_memory_barrier.subresourceRange.layerCount = 6;
 
     vkCmdPipelineBarrier(p_command_buffer->command_buffer, src_stage_bits, dst_stage_bits, 0, 0, TG_NULL, 0, TG_NULL, 1, &image_memory_barrier);
-}
-
-void tgvk_cmd_transition_depth_image_layout(tgvk_command_buffer* p_command_buffer, tgvk_image* p_image, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits)
-{
-    VkImageMemoryBarrier image_memory_barrier = { 0 };
-    image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    image_memory_barrier.pNext = TG_NULL;
-    image_memory_barrier.srcAccessMask = src_access_mask;
-    image_memory_barrier.dstAccessMask = dst_access_mask;
-    image_memory_barrier.oldLayout = old_layout;
-    image_memory_barrier.newLayout = new_layout;
-    image_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    image_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    image_memory_barrier.image = p_image->image;
-    image_memory_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-    image_memory_barrier.subresourceRange.baseMipLevel = 0;
-    image_memory_barrier.subresourceRange.levelCount = 1;
-    image_memory_barrier.subresourceRange.baseArrayLayer = 0;
-    image_memory_barrier.subresourceRange.layerCount = 1;
-
-    vkCmdPipelineBarrier(p_command_buffer->command_buffer, src_stage_bits, dst_stage_bits, 0, 0, TG_NULL, 0, TG_NULL, 1, &image_memory_barrier);
-}
-
-void tgvk_cmd_transition_storage_image_3d_layout(tgvk_command_buffer* p_command_buffer, tgvk_image_3d* p_storage_image_3d, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits)
-{
-    VkImageMemoryBarrier image_memory_barrier = { 0 };
-    image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    image_memory_barrier.pNext = TG_NULL;
-    image_memory_barrier.srcAccessMask = src_access_mask;
-    image_memory_barrier.dstAccessMask = dst_access_mask;
-    image_memory_barrier.oldLayout = old_layout;
-    image_memory_barrier.newLayout = new_layout;
-    image_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    image_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    image_memory_barrier.image = p_storage_image_3d->image;
-    image_memory_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    image_memory_barrier.subresourceRange.baseMipLevel = 0;
-    image_memory_barrier.subresourceRange.levelCount = 1;
-    image_memory_barrier.subresourceRange.baseArrayLayer = 0;
-    image_memory_barrier.subresourceRange.layerCount = 1;
-
-    vkCmdPipelineBarrier(p_command_buffer->command_buffer, src_stage_bits, dst_stage_bits, 0, 0, TG_NULL, 0, TG_NULL, 1, &image_memory_barrier);
-}
-
-
-
-tgvk_image tgvk_color_image_create(u32 width, u32 height, VkFormat format, const tg_sampler_create_info* p_sampler_create_info)
-{
-    tgvk_image image = { 0 };
-    image.type = TGVK_IMAGE_TYPE_COLOR;
-    image.width = width;
-    image.height = height;
-    image.format = format;
-
-    VkImageCreateInfo image_create_info = { 0 };
-    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    image_create_info.pNext = TG_NULL;
-    image_create_info.flags = 0;
-    image_create_info.imageType = VK_IMAGE_TYPE_2D;
-    image_create_info.format = image.format;
-    image_create_info.extent.width = image.width;
-    image_create_info.extent.height = image.height;
-    image_create_info.extent.depth = 1;
-    image_create_info.mipLevels = 1;
-    image_create_info.arrayLayers = 1;
-    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
-    image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
-    image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-    image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    image_create_info.queueFamilyIndexCount = 0;
-    image_create_info.pQueueFamilyIndices = TG_NULL;
-    image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-
-    TGVK_CALL(vkCreateImage(device, &image_create_info, TG_NULL, &image.image));
-
-    VkMemoryRequirements memory_requirements = { 0 };
-    vkGetImageMemoryRequirements(device, image.image, &memory_requirements);
-    image.memory = tgvk_memory_allocator_alloc(memory_requirements.alignment, memory_requirements.size, memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    TGVK_CALL(vkBindImageMemory(device, image.image, image.memory.device_memory, image.memory.offset));
-
-    // TODO: mipmapping
-    //VkCommandBuffer command_buffer = tgvk_command_buffer_create(graphics_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
-    //tgvk_command_buffer_begin(command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
-    //
-    //VkImageMemoryBarrier mipmap_image_memory_barrier = { 0 };
-    //{
-    //    mipmap_image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    //    mipmap_image_memory_barrier.pNext = TG_NULL;
-    //    mipmap_image_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    //    mipmap_image_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    //    mipmap_image_memory_barrier.image = color_image.image;
-    //    mipmap_image_memory_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    //    mipmap_image_memory_barrier.subresourceRange.baseMipLevel = 0;
-    //    mipmap_image_memory_barrier.subresourceRange.levelCount = 1;
-    //    mipmap_image_memory_barrier.subresourceRange.baseArrayLayer = 0;
-    //    mipmap_image_memory_barrier.subresourceRange.layerCount = 1;
-    //}
-    //u32 mip_width = color_image.width;
-    //u32 mip_height = color_image.height;
-    //for (u32 i = 1; i < color_image.mip_levels; i++)
-    //{
-    //    const u32 next_mip_width = tgm_u32_max(1, mip_width / 2);
-    //    const u32 next_mip_height = tgm_u32_max(1, mip_height / 2);
-    //
-    //    mipmap_image_memory_barrier.subresourceRange.baseMipLevel = i - 1;
-    //    mipmap_image_memory_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    //    mipmap_image_memory_barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-    //    mipmap_image_memory_barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-    //    mipmap_image_memory_barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-    //
-    //    vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, TG_NULL, 0, TG_NULL, 1, &mipmap_image_memory_barrier);
-    //
-    //    VkImageBlit image_blit = { 0 };
-    //    {
-    //        image_blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    //        image_blit.srcSubresource.mipLevel = i - 1;
-    //        image_blit.srcSubresource.baseArrayLayer = 0;
-    //        image_blit.srcSubresource.layerCount = 1;
-    //        image_blit.srcOffsets[0].x = 0;
-    //        image_blit.srcOffsets[0].y = 0;
-    //        image_blit.srcOffsets[0].z = 0;
-    //        image_blit.srcOffsets[1].x = mip_width;
-    //        image_blit.srcOffsets[1].y = mip_height;
-    //        image_blit.srcOffsets[1].z = 1;
-    //        image_blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    //        image_blit.dstSubresource.mipLevel = i;
-    //        image_blit.dstSubresource.baseArrayLayer = 0;
-    //        image_blit.dstSubresource.layerCount = 1;
-    //        image_blit.dstOffsets[0].x = 0;
-    //        image_blit.dstOffsets[0].y = 0;
-    //        image_blit.dstOffsets[0].z = 0;
-    //        image_blit.dstOffsets[1].x = next_mip_width;
-    //        image_blit.dstOffsets[1].y = next_mip_height;
-    //        image_blit.dstOffsets[1].z = 1;
-    //    }
-    //    vkCmdBlitImage(command_buffer, color_image.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, color_image.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &image_blit, VK_FILTER_LINEAR);
-    //
-    //    mipmap_image_memory_barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-    //    mipmap_image_memory_barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    //    mipmap_image_memory_barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-    //    mipmap_image_memory_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-    //
-    //    vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, TG_NULL, 0, TG_NULL, 1, &mipmap_image_memory_barrier);
-    //
-    //    mip_width = next_mip_width;
-    //    mip_height = next_mip_height;
-    //}
-    //
-    //mipmap_image_memory_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    //mipmap_image_memory_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-    //mipmap_image_memory_barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-    //mipmap_image_memory_barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    //mipmap_image_memory_barrier.subresourceRange.baseMipLevel = color_image.mip_levels - 1;
-    //
-    //vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, TG_NULL, 0, TG_NULL, 1, &image_memory_barrier);
-    //tgvk_command_buffer_end_and_submit(command_buffer, &graphics_queue);
-    //tgvk_command_buffer_destroy(graphics_command_pool, command_buffer);
-    
-    image.image_view = tg__image_view_create(image.image, VK_IMAGE_VIEW_TYPE_2D, image.format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
-
-    if (p_sampler_create_info)
-    {
-        image.sampler = tg__sampler_create_custom(
-            1,
-            p_sampler_create_info->min_filter,
-            p_sampler_create_info->mag_filter,
-            p_sampler_create_info->address_mode_u,
-            p_sampler_create_info->address_mode_v,
-            p_sampler_create_info->address_mode_w
-        );
-    }
-    else
-    {
-        image.sampler = tg__sampler_create(1);
-    }
-
-    return image;
-}
-
-tgvk_image tgvk_color_image_create2(const char* p_filename, const tg_sampler_create_info* p_sampler_create_info)
-{
-    u32 w, h;
-    tg_color_image_format f;
-    u32* p_data = TG_NULL;
-    tg_image_load(p_filename, &w, &h, &f, &p_data);
-    //h_color_image->mip_levels = TG_IMAGE_MAX_MIP_LEVELS(h_color_image->width, h_color_image->height);// TODO: mipmapping
-    const u64 size = (u64)w * (u64)h * sizeof(*p_data);
-
-    tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take(size);
-    tg_memcpy(size, p_data, p_staging_buffer->memory.p_mapped_device_memory);
-
-    tgvk_image image = tgvk_color_image_create(w, h, (VkFormat)f, p_sampler_create_info);
-
-    tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
-    tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-    tgvk_cmd_transition_color_image_layout(p_command_buffer, &image, 0, 0, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
-    tgvk_cmd_copy_buffer_to_color_image(p_command_buffer, p_staging_buffer->buffer, &image);
-    tgvk_cmd_transition_color_image_layout(p_command_buffer, &image, 0, 0, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-    tgvk_command_buffer_end_and_submit(p_command_buffer);
-    tgvk_global_staging_buffer_release();
-
-    tg_image_free(p_data);
-
-    return image;
 }
 
 
@@ -1282,62 +1127,6 @@ void tgvk_cube_map_destroy(tgvk_cube_map* p_cube_map)
 }
 
 
-tgvk_image tgvk_depth_image_create(u32 width, u32 height, VkFormat format, const tg_sampler_create_info* p_sampler_create_info)
-{
-    tgvk_image image = { 0 };
-    image.type = TGVK_IMAGE_TYPE_DEPTH;
-    image.width = width;
-    image.height = height;
-    image.format = format;
-
-    VkImageCreateInfo image_create_info = { 0 };
-    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    image_create_info.pNext = TG_NULL;
-    image_create_info.flags = 0;
-    image_create_info.imageType = VK_IMAGE_TYPE_2D;
-    image_create_info.format = image.format;
-    image_create_info.extent.width = image.width;
-    image_create_info.extent.height = image.height;
-    image_create_info.extent.depth = 1;
-    image_create_info.mipLevels = 1;
-    image_create_info.arrayLayers = 1;
-    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
-    image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
-    image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-    image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    image_create_info.queueFamilyIndexCount = 0;
-    image_create_info.pQueueFamilyIndices = TG_NULL;
-    image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-
-    TGVK_CALL(vkCreateImage(device, &image_create_info, TG_NULL, &image.image));
-
-    VkMemoryRequirements memory_requirements = { 0 };
-    vkGetImageMemoryRequirements(device, image.image, &memory_requirements);
-    image.memory = tgvk_memory_allocator_alloc(memory_requirements.alignment, memory_requirements.size, memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    TGVK_CALL(vkBindImageMemory(device, image.image, image.memory.device_memory, image.memory.offset));
-
-    image.image_view = tg__image_view_create(image.image, VK_IMAGE_VIEW_TYPE_2D, image.format, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
-
-    if (p_sampler_create_info)
-    {
-        image.sampler = tg__sampler_create_custom(
-            1,
-            p_sampler_create_info->min_filter,
-            p_sampler_create_info->mag_filter,
-            p_sampler_create_info->address_mode_u,
-            p_sampler_create_info->address_mode_v,
-            p_sampler_create_info->address_mode_w
-        );
-    }
-    else
-    {
-        image.sampler = tg__sampler_create(1);
-    }
-
-    return image;
-}
-
-
 
 tgvk_descriptor_set tgvk_descriptor_set_create(const tgvk_pipeline* p_pipeline)
 {
@@ -1393,7 +1182,7 @@ void tgvk_descriptor_set_update(VkDescriptorSet descriptor_set, tg_handle handle
     case TG_STRUCTURE_TYPE_STORAGE_IMAGE_3D:
     {
         tg_storage_image_3d_h h_storage_image_3d = (tg_storage_image_3d_h)handle;
-        tgvk_descriptor_set_update_storage_image_3d(descriptor_set, &h_storage_image_3d->storage_image_3d, dst_binding);
+        tgvk_descriptor_set_update_image_3d(descriptor_set, &h_storage_image_3d->image_3d, dst_binding);
     } break;
     case TG_STRUCTURE_TYPE_CUBE_MAP:
     {
@@ -1424,11 +1213,11 @@ void tgvk_descriptor_set_update(VkDescriptorSet descriptor_set, tg_handle handle
     }
 }
 
-void tgvk_descriptor_set_update_image(VkDescriptorSet descriptor_set, tgvk_image* p_image, u32 dst_binding)
+void tgvk_descriptor_set_update_cube_map(VkDescriptorSet descriptor_set, tgvk_cube_map* p_cube_map, u32 dst_binding)
 {
     VkDescriptorImageInfo descriptor_image_info = { 0 };
-    descriptor_image_info.sampler = p_image->sampler;
-    descriptor_image_info.imageView = p_image->image_view;
+    descriptor_image_info.sampler = p_cube_map->sampler;
+    descriptor_image_info.imageView = p_cube_map->image_view;
     descriptor_image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
     VkWriteDescriptorSet write_descriptor_set = { 0 };
@@ -1446,11 +1235,11 @@ void tgvk_descriptor_set_update_image(VkDescriptorSet descriptor_set, tgvk_image
     vkUpdateDescriptorSets(device, 1, &write_descriptor_set, 0, TG_NULL);
 }
 
-void tgvk_descriptor_set_update_cube_map(VkDescriptorSet descriptor_set, tgvk_cube_map* p_cube_map, u32 dst_binding)
+void tgvk_descriptor_set_update_image(VkDescriptorSet descriptor_set, tgvk_image* p_image, u32 dst_binding)
 {
     VkDescriptorImageInfo descriptor_image_info = { 0 };
-    descriptor_image_info.sampler = p_cube_map->sampler;
-    descriptor_image_info.imageView = p_cube_map->image_view;
+    descriptor_image_info.sampler = p_image->sampler;
+    descriptor_image_info.imageView = p_image->image_view;
     descriptor_image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
     VkWriteDescriptorSet write_descriptor_set = { 0 };
@@ -1486,6 +1275,37 @@ void tgvk_descriptor_set_update_image_array(VkDescriptorSet descriptor_set, tgvk
     write_descriptor_set.pImageInfo = &descriptor_image_info;
     write_descriptor_set.pBufferInfo = TG_NULL;
     write_descriptor_set.pTexelBufferView = TG_NULL;
+
+    vkUpdateDescriptorSets(device, 1, &write_descriptor_set, 0, TG_NULL);
+}
+
+void tgvk_descriptor_set_update_image_3d(VkDescriptorSet descriptor_set, tgvk_image_3d* p_image_3d, u32 dst_binding)
+{
+    VkDescriptorImageInfo descriptor_image_info = { 0 };
+    descriptor_image_info.sampler = p_image_3d->sampler;
+    descriptor_image_info.imageView = p_image_3d->image_view;
+
+    VkWriteDescriptorSet write_descriptor_set = { 0 };
+    write_descriptor_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    write_descriptor_set.pNext = TG_NULL;
+    write_descriptor_set.dstSet = descriptor_set;
+    write_descriptor_set.dstBinding = dst_binding;
+    write_descriptor_set.dstArrayElement = 0;
+    write_descriptor_set.descriptorCount = 1;
+    write_descriptor_set.pImageInfo = &descriptor_image_info;
+    write_descriptor_set.pBufferInfo = TG_NULL;
+    write_descriptor_set.pTexelBufferView = TG_NULL;
+
+    if (p_image_3d->type == TGVK_IMAGE_TYPE_COLOR || p_image_3d->type == TGVK_IMAGE_TYPE_DEPTH)
+    {
+        descriptor_image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        write_descriptor_set.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    }
+    else if (p_image_3d->type == TGVK_IMAGE_TYPE_STORAGE)
+    {
+        descriptor_image_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+        write_descriptor_set.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    }
 
     vkUpdateDescriptorSets(device, 1, &write_descriptor_set, 0, TG_NULL);
 }
@@ -1535,28 +1355,6 @@ void tgvk_descriptor_set_update_storage_buffer_array(VkDescriptorSet descriptor_
     write_descriptor_set.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     write_descriptor_set.pImageInfo = TG_NULL;
     write_descriptor_set.pBufferInfo = &descriptor_buffer_info;
-    write_descriptor_set.pTexelBufferView = TG_NULL;
-
-    vkUpdateDescriptorSets(device, 1, &write_descriptor_set, 0, TG_NULL);
-}
-
-void tgvk_descriptor_set_update_storage_image_3d(VkDescriptorSet descriptor_set, tgvk_image_3d* p_storage_image_3d, u32 dst_binding)
-{
-    VkDescriptorImageInfo descriptor_image_info = { 0 };
-    descriptor_image_info.sampler = p_storage_image_3d->sampler;
-    descriptor_image_info.imageView = p_storage_image_3d->image_view;
-    descriptor_image_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-
-    VkWriteDescriptorSet write_descriptor_set = { 0 };
-    write_descriptor_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    write_descriptor_set.pNext = TG_NULL;
-    write_descriptor_set.dstSet = descriptor_set;
-    write_descriptor_set.dstBinding = dst_binding;
-    write_descriptor_set.dstArrayElement = 0;
-    write_descriptor_set.descriptorCount = 1;
-    write_descriptor_set.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-    write_descriptor_set.pImageInfo = &descriptor_image_info;
-    write_descriptor_set.pBufferInfo = TG_NULL;
     write_descriptor_set.pTexelBufferView = TG_NULL;
 
     vkUpdateDescriptorSets(device, 1, &write_descriptor_set, 0, TG_NULL);
@@ -1704,12 +1502,195 @@ void tgvk_framebuffers_destroy(u32 count, tgvk_framebuffer* p_framebuffers)
 
 
 
+tgvk_image tgvk_image_create(tgvk_image_type type, u32 width, u32 height, VkFormat format, const tg_sampler_create_info* p_sampler_create_info)
+{
+    tgvk_image image = { 0 };
+
+    VkImageUsageFlags usage = 0;
+    VkImageAspectFlagBits aspect_mask = 0;
+    if (type == TGVK_IMAGE_TYPE_COLOR)
+    {
+        usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        aspect_mask = VK_IMAGE_ASPECT_COLOR_BIT;
+    }
+    else if (type == TGVK_IMAGE_TYPE_DEPTH)
+    {
+        usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+        aspect_mask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    }
+    else if (type == TGVK_IMAGE_TYPE_STORAGE)
+    {
+        usage = VK_IMAGE_USAGE_STORAGE_BIT;
+        aspect_mask = VK_IMAGE_ASPECT_COLOR_BIT;
+    }
+    else
+    {
+        TG_INVALID_CODEPATH();
+    }
+
+    image.type = type;
+    image.width = width;
+    image.height = height;
+    image.format = format;
+
+    VkImageCreateInfo image_create_info = { 0 };
+    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_create_info.pNext = TG_NULL;
+    image_create_info.flags = 0;
+    image_create_info.imageType = VK_IMAGE_TYPE_2D;
+    image_create_info.format = image.format;
+    image_create_info.extent.width = image.width;
+    image_create_info.extent.height = image.height;
+    image_create_info.extent.depth = 1;
+    image_create_info.mipLevels = 1;
+    image_create_info.arrayLayers = 1;
+    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
+    image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+    image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | usage;
+    image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    image_create_info.queueFamilyIndexCount = 0;
+    image_create_info.pQueueFamilyIndices = TG_NULL;
+    image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+    TGVK_CALL(vkCreateImage(device, &image_create_info, TG_NULL, &image.image));
+
+    VkMemoryRequirements memory_requirements = { 0 };
+    vkGetImageMemoryRequirements(device, image.image, &memory_requirements);
+    image.memory = tgvk_memory_allocator_alloc(memory_requirements.alignment, memory_requirements.size, memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    TGVK_CALL(vkBindImageMemory(device, image.image, image.memory.device_memory, image.memory.offset));
+
+    // TODO: mipmapping
+    //VkCommandBuffer command_buffer = tgvk_command_buffer_create(graphics_command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+    //tgvk_command_buffer_begin(command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, TG_NULL);
+    //
+    //VkImageMemoryBarrier mipmap_image_memory_barrier = { 0 };
+    //{
+    //    mipmap_image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    //    mipmap_image_memory_barrier.pNext = TG_NULL;
+    //    mipmap_image_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    //    mipmap_image_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    //    mipmap_image_memory_barrier.image = color_image.image;
+    //    mipmap_image_memory_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    //    mipmap_image_memory_barrier.subresourceRange.baseMipLevel = 0;
+    //    mipmap_image_memory_barrier.subresourceRange.levelCount = 1;
+    //    mipmap_image_memory_barrier.subresourceRange.baseArrayLayer = 0;
+    //    mipmap_image_memory_barrier.subresourceRange.layerCount = 1;
+    //}
+    //u32 mip_width = color_image.width;
+    //u32 mip_height = color_image.height;
+    //for (u32 i = 1; i < color_image.mip_levels; i++)
+    //{
+    //    const u32 next_mip_width = tgm_u32_max(1, mip_width / 2);
+    //    const u32 next_mip_height = tgm_u32_max(1, mip_height / 2);
+    //
+    //    mipmap_image_memory_barrier.subresourceRange.baseMipLevel = i - 1;
+    //    mipmap_image_memory_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    //    mipmap_image_memory_barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+    //    mipmap_image_memory_barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    //    mipmap_image_memory_barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    //
+    //    vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, TG_NULL, 0, TG_NULL, 1, &mipmap_image_memory_barrier);
+    //
+    //    VkImageBlit image_blit = { 0 };
+    //    {
+    //        image_blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    //        image_blit.srcSubresource.mipLevel = i - 1;
+    //        image_blit.srcSubresource.baseArrayLayer = 0;
+    //        image_blit.srcSubresource.layerCount = 1;
+    //        image_blit.srcOffsets[0].x = 0;
+    //        image_blit.srcOffsets[0].y = 0;
+    //        image_blit.srcOffsets[0].z = 0;
+    //        image_blit.srcOffsets[1].x = mip_width;
+    //        image_blit.srcOffsets[1].y = mip_height;
+    //        image_blit.srcOffsets[1].z = 1;
+    //        image_blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    //        image_blit.dstSubresource.mipLevel = i;
+    //        image_blit.dstSubresource.baseArrayLayer = 0;
+    //        image_blit.dstSubresource.layerCount = 1;
+    //        image_blit.dstOffsets[0].x = 0;
+    //        image_blit.dstOffsets[0].y = 0;
+    //        image_blit.dstOffsets[0].z = 0;
+    //        image_blit.dstOffsets[1].x = next_mip_width;
+    //        image_blit.dstOffsets[1].y = next_mip_height;
+    //        image_blit.dstOffsets[1].z = 1;
+    //    }
+    //    vkCmdBlitImage(command_buffer, color_image.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, color_image.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &image_blit, VK_FILTER_LINEAR);
+    //
+    //    mipmap_image_memory_barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    //    mipmap_image_memory_barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    //    mipmap_image_memory_barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+    //    mipmap_image_memory_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    //
+    //    vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, TG_NULL, 0, TG_NULL, 1, &mipmap_image_memory_barrier);
+    //
+    //    mip_width = next_mip_width;
+    //    mip_height = next_mip_height;
+    //}
+    //
+    //mipmap_image_memory_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    //mipmap_image_memory_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    //mipmap_image_memory_barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    //mipmap_image_memory_barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    //mipmap_image_memory_barrier.subresourceRange.baseMipLevel = color_image.mip_levels - 1;
+    //
+    //vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, TG_NULL, 0, TG_NULL, 1, &image_memory_barrier);
+    //tgvk_command_buffer_end_and_submit(command_buffer, &graphics_queue);
+    //tgvk_command_buffer_destroy(graphics_command_pool, command_buffer);
+
+    image.image_view = tg__image_view_create(image.image, VK_IMAGE_VIEW_TYPE_2D, image.format, aspect_mask, 1);
+
+    if (p_sampler_create_info)
+    {
+        image.sampler = tg__sampler_create_custom(
+            1,
+            p_sampler_create_info->min_filter,
+            p_sampler_create_info->mag_filter,
+            p_sampler_create_info->address_mode_u,
+            p_sampler_create_info->address_mode_v,
+            p_sampler_create_info->address_mode_w
+        );
+    }
+    else
+    {
+        image.sampler = tg__sampler_create(1);
+    }
+
+    return image;
+}
+
+tgvk_image tgvk_image_create2(tgvk_image_type type, const char* p_filename, const tg_sampler_create_info* p_sampler_create_info)
+{
+    u32 w, h;
+    tg_color_image_format f;
+    u32* p_data = TG_NULL;
+    tg_image_load(p_filename, &w, &h, &f, &p_data);
+    //h_color_image->mip_levels = TG_IMAGE_MAX_MIP_LEVELS(h_color_image->width, h_color_image->height);// TODO: mipmapping
+    const u64 size = (u64)w * (u64)h * sizeof(*p_data);
+
+    tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take(size);
+    tg_memcpy(size, p_data, p_staging_buffer->memory.p_mapped_device_memory);
+
+    tgvk_image image = tgvk_image_create(type, w, h, (VkFormat)f, p_sampler_create_info);
+
+    tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
+    tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+    tgvk_cmd_transition_image_layout(p_command_buffer, &image, 0, 0, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+    tgvk_cmd_copy_buffer_to_color_image(p_command_buffer, p_staging_buffer->buffer, &image);
+    tgvk_cmd_transition_image_layout(p_command_buffer, &image, 0, 0, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+    tgvk_command_buffer_end_and_submit(p_command_buffer);
+    tgvk_global_staging_buffer_release();
+
+    tg_image_free(p_data);
+
+    return image;
+}
+
 b32 tgvk_image_store_to_disc(tgvk_image* p_image, const char* p_filename, b32 replace_existing)
 {
     const u32 width = p_image->width;
     const u32 height = p_image->height;
 
-    tgvk_image blit_image = tgvk_color_image_create(width, height, (VkFormat)TG_COLOR_IMAGE_FORMAT_B8G8R8A8_UNORM, TG_NULL);
+    tgvk_image blit_image = tgvk_image_create(TGVK_IMAGE_TYPE_COLOR, width, height, (VkFormat)TG_COLOR_IMAGE_FORMAT_B8G8R8A8_UNORM, TG_NULL);
 
     const u32 staging_buffer_size = width * height * tg_color_image_format_size((tg_color_image_format)blit_image.format);
     tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take((u64)staging_buffer_size);
@@ -1717,7 +1698,7 @@ b32 tgvk_image_store_to_disc(tgvk_image* p_image, const char* p_filename, b32 re
     tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
     tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
     {
-        tgvk_cmd_transition_color_image_layout(
+        tgvk_cmd_transition_image_layout(
             p_command_buffer,
             &blit_image,
             0,
@@ -1730,7 +1711,7 @@ b32 tgvk_image_store_to_disc(tgvk_image* p_image, const char* p_filename, b32 re
 
         tgvk_cmd_blit_image(p_command_buffer, p_image, &blit_image, TG_NULL);
 
-        tgvk_cmd_transition_color_image_layout(
+        tgvk_cmd_transition_image_layout(
             p_command_buffer,
             &blit_image,
             VK_ACCESS_TRANSFER_WRITE_BIT,
@@ -1770,187 +1751,92 @@ void tgvk_image_destroy(tgvk_image* p_image)
 
 
 
-VkPhysicalDeviceProperties tgvk_physical_device_get_properties(void)
+tgvk_image_3d tgvk_image_3d_create(tgvk_image_type type, u32 width, u32 height, u32 depth, VkFormat format, const tg_sampler_create_info* p_sampler_create_info)
 {
-    VkPhysicalDeviceProperties physical_device_properties = { 0 };
-    vkGetPhysicalDeviceProperties(physical_device, &physical_device_properties);
-    return physical_device_properties;
-}
+    tgvk_image_3d image_3d = { 0 };
 
-
-
-void tgvk_pipeline_shader_stage_create_infos_create(const tgvk_shader* p_vertex_shader, const tgvk_shader* p_fragment_shader, VkPipelineShaderStageCreateInfo* p_pipeline_shader_stage_create_infos)
-{
-    const char* p_name = "main";
-
-    p_pipeline_shader_stage_create_infos[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    p_pipeline_shader_stage_create_infos[0].pNext = TG_NULL;
-    p_pipeline_shader_stage_create_infos[0].flags = 0;
-    p_pipeline_shader_stage_create_infos[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
-    p_pipeline_shader_stage_create_infos[0].module = p_vertex_shader->shader_module;
-    p_pipeline_shader_stage_create_infos[0].pName = p_name;
-    p_pipeline_shader_stage_create_infos[0].pSpecializationInfo = TG_NULL;
-
-    p_pipeline_shader_stage_create_infos[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    p_pipeline_shader_stage_create_infos[1].pNext = TG_NULL;
-    p_pipeline_shader_stage_create_infos[1].flags = 0;
-    p_pipeline_shader_stage_create_infos[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-    p_pipeline_shader_stage_create_infos[1].module = p_fragment_shader->shader_module;
-    p_pipeline_shader_stage_create_infos[1].pName = p_name;
-    p_pipeline_shader_stage_create_infos[1].pSpecializationInfo = TG_NULL;
-}
-
-VkPipelineInputAssemblyStateCreateInfo tgvk_pipeline_input_assembly_state_create_info_create(void)
-{
-    VkPipelineInputAssemblyStateCreateInfo pipeline_input_assembly_state_create_info = { 0 };
-    pipeline_input_assembly_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    pipeline_input_assembly_state_create_info.pNext = TG_NULL;
-    pipeline_input_assembly_state_create_info.flags = 0;
-    pipeline_input_assembly_state_create_info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-    pipeline_input_assembly_state_create_info.primitiveRestartEnable = VK_FALSE;
-
-    return pipeline_input_assembly_state_create_info;
-}
-
-VkViewport tgvk_viewport_create(f32 width, f32 height)
-{
-    VkViewport viewport = { 0 };
-    viewport.x = 0.0f;
-    viewport.y = 0.0f;
-    viewport.width = width;
-    viewport.height = height;
-    viewport.minDepth = 0.0f;
-    viewport.maxDepth = 1.0f;
-
-    return viewport;
-}
-
-VkPipelineViewportStateCreateInfo tgvk_pipeline_viewport_state_create_info_create(const VkViewport* p_viewport, const VkRect2D* p_scissors)
-{
-    VkPipelineViewportStateCreateInfo pipeline_viewport_state_create_info = { 0 };
-    pipeline_viewport_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-    pipeline_viewport_state_create_info.pNext = TG_NULL;
-    pipeline_viewport_state_create_info.flags = 0;
-    pipeline_viewport_state_create_info.viewportCount = 1;
-    pipeline_viewport_state_create_info.pViewports = p_viewport;
-    pipeline_viewport_state_create_info.scissorCount = 1;
-    pipeline_viewport_state_create_info.pScissors = p_scissors;
-
-    return pipeline_viewport_state_create_info;
-}
-
-VkPipelineRasterizationStateCreateInfo tgvk_pipeline_rasterization_state_create_info_create(VkPipelineRasterizationStateCreateInfo* p_next, VkBool32 depth_clamp_enable, VkPolygonMode polygon_mode, VkCullModeFlags cull_mode)
-{
-    VkPipelineRasterizationStateCreateInfo pipeline_rasterization_state_create_info = { 0 };
-    pipeline_rasterization_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-    pipeline_rasterization_state_create_info.pNext = p_next;
-    pipeline_rasterization_state_create_info.flags = 0;
-    pipeline_rasterization_state_create_info.depthClampEnable = depth_clamp_enable;
-    pipeline_rasterization_state_create_info.rasterizerDiscardEnable = VK_FALSE;
-    pipeline_rasterization_state_create_info.polygonMode = polygon_mode;
-    pipeline_rasterization_state_create_info.cullMode = cull_mode;
-    pipeline_rasterization_state_create_info.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-    pipeline_rasterization_state_create_info.depthBiasEnable = VK_FALSE;
-    pipeline_rasterization_state_create_info.depthBiasConstantFactor = 0.0f;
-    pipeline_rasterization_state_create_info.depthBiasClamp = 0.0f;
-    pipeline_rasterization_state_create_info.depthBiasSlopeFactor = 0.0f;
-    pipeline_rasterization_state_create_info.lineWidth = 1.0f;
-
-    return pipeline_rasterization_state_create_info;
-}
-
-VkPipelineMultisampleStateCreateInfo tgvk_pipeline_multisample_state_create_info_create(u32 rasterization_samples, VkBool32 sample_shading_enable, f32 min_sample_shading)
-{
-    VkPipelineMultisampleStateCreateInfo pipeline_multisample_state_create_info = { 0 };
-    pipeline_multisample_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-    pipeline_multisample_state_create_info.pNext = TG_NULL;
-    pipeline_multisample_state_create_info.flags = 0;
-    pipeline_multisample_state_create_info.rasterizationSamples = rasterization_samples;
-    pipeline_multisample_state_create_info.sampleShadingEnable = sample_shading_enable;
-    pipeline_multisample_state_create_info.minSampleShading = min_sample_shading;
-    pipeline_multisample_state_create_info.pSampleMask = TG_NULL;
-    pipeline_multisample_state_create_info.alphaToCoverageEnable = VK_FALSE;
-    pipeline_multisample_state_create_info.alphaToOneEnable = VK_FALSE;
-
-    return pipeline_multisample_state_create_info;
-}
-
-VkPipelineDepthStencilStateCreateInfo tgvk_pipeline_depth_stencil_state_create_info_create(VkBool32 depth_test_enable, VkBool32 depth_write_enable)
-{
-    VkPipelineDepthStencilStateCreateInfo pipeline_depth_stencil_state_create_info = { 0 };
-    pipeline_depth_stencil_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-    pipeline_depth_stencil_state_create_info.pNext = TG_NULL;
-    pipeline_depth_stencil_state_create_info.flags = 0;
-    pipeline_depth_stencil_state_create_info.depthTestEnable = depth_test_enable;
-    pipeline_depth_stencil_state_create_info.depthWriteEnable = depth_write_enable;
-    pipeline_depth_stencil_state_create_info.depthCompareOp = VK_COMPARE_OP_LESS;
-    pipeline_depth_stencil_state_create_info.depthBoundsTestEnable = VK_FALSE;
-    pipeline_depth_stencil_state_create_info.stencilTestEnable = VK_FALSE;
-    pipeline_depth_stencil_state_create_info.front.failOp = VK_STENCIL_OP_KEEP;
-    pipeline_depth_stencil_state_create_info.front.passOp = VK_STENCIL_OP_KEEP;
-    pipeline_depth_stencil_state_create_info.front.depthFailOp = VK_STENCIL_OP_KEEP;
-    pipeline_depth_stencil_state_create_info.front.compareOp = VK_COMPARE_OP_NEVER;
-    pipeline_depth_stencil_state_create_info.front.compareMask = 0;
-    pipeline_depth_stencil_state_create_info.front.writeMask = 0;
-    pipeline_depth_stencil_state_create_info.front.reference = 0;
-    pipeline_depth_stencil_state_create_info.back.failOp = VK_STENCIL_OP_KEEP;
-    pipeline_depth_stencil_state_create_info.back.passOp = VK_STENCIL_OP_KEEP;
-    pipeline_depth_stencil_state_create_info.back.depthFailOp = VK_STENCIL_OP_KEEP;
-    pipeline_depth_stencil_state_create_info.back.compareOp = VK_COMPARE_OP_NEVER;
-    pipeline_depth_stencil_state_create_info.back.compareMask = 0;
-    pipeline_depth_stencil_state_create_info.back.writeMask = 0;
-    pipeline_depth_stencil_state_create_info.back.reference = 0;
-    pipeline_depth_stencil_state_create_info.minDepthBounds = 0.0f;
-    pipeline_depth_stencil_state_create_info.maxDepthBounds = 0.0f;
-
-    return pipeline_depth_stencil_state_create_info;
-}
-
-void tgvk_pipeline_color_blend_attachmen_states_create(VkBool32 blend_enable, u32 count, VkPipelineColorBlendAttachmentState* p_pipeline_color_blend_attachment_states)
-{
-    for (u32 i = 0; i < count; i++)
+    VkImageUsageFlags usage = 0;
+    VkImageAspectFlagBits aspect_mask = 0;
+    if (type == TGVK_IMAGE_TYPE_COLOR)
     {
-        p_pipeline_color_blend_attachment_states[i].blendEnable = blend_enable;
-        p_pipeline_color_blend_attachment_states[i].srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-        p_pipeline_color_blend_attachment_states[i].dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-        p_pipeline_color_blend_attachment_states[i].colorBlendOp = VK_BLEND_OP_ADD;
-        p_pipeline_color_blend_attachment_states[i].srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-        p_pipeline_color_blend_attachment_states[i].dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-        p_pipeline_color_blend_attachment_states[i].alphaBlendOp = VK_BLEND_OP_ADD;
-        p_pipeline_color_blend_attachment_states[i].colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+        usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        aspect_mask = VK_IMAGE_ASPECT_COLOR_BIT;
     }
+    else if (type == TGVK_IMAGE_TYPE_DEPTH)
+    {
+        usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+        aspect_mask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    }
+    else if (type == TGVK_IMAGE_TYPE_STORAGE)
+    {
+        usage = VK_IMAGE_USAGE_STORAGE_BIT;
+        aspect_mask = VK_IMAGE_ASPECT_COLOR_BIT;
+    }
+    else
+    {
+        TG_INVALID_CODEPATH();
+    }
+
+    image_3d.type = type;
+    image_3d.width = width;
+    image_3d.height = height;
+    image_3d.depth = depth;
+    image_3d.format = format;
+
+    VkImageCreateInfo image_create_info = { 0 };
+    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_create_info.pNext = TG_NULL;
+    image_create_info.flags = 0;
+    image_create_info.imageType = VK_IMAGE_TYPE_3D;
+    image_create_info.format = format;
+    image_create_info.extent.width = width;
+    image_create_info.extent.height = height;
+    image_create_info.extent.depth = depth;
+    image_create_info.mipLevels = 1;
+    image_create_info.arrayLayers = 1;
+    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
+    image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+    image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | usage;
+    image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    image_create_info.queueFamilyIndexCount = 0;
+    image_create_info.pQueueFamilyIndices = TG_NULL;
+    image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+    TGVK_CALL(vkCreateImage(device, &image_create_info, TG_NULL, &image_3d.image));
+
+    VkMemoryRequirements memory_requirements = { 0 };
+    vkGetImageMemoryRequirements(device, image_3d.image, &memory_requirements);
+    image_3d.memory = tgvk_memory_allocator_alloc(memory_requirements.alignment, memory_requirements.size, memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    TGVK_CALL(vkBindImageMemory(device, image_3d.image, image_3d.memory.device_memory, image_3d.memory.offset));
+
+    image_3d.image_view = tg__image_view_create(image_3d.image, VK_IMAGE_VIEW_TYPE_3D, image_3d.format, aspect_mask, 1);
+
+    if (p_sampler_create_info)
+    {
+        // TODO: mip levels, also above and below, once respectively
+        image_3d.sampler = tg__sampler_create_custom(
+            1,
+            p_sampler_create_info->min_filter,
+            p_sampler_create_info->mag_filter,
+            p_sampler_create_info->address_mode_u,
+            p_sampler_create_info->address_mode_v,
+            p_sampler_create_info->address_mode_w
+        );
+    }
+    else
+    {
+        image_3d.sampler = tg__sampler_create(1);
+    }
+
+    return image_3d;
 }
 
-VkPipelineColorBlendStateCreateInfo tgvk_pipeline_color_blend_state_create_info_create(u32 attachment_count, VkPipelineColorBlendAttachmentState* p_pipeline_color_blend_attachmen_states)
+void tgvk_image_3d_destroy(tgvk_image_3d* p_image_3d)
 {
-    VkPipelineColorBlendStateCreateInfo pipeline_color_blend_state_create_info = { 0 };
-    pipeline_color_blend_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-    pipeline_color_blend_state_create_info.pNext = TG_NULL;
-    pipeline_color_blend_state_create_info.flags = 0;
-    pipeline_color_blend_state_create_info.logicOpEnable = VK_FALSE;
-    pipeline_color_blend_state_create_info.logicOp = VK_LOGIC_OP_COPY;
-    pipeline_color_blend_state_create_info.attachmentCount = attachment_count;
-    pipeline_color_blend_state_create_info.pAttachments = p_pipeline_color_blend_attachmen_states;
-    pipeline_color_blend_state_create_info.blendConstants[0] = 0.0f;
-    pipeline_color_blend_state_create_info.blendConstants[1] = 0.0f;
-    pipeline_color_blend_state_create_info.blendConstants[2] = 0.0f;
-    pipeline_color_blend_state_create_info.blendConstants[3] = 0.0f;
-
-    return pipeline_color_blend_state_create_info;
-}
-
-VkPipelineVertexInputStateCreateInfo tgvk_pipeline_vertex_input_state_create_info_create(u32 vertex_binding_description_count, VkVertexInputBindingDescription* p_vertex_binding_descriptions, u32 vertex_attribute_description_count, VkVertexInputAttributeDescription* p_vertex_attribute_descriptions)
-{
-    VkPipelineVertexInputStateCreateInfo pipeline_vertex_input_state_create_info = { 0 };
-    pipeline_vertex_input_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    pipeline_vertex_input_state_create_info.pNext = TG_NULL;
-    pipeline_vertex_input_state_create_info.flags = 0;
-    pipeline_vertex_input_state_create_info.vertexBindingDescriptionCount = vertex_binding_description_count;
-    pipeline_vertex_input_state_create_info.pVertexBindingDescriptions = p_vertex_binding_descriptions;
-    pipeline_vertex_input_state_create_info.vertexAttributeDescriptionCount = vertex_attribute_description_count;
-    pipeline_vertex_input_state_create_info.pVertexAttributeDescriptions = p_vertex_attribute_descriptions;
-
-    return pipeline_vertex_input_state_create_info;
+    vkDestroySampler(device, p_image_3d->sampler, TG_NULL);
+    vkDestroyImageView(device, p_image_3d->image_view, TG_NULL);
+    tgvk_memory_allocator_free(&p_image_3d->memory);
+    vkDestroyImage(device, p_image_3d->image, TG_NULL);
 }
 
 
@@ -1988,27 +1874,6 @@ tgvk_pipeline tgvk_pipeline_create_compute(const tgvk_shader* p_compute_shader)
 }
 
 tgvk_pipeline tgvk_pipeline_create_graphics(const tgvk_graphics_pipeline_create_info* p_create_info)
-{
-    tgvk_pipeline graphics_pipeline = { 0 };
-
-    VkVertexInputBindingDescription p_vertex_input_binding_descriptions[TG_MAX_SHADER_INPUTS] = { 0 };
-    VkVertexInputAttributeDescription p_vertex_input_attribute_descriptions[TG_MAX_SHADER_INPUTS] = { 0 };
-    for (u8 i = 0; i < p_create_info->p_vertex_shader->spirv_layout.vertex_shader_input.count; i++)
-    {
-        p_vertex_input_binding_descriptions[i].binding = i;
-        p_vertex_input_binding_descriptions[i].stride = tg_vertex_input_attribute_format_get_size(p_create_info->p_vertex_shader->spirv_layout.vertex_shader_input.p_resources[i].format);
-        p_vertex_input_binding_descriptions[i].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-        p_vertex_input_attribute_descriptions[i].binding = i;
-        p_vertex_input_attribute_descriptions[i].location = p_create_info->p_vertex_shader->spirv_layout.vertex_shader_input.p_resources[i].location;
-        p_vertex_input_attribute_descriptions[i].format = p_create_info->p_vertex_shader->spirv_layout.vertex_shader_input.p_resources[i].format;
-        p_vertex_input_attribute_descriptions[i].offset = 0;
-    }
-    graphics_pipeline = tgvk_pipeline_create_graphics2(p_create_info, p_create_info->p_vertex_shader->spirv_layout.vertex_shader_input.count, p_vertex_input_binding_descriptions, p_vertex_input_attribute_descriptions);
-
-    return graphics_pipeline;
-}
-
-tgvk_pipeline tgvk_pipeline_create_graphics2(const tgvk_graphics_pipeline_create_info* p_create_info, u32 vertex_attrib_count, VkVertexInputBindingDescription* p_vertex_bindings, VkVertexInputAttributeDescription* p_vertex_attribs)
 {
     tgvk_pipeline graphics_pipeline = { 0 };
 
@@ -2159,14 +2024,27 @@ tgvk_pipeline tgvk_pipeline_create_graphics2(const tgvk_graphics_pipeline_create
     pipeline_color_blend_state_create_info.blendConstants[2] = 0.0f;
     pipeline_color_blend_state_create_info.blendConstants[3] = 0.0f;
 
+    VkVertexInputBindingDescription p_vertex_input_binding_descriptions[TG_MAX_SHADER_INPUTS] = { 0 };
+    VkVertexInputAttributeDescription p_vertex_input_attribute_descriptions[TG_MAX_SHADER_INPUTS] = { 0 };
+    for (u8 i = 0; i < p_create_info->p_vertex_shader->spirv_layout.vertex_shader_input.count; i++)
+    {
+        p_vertex_input_binding_descriptions[i].binding = i;
+        p_vertex_input_binding_descriptions[i].stride = tg_vertex_input_attribute_format_get_size(p_create_info->p_vertex_shader->spirv_layout.vertex_shader_input.p_resources[i].format);
+        p_vertex_input_binding_descriptions[i].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+        p_vertex_input_attribute_descriptions[i].binding = i;
+        p_vertex_input_attribute_descriptions[i].location = p_create_info->p_vertex_shader->spirv_layout.vertex_shader_input.p_resources[i].location;
+        p_vertex_input_attribute_descriptions[i].format = p_create_info->p_vertex_shader->spirv_layout.vertex_shader_input.p_resources[i].format;
+        p_vertex_input_attribute_descriptions[i].offset = 0;
+    }
+
     VkPipelineVertexInputStateCreateInfo pipeline_vertex_input_state_create_info = { 0 };
     pipeline_vertex_input_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     pipeline_vertex_input_state_create_info.pNext = TG_NULL;
     pipeline_vertex_input_state_create_info.flags = 0;
-    pipeline_vertex_input_state_create_info.vertexBindingDescriptionCount = vertex_attrib_count;
-    pipeline_vertex_input_state_create_info.pVertexBindingDescriptions = p_vertex_bindings;
-    pipeline_vertex_input_state_create_info.vertexAttributeDescriptionCount = vertex_attrib_count;
-    pipeline_vertex_input_state_create_info.pVertexAttributeDescriptions = p_vertex_attribs;
+    pipeline_vertex_input_state_create_info.vertexBindingDescriptionCount = p_create_info->p_vertex_shader->spirv_layout.vertex_shader_input.count;
+    pipeline_vertex_input_state_create_info.pVertexBindingDescriptions = p_vertex_input_binding_descriptions;
+    pipeline_vertex_input_state_create_info.vertexAttributeDescriptionCount = p_create_info->p_vertex_shader->spirv_layout.vertex_shader_input.count;
+    pipeline_vertex_input_state_create_info.pVertexAttributeDescriptions = p_vertex_input_attribute_descriptions;
 
     VkGraphicsPipelineCreateInfo graphics_pipeline_create_info = { 0 };
     graphics_pipeline_create_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -2267,17 +2145,17 @@ tg_render_target tgvk_render_target_create(u32 color_width, u32 color_height, Vk
     tg_render_target render_target = { 0 };
     render_target.type = TG_STRUCTURE_TYPE_RENDER_TARGET;
 
-    render_target.color_attachment = tgvk_color_image_create(color_width, color_height, color_format, p_color_sampler_create_info);
-    render_target.color_attachment_copy = tgvk_color_image_create(color_width, color_height, color_format, p_color_sampler_create_info);
-    render_target.depth_attachment = tgvk_depth_image_create(depth_width, depth_height, depth_format, p_depth_sampler_create_info);
-    render_target.depth_attachment_copy = tgvk_depth_image_create(depth_width, depth_height, depth_format, p_depth_sampler_create_info);
+    render_target.color_attachment = tgvk_image_create(TGVK_IMAGE_TYPE_COLOR, color_width, color_height, color_format, p_color_sampler_create_info);
+    render_target.color_attachment_copy = tgvk_image_create(TGVK_IMAGE_TYPE_COLOR, color_width, color_height, color_format, p_color_sampler_create_info);
+    render_target.depth_attachment = tgvk_image_create(TGVK_IMAGE_TYPE_DEPTH, depth_width, depth_height, depth_format, p_depth_sampler_create_info);
+    render_target.depth_attachment_copy = tgvk_image_create(TGVK_IMAGE_TYPE_DEPTH, depth_width, depth_height, depth_format, p_depth_sampler_create_info);
 
     const u32 thread_id = tg_platform_get_thread_id();
     tgvk_command_buffer_begin(&p_global_graphics_command_buffers[thread_id], VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-    tgvk_cmd_transition_color_image_layout(&p_global_graphics_command_buffers[thread_id], &render_target.color_attachment, 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
-    tgvk_cmd_transition_color_image_layout(&p_global_graphics_command_buffers[thread_id], &render_target.color_attachment_copy, 0, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-    tgvk_cmd_transition_depth_image_layout(&p_global_graphics_command_buffers[thread_id], &render_target.depth_attachment, 0, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT);
-    tgvk_cmd_transition_depth_image_layout(&p_global_graphics_command_buffers[thread_id], &render_target.depth_attachment_copy, 0, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+    tgvk_cmd_transition_image_layout(&p_global_graphics_command_buffers[thread_id], &render_target.color_attachment, 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+    tgvk_cmd_transition_image_layout(&p_global_graphics_command_buffers[thread_id], &render_target.color_attachment_copy, 0, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+    tgvk_cmd_transition_image_layout(&p_global_graphics_command_buffers[thread_id], &render_target.depth_attachment, 0, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT);
+    tgvk_cmd_transition_image_layout(&p_global_graphics_command_buffers[thread_id], &render_target.depth_attachment_copy, 0, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
     tgvk_command_buffer_end_and_submit(&p_global_graphics_command_buffers[thread_id]);
 
     render_target.fence = tgvk_fence_create(fence_create_flags);
@@ -2401,73 +2279,6 @@ tgvk_shader tgvk_shader_create_from_spirv(u32 size, const char* p_source)
 void tgvk_shader_destroy(tgvk_shader* p_shader)
 {
     vkDestroyShaderModule(device, p_shader->shader_module, TG_NULL);
-}
-
-
-
-tgvk_image_3d tgvk_storage_image_3d_create(u32 width, u32 height, u32 depth, VkFormat format, const tg_sampler_create_info* p_sampler_create_info)
-{
-    tgvk_image_3d image_3d = { 0 };
-    image_3d.type = TGVK_IMAGE_TYPE_STORAGE;
-    image_3d.width = width;
-    image_3d.height = height;
-    image_3d.depth = depth;
-    image_3d.format = format;
-
-    VkImageCreateInfo image_create_info = { 0 };
-    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    image_create_info.pNext = TG_NULL;
-    image_create_info.flags = 0;
-    image_create_info.imageType = VK_IMAGE_TYPE_3D;
-    image_create_info.format = format;
-    image_create_info.extent.width = width;
-    image_create_info.extent.height = height;
-    image_create_info.extent.depth = depth;
-    image_create_info.mipLevels = 1;
-    image_create_info.arrayLayers = 1;
-    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
-    image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
-    image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-    image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    image_create_info.queueFamilyIndexCount = 0;
-    image_create_info.pQueueFamilyIndices = TG_NULL;
-    image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-
-    TGVK_CALL(vkCreateImage(device, &image_create_info, TG_NULL, &image_3d.image));
-
-    VkMemoryRequirements memory_requirements = { 0 };
-    vkGetImageMemoryRequirements(device, image_3d.image, &memory_requirements);
-    image_3d.memory = tgvk_memory_allocator_alloc(memory_requirements.alignment, memory_requirements.size, memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    TGVK_CALL(vkBindImageMemory(device, image_3d.image, image_3d.memory.device_memory, image_3d.memory.offset));
-
-    image_3d.image_view = tg__image_view_create(image_3d.image, VK_IMAGE_VIEW_TYPE_3D, image_3d.format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
-
-    if (p_sampler_create_info)
-    {
-        // TODO: mip levels, also above and below, once respectively
-        image_3d.sampler = tg__sampler_create_custom(
-            1,
-            p_sampler_create_info->min_filter,
-            p_sampler_create_info->mag_filter,
-            p_sampler_create_info->address_mode_u,
-            p_sampler_create_info->address_mode_v,
-            p_sampler_create_info->address_mode_w
-        );
-    }
-    else
-    {
-        image_3d.sampler = tg__sampler_create(1);
-    }
-
-    return image_3d;
-}
-
-void tgvk_storage_image_3d_destroy(tgvk_image_3d* p_storage_image_3d)
-{
-    vkDestroySampler(device, p_storage_image_3d->sampler, TG_NULL);
-    vkDestroyImageView(device, p_storage_image_3d->image_view, TG_NULL);
-    tgvk_memory_allocator_free(&p_storage_image_3d->memory);
-    vkDestroyImage(device, p_storage_image_3d->image, TG_NULL);
 }
 
 
