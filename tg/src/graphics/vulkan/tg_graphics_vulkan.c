@@ -124,34 +124,6 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL tg__debug_callback(VkDebugUtilsMessageSeve
 
 
 
-static VkImageView tg__image_view_create(VkImage image, VkImageViewType view_type, VkFormat format, VkImageAspectFlagBits aspect_mask, u32 mip_levels)
-{
-    VkImageView image_view = VK_NULL_HANDLE;
-
-    VkImageViewCreateInfo image_view_create_info = { 0 };
-    image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    image_view_create_info.pNext = TG_NULL;
-    image_view_create_info.flags = 0;
-    image_view_create_info.image = image;
-    image_view_create_info.viewType = view_type;
-    image_view_create_info.format = format;
-    image_view_create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-    image_view_create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-    image_view_create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-    image_view_create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-    image_view_create_info.subresourceRange.aspectMask = aspect_mask;
-    image_view_create_info.subresourceRange.baseMipLevel = 0;
-    image_view_create_info.subresourceRange.levelCount = mip_levels;
-    image_view_create_info.subresourceRange.baseArrayLayer = 0;
-    image_view_create_info.subresourceRange.layerCount = view_type == VK_IMAGE_VIEW_TYPE_CUBE ? 6 : 1;
-
-    TGVK_CALL(vkCreateImageView(device, &image_view_create_info, TG_NULL, &image_view));
-
-    return image_view;
-}
-
-
-
 static tgvk_pipeline_layout tg__pipeline_layout_create(u32 shader_count, const tgvk_shader* const* pp_shaders)
 {
     tgvk_pipeline_layout pipeline_layout = { 0 };
@@ -238,7 +210,7 @@ static VkSampler tg__sampler_create_custom(u32 mip_levels, VkFilter min_filter, 
     sampler_create_info.addressModeW = address_mode_w;
     sampler_create_info.mipLodBias = 0.0f;
     sampler_create_info.anisotropyEnable = VK_TRUE;
-    sampler_create_info.maxAnisotropy = 16;
+    sampler_create_info.maxAnisotropy = 16.0f;
     sampler_create_info.compareEnable = VK_FALSE;
     sampler_create_info.compareOp = VK_COMPARE_OP_ALWAYS;
     sampler_create_info.minLod = 0.0f;
@@ -513,6 +485,15 @@ void tgvk_cmd_begin_render_pass(tgvk_command_buffer* p_command_buffer, VkRenderP
     vkCmdBeginRenderPass(p_command_buffer->command_buffer, &render_pass_begin_info, subpass_contents);
 }
 
+void tgvk_cmd_bind_and_draw_screen_quad(tgvk_command_buffer* p_command_buffer)
+{
+    vkCmdBindIndexBuffer(p_command_buffer->command_buffer, shared_render_resources.screen_quad_indices.buffer, 0, VK_INDEX_TYPE_UINT16);
+    const VkDeviceSize vertex_buffer_offset = 0;
+    vkCmdBindVertexBuffers(p_command_buffer->command_buffer, 0, 1, &shared_render_resources.screen_quad_positions_buffer.buffer, &vertex_buffer_offset);
+    vkCmdBindVertexBuffers(p_command_buffer->command_buffer, 1, 1, &shared_render_resources.screen_quad_uvs_buffer.buffer, &vertex_buffer_offset);
+    vkCmdDrawIndexed(p_command_buffer->command_buffer, 6, 1, 0, 0, 0); 
+}
+
 void tgvk_cmd_bind_descriptor_set(tgvk_command_buffer* p_command_buffer, tgvk_pipeline* p_pipeline, tgvk_descriptor_set* p_descriptor_set)
 {
     vkCmdBindDescriptorSets(
@@ -566,6 +547,74 @@ void tgvk_cmd_blit_image(tgvk_command_buffer* p_command_buffer, tgvk_image* p_so
         region.srcOffsets[1].x = p_source->width;
         region.srcOffsets[1].y = p_source->height;
         region.srcOffsets[1].z = 1;
+        region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        region.dstSubresource.mipLevel = 0;
+        region.dstSubresource.baseArrayLayer = 0;
+        region.dstSubresource.layerCount = 1;
+        region.dstOffsets[0].x = 0;
+        region.dstOffsets[0].y = 0;
+        region.dstOffsets[0].z = 0;
+        region.dstOffsets[1].x = p_destination->width;
+        region.dstOffsets[1].y = p_destination->height;
+        region.dstOffsets[1].z = 1;
+    }
+
+    vkCmdBlitImage(p_command_buffer->command_buffer, p_source->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, p_destination->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region, VK_FILTER_NEAREST);
+}
+
+void tgvk_cmd_blit_image_3d_slice_to_image(tgvk_command_buffer* p_command_buffer, u32 slice_depth, tgvk_image_3d* p_source, tgvk_image* p_destination, const VkImageBlit* p_region)
+{
+    VkImageBlit region = { 0 };
+    if (p_region)
+    {
+        region = *p_region;
+    }
+    else
+    {
+        region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        region.srcSubresource.mipLevel = 0;
+        region.srcSubresource.baseArrayLayer = 0;
+        region.srcSubresource.layerCount = 1;
+        region.srcOffsets[0].x = 0;
+        region.srcOffsets[0].y = 0;
+        region.srcOffsets[0].z = slice_depth;
+        region.srcOffsets[1].x = p_source->width;
+        region.srcOffsets[1].y = p_source->height;
+        region.srcOffsets[1].z = slice_depth + 1;
+        region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        region.dstSubresource.mipLevel = 0;
+        region.dstSubresource.baseArrayLayer = 0;
+        region.dstSubresource.layerCount = 1;
+        region.dstOffsets[0].x = 0;
+        region.dstOffsets[0].y = 0;
+        region.dstOffsets[0].z = 0;
+        region.dstOffsets[1].x = p_destination->width;
+        region.dstOffsets[1].y = p_destination->height;
+        region.dstOffsets[1].z = 1;
+    }
+
+    vkCmdBlitImage(p_command_buffer->command_buffer, p_source->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, p_destination->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region, VK_FILTER_NEAREST);
+}
+
+void tgvk_cmd_blit_layered_image_layer_to_image(tgvk_command_buffer* p_command_buffer, u32 layer, tgvk_layered_image* p_source, tgvk_image* p_destination, const VkImageBlit* p_region)
+{
+    VkImageBlit region = { 0 };
+    if (p_region)
+    {
+        region = *p_region;
+    }
+    else
+    {
+        region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        region.srcSubresource.mipLevel = 0;
+        region.srcSubresource.baseArrayLayer = 0;
+        region.srcSubresource.layerCount = 1;
+        region.srcOffsets[0].x = 0;
+        region.srcOffsets[0].y = 0;
+        region.srcOffsets[0].z = layer;
+        region.srcOffsets[1].x = p_source->width;
+        region.srcOffsets[1].y = p_source->height;
+        region.srcOffsets[1].z = layer + 1;
         region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         region.dstSubresource.mipLevel = 0;
         region.dstSubresource.baseArrayLayer = 0;
@@ -840,6 +889,27 @@ void tgvk_cmd_draw_indexed(tgvk_command_buffer* p_command_buffer, u32 index_coun
     vkCmdDrawIndexed(p_command_buffer->command_buffer, index_count, 1, 0, 0, 0);
 }
 
+void tgvk_cmd_transition_cube_map_layout(tgvk_command_buffer* p_command_buffer, tgvk_cube_map* p_cube_map, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits)
+{
+    VkImageMemoryBarrier image_memory_barrier = { 0 };
+    image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    image_memory_barrier.pNext = TG_NULL;
+    image_memory_barrier.srcAccessMask = src_access_mask;
+    image_memory_barrier.dstAccessMask = dst_access_mask;
+    image_memory_barrier.oldLayout = old_layout;
+    image_memory_barrier.newLayout = new_layout;
+    image_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    image_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    image_memory_barrier.image = p_cube_map->image;
+    image_memory_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    image_memory_barrier.subresourceRange.baseMipLevel = 0;
+    image_memory_barrier.subresourceRange.levelCount = 1;
+    image_memory_barrier.subresourceRange.baseArrayLayer = 0;
+    image_memory_barrier.subresourceRange.layerCount = 6;
+
+    vkCmdPipelineBarrier(p_command_buffer->command_buffer, src_stage_bits, dst_stage_bits, 0, 0, TG_NULL, 0, TG_NULL, 1, &image_memory_barrier);
+}
+
 void tgvk_cmd_transition_image_layout(tgvk_command_buffer* p_command_buffer, tgvk_image* p_image, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits)
 {
     VkImageMemoryBarrier image_memory_barrier = { 0 };
@@ -882,7 +952,7 @@ void tgvk_cmd_transition_image_3d_layout(tgvk_command_buffer* p_command_buffer, 
     vkCmdPipelineBarrier(p_command_buffer->command_buffer, src_stage_bits, dst_stage_bits, 0, 0, TG_NULL, 0, TG_NULL, 1, &image_memory_barrier);
 }
 
-void tgvk_cmd_transition_cube_map_layout(tgvk_command_buffer* p_command_buffer, tgvk_cube_map* p_cube_map, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits)
+void tgvk_cmd_transition_layered_image_layout(tgvk_command_buffer* p_command_buffer, tgvk_layered_image* p_image, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits)
 {
     VkImageMemoryBarrier image_memory_barrier = { 0 };
     image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -893,12 +963,12 @@ void tgvk_cmd_transition_cube_map_layout(tgvk_command_buffer* p_command_buffer, 
     image_memory_barrier.newLayout = new_layout;
     image_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     image_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    image_memory_barrier.image = p_cube_map->image;
-    image_memory_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    image_memory_barrier.image = p_image->image;
+    image_memory_barrier.subresourceRange.aspectMask = p_image->type == TGVK_IMAGE_TYPE_DEPTH ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
     image_memory_barrier.subresourceRange.baseMipLevel = 0;
     image_memory_barrier.subresourceRange.levelCount = 1;
     image_memory_barrier.subresourceRange.baseArrayLayer = 0;
-    image_memory_barrier.subresourceRange.layerCount = 6;
+    image_memory_barrier.subresourceRange.layerCount = 1;
 
     vkCmdPipelineBarrier(p_command_buffer->command_buffer, src_stage_bits, dst_stage_bits, 0, 0, TG_NULL, 0, TG_NULL, 1, &image_memory_barrier);
 }
@@ -1097,7 +1167,24 @@ tgvk_cube_map tgvk_cube_map_create(u32 dimension, VkFormat format, const tg_samp
     cube_map.memory = tgvk_memory_allocator_alloc(memory_requirements.alignment, memory_requirements.size, memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     TGVK_CALL(vkBindImageMemory(device, cube_map.image, cube_map.memory.device_memory, cube_map.memory.offset));
 
-    cube_map.image_view = tg__image_view_create(cube_map.image, VK_IMAGE_VIEW_TYPE_CUBE, cube_map.format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+    VkImageViewCreateInfo image_view_create_info = { 0 };
+    image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    image_view_create_info.pNext = TG_NULL;
+    image_view_create_info.flags = 0;
+    image_view_create_info.image = cube_map.image;
+    image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
+    image_view_create_info.format = format;
+    image_view_create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+    image_view_create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+    image_view_create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+    image_view_create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+    image_view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    image_view_create_info.subresourceRange.baseMipLevel = 0;
+    image_view_create_info.subresourceRange.levelCount = 1;
+    image_view_create_info.subresourceRange.baseArrayLayer = 0;
+    image_view_create_info.subresourceRange.layerCount = 6;
+
+    TGVK_CALL(vkCreateImageView(device, &image_view_create_info, TG_NULL, &cube_map.image_view));
 
     if (p_sampler_create_info)
     {
@@ -1131,6 +1218,8 @@ void tgvk_cube_map_destroy(tgvk_cube_map* p_cube_map)
 tgvk_descriptor_set tgvk_descriptor_set_create(const tgvk_pipeline* p_pipeline)
 {
     tgvk_descriptor_set descriptor_set = { 0 };
+
+    TG_ASSERT(p_pipeline->layout.global_resource_count <= TG_MAX_SHADER_GLOBAL_RESOURCES);
 
     VkDescriptorPoolSize p_descriptor_pool_sizes[TG_MAX_SHADER_GLOBAL_RESOURCES] = { 0 };
     for (u32 i = 0; i < p_pipeline->layout.global_resource_count; i++)
@@ -1310,6 +1399,28 @@ void tgvk_descriptor_set_update_image_3d(VkDescriptorSet descriptor_set, tgvk_im
     vkUpdateDescriptorSets(device, 1, &write_descriptor_set, 0, TG_NULL);
 }
 
+void tgvk_descriptor_set_update_layered_image(VkDescriptorSet descriptor_set, tgvk_layered_image* p_image, u32 dst_binding)
+{
+    VkDescriptorImageInfo descriptor_image_info = { 0 };
+    descriptor_image_info.sampler = p_image->sampler;
+    descriptor_image_info.imageView = p_image->image_view;
+    descriptor_image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+    VkWriteDescriptorSet write_descriptor_set = { 0 };
+    write_descriptor_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    write_descriptor_set.pNext = TG_NULL;
+    write_descriptor_set.dstSet = descriptor_set;
+    write_descriptor_set.dstBinding = dst_binding;
+    write_descriptor_set.dstArrayElement = 0;
+    write_descriptor_set.descriptorCount = 1;
+    write_descriptor_set.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    write_descriptor_set.pImageInfo = &descriptor_image_info;
+    write_descriptor_set.pBufferInfo = TG_NULL;
+    write_descriptor_set.pTexelBufferView = TG_NULL;
+
+    vkUpdateDescriptorSets(device, 1, &write_descriptor_set, 0, TG_NULL);
+}
+
 void tgvk_descriptor_set_update_render_target(VkDescriptorSet descriptor_set, tg_render_target* p_render_target, u32 dst_binding)
 {
     tgvk_descriptor_set_update_image(descriptor_set, &p_render_target->color_attachment_copy, dst_binding);
@@ -1470,6 +1581,7 @@ tgvk_framebuffer tgvk_framebuffer_create(VkRenderPass render_pass, u32 attachmen
 
     framebuffer.width = width;
     framebuffer.height = height;
+    framebuffer.layers = 1;
 
     VkFramebufferCreateInfo framebuffer_create_info = { 0 };
     framebuffer_create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -1487,6 +1599,30 @@ tgvk_framebuffer tgvk_framebuffer_create(VkRenderPass render_pass, u32 attachmen
     return framebuffer;
 }
 
+tgvk_framebuffer tgvk_framebuffer_create_layered(VkRenderPass render_pass, u32 attachment_count, const VkImageView* p_attachments, u32 width, u32 height, u32 layers)
+{
+    tgvk_framebuffer framebuffer = { 0 };
+
+    framebuffer.width = width;
+    framebuffer.height = height;
+    framebuffer.layers = layers;
+
+    VkFramebufferCreateInfo framebuffer_create_info = { 0 };
+    framebuffer_create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    framebuffer_create_info.pNext = TG_NULL;
+    framebuffer_create_info.flags = 0;
+    framebuffer_create_info.renderPass = render_pass;
+    framebuffer_create_info.attachmentCount = attachment_count;
+    framebuffer_create_info.pAttachments = p_attachments;
+    framebuffer_create_info.width = width;
+    framebuffer_create_info.height = height;
+    framebuffer_create_info.layers = layers;
+
+    TGVK_CALL(vkCreateFramebuffer(device, &framebuffer_create_info, TG_NULL, &framebuffer.framebuffer));
+
+    return framebuffer;
+}
+
 void tgvk_framebuffer_destroy(tgvk_framebuffer* p_framebuffer)
 {
     vkDestroyFramebuffer(device, p_framebuffer->framebuffer, TG_NULL);
@@ -1498,6 +1634,32 @@ void tgvk_framebuffers_destroy(u32 count, tgvk_framebuffer* p_framebuffers)
     {
         tgvk_framebuffer_destroy(&p_framebuffers[i]);
     }
+}
+
+
+
+tgvk_buffer* tgvk_global_staging_buffer_take(VkDeviceSize size)
+{
+    TG_RWL_LOCK_FOR_WRITE(global_staging_buffer_lock);
+
+    if (global_staging_buffer.memory.size < size)
+    {
+        if (global_staging_buffer.buffer)
+        {
+            tgvk_buffer_destroy(&global_staging_buffer);
+        }
+        global_staging_buffer = tgvk_buffer_create(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+    }
+
+    return &global_staging_buffer;
+}
+
+void tgvk_global_staging_buffer_release(void)
+{
+#pragma warning(push)
+#pragma warning(disable:26110)
+    TG_RWL_UNLOCK_FOR_WRITE(global_staging_buffer_lock);
+#pragma warning(pop)
 }
 
 
@@ -1538,9 +1700,9 @@ tgvk_image tgvk_image_create(tgvk_image_type type, u32 width, u32 height, VkForm
     image_create_info.pNext = TG_NULL;
     image_create_info.flags = 0;
     image_create_info.imageType = VK_IMAGE_TYPE_2D;
-    image_create_info.format = image.format;
-    image_create_info.extent.width = image.width;
-    image_create_info.extent.height = image.height;
+    image_create_info.format = format;
+    image_create_info.extent.width = width;
+    image_create_info.extent.height = height;
     image_create_info.extent.depth = 1;
     image_create_info.mipLevels = 1;
     image_create_info.arrayLayers = 1;
@@ -1637,7 +1799,24 @@ tgvk_image tgvk_image_create(tgvk_image_type type, u32 width, u32 height, VkForm
     //tgvk_command_buffer_end_and_submit(command_buffer, &graphics_queue);
     //tgvk_command_buffer_destroy(graphics_command_pool, command_buffer);
 
-    image.image_view = tg__image_view_create(image.image, VK_IMAGE_VIEW_TYPE_2D, image.format, aspect_mask, 1);
+    VkImageViewCreateInfo image_view_create_info = { 0 };
+    image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    image_view_create_info.pNext = TG_NULL;
+    image_view_create_info.flags = 0;
+    image_view_create_info.image = image.image;
+    image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    image_view_create_info.format = format;
+    image_view_create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+    image_view_create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+    image_view_create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+    image_view_create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+    image_view_create_info.subresourceRange.aspectMask = aspect_mask;
+    image_view_create_info.subresourceRange.baseMipLevel = 0;
+    image_view_create_info.subresourceRange.levelCount = 1;
+    image_view_create_info.subresourceRange.baseArrayLayer = 0;
+    image_view_create_info.subresourceRange.layerCount = 1;
+
+    TGVK_CALL(vkCreateImageView(device, &image_view_create_info, TG_NULL, &image.image_view));
 
     if (p_sampler_create_info)
     {
@@ -1685,7 +1864,7 @@ tgvk_image tgvk_image_create2(tgvk_image_type type, const char* p_filename, cons
     return image;
 }
 
-b32 tgvk_image_store_to_disc(tgvk_image* p_image, const char* p_filename, b32 replace_existing)
+b32 tgvk_image_store_to_disc(tgvk_image* p_image, const char* p_filename, b32 force_alpha_one, b32 replace_existing)
 {
     const u32 width = p_image->width;
     const u32 height = p_image->height;
@@ -1727,7 +1906,7 @@ b32 tgvk_image_store_to_disc(tgvk_image* p_image, const char* p_filename, b32 re
 
     tgvk_command_buffer_end_and_submit(p_command_buffer);
     tgvk_buffer_flush_device_to_host(p_staging_buffer);
-    const b32 result = tg_image_store_to_disc(p_filename, width, height, (tg_color_image_format)blit_image.format, p_staging_buffer->memory.p_mapped_device_memory, replace_existing);
+    const b32 result = tg_image_store_to_disc(p_filename, width, height, (tg_color_image_format)blit_image.format, p_staging_buffer->memory.p_mapped_device_memory, force_alpha_one, replace_existing);
 
     tgvk_global_staging_buffer_release();
     tgvk_image_destroy(&blit_image);
@@ -1809,7 +1988,24 @@ tgvk_image_3d tgvk_image_3d_create(tgvk_image_type type, u32 width, u32 height, 
     image_3d.memory = tgvk_memory_allocator_alloc(memory_requirements.alignment, memory_requirements.size, memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     TGVK_CALL(vkBindImageMemory(device, image_3d.image, image_3d.memory.device_memory, image_3d.memory.offset));
 
-    image_3d.image_view = tg__image_view_create(image_3d.image, VK_IMAGE_VIEW_TYPE_3D, image_3d.format, aspect_mask, 1);
+    VkImageViewCreateInfo image_view_create_info = { 0 };
+    image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    image_view_create_info.pNext = TG_NULL;
+    image_view_create_info.flags = 0;
+    image_view_create_info.image = image_3d.image;
+    image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_3D;
+    image_view_create_info.format = format;
+    image_view_create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+    image_view_create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+    image_view_create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+    image_view_create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+    image_view_create_info.subresourceRange.aspectMask = aspect_mask;
+    image_view_create_info.subresourceRange.baseMipLevel = 0;
+    image_view_create_info.subresourceRange.levelCount = 1;
+    image_view_create_info.subresourceRange.baseArrayLayer = 0;
+    image_view_create_info.subresourceRange.layerCount = 1;
+
+    TGVK_CALL(vkCreateImageView(device, &image_view_create_info, TG_NULL, &image_3d.image_view));
 
     if (p_sampler_create_info)
     {
@@ -1831,12 +2027,226 @@ tgvk_image_3d tgvk_image_3d_create(tgvk_image_type type, u32 width, u32 height, 
     return image_3d;
 }
 
+b32 tgvk_image_3d_store_slice_to_disc(tgvk_image_3d* p_image_3d, u32 slice_depth, const char* p_filename, b32 force_alpha_one, b32 replace_existing)
+{
+    const u32 width = p_image_3d->width;
+    const u32 height = p_image_3d->height;
+
+    tgvk_image blit_image = tgvk_image_create(TGVK_IMAGE_TYPE_COLOR, width, height, (VkFormat)TG_COLOR_IMAGE_FORMAT_B8G8R8A8_UNORM, TG_NULL);
+
+    const u32 staging_buffer_size = width * height * tg_color_image_format_size((tg_color_image_format)blit_image.format);
+    tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take((u64)staging_buffer_size);
+
+    tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
+    tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+    {
+        tgvk_cmd_transition_image_layout(
+            p_command_buffer,
+            &blit_image,
+            0,
+            VK_ACCESS_TRANSFER_WRITE_BIT,
+            VK_IMAGE_LAYOUT_UNDEFINED,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+            VK_PIPELINE_STAGE_TRANSFER_BIT
+        );
+
+        tgvk_cmd_blit_image_3d_slice_to_image(p_command_buffer, slice_depth, p_image_3d, &blit_image, TG_NULL);
+
+        tgvk_cmd_transition_image_layout(
+            p_command_buffer,
+            &blit_image,
+            VK_ACCESS_TRANSFER_WRITE_BIT,
+            VK_ACCESS_TRANSFER_READ_BIT,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+            VK_PIPELINE_STAGE_TRANSFER_BIT,
+            VK_PIPELINE_STAGE_TRANSFER_BIT
+        );
+
+        tgvk_cmd_copy_color_image_to_buffer(p_command_buffer, &blit_image, p_staging_buffer->buffer);
+    }
+
+    tgvk_command_buffer_end_and_submit(p_command_buffer);
+    tgvk_buffer_flush_device_to_host(p_staging_buffer);
+    const b32 result = tg_image_store_to_disc(p_filename, width, height, (tg_color_image_format)blit_image.format, p_staging_buffer->memory.p_mapped_device_memory, force_alpha_one, replace_existing);
+
+    tgvk_global_staging_buffer_release();
+    tgvk_image_destroy(&blit_image);
+
+    return result;
+}
+
 void tgvk_image_3d_destroy(tgvk_image_3d* p_image_3d)
 {
     vkDestroySampler(device, p_image_3d->sampler, TG_NULL);
     vkDestroyImageView(device, p_image_3d->image_view, TG_NULL);
     tgvk_memory_allocator_free(&p_image_3d->memory);
     vkDestroyImage(device, p_image_3d->image, TG_NULL);
+}
+
+
+
+tgvk_layered_image tgvk_layered_image_create(tgvk_image_type type, u32 width, u32 height, u32 layers, VkFormat format, const tg_sampler_create_info* p_sampler_create_info)
+{
+    tgvk_layered_image image = { 0 };
+
+    VkImageUsageFlags usage = 0;
+    VkImageAspectFlagBits aspect_mask = 0;
+    if (type == TGVK_IMAGE_TYPE_COLOR)
+    {
+        usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        aspect_mask = VK_IMAGE_ASPECT_COLOR_BIT;
+    }
+    else if (type == TGVK_IMAGE_TYPE_DEPTH)
+    {
+        usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+        aspect_mask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    }
+    else if (type == TGVK_IMAGE_TYPE_STORAGE)
+    {
+        usage = VK_IMAGE_USAGE_STORAGE_BIT;
+        aspect_mask = VK_IMAGE_ASPECT_COLOR_BIT;
+    }
+    else
+    {
+        TG_INVALID_CODEPATH();
+    }
+
+    image.type = type;
+    image.width = width;
+    image.height = height;
+    image.layers = layers;
+    image.format = format;
+
+    VkImageCreateInfo image_create_info = { 0 };
+    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_create_info.pNext = TG_NULL;
+    image_create_info.flags = VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT;
+    image_create_info.imageType = VK_IMAGE_TYPE_3D;
+    image_create_info.format = format;
+    image_create_info.extent.width = width;
+    image_create_info.extent.height = height;
+    image_create_info.extent.depth = layers;
+    image_create_info.mipLevels = 1;
+    image_create_info.arrayLayers = 1;
+    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
+    image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+    image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | usage;
+    image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    image_create_info.queueFamilyIndexCount = 0;
+    image_create_info.pQueueFamilyIndices = TG_NULL;
+    image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+    TGVK_CALL(vkCreateImage(device, &image_create_info, TG_NULL, &image.image));
+
+    VkMemoryRequirements memory_requirements = { 0 };
+    vkGetImageMemoryRequirements(device, image.image, &memory_requirements);
+    image.memory = tgvk_memory_allocator_alloc(memory_requirements.alignment, memory_requirements.size, memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    TGVK_CALL(vkBindImageMemory(device, image.image, image.memory.device_memory, image.memory.offset));
+
+    // TODO: mipmapping
+
+    VkImageViewCreateInfo image_view_create_info = { 0 };
+    image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    image_view_create_info.pNext = TG_NULL;
+    image_view_create_info.flags = 0;
+    image_view_create_info.image = image.image;
+    image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+    image_view_create_info.format = format;
+    image_view_create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+    image_view_create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+    image_view_create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+    image_view_create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+    image_view_create_info.subresourceRange.aspectMask = aspect_mask;
+    image_view_create_info.subresourceRange.baseMipLevel = 0;
+    image_view_create_info.subresourceRange.levelCount = 1;
+    image_view_create_info.subresourceRange.baseArrayLayer = 0;
+    image_view_create_info.subresourceRange.layerCount = layers;
+
+    TGVK_CALL(vkCreateImageView(device, &image_view_create_info, TG_NULL, &image.image_view));
+
+    if (p_sampler_create_info)
+    {
+        image.sampler = tg__sampler_create_custom(
+            1,
+            p_sampler_create_info->min_filter,
+            p_sampler_create_info->mag_filter,
+            p_sampler_create_info->address_mode_u,
+            p_sampler_create_info->address_mode_v,
+            p_sampler_create_info->address_mode_w
+        );
+    }
+    else
+    {
+        image.sampler = tg__sampler_create(1);
+    }
+
+    return image;
+}
+
+b32 tgvk_layered_image_store_layer_to_disc(tgvk_layered_image* p_image, u32 layer, const char* p_filename, b32 force_alpha_one, b32 replace_existing)
+{
+    const u32 width = p_image->width;
+    const u32 height = p_image->height;
+
+    tgvk_image blit_image = tgvk_image_create(TGVK_IMAGE_TYPE_COLOR, width, height, (VkFormat)TG_COLOR_IMAGE_FORMAT_B8G8R8A8_UNORM, TG_NULL);
+
+    const u32 staging_buffer_size = width * height * tg_color_image_format_size((tg_color_image_format)blit_image.format);
+    tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take((u64)staging_buffer_size);
+
+    tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
+    tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+    {
+        tgvk_cmd_transition_image_layout(
+            p_command_buffer,
+            &blit_image,
+            0,
+            VK_ACCESS_TRANSFER_WRITE_BIT,
+            VK_IMAGE_LAYOUT_UNDEFINED,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+            VK_PIPELINE_STAGE_TRANSFER_BIT
+        );
+
+        tgvk_cmd_blit_layered_image_layer_to_image(p_command_buffer, layer, p_image, &blit_image, TG_NULL);
+
+        tgvk_cmd_transition_image_layout(
+            p_command_buffer,
+            &blit_image,
+            VK_ACCESS_TRANSFER_WRITE_BIT,
+            VK_ACCESS_TRANSFER_READ_BIT,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+            VK_PIPELINE_STAGE_TRANSFER_BIT,
+            VK_PIPELINE_STAGE_TRANSFER_BIT
+        );
+
+        tgvk_cmd_copy_color_image_to_buffer(p_command_buffer, &blit_image, p_staging_buffer->buffer);
+    }
+
+    tgvk_command_buffer_end_and_submit(p_command_buffer);
+    tgvk_buffer_flush_device_to_host(p_staging_buffer);
+    const b32 result = tg_image_store_to_disc(p_filename, width, height, (tg_color_image_format)blit_image.format, p_staging_buffer->memory.p_mapped_device_memory, force_alpha_one, replace_existing);
+
+    tgvk_global_staging_buffer_release();
+    tgvk_image_destroy(&blit_image);
+
+    return result;
+}
+
+void tgvk_layered_image_destroy(tgvk_layered_image* p_image)
+{
+    if (p_image->sampler)
+    {
+        vkDestroySampler(device, p_image->sampler, TG_NULL);
+    }
+    if (p_image->image_view)
+    {
+        vkDestroyImageView(device, p_image->image_view, TG_NULL);
+    }
+    tgvk_memory_allocator_free(&p_image->memory);
+    vkDestroyImage(device, p_image->image, TG_NULL);
 }
 
 
@@ -2279,32 +2689,6 @@ tgvk_shader tgvk_shader_create_from_spirv(u32 size, const char* p_source)
 void tgvk_shader_destroy(tgvk_shader* p_shader)
 {
     vkDestroyShaderModule(device, p_shader->shader_module, TG_NULL);
-}
-
-
-
-tgvk_buffer* tgvk_global_staging_buffer_take(VkDeviceSize size)
-{
-    TG_RWL_LOCK_FOR_WRITE(global_staging_buffer_lock);
-
-    if (global_staging_buffer.memory.size < size)
-    {
-        if (global_staging_buffer.buffer)
-        {
-            tgvk_buffer_destroy(&global_staging_buffer);
-        }
-        global_staging_buffer = tgvk_buffer_create(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-    }
-
-    return &global_staging_buffer;
-}
-
-void tgvk_global_staging_buffer_release(void)
-{
-#pragma warning(push)
-#pragma warning(disable:26110)
-    TG_RWL_UNLOCK_FOR_WRITE(global_staging_buffer_lock);
-#pragma warning(pop)
 }
 
 
@@ -2824,8 +3208,8 @@ static VkDevice tg__device_create(void)
     physical_device_features.robustBufferAccess = VK_FALSE;
     physical_device_features.fullDrawIndexUint32 = VK_FALSE;
     physical_device_features.imageCubeArray = VK_FALSE;
-    physical_device_features.independentBlend = VK_FALSE;
-    physical_device_features.geometryShader = VK_FALSE;
+    physical_device_features.independentBlend = VK_TRUE;
+    physical_device_features.geometryShader = VK_TRUE;
     physical_device_features.tessellationShader = VK_FALSE;
     physical_device_features.sampleRateShading = VK_FALSE;
     physical_device_features.dualSrcBlend = VK_FALSE;
@@ -3015,7 +3399,24 @@ static void tg__swapchain_create(void)
 
     for (u32 i = 0; i < TG_MAX_SWAPCHAIN_IMAGES; i++)
     {
-        p_swapchain_image_views[i] = tg__image_view_create(p_swapchain_images[i], VK_IMAGE_VIEW_TYPE_2D, surface.format.format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+        VkImageViewCreateInfo image_view_create_info = { 0 };
+        image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        image_view_create_info.pNext = TG_NULL;
+        image_view_create_info.flags = 0;
+        image_view_create_info.image = p_swapchain_images[i];
+        image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+        image_view_create_info.format = surface.format.format;
+        image_view_create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+        image_view_create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+        image_view_create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+        image_view_create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+        image_view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        image_view_create_info.subresourceRange.baseMipLevel = 0;
+        image_view_create_info.subresourceRange.levelCount = 1;
+        image_view_create_info.subresourceRange.baseArrayLayer = 0;
+        image_view_create_info.subresourceRange.layerCount = 1;
+
+        TGVK_CALL(vkCreateImageView(device, &image_view_create_info, TG_NULL, &p_swapchain_image_views[i]));
     }
 }
 

@@ -435,7 +435,7 @@ void tg_image_convert_format(TG_INOUT u32* p_data, u32 width, u32 height, tg_col
 	}
 }
 
-b32 tg_image_store_to_disc(const char* p_filename, u32 width, u32 height, tg_color_image_format format, const u32* p_data, b32 replace_existing)
+b32 tg_image_store_to_disc(const char* p_filename, u32 width, u32 height, tg_color_image_format format, const u32* p_data, b32 force_alpha_one, b32 replace_existing)
 {
 	b32 result = TG_FALSE;
 
@@ -521,6 +521,14 @@ b32 tg_image_store_to_disc(const char* p_filename, u32 width, u32 height, tg_col
 		// color-index array
 		u32* p_pixels = (u32*)&p_buffer[offset_bits];
 		tg_memcpy(in_data_size, p_data, p_pixels);
+		if (force_alpha_one)
+		{
+			const u32 alpha_mask = *(u32*)&p_bitmap_info_header[52];
+			for (u32 i = 0; i < in_data_size / 4; i++)
+			{
+				p_pixels[i] |= alpha_mask;
+			}
+		}
 
 		result = tg_platform_file_create(p_filename, bmp_size, p_buffer, replace_existing);
 		

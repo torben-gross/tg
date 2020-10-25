@@ -92,17 +92,17 @@ typedef enum tg_depth_image_format
 
 typedef enum tg_image_address_mode
 {
-	TG_IMAGE_ADDRESS_MODE_CLAMP_TO_BORDER = 3,
-	TG_IMAGE_ADDRESS_MODE_CLAMP_TO_EDGE = 2,
-	TG_IMAGE_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE = 4,
-	TG_IMAGE_ADDRESS_MODE_MIRRORED_REPEAT = 1,
-	TG_IMAGE_ADDRESS_MODE_REPEAT = 0
+	TG_IMAGE_ADDRESS_MODE_CLAMP_TO_BORDER         = 3,
+	TG_IMAGE_ADDRESS_MODE_CLAMP_TO_EDGE           = 2,
+	TG_IMAGE_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE    = 4,
+	TG_IMAGE_ADDRESS_MODE_MIRRORED_REPEAT         = 1,
+	TG_IMAGE_ADDRESS_MODE_REPEAT                  = 0
 } tg_image_address_mode;
 
 typedef enum tg_image_filter
 {
-	TG_IMAGE_FILTER_LINEAR = 1,
-	TG_IMAGE_FILTER_NEAREST = 0
+	TG_IMAGE_FILTER_LINEAR     = 1,
+	TG_IMAGE_FILTER_NEAREST    = 0
 } tg_image_filter;
 
 typedef enum tg_shader_type

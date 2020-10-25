@@ -110,13 +110,13 @@ const char p_atmosphere_compute_direct_irradiance_shader[] =
 	"}\r\n";
 
 const char p_atmosphere_compute_single_scattering_shader[] =
-	"layout(set = 0, binding = 0) uniform ubo\r\n"
+	"layout(set = 0, binding = 1) uniform ubo\r\n"
 	"{\r\n"
 	"    mat4 luminance_from_radiance;\r\n"
 	"    int layer;\r\n"
 	"};\r\n"
 	"\r\n"
-	"layout(set = 0, binding = 1) uniform sampler2D transmittance_texture;\r\n"
+	"layout(set = 0, binding = 2) uniform sampler2D transmittance_texture;\r\n"
 	"\r\n"
 	"layout(location = 0) out vec3 delta_rayleigh;\r\n"
 	"layout(location = 1) out vec3 delta_mie;\r\n"
@@ -159,7 +159,7 @@ const char p_atmosphere_compute_scattering_density_shader[] =
 const char p_atmosphere_compute_indirect_irradiance_shader[] =
 	"layout(set = 0, binding = 0) uniform ubo\r\n"
 	"{\r\n"
-	"    mat3 luminance_from_radiance;\r\n"
+	"    mat4 luminance_from_radiance;\r\n"
 	"    int scattering_order;\r\n"
 	"};\r\n"
 	"\r\n"
@@ -172,18 +172,19 @@ const char p_atmosphere_compute_indirect_irradiance_shader[] =
 	"\r\n"
 	"void main()\r\n"
 	"{\r\n"
+	"    mat3 lum_from_rad = mat3(luminance_from_radiance);"
 	"    delta_irradiance = tg_compute_indirect_irradiance_texture(\r\n"
 	"        ATMOSPHERE, single_rayleigh_scattering_texture,\r\n"
 	"        single_mie_scattering_texture, multiple_scattering_texture,\r\n"
 	"        gl_FragCoord.xy, scattering_order\r\n"
 	"    );\r\n"
-	"    irradiance = luminance_from_radiance * delta_irradiance;\r\n"
+	"    irradiance = lum_from_rad * delta_irradiance;\r\n"
 	"}\r\n";
 
 const char p_atmosphere_compute_multiple_scattering_shader[] =
 	"layout(set = 0, binding = 0) uniform ubo\r\n"
 	"{\r\n"
-	"    mat3 luminance_from_radiance;\r\n"
+	"    mat4 luminance_from_radiance;\r\n"
 	"    int layer;\r\n"
 	"};\r\n"
 	"\r\n"
@@ -195,12 +196,13 @@ const char p_atmosphere_compute_multiple_scattering_shader[] =
 	"\r\n"
 	"void main()\r\n"
 	"{\r\n"
+	"    mat3 lum_from_rad = mat3(luminance_from_radiance);"
 	"    float nu;\r\n"
 	"    delta_multiple_scattering = tg_compute_multiple_scattering_texture(\r\n"
 	"        ATMOSPHERE, transmittance_texture, scattering_density_texture,\r\n"
 	"        vec3(gl_FragCoord.xy, layer + 0.5), nu\r\n"
 	"    );\r\n"
-	"    scattering = vec4(luminance_from_radiance * delta_multiple_scattering.rgb / tg_rayleigh_phase_function(nu), 0.0);\r\n"
+	"    scattering = vec4(lum_from_rad * delta_multiple_scattering.rgb / tg_rayleigh_phase_function(nu), 0.0);\r\n"
 	"}\r\n";
 
 const char p_atmosphere_shader[] =

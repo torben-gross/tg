@@ -1811,7 +1811,7 @@ void tg_renderer_screenshot(tg_renderer_h h_renderer, const char* p_filename)
     }
     tgvk_command_buffer_end_and_submit(p_command_buffer);
 
-    tgvk_image_store_to_disc(&h_renderer->render_target.color_attachment_copy, p_filename, TG_FALSE);
+    tgvk_image_store_to_disc(&h_renderer->render_target.color_attachment_copy, p_filename, TG_FALSE, TG_FALSE);
 
     tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
     {
