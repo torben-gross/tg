@@ -29,7 +29,7 @@ void tg_voxelizer_create(tg_voxelizer* p_voxelizer)
     graphics_pipeline_create_info.cull_mode = VK_CULL_MODE_NONE;
     graphics_pipeline_create_info.depth_test_enable = VK_FALSE;
     graphics_pipeline_create_info.depth_write_enable = VK_FALSE;
-    graphics_pipeline_create_info.p_blend_enable = TG_NULL;
+    graphics_pipeline_create_info.p_blend_modes = TG_NULL;
     graphics_pipeline_create_info.render_pass = p_voxelizer->render_pass;
     graphics_pipeline_create_info.viewport_size = (v2){ (f32)TG_SVO_DIMS, (f32)TG_SVO_DIMS };
     graphics_pipeline_create_info.polygon_mode = VK_POLYGON_MODE_FILL;

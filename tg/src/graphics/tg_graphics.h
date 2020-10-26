@@ -65,6 +65,13 @@ typedef void* tg_handle;
 
 
 
+typedef enum tg_blend_mode
+{
+	TG_BLEND_MODE_NONE = 0,
+	TG_BLEND_MODE_ADD,
+	TG_BLEND_MODE_BLEND
+} tg_blend_mode;
+
 typedef enum tg_camera_type
 {
 	TG_CAMERA_TYPE_ORTHOGRAPHIC,

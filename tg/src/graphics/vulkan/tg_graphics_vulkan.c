@@ -1403,7 +1403,7 @@ void tgvk_descriptor_set_update_layered_image(VkDescriptorSet descriptor_set, tg
 {
     VkDescriptorImageInfo descriptor_image_info = { 0 };
     descriptor_image_info.sampler = p_image->sampler;
-    descriptor_image_info.imageView = p_image->image_view;
+    descriptor_image_info.imageView = p_image->read_image_view;
     descriptor_image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
     VkWriteDescriptorSet write_descriptor_set = { 0 };
@@ -2147,24 +2147,43 @@ tgvk_layered_image tgvk_layered_image_create(tgvk_image_type type, u32 width, u3
 
     // TODO: mipmapping
 
-    VkImageViewCreateInfo image_view_create_info = { 0 };
-    image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    image_view_create_info.pNext = TG_NULL;
-    image_view_create_info.flags = 0;
-    image_view_create_info.image = image.image;
-    image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
-    image_view_create_info.format = format;
-    image_view_create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-    image_view_create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-    image_view_create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-    image_view_create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-    image_view_create_info.subresourceRange.aspectMask = aspect_mask;
-    image_view_create_info.subresourceRange.baseMipLevel = 0;
-    image_view_create_info.subresourceRange.levelCount = 1;
-    image_view_create_info.subresourceRange.baseArrayLayer = 0;
-    image_view_create_info.subresourceRange.layerCount = layers;
+    VkImageViewCreateInfo read_image_view_create_info = { 0 };
+    read_image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    read_image_view_create_info.pNext = TG_NULL;
+    read_image_view_create_info.flags = 0;
+    read_image_view_create_info.image = image.image;
+    read_image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_3D;
+    read_image_view_create_info.format = format;
+    read_image_view_create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+    read_image_view_create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+    read_image_view_create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+    read_image_view_create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+    read_image_view_create_info.subresourceRange.aspectMask = aspect_mask;
+    read_image_view_create_info.subresourceRange.baseMipLevel = 0;
+    read_image_view_create_info.subresourceRange.levelCount = 1;
+    read_image_view_create_info.subresourceRange.baseArrayLayer = 0;
+    read_image_view_create_info.subresourceRange.layerCount = 1;
 
-    TGVK_CALL(vkCreateImageView(device, &image_view_create_info, TG_NULL, &image.image_view));
+    TGVK_CALL(vkCreateImageView(device, &read_image_view_create_info, TG_NULL, &image.read_image_view));
+
+    VkImageViewCreateInfo write_image_view_create_info = { 0 };
+    write_image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    write_image_view_create_info.pNext = TG_NULL;
+    write_image_view_create_info.flags = 0;
+    write_image_view_create_info.image = image.image;
+    write_image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+    write_image_view_create_info.format = format;
+    write_image_view_create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+    write_image_view_create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+    write_image_view_create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+    write_image_view_create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+    write_image_view_create_info.subresourceRange.aspectMask = aspect_mask;
+    write_image_view_create_info.subresourceRange.baseMipLevel = 0;
+    write_image_view_create_info.subresourceRange.levelCount = 1;
+    write_image_view_create_info.subresourceRange.baseArrayLayer = 0;
+    write_image_view_create_info.subresourceRange.layerCount = layers;
+
+    TGVK_CALL(vkCreateImageView(device, &write_image_view_create_info, TG_NULL, &image.write_image_view));
 
     if (p_sampler_create_info)
     {
@@ -2241,9 +2260,13 @@ void tgvk_layered_image_destroy(tgvk_layered_image* p_image)
     {
         vkDestroySampler(device, p_image->sampler, TG_NULL);
     }
-    if (p_image->image_view)
+    if (p_image->read_image_view)
     {
-        vkDestroyImageView(device, p_image->image_view, TG_NULL);
+        vkDestroyImageView(device, p_image->read_image_view, TG_NULL);
+    }
+    if (p_image->write_image_view)
+    {
+        vkDestroyImageView(device, p_image->write_image_view, TG_NULL);
     }
     tgvk_memory_allocator_free(&p_image->memory);
     vkDestroyImage(device, p_image->image, TG_NULL);
@@ -2411,14 +2434,43 @@ tgvk_pipeline tgvk_pipeline_create_graphics(const tgvk_graphics_pipeline_create_
     VkPipelineColorBlendAttachmentState p_pipeline_color_blend_attachment_states[TG_MAX_SHADER_ATTACHMENTS] = { 0 };
     for (u32 i = 0; i < p_create_info->p_fragment_shader->spirv_layout.fragment_shader_output.count; i++)
     {
-        p_pipeline_color_blend_attachment_states[i].blendEnable = p_create_info->p_blend_enable ? p_create_info->p_blend_enable[i] : VK_FALSE;
-        p_pipeline_color_blend_attachment_states[i].srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-        p_pipeline_color_blend_attachment_states[i].dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-        p_pipeline_color_blend_attachment_states[i].colorBlendOp = VK_BLEND_OP_ADD;
-        p_pipeline_color_blend_attachment_states[i].srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-        p_pipeline_color_blend_attachment_states[i].dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-        p_pipeline_color_blend_attachment_states[i].alphaBlendOp = VK_BLEND_OP_ADD;
-        p_pipeline_color_blend_attachment_states[i].colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+        if (!p_create_info->p_blend_modes || p_create_info->p_blend_modes[i] == TG_BLEND_MODE_NONE)
+        {
+            p_pipeline_color_blend_attachment_states[i].blendEnable = VK_FALSE;
+            p_pipeline_color_blend_attachment_states[i].srcColorBlendFactor = VK_BLEND_FACTOR_ZERO;
+            p_pipeline_color_blend_attachment_states[i].dstColorBlendFactor = VK_BLEND_FACTOR_ONE;
+            p_pipeline_color_blend_attachment_states[i].colorBlendOp = VK_BLEND_OP_ADD;
+            p_pipeline_color_blend_attachment_states[i].srcAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+            p_pipeline_color_blend_attachment_states[i].dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+            p_pipeline_color_blend_attachment_states[i].alphaBlendOp = VK_BLEND_OP_ADD;
+            p_pipeline_color_blend_attachment_states[i].colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+        }
+        else if (p_create_info->p_blend_modes[i] == TG_BLEND_MODE_ADD)
+        {
+            p_pipeline_color_blend_attachment_states[i].blendEnable = VK_TRUE;
+            p_pipeline_color_blend_attachment_states[i].srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+            p_pipeline_color_blend_attachment_states[i].dstColorBlendFactor = VK_BLEND_FACTOR_ONE;
+            p_pipeline_color_blend_attachment_states[i].colorBlendOp = VK_BLEND_OP_ADD;
+            p_pipeline_color_blend_attachment_states[i].srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+            p_pipeline_color_blend_attachment_states[i].dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+            p_pipeline_color_blend_attachment_states[i].alphaBlendOp = VK_BLEND_OP_ADD;
+            p_pipeline_color_blend_attachment_states[i].colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+        }
+        else if (p_create_info->p_blend_modes[i] == TG_BLEND_MODE_BLEND)
+        {
+            p_pipeline_color_blend_attachment_states[i].blendEnable = VK_TRUE;
+            p_pipeline_color_blend_attachment_states[i].srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+            p_pipeline_color_blend_attachment_states[i].dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+            p_pipeline_color_blend_attachment_states[i].colorBlendOp = VK_BLEND_OP_ADD;
+            p_pipeline_color_blend_attachment_states[i].srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+            p_pipeline_color_blend_attachment_states[i].dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+            p_pipeline_color_blend_attachment_states[i].alphaBlendOp = VK_BLEND_OP_ADD;
+            p_pipeline_color_blend_attachment_states[i].colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+        }
+        else
+        {
+            TG_INVALID_CODEPATH();
+        }
     }
 
     VkPipelineColorBlendStateCreateInfo pipeline_color_blend_state_create_info = { 0 };

@@ -18,15 +18,15 @@ static tg_material_h tg__create(tgvk_material_type material_type, tg_vertex_shad
     graphics_pipeline_create_info.depth_test_enable = VK_TRUE;
     graphics_pipeline_create_info.depth_write_enable = VK_TRUE;
 
-    VkBool32 p_blend_enable[TG_MAX_SHADER_INPUTS] = { 0 };
-    graphics_pipeline_create_info.p_blend_enable = p_blend_enable;
+    tg_blend_mode p_blend_modes[TG_MAX_SHADER_INPUTS] = { 0 };
+    graphics_pipeline_create_info.p_blend_modes = p_blend_modes;
     switch (material_type)
     {
     case TGVK_MATERIAL_TYPE_DEFERRED:
     {
         for (u32 i = 0; i < h_fragment_shader->shader.spirv_layout.fragment_shader_output.count; i++)
         {
-            p_blend_enable[i] = VK_FALSE;
+            p_blend_modes[i] = TG_BLEND_MODE_NONE;
         }
         graphics_pipeline_create_info.render_pass = shared_render_resources.geometry_render_pass;
     } break;
@@ -34,7 +34,7 @@ static tg_material_h tg__create(tgvk_material_type material_type, tg_vertex_shad
     {
         for (u32 i = 0; i < h_fragment_shader->shader.spirv_layout.fragment_shader_output.count; i++)
         {
-            p_blend_enable[i] = VK_TRUE;
+            p_blend_modes[i] = TG_BLEND_MODE_BLEND;
         }
         graphics_pipeline_create_info.render_pass = shared_render_resources.forward_render_pass;
     } break;

@@ -17,9 +17,10 @@ layout(set = 0, binding = 3) uniform sampler2D tex;
 void main()
 {
     out_color = vec4(u_color, 1.0) * 0.1 + 0.9 * texture(tex, v_uv);
-	out_color.a = 0.6;
-	if ((1.0 - v_uv.x) * v_uv.y > 0.5)
+	const float start = 0.1;
+	float d = (v_uv.x - 0.5) * (v_uv.x - 0.5) + (v_uv.y - 0.5) * (v_uv.y - 0.5);
+	if (d > start)
 	{
-		out_color = vec4(0.0);
+		out_color.a = smoothstep(1.0, 0.0, (d - start) / (0.25 - start));
 	}
 }

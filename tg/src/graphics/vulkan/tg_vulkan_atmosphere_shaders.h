@@ -132,17 +132,17 @@ const char p_atmosphere_compute_single_scattering_shader[] =
 	"}\r\n";
 
 const char p_atmosphere_compute_scattering_density_shader[] =
-	"layout(set = 0, binding = 0) uniform ubo\r\n"
+	"layout(set = 0, binding = 1) uniform ubo\r\n"
 	"{\r\n"
 	"    int scattering_order;\r\n"
 	"    int layer;\r\n"
 	"};\r\n"
 	"\r\n"
-	"layout(set = 0, binding = 1) uniform sampler2D transmittance_texture;\r\n"
-	"layout(set = 0, binding = 2) uniform sampler3D single_rayleigh_scattering_texture;\r\n"
-	"layout(set = 0, binding = 3) uniform sampler3D single_mie_scattering_texture;\r\n"
-	"layout(set = 0, binding = 4) uniform sampler3D multiple_scattering_texture;\r\n"
-	"layout(set = 0, binding = 5) uniform sampler2D irradiance_texture;\r\n"
+	"layout(set = 0, binding = 2) uniform sampler2D transmittance_texture;\r\n"
+	"layout(set = 0, binding = 3) uniform sampler3D single_rayleigh_scattering_texture;\r\n"
+	"layout(set = 0, binding = 4) uniform sampler3D single_mie_scattering_texture;\r\n"
+	"layout(set = 0, binding = 5) uniform sampler3D multiple_scattering_texture;\r\n"
+	"layout(set = 0, binding = 6) uniform sampler2D irradiance_texture;\r\n"
 	"\r\n"
 	"layout(location = 0) out vec3 scattering_density;\r\n"
 	"\r\n"
@@ -182,14 +182,14 @@ const char p_atmosphere_compute_indirect_irradiance_shader[] =
 	"}\r\n";
 
 const char p_atmosphere_compute_multiple_scattering_shader[] =
-	"layout(set = 0, binding = 0) uniform ubo\r\n"
+	"layout(set = 0, binding = 1) uniform ubo\r\n"
 	"{\r\n"
 	"    mat4 luminance_from_radiance;\r\n"
 	"    int layer;\r\n"
 	"};\r\n"
 	"\r\n"
-	"layout(set = 0, binding = 1) uniform sampler2D transmittance_texture;\r\n"
-	"layout(set = 0, binding = 2) uniform sampler3D scattering_density_texture;\r\n"
+	"layout(set = 0, binding = 2) uniform sampler2D transmittance_texture;\r\n"
+	"layout(set = 0, binding = 3) uniform sampler3D scattering_density_texture;\r\n"
 	"\r\n"
 	"layout(location = 0) out vec3 delta_multiple_scattering;\r\n"
 	"layout(location = 1) out vec4 scattering;\r\n"

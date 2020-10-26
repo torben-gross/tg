@@ -167,7 +167,7 @@ typedef struct tgvk_graphics_pipeline_create_info
     VkCullModeFlagBits       cull_mode;
     VkBool32                 depth_test_enable;
     VkBool32                 depth_write_enable;
-    const VkBool32*          p_blend_enable;     // TG_NULL disables blending for every attachment
+    tg_blend_mode*           p_blend_modes;      // TG_NULL sets blending for every attachment to TG_BLEND_MODE_NONE
     VkRenderPass             render_pass;
     v2                       viewport_size;
     VkPolygonMode            polygon_mode;
@@ -190,7 +190,8 @@ typedef struct tgvk_layered_image
     VkFormat             format;
     VkImage              image;
     tgvk_memory_block    memory;
-    VkImageView          image_view;
+    VkImageView          read_image_view;
+    VkImageView          write_image_view;
     VkSampler            sampler;
 } tgvk_layered_image;
 
