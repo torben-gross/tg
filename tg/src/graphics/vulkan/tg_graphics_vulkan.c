@@ -710,6 +710,46 @@ void tgvk_cmd_clear_image_3d(tgvk_command_buffer* p_command_buffer, tgvk_image_3
     }
 }
 
+void tgvk_cmd_clear_layered_image(tgvk_command_buffer* p_command_buffer, tgvk_layered_image* p_image)
+{
+    if (p_image->type == TGVK_IMAGE_TYPE_COLOR || p_image->type == TGVK_IMAGE_TYPE_STORAGE)
+    {
+        VkImageSubresourceRange image_subresource_range = { 0 };
+        image_subresource_range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        image_subresource_range.baseMipLevel = 0;
+        image_subresource_range.levelCount = 1;
+        image_subresource_range.baseArrayLayer = 0;
+        image_subresource_range.layerCount = 1;
+
+        VkClearColorValue clear_color_value = { 0 };
+        clear_color_value.float32[0] = 0.0f;
+        clear_color_value.float32[1] = 0.0f;
+        clear_color_value.float32[2] = 0.0f;
+        clear_color_value.float32[3] = 0.0f;
+
+        vkCmdClearColorImage(p_command_buffer->command_buffer, p_image->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color_value, 1, &image_subresource_range);
+    }
+    else if (p_image->type == TGVK_IMAGE_TYPE_DEPTH)
+    {
+        VkImageSubresourceRange image_subresource_range = { 0 };
+        image_subresource_range.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+        image_subresource_range.baseMipLevel = 0;
+        image_subresource_range.levelCount = 1;
+        image_subresource_range.baseArrayLayer = 0;
+        image_subresource_range.layerCount = 1;
+
+        VkClearDepthStencilValue clear_depth_stencil_value = { 0 };
+        clear_depth_stencil_value.depth = 1.0f;
+        clear_depth_stencil_value.stencil = 0;
+
+        vkCmdClearDepthStencilImage(p_command_buffer->command_buffer, p_image->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_depth_stencil_value, 1, &image_subresource_range);
+    }
+    else
+    {
+        TG_INVALID_CODEPATH();
+    }
+}
+
 void tgvk_cmd_copy_buffer(tgvk_command_buffer* p_command_buffer, VkDeviceSize size, tgvk_buffer* p_src, tgvk_buffer* p_dst)
 {
     VkBufferCopy buffer_copy = { 0 };

@@ -519,6 +519,7 @@ void                    tgvk_cmd_blit_image_3d_slice_to_image(tgvk_command_buffe
 void                    tgvk_cmd_blit_layered_image_layer_to_image(tgvk_command_buffer* p_command_buffer, u32 layer, tgvk_layered_image* p_source, tgvk_image* p_destination, const VkImageBlit* p_region);
 void                    tgvk_cmd_clear_image(tgvk_command_buffer* p_command_buffer, tgvk_image* p_image);
 void                    tgvk_cmd_clear_image_3d(tgvk_command_buffer* p_command_buffer, tgvk_image_3d* p_image_3d);
+void                    tgvk_cmd_clear_layered_image(tgvk_command_buffer* p_command_buffer, tgvk_layered_image* p_image);
 void                    tgvk_cmd_copy_buffer(tgvk_command_buffer* p_command_buffer, VkDeviceSize size, tgvk_buffer* p_src, tgvk_buffer* p_dst);
 void                    tgvk_cmd_copy_buffer_to_color_image(tgvk_command_buffer* p_command_buffer, VkBuffer source, tgvk_image* p_destination);
 void                    tgvk_cmd_copy_buffer_to_cube_map(tgvk_command_buffer* p_command_buffer, VkBuffer source, tgvk_cube_map* p_destination);
