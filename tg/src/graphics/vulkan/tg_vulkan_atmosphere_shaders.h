@@ -30,27 +30,6 @@
 #ifndef TG_VULKAN_ATMOSPHERE_SHADERS_H
 #define TG_VULKAN_ATMOSPHERE_SHADERS_H
 
-static const char p_atmosphere_demo_vertex_shader[] =
-	"#version 450\r\n"
-	"\r\n"
-	"layout(location = 0) in vec4 vertex;\r\n"
-	"\r\n"
-	"layout(set = 0, binding = 0) uniform ubo\r\n"
-	"{\r\n"
-	"    mat4 model_from_view;\r\n"
-	"    mat4 view_from_clip;\r\n"
-	"};\r\n"
-	"\r\n"
-	"layout(location = 0) out vec3 view_ray;\r\n"
-	"\r\n"
-	"void main()\r\n"
-	"{\r\n"
-	"    view_ray = (model_from_view * vec4((view_from_clip * vertex).xyz, 0.0)).xyz;\r\n"
-	"    gl_Position = vertex;\r\n"
-	"}\r\n";
-
-
-
 const char p_atmosphere_vertex_shader[] =
     "#version 450\r\n"
 	"\r\n"
@@ -86,8 +65,6 @@ const char p_atmosphere_geometry_shader[] =
     "    EmitVertex();\r\n"
     "    EndPrimitive();\r\n"
     "}\r\n";
-
-
 
 const char p_atmosphere_compute_transmittance_shader[] =
 	"layout(location = 0) out vec3 transmittance;\r\n"

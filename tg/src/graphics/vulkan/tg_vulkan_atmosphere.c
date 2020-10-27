@@ -35,9 +35,153 @@
 
 #include "graphics/tg_atmosphere_lookup_tables.h"
 #include "graphics/vulkan/tg_vulkan_atmosphere_definitions.h"
+#include "graphics/vulkan/tg_vulkan_atmosphere_demo_shaders.h"
 #include "graphics/vulkan/tg_vulkan_atmosphere_functions.h"
 #include "graphics/vulkan/tg_vulkan_atmosphere_shaders.h"
 #include "util/tg_string.h"
+
+#ifdef TG_DEBUG
+#define TG_DEBUG_STORE_IMAGE(texture, p_filename)                                                \
+	tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);    \
+	{                                                                                            \
+		tgvk_cmd_transition_image_layout(                                                        \
+			p_command_buffer,                                                                    \
+			&(texture),                                                                          \
+			VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,                                                \
+			VK_ACCESS_TRANSFER_READ_BIT,                                                         \
+			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,                                            \
+			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,                                                \
+			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,                                       \
+			VK_PIPELINE_STAGE_TRANSFER_BIT                                                       \
+		);                                                                                       \
+	}                                                                                            \
+	tgvk_command_buffer_end_and_submit(p_command_buffer);                                        \
+                                                                                                 \
+	tgvk_image_store_to_disc(&(texture), p_filename, TG_TRUE, TG_TRUE);                          \
+                                                                                                 \
+	tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);    \
+	{                                                                                            \
+		tgvk_cmd_transition_image_layout(                                                        \
+			p_command_buffer,                                                                    \
+			&(texture),                                                                          \
+			VK_ACCESS_TRANSFER_READ_BIT,                                                         \
+			VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,                                                \
+			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,                                                \
+			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,                                            \
+			VK_PIPELINE_STAGE_TRANSFER_BIT,                                                      \
+			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT                                        \
+		);                                                                                       \
+	}                                                                                            \
+	tgvk_command_buffer_end_and_submit(p_command_buffer);
+
+#define TG_DEBUG_STORE_LAYERED_IMAGE_SLICE(texture, layer, p_filename)                           \
+	tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);    \
+	{                                                                                            \
+		tgvk_cmd_transition_layered_image_layout(                                                \
+			p_command_buffer,                                                                    \
+			&(texture),                                                                          \
+			VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,                                                \
+			VK_ACCESS_TRANSFER_READ_BIT,                                                         \
+			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,                                            \
+			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,                                                \
+			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,                                       \
+			VK_PIPELINE_STAGE_TRANSFER_BIT                                                       \
+		);                                                                                       \
+	}                                                                                            \
+	tgvk_command_buffer_end_and_submit(p_command_buffer);                                        \
+                                                                                                 \
+	tgvk_layered_image_store_layer_to_disc(&(texture), layer, p_filename, TG_TRUE, TG_TRUE);     \
+                                                                                                 \
+	tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);    \
+	{                                                                                            \
+		tgvk_cmd_transition_layered_image_layout(                                                \
+			p_command_buffer,                                                                    \
+			&(texture),                                                                          \
+			VK_ACCESS_TRANSFER_READ_BIT,                                                         \
+			VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,                                                \
+			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,                                                \
+			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,                                            \
+			VK_PIPELINE_STAGE_TRANSFER_BIT,                                                      \
+			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT                                        \
+		);                                                                                       \
+	}                                                                                            \
+	tgvk_command_buffer_end_and_submit(p_command_buffer);
+#else
+#define TG_DEBUG_STORE_IMAGE(texture, p_filename)
+#define TG_DEBUG_STORE_LAYERED_IMAGE_SLICE(texture, slice_depth, p_filename)
+#endif
+
+#define TO_COLOR_ATTACHMENT_LAYOUT(texture)           \
+	tgvk_cmd_transition_image_layout(                 \
+		p_command_buffer,                             \
+		&(texture),                                   \
+		0,                                            \
+		VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,         \
+		VK_IMAGE_LAYOUT_UNDEFINED,                    \
+		VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,     \
+		VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,            \
+		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT \
+	)
+
+#define TO_COLOR_ATTACHMENT_LAYOUT_LAYERED(texture)   \
+	tgvk_cmd_transition_layered_image_layout(         \
+		p_command_buffer,                             \
+		&(texture),                                   \
+		0,                                            \
+		VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,         \
+		VK_IMAGE_LAYOUT_UNDEFINED,                    \
+		VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,     \
+		VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,            \
+		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT \
+	)
+
+#define COLOR_ATTACHMENT_TO_SHADER_READ(texture)       \
+	tgvk_cmd_transition_image_layout(                  \
+		p_command_buffer,                              \
+		&(texture),                                    \
+		VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,          \
+		VK_ACCESS_SHADER_READ_BIT,                     \
+		VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,      \
+		VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,      \
+		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, \
+		VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT          \
+	)
+
+#define COLOR_ATTACHMENT_TO_SHADER_READ_LAYERED(texture) \
+	tgvk_cmd_transition_layered_image_layout(            \
+		p_command_buffer,                                \
+		&(texture),                                      \
+		VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,            \
+		VK_ACCESS_SHADER_READ_BIT,                       \
+		VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,        \
+		VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,        \
+		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,   \
+		VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT            \
+	)
+
+#define SHADER_READ_TO_COLOR_ATTACHMENT(texture)      \
+	tgvk_cmd_transition_image_layout(                 \
+		p_command_buffer,                             \
+		&(texture),                                   \
+		VK_ACCESS_SHADER_READ_BIT,                    \
+		VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,         \
+		VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,     \
+		VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,     \
+		VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,        \
+		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT \
+	)
+
+#define SHADER_READ_TO_COLOR_ATTACHMENT_LAYERED(texture) \
+	tgvk_cmd_transition_layered_image_layout(            \
+		p_command_buffer,                                \
+		&(texture),                                      \
+		VK_ACCESS_SHADER_READ_BIT,                       \
+		VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,            \
+		VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,        \
+		VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,        \
+		VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,           \
+		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT    \
+	)
 
 
 
@@ -377,149 +521,6 @@ static void tg__compute_spectral_radiance_to_luminance_factors(const f64* p_wave
 
 static void tg__precompute(tg_model* p_model)
 {
-#ifdef TG_DEBUG
-#define TG_DEBUG_STORE_IMAGE(texture, p_filename)                                                \
-	tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);    \
-	{                                                                                            \
-		tgvk_cmd_transition_image_layout(                                                        \
-			p_command_buffer,                                                                    \
-			&(texture),                                                                          \
-			VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,                                                \
-			VK_ACCESS_TRANSFER_READ_BIT,                                                         \
-			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,                                            \
-			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,                                                \
-			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,                                       \
-			VK_PIPELINE_STAGE_TRANSFER_BIT                                                       \
-		);                                                                                       \
-	}                                                                                            \
-	tgvk_command_buffer_end_and_submit(p_command_buffer);                                        \
-                                                                                                 \
-	tgvk_image_store_to_disc(&(texture), p_filename, TG_TRUE, TG_TRUE);                          \
-                                                                                                 \
-	tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);    \
-	{                                                                                            \
-		tgvk_cmd_transition_image_layout(                                                        \
-			p_command_buffer,                                                                    \
-			&(texture),                                                                          \
-			VK_ACCESS_TRANSFER_READ_BIT,                                                         \
-			VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,                                                \
-			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,                                                \
-			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,                                            \
-			VK_PIPELINE_STAGE_TRANSFER_BIT,                                                      \
-			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT                                        \
-		);                                                                                       \
-	}                                                                                            \
-	tgvk_command_buffer_end_and_submit(p_command_buffer);
-
-#define TG_DEBUG_STORE_LAYERED_IMAGE_SLICE(texture, layer, p_filename)                           \
-	tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);    \
-	{                                                                                            \
-		tgvk_cmd_transition_layered_image_layout(                                                \
-			p_command_buffer,                                                                    \
-			&(texture),                                                                          \
-			VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,                                                \
-			VK_ACCESS_TRANSFER_READ_BIT,                                                         \
-			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,                                            \
-			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,                                                \
-			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,                                       \
-			VK_PIPELINE_STAGE_TRANSFER_BIT                                                       \
-		);                                                                                       \
-	}                                                                                            \
-	tgvk_command_buffer_end_and_submit(p_command_buffer);                                        \
-                                                                                                 \
-	tgvk_layered_image_store_layer_to_disc(&(texture), layer, p_filename, TG_TRUE, TG_TRUE);     \
-                                                                                                 \
-	tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);    \
-	{                                                                                            \
-		tgvk_cmd_transition_layered_image_layout(                                                \
-			p_command_buffer,                                                                    \
-			&(texture),                                                                          \
-			VK_ACCESS_TRANSFER_READ_BIT,                                                         \
-			VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,                                                \
-			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,                                                \
-			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,                                            \
-			VK_PIPELINE_STAGE_TRANSFER_BIT,                                                      \
-			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT                                        \
-		);                                                                                       \
-	}                                                                                            \
-	tgvk_command_buffer_end_and_submit(p_command_buffer);
-#else
-#define TG_DEBUG_STORE_IMAGE(texture, p_filename)
-#define TG_DEBUG_STORE_LAYERED_IMAGE_SLICE(texture, slice_depth, p_filename)
-#endif
-
-#define TO_COLOR_ATTACHMENT_LAYOUT(texture)           \
-	tgvk_cmd_transition_image_layout(                 \
-		p_command_buffer,                             \
-		&(texture),                                   \
-		0,                                            \
-		VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,         \
-		VK_IMAGE_LAYOUT_UNDEFINED,                    \
-		VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,     \
-		VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,            \
-		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT \
-	)
-
-#define TO_COLOR_ATTACHMENT_LAYOUT_LAYERED(texture)   \
-	tgvk_cmd_transition_layered_image_layout(         \
-		p_command_buffer,                             \
-		&(texture),                                   \
-		0,                                            \
-		VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,         \
-		VK_IMAGE_LAYOUT_UNDEFINED,                    \
-		VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,     \
-		VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,            \
-		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT \
-	)
-
-#define COLOR_ATTACHMENT_TO_SHADER_READ(texture)       \
-	tgvk_cmd_transition_image_layout(                  \
-		p_command_buffer,                              \
-		&(texture),                                    \
-		VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,          \
-		VK_ACCESS_SHADER_READ_BIT,                     \
-		VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,      \
-		VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,      \
-		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, \
-		VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT          \
-	)
-
-#define COLOR_ATTACHMENT_TO_SHADER_READ_LAYERED(texture) \
-	tgvk_cmd_transition_layered_image_layout(            \
-		p_command_buffer,                                \
-		&(texture),                                      \
-		VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,            \
-		VK_ACCESS_SHADER_READ_BIT,                       \
-		VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,        \
-		VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,        \
-		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,   \
-		VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT            \
-	)
-
-#define SHADER_READ_TO_COLOR_ATTACHMENT(texture)      \
-	tgvk_cmd_transition_image_layout(                 \
-		p_command_buffer,                             \
-		&(texture),                                   \
-		VK_ACCESS_SHADER_READ_BIT,                    \
-		VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,         \
-		VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,     \
-		VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,     \
-		VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,        \
-		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT \
-	)
-
-#define SHADER_READ_TO_COLOR_ATTACHMENT_LAYERED(texture) \
-	tgvk_cmd_transition_layered_image_layout(            \
-		p_command_buffer,                                \
-		&(texture),                                      \
-		VK_ACCESS_SHADER_READ_BIT,                       \
-		VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,            \
-		VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,        \
-		VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,        \
-		VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,           \
-		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT    \
-	)
-
 	tg_sampler_create_info sampler_create_info = { 0 };
 	sampler_create_info.min_filter = TG_IMAGE_FILTER_LINEAR;
 	sampler_create_info.mag_filter = TG_IMAGE_FILTER_LINEAR;
@@ -566,7 +567,6 @@ static void tg__precompute(tg_model* p_model)
 
 	if (p_model->precomputed_wavelength_count <= 3)
 	{
-		// TODO: needed?
 		const m4 luminance_from_radiance = tgm_m4_identity();
 		const tg_blend_mode blend = TG_BLEND_MODE_NONE;
 
@@ -674,10 +674,6 @@ static void tg__precompute(tg_model* p_model)
 		}
 		tgvk_command_buffer_end_and_submit(p_command_buffer);
 		TG_DEBUG_STORE_IMAGE(p_model->transmittance_texture, "textures/atmosphere/transmittance_texture.bmp");
-
-		tgvk_pipeline_destroy(&transmittance_pipeline);
-		tgvk_framebuffer_destroy(&transmittance_framebuffer);
-		tgvk_render_pass_destroy(transmittance_render_pass);
 
 
 
@@ -1059,6 +1055,28 @@ static void tg__precompute(tg_model* p_model)
 
 
 
+		// recompute transmittance
+		// TODO: is this even necessary?
+
+		tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+		{
+			SHADER_READ_TO_COLOR_ATTACHMENT(p_model->transmittance_texture);
+
+			tgvk_cmd_begin_render_pass(p_command_buffer, transmittance_render_pass, &transmittance_framebuffer, VK_SUBPASS_CONTENTS_INLINE);
+
+			tgvk_cmd_bind_pipeline(p_command_buffer, &transmittance_pipeline);
+			tgvk_cmd_bind_and_draw_screen_quad(p_command_buffer);
+
+			vkCmdEndRenderPass(p_command_buffer->command_buffer);
+		}
+		tgvk_command_buffer_end_and_submit(p_command_buffer);
+
+		tgvk_pipeline_destroy(&transmittance_pipeline);
+		tgvk_framebuffer_destroy(&transmittance_framebuffer);
+		tgvk_render_pass_destroy(transmittance_render_pass);
+
+
+
 		tgvk_buffer_destroy(&geometry_ubo);
 		tgvk_buffer_destroy(&ubo);
 		tgvk_semaphore_destroy(semaphore);
@@ -1085,120 +1103,98 @@ static void tg__precompute(tg_model* p_model)
 		TG_INVALID_CODEPATH();
 	}
 
-	// TODO:
-	// After the above iterations, the transmittance texture contains the
-	// transmittance for the 3 wavelengths used at the last iteration. But we
-	// want the transmittance at kLambdaR, kLambdaG, kLambdaB instead, so we
-	// must recompute it here for these 3 wavelengths:
-	//std::string header = glsl_header_factory_({ kLambdaR, kLambdaG, kLambdaB });
-	//Program compute_transmittance(kVertexShader, header + kComputeTransmittanceShader);
-	//glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, transmittance_texture_, 0);
-	//glDrawBuffer(GL_COLOR_ATTACHMENT0);
-	//glViewport(0, 0, TRANSMITTANCE_TEXTURE_WIDTH, TRANSMITTANCE_TEXTURE_HEIGHT);
-	//compute_transmittance.Use();
-	//DrawQuad({}, full_screen_quad_vao_);
-
 	tgvk_layered_image_destroy(&delta_scattering_density_texture);
 	tgvk_layered_image_destroy(&delta_mie_scattering_texture);
 	tgvk_layered_image_destroy(&delta_rayleigh_scattering_texture);
 	tgvk_image_destroy(&delta_irradiance_texture);
-
-#undef SHADER_READ_TO_COLOR_ATTACHMENT_LAYERED
-#undef SHADER_READ_TO_COLOR_ATTACHMENT
-#undef COLOR_ATTACHMENT_TO_SHADER_READ_LAYERED
-#undef COLOR_ATTACHMENT_TO_SHADER_READ
-#undef TO_COLOR_ATTACHMENT_LAYOUT_LAYERED
-#undef TO_COLOR_ATTACHMENT_LAYOUT // TODO: rename to 3d
-#undef TG_DEBUG_STORE_LAYERED_IMAGE_SLICE
-#undef TG_DEBUG_STORE_IMAGE
 }
 
 void tg_atmosphere_precompute(void)
 {
-	tg_model model = { 0 };
+	tg_model* p_model = TG_MEMORY_STACK_ALLOC(sizeof(*p_model));
 
-	model.rayleigh_density_profile_layer.width = 0.0;
-	model.rayleigh_density_profile_layer.exp_term = 1.0;
-	model.rayleigh_density_profile_layer.exp_scale = -1.0 / TG_RAYLEIGH_SCALE_HEIGHT;
-	model.rayleigh_density_profile_layer.linear_term = 0.0;
-	model.rayleigh_density_profile_layer.constant_term = 0.0;
+	p_model->rayleigh_density_profile_layer.width = 0.0;
+	p_model->rayleigh_density_profile_layer.exp_term = 1.0;
+	p_model->rayleigh_density_profile_layer.exp_scale = -1.0 / TG_RAYLEIGH_SCALE_HEIGHT;
+	p_model->rayleigh_density_profile_layer.linear_term = 0.0;
+	p_model->rayleigh_density_profile_layer.constant_term = 0.0;
 
-	model.mie_density_profile_layer.width = 0.0;
-	model.mie_density_profile_layer.exp_term = 1.0;
-	model.mie_density_profile_layer.exp_scale = -1.0 / TG_MIE_SCALE_HEIGHT;
-	model.mie_density_profile_layer.linear_term = 0.0;
-	model.mie_density_profile_layer.constant_term = 0.0;
+	p_model->mie_density_profile_layer.width = 0.0;
+	p_model->mie_density_profile_layer.exp_term = 1.0;
+	p_model->mie_density_profile_layer.exp_scale = -1.0 / TG_MIE_SCALE_HEIGHT;
+	p_model->mie_density_profile_layer.linear_term = 0.0;
+	p_model->mie_density_profile_layer.constant_term = 0.0;
 
-	model.p_absorption_density_profile_layers[0].width = 25000.0;
-	model.p_absorption_density_profile_layers[0].exp_term = 0.0;
-	model.p_absorption_density_profile_layers[0].exp_scale = 0.0;
-	model.p_absorption_density_profile_layers[0].linear_term = 1.0 / 15000.0;
-	model.p_absorption_density_profile_layers[0].constant_term = -2.0 / 3.0;
+	p_model->p_absorption_density_profile_layers[0].width = 25000.0;
+	p_model->p_absorption_density_profile_layers[0].exp_term = 0.0;
+	p_model->p_absorption_density_profile_layers[0].exp_scale = 0.0;
+	p_model->p_absorption_density_profile_layers[0].linear_term = 1.0 / 15000.0;
+	p_model->p_absorption_density_profile_layers[0].constant_term = -2.0 / 3.0;
 
-	model.p_absorption_density_profile_layers[1].width = 0.0;
-	model.p_absorption_density_profile_layers[1].exp_term = 0.0;
-	model.p_absorption_density_profile_layers[1].exp_scale = 0.0;
-	model.p_absorption_density_profile_layers[1].linear_term = -1.0 / 15000.0;
-	model.p_absorption_density_profile_layers[1].constant_term = 8.0 / 3.0;
+	p_model->p_absorption_density_profile_layers[1].width = 0.0;
+	p_model->p_absorption_density_profile_layers[1].exp_term = 0.0;
+	p_model->p_absorption_density_profile_layers[1].exp_scale = 0.0;
+	p_model->p_absorption_density_profile_layers[1].linear_term = -1.0 / 15000.0;
+	p_model->p_absorption_density_profile_layers[1].constant_term = 8.0 / 3.0;
 
-	model.use_constant_solar_spectrum = TG_FALSE;
-	model.use_ozone = TG_TRUE;
-	model.use_combined_textures = TG_TRUE;
-	model.use_half_precision = TG_TRUE;
-	model.use_luminance = TG_LUMINANCE_NONE;
-	model.do_white_balance = TG_FALSE;
-	model.view_distance_meters = 9000.0;
-    model.view_zenith_angle_radians = 1.47;
-	model.view_azimuth_angle_radians = -0.1;
-	model.sun_zenith_angle_radians = 1.3;
-	model.sun_azimuth_angle_radians = 2.9;
-	model.exposure = 10.0;
+	p_model->use_constant_solar_spectrum = TG_FALSE;
+	p_model->use_ozone = TG_TRUE;
+	p_model->use_combined_textures = TG_TRUE;
+	p_model->use_half_precision = TG_TRUE;
+	p_model->use_luminance = TG_LUMINANCE_NONE;
+	p_model->do_white_balance = TG_FALSE;
+	p_model->view_distance_meters = 9000.0;
+    p_model->view_zenith_angle_radians = 1.47;
+	p_model->view_azimuth_angle_radians = -0.1;
+	p_model->sun_zenith_angle_radians = 1.3;
+	p_model->sun_azimuth_angle_radians = 2.9;
+	p_model->exposure = 10.0;
 	
 	for (u32 i = 0, l = TG_LAMBDA_MIN; l <= TG_LAMBDA_MAX; i++, l += 10)
 	{
 		f64 lambda = (f64)l * 1e-3;
 		f64 mie = TG_MIE_ANGSTROM_BETA / TG_MIE_SCALE_HEIGHT * tgm_f64_pow(lambda, -TG_MIE_ANGSTROM_ALPHA);
 
-		model.p_wavelengths[i] = l;
-		model.p_solar_irradiances[i] = model.use_constant_solar_spectrum ? TG_CONSTANT_SOLAR_IRRADIANCE : p_solar_irradiance[(l - TG_LAMBDA_MIN) / 10];
-		model.p_rayleigh_scatterings[i] = TG_RAYLEIGH * tgm_f64_pow(lambda, -4.0);
-		model.p_mie_scatterings[i] = mie * TG_MIE_SINGLE_SCATTERING_ALBEDO;
-		model.p_mie_extinctions[i] = mie;
-		model.p_absorption_extinctions[i] = model.use_ozone ? TG_MAX_OZONE_NUMBER_DENSITY * p_ozone_cross_section[(l - TG_LAMBDA_MIN) / 10] : 0.0;
-		model.p_ground_albedos[i] = TG_GROUND_ALBEDO;
+		p_model->p_wavelengths[i] = l;
+		p_model->p_solar_irradiances[i] = p_model->use_constant_solar_spectrum ? TG_CONSTANT_SOLAR_IRRADIANCE : p_solar_irradiance[(l - TG_LAMBDA_MIN) / 10];
+		p_model->p_rayleigh_scatterings[i] = TG_RAYLEIGH * tgm_f64_pow(lambda, -4.0);
+		p_model->p_mie_scatterings[i] = mie * TG_MIE_SINGLE_SCATTERING_ALBEDO;
+		p_model->p_mie_extinctions[i] = mie;
+		p_model->p_absorption_extinctions[i] = p_model->use_ozone ? TG_MAX_OZONE_NUMBER_DENSITY * p_ozone_cross_section[(l - TG_LAMBDA_MIN) / 10] : 0.0;
+		p_model->p_ground_albedos[i] = TG_GROUND_ALBEDO;
 	}
 
-	model.precomputed_wavelength_count = model.use_luminance == TG_LUMINANCE_PRECOMPUTED ? 15 : 3;
+	p_model->precomputed_wavelength_count = p_model->use_luminance == TG_LUMINANCE_PRECOMPUTED ? 15 : 3;
 
-	const b32 precompute_illuminance = model.precomputed_wavelength_count > 3;
+	const b32 precompute_illuminance = p_model->precomputed_wavelength_count > 3;
 	if (precompute_illuminance)
 	{
-		model.sky_k_r = TG_MAX_LUMINOUS_EFFICACY;
-		model.sky_k_g = TG_MAX_LUMINOUS_EFFICACY;
-		model.sky_k_b = TG_MAX_LUMINOUS_EFFICACY;
+		p_model->sky_k_r = TG_MAX_LUMINOUS_EFFICACY;
+		p_model->sky_k_g = TG_MAX_LUMINOUS_EFFICACY;
+		p_model->sky_k_b = TG_MAX_LUMINOUS_EFFICACY;
 	}
 	else
 	{
-		tg__compute_spectral_radiance_to_luminance_factors(model.p_wavelengths, -3.0, &model.sky_k_r, &model.sky_k_g, &model.sky_k_b);
+		tg__compute_spectral_radiance_to_luminance_factors(p_model->p_wavelengths, -3.0, &p_model->sky_k_r, &p_model->sky_k_g, &p_model->sky_k_b);
 	}
 
-	tg__compute_spectral_radiance_to_luminance_factors(model.p_wavelengths, 0.0, &model.sun_k_r, &model.sun_k_g, &model.sun_k_b);
+	tg__compute_spectral_radiance_to_luminance_factors(p_model->p_wavelengths, 0.0, &p_model->sun_k_r, &p_model->sun_k_g, &p_model->sun_k_b);
 
-	model.combine_scattering_textures = TG_TRUE;
-	model.rgb_format_supported = TG_FALSE; // TODO: ask vulkan for this
+	p_model->combine_scattering_textures = TG_TRUE;
+	p_model->rgb_format_supported = TG_FALSE; // TODO: ask vulkan for this
 
-	model.shader.capacity = 1 << 16;
-	model.shader.header_count = 0;
-	model.shader.total_count = 0;
-	model.shader.p_source = TG_MEMORY_STACK_ALLOC(model.shader.capacity);
-	model.shader.header_count = tg__glsl_header_factory(&model, model.shader.capacity, model.shader.p_source);
-	model.shader.total_count = model.shader.header_count;
-	model.shader.total_count += tg_strcpy_no_nul(model.shader.capacity - model.shader.total_count, &model.shader.p_source[model.shader.total_count], "\r\n");
-	if (precompute_illuminance)
+	p_model->shader.capacity = 1 << 16;
+	p_model->shader.header_count = 0;
+	p_model->shader.total_count = 0;
+	p_model->shader.p_source = TG_MEMORY_STACK_ALLOC(p_model->shader.capacity);
+	p_model->shader.header_count = tg__glsl_header_factory(p_model, p_model->shader.capacity, p_model->shader.p_source);
+	p_model->shader.total_count = p_model->shader.header_count;
+	p_model->shader.total_count += tg_strcpy_no_nul(p_model->shader.capacity - p_model->shader.total_count, &p_model->shader.p_source[p_model->shader.total_count], "\r\n");
+	if (!precompute_illuminance)
 	{
-		model.shader.total_count += tg_strcpy_no_nul(model.shader.capacity - model.shader.total_count, &model.shader.p_source[model.shader.total_count], "#define TG_RADIANCE_API_ENABLED\r\n\r\n");
+		p_model->shader.total_count += tg_strcpy_no_nul(p_model->shader.capacity - p_model->shader.total_count, &p_model->shader.p_source[p_model->shader.total_count], "#define TG_RADIANCE_API_ENABLED\r\n\r\n");
 	}
-	model.shader.total_count += tg_strcpy_no_nul(model.shader.capacity - model.shader.total_count, &model.shader.p_source[model.shader.total_count], p_atmosphere_shader);
+	p_model->shader.total_count += tg_strcpy_no_nul(p_model->shader.capacity - p_model->shader.total_count, &p_model->shader.p_source[p_model->shader.total_count], p_atmosphere_shader);
 
 
 
@@ -1209,51 +1205,224 @@ void tg_atmosphere_precompute(void)
 	sampler_create_info.address_mode_v = TG_IMAGE_ADDRESS_MODE_CLAMP_TO_EDGE;
 	sampler_create_info.address_mode_w = TG_IMAGE_ADDRESS_MODE_CLAMP_TO_EDGE;
 
-	model.transmittance_texture = tgvk_image_create(TGVK_IMAGE_TYPE_COLOR, TG_TRANSMITTANCE_TEXTURE_WIDTH, TG_TRANSMITTANCE_TEXTURE_HEIGHT, VK_FORMAT_R32G32B32A32_SFLOAT, &sampler_create_info);
+	p_model->transmittance_texture = tgvk_image_create(TGVK_IMAGE_TYPE_COLOR, TG_TRANSMITTANCE_TEXTURE_WIDTH, TG_TRANSMITTANCE_TEXTURE_HEIGHT, VK_FORMAT_R32G32B32A32_SFLOAT, &sampler_create_info);
 
-	model.scattering_texture = tgvk_layered_image_create(
+	p_model->scattering_texture = tgvk_layered_image_create(
 		TGVK_IMAGE_TYPE_COLOR,
 		TG_SCATTERING_TEXTURE_WIDTH,
 		TG_SCATTERING_TEXTURE_HEIGHT,
 		TG_SCATTERING_TEXTURE_DEPTH,
-		model.use_half_precision ?
-			(!model.combine_scattering_textures && model.rgb_format_supported ? VK_FORMAT_R16G16B16_SFLOAT : VK_FORMAT_R16G16B16A16_SFLOAT) :
-			(!model.combine_scattering_textures && model.rgb_format_supported ? VK_FORMAT_R32G32B32_SFLOAT : VK_FORMAT_R32G32B32A32_SFLOAT),
+		p_model->use_half_precision ?
+			(!p_model->combine_scattering_textures && p_model->rgb_format_supported ? VK_FORMAT_R16G16B16_SFLOAT : VK_FORMAT_R16G16B16A16_SFLOAT) :
+			(!p_model->combine_scattering_textures && p_model->rgb_format_supported ? VK_FORMAT_R32G32B32_SFLOAT : VK_FORMAT_R32G32B32A32_SFLOAT),
 		&sampler_create_info
 	);
 
-	if (model.combine_scattering_textures)
+	if (p_model->combine_scattering_textures)
 	{
-		model.optional_single_mie_scattering_texture = tgvk_layered_image_create(
+		p_model->optional_single_mie_scattering_texture = tgvk_layered_image_create(
 			TGVK_IMAGE_TYPE_COLOR,
 			TG_SCATTERING_TEXTURE_WIDTH,
 			TG_SCATTERING_TEXTURE_HEIGHT,
 			TG_SCATTERING_TEXTURE_DEPTH,
-			model.use_half_precision ?
-				(model.rgb_format_supported ? VK_FORMAT_R16G16B16_SFLOAT : VK_FORMAT_R16G16B16A16_SFLOAT) :
-				(model.rgb_format_supported ? VK_FORMAT_R32G32B32_SFLOAT : VK_FORMAT_R32G32B32A32_SFLOAT),
+			p_model->use_half_precision ?
+				(p_model->rgb_format_supported ? VK_FORMAT_R16G16B16_SFLOAT : VK_FORMAT_R16G16B16A16_SFLOAT) :
+				(p_model->rgb_format_supported ? VK_FORMAT_R32G32B32_SFLOAT : VK_FORMAT_R32G32B32A32_SFLOAT),
 			&sampler_create_info);
 	}
 
-	model.irradiance_texture = tgvk_image_create(TGVK_IMAGE_TYPE_COLOR, TG_IRRADIANCE_TEXTURE_WIDTH, TG_IRRADIANCE_TEXTURE_HEIGHT, VK_FORMAT_R32G32B32A32_SFLOAT, &sampler_create_info);
+	p_model->irradiance_texture = tgvk_image_create(TGVK_IMAGE_TYPE_COLOR, TG_IRRADIANCE_TEXTURE_WIDTH, TG_IRRADIANCE_TEXTURE_HEIGHT, VK_FORMAT_R32G32B32A32_SFLOAT, &sampler_create_info);
 
 
 
-	tg__precompute(&model);
+	tg__precompute(p_model);
 
 
 
-	tgvk_image_destroy(&model.transmittance_texture);
-	tgvk_layered_image_destroy(&model.scattering_texture);
-	if (model.combine_scattering_textures)
+	tgvk_image render_target;
+	tgvk_shader demo_vertex_shader;
+	tgvk_shader demo_fragment_shader;
+	VkRenderPass demo_render_pass;
+	tgvk_framebuffer demo_framebuffer;
+	tgvk_pipeline demo_pipeline;
+	tgvk_buffer demo_vert_ubo;
+	tgvk_buffer demo_frag_ubo;
+	tgvk_descriptor_set demo_descriptor_set;
+
+	const u32 viewport_width = 1024;
+	const u32 viewport_height = 576;
+	render_target = tgvk_image_create(TGVK_IMAGE_TYPE_COLOR, viewport_width, viewport_height, VK_FORMAT_R32G32B32A32_SFLOAT, &sampler_create_info);
+
+	demo_vertex_shader = tgvk_shader_create_from_glsl(TG_SHADER_TYPE_VERTEX, p_atmosphere_demo_vertex_shader);
+
+	char* p_demo_fragment_shader_buffer = TG_MEMORY_STACK_ALLOC(p_model->shader.capacity);
+	tg_stringf(
+		p_model->shader.capacity,
+		p_demo_fragment_shader_buffer,
+		"%s"
+		"\r\n"
+		"%s"
+		""
+		"const float kLengthUnitInMeters = %d;\r\n"
+		"\r\n"
+		"%s\r\n",
+		p_model->shader.p_source,
+		p_model->use_luminance != TG_LUMINANCE_NONE ? "#define USE_LUMINANCE\r\n\r\n" : "",
+		TG_LENGTH_UNIT_IN_METERS,
+		p_atmosphere_demo_fragment_shader
+	);
+
+	demo_fragment_shader = tgvk_shader_create_from_glsl(TG_SHADER_TYPE_FRAGMENT, p_demo_fragment_shader_buffer);
+
+	VkAttachmentDescription demo_attachment_description = { 0 };
+	demo_attachment_description.format = render_target.format;
+	demo_attachment_description.samples = VK_SAMPLE_COUNT_1_BIT;
+	demo_attachment_description.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+	demo_attachment_description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	demo_attachment_description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	demo_attachment_description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	demo_attachment_description.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	demo_attachment_description.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+	VkAttachmentReference demo_color_attachment_reference = { 0 };
+	demo_color_attachment_reference.attachment = 0;
+	demo_color_attachment_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+	VkSubpassDescription demo_subpass_description = { 0 };
+	demo_subpass_description.flags = 0;
+	demo_subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+	demo_subpass_description.colorAttachmentCount = 1;
+	demo_subpass_description.pColorAttachments = &demo_color_attachment_reference;
+	demo_render_pass = tgvk_render_pass_create(&demo_attachment_description, &demo_subpass_description);
+
+	demo_framebuffer = tgvk_framebuffer_create(demo_render_pass, 1, &render_target.image_view, viewport_width, viewport_height);
+
+	tgvk_graphics_pipeline_create_info demo_graphics_pipeline_create_info = { 0 };
+	demo_graphics_pipeline_create_info.p_vertex_shader = &demo_vertex_shader;
+	demo_graphics_pipeline_create_info.p_fragment_shader = &demo_fragment_shader;
+	demo_graphics_pipeline_create_info.render_pass = demo_render_pass;
+	demo_graphics_pipeline_create_info.viewport_size = (v2){ (f32)viewport_width, (f32)viewport_height };
+	demo_pipeline = tgvk_pipeline_create_graphics(&demo_graphics_pipeline_create_info);
+
+	demo_vert_ubo = tgvk_buffer_create(2 * sizeof(m4), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+	demo_frag_ubo = tgvk_buffer_create(6 * sizeof(v4), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+	demo_descriptor_set = tgvk_descriptor_set_create(&demo_pipeline);
+	tgvk_descriptor_set_update_image(demo_descriptor_set.descriptor_set, &p_model->transmittance_texture, 0);
+	tgvk_descriptor_set_update_layered_image(demo_descriptor_set.descriptor_set, &p_model->scattering_texture, 1);
+	tgvk_descriptor_set_update_layered_image(demo_descriptor_set.descriptor_set, &p_model->optional_single_mie_scattering_texture, 2);
+	tgvk_descriptor_set_update_image(demo_descriptor_set.descriptor_set, &p_model->irradiance_texture, 3);
+	tgvk_descriptor_set_update_uniform_buffer(demo_descriptor_set.descriptor_set, demo_vert_ubo.buffer, 4);
+	tgvk_descriptor_set_update_uniform_buffer(demo_descriptor_set.descriptor_set, demo_frag_ubo.buffer, 5);
+
+	const f32 view_distance_meters = 9000.0f;
+	const f32 view_zenith_angle_radians = 1.47f;
+	const f32 view_azimuth_angle_radians = -0.1f;
+
+	const f32 cos_z = tgm_f32_cos(view_zenith_angle_radians);
+	const f32 sin_z = tgm_f32_sin(view_zenith_angle_radians);
+	const f32 cos_a = tgm_f32_cos(view_azimuth_angle_radians);
+	const f32 sin_a = tgm_f32_sin(view_azimuth_angle_radians);
+	const f32 ux[3] = { -sin_a, cos_a, 0.0f };
+	const f32 uy[3] = { -cos_z * cos_a, -cos_z * sin_a, sin_z };
+	const f32 uz[3] = { sin_z * cos_a, sin_z * sin_a, cos_z };
+	const f32 l = view_distance_meters / (f32)TG_LENGTH_UNIT_IN_METERS;
+
+	m4 model_from_view = {
+	  ux[0], uy[0], uz[0], uz[0] * l,
+	  ux[1], uy[1], uz[1], uz[1] * l,
+	  ux[2], uy[2], uz[2], uz[2] * l,
+	  0.0f, 0.0f, 0.0f, 1.0f
+	};
+	model_from_view = tgm_m4_transposed(model_from_view);
+
+	const f32 fov_y = 50.0f / 180.0f * TG_PI;
+	const f32 tan_fov_y = tgm_f32_tan(fov_y / 2.0f);
+	const f32 aspect_ratio = (f32)viewport_width / (f32)viewport_height;
+	m4 view_from_clip = {
+	  tan_fov_y * aspect_ratio, 0.0f, 0.0f, 0.0f,
+	  0.0f, tan_fov_y, 0.0f, 0.0f,
+	  0.0f, 0.0f, 0.0f, -1.0f,
+	  0.0f, 0.0f, 1.0f, 1.0f
+	};
+	view_from_clip = tgm_m4_transposed(view_from_clip);
+
+	const v3 camera = { model_from_view.m03, model_from_view.m13, model_from_view.m23 };
+	const f32 exposure = 10.0f;
+	const f32 white_point_r = 1.0f;
+	const f32 white_point_g = 1.0f;
+	const f32 white_point_b = 1.0f;
+	const v3 earth_center = { 0.0f, 0.0f, (f32)(-TG_BOTTOM_RADIUS / TG_LENGTH_UNIT_IN_METERS) };
+
+	const f32 sun_zenith_angle_radians = 1.3f;
+	const f32 sun_azimuth_angle_radians = 2.9f;
+	const v3 sun_direction = {
+		tgm_f32_cos(sun_azimuth_angle_radians) * tgm_f32_sin(sun_zenith_angle_radians),
+		tgm_f32_sin(sun_azimuth_angle_radians) * tgm_f32_sin(sun_zenith_angle_radians),
+		tgm_f32_cos(sun_zenith_angle_radians)
+	};
+	const v2 sun_size = { tgm_f32_tan((f32)TG_SUN_ANGULAR_RADIUS), tgm_f32_cos((f32)TG_SUN_ANGULAR_RADIUS) };
+	// TODO:
+	//if (do_white_balance)
+	//{
+	//	...
+	//}
+
+	((m4*)demo_vert_ubo.memory.p_mapped_device_memory)[0] = model_from_view;
+	((m4*)demo_vert_ubo.memory.p_mapped_device_memory)[1] = view_from_clip;
+
+	((v4*)demo_frag_ubo.memory.p_mapped_device_memory)[0].xyz = camera;
+	((v4*)demo_frag_ubo.memory.p_mapped_device_memory)[1].x = p_model->use_luminance != TG_LUMINANCE_NONE ? exposure * 1e-5f : exposure;
+	((v4*)demo_frag_ubo.memory.p_mapped_device_memory)[2].xyz = (v3){ white_point_r, white_point_g, white_point_b };
+	((v4*)demo_frag_ubo.memory.p_mapped_device_memory)[3].xyz = earth_center;
+	((v4*)demo_frag_ubo.memory.p_mapped_device_memory)[4].xyz = sun_direction;
+	((v4*)demo_frag_ubo.memory.p_mapped_device_memory)[5].xy = sun_size;
+
+	tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
+	tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 	{
-		tgvk_layered_image_destroy(&model.optional_single_mie_scattering_texture);
-	}
-	tgvk_image_destroy(&model.irradiance_texture);
+		COLOR_ATTACHMENT_TO_SHADER_READ(p_model->transmittance_texture);
+		COLOR_ATTACHMENT_TO_SHADER_READ_LAYERED(p_model->scattering_texture);
+		COLOR_ATTACHMENT_TO_SHADER_READ_LAYERED(p_model->optional_single_mie_scattering_texture);
+		COLOR_ATTACHMENT_TO_SHADER_READ(p_model->irradiance_texture);
+		TO_COLOR_ATTACHMENT_LAYOUT(render_target);
 
-	TG_MEMORY_STACK_FREE(model.shader.capacity);
+		tgvk_cmd_begin_render_pass(p_command_buffer, demo_render_pass, &demo_framebuffer, VK_SUBPASS_CONTENTS_INLINE);
+
+		tgvk_cmd_bind_descriptor_set(p_command_buffer, &demo_pipeline, &demo_descriptor_set);
+		tgvk_cmd_bind_pipeline(p_command_buffer, &demo_pipeline);
+		tgvk_cmd_bind_and_draw_screen_quad(p_command_buffer);
+
+		vkCmdEndRenderPass(p_command_buffer->command_buffer);
+	}
+	tgvk_command_buffer_end_and_submit(p_command_buffer);
+	TG_DEBUG_STORE_IMAGE(render_target, "textures/atmosphere/render_target.bmp");
+
+
+
+
+	TG_MEMORY_STACK_FREE(p_model->shader.capacity);
+
+	tgvk_image_destroy(&p_model->transmittance_texture);
+	tgvk_layered_image_destroy(&p_model->scattering_texture);
+	if (p_model->combine_scattering_textures)
+	{
+		tgvk_layered_image_destroy(&p_model->optional_single_mie_scattering_texture);
+	}
+	tgvk_image_destroy(&p_model->irradiance_texture);
+
+	TG_MEMORY_STACK_FREE(p_model->shader.capacity);
+	TG_MEMORY_STACK_FREE(sizeof(*p_model));
 }
 
 
+#undef SHADER_READ_TO_COLOR_ATTACHMENT_LAYERED
+#undef SHADER_READ_TO_COLOR_ATTACHMENT
+#undef COLOR_ATTACHMENT_TO_SHADER_READ_LAYERED
+#undef COLOR_ATTACHMENT_TO_SHADER_READ
+#undef TO_COLOR_ATTACHMENT_LAYOUT_LAYERED
+#undef TO_COLOR_ATTACHMENT_LAYOUT // TODO: rename to 3d
+#undef TG_DEBUG_STORE_LAYERED_IMAGE_SLICE
+#undef TG_DEBUG_STORE_IMAGE
 
 #endif
