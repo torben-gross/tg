@@ -29,7 +29,7 @@
  * http://www-evasion.imag.fr/Membres/Eric.Bruneton/
  */
 
-#include "graphics/vulkan/tg_graphics_vulkan.h"
+#include "graphics/vulkan/tg_vulkan_atmosphere.h"
 
 #ifdef TG_VULKAN
 
@@ -233,78 +233,6 @@
 #define TG_IRRADIANCE_TEXTURE_HEIGHT       16
 
 #define TG_MAX_LUMINOUS_EFFICACY           683.0
-
-
-
-typedef enum tg_luminance
-{
-	TG_LUMINANCE_NONE,
-	TG_LUMINANCE_APPROXIMATE,
-	TG_LUMINANCE_PRECOMPUTED
-} tg_luminance;
-
-
-
-typedef struct tg_density_profile_layer
-{
-	f64    width;
-	f64    exp_term;
-	f64    exp_scale;
-	f64    linear_term;
-	f64    constant_term;
-} tg_density_profile_layer;
-
-typedef struct tg_model
-{
-	tg_density_profile_layer    rayleigh_density_profile_layer;
-	tg_density_profile_layer    mie_density_profile_layer;
-	tg_density_profile_layer    p_absorption_density_profile_layers[2];
-
-	b32                         use_constant_solar_spectrum;
-	b32                         use_ozone;
-	b32                         use_combined_textures;
-	b32                         use_half_precision;
-	tg_luminance                use_luminance;
-	b32                         do_white_balance;
-	f64                         view_distance_meters;
-	f64                         view_zenith_angle_radians;
-	f64                         view_azimuth_angle_radians;
-	f64                         sun_zenith_angle_radians;
-	f64                         sun_azimuth_angle_radians;
-	f64                         exposure;
-
-	f64                         p_wavelengths[48];
-	f64                         p_solar_irradiances[48];
-	f64                         p_rayleigh_scatterings[48];
-	f64                         p_mie_scatterings[48];
-	f64                         p_mie_extinctions[48];
-	f64                         p_absorption_extinctions[48];
-	f64                         p_ground_albedos[48];
-
-	u32                         precomputed_wavelength_count;
-	f64                         sky_k_r;
-	f64                         sky_k_g;
-	f64                         sky_k_b;
-	f64                         sun_k_r;
-	f64                         sun_k_g;
-	f64                         sun_k_b;
-
-	b32                         combine_scattering_textures;
-	b32                         rgb_format_supported;
-
-	struct
-	{
-		u32                     capacity;
-		u32                     header_count;
-		u32                     total_count;
-		char*                   p_source;
-	} shader;
-
-	tgvk_image                  transmittance_texture;
-	tgvk_layered_image          scattering_texture;
-	tgvk_layered_image          optional_single_mie_scattering_texture;
-	tgvk_image                  irradiance_texture;
-} tg_model;
 
 
 
@@ -1156,11 +1084,6 @@ void tg_atmosphere_precompute(void)
 	p_model->use_half_precision = TG_TRUE;
 	p_model->use_luminance = TG_LUMINANCE_NONE;
 	p_model->do_white_balance = TG_FALSE;
-	p_model->view_distance_meters = 9000.0;
-    p_model->view_zenith_angle_radians = 1.47;
-	p_model->view_azimuth_angle_radians = -0.1;
-	p_model->sun_zenith_angle_radians = 1.3;
-	p_model->sun_azimuth_angle_radians = 2.9;
 	p_model->exposure = 10.0;
 	
 	for (u32 i = 0, l = TG_LAMBDA_MIN; l <= TG_LAMBDA_MAX; i++, l += 10)
@@ -1231,7 +1154,7 @@ void tg_atmosphere_precompute(void)
 		&sampler_create_info
 	);
 
-	tgvk_layered_image black_texture = { 0 };
+	tgvk_layered_image black_texture = { 0 }; // TODO: remove this and change 'p_atmosphere_shader' to not use 'single_mie_scattering_texture'
 	if (p_model->combine_scattering_textures)
 	{
 		p_model->optional_single_mie_scattering_texture = (tgvk_layered_image){ 0 };
@@ -1290,12 +1213,9 @@ void tg_atmosphere_precompute(void)
 		"\r\n"
 		"%s"
 		""
-		"const float kLengthUnitInMeters = %d;\r\n"
-		"\r\n"
 		"%s\r\n",
 		p_model->shader.p_source,
-		p_model->use_luminance != TG_LUMINANCE_NONE ? "#define USE_LUMINANCE\r\n\r\n" : "",
-		TG_LENGTH_UNIT_IN_METERS,
+		p_model->use_luminance != TG_LUMINANCE_NONE ? "#define TG_USE_LUMINANCE\r\n\r\n" : "",
 		p_atmosphere_demo_fragment_shader
 	);
 
@@ -1349,44 +1269,19 @@ void tg_atmosphere_precompute(void)
 	tgvk_descriptor_set_update_uniform_buffer(demo_descriptor_set.descriptor_set, demo_vert_ubo.buffer, 4);
 	tgvk_descriptor_set_update_uniform_buffer(demo_descriptor_set.descriptor_set, demo_frag_ubo.buffer, 5);
 
-	const f32 view_distance_meters = 9000.0f;
-	const f32 view_zenith_angle_radians = 1.47f;
-	const f32 view_azimuth_angle_radians = -0.1f;
+	// TODO: camera
+	m4 model_from_view = tgm_m4_translate((v3) { 0.0f, 0.0f, 0.0f });
+	model_from_view = tgm_m4_inverse(model_from_view);
 
-	const f32 cos_z = tgm_f32_cos(view_zenith_angle_radians);
-	const f32 sin_z = tgm_f32_sin(view_zenith_angle_radians);
-	const f32 cos_a = tgm_f32_cos(view_azimuth_angle_radians);
-	const f32 sin_a = tgm_f32_sin(view_azimuth_angle_radians);
-	const f32 ux[3] = { -sin_a, cos_a, 0.0f };
-	const f32 uy[3] = { -cos_z * cos_a, -cos_z * sin_a, sin_z };
-	const f32 uz[3] = { sin_z * cos_a, sin_z * sin_a, cos_z };
-	const f32 l = view_distance_meters / (f32)TG_LENGTH_UNIT_IN_METERS;
-
-	m4 model_from_view = {
-	  ux[0], uy[0], uz[0], uz[0] * l,
-	  ux[1], uy[1], uz[1], uz[1] * l,
-	  ux[2], uy[2], uz[2], uz[2] * l,
-	  0.0f, 0.0f, 0.0f, 1.0f
-	};
-	model_from_view = tgm_m4_transposed(model_from_view);
-
-	const f32 fov_y = 50.0f / 180.0f * TG_PI;
-	const f32 tan_fov_y = tgm_f32_tan(fov_y / 2.0f);
-	const f32 aspect_ratio = (f32)viewport_width / (f32)viewport_height;
-	m4 view_from_clip = {
-	  tan_fov_y * aspect_ratio, 0.0f, 0.0f, 0.0f,
-	  0.0f, tan_fov_y, 0.0f, 0.0f,
-	  0.0f, 0.0f, 0.0f, -1.0f,
-	  0.0f, 0.0f, 1.0f, 1.0f
-	};
-	view_from_clip = tgm_m4_transposed(view_from_clip);
+	m4 view_from_clip = tgm_m4_perspective(TG_TO_RADIANS(70.0f), tg_platform_get_window_aspect_ratio(), -0.1f, -1000.0f);
+	view_from_clip = tgm_m4_inverse(view_from_clip);
 
 	const v3 camera = { model_from_view.m03, model_from_view.m13, model_from_view.m23 };
 	const f32 exposure = 10.0f;
 	const f32 white_point_r = 1.0f;
 	const f32 white_point_g = 1.0f;
 	const f32 white_point_b = 1.0f;
-	const v3 earth_center = { 0.0f, 0.0f, (f32)(-TG_BOTTOM_RADIUS / TG_LENGTH_UNIT_IN_METERS) };
+	const v3 earth_center = { 0.0f, (f32)(-TG_BOTTOM_RADIUS / TG_LENGTH_UNIT_IN_METERS), 0.0f };
 
 	const f32 sun_zenith_angle_radians = 1.3f;
 	const f32 sun_azimuth_angle_radians = 2.9f;

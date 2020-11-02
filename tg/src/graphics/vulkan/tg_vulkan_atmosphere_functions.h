@@ -860,7 +860,7 @@ static const char p_atmosphere_functions[] =
 "    tg_number mu = rmu / r;\r\n"
 "    tg_number mu_s = dot(camera, sun_direction) / r;\r\n"
 "    tg_number nu = dot(view_ray, sun_direction);\r\n"
-"    bool ray_r_mu_intersects_ground = tg_ray_intersects_ground(atmosphere, r, mu);\r\n"
+"    bool ray_r_mu_intersects_ground = false;//tg_ray_intersects_ground(atmosphere, r, mu);\r\n"
 "    \r\n"
 "    transmittance = ray_r_mu_intersects_ground ? tg_dimensionless_spectrum(0.0) : tg_get_transmittance_to_top_atmosphere_boundary(atmosphere, transmittance_texture, r, mu);\r\n"
 "    tg_irradiance_spectrum single_mie_scattering;\r\n"
