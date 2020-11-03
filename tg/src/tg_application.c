@@ -108,8 +108,6 @@ static void tg__game_3d_create(void)
     tg_renderer_enable_shadows(scene.h_main_renderer, TG_FALSE);
     tg_renderer_enable_shadows(scene.h_secondary_renderer, TG_FALSE);
 
-    tg_atmosphere_precompute();
-
     scene.p_terrain = tg_terrain_create(&scene.camera);
 
 

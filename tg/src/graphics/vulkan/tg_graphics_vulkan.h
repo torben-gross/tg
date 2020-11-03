@@ -9,6 +9,7 @@
 #include "graphics/vulkan/tg_vulkan_memory_allocator.h"
 #include "memory/tg_memory.h"
 #include "platform/tg_platform.h"
+
 #pragma warning(push, 3)
 #include <vulkan/vulkan.h>
 #pragma warning(pop)
@@ -40,6 +41,13 @@
 #endif
 
 
+
+typedef enum tgvk_atmosphere_luminance
+{
+    TG_LUMINANCE_NONE,
+    TG_LUMINANCE_APPROXIMATE,
+    TG_LUMINANCE_PRECOMPUTED
+} tgvk_atmosphere_luminance;
 
 typedef enum tgvk_command_pool_type
 {
@@ -85,6 +93,15 @@ typedef enum tgvk_geometry_attachment
 } tgvk_geometry_attachment;
 
 
+
+typedef struct tgvk_atmosphere_density_profile_layer
+{
+	f64    width;
+	f64    exp_term;
+	f64    exp_scale;
+	f64    linear_term;
+	f64    constant_term;
+} tgvk_atmosphere_density_profile_layer;
 
 typedef struct tgvk_buffer
 {
@@ -247,6 +264,7 @@ typedef struct tgvk_shared_render_resources
     VkRenderPass     shading_render_pass;
     VkRenderPass     tone_mapping_render_pass;
     VkRenderPass     forward_render_pass;
+    VkRenderPass     atmosphere_render_pass;
     VkRenderPass     present_render_pass;
 } tgvk_shared_render_resources;
 
@@ -336,127 +354,6 @@ typedef struct tg_mesh
     tgvk_buffer          bitangent_buffer;
 } tg_mesh;
 
-typedef struct tg_renderer
-{
-    tg_structure_type          type;
-    const tg_camera*           p_camera;
-    tgvk_buffer                view_projection_ubo;
-    tg_render_target           render_target;
-    VkSemaphore                semaphore;
-
-    u32                        deferred_command_buffer_count;
-    u32                        shadow_command_buffer_count;
-    u32                        forward_render_command_count;
-    VkCommandBuffer            p_deferred_command_buffers[TG_MAX_RENDER_COMMANDS];
-    VkCommandBuffer            p_shadow_command_buffers[TG_CASCADED_SHADOW_MAPS][TG_MAX_RENDER_COMMANDS];
-    tg_render_command_h        ph_forward_render_commands[TG_MAX_RENDER_COMMANDS];
-
-    struct
-    {
-        b32                    enabled;
-        tgvk_image             p_shadow_maps[TG_CASCADED_SHADOW_MAPS];
-        tgvk_framebuffer       p_framebuffers[TG_CASCADED_SHADOW_MAPS];
-        tgvk_command_buffer    command_buffer;
-        tgvk_buffer            p_lightspace_ubos[TG_CASCADED_SHADOW_MAPS];
-    } shadow_pass;
-
-    struct
-    {
-        tgvk_image             p_color_attachments[TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT];
-        tgvk_framebuffer       framebuffer;
-        tgvk_command_buffer    command_buffer;
-    } geometry_pass;
-
-    struct
-    {
-        tgvk_image             ssao_attachment;
-        tgvk_framebuffer       ssao_framebuffer;
-        tgvk_pipeline          ssao_graphics_pipeline;
-        tgvk_descriptor_set    ssao_descriptor_set;
-        tgvk_image             ssao_noise_image;
-        tgvk_buffer            ssao_ubo;
-
-        tgvk_image             blur_attachment;
-        tgvk_framebuffer       blur_framebuffer;
-        tgvk_pipeline          blur_graphics_pipeline;
-        tgvk_descriptor_set    blur_descriptor_set;
-
-        tgvk_command_buffer    command_buffer;
-    } ssao_pass;
-
-    struct
-    {
-        tgvk_image             color_attachment;
-        tgvk_framebuffer       framebuffer;
-        tgvk_pipeline          graphics_pipeline;
-        tgvk_descriptor_set    descriptor_set;
-        tgvk_command_buffer    command_buffer;
-        tgvk_buffer            shading_info_ubo;
-    } shading_pass;
-
-    struct
-    {
-        tgvk_framebuffer       framebuffer;
-        tgvk_command_buffer    command_buffer;
-    } forward_pass;
-
-    struct
-    {
-        tgvk_buffer            acquire_exposure_clear_storage_buffer;
-        tgvk_shader            acquire_exposure_compute_shader;
-        tgvk_pipeline          acquire_exposure_compute_pipeline;
-        tgvk_descriptor_set    acquire_exposure_descriptor_set;
-        tgvk_buffer            acquire_exposure_storage_buffer;
-
-        tgvk_shader            finalize_exposure_compute_shader;
-        tgvk_pipeline          finalize_exposure_compute_pipeline;
-        tgvk_descriptor_set    finalize_exposure_descriptor_set;
-        tgvk_buffer            finalize_exposure_storage_buffer;
-        tgvk_buffer            finalize_exposure_dt_ubo;
-        
-        tgvk_framebuffer       adapt_exposure_framebuffer;
-        tgvk_pipeline          adapt_exposure_graphics_pipeline;
-        tgvk_descriptor_set    adapt_exposure_descriptor_set;
-        tgvk_command_buffer    adapt_exposure_command_buffer;
-    } tone_mapping_pass;
-
-    struct
-    {
-        tgvk_command_buffer    command_buffer;
-    } blit_pass;
-
-    struct
-    {
-        VkSemaphore            image_acquired_semaphore;
-        tgvk_framebuffer       p_framebuffers[TG_MAX_SWAPCHAIN_IMAGES];
-        tgvk_pipeline          graphics_pipeline;
-        tgvk_descriptor_set    descriptor_set;
-        tgvk_command_buffer    p_command_buffers[TG_MAX_SWAPCHAIN_IMAGES];
-    } present_pass;
-
-    struct
-    {
-        tgvk_command_buffer    command_buffer;
-    } clear_pass;
-
-#if TG_ENABLE_DEBUG_TOOLS == 1
-#define TG_DEBUG_MAX_CUBES 2097152
-    struct
-    {
-        u32                        cube_count;
-        tgvk_buffer                cube_index_buffer;
-        tgvk_buffer                cube_position_buffer;
-        struct
-        {
-            tgvk_pipeline          graphics_pipeline;
-            tgvk_descriptor_set    descriptor_set;
-            tgvk_buffer            ubo;
-            tgvk_command_buffer    command_buffer;
-        } *p_cubes;
-    } DEBUG;
-#endif
-} tg_renderer;
-
 typedef struct tg_storage_buffer
 {
     tg_structure_type    type;
@@ -481,6 +378,185 @@ typedef struct tg_vertex_shader
     tgvk_shader          shader;
 } tg_vertex_shader;
 
+typedef struct tgvk_atmosphere_model
+{
+	tgvk_atmosphere_density_profile_layer    rayleigh_density_profile_layer;
+	tgvk_atmosphere_density_profile_layer    mie_density_profile_layer;
+	tgvk_atmosphere_density_profile_layer    p_absorption_density_profile_layers[2];
+
+	b32                                      use_constant_solar_spectrum;
+	b32                                      use_ozone;
+	b32                                      use_combined_textures;
+	b32                                      use_half_precision;
+	tgvk_atmosphere_luminance                use_luminance;
+	b32                                      do_white_balance;
+	f64                                      exposure;
+
+	f64                                      p_wavelengths[48];
+	f64                                      p_solar_irradiances[48];
+	f64                                      p_rayleigh_scatterings[48];
+	f64                                      p_mie_scatterings[48];
+	f64                                      p_mie_extinctions[48];
+	f64                                      p_absorption_extinctions[48];
+	f64                                      p_ground_albedos[48];
+
+	u32                                      precomputed_wavelength_count;
+	f64                                      sky_k_r;
+	f64                                      sky_k_g;
+	f64                                      sky_k_b;
+	f64                                      sun_k_r;
+	f64                                      sun_k_g;
+	f64                                      sun_k_b;
+
+	b32                                      combine_scattering_textures;
+	b32                                      rgb_format_supported;
+
+	tgvk_image                               transmittance_texture;
+	tgvk_layered_image                       scattering_texture;
+	tgvk_layered_image                       optional_single_mie_scattering_texture;
+	tgvk_layered_image                       no_single_mie_scattering_black_texture; // TODO: remove this and change 'p_atmosphere_shader' to not use 'single_mie_scattering_texture'
+	tgvk_image                               irradiance_texture;
+
+    struct
+    {
+        tgvk_shader                          vertex_shader;
+        tgvk_shader                          fragment_shader;
+        tgvk_image                           color_attachment;
+        tgvk_framebuffer                     framebuffer;
+        tgvk_pipeline                        graphics_pipeline;
+        tgvk_descriptor_set                  descriptor_set;
+        tgvk_buffer                          vertex_shader_ubo;
+        tgvk_buffer                          fragment_shader_ubo;
+        tgvk_command_buffer                  command_buffer;
+    } rendering;
+} tgvk_atmosphere_model;
+
+typedef struct tg_renderer
+{
+    tg_structure_type            type;
+    const tg_camera*             p_camera;
+    tgvk_buffer                  view_projection_ubo;
+    tgvk_image                   hdr_color_attachment;
+    tg_render_target             render_target;
+    VkSemaphore                  semaphore;
+
+    u32                          deferred_command_buffer_count;
+    u32                          shadow_command_buffer_count;
+    u32                          forward_render_command_count;
+    VkCommandBuffer              p_deferred_command_buffers[TG_MAX_RENDER_COMMANDS];
+    VkCommandBuffer              p_shadow_command_buffers[TG_CASCADED_SHADOW_MAPS][TG_MAX_RENDER_COMMANDS];
+    tg_render_command_h          ph_forward_render_commands[TG_MAX_RENDER_COMMANDS];
+
+    struct
+    {
+        b32                      enabled;
+        tgvk_image               p_shadow_maps[TG_CASCADED_SHADOW_MAPS];
+        tgvk_framebuffer         p_framebuffers[TG_CASCADED_SHADOW_MAPS];
+        tgvk_command_buffer      command_buffer;
+        tgvk_buffer              p_lightspace_ubos[TG_CASCADED_SHADOW_MAPS];
+    } shadow_pass;
+
+    struct
+    {
+        tgvk_image               p_color_attachments[TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT];
+        tgvk_framebuffer         framebuffer;
+        tgvk_command_buffer      command_buffer;
+    } geometry_pass;
+
+    struct
+    {
+        tgvk_image               ssao_attachment;
+        tgvk_framebuffer         ssao_framebuffer;
+        tgvk_pipeline            ssao_graphics_pipeline;
+        tgvk_descriptor_set      ssao_descriptor_set;
+        tgvk_image               ssao_noise_image;
+        tgvk_buffer              ssao_ubo;
+
+        tgvk_image               blur_attachment;
+        tgvk_framebuffer         blur_framebuffer;
+        tgvk_pipeline            blur_graphics_pipeline;
+        tgvk_descriptor_set      blur_descriptor_set;
+
+        tgvk_command_buffer      command_buffer;
+    } ssao_pass;
+
+    struct
+    {
+        tgvk_framebuffer         framebuffer;
+        tgvk_pipeline            graphics_pipeline;
+        tgvk_descriptor_set      descriptor_set;
+        tgvk_command_buffer      command_buffer;
+        tgvk_buffer              shading_info_ubo;
+    } shading_pass;
+
+    struct
+    {
+        tgvk_framebuffer         framebuffer;
+        tgvk_command_buffer      command_buffer;
+    } forward_pass;
+
+    struct
+    {
+        tgvk_atmosphere_model    model;
+    } atmosphere_pass;
+
+    struct
+    {
+        tgvk_buffer              acquire_exposure_clear_storage_buffer;
+        tgvk_shader              acquire_exposure_compute_shader;
+        tgvk_pipeline            acquire_exposure_compute_pipeline;
+        tgvk_descriptor_set      acquire_exposure_descriptor_set;
+        tgvk_buffer              acquire_exposure_storage_buffer;
+
+        tgvk_shader              finalize_exposure_compute_shader;
+        tgvk_pipeline            finalize_exposure_compute_pipeline;
+        tgvk_descriptor_set      finalize_exposure_descriptor_set;
+        tgvk_buffer              finalize_exposure_storage_buffer;
+        tgvk_buffer              finalize_exposure_dt_ubo;
+        
+        tgvk_framebuffer         adapt_exposure_framebuffer;
+        tgvk_pipeline            adapt_exposure_graphics_pipeline;
+        tgvk_descriptor_set      adapt_exposure_descriptor_set;
+        tgvk_command_buffer      adapt_exposure_command_buffer;
+    } tone_mapping_pass;
+
+    struct
+    {
+        tgvk_command_buffer      command_buffer;
+    } blit_pass;
+
+    struct
+    {
+        VkSemaphore              image_acquired_semaphore;
+        tgvk_framebuffer         p_framebuffers[TG_MAX_SWAPCHAIN_IMAGES];
+        tgvk_pipeline            graphics_pipeline;
+        tgvk_descriptor_set      descriptor_set;
+        tgvk_command_buffer      p_command_buffers[TG_MAX_SWAPCHAIN_IMAGES];
+    } present_pass;
+
+    struct
+    {
+        tgvk_command_buffer      command_buffer;
+    } clear_pass;
+
+#if TG_ENABLE_DEBUG_TOOLS == 1
+#define TG_DEBUG_MAX_CUBES 2097152
+    struct
+    {
+        u32                        cube_count;
+        tgvk_buffer                cube_index_buffer;
+        tgvk_buffer                cube_position_buffer;
+        struct
+        {
+            tgvk_pipeline          graphics_pipeline;
+            tgvk_descriptor_set    descriptor_set;
+            tgvk_buffer            ubo;
+            tgvk_command_buffer    command_buffer;
+        } *p_cubes;
+    } DEBUG;
+#endif
+} tg_renderer;
+
 
 
 VkInstance                      instance;
@@ -496,9 +572,8 @@ tgvk_shared_render_resources    shared_render_resources;
 
 
 
-void*                   tgvk_handle_array(tg_structure_type type);
-void*                   tgvk_handle_take(tg_structure_type type);
-void                    tgvk_handle_release(void* p_handle);
+void                    tgvk_atmosphere_model_create(tgvk_image* p_color_attachment, tgvk_image* p_depth_attachment, TG_OUT tgvk_atmosphere_model* p_model);
+void                    tgvk_atmosphere_model_destroy(tgvk_atmosphere_model* p_model);
 
 void                    tgvk_buffer_copy(VkDeviceSize size, tgvk_buffer* p_src, tgvk_buffer* p_dst);
 tgvk_buffer             tgvk_buffer_create(VkDeviceSize size, VkBufferUsageFlags buffer_usage_flags, VkMemoryPropertyFlags memory_property_flags);
@@ -576,6 +651,10 @@ void                    tgvk_framebuffers_destroy(u32 count, tgvk_framebuffer* p
 
 tgvk_buffer*            tgvk_global_staging_buffer_take(VkDeviceSize size);
 void                    tgvk_global_staging_buffer_release(void);
+
+void*                   tgvk_handle_array(tg_structure_type type);
+void*                   tgvk_handle_take(tg_structure_type type);
+void                    tgvk_handle_release(void* p_handle);
 
 tgvk_image              tgvk_image_create(tgvk_image_type type, u32 width, u32 height, VkFormat format, const tg_sampler_create_info* p_sampler_create_info);
 tgvk_image              tgvk_image_create2(tgvk_image_type type, const char* p_filename, const tg_sampler_create_info* p_sampler_create_info);

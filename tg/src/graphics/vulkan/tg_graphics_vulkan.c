@@ -107,7 +107,7 @@ TGVK_DEFINE_STRUCTURE_BUFFER(vertex_shader, TG_MAX_VERTEX_SHADERS);
 static VKAPI_ATTR VkBool32 VKAPI_CALL tg__debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity, VkDebugUtilsMessageTypeFlagsEXT message_type, const VkDebugUtilsMessengerCallbackDataEXT* p_callback_data, void* user_data)
 {
     TG_DEBUG_LOG("%s\n", p_callback_data->pMessage);
-    tg_platform_file_create("tg_last_error.txt", tg_strlen_no_nul(p_callback_data->pMessage), p_callback_data->pMessage, TG_TRUE);
+    tg_platform_file_create("tgvk_last_error.txt", tg_strlen_no_nul(p_callback_data->pMessage), p_callback_data->pMessage, TG_TRUE);
     return VK_TRUE;
 }
 #pragma warning(pop)
@@ -288,87 +288,6 @@ u32 tg_vertex_input_attribute_format_get_size(tg_vertex_input_attribute_format f
 }
 
 
-void* tgvk_handle_array(tg_structure_type type)
-{
-    void* p_array = TG_NULL;
-
-    switch (type)
-    {
-    case TG_STRUCTURE_TYPE_COLOR_IMAGE:      p_array = TGVK_STRUCTURE_BUFFER_NAME(color_image);      break;
-    case TG_STRUCTURE_TYPE_COMPUTE_SHADER:   p_array = TGVK_STRUCTURE_BUFFER_NAME(compute_shader);   break;
-    case TG_STRUCTURE_TYPE_CUBE_MAP:         p_array = TGVK_STRUCTURE_BUFFER_NAME(cube_map);         break;
-    case TG_STRUCTURE_TYPE_DEPTH_IMAGE:      p_array = TGVK_STRUCTURE_BUFFER_NAME(depth_image);      break;
-    case TG_STRUCTURE_TYPE_FRAGMENT_SHADER:  p_array = TGVK_STRUCTURE_BUFFER_NAME(fragment_shader);  break;
-    case TG_STRUCTURE_TYPE_MATERIAL:         p_array = TGVK_STRUCTURE_BUFFER_NAME(material);         break;
-    case TG_STRUCTURE_TYPE_MESH:             p_array = TGVK_STRUCTURE_BUFFER_NAME(mesh);             break;
-    case TG_STRUCTURE_TYPE_RENDER_COMMAND:   p_array = TGVK_STRUCTURE_BUFFER_NAME(render_command);   break;
-    case TG_STRUCTURE_TYPE_RENDERER:         p_array = TGVK_STRUCTURE_BUFFER_NAME(renderer);         break;
-    case TG_STRUCTURE_TYPE_STORAGE_BUFFER:   p_array = TGVK_STRUCTURE_BUFFER_NAME(storage_buffer);   break;
-    case TG_STRUCTURE_TYPE_STORAGE_IMAGE_3D: p_array = TGVK_STRUCTURE_BUFFER_NAME(storage_image_3d); break;
-    case TG_STRUCTURE_TYPE_UNIFORM_BUFFER:   p_array = TGVK_STRUCTURE_BUFFER_NAME(uniform_buffer);   break;
-    case TG_STRUCTURE_TYPE_VERTEX_SHADER:    p_array = TGVK_STRUCTURE_BUFFER_NAME(vertex_shader);    break;
-
-    default: TG_INVALID_CODEPATH(); break;
-    }
-
-    return p_array;
-}
-
-void* tgvk_handle_take(tg_structure_type type)
-{
-    void* p_handle = TG_NULL;
-
-    TG_RWL_LOCK_FOR_WRITE(handle_lock);
-    switch (type)
-    {
-    case TG_STRUCTURE_TYPE_COLOR_IMAGE:      { TGVK_STRUCTURE_TAKE(color_image, p_handle);      } break;
-    case TG_STRUCTURE_TYPE_COMPUTE_SHADER:   { TGVK_STRUCTURE_TAKE(compute_shader, p_handle);   } break;
-    case TG_STRUCTURE_TYPE_CUBE_MAP:         { TGVK_STRUCTURE_TAKE(cube_map, p_handle);         } break;
-    case TG_STRUCTURE_TYPE_DEPTH_IMAGE:      { TGVK_STRUCTURE_TAKE(depth_image, p_handle);      } break;
-    case TG_STRUCTURE_TYPE_FRAGMENT_SHADER:  { TGVK_STRUCTURE_TAKE(fragment_shader, p_handle);  } break;
-    case TG_STRUCTURE_TYPE_MATERIAL:         { TGVK_STRUCTURE_TAKE(material, p_handle);         } break;
-    case TG_STRUCTURE_TYPE_MESH:             { TGVK_STRUCTURE_TAKE(mesh, p_handle);             } break;
-    case TG_STRUCTURE_TYPE_RENDER_COMMAND:   { TGVK_STRUCTURE_TAKE(render_command, p_handle);   } break;
-    case TG_STRUCTURE_TYPE_RENDERER:         { TGVK_STRUCTURE_TAKE(renderer, p_handle);         } break;
-    case TG_STRUCTURE_TYPE_STORAGE_BUFFER:   { TGVK_STRUCTURE_TAKE(storage_buffer, p_handle);   } break;
-    case TG_STRUCTURE_TYPE_STORAGE_IMAGE_3D: { TGVK_STRUCTURE_TAKE(storage_image_3d, p_handle); } break;
-    case TG_STRUCTURE_TYPE_UNIFORM_BUFFER:   { TGVK_STRUCTURE_TAKE(uniform_buffer, p_handle);   } break;
-    case TG_STRUCTURE_TYPE_VERTEX_SHADER:    { TGVK_STRUCTURE_TAKE(vertex_shader, p_handle);    } break;
-
-    default: TG_INVALID_CODEPATH(); break;
-    }
-    *(tg_structure_type*)p_handle = type;
-    TG_RWL_UNLOCK_FOR_WRITE(handle_lock);
-
-    return p_handle;
-}
-
-void tgvk_handle_release(void* p_handle)
-{
-    TG_ASSERT(p_handle && *(tg_structure_type*)p_handle != TG_STRUCTURE_TYPE_INVALID);
-    
-    const tg_structure_type type = *(tg_structure_type*)p_handle;
-    TG_RWL_LOCK_FOR_WRITE(handle_lock);
-    switch (type)
-    {
-    case TG_STRUCTURE_TYPE_COLOR_IMAGE:      { TGVK_STRUCTURE_RELEASE(color_image, p_handle);      } break;
-    case TG_STRUCTURE_TYPE_COMPUTE_SHADER:   { TGVK_STRUCTURE_RELEASE(compute_shader, p_handle);   } break;
-    case TG_STRUCTURE_TYPE_CUBE_MAP:         { TGVK_STRUCTURE_RELEASE(cube_map, p_handle);         } break;
-    case TG_STRUCTURE_TYPE_DEPTH_IMAGE:      { TGVK_STRUCTURE_RELEASE(depth_image, p_handle);      } break;
-    case TG_STRUCTURE_TYPE_FRAGMENT_SHADER:  { TGVK_STRUCTURE_RELEASE(fragment_shader, p_handle);  } break;
-    case TG_STRUCTURE_TYPE_MATERIAL:         { TGVK_STRUCTURE_RELEASE(material, p_handle);         } break;
-    case TG_STRUCTURE_TYPE_MESH:             { TGVK_STRUCTURE_RELEASE(mesh, p_handle);             } break;
-    case TG_STRUCTURE_TYPE_RENDER_COMMAND:   { TGVK_STRUCTURE_RELEASE(render_command, p_handle);   } break;
-    case TG_STRUCTURE_TYPE_RENDERER:         { TGVK_STRUCTURE_RELEASE(renderer, p_handle);         } break;
-    case TG_STRUCTURE_TYPE_STORAGE_BUFFER:   { TGVK_STRUCTURE_RELEASE(storage_buffer, p_handle);   } break;
-    case TG_STRUCTURE_TYPE_UNIFORM_BUFFER:   { TGVK_STRUCTURE_RELEASE(uniform_buffer, p_handle);   } break;
-    case TG_STRUCTURE_TYPE_STORAGE_IMAGE_3D: { TGVK_STRUCTURE_RELEASE(storage_image_3d, p_handle); } break;
-    case TG_STRUCTURE_TYPE_VERTEX_SHADER:    { TGVK_STRUCTURE_RELEASE(vertex_shader, p_handle);    } break;
-    
-    default: TG_INVALID_CODEPATH(); break;
-    }
-    TG_RWL_UNLOCK_FOR_WRITE(handle_lock);
-}
 
 
 
@@ -1700,6 +1619,90 @@ void tgvk_global_staging_buffer_release(void)
 #pragma warning(disable:26110)
     TG_RWL_UNLOCK_FOR_WRITE(global_staging_buffer_lock);
 #pragma warning(pop)
+}
+
+
+
+void* tgvk_handle_array(tg_structure_type type)
+{
+    void* p_array = TG_NULL;
+
+    switch (type)
+    {
+    case TG_STRUCTURE_TYPE_COLOR_IMAGE:      p_array = TGVK_STRUCTURE_BUFFER_NAME(color_image);      break;
+    case TG_STRUCTURE_TYPE_COMPUTE_SHADER:   p_array = TGVK_STRUCTURE_BUFFER_NAME(compute_shader);   break;
+    case TG_STRUCTURE_TYPE_CUBE_MAP:         p_array = TGVK_STRUCTURE_BUFFER_NAME(cube_map);         break;
+    case TG_STRUCTURE_TYPE_DEPTH_IMAGE:      p_array = TGVK_STRUCTURE_BUFFER_NAME(depth_image);      break;
+    case TG_STRUCTURE_TYPE_FRAGMENT_SHADER:  p_array = TGVK_STRUCTURE_BUFFER_NAME(fragment_shader);  break;
+    case TG_STRUCTURE_TYPE_MATERIAL:         p_array = TGVK_STRUCTURE_BUFFER_NAME(material);         break;
+    case TG_STRUCTURE_TYPE_MESH:             p_array = TGVK_STRUCTURE_BUFFER_NAME(mesh);             break;
+    case TG_STRUCTURE_TYPE_RENDER_COMMAND:   p_array = TGVK_STRUCTURE_BUFFER_NAME(render_command);   break;
+    case TG_STRUCTURE_TYPE_RENDERER:         p_array = TGVK_STRUCTURE_BUFFER_NAME(renderer);         break;
+    case TG_STRUCTURE_TYPE_STORAGE_BUFFER:   p_array = TGVK_STRUCTURE_BUFFER_NAME(storage_buffer);   break;
+    case TG_STRUCTURE_TYPE_STORAGE_IMAGE_3D: p_array = TGVK_STRUCTURE_BUFFER_NAME(storage_image_3d); break;
+    case TG_STRUCTURE_TYPE_UNIFORM_BUFFER:   p_array = TGVK_STRUCTURE_BUFFER_NAME(uniform_buffer);   break;
+    case TG_STRUCTURE_TYPE_VERTEX_SHADER:    p_array = TGVK_STRUCTURE_BUFFER_NAME(vertex_shader);    break;
+
+    default: TG_INVALID_CODEPATH(); break;
+    }
+
+    return p_array;
+}
+
+void* tgvk_handle_take(tg_structure_type type)
+{
+    void* p_handle = TG_NULL;
+
+    TG_RWL_LOCK_FOR_WRITE(handle_lock);
+    switch (type)
+    {
+    case TG_STRUCTURE_TYPE_COLOR_IMAGE:      { TGVK_STRUCTURE_TAKE(color_image, p_handle);      } break;
+    case TG_STRUCTURE_TYPE_COMPUTE_SHADER:   { TGVK_STRUCTURE_TAKE(compute_shader, p_handle);   } break;
+    case TG_STRUCTURE_TYPE_CUBE_MAP:         { TGVK_STRUCTURE_TAKE(cube_map, p_handle);         } break;
+    case TG_STRUCTURE_TYPE_DEPTH_IMAGE:      { TGVK_STRUCTURE_TAKE(depth_image, p_handle);      } break;
+    case TG_STRUCTURE_TYPE_FRAGMENT_SHADER:  { TGVK_STRUCTURE_TAKE(fragment_shader, p_handle);  } break;
+    case TG_STRUCTURE_TYPE_MATERIAL:         { TGVK_STRUCTURE_TAKE(material, p_handle);         } break;
+    case TG_STRUCTURE_TYPE_MESH:             { TGVK_STRUCTURE_TAKE(mesh, p_handle);             } break;
+    case TG_STRUCTURE_TYPE_RENDER_COMMAND:   { TGVK_STRUCTURE_TAKE(render_command, p_handle);   } break;
+    case TG_STRUCTURE_TYPE_RENDERER:         { TGVK_STRUCTURE_TAKE(renderer, p_handle);         } break;
+    case TG_STRUCTURE_TYPE_STORAGE_BUFFER:   { TGVK_STRUCTURE_TAKE(storage_buffer, p_handle);   } break;
+    case TG_STRUCTURE_TYPE_STORAGE_IMAGE_3D: { TGVK_STRUCTURE_TAKE(storage_image_3d, p_handle); } break;
+    case TG_STRUCTURE_TYPE_UNIFORM_BUFFER:   { TGVK_STRUCTURE_TAKE(uniform_buffer, p_handle);   } break;
+    case TG_STRUCTURE_TYPE_VERTEX_SHADER:    { TGVK_STRUCTURE_TAKE(vertex_shader, p_handle);    } break;
+
+    default: TG_INVALID_CODEPATH(); break;
+    }
+    *(tg_structure_type*)p_handle = type;
+    TG_RWL_UNLOCK_FOR_WRITE(handle_lock);
+
+    return p_handle;
+}
+
+void tgvk_handle_release(void* p_handle)
+{
+    TG_ASSERT(p_handle && *(tg_structure_type*)p_handle != TG_STRUCTURE_TYPE_INVALID);
+    
+    const tg_structure_type type = *(tg_structure_type*)p_handle;
+    TG_RWL_LOCK_FOR_WRITE(handle_lock);
+    switch (type)
+    {
+    case TG_STRUCTURE_TYPE_COLOR_IMAGE:      { TGVK_STRUCTURE_RELEASE(color_image, p_handle);      } break;
+    case TG_STRUCTURE_TYPE_COMPUTE_SHADER:   { TGVK_STRUCTURE_RELEASE(compute_shader, p_handle);   } break;
+    case TG_STRUCTURE_TYPE_CUBE_MAP:         { TGVK_STRUCTURE_RELEASE(cube_map, p_handle);         } break;
+    case TG_STRUCTURE_TYPE_DEPTH_IMAGE:      { TGVK_STRUCTURE_RELEASE(depth_image, p_handle);      } break;
+    case TG_STRUCTURE_TYPE_FRAGMENT_SHADER:  { TGVK_STRUCTURE_RELEASE(fragment_shader, p_handle);  } break;
+    case TG_STRUCTURE_TYPE_MATERIAL:         { TGVK_STRUCTURE_RELEASE(material, p_handle);         } break;
+    case TG_STRUCTURE_TYPE_MESH:             { TGVK_STRUCTURE_RELEASE(mesh, p_handle);             } break;
+    case TG_STRUCTURE_TYPE_RENDER_COMMAND:   { TGVK_STRUCTURE_RELEASE(render_command, p_handle);   } break;
+    case TG_STRUCTURE_TYPE_RENDERER:         { TGVK_STRUCTURE_RELEASE(renderer, p_handle);         } break;
+    case TG_STRUCTURE_TYPE_STORAGE_BUFFER:   { TGVK_STRUCTURE_RELEASE(storage_buffer, p_handle);   } break;
+    case TG_STRUCTURE_TYPE_UNIFORM_BUFFER:   { TGVK_STRUCTURE_RELEASE(uniform_buffer, p_handle);   } break;
+    case TG_STRUCTURE_TYPE_STORAGE_IMAGE_3D: { TGVK_STRUCTURE_RELEASE(storage_image_3d, p_handle); } break;
+    case TG_STRUCTURE_TYPE_VERTEX_SHADER:    { TGVK_STRUCTURE_RELEASE(vertex_shader, p_handle);    } break;
+    
+    default: TG_INVALID_CODEPATH(); break;
+    }
+    TG_RWL_UNLOCK_FOR_WRITE(handle_lock);
 }
 
 

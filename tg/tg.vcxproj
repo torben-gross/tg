@@ -149,7 +149,6 @@
     <ClCompile Include="src\util\tg_string.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\graphics\vulkan\tg_vulkan_atmosphere.h" />
     <ClInclude Include="src\graphics\vulkan\tg_vulkan_atmosphere_definitions.h" />
     <ClInclude Include="src\graphics\vulkan\tg_vulkan_atmosphere_demo_shaders.h" />
     <ClInclude Include="src\graphics\vulkan\tg_vulkan_atmosphere_functions.h" />
