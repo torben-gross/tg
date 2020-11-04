@@ -1209,7 +1209,7 @@ tg_terrain* tg_terrain_create(tg_camera* p_camera)
 	tg_terrain* p_terrain = TG_MEMORY_ALLOC_NULLIFY(sizeof(*p_terrain));
 	
 	p_terrain->p_camera = p_camera;
-	p_terrain->h_material = tg_material_create_deferred(tg_vertex_shader_get("shaders/deferred/terrain.vert"), tg_fragment_shader_get("shaders/deferred/terrain.frag"));
+	p_terrain->h_material = tg_material_create_deferred(tg_vertex_shader_create("shaders/deferred/terrain.vert"), tg_fragment_shader_create("shaders/deferred/terrain.frag"));
 	p_terrain->render_read_write_lock = TG_RWL_CREATE();
 	p_terrain->h_event = TG_EVENT_CREATE();
 

@@ -178,16 +178,16 @@ typedef struct tgvk_framebuffer
 typedef struct tgvk_shader tgvk_shader;
 typedef struct tgvk_graphics_pipeline_create_info
 {
-    const tgvk_shader*       p_vertex_shader;
-    const tgvk_shader*       p_geometry_shader;
-    const tgvk_shader*       p_fragment_shader;
-    VkCullModeFlagBits       cull_mode;
-    VkBool32                 depth_test_enable;
-    VkBool32                 depth_write_enable;
-    tg_blend_mode*           p_blend_modes;      // TG_NULL sets blending for every attachment to TG_BLEND_MODE_NONE
-    VkRenderPass             render_pass;
-    v2                       viewport_size;
-    VkPolygonMode            polygon_mode;
+    const tgvk_shader*      p_vertex_shader;
+    const tgvk_shader*      p_geometry_shader;
+    const tgvk_shader*      p_fragment_shader;
+    VkCullModeFlagBits      cull_mode;
+    VkBool32                depth_test_enable;
+    VkBool32                depth_write_enable;
+    const tg_blend_mode*    p_blend_modes;      // TG_NULL sets blending for every attachment to TG_BLEND_MODE_NONE
+    VkRenderPass            render_pass;
+    v2                      viewport_size;
+    VkPolygonMode           polygon_mode;
 } tgvk_graphics_pipeline_create_info;
 
 typedef struct tgvk_image_extent
@@ -380,54 +380,42 @@ typedef struct tg_vertex_shader
 
 typedef struct tgvk_atmosphere_model
 {
-	tgvk_atmosphere_density_profile_layer    rayleigh_density_profile_layer;
-	tgvk_atmosphere_density_profile_layer    mie_density_profile_layer;
-	tgvk_atmosphere_density_profile_layer    p_absorption_density_profile_layers[2];
-
-	b32                                      use_constant_solar_spectrum;
-	b32                                      use_ozone;
-	b32                                      use_combined_textures;
-	b32                                      use_half_precision;
-	tgvk_atmosphere_luminance                use_luminance;
-	b32                                      do_white_balance;
-	f64                                      exposure;
-
-	f64                                      p_wavelengths[48];
-	f64                                      p_solar_irradiances[48];
-	f64                                      p_rayleigh_scatterings[48];
-	f64                                      p_mie_scatterings[48];
-	f64                                      p_mie_extinctions[48];
-	f64                                      p_absorption_extinctions[48];
-	f64                                      p_ground_albedos[48];
-
-	u32                                      precomputed_wavelength_count;
-	f64                                      sky_k_r;
-	f64                                      sky_k_g;
-	f64                                      sky_k_b;
-	f64                                      sun_k_r;
-	f64                                      sun_k_g;
-	f64                                      sun_k_b;
-
-	b32                                      combine_scattering_textures;
-	b32                                      rgb_format_supported;
-
-	tgvk_image                               transmittance_texture;
-	tgvk_layered_image                       scattering_texture;
-	tgvk_layered_image                       optional_single_mie_scattering_texture;
-	tgvk_layered_image                       no_single_mie_scattering_black_texture; // TODO: remove this and change 'p_atmosphere_shader' to not use 'single_mie_scattering_texture'
-	tgvk_image                               irradiance_texture;
+    struct
+    {
+	    b32                          use_constant_solar_spectrum;
+	    b32                          use_ozone;
+	    b32                          use_combined_textures;
+	    b32                          use_half_precision;
+	    tgvk_atmosphere_luminance    use_luminance;
+        u32                          precomputed_wavelength_count;
+	    b32                          do_white_balance;
+	    f64                          exposure;
+	    b32                          combine_scattering_textures;
+    } settings;
 
     struct
     {
-        tgvk_shader                          vertex_shader;
-        tgvk_shader                          fragment_shader;
-        tgvk_image                           color_attachment;
-        tgvk_framebuffer                     framebuffer;
-        tgvk_pipeline                        graphics_pipeline;
-        tgvk_descriptor_set                  descriptor_set;
-        tgvk_buffer                          vertex_shader_ubo;
-        tgvk_buffer                          fragment_shader_ubo;
-        tgvk_command_buffer                  command_buffer;
+        u32                          capacity;
+        u32                          header_count;
+        u32                          total_count;
+        char*                        p_source;
+    } api_shader;
+
+    struct
+    {
+	    tgvk_image                   transmittance_texture;
+	    tgvk_layered_image           scattering_texture;
+	    tgvk_layered_image           optional_single_mie_scattering_texture;
+	    tgvk_layered_image           no_single_mie_scattering_black_texture; // TODO: remove this and change 'p_atmosphere_shader' to not use 'single_mie_scattering_texture'
+	    tgvk_image                   irradiance_texture;
+        tgvk_shader                  vertex_shader;
+        tgvk_shader                  fragment_shader;
+        tgvk_framebuffer             framebuffer;
+        tgvk_pipeline                graphics_pipeline;
+        tgvk_descriptor_set          descriptor_set;
+        tgvk_buffer                  vertex_shader_ubo;
+        tgvk_buffer                  fragment_shader_ubo;
+        tgvk_command_buffer          command_buffer;
     } rendering;
 } tgvk_atmosphere_model;
 
@@ -483,6 +471,7 @@ typedef struct tg_renderer
     struct
     {
         tgvk_framebuffer         framebuffer;
+        tgvk_shader              fragment_shader;
         tgvk_pipeline            graphics_pipeline;
         tgvk_descriptor_set      descriptor_set;
         tgvk_command_buffer      command_buffer;
@@ -574,6 +563,7 @@ tgvk_shared_render_resources    shared_render_resources;
 
 void                    tgvk_atmosphere_model_create(tgvk_image* p_color_attachment, tgvk_image* p_depth_attachment, TG_OUT tgvk_atmosphere_model* p_model);
 void                    tgvk_atmosphere_model_destroy(tgvk_atmosphere_model* p_model);
+void                    tgvk_atmosphere_model_update(tgvk_atmosphere_model* p_model, v3 sun_direction, m4 inv_view, m4 inv_proj);
 
 void                    tgvk_buffer_copy(VkDeviceSize size, tgvk_buffer* p_src, tgvk_buffer* p_dst);
 tgvk_buffer             tgvk_buffer_create(VkDeviceSize size, VkBufferUsageFlags buffer_usage_flags, VkMemoryPropertyFlags memory_property_flags);
@@ -649,6 +639,8 @@ tgvk_framebuffer        tgvk_framebuffer_create_layered(VkRenderPass render_pass
 void                    tgvk_framebuffer_destroy(tgvk_framebuffer* p_framebuffer);
 void                    tgvk_framebuffers_destroy(u32 count, tgvk_framebuffer* p_framebuffers);
 
+void                    tgvk_get_physical_device_format_properties(VkFormat format, TG_OUT VkFormatProperties* p_format_properties);
+
 tgvk_buffer*            tgvk_global_staging_buffer_take(VkDeviceSize size);
 void                    tgvk_global_staging_buffer_release(void);
 
@@ -658,16 +650,16 @@ void                    tgvk_handle_release(void* p_handle);
 
 tgvk_image              tgvk_image_create(tgvk_image_type type, u32 width, u32 height, VkFormat format, const tg_sampler_create_info* p_sampler_create_info);
 tgvk_image              tgvk_image_create2(tgvk_image_type type, const char* p_filename, const tg_sampler_create_info* p_sampler_create_info);
-b32                     tgvk_image_store_to_disc(tgvk_image* p_image, const char* p_filename, b32 force_alpha_one, b32 replace_existing);
 void                    tgvk_image_destroy(tgvk_image* p_image);
+b32                     tgvk_image_store_to_disc(tgvk_image* p_image, const char* p_filename, b32 force_alpha_one, b32 replace_existing);
 
 tgvk_image_3d           tgvk_image_3d_create(tgvk_image_type type, u32 width, u32 height, u32 depth, VkFormat format, const tg_sampler_create_info* p_sampler_create_info);
-b32                     tgvk_image_3d_store_slice_to_disc(tgvk_image_3d* p_image_3d, u32 slice_depth, const char* p_filename, b32 force_alpha_one, b32 replace_existing);
 void                    tgvk_image_3d_destroy(tgvk_image_3d* p_image_3d);
+b32                     tgvk_image_3d_store_slice_to_disc(tgvk_image_3d* p_image_3d, u32 slice_depth, const char* p_filename, b32 force_alpha_one, b32 replace_existing);
 
 tgvk_layered_image      tgvk_layered_image_create(tgvk_image_type type, u32 width, u32 height, u32 layers, VkFormat format, const tg_sampler_create_info* p_sampler_create_info);
-b32                     tgvk_layered_image_store_layer_to_disc(tgvk_layered_image* p_image, u32 layer, const char* p_filename, b32 force_alpha_one, b32 replace_existing);
 void                    tgvk_layered_image_destroy(tgvk_layered_image* p_image);
+b32                     tgvk_layered_image_store_layer_to_disc(tgvk_layered_image* p_image, u32 layer, const char* p_filename, b32 force_alpha_one, b32 replace_existing);
 
 tgvk_pipeline           tgvk_pipeline_create_compute(const tgvk_shader* p_compute_shader);
 tgvk_pipeline           tgvk_pipeline_create_graphics(const tgvk_graphics_pipeline_create_info* p_create_info);

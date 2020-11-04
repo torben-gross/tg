@@ -57,6 +57,8 @@ static tgvk_buffer                 global_staging_buffer;
 
 static tg_read_write_lock          handle_lock;
 
+static shaderc_compiler_t          shaderc_compiler;
+
 #define TGVK_STRUCTURE_NAME(name)                    tg_##name
 #define TGVK_STRUCTURE_SIZE_NAME(name)               name##_size
 #define TGVK_STRUCTURE_BUFFER_COUNT_NAME(name)       name##_buffer_count
@@ -1597,6 +1599,13 @@ void tgvk_framebuffers_destroy(u32 count, tgvk_framebuffer* p_framebuffers)
 
 
 
+void tgvk_get_physical_device_format_properties(VkFormat format, TG_OUT VkFormatProperties* p_format_properties)
+{
+    vkGetPhysicalDeviceFormatProperties(physical_device, format, p_format_properties);
+}
+
+
+
 tgvk_buffer* tgvk_global_staging_buffer_take(VkDeviceSize size)
 {
     TG_RWL_LOCK_FOR_WRITE(global_staging_buffer_lock);
@@ -1907,6 +1916,20 @@ tgvk_image tgvk_image_create2(tgvk_image_type type, const char* p_filename, cons
     return image;
 }
 
+void tgvk_image_destroy(tgvk_image* p_image)
+{
+    if (p_image->sampler)
+    {
+        vkDestroySampler(device, p_image->sampler, TG_NULL);
+    }
+    if (p_image->image_view)
+    {
+        vkDestroyImageView(device, p_image->image_view, TG_NULL);
+    }
+    tgvk_memory_allocator_free(&p_image->memory);
+    vkDestroyImage(device, p_image->image, TG_NULL);
+}
+
 b32 tgvk_image_store_to_disc(tgvk_image* p_image, const char* p_filename, b32 force_alpha_one, b32 replace_existing)
 {
     const u32 width = p_image->width;
@@ -1955,20 +1978,6 @@ b32 tgvk_image_store_to_disc(tgvk_image* p_image, const char* p_filename, b32 fo
     tgvk_image_destroy(&blit_image);
 
     return result;
-}
-
-void tgvk_image_destroy(tgvk_image* p_image)
-{
-    if (p_image->sampler)
-    {
-        vkDestroySampler(device, p_image->sampler, TG_NULL);
-    }
-    if (p_image->image_view)
-    {
-        vkDestroyImageView(device, p_image->image_view, TG_NULL);
-    }
-    tgvk_memory_allocator_free(&p_image->memory);
-    vkDestroyImage(device, p_image->image, TG_NULL);
 }
 
 
@@ -2070,6 +2079,14 @@ tgvk_image_3d tgvk_image_3d_create(tgvk_image_type type, u32 width, u32 height, 
     return image_3d;
 }
 
+void tgvk_image_3d_destroy(tgvk_image_3d* p_image_3d)
+{
+    vkDestroySampler(device, p_image_3d->sampler, TG_NULL);
+    vkDestroyImageView(device, p_image_3d->image_view, TG_NULL);
+    tgvk_memory_allocator_free(&p_image_3d->memory);
+    vkDestroyImage(device, p_image_3d->image, TG_NULL);
+}
+
 b32 tgvk_image_3d_store_slice_to_disc(tgvk_image_3d* p_image_3d, u32 slice_depth, const char* p_filename, b32 force_alpha_one, b32 replace_existing)
 {
     const u32 width = p_image_3d->width;
@@ -2118,14 +2135,6 @@ b32 tgvk_image_3d_store_slice_to_disc(tgvk_image_3d* p_image_3d, u32 slice_depth
     tgvk_image_destroy(&blit_image);
 
     return result;
-}
-
-void tgvk_image_3d_destroy(tgvk_image_3d* p_image_3d)
-{
-    vkDestroySampler(device, p_image_3d->sampler, TG_NULL);
-    vkDestroyImageView(device, p_image_3d->image_view, TG_NULL);
-    tgvk_memory_allocator_free(&p_image_3d->memory);
-    vkDestroyImage(device, p_image_3d->image, TG_NULL);
 }
 
 
@@ -2247,6 +2256,26 @@ tgvk_layered_image tgvk_layered_image_create(tgvk_image_type type, u32 width, u3
     return image;
 }
 
+void tgvk_layered_image_destroy(tgvk_layered_image* p_image)
+{
+    if (p_image->sampler)
+    {
+        vkDestroySampler(device, p_image->sampler, TG_NULL);
+    }
+    if (p_image->read_image_view)
+    {
+        vkDestroyImageView(device, p_image->read_image_view, TG_NULL);
+    }
+    if (p_image->write_image_view)
+    {
+        vkDestroyImageView(device, p_image->write_image_view, TG_NULL);
+    }
+    TG_ASSERT(p_image->memory.device_memory);
+    tgvk_memory_allocator_free(&p_image->memory);
+    TG_ASSERT(p_image->image);
+    vkDestroyImage(device, p_image->image, TG_NULL);
+}
+
 b32 tgvk_layered_image_store_layer_to_disc(tgvk_layered_image* p_image, u32 layer, const char* p_filename, b32 force_alpha_one, b32 replace_existing)
 {
     const u32 width = p_image->width;
@@ -2295,24 +2324,6 @@ b32 tgvk_layered_image_store_layer_to_disc(tgvk_layered_image* p_image, u32 laye
     tgvk_image_destroy(&blit_image);
 
     return result;
-}
-
-void tgvk_layered_image_destroy(tgvk_layered_image* p_image)
-{
-    if (p_image->sampler)
-    {
-        vkDestroySampler(device, p_image->sampler, TG_NULL);
-    }
-    if (p_image->read_image_view)
-    {
-        vkDestroyImageView(device, p_image->read_image_view, TG_NULL);
-    }
-    if (p_image->write_image_view)
-    {
-        vkDestroyImageView(device, p_image->write_image_view, TG_NULL);
-    }
-    tgvk_memory_allocator_free(&p_image->memory);
-    vkDestroyImage(device, p_image->image, TG_NULL);
 }
 
 
@@ -2705,11 +2716,74 @@ tgvk_shader tgvk_shader_create(const char* p_filename)
     char p_filename_buffer[TG_MAX_PATH] = { 0 };
     tg_stringf(sizeof(p_filename_buffer), p_filename_buffer, "%s.spv", p_filename);
 
-    // TODO: shader recompilation here
+#ifndef TG_DISTRIBUTE
+    tg_file_properties uncompiled_properties = { 0 };
+    const b32 get_uncompiled_properties_result = tg_platform_file_get_properties(p_filename, &uncompiled_properties);
+    TG_ASSERT(get_uncompiled_properties_result);
+
+    tg_file_properties compiled_properties = { 0 };
+    const b32 spv_exists = tg_platform_file_get_properties(p_filename_buffer, &compiled_properties);
+
+    b32 recompile = TG_FALSE;
+    if (spv_exists)
+    {
+        recompile = tg_platform_system_time_compare(&compiled_properties.last_write_time, &uncompiled_properties.last_write_time) == -1;
+    }
+
+    if (!spv_exists || recompile)
+    {
+        char* p_data = TG_MEMORY_STACK_ALLOC(uncompiled_properties.size);
+        tg_platform_file_read(p_filename, uncompiled_properties.size, p_data);
+
+        TG_ASSERT(shaderc_compiler);
+
+        shaderc_shader_kind shader_kind = 0;
+        if (tg_string_equal(uncompiled_properties.p_extension, "vert"))
+        {
+            shader_kind = shaderc_vertex_shader;
+        }
+        else if (tg_string_equal(uncompiled_properties.p_extension, "geom"))
+        {
+            shader_kind = shaderc_geometry_shader;
+        }
+        else if (tg_string_equal(uncompiled_properties.p_extension, "frag"))
+        {
+            shader_kind = shaderc_fragment_shader;
+        }
+        else if (tg_string_equal(uncompiled_properties.p_extension, "comp"))
+        {
+            shader_kind = shaderc_compute_shader;
+        }
+        else
+        {
+            TG_INVALID_CODEPATH();
+        }
+
+        const shaderc_compilation_result_t result = shaderc_compile_into_spv(shaderc_compiler, p_data, uncompiled_properties.size, shader_kind, "", "main", TG_NULL);
+        TG_ASSERT(result);
+
+        TG_DEBUG_EXEC(
+            if (shaderc_result_get_num_warnings(result) || shaderc_result_get_num_errors(result))
+            {
+                const char* p_error_message = shaderc_result_get_error_message(result);
+                TG_DEBUG_LOG(p_error_message);
+                TG_INVALID_CODEPATH();
+            }
+        );
+
+        const size_t length = shaderc_result_get_length(result);
+        const char* p_bytes = shaderc_result_get_bytes(result);
+
+        tg_platform_file_create(p_filename_buffer, (u32)length, p_bytes, TG_TRUE);
+
+        shaderc_result_release(result);
+    }
+#endif
 
     tg_file_properties file_properties = { 0 };
-    const b32 result = tg_platform_file_get_properties(p_filename_buffer, &file_properties);
-    TG_ASSERT(result);
+    const b32 get_properties_result = tg_platform_file_get_properties(p_filename_buffer, &file_properties);
+    TG_ASSERT(get_properties_result);
+
     char* p_content = TG_MEMORY_STACK_ALLOC(file_properties.size);
     tg_platform_file_read(p_filename_buffer, file_properties.size, p_content);
 
@@ -2724,8 +2798,7 @@ tgvk_shader tgvk_shader_create_from_glsl(tg_shader_type type, const char* p_sour
 {
     TG_ASSERT(p_source[tg_strlen_no_nul(p_source)] == '\0');
 
-    shaderc_compiler_t compiler = shaderc_compiler_initialize();
-    TG_ASSERT(compiler);
+    TG_ASSERT(shaderc_compiler);
 
     shaderc_shader_kind shader_kind = 0;
     switch (type)
@@ -2737,7 +2810,7 @@ tgvk_shader tgvk_shader_create_from_glsl(tg_shader_type type, const char* p_sour
 
     default: TG_INVALID_CODEPATH(); break;
     }
-    const shaderc_compilation_result_t result = shaderc_compile_into_spv(compiler, p_source, tg_strlen_no_nul(p_source), shader_kind, "", "main", TG_NULL);
+    const shaderc_compilation_result_t result = shaderc_compile_into_spv(shaderc_compiler, p_source, tg_strlen_no_nul(p_source), shader_kind, "", "main", TG_NULL);
     TG_ASSERT(result);
 
     TG_DEBUG_EXEC(
@@ -2755,7 +2828,6 @@ tgvk_shader tgvk_shader_create_from_glsl(tg_shader_type type, const char* p_sour
     const tgvk_shader shader = tgvk_shader_create_from_spirv((u32)length, p_bytes);
 
     shaderc_result_release(result);
-    shaderc_compiler_release(compiler);
 
     return shader;
 }
@@ -3560,6 +3632,8 @@ void tg_graphics_init(void)
     tgvk_memory_allocator_init(device, physical_device);
     handle_lock = TG_RWL_CREATE();
     global_staging_buffer_lock = TG_RWL_CREATE();
+
+    shaderc_compiler = shaderc_compiler_initialize();
     tg_shader_library_init();
     tg_renderer_init_shared_resources();
 }
@@ -3573,6 +3647,8 @@ void tg_graphics_shutdown(void)
 {
     tg_renderer_shutdown_shared_resources();
     tg_shader_library_shutdown();
+    shaderc_compiler_release(shaderc_compiler);
+
     if (global_staging_buffer.buffer)
     {
         tgvk_buffer_destroy(&global_staging_buffer);

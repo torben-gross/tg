@@ -2,62 +2,8 @@
 
 #ifdef TG_VULKAN
 
-#if !defined(TG_DISTRIBUTE)
-#define TG_RECOMPILE_SHADERS_ON_STARTUP 1
-#else
-#define TG_RECOMPILE_SHADERS_ON_STARTUP 0
-#endif
-
 #include "graphics/tg_shader_library.h"
 #include "util/tg_string.h"
-
-#if TG_RECOMPILE_SHADERS_ON_STARTUP
-static void tg__recompile(const char* p_filename)
-{
-	tg_file_properties uncompiled_properties = { 0 };
-	tg_platform_file_get_properties(p_filename, &uncompiled_properties);
-
-	char p_filename_buffer_spv[TG_MAX_PATH] = { 0 };
-	tg_stringf(TG_MAX_PATH, p_filename_buffer_spv, "%s.spv", p_filename);
-
-	tg_file_properties compiled_properties = { 0 };
-	const b32 spv_exists = tg_platform_file_get_properties(p_filename_buffer_spv, &compiled_properties);
-
-	b32 recompile = TG_FALSE;
-	if (spv_exists)
-	{
-		recompile = tg_platform_system_time_compare(&compiled_properties.last_write_time, &uncompiled_properties.last_write_time) == -1;
-	}
-
-	if (!spv_exists || recompile)
-	{
-		char p_filename_buffer[TG_MAX_PATH] = { 0 };
-		tg_stringf(TG_MAX_PATH, p_filename_buffer, "%s%c%s", uncompiled_properties.p_directory, TG_FILE_SEPERATOR, uncompiled_properties.p_short_filename);
-
-		char p_full_filename_buffer[TG_MAX_PATH] = { 0 };
-		tg_platform_prepend_asset_directory(p_filename_buffer, TG_MAX_PATH, p_full_filename_buffer);
-
-		char p_delete_buffer[10 + 2 * TG_MAX_PATH] = { 0 };
-		tg_stringf(
-			sizeof(p_delete_buffer), p_delete_buffer,
-			"del /s /q %s.spv",
-			p_full_filename_buffer
-		);
-		const i32 result0 = system(p_delete_buffer);
-		TG_ASSERT(result0 != -1);
-
-		char p_compile_buffer[38 + 4 + 2 * TG_MAX_PATH] = { 0 };
-		tg_stringf(
-			sizeof(p_compile_buffer), p_compile_buffer,
-			"C:/VulkanSDK/1.2.141.2/Bin/glslc.exe %s -o %s.spv",
-			p_full_filename_buffer,
-			p_full_filename_buffer
-		);
-		const i32 result1 = system(p_compile_buffer);
-		TG_ASSERT(result1 != -1);
-	}
-}
-#endif
 
 
 
@@ -73,15 +19,14 @@ tg_compute_shader_h tg_compute_shader_create(const char* p_filename)
 {
 	TG_ASSERT(p_filename);
 
-	TG_ASSERT(tg_shader_library_get_compute_shader(p_filename) == TG_NULL);
-#if TG_RECOMPILE_SHADERS_ON_STARTUP
-	tg__recompile(p_filename);
-#endif
-
-	tg_compute_shader_h h_compute_shader = tgvk_handle_take(TG_STRUCTURE_TYPE_COMPUTE_SHADER);
-	h_compute_shader->shader = tgvk_shader_create(p_filename);
-	h_compute_shader->compute_pipeline = tgvk_pipeline_create_compute(&h_compute_shader->shader);
-	h_compute_shader->descriptor_set = tgvk_descriptor_set_create(&h_compute_shader->compute_pipeline);
+	tg_compute_shader_h h_compute_shader = tg_shader_library_get_compute_shader(p_filename);
+	if (!h_compute_shader)
+	{
+		h_compute_shader = tgvk_handle_take(TG_STRUCTURE_TYPE_COMPUTE_SHADER);
+		h_compute_shader->shader = tgvk_shader_create(p_filename);
+		h_compute_shader->compute_pipeline = tgvk_pipeline_create_compute(&h_compute_shader->shader);
+		h_compute_shader->descriptor_set = tgvk_descriptor_set_create(&h_compute_shader->compute_pipeline);
+	}
 
 	return h_compute_shader;
 }
@@ -108,27 +53,19 @@ void tg_compute_shader_destroy(tg_compute_shader_h h_compute_shader)
 	tgvk_handle_release(h_compute_shader);
 }
 
-tg_compute_shader_h tg_compute_shader_get(const char* p_filename)
-{
-	TG_ASSERT(p_filename);
-
-	tg_compute_shader_h h_compute_shader = tg_shader_library_get_compute_shader(p_filename);
-	return h_compute_shader;
-}
-
 
 
 tg_vertex_shader_h tg_vertex_shader_create(const char* p_filename)
 {
 	TG_ASSERT(p_filename);
 
-	TG_ASSERT(tg_shader_library_get_vertex_shader(p_filename) == TG_NULL);
-#if TG_RECOMPILE_SHADERS_ON_STARTUP
-	tg__recompile(p_filename);
-#endif
+	tg_vertex_shader_h h_vertex_shader = tg_shader_library_get_vertex_shader(p_filename);
+	if (!h_vertex_shader)
+	{
+		h_vertex_shader = tgvk_handle_take(TG_STRUCTURE_TYPE_VERTEX_SHADER);
+		h_vertex_shader->shader = tgvk_shader_create(p_filename);
+	}
 
-	tg_vertex_shader_h h_vertex_shader = tgvk_handle_take(TG_STRUCTURE_TYPE_VERTEX_SHADER);
-	h_vertex_shader->shader = tgvk_shader_create(p_filename);
 	return h_vertex_shader;
 }
 
@@ -140,27 +77,19 @@ void tg_vertex_shader_destroy(tg_vertex_shader_h h_vertex_shader)
 	tgvk_handle_release(h_vertex_shader);
 }
 
-tg_vertex_shader_h tg_vertex_shader_get(const char* p_filename)
-{
-    TG_ASSERT(p_filename);
-
-	tg_vertex_shader_h h_vertex_shader = tg_shader_library_get_vertex_shader(p_filename);
-	return h_vertex_shader;
-}
-
 
 
 tg_fragment_shader_h tg_fragment_shader_create(const char* p_filename)
 {
 	TG_ASSERT(p_filename);
 
-	TG_ASSERT(tg_shader_library_get_fragment_shader(p_filename) == TG_NULL);
-#if TG_RECOMPILE_SHADERS_ON_STARTUP
-	tg__recompile(p_filename);
-#endif
+	tg_fragment_shader_h h_fragment_shader = tg_shader_library_get_fragment_shader(p_filename);
+	if (!h_fragment_shader)
+	{
+		h_fragment_shader = tgvk_handle_take(TG_STRUCTURE_TYPE_FRAGMENT_SHADER);
+		h_fragment_shader->shader = tgvk_shader_create(p_filename);
+	}
 
-	tg_fragment_shader_h h_fragment_shader = tgvk_handle_take(TG_STRUCTURE_TYPE_FRAGMENT_SHADER);
-	h_fragment_shader->shader = tgvk_shader_create(p_filename);
 	return h_fragment_shader;
 }
 
@@ -170,14 +99,6 @@ void tg_fragment_shader_destroy(tg_fragment_shader_h h_fragment_shader)
 
 	tgvk_shader_destroy(&h_fragment_shader->shader);
 	tgvk_handle_release(h_fragment_shader);
-}
-
-tg_fragment_shader_h tg_fragment_shader_get(const char* p_filename)
-{
-    TG_ASSERT(p_filename);
-
-	tg_fragment_shader_h h_fragment_shader = tg_shader_library_get_fragment_shader(p_filename);
-    return h_fragment_shader;
 }
 
 #endif

@@ -98,8 +98,8 @@ static void tg__init_ssao_pass(tg_renderer_h h_renderer)
     h_renderer->ssao_pass.ssao_framebuffer = tgvk_framebuffer_create(shared_render_resources.ssao_render_pass, 1, &h_renderer->ssao_pass.ssao_attachment.image_view, TG_SSAO_MAP_SIZE, TG_SSAO_MAP_SIZE);
 
     tgvk_graphics_pipeline_create_info ssao_pipeline_create_info = { 0 };
-    ssao_pipeline_create_info.p_vertex_shader = &tg_vertex_shader_get("shaders/renderer/screen_quad.vert")->shader;
-    ssao_pipeline_create_info.p_fragment_shader = &tg_fragment_shader_get("shaders/renderer/ssao.frag")->shader;
+    ssao_pipeline_create_info.p_vertex_shader = &tg_vertex_shader_create("shaders/renderer/screen_quad.vert")->shader;
+    ssao_pipeline_create_info.p_fragment_shader = &tg_fragment_shader_create("shaders/renderer/ssao.frag")->shader;
     ssao_pipeline_create_info.cull_mode = VK_CULL_MODE_NONE;
     ssao_pipeline_create_info.depth_test_enable = VK_FALSE;
     ssao_pipeline_create_info.depth_write_enable = VK_FALSE;
@@ -154,8 +154,8 @@ static void tg__init_ssao_pass(tg_renderer_h h_renderer)
     h_renderer->ssao_pass.blur_framebuffer = tgvk_framebuffer_create(shared_render_resources.ssao_blur_render_pass, 1, &h_renderer->ssao_pass.blur_attachment.image_view, TG_SSAO_MAP_SIZE, TG_SSAO_MAP_SIZE);
 
     tgvk_graphics_pipeline_create_info blur_pipeline_create_info = { 0 };
-    blur_pipeline_create_info.p_vertex_shader = &tg_vertex_shader_get("shaders/renderer/screen_quad.vert")->shader;
-    blur_pipeline_create_info.p_fragment_shader = &tg_fragment_shader_get("shaders/renderer/ssao_blur.frag")->shader;
+    blur_pipeline_create_info.p_vertex_shader = &tg_vertex_shader_create("shaders/renderer/screen_quad.vert")->shader;
+    blur_pipeline_create_info.p_fragment_shader = &tg_fragment_shader_create("shaders/renderer/ssao_blur.frag")->shader;
     blur_pipeline_create_info.cull_mode = VK_CULL_MODE_NONE;
     blur_pipeline_create_info.depth_test_enable = VK_FALSE;
     blur_pipeline_create_info.depth_write_enable = VK_FALSE;
@@ -257,8 +257,18 @@ static void tg__init_shading_pass(tg_renderer_h h_renderer)
     h_renderer->shading_pass.framebuffer = tgvk_framebuffer_create(shared_render_resources.shading_render_pass, TGVK_SHADING_ATTACHMENT_COUNT, &h_renderer->hdr_color_attachment.image_view, swapchain_extent.width, swapchain_extent.height);
 
     tgvk_graphics_pipeline_create_info graphics_pipeline_create_info = { 0 };
-    graphics_pipeline_create_info.p_vertex_shader = &tg_vertex_shader_get("shaders/renderer/screen_quad.vert")->shader;
-    graphics_pipeline_create_info.p_fragment_shader = &tg_fragment_shader_get("shaders/renderer/shading.frag")->shader;
+    graphics_pipeline_create_info.p_vertex_shader = &tg_vertex_shader_create("shaders/renderer/screen_quad.vert")->shader;
+
+    tg_file_properties file_properties = { 0 };
+    const b32 result = tg_platform_file_get_properties("shaders/renderer/shading.inc", &file_properties);
+    TG_ASSERT(result);
+
+    char* p_vertex_shader_source = TG_MEMORY_STACK_ALLOC(file_properties.size + 1);
+    tg_platform_file_read("shaders/renderer/shading.inc", file_properties.size, p_vertex_shader_source);
+    p_vertex_shader_source[file_properties.size] = '\0';
+    h_renderer->shading_pass.fragment_shader = tgvk_shader_create_from_glsl(TG_SHADER_TYPE_FRAGMENT, p_vertex_shader_source);
+
+    graphics_pipeline_create_info.p_fragment_shader = &h_renderer->shading_pass.fragment_shader;
     graphics_pipeline_create_info.cull_mode = VK_CULL_MODE_NONE;
     graphics_pipeline_create_info.depth_test_enable = VK_FALSE;
     graphics_pipeline_create_info.depth_write_enable = VK_FALSE;
@@ -269,6 +279,8 @@ static void tg__init_shading_pass(tg_renderer_h h_renderer)
     graphics_pipeline_create_info.polygon_mode = VK_POLYGON_MODE_FILL;
 
     h_renderer->shading_pass.graphics_pipeline = tgvk_pipeline_create_graphics(&graphics_pipeline_create_info);
+    TG_MEMORY_STACK_FREE(file_properties.size + 1);
+
     h_renderer->shading_pass.descriptor_set = tgvk_descriptor_set_create(&h_renderer->shading_pass.graphics_pipeline);
     for (u32 i = 0; i < TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT; i++)
     {
@@ -386,14 +398,14 @@ static void tg__init_tone_mapping_pass(tg_renderer_h h_renderer)
     tgvk_buffer_copy(exposure_sum_buffer_size, &staging_buffer, &h_renderer->tone_mapping_pass.acquire_exposure_clear_storage_buffer);
     tgvk_buffer_destroy(&staging_buffer);
 
-    h_renderer->tone_mapping_pass.acquire_exposure_compute_shader = tg_compute_shader_get("shaders/renderer/acquire_exposure.comp")->shader;
+    h_renderer->tone_mapping_pass.acquire_exposure_compute_shader = tg_compute_shader_create("shaders/renderer/acquire_exposure.comp")->shader;
     h_renderer->tone_mapping_pass.acquire_exposure_compute_pipeline = tgvk_pipeline_create_compute(&h_renderer->tone_mapping_pass.acquire_exposure_compute_shader);
     h_renderer->tone_mapping_pass.acquire_exposure_descriptor_set = tgvk_descriptor_set_create(&h_renderer->tone_mapping_pass.acquire_exposure_compute_pipeline);
     h_renderer->tone_mapping_pass.acquire_exposure_storage_buffer = tgvk_buffer_create(exposure_sum_buffer_size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 
 
-    h_renderer->tone_mapping_pass.finalize_exposure_compute_shader = tg_compute_shader_get("shaders/renderer/finalize_exposure.comp")->shader;
+    h_renderer->tone_mapping_pass.finalize_exposure_compute_shader = tg_compute_shader_create("shaders/renderer/finalize_exposure.comp")->shader;
     h_renderer->tone_mapping_pass.finalize_exposure_compute_pipeline = tgvk_pipeline_create_compute(&h_renderer->tone_mapping_pass.finalize_exposure_compute_shader);
     h_renderer->tone_mapping_pass.finalize_exposure_descriptor_set = tgvk_descriptor_set_create(&h_renderer->tone_mapping_pass.finalize_exposure_compute_pipeline);
     h_renderer->tone_mapping_pass.finalize_exposure_storage_buffer = tgvk_buffer_create(sizeof(f32), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
@@ -404,8 +416,8 @@ static void tg__init_tone_mapping_pass(tg_renderer_h h_renderer)
     h_renderer->tone_mapping_pass.adapt_exposure_framebuffer = tgvk_framebuffer_create(shared_render_resources.tone_mapping_render_pass, TGVK_SHADING_ATTACHMENT_COUNT, &h_renderer->render_target.color_attachment.image_view, swapchain_extent.width, swapchain_extent.height);
 
     tgvk_graphics_pipeline_create_info exposure_graphics_pipeline_create_info = { 0 };
-    exposure_graphics_pipeline_create_info.p_vertex_shader = &tg_vertex_shader_get("shaders/renderer/screen_quad.vert")->shader;
-    exposure_graphics_pipeline_create_info.p_fragment_shader = &tg_fragment_shader_get("shaders/renderer/adapt_exposure.frag")->shader;
+    exposure_graphics_pipeline_create_info.p_vertex_shader = &tg_vertex_shader_create("shaders/renderer/screen_quad.vert")->shader;
+    exposure_graphics_pipeline_create_info.p_fragment_shader = &tg_fragment_shader_create("shaders/renderer/adapt_exposure.frag")->shader;
     exposure_graphics_pipeline_create_info.cull_mode = VK_CULL_MODE_NONE;
     exposure_graphics_pipeline_create_info.depth_test_enable = VK_FALSE;
     exposure_graphics_pipeline_create_info.depth_write_enable = VK_FALSE;
@@ -421,14 +433,14 @@ static void tg__init_tone_mapping_pass(tg_renderer_h h_renderer)
 
 
 
-    tgvk_descriptor_set_update_image(h_renderer->tone_mapping_pass.acquire_exposure_descriptor_set.descriptor_set, &h_renderer->atmosphere_pass.model.rendering.color_attachment, 0);
+    tgvk_descriptor_set_update_image(h_renderer->tone_mapping_pass.acquire_exposure_descriptor_set.descriptor_set, &h_renderer->hdr_color_attachment, 0);
     tgvk_descriptor_set_update_storage_buffer(h_renderer->tone_mapping_pass.acquire_exposure_descriptor_set.descriptor_set, h_renderer->tone_mapping_pass.acquire_exposure_storage_buffer.buffer, 1);
 
     tgvk_descriptor_set_update_storage_buffer(h_renderer->tone_mapping_pass.finalize_exposure_descriptor_set.descriptor_set, h_renderer->tone_mapping_pass.acquire_exposure_storage_buffer.buffer, 0);
     tgvk_descriptor_set_update_storage_buffer(h_renderer->tone_mapping_pass.finalize_exposure_descriptor_set.descriptor_set, h_renderer->tone_mapping_pass.finalize_exposure_storage_buffer.buffer, 1);
     tgvk_descriptor_set_update_uniform_buffer(h_renderer->tone_mapping_pass.finalize_exposure_descriptor_set.descriptor_set, h_renderer->tone_mapping_pass.finalize_exposure_dt_ubo.buffer, 2);
 
-    tgvk_descriptor_set_update_image(h_renderer->tone_mapping_pass.adapt_exposure_descriptor_set.descriptor_set, &h_renderer->atmosphere_pass.model.rendering.color_attachment, 0);
+    tgvk_descriptor_set_update_image(h_renderer->tone_mapping_pass.adapt_exposure_descriptor_set.descriptor_set, &h_renderer->hdr_color_attachment, 0);
     tgvk_descriptor_set_update_storage_buffer(h_renderer->tone_mapping_pass.adapt_exposure_descriptor_set.descriptor_set, h_renderer->tone_mapping_pass.finalize_exposure_storage_buffer.buffer, 1);
 
     tgvk_command_buffer_begin(&h_renderer->tone_mapping_pass.adapt_exposure_command_buffer, 0);
@@ -437,7 +449,7 @@ static void tg__init_tone_mapping_pass(tg_renderer_h h_renderer)
 
         tgvk_cmd_transition_image_layout(
             &h_renderer->tone_mapping_pass.adapt_exposure_command_buffer,
-            &h_renderer->atmosphere_pass.model.rendering.color_attachment,
+            &h_renderer->hdr_color_attachment,
             VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
             VK_ACCESS_SHADER_READ_BIT,
             VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
@@ -474,7 +486,7 @@ static void tg__init_tone_mapping_pass(tg_renderer_h h_renderer)
 
         tgvk_cmd_transition_image_layout(
             &h_renderer->tone_mapping_pass.adapt_exposure_command_buffer,
-            &h_renderer->atmosphere_pass.model.rendering.color_attachment,
+            &h_renderer->hdr_color_attachment,
             VK_ACCESS_SHADER_READ_BIT,
             VK_ACCESS_SHADER_READ_BIT,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
@@ -497,7 +509,7 @@ static void tg__init_tone_mapping_pass(tg_renderer_h h_renderer)
 
         tgvk_cmd_transition_image_layout(
             &h_renderer->tone_mapping_pass.adapt_exposure_command_buffer,
-            &h_renderer->atmosphere_pass.model.rendering.color_attachment,
+            &h_renderer->hdr_color_attachment,
             VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
@@ -675,8 +687,8 @@ static void tg__init_present_pass(tg_renderer_h h_renderer)
     }
 
     tgvk_graphics_pipeline_create_info graphics_pipeline_create_info = { 0 };
-    graphics_pipeline_create_info.p_vertex_shader = &tg_vertex_shader_get("shaders/renderer/screen_quad.vert")->shader;
-    graphics_pipeline_create_info.p_fragment_shader = &tg_fragment_shader_get("shaders/renderer/present.frag")->shader;
+    graphics_pipeline_create_info.p_vertex_shader = &tg_vertex_shader_create("shaders/renderer/screen_quad.vert")->shader;
+    graphics_pipeline_create_info.p_fragment_shader = &tg_fragment_shader_create("shaders/renderer/present.frag")->shader;
     graphics_pipeline_create_info.cull_mode = VK_CULL_MODE_NONE;
     graphics_pipeline_create_info.depth_test_enable = VK_FALSE;
     graphics_pipeline_create_info.depth_write_enable = VK_FALSE;
@@ -844,8 +856,8 @@ void tg_renderer_init_shared_resources(void)
         shared_render_resources.shadow_render_pass = tgvk_render_pass_create(&attachment_description, &subpass_description);
 
         tgvk_graphics_pipeline_create_info pipeline_create_info = { 0 };
-        pipeline_create_info.p_vertex_shader = &tg_vertex_shader_get("shaders/shadow.vert")->shader;
-        pipeline_create_info.p_fragment_shader = &tg_fragment_shader_get("shaders/shadow.frag")->shader;
+        pipeline_create_info.p_vertex_shader = &tg_vertex_shader_create("shaders/shadow.vert")->shader;
+        pipeline_create_info.p_fragment_shader = &tg_fragment_shader_create("shaders/shadow.frag")->shader;
         pipeline_create_info.cull_mode = VK_CULL_MODE_BACK_BIT;
         pipeline_create_info.depth_test_enable = TG_TRUE;
         pipeline_create_info.depth_write_enable = TG_TRUE;
@@ -1182,12 +1194,12 @@ tg_renderer_h tg_renderer_create(tg_camera* p_camera)
 
     h_renderer->semaphore = tgvk_semaphore_create();
 
+    tgvk_atmosphere_model_create(&h_renderer->hdr_color_attachment, &h_renderer->render_target.depth_attachment, &h_renderer->atmosphere_pass.model);
     tg__init_shadow_pass(h_renderer);
     tg__init_geometry_pass(h_renderer);
     tg__init_ssao_pass(h_renderer);
     tg__init_shading_pass(h_renderer);
     tg__init_forward_pass(h_renderer);
-    tgvk_atmosphere_model_create(&h_renderer->hdr_color_attachment, &h_renderer->render_target.depth_attachment, &h_renderer->atmosphere_pass.model);
     tg__init_tone_mapping_pass(h_renderer);
     tg__init_blit_pass(h_renderer);
     tg__init_clear_pass(h_renderer);
@@ -1262,6 +1274,8 @@ void tg_renderer_destroy(tg_renderer_h h_renderer)
     TG_INVALID_CODEPATH();
 #endif
 
+    tgvk_atmosphere_model_destroy(&h_renderer->atmosphere_pass.model);
+
     tgvk_command_buffer_destroy(&h_renderer->clear_pass.command_buffer);
 
     tgvk_command_buffers_destroy(TG_MAX_SWAPCHAIN_IMAGES, h_renderer->present_pass.p_command_buffers);
@@ -1292,6 +1306,7 @@ void tg_renderer_destroy(tg_renderer_h h_renderer)
     tgvk_command_buffer_destroy(&h_renderer->shading_pass.command_buffer);
     tgvk_descriptor_set_destroy(&h_renderer->shading_pass.descriptor_set);
     tgvk_pipeline_destroy(&h_renderer->shading_pass.graphics_pipeline);
+    tgvk_shader_destroy(&h_renderer->shading_pass.fragment_shader);
     tgvk_framebuffer_destroy(&h_renderer->shading_pass.framebuffer);
 
     tgvk_command_buffer_destroy(&h_renderer->ssao_pass.command_buffer);
@@ -1429,22 +1444,20 @@ void tg_renderer_end(tg_renderer_h h_renderer, f32 dt, b32 present)
 {
     TG_ASSERT(h_renderer);
     
-    const tg_camera* p_cam = h_renderer->p_camera;
-    TGVK_CAMERA_VIEW(h_renderer->view_projection_ubo) = tgm_m4_mul(tgm_m4_inverse(tgm_m4_euler(p_cam->pitch, p_cam->yaw, p_cam->roll)), tgm_m4_translate(tgm_v3_neg(p_cam->position)));
-    if (h_renderer->p_camera->type == TG_CAMERA_TYPE_ORTHOGRAPHIC)
-    {
-        TGVK_CAMERA_PROJ(h_renderer->view_projection_ubo) = tgm_m4_orthographic(p_cam->ortho.l, p_cam->ortho.r, p_cam->ortho.b, p_cam->ortho.t, p_cam->ortho.f, p_cam->ortho.n);
-    }
-    else
-    {
-        TGVK_CAMERA_PROJ(h_renderer->view_projection_ubo) = tgm_m4_perspective(p_cam->persp.fov_y_in_radians, p_cam->persp.aspect, p_cam->persp.n, p_cam->persp.f);
-    }
+    const tg_camera* p_camera = h_renderer->p_camera;
+    const m4 view = tgm_m4_mul(tgm_m4_inverse(tgm_m4_euler(p_camera->pitch, p_camera->yaw, p_camera->roll)), tgm_m4_translate(tgm_v3_neg(p_camera->position)));
+    const m4 proj = p_camera->type == TG_CAMERA_TYPE_ORTHOGRAPHIC
+        ? tgm_m4_orthographic(p_camera->ortho.l, p_camera->ortho.r, p_camera->ortho.b, p_camera->ortho.t, p_camera->ortho.f, p_camera->ortho.n)
+        : tgm_m4_perspective(p_camera->persp.fov_y_in_radians, p_camera->persp.aspect, p_camera->persp.n, p_camera->persp.f);
 
-    ((tg_ssao_info*)h_renderer->ssao_pass.ssao_ubo.memory.p_mapped_device_memory)->view = TGVK_CAMERA_VIEW(h_renderer->view_projection_ubo);
-    ((tg_ssao_info*)h_renderer->ssao_pass.ssao_ubo.memory.p_mapped_device_memory)->projection = TGVK_CAMERA_PROJ(h_renderer->view_projection_ubo);
+    TGVK_CAMERA_VIEW(h_renderer->view_projection_ubo) = view;
+    TGVK_CAMERA_PROJ(h_renderer->view_projection_ubo) = proj;
+
+    ((tg_ssao_info*)h_renderer->ssao_pass.ssao_ubo.memory.p_mapped_device_memory)->view = view;
+    ((tg_ssao_info*)h_renderer->ssao_pass.ssao_ubo.memory.p_mapped_device_memory)->projection = proj;
 
     tg_shading_info* p_shading_info = (tg_shading_info*)h_renderer->shading_pass.shading_info_ubo.memory.p_mapped_device_memory;
-    p_shading_info->camera_position = h_renderer->p_camera->position;
+    p_shading_info->camera_position = p_camera->position;
 
     VkCommandBufferBeginInfo command_buffer_begin_info = { 0 };
     command_buffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -1474,7 +1487,7 @@ void tg_renderer_end(tg_renderer_h h_renderer, f32 dt, b32 present)
                     {  1.0f, -1.0f,  1.0f,  1.0f }
                 };
 
-                const m4 ivp = TGVK_INV_VIEW_PROJ(TGVK_CAMERA_PROJ(h_renderer->view_projection_ubo), TGVK_CAMERA_VIEW(h_renderer->view_projection_ubo));
+                const m4 ivp = TGVK_INV_VIEW_PROJ(proj, view);
                 v3 p_corners_ws[8] = { 0 };
                 for (u8 j = 0; j < 8; j++)
                 {
@@ -1665,6 +1678,10 @@ void tg_renderer_end(tg_renderer_h h_renderer, f32 dt, b32 present)
     forward_submit_info.pSignalSemaphores = &h_renderer->semaphore;
 
     tgvk_queue_submit(TGVK_QUEUE_TYPE_GRAPHICS, 1, &forward_submit_info, VK_NULL_HANDLE);
+
+    TG_ASSERT(p_shading_info->directional_light_count);
+    const v3 sun_direction = p_shading_info->p_directional_light_directions[0].xyz;
+    tgvk_atmosphere_model_update(&h_renderer->atmosphere_pass.model, sun_direction, tgm_m4_inverse(view), tgm_m4_inverse(proj));
 
     const VkPipelineStageFlags atmosphere_pipeline_stage_flags = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     VkSubmitInfo atmosphere_submit_info = { 0 };
@@ -1911,8 +1928,8 @@ void tg_renderer_draw_cube_DEBUG(tg_renderer_h h_renderer, v3 position, v3 scale
         const VkBool32 blend_enable = VK_TRUE;
 
         tgvk_graphics_pipeline_create_info graphics_pipeline_create_info = { 0 };
-        graphics_pipeline_create_info.p_vertex_shader = &tg_vertex_shader_get("shaders/renderer/debug/forward.vert")->shader;
-        graphics_pipeline_create_info.p_fragment_shader = &tg_fragment_shader_get("shaders/renderer/debug/forward.frag")->shader;
+        graphics_pipeline_create_info.p_vertex_shader = &tg_vertex_shader_create("shaders/renderer/debug/forward.vert")->shader;
+        graphics_pipeline_create_info.p_fragment_shader = &tg_fragment_shader_create("shaders/renderer/debug/forward.frag")->shader;
         graphics_pipeline_create_info.cull_mode = VK_CULL_MODE_NONE;
         graphics_pipeline_create_info.depth_test_enable = TG_TRUE;
         graphics_pipeline_create_info.depth_write_enable = TG_TRUE;

@@ -24,8 +24,8 @@ void tg_voxelizer_create(tg_voxelizer* p_voxelizer)
     p_voxelizer->framebuffer = tgvk_framebuffer_create(p_voxelizer->render_pass, 0, TG_NULL, TG_SVO_DIMS, TG_SVO_DIMS);
 
     tgvk_graphics_pipeline_create_info graphics_pipeline_create_info = { 0 };
-    graphics_pipeline_create_info.p_vertex_shader = &tg_vertex_shader_get("shaders/voxelize.vert")->shader;
-    graphics_pipeline_create_info.p_fragment_shader = &tg_fragment_shader_get("shaders/voxelize.frag")->shader;
+    graphics_pipeline_create_info.p_vertex_shader = &tg_vertex_shader_create("shaders/voxelize.vert")->shader;
+    graphics_pipeline_create_info.p_fragment_shader = &tg_fragment_shader_create("shaders/voxelize.frag")->shader;
     graphics_pipeline_create_info.cull_mode = VK_CULL_MODE_NONE;
     graphics_pipeline_create_info.depth_test_enable = VK_FALSE;
     graphics_pipeline_create_info.depth_write_enable = VK_FALSE;

@@ -71,7 +71,6 @@ static const char p_atmosphere_demo_fragment_shader[] =
 	"};\r\n"
 	"\r\n"
 	"layout(set = 0, binding = 6) uniform sampler2D depth_attachment;\r\n"
-	"layout(set = 0, binding = 7) uniform sampler2D color_attachment;\r\n"
 	"\r\n"
 	"layout(location = 0) out vec4 color;\r\n"
 	"\r\n"
@@ -99,10 +98,11 @@ static const char p_atmosphere_demo_fragment_shader[] =
 	"        }\r\n"
 	"        color.rgb = pow(vec3(1.0) - exp(-radiance / white_point.xyz * exposure), vec3(1.0 / 2.2));\r\n"
 	"        color.a = 1.0;\r\n"
+	"        //color = vec4(radiance, 1.0);\r\n"
 	"    }\r\n"
 	"    else\r\n"
 	"    {\r\n"
-	"        color = texture(color_attachment, v_uv);\r\n"
+	"        color = vec4(0.0);\r\n"
 	"    }\r\n"
 	"}\r\n";
 

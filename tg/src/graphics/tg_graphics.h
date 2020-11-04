@@ -219,11 +219,10 @@ tg_storage_image_3d_h    tg_storage_image_3d_create(u32 width, u32 height, u32 d
 void                     tg_storage_image_3d_destroy(tg_storage_image_3d_h h_storage_image_3d);
 void                     tg_storage_image_3d_set_data(tg_storage_image_3d_h h_storage_image_3d, void* p_data);
 
-void                     tg_compute_shader_bind_input(tg_compute_shader_h h_compute_shader, u32 first_handle_index, u32 handle_count, tg_handle* p_handles);
 tg_compute_shader_h      tg_compute_shader_create(const char* filename);
-void                     tg_compute_shader_dispatch(tg_compute_shader_h h_compute_shader, u32 group_count_x, u32 group_count_y, u32 group_count_z);
 void                     tg_compute_shader_destroy(tg_compute_shader_h h_compute_shader);
-tg_compute_shader_h      tg_compute_shader_get(const char* filename);
+void                     tg_compute_shader_bind_input(tg_compute_shader_h h_compute_shader, u32 first_handle_index, u32 handle_count, tg_handle* p_handles);
+void                     tg_compute_shader_dispatch(tg_compute_shader_h h_compute_shader, u32 group_count_x, u32 group_count_y, u32 group_count_z);
 
 tg_cube_map_h            tg_cube_map_create(u32 dimension, tg_color_image_format format, const tg_sampler_create_info* p_sampler_create_info);
 void                     tg_cube_map_destroy(tg_cube_map_h h_cube_map);
@@ -234,7 +233,6 @@ void                     tg_depth_image_destroy(tg_depth_image_h h_depth_image);
 
 tg_fragment_shader_h     tg_fragment_shader_create(const char* p_filename);
 void                     tg_fragment_shader_destroy(tg_fragment_shader_h h_fragment_shader);
-tg_fragment_shader_h     tg_fragment_shader_get(const char* p_filename);
 
 tg_material_h            tg_material_create_deferred(tg_vertex_shader_h h_vertex_shader, tg_fragment_shader_h h_fragment_shader);
 tg_material_h            tg_material_create_forward(tg_vertex_shader_h h_vertex_shader, tg_fragment_shader_h h_fragment_shader);
@@ -312,6 +310,5 @@ u32                      tg_vertex_input_attribute_format_get_size(tg_vertex_inp
 
 tg_vertex_shader_h       tg_vertex_shader_create(const char* p_filename);
 void                     tg_vertex_shader_destroy(tg_vertex_shader_h h_vertex_shader);
-tg_vertex_shader_h       tg_vertex_shader_get(const char* p_filename);
 
 #endif

@@ -23,5 +23,7 @@ void main()
 	);
 
 	atomicAdd(u_count, 1);
-	atomicAdd(u_exposure_sum, uint(length(texture(u_shaded_image, uv).xyz) * 255.0));
+	vec3 color = min(vec3(100.0), texture(u_shaded_image, uv).xyz);
+	uint exposure = uint(length(color) * 255.0);
+	atomicAdd(u_exposure_sum, exposure);
 }
