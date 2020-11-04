@@ -474,10 +474,6 @@ static void tg__precompute(tgvk_atmosphere_model* p_model, VkFormat layered_imag
 	p_model->api_shader.capacity = 1 << 16;
 	p_model->api_shader.header_count = 0;
 	p_model->api_shader.total_count = 0;
-	if (!p_model->api_shader.p_source)
-	{
-		p_model->api_shader.p_source = TG_MEMORY_ALLOC(p_model->api_shader.capacity);
-	}
 	p_model->api_shader.header_count = tg__glsl_header_factory(p_model, p_model->api_shader.capacity, p_model->api_shader.p_source);
 	p_model->api_shader.total_count = p_model->api_shader.header_count;
 	p_model->api_shader.total_count += tg_strcpy_no_nul(p_model->api_shader.capacity - p_model->api_shader.total_count, &p_model->api_shader.p_source[p_model->api_shader.total_count], "\r\n");
@@ -1086,6 +1082,8 @@ void tgvk_atmosphere_model_create(tgvk_image* p_color_attachment, tgvk_image* p_
 
 
 
+	p_model->api_shader.capacity = 1 << 16;
+	p_model->api_shader.p_source = TG_MEMORY_ALLOC(p_model->api_shader.capacity);
 	tg__precompute(p_model, layered_image_format);
 
 
@@ -1107,17 +1105,8 @@ void tgvk_atmosphere_model_create(tgvk_image* p_color_attachment, tgvk_image* p_
 	p_model->rendering.fragment_shader_ubo = tgvk_buffer_create(6 * sizeof(v4), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
 	p_model->rendering.descriptor_set = tgvk_descriptor_set_create(&p_model->rendering.graphics_pipeline);
-	tgvk_descriptor_set_update_image(p_model->rendering.descriptor_set.descriptor_set, &p_model->rendering.transmittance_texture, 0);
-	tgvk_descriptor_set_update_layered_image(p_model->rendering.descriptor_set.descriptor_set, &p_model->rendering.scattering_texture, 1);
-	if (p_model->rendering.optional_single_mie_scattering_texture.image)
-	{
-		tgvk_descriptor_set_update_layered_image(p_model->rendering.descriptor_set.descriptor_set, &p_model->rendering.optional_single_mie_scattering_texture, 2);
-	}
-	else
-	{
-		tgvk_descriptor_set_update_layered_image(p_model->rendering.descriptor_set.descriptor_set, &p_model->rendering.no_single_mie_scattering_black_texture, 2);
-	}
-	tgvk_descriptor_set_update_image(p_model->rendering.descriptor_set.descriptor_set, &p_model->rendering.irradiance_texture, 3);
+
+	tgvk_atmosphere_model_update_descriptor_set(p_model, &p_model->rendering.descriptor_set);
 	tgvk_descriptor_set_update_uniform_buffer(p_model->rendering.descriptor_set.descriptor_set, p_model->rendering.vertex_shader_ubo.buffer, 4);
 	tgvk_descriptor_set_update_uniform_buffer(p_model->rendering.descriptor_set.descriptor_set, p_model->rendering.fragment_shader_ubo.buffer, 5);
 	tgvk_descriptor_set_update_image(p_model->rendering.descriptor_set.descriptor_set, p_depth_attachment, 6);
@@ -1163,7 +1152,7 @@ void tgvk_atmosphere_model_create(tgvk_image* p_color_attachment, tgvk_image* p_
 			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
 		);
-		if (p_model->rendering.optional_single_mie_scattering_texture.image)
+		if (!p_model->settings.combine_scattering_textures)
 		{
 			tgvk_cmd_transition_layered_image_layout(
 				&p_model->rendering.command_buffer,
@@ -1275,6 +1264,21 @@ void tgvk_atmosphere_model_destroy(tgvk_atmosphere_model* p_model)
 	}
 	tgvk_layered_image_destroy(&p_model->rendering.scattering_texture);
 	tgvk_image_destroy(&p_model->rendering.transmittance_texture);
+}
+
+void tgvk_atmosphere_model_update_descriptor_set(tgvk_atmosphere_model* p_model, tgvk_descriptor_set* p_descriptor_set)
+{
+	tgvk_descriptor_set_update_image(p_descriptor_set->descriptor_set, &p_model->rendering.transmittance_texture, 0);
+	tgvk_descriptor_set_update_layered_image(p_descriptor_set->descriptor_set, &p_model->rendering.scattering_texture, 1);
+	if (p_model->settings.combine_scattering_textures)
+	{
+		tgvk_descriptor_set_update_layered_image(p_descriptor_set->descriptor_set, &p_model->rendering.no_single_mie_scattering_black_texture, 2);
+	}
+	else
+	{
+		tgvk_descriptor_set_update_layered_image(p_descriptor_set->descriptor_set, &p_model->rendering.optional_single_mie_scattering_texture, 2);
+	}
+	tgvk_descriptor_set_update_image(p_descriptor_set->descriptor_set, &p_model->rendering.irradiance_texture, 3);
 }
 
 void tgvk_atmosphere_model_update(tgvk_atmosphere_model* p_model, v3 sun_direction, m4 inv_view, m4 inv_proj)

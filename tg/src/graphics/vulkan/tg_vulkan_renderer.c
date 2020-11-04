@@ -3,6 +3,7 @@
 #ifdef TG_VULKAN
 
 #include "graphics/tg_image_io.h"
+#include "util/tg_string.h"
 
 
 
@@ -248,8 +249,8 @@ static void tg__init_shading_pass(tg_renderer_h h_renderer)
 {
     TG_ASSERT(h_renderer);
 
-    h_renderer->shading_pass.shading_info_ubo = tgvk_buffer_create(sizeof(tg_shading_info), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-    tg_shading_info* p_shading_info = h_renderer->shading_pass.shading_info_ubo.memory.p_mapped_device_memory;
+    h_renderer->shading_pass.fragment_shader_ubo = tgvk_buffer_create(sizeof(tg_shading_info), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+    tg_shading_info* p_shading_info = h_renderer->shading_pass.fragment_shader_ubo.memory.p_mapped_device_memory;
     p_shading_info->directional_light_count = 0;
     p_shading_info->point_light_count = 0;
 
@@ -257,16 +258,20 @@ static void tg__init_shading_pass(tg_renderer_h h_renderer)
     h_renderer->shading_pass.framebuffer = tgvk_framebuffer_create(shared_render_resources.shading_render_pass, TGVK_SHADING_ATTACHMENT_COUNT, &h_renderer->hdr_color_attachment.image_view, swapchain_extent.width, swapchain_extent.height);
 
     tgvk_graphics_pipeline_create_info graphics_pipeline_create_info = { 0 };
-    graphics_pipeline_create_info.p_vertex_shader = &tg_vertex_shader_create("shaders/renderer/screen_quad.vert")->shader;
+    graphics_pipeline_create_info.p_vertex_shader = &tg_vertex_shader_create("shaders/renderer/shading.vert")->shader;
 
     tg_file_properties file_properties = { 0 };
     const b32 result = tg_platform_file_get_properties("shaders/renderer/shading.inc", &file_properties);
     TG_ASSERT(result);
 
-    char* p_vertex_shader_source = TG_MEMORY_STACK_ALLOC(file_properties.size + 1);
-    tg_platform_file_read("shaders/renderer/shading.inc", file_properties.size, p_vertex_shader_source);
-    p_vertex_shader_source[file_properties.size] = '\0';
-    h_renderer->shading_pass.fragment_shader = tgvk_shader_create_from_glsl(TG_SHADER_TYPE_FRAGMENT, p_vertex_shader_source);
+    const u32 api_shader_size = h_renderer->atmosphere_pass.model.api_shader.total_count;
+    const u32 fragment_shader_buffer_size = (u32)api_shader_size + (u32)file_properties.size + 1;
+    char* p_fragment_shader_buffer = TG_MEMORY_STACK_ALLOC((u64)fragment_shader_buffer_size);
+    const u32 fragment_shader_buffer_offset = tg_strncpy(fragment_shader_buffer_size, p_fragment_shader_buffer, api_shader_size, h_renderer->atmosphere_pass.model.api_shader.p_source);
+
+    tg_platform_file_read("shaders/renderer/shading.inc", fragment_shader_buffer_size - fragment_shader_buffer_offset, &p_fragment_shader_buffer[fragment_shader_buffer_offset]);
+    p_fragment_shader_buffer[fragment_shader_buffer_size - 1] = '\0';
+    h_renderer->shading_pass.fragment_shader = tgvk_shader_create_from_glsl(TG_SHADER_TYPE_FRAGMENT, p_fragment_shader_buffer);
 
     graphics_pipeline_create_info.p_fragment_shader = &h_renderer->shading_pass.fragment_shader;
     graphics_pipeline_create_info.cull_mode = VK_CULL_MODE_NONE;
@@ -279,20 +284,24 @@ static void tg__init_shading_pass(tg_renderer_h h_renderer)
     graphics_pipeline_create_info.polygon_mode = VK_POLYGON_MODE_FILL;
 
     h_renderer->shading_pass.graphics_pipeline = tgvk_pipeline_create_graphics(&graphics_pipeline_create_info);
-    TG_MEMORY_STACK_FREE(file_properties.size + 1);
+    TG_MEMORY_STACK_FREE((u64)fragment_shader_buffer_size);
 
     h_renderer->shading_pass.descriptor_set = tgvk_descriptor_set_create(&h_renderer->shading_pass.graphics_pipeline);
+    tgvk_atmosphere_model_update_descriptor_set(&h_renderer->atmosphere_pass.model, &h_renderer->shading_pass.descriptor_set);
+    const u32 atmosphere_binding_offset = 4;
     for (u32 i = 0; i < TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT; i++)
     {
-        tgvk_descriptor_set_update_image(h_renderer->shading_pass.descriptor_set.descriptor_set, &h_renderer->geometry_pass.p_color_attachments[i], i);
+        tgvk_descriptor_set_update_image(h_renderer->shading_pass.descriptor_set.descriptor_set, &h_renderer->geometry_pass.p_color_attachments[i], atmosphere_binding_offset + i);
     }
 
-    tgvk_descriptor_set_update_uniform_buffer(h_renderer->shading_pass.descriptor_set.descriptor_set, h_renderer->shading_pass.shading_info_ubo.buffer, TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT);
+    tgvk_descriptor_set_update_uniform_buffer(h_renderer->shading_pass.descriptor_set.descriptor_set, h_renderer->shading_pass.fragment_shader_ubo.buffer, atmosphere_binding_offset + TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT);
     for (u32 i = 0; i < TG_CASCADED_SHADOW_MAPS; i++)
     {
-        tgvk_descriptor_set_update_image_array(h_renderer->shading_pass.descriptor_set.descriptor_set, &h_renderer->shadow_pass.p_shadow_maps[i], TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT + 1, i);
+        tgvk_descriptor_set_update_image_array(h_renderer->shading_pass.descriptor_set.descriptor_set, &h_renderer->shadow_pass.p_shadow_maps[i], atmosphere_binding_offset + TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT + 1, i);
     }
-    tgvk_descriptor_set_update_image(h_renderer->shading_pass.descriptor_set.descriptor_set, &h_renderer->ssao_pass.blur_attachment, TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT + 2);
+    tgvk_descriptor_set_update_image(h_renderer->shading_pass.descriptor_set.descriptor_set, &h_renderer->ssao_pass.blur_attachment, atmosphere_binding_offset + TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT + 2);
+    tgvk_descriptor_set_update_uniform_buffer(h_renderer->shading_pass.descriptor_set.descriptor_set, h_renderer->atmosphere_pass.model.rendering.fragment_shader_ubo.buffer, 11);
+    tgvk_descriptor_set_update_uniform_buffer(h_renderer->shading_pass.descriptor_set.descriptor_set, h_renderer->atmosphere_pass.model.rendering.vertex_shader_ubo.buffer, 12);
 
     tgvk_command_buffer_begin(&h_renderer->shading_pass.command_buffer, 0);
     {
@@ -1302,7 +1311,7 @@ void tg_renderer_destroy(tg_renderer_h h_renderer)
     tgvk_command_buffer_destroy(&h_renderer->forward_pass.command_buffer);
     tgvk_framebuffer_destroy(&h_renderer->forward_pass.framebuffer);
 
-    tgvk_buffer_destroy(&h_renderer->shading_pass.shading_info_ubo);
+    tgvk_buffer_destroy(&h_renderer->shading_pass.fragment_shader_ubo);
     tgvk_command_buffer_destroy(&h_renderer->shading_pass.command_buffer);
     tgvk_descriptor_set_destroy(&h_renderer->shading_pass.descriptor_set);
     tgvk_pipeline_destroy(&h_renderer->shading_pass.graphics_pipeline);
@@ -1367,7 +1376,7 @@ void tg_renderer_push_directional_light(tg_renderer_h h_renderer, v3 direction, 
     TG_ASSERT(h_renderer && tgm_v3_mag(direction) && tgm_v3_mag(color));
 
     // TODO: forward renderer
-    tg_shading_info* p_light_setup = (tg_shading_info*)h_renderer->shading_pass.shading_info_ubo.memory.p_mapped_device_memory;
+    tg_shading_info* p_light_setup = (tg_shading_info*)h_renderer->shading_pass.fragment_shader_ubo.memory.p_mapped_device_memory;
 
     p_light_setup->p_directional_light_directions[p_light_setup->directional_light_count].x = direction.x;
     p_light_setup->p_directional_light_directions[p_light_setup->directional_light_count].y = direction.y;
@@ -1387,7 +1396,7 @@ void tg_renderer_push_point_light(tg_renderer_h h_renderer, v3 position, v3 colo
     TG_ASSERT(h_renderer && tgm_v3_mag(color));
 
     // TODO: forward renderer
-    tg_shading_info* p_light_setup = (tg_shading_info*)h_renderer->shading_pass.shading_info_ubo.memory.p_mapped_device_memory;
+    tg_shading_info* p_light_setup = (tg_shading_info*)h_renderer->shading_pass.fragment_shader_ubo.memory.p_mapped_device_memory;
 
     p_light_setup->p_point_light_positions[p_light_setup->point_light_count].x = position.x;
     p_light_setup->p_point_light_positions[p_light_setup->point_light_count].y = position.y;
@@ -1456,7 +1465,7 @@ void tg_renderer_end(tg_renderer_h h_renderer, f32 dt, b32 present)
     ((tg_ssao_info*)h_renderer->ssao_pass.ssao_ubo.memory.p_mapped_device_memory)->view = view;
     ((tg_ssao_info*)h_renderer->ssao_pass.ssao_ubo.memory.p_mapped_device_memory)->projection = proj;
 
-    tg_shading_info* p_shading_info = (tg_shading_info*)h_renderer->shading_pass.shading_info_ubo.memory.p_mapped_device_memory;
+    tg_shading_info* p_shading_info = (tg_shading_info*)h_renderer->shading_pass.fragment_shader_ubo.memory.p_mapped_device_memory;
     p_shading_info->camera_position = p_camera->position;
 
     VkCommandBufferBeginInfo command_buffer_begin_info = { 0 };
@@ -1533,7 +1542,7 @@ void tg_renderer_end(tg_renderer_h h_renderer, f32 dt, b32 present)
                 p_shading_info->p_lightspace_matrices[i] = *(m4*)h_renderer->shadow_pass.p_lightspace_ubos[i].memory.p_mapped_device_memory;
             }
 
-            tgvk_buffer_flush_host_to_device(&h_renderer->shading_pass.shading_info_ubo);
+            tgvk_buffer_flush_host_to_device(&h_renderer->shading_pass.fragment_shader_ubo);
         }
         TGVK_CALL(vkEndCommandBuffer(h_renderer->shadow_pass.command_buffer.command_buffer));
 
@@ -1552,7 +1561,7 @@ void tg_renderer_end(tg_renderer_h h_renderer, f32 dt, b32 present)
     }
     else
     {
-        tgvk_buffer_flush_host_to_device(&h_renderer->shading_pass.shading_info_ubo);
+        tgvk_buffer_flush_host_to_device(&h_renderer->shading_pass.fragment_shader_ubo);
     }
 
 
@@ -1695,7 +1704,7 @@ void tg_renderer_end(tg_renderer_h h_renderer, f32 dt, b32 present)
     atmosphere_submit_info.signalSemaphoreCount = 1;
     atmosphere_submit_info.pSignalSemaphores = &h_renderer->semaphore;
 
-    tgvk_queue_submit(TGVK_QUEUE_TYPE_GRAPHICS, 1, &atmosphere_submit_info, VK_NULL_HANDLE);
+    //tgvk_queue_submit(TGVK_QUEUE_TYPE_GRAPHICS, 1, &atmosphere_submit_info, VK_NULL_HANDLE);
 
     VkSubmitInfo tone_mapping_submit_info = { 0 };
     tone_mapping_submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -1788,7 +1797,7 @@ void tg_renderer_clear(tg_renderer_h h_renderer)
     tgvk_queue_submit(TGVK_QUEUE_TYPE_GRAPHICS, 1, &submit_info, h_renderer->render_target.fence);
 
     // TODO: forward renderer
-    tg_shading_info* p_light_setup = (tg_shading_info*)h_renderer->shading_pass.shading_info_ubo.memory.p_mapped_device_memory;
+    tg_shading_info* p_light_setup = (tg_shading_info*)h_renderer->shading_pass.fragment_shader_ubo.memory.p_mapped_device_memory;
 
     p_light_setup->directional_light_count = 0;
     p_light_setup->point_light_count = 0;

@@ -23,8 +23,8 @@
 #define TG_MAX_VERTEX_SHADERS             32
 
 #define TG_MAX_SHADER_ATTACHMENTS         8
-#define TG_MAX_SHADER_GLOBAL_RESOURCES    32
-#define TG_MAX_SHADER_INPUTS              32
+#define TG_MAX_SHADER_GLOBAL_RESOURCES    16
+#define TG_MAX_SHADER_INPUTS              16
 #define TG_SHADER_RESERVED_BINDINGS       2
 
 #define TG_CASCADED_SHADOW_MAPS           4

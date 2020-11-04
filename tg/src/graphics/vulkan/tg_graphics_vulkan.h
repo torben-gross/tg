@@ -475,7 +475,7 @@ typedef struct tg_renderer
         tgvk_pipeline            graphics_pipeline;
         tgvk_descriptor_set      descriptor_set;
         tgvk_command_buffer      command_buffer;
-        tgvk_buffer              shading_info_ubo;
+        tgvk_buffer              fragment_shader_ubo;
     } shading_pass;
 
     struct
@@ -563,6 +563,7 @@ tgvk_shared_render_resources    shared_render_resources;
 
 void                    tgvk_atmosphere_model_create(tgvk_image* p_color_attachment, tgvk_image* p_depth_attachment, TG_OUT tgvk_atmosphere_model* p_model);
 void                    tgvk_atmosphere_model_destroy(tgvk_atmosphere_model* p_model);
+void                    tgvk_atmosphere_model_update_descriptor_set(tgvk_atmosphere_model* p_model, tgvk_descriptor_set* p_descriptor_set);
 void                    tgvk_atmosphere_model_update(tgvk_atmosphere_model* p_model, v3 sun_direction, m4 inv_view, m4 inv_proj);
 
 void                    tgvk_buffer_copy(VkDeviceSize size, tgvk_buffer* p_src, tgvk_buffer* p_dst);

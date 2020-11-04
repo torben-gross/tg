@@ -1,5 +1,3 @@
-#version 450
-
 #define TG_CASCADED_SHADOW_MAPS          4
 #define TG_CASCADED_SHADOW_MAP_SIZE      1024
 #define TG_CASCADED_SHADOW_MAP_SIZE_F    1024.0
@@ -12,15 +10,16 @@
 
 
 layout(location = 0) in vec2 v_uv;
+layout(location = 1) in vec3 v_view_ray;
 
 
 
-layout(set = 0, binding = 0) uniform sampler2D u_position;
-layout(set = 0, binding = 1) uniform sampler2D u_normal;
-layout(set = 0, binding = 2) uniform sampler2D u_albedo;
-layout(set = 0, binding = 3) uniform sampler2D u_metallic_roughness_ao;
+layout(set = 0, binding = 4) uniform sampler2D u_position;
+layout(set = 0, binding = 5) uniform sampler2D u_normal;
+layout(set = 0, binding = 6) uniform sampler2D u_albedo;
+layout(set = 0, binding = 7) uniform sampler2D u_metallic_roughness_ao;
 
-layout(set = 0, binding = 4) uniform render_info
+layout(set = 0, binding = 8) uniform ubo
 {
     vec3                                       u_camera_position;
     uint                                       u_directional_light_count;
@@ -33,8 +32,21 @@ layout(set = 0, binding = 4) uniform render_info
     vec4[(TG_CASCADED_SHADOW_MAPS + 3) / 4]    u_shadow_distances;
 };
 
-layout(set = 0, binding = 5) uniform sampler2D[TG_CASCADED_SHADOW_MAPS] u_shadow_maps;
-layout(set = 0, binding = 6) uniform sampler2D u_ssao;
+layout(set = 0, binding = 9) uniform sampler2D[TG_CASCADED_SHADOW_MAPS] u_shadow_maps;
+layout(set = 0, binding = 10) uniform sampler2D u_ssao;
+
+layout(set = 0, binding = 11) uniform atmosphere_ubo
+{
+    vec4 camera;
+    float exposure;
+    float pad0;
+    float pad1;
+    float pad2;
+    vec4 white_point;
+    vec4 earth_center;
+    vec4 sun_direction;
+    vec2 sun_size;
+};
 
 
 
@@ -263,10 +275,24 @@ void main()
     float roughness    = texture(u_metallic_roughness_ao, v_uv).y;
     float ao           = texture(u_ssao, v_uv).x * texture(u_metallic_roughness_ao, v_uv).z;
 
-    vec4 sky_color = 0.7 * u_directional_light_colors[0];
-    if (dot(normal, normal) < 0.5) // TODO: sky
+    if (dot(normal, normal) < 0.5)
     {
-        out_color = sky_color;
+	    vec3 view_direction = normalize(v_view_ray);
+	    vec3 transmittance;
+	    vec3 radiance = tg_get_sky_radiance(
+	        camera.xyz - earth_center.xyz,
+	        view_direction,
+	        0.0,
+	        sun_direction.xyz,
+	        transmittance
+	    );
+	    if (dot(view_direction, sun_direction.xyz) > sun_size.y)
+	    {
+	        radiance = radiance + transmittance * tg_get_solar_radiance();
+	    }
+	    out_color.rgb = pow(vec3(1.0) - exp(-radiance / white_point.xyz * exposure), vec3(1.0 / 2.2));
+	    out_color.a = 1.0;
+	    //out_color = vec4(radiance, 1.0);
     }
     else
     {
