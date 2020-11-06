@@ -2878,6 +2878,16 @@ VkDescriptorType tgvk_structure_type_convert_to_descriptor_type(tg_structure_typ
     return descriptor_type;
 }
 
+
+
+tgvk_buffer tgvk_uniform_buffer_create(VkDeviceSize size)
+{
+    tgvk_buffer buffer = tgvk_buffer_create(size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    return buffer;
+}
+
+
+
 void tgvk_vkresult_convert_to_string(char* p_buffer, VkResult result)
 {
     switch (result)

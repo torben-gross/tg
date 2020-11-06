@@ -1,11 +1,13 @@
-#define TG_CASCADED_SHADOW_MAPS          4
-#define TG_CASCADED_SHADOW_MAP_SIZE      1024
-#define TG_CASCADED_SHADOW_MAP_SIZE_F    1024.0
-#define TG_SHADOW_BIAS                   0.001
-#define TG_MAX_DIRECTIONAL_LIGHTS        512
-#define TG_MAX_POINT_LIGHTS              512
-#define TG_SHADOW_SAMPLE_COUNT           2
-#define TG_PI                            3.14159265358979323846
+#define TG_CASCADED_SHADOW_MAPS              4
+#define TG_CASCADED_SHADOW_MAP_SIZE          1024
+#define TG_CASCADED_SHADOW_MAP_SIZE_F        1024.0
+#define TG_SHADOW_BIAS                       0.001
+#define TG_MAX_DIRECTIONAL_LIGHTS            512
+#define TG_MAX_POINT_LIGHTS                  512
+#define TG_SHADOW_SAMPLE_COUNT               2
+#define TG_PI                                3.14159265358979323846
+
+#define TG_TONEMAP_SUN_RADIANCE(radiance)    (2.0 * pow(vec3(1.0) - exp(-radiance * exposure), vec3(1.0 / 2.2)))
 
 
 
@@ -18,10 +20,13 @@ layout(set = 0, binding = 4) uniform sampler2D u_position;
 layout(set = 0, binding = 5) uniform sampler2D u_normal;
 layout(set = 0, binding = 6) uniform sampler2D u_albedo;
 layout(set = 0, binding = 7) uniform sampler2D u_metallic_roughness_ao;
+layout(set = 0, binding = 8) uniform sampler2D u_depth;
 
-layout(set = 0, binding = 8) uniform ubo
+layout(set = 0, binding = 9) uniform ubo
 {
     vec3                                       u_camera_position;
+    bool                                       u_sun_enabled;
+    vec3                                       u_sun_direction;
     uint                                       u_directional_light_count;
     uint                                       u_point_light_count;
     vec4[TG_MAX_DIRECTIONAL_LIGHTS]            u_directional_light_directions;
@@ -32,20 +37,17 @@ layout(set = 0, binding = 8) uniform ubo
     vec4[(TG_CASCADED_SHADOW_MAPS + 3) / 4]    u_shadow_distances;
 };
 
-layout(set = 0, binding = 9) uniform sampler2D[TG_CASCADED_SHADOW_MAPS] u_shadow_maps;
-layout(set = 0, binding = 10) uniform sampler2D u_ssao;
+layout(set = 0, binding = 10) uniform sampler2D[TG_CASCADED_SHADOW_MAPS] u_shadow_maps;
+layout(set = 0, binding = 11) uniform sampler2D u_ssao;
 
-layout(set = 0, binding = 11) uniform atmosphere_ubo
+layout(set = 0, binding = 12) uniform atmosphere_ubo
 {
-    vec4 camera;
-    float exposure;
-    float pad0;
-    float pad1;
-    float pad2;
-    vec4 white_point;
-    vec4 earth_center;
-    vec4 sun_direction;
-    vec2 sun_size;
+    float    exposure;
+    float    pad0;
+    float    pad1;
+    float    pad2;
+    vec4     earth_center;
+    vec2     sun_size;
 };
 
 
@@ -266,6 +268,44 @@ vec3 tg_shade(vec3 n, vec3 v, vec3 l, vec3 diffuse_albedo, vec3 specular_albedo,
     return (diffuse + specular) * radiance * clamped_l_dot_n * shadow;
 }
 
+vec3 tg_shade_with_sun(vec3 n, vec3 v, vec3 l, vec3 diffuse_albedo, vec3 specular_albedo, float metallic, float roughness)
+{
+    vec3 position = texture(u_position, v_uv).xyz;
+    vec3 view_direction = normalize(v_view_ray);
+
+    vec3 pos_y = vec3(0.0, position.y, 0.0);
+    vec3 earth_y = vec3(0.0, earth_center.y, 0.0);
+    vec3 cam_y = vec3(0.0, u_camera_position.y, 0.0);
+
+    tg_length r = length(pos_y - earth_y);
+    tg_number mu_s = dot(pos_y - earth_y, -u_sun_direction) / r;
+
+    vec3 sky_irradiance = tg_get_irradiance(ATMOSPHERE, irradiance_texture, r, mu_s);
+    vec3 sun_irradiance = ATMOSPHERE.solar_irradiance * tg_get_transmittance_to_sun(ATMOSPHERE, transmittance_texture, r, mu_s);
+
+    #ifdef TG_USE_LUMINANCE
+    sky_irradiance *= SKY_SPECTRAL_RADIANCE_TO_LUMINANCE;
+    sun_irradiance *= SUN_SPECTRAL_RADIANCE_TO_LUMINANCE;
+    #endif
+
+    vec3 transmittance;
+    vec3 in_scatter = tg_get_sky_radiance_to_point(
+        ATMOSPHERE,
+        transmittance_texture,
+        scattering_texture,
+        single_mie_scattering_texture,
+        cam_y - earth_y,
+        pos_y - earth_y,
+        0.0,
+        -u_sun_direction,
+        transmittance
+    );
+    vec3 radiance = transmittance * (sun_irradiance + sky_irradiance);
+    radiance = TG_TONEMAP_SUN_RADIANCE(radiance);
+
+    return tg_shade(n, v, l, diffuse_albedo, specular_albedo, metallic, roughness, radiance) + in_scatter;
+}
+
 void main()
 {
     vec3  position     = texture(u_position, v_uv).xyz;
@@ -275,24 +315,33 @@ void main()
     float roughness    = texture(u_metallic_roughness_ao, v_uv).y;
     float ao           = texture(u_ssao, v_uv).x * texture(u_metallic_roughness_ao, v_uv).z;
 
-    if (dot(normal, normal) < 0.5)
+    if (texture(u_depth, v_uv).x == 1.0)
     {
-	    vec3 view_direction = normalize(v_view_ray);
-	    vec3 transmittance;
-	    vec3 radiance = tg_get_sky_radiance(
-	        camera.xyz - earth_center.xyz,
-	        view_direction,
-	        0.0,
-	        sun_direction.xyz,
-	        transmittance
-	    );
-	    if (dot(view_direction, sun_direction.xyz) > sun_size.y)
-	    {
-	        radiance = radiance + transmittance * tg_get_solar_radiance();
-	    }
-	    out_color.rgb = pow(vec3(1.0) - exp(-radiance / white_point.xyz * exposure), vec3(1.0 / 2.2));
-	    out_color.a = 1.0;
-	    //out_color = vec4(radiance, 1.0);
+        if (u_sun_enabled)
+        {
+	        vec3 view_direction = normalize(v_view_ray);
+	        vec3 transmittance;
+	        vec3 radiance = tg_get_sky_radiance(
+                ATMOSPHERE,
+                transmittance_texture,
+                scattering_texture,
+                single_mie_scattering_texture,
+	            vec3(0.0, u_camera_position.y, 0.0) - vec3(0.0, earth_center.y, 0.0), // Note: This keeps the atmosphere always xz aligned
+	            view_direction,
+	            0.0,
+	            -u_sun_direction,
+	            transmittance
+	        );
+	        if (dot(view_direction, -u_sun_direction) > sun_size.y)
+	        {
+	            radiance = radiance + transmittance * tg_get_solar_radiance();
+	        }
+            out_color = vec4(TG_TONEMAP_SUN_RADIANCE(radiance), 1.0);
+        }
+        else
+        {
+            out_color = vec4(0.0, 0.0, 0.0, 1.0);
+        }
     }
     else
     {
@@ -302,11 +351,17 @@ void main()
 
         vec3 lo = vec3(0.0);
 
+        if (u_sun_enabled)
+        {
+            lo += tg_shade_with_sun(n, v, -u_sun_direction, albedo, specular_albedo, metallic, roughness);
+        }
+
         for (int i = 0; i < u_directional_light_count; i++)
         {
             vec3 l = normalize(-u_directional_light_directions[i].xyz);
+            vec3 radiance = u_directional_light_colors[i].xyz;
 
-            lo += tg_shade(n, v, l, albedo, specular_albedo, metallic, roughness, u_directional_light_colors[i].xyz);
+            lo += tg_shade(n, v, l, albedo, specular_albedo, metallic, roughness, radiance);
         }
 
         for (int i = 0; i < u_point_light_count; i++)

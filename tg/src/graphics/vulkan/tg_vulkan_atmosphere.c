@@ -35,7 +35,6 @@
 
 #include "graphics/tg_atmosphere_lookup_tables.h"
 #include "graphics/vulkan/tg_vulkan_atmosphere_definitions.h"
-#include "graphics/vulkan/tg_vulkan_atmosphere_demo_shaders.h"
 #include "graphics/vulkan/tg_vulkan_atmosphere_functions.h"
 #include "graphics/vulkan/tg_vulkan_atmosphere_shaders.h"
 #include "util/tg_string.h"
@@ -116,8 +115,7 @@
 
 #define TG_PI64                            3.1415926
 #define TG_SUN_ANGULAR_RADIUS              (0.00935 / 2.0)
-#define TG_SUN_SOLIG_ANGLE                 (TG_PI64 * TG_SUN_ANGULAR_RADIUS * TG_SUN_ANGULAR_RADIUS)
-#define TG_LENGTH_UNIT_IN_METERS           1000.0
+#define TG_LENGTH_UNIT_IN_METERS           1.0
 
 #define TG_DOPSON_UNIT                     2.687e20
 #define TG_MAX_OZONE_NUMBER_DENSITY        (300.0 * TG_DOPSON_UNIT / 15000.0)
@@ -491,7 +489,15 @@ static void tg__precompute(tgvk_atmosphere_model* p_model, VkFormat layered_imag
 		&p_model->api_shader.p_source[p_model->api_shader.total_count],
 		p_atmosphere_shader
 	);
-
+	if (p_model->settings.use_luminance)
+	{
+		p_model->api_shader.total_count += tg_strcpy_no_nul(
+			p_model->api_shader.capacity - p_model->api_shader.total_count,
+			&p_model->api_shader.p_source[p_model->api_shader.total_count],
+			"#define TG_USE_LUMINANCE\r\n\r\n"
+		);
+	}
+	
 	const u32 precomputed_wavelength_count = p_model->settings.precomputed_wavelength_count;
 	if (precomputed_wavelength_count <= 3)
 	{
@@ -512,8 +518,8 @@ static void tg__precompute(tgvk_atmosphere_model* p_model, VkFormat layered_imag
 
 		// TODO: use
 		VkSemaphore semaphore = tgvk_semaphore_create();
-		tgvk_buffer ubo = tgvk_buffer_create(sizeof(m4) + sizeof(i32), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-		tgvk_buffer geometry_ubo = tgvk_buffer_create(sizeof(i32), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+		tgvk_buffer ubo = tgvk_uniform_buffer_create(sizeof(m4) + sizeof(i32));
+		tgvk_buffer geometry_ubo = tgvk_uniform_buffer_create(sizeof(i32));
 
 		tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
 
@@ -1002,23 +1008,11 @@ static void tg__precompute(tgvk_atmosphere_model* p_model, VkFormat layered_imag
 	tgvk_layered_image_destroy(&delta_mie_scattering_texture);
 	tgvk_layered_image_destroy(&delta_rayleigh_scattering_texture);
 	tgvk_image_destroy(&delta_irradiance_texture);
-
-	char* p_demo_fragment_shader_buffer = TG_MEMORY_STACK_ALLOC(p_model->api_shader.capacity);
-	tg_stringf(
-		p_model->api_shader.capacity,
-		p_demo_fragment_shader_buffer,
-		"%s\r\n%s%s\r\n",
-		p_model->api_shader.p_source,
-		p_model->settings.use_luminance != TG_LUMINANCE_NONE ? "#define TG_USE_LUMINANCE\r\n\r\n" : "",
-		p_atmosphere_demo_fragment_shader
-	);
-	p_model->rendering.fragment_shader = tgvk_shader_create_from_glsl(TG_SHADER_TYPE_FRAGMENT, p_demo_fragment_shader_buffer);
-	TG_MEMORY_STACK_FREE(p_model->api_shader.capacity);
 }
 
 
 
-void tgvk_atmosphere_model_create(tgvk_image* p_color_attachment, tgvk_image* p_depth_attachment, TG_OUT tgvk_atmosphere_model* p_model)
+void tgvk_atmosphere_model_create(TG_OUT tgvk_atmosphere_model* p_model)
 {
 	p_model->settings.use_constant_solar_spectrum = TG_FALSE;
 	p_model->settings.use_ozone = TG_TRUE;
@@ -1026,8 +1020,6 @@ void tgvk_atmosphere_model_create(tgvk_image* p_color_attachment, tgvk_image* p_
 	p_model->settings.use_half_precision = TG_TRUE;
 	p_model->settings.use_luminance = TG_LUMINANCE_NONE;
 	p_model->settings.precomputed_wavelength_count = p_model->settings.use_luminance == TG_LUMINANCE_PRECOMPUTED ? 15 : 3;
-	p_model->settings.do_white_balance = TG_FALSE;
-	p_model->settings.exposure = 10.0;
 	p_model->settings.combine_scattering_textures = TG_TRUE;
 
 	tg_sampler_create_info sampler_create_info = { 0 };
@@ -1088,52 +1080,22 @@ void tgvk_atmosphere_model_create(tgvk_image* p_color_attachment, tgvk_image* p_
 
 
 
-	p_model->rendering.vertex_shader = tgvk_shader_create_from_glsl(TG_SHADER_TYPE_VERTEX, p_atmosphere_demo_vertex_shader);
+	p_model->rendering.vertex_shader_ubo = tgvk_uniform_buffer_create(2 * sizeof(m4));
+	p_model->rendering.fragment_shader_ubo = tgvk_uniform_buffer_create(6 * sizeof(v4));
 
-	p_model->rendering.framebuffer = tgvk_framebuffer_create(shared_render_resources.atmosphere_render_pass, 1, &p_color_attachment->image_view, p_color_attachment->width, p_color_attachment->height);
-
-	const tg_blend_mode blend_mode = TG_BLEND_MODE_BLEND;
-	tgvk_graphics_pipeline_create_info demo_graphics_pipeline_create_info = { 0 };
-	demo_graphics_pipeline_create_info.p_vertex_shader = &p_model->rendering.vertex_shader;
-	demo_graphics_pipeline_create_info.p_fragment_shader = &p_model->rendering.fragment_shader;
-	demo_graphics_pipeline_create_info.p_blend_modes = &blend_mode;
-	demo_graphics_pipeline_create_info.render_pass = shared_render_resources.atmosphere_render_pass;
-	demo_graphics_pipeline_create_info.viewport_size = (v2){ (f32)p_model->rendering.framebuffer.width, (f32)p_model->rendering.framebuffer.height };
-	p_model->rendering.graphics_pipeline = tgvk_pipeline_create_graphics(&demo_graphics_pipeline_create_info);
-
-	p_model->rendering.vertex_shader_ubo = tgvk_buffer_create(2 * sizeof(m4), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-	p_model->rendering.fragment_shader_ubo = tgvk_buffer_create(6 * sizeof(v4), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-	p_model->rendering.descriptor_set = tgvk_descriptor_set_create(&p_model->rendering.graphics_pipeline);
-
-	tgvk_atmosphere_model_update_descriptor_set(p_model, &p_model->rendering.descriptor_set);
-	tgvk_descriptor_set_update_uniform_buffer(p_model->rendering.descriptor_set.descriptor_set, p_model->rendering.vertex_shader_ubo.buffer, 4);
-	tgvk_descriptor_set_update_uniform_buffer(p_model->rendering.descriptor_set.descriptor_set, p_model->rendering.fragment_shader_ubo.buffer, 5);
-	tgvk_descriptor_set_update_image(p_model->rendering.descriptor_set.descriptor_set, p_depth_attachment, 6);
-
-	const f32 exposure = 10.0f;
-	const f32 white_point_r = 1.0f;
-	const f32 white_point_g = 1.0f;
-	const f32 white_point_b = 1.0f;
-	const v3 earth_center = { 0.0f, (f32)(-TG_BOTTOM_RADIUS / TG_LENGTH_UNIT_IN_METERS) + 200.0f, 0.0f };
+	const f32 exposure = p_model->settings.use_luminance != TG_LUMINANCE_NONE ? 1e-5f : 1.0f;
+	const v3 earth_center = { 0.0f, (f32)(-TG_BOTTOM_RADIUS / TG_LENGTH_UNIT_IN_METERS) + 100.0f, 0.0f };
 	const v2 sun_size = { tgm_f32_tan((f32)TG_SUN_ANGULAR_RADIUS), tgm_f32_cos((f32)TG_SUN_ANGULAR_RADIUS) };
 
-	// TODO:
-	//if (do_white_balance)
-	//{
-	//	...
-	//}
+	((v4*)p_model->rendering.fragment_shader_ubo.memory.p_mapped_device_memory)[0].x = exposure;
+	((v4*)p_model->rendering.fragment_shader_ubo.memory.p_mapped_device_memory)[1].xyz = earth_center;
+	((v4*)p_model->rendering.fragment_shader_ubo.memory.p_mapped_device_memory)[2].xy = sun_size;
 
-	((v4*)p_model->rendering.fragment_shader_ubo.memory.p_mapped_device_memory)[1].x = p_model->settings.use_luminance != TG_LUMINANCE_NONE ? exposure * 1e-5f : exposure;
-	((v4*)p_model->rendering.fragment_shader_ubo.memory.p_mapped_device_memory)[2].xyz = (v3){ white_point_r, white_point_g, white_point_b };
-	((v4*)p_model->rendering.fragment_shader_ubo.memory.p_mapped_device_memory)[3].xyz = earth_center;
-	((v4*)p_model->rendering.fragment_shader_ubo.memory.p_mapped_device_memory)[5].xy = sun_size;
-
-	p_model->rendering.command_buffer = tgvk_command_buffer_create(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
-	tgvk_command_buffer_begin(&p_model->rendering.command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+	tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
+	tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 	{
 		tgvk_cmd_transition_image_layout(
-			&p_model->rendering.command_buffer,
+			p_command_buffer,
 			&p_model->rendering.transmittance_texture,
 			VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
 			VK_ACCESS_SHADER_READ_BIT,
@@ -1143,7 +1105,7 @@ void tgvk_atmosphere_model_create(tgvk_image* p_color_attachment, tgvk_image* p_
 			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
 		);
 		tgvk_cmd_transition_layered_image_layout(
-			&p_model->rendering.command_buffer,
+			p_command_buffer,
 			&p_model->rendering.scattering_texture,
 			VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
 			VK_ACCESS_SHADER_READ_BIT,
@@ -1155,7 +1117,7 @@ void tgvk_atmosphere_model_create(tgvk_image* p_color_attachment, tgvk_image* p_
 		if (!p_model->settings.combine_scattering_textures)
 		{
 			tgvk_cmd_transition_layered_image_layout(
-				&p_model->rendering.command_buffer,
+				p_command_buffer,
 				&p_model->rendering.optional_single_mie_scattering_texture,
 				VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
 				VK_ACCESS_SHADER_READ_BIT,
@@ -1168,7 +1130,7 @@ void tgvk_atmosphere_model_create(tgvk_image* p_color_attachment, tgvk_image* p_
 		else
 		{
 			tgvk_cmd_transition_layered_image_layout(
-				&p_model->rendering.command_buffer,
+				p_command_buffer,
 				&p_model->rendering.no_single_mie_scattering_black_texture,
 				0,
 				VK_ACCESS_TRANSFER_WRITE_BIT,
@@ -1177,9 +1139,9 @@ void tgvk_atmosphere_model_create(tgvk_image* p_color_attachment, tgvk_image* p_
 				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
 				VK_PIPELINE_STAGE_TRANSFER_BIT
 			);
-			tgvk_cmd_clear_layered_image(&p_model->rendering.command_buffer, &p_model->rendering.no_single_mie_scattering_black_texture);
+			tgvk_cmd_clear_layered_image(p_command_buffer, &p_model->rendering.no_single_mie_scattering_black_texture);
 			tgvk_cmd_transition_layered_image_layout(
-				&p_model->rendering.command_buffer,
+				p_command_buffer,
 				&p_model->rendering.no_single_mie_scattering_black_texture,
 				VK_ACCESS_TRANSFER_WRITE_BIT,
 				VK_ACCESS_SHADER_READ_BIT,
@@ -1190,7 +1152,7 @@ void tgvk_atmosphere_model_create(tgvk_image* p_color_attachment, tgvk_image* p_
 			);
 		}
 		tgvk_cmd_transition_image_layout(
-			&p_model->rendering.command_buffer,
+			p_command_buffer,
 			&p_model->rendering.irradiance_texture,
 			VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
 			VK_ACCESS_SHADER_READ_BIT,
@@ -1200,53 +1162,13 @@ void tgvk_atmosphere_model_create(tgvk_image* p_color_attachment, tgvk_image* p_
 			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
 		);
 	}
-	tgvk_command_buffer_end_and_submit(&p_model->rendering.command_buffer);
-
-	tgvk_command_buffer_begin(&p_model->rendering.command_buffer, 0);
-	{
-		tgvk_cmd_transition_image_layout(
-			&p_model->rendering.command_buffer,
-			p_depth_attachment,
-			VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-			VK_ACCESS_SHADER_READ_BIT,
-			VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-			VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
-			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
-		);
-
-		tgvk_cmd_begin_render_pass(&p_model->rendering.command_buffer, shared_render_resources.atmosphere_render_pass, &p_model->rendering.framebuffer, VK_SUBPASS_CONTENTS_INLINE);
-
-		tgvk_cmd_bind_descriptor_set(&p_model->rendering.command_buffer, &p_model->rendering.graphics_pipeline, &p_model->rendering.descriptor_set);
-		tgvk_cmd_bind_pipeline(&p_model->rendering.command_buffer, &p_model->rendering.graphics_pipeline);
-		tgvk_cmd_bind_and_draw_screen_quad(&p_model->rendering.command_buffer);
-
-		vkCmdEndRenderPass(p_model->rendering.command_buffer.command_buffer);
-
-		tgvk_cmd_transition_image_layout(
-			&p_model->rendering.command_buffer,
-			p_depth_attachment,
-			VK_ACCESS_SHADER_READ_BIT,
-			VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-			VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-			VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT
-		);
-	}
-	vkEndCommandBuffer(p_model->rendering.command_buffer.command_buffer);
+	tgvk_command_buffer_end_and_submit(p_command_buffer);
 }
 
 void tgvk_atmosphere_model_destroy(tgvk_atmosphere_model* p_model)
 {
-	tgvk_command_buffer_destroy(&p_model->rendering.command_buffer);
 	tgvk_buffer_destroy(&p_model->rendering.fragment_shader_ubo);
 	tgvk_buffer_destroy(&p_model->rendering.vertex_shader_ubo);
-	tgvk_descriptor_set_destroy(&p_model->rendering.descriptor_set);
-	tgvk_pipeline_destroy(&p_model->rendering.graphics_pipeline);
-	tgvk_framebuffer_destroy(&p_model->rendering.framebuffer);
-	tgvk_shader_destroy(&p_model->rendering.fragment_shader);
-	tgvk_shader_destroy(&p_model->rendering.vertex_shader);
 
 	if (p_model->api_shader.p_source)
 	{
@@ -1281,12 +1203,10 @@ void tgvk_atmosphere_model_update_descriptor_set(tgvk_atmosphere_model* p_model,
 	tgvk_descriptor_set_update_image(p_descriptor_set->descriptor_set, &p_model->rendering.irradiance_texture, 3);
 }
 
-void tgvk_atmosphere_model_update(tgvk_atmosphere_model* p_model, v3 sun_direction, m4 inv_view, m4 inv_proj)
+void tgvk_atmosphere_model_update(tgvk_atmosphere_model* p_model, m4 inv_view, m4 inv_proj)
 {
 	((m4*)p_model->rendering.vertex_shader_ubo.memory.p_mapped_device_memory)[0] = inv_view;
 	((m4*)p_model->rendering.vertex_shader_ubo.memory.p_mapped_device_memory)[1] = inv_proj;
-	((v4*)p_model->rendering.fragment_shader_ubo.memory.p_mapped_device_memory)[0].xyz = (v3){ inv_view.m03, inv_view.m13, inv_view.m23 };
-	((v4*)p_model->rendering.fragment_shader_ubo.memory.p_mapped_device_memory)[4].xyz = tgm_v3_neg(sun_direction);
 }
 
 

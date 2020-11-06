@@ -3,7 +3,7 @@
 layout(location = 0) in vec2 in_position;
 layout(location = 1) in vec2 in_uv;
 
-layout(set = 0, binding = 12) uniform atmosphere_ubo
+layout(set = 0, binding = 13) uniform atmosphere_ubo
 {
     mat4 model_from_view;
     mat4 view_from_clip;

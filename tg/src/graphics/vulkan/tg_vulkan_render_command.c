@@ -147,7 +147,7 @@ tg_render_command_h tg_render_command_create(tg_mesh_h h_mesh, tg_material_h h_m
     tg_render_command_h h_render_command = tgvk_handle_take(TG_STRUCTURE_TYPE_RENDER_COMMAND);
 	h_render_command->h_mesh = h_mesh;
 	h_render_command->h_material = h_material;
-    h_render_command->model_ubo = tgvk_buffer_create(sizeof(m4), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    h_render_command->model_ubo = tgvk_uniform_buffer_create(sizeof(m4));
     *((m4*)h_render_command->model_ubo.memory.p_mapped_device_memory) = tgm_m4_translate(position);
 
 	h_render_command->renderer_info_count = 0;

@@ -106,6 +106,7 @@ static void tg__game_3d_create(void)
     scene.h_main_renderer = tg_renderer_create(&scene.camera);
     scene.h_secondary_renderer = tg_renderer_create(&scene.camera);
     tg_renderer_enable_shadows(scene.h_main_renderer, TG_FALSE);
+    tg_renderer_enable_sun(scene.h_main_renderer, TG_TRUE);
     tg_renderer_enable_shadows(scene.h_secondary_renderer, TG_FALSE);
 
     scene.p_terrain = tg_terrain_create(&scene.camera);
@@ -336,16 +337,16 @@ static void tg__game_3d_update_and_render(f32 dt)
     {
         scene.light_timer -= 32000.0f;
     }
-    //const f32 lx0 = tgm_f32_sin(scene.light_timer / 32000.0f * 2.0f * TG_PI);
-    //const f32 ly0 = tgm_f32_sin(scene.light_timer / 32000.0f * 2.0f * TG_PI) * 0.5f - 0.5f;
-    //const f32 lz0 = tgm_f32_cos(scene.light_timer / 32000.0f * 2.0f * TG_PI);
+    const f32 lx0 = tgm_f32_sin(scene.light_timer / 32000.0f * 2.0f * TG_PI);
+    const f32 ly0 = tgm_f32_sin(scene.light_timer / 32000.0f * 2.0f * TG_PI) * 0.5f - 0.5f;
+    const f32 lz0 = tgm_f32_cos(scene.light_timer / 32000.0f * 2.0f * TG_PI);
     const f32 lx1 = 127.0f + 5.0f * tgm_f32_cos(scene.light_timer / 4000.0f * 2.0f * TG_PI);
     const f32 ly1 = 149.0f + 5.0f * tgm_f32_sin(scene.light_timer / 4000.0f * 2.0f * TG_PI);
     const f32 lz1 = 112.0f + 2.0f;
 
 
-    //const v3 d0 = tgm_v3_normalized((v3) { lx0, ly0, lz0 });
-    const v3 d0 = tgm_v3_normalized((v3) { 0.3f, -1.0f, -0.2f });
+    const v3 d0 = tgm_v3_normalized((v3) { lx0, ly0, lz0 });
+    //const v3 d0 = tgm_v3_normalized((v3) { 0.3f, -1.0f, -0.2f });
     //const v3 c0d = tgm_v3_mulf((v3) { 0.529f, 0.808f, 0.922f }, 2.0f);
     //const v3 c0n = tgm_v3_mulf((v3) { 0.992f, 0.369f, 0.325f }, 2.0f);
     //const v3 c0 = tgm_v3_lerp(c0n, c0d, -d0.y);
@@ -362,7 +363,8 @@ static void tg__game_3d_update_and_render(f32 dt)
     tg_renderer_end(scene.h_secondary_renderer, dt, TG_FALSE);
 
     tg_renderer_begin(scene.h_main_renderer);
-    tg_renderer_push_directional_light(scene.h_main_renderer, d0, c0);
+    tg_renderer_set_sun_direction(scene.h_main_renderer, d0);
+    //tg_renderer_push_directional_light(scene.h_main_renderer, d0, c0);
     tg_renderer_push_point_light(scene.h_main_renderer, (v3) { lx1, ly1, lz1 }, (v3){ 8.0f, 8.0f, 16.0f });
     tg_terrain_render(scene.p_terrain, scene.h_main_renderer);
     ph_render_commands = TG_LIST_POINTER_TO(scene.render_commands, 0);

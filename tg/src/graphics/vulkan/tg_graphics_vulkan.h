@@ -264,7 +264,6 @@ typedef struct tgvk_shared_render_resources
     VkRenderPass     shading_render_pass;
     VkRenderPass     tone_mapping_render_pass;
     VkRenderPass     forward_render_pass;
-    VkRenderPass     atmosphere_render_pass;
     VkRenderPass     present_render_pass;
 } tgvk_shared_render_resources;
 
@@ -388,8 +387,6 @@ typedef struct tgvk_atmosphere_model
 	    b32                          use_half_precision;
 	    tgvk_atmosphere_luminance    use_luminance;
         u32                          precomputed_wavelength_count;
-	    b32                          do_white_balance;
-	    f64                          exposure;
 	    b32                          combine_scattering_textures;
     } settings;
 
@@ -408,14 +405,8 @@ typedef struct tgvk_atmosphere_model
 	    tgvk_layered_image           optional_single_mie_scattering_texture;
 	    tgvk_layered_image           no_single_mie_scattering_black_texture; // TODO: remove this and change 'p_atmosphere_shader' to not use 'single_mie_scattering_texture'
 	    tgvk_image                   irradiance_texture;
-        tgvk_shader                  vertex_shader;
-        tgvk_shader                  fragment_shader;
-        tgvk_framebuffer             framebuffer;
-        tgvk_pipeline                graphics_pipeline;
-        tgvk_descriptor_set          descriptor_set;
         tgvk_buffer                  vertex_shader_ubo;
         tgvk_buffer                  fragment_shader_ubo;
-        tgvk_command_buffer          command_buffer;
     } rendering;
 } tgvk_atmosphere_model;
 
@@ -434,6 +425,8 @@ typedef struct tg_renderer
     VkCommandBuffer              p_deferred_command_buffers[TG_MAX_RENDER_COMMANDS];
     VkCommandBuffer              p_shadow_command_buffers[TG_CASCADED_SHADOW_MAPS][TG_MAX_RENDER_COMMANDS];
     tg_render_command_h          ph_forward_render_commands[TG_MAX_RENDER_COMMANDS];
+
+    tgvk_atmosphere_model        model;
 
     struct
     {
@@ -483,11 +476,6 @@ typedef struct tg_renderer
         tgvk_framebuffer         framebuffer;
         tgvk_command_buffer      command_buffer;
     } forward_pass;
-
-    struct
-    {
-        tgvk_atmosphere_model    model;
-    } atmosphere_pass;
 
     struct
     {
@@ -561,10 +549,10 @@ tgvk_shared_render_resources    shared_render_resources;
 
 
 
-void                    tgvk_atmosphere_model_create(tgvk_image* p_color_attachment, tgvk_image* p_depth_attachment, TG_OUT tgvk_atmosphere_model* p_model);
+void                    tgvk_atmosphere_model_create(TG_OUT tgvk_atmosphere_model* p_model);
 void                    tgvk_atmosphere_model_destroy(tgvk_atmosphere_model* p_model);
 void                    tgvk_atmosphere_model_update_descriptor_set(tgvk_atmosphere_model* p_model, tgvk_descriptor_set* p_descriptor_set);
-void                    tgvk_atmosphere_model_update(tgvk_atmosphere_model* p_model, v3 sun_direction, m4 inv_view, m4 inv_proj);
+void                    tgvk_atmosphere_model_update(tgvk_atmosphere_model* p_model, m4 inv_view, m4 inv_proj);
 
 void                    tgvk_buffer_copy(VkDeviceSize size, tgvk_buffer* p_src, tgvk_buffer* p_dst);
 tgvk_buffer             tgvk_buffer_create(VkDeviceSize size, VkBufferUsageFlags buffer_usage_flags, VkMemoryPropertyFlags memory_property_flags);
@@ -686,6 +674,8 @@ tgvk_shader             tgvk_shader_create_from_spirv(u32 size, const char* p_so
 void                    tgvk_shader_destroy(tgvk_shader* p_shader);
 
 VkDescriptorType        tgvk_structure_type_convert_to_descriptor_type(tg_structure_type type);
+
+tgvk_buffer             tgvk_uniform_buffer_create(VkDeviceSize size);
 
 void                    tgvk_vkresult_convert_to_string(char* p_buffer, VkResult result);
 

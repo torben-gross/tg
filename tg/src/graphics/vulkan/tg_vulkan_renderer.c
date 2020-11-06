@@ -17,19 +17,24 @@
 
 #define TGVK_GEOMETRY_FORMATS(var)                            const VkFormat var[TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT] = { VK_FORMAT_R32G32B32A32_SFLOAT, TGVK_HDR_FORMAT, TGVK_HDR_FORMAT, TGVK_HDR_FORMAT }
 
+#define TGVK_SSAO_UBO                                         (*(tg_ssao_ubo*)h_renderer->ssao_pass.ssao_ubo.memory.p_mapped_device_memory)
+#define TGVK_SHADING_UBO                                      (*(tg_shading_ubo*)h_renderer->shading_pass.fragment_shader_ubo.memory.p_mapped_device_memory)
 
 
-typedef struct tg_ssao_info
+
+typedef struct tg_ssao_ubo
 {
     v4    p_kernel[64];
     v2    noise_scale; u32 pad[2];
     m4    view;
     m4    projection;
-} tg_ssao_info;
+} tg_ssao_ubo;
 
-typedef struct tg_shading_info
+typedef struct tg_shading_ubo
 {
     v3     camera_position;
+    b32    sun_enabled;
+    v3     sun_direction;
     u32    directional_light_count;
     u32    point_light_count; u32 pad[3];
     v4     p_directional_light_directions[TG_MAX_DIRECTIONAL_LIGHTS];
@@ -38,7 +43,7 @@ typedef struct tg_shading_info
     v4     p_point_light_colors[TG_MAX_POINT_LIGHTS];
     m4     p_lightspace_matrices[TG_CASCADED_SHADOW_MAPS];
     v4     p_shadow_distances[(TG_CASCADED_SHADOW_MAPS + 3) / 4]; // because of padding in the shader, this must at least be a vec4 in the shader
-} tg_shading_info;
+} tg_shading_ubo;
 
 
 
@@ -62,7 +67,7 @@ static void tg__init_shadow_pass(tg_renderer_h h_renderer)
     for (u32 i = 0; i < TG_CASCADED_SHADOW_MAPS; i++)
     {
         h_renderer->shadow_pass.p_framebuffers[i] = tgvk_framebuffer_create(shared_render_resources.shadow_render_pass, 1, &h_renderer->shadow_pass.p_shadow_maps[i].image_view, TG_CASCADED_SHADOW_MAP_SIZE, TG_CASCADED_SHADOW_MAP_SIZE);
-        h_renderer->shadow_pass.p_lightspace_ubos[i] = tgvk_buffer_create(sizeof(m4), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        h_renderer->shadow_pass.p_lightspace_ubos[i] = tgvk_uniform_buffer_create(sizeof(m4));
     }
 }
 
@@ -112,7 +117,7 @@ static void tg__init_ssao_pass(tg_renderer_h h_renderer)
 
     h_renderer->ssao_pass.ssao_graphics_pipeline = tgvk_pipeline_create_graphics(&ssao_pipeline_create_info);
     h_renderer->ssao_pass.ssao_descriptor_set = tgvk_descriptor_set_create(&h_renderer->ssao_pass.ssao_graphics_pipeline);
-    h_renderer->ssao_pass.ssao_ubo = tgvk_buffer_create(sizeof(tg_ssao_info), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    h_renderer->ssao_pass.ssao_ubo = tgvk_uniform_buffer_create(sizeof(tg_ssao_ubo));
 
     tg_random random = tgm_random_init(13031995);
     for (u32 i = 0; i < 64; i++)
@@ -123,10 +128,10 @@ static void tg__init_ssao_pass(tg_renderer_h h_renderer)
         f32 scale = (f32)i / 64.0f;
         scale = tgm_f32_lerp(0.1f, 1.0f, scale * scale);
         sample = tgm_v3_mulf(sample, scale);
-        ((tg_ssao_info*)h_renderer->ssao_pass.ssao_ubo.memory.p_mapped_device_memory)->p_kernel[i].xyz = sample;
+        ((tg_ssao_ubo*)h_renderer->ssao_pass.ssao_ubo.memory.p_mapped_device_memory)->p_kernel[i].xyz = sample;
     }
-    ((tg_ssao_info*)h_renderer->ssao_pass.ssao_ubo.memory.p_mapped_device_memory)->noise_scale.x = (f32)TG_SSAO_MAP_SIZE / 4.0f;
-    ((tg_ssao_info*)h_renderer->ssao_pass.ssao_ubo.memory.p_mapped_device_memory)->noise_scale.y = (f32)TG_SSAO_MAP_SIZE / 4.0f;
+    TGVK_SSAO_UBO.noise_scale.x = (f32)TG_SSAO_MAP_SIZE / 4.0f;
+    TGVK_SSAO_UBO.noise_scale.y = (f32)TG_SSAO_MAP_SIZE / 4.0f;
 
     tgvk_buffer staging_buffer = tgvk_buffer_create(16 * sizeof(v2), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
     for (u32 i = 0; i < 16; i++)
@@ -249,10 +254,9 @@ static void tg__init_shading_pass(tg_renderer_h h_renderer)
 {
     TG_ASSERT(h_renderer);
 
-    h_renderer->shading_pass.fragment_shader_ubo = tgvk_buffer_create(sizeof(tg_shading_info), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-    tg_shading_info* p_shading_info = h_renderer->shading_pass.fragment_shader_ubo.memory.p_mapped_device_memory;
-    p_shading_info->directional_light_count = 0;
-    p_shading_info->point_light_count = 0;
+    h_renderer->shading_pass.fragment_shader_ubo = tgvk_uniform_buffer_create(sizeof(tg_shading_ubo));
+    tg_shading_ubo* p_shading_ubo = h_renderer->shading_pass.fragment_shader_ubo.memory.p_mapped_device_memory;
+    *p_shading_ubo = (tg_shading_ubo){ 0 };
 
     h_renderer->shading_pass.command_buffer = tgvk_command_buffer_create(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     h_renderer->shading_pass.framebuffer = tgvk_framebuffer_create(shared_render_resources.shading_render_pass, TGVK_SHADING_ATTACHMENT_COUNT, &h_renderer->hdr_color_attachment.image_view, swapchain_extent.width, swapchain_extent.height);
@@ -264,10 +268,10 @@ static void tg__init_shading_pass(tg_renderer_h h_renderer)
     const b32 result = tg_platform_file_get_properties("shaders/renderer/shading.inc", &file_properties);
     TG_ASSERT(result);
 
-    const u32 api_shader_size = h_renderer->atmosphere_pass.model.api_shader.total_count;
+    const u32 api_shader_size = h_renderer->model.api_shader.total_count;
     const u32 fragment_shader_buffer_size = (u32)api_shader_size + (u32)file_properties.size + 1;
     char* p_fragment_shader_buffer = TG_MEMORY_STACK_ALLOC((u64)fragment_shader_buffer_size);
-    const u32 fragment_shader_buffer_offset = tg_strncpy(fragment_shader_buffer_size, p_fragment_shader_buffer, api_shader_size, h_renderer->atmosphere_pass.model.api_shader.p_source);
+    const u32 fragment_shader_buffer_offset = tg_strncpy(fragment_shader_buffer_size, p_fragment_shader_buffer, api_shader_size, h_renderer->model.api_shader.p_source);
 
     tg_platform_file_read("shaders/renderer/shading.inc", fragment_shader_buffer_size - fragment_shader_buffer_offset, &p_fragment_shader_buffer[fragment_shader_buffer_offset]);
     p_fragment_shader_buffer[fragment_shader_buffer_size - 1] = '\0';
@@ -287,21 +291,23 @@ static void tg__init_shading_pass(tg_renderer_h h_renderer)
     TG_MEMORY_STACK_FREE((u64)fragment_shader_buffer_size);
 
     h_renderer->shading_pass.descriptor_set = tgvk_descriptor_set_create(&h_renderer->shading_pass.graphics_pipeline);
-    tgvk_atmosphere_model_update_descriptor_set(&h_renderer->atmosphere_pass.model, &h_renderer->shading_pass.descriptor_set);
+    tgvk_atmosphere_model_update_descriptor_set(&h_renderer->model, &h_renderer->shading_pass.descriptor_set);
     const u32 atmosphere_binding_offset = 4;
-    for (u32 i = 0; i < TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT; i++)
-    {
-        tgvk_descriptor_set_update_image(h_renderer->shading_pass.descriptor_set.descriptor_set, &h_renderer->geometry_pass.p_color_attachments[i], atmosphere_binding_offset + i);
-    }
-
-    tgvk_descriptor_set_update_uniform_buffer(h_renderer->shading_pass.descriptor_set.descriptor_set, h_renderer->shading_pass.fragment_shader_ubo.buffer, atmosphere_binding_offset + TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT);
+    u32 binding_offset = atmosphere_binding_offset;
+    tgvk_descriptor_set_update_image(h_renderer->shading_pass.descriptor_set.descriptor_set, &h_renderer->geometry_pass.p_color_attachments[0], binding_offset++);
+    tgvk_descriptor_set_update_image(h_renderer->shading_pass.descriptor_set.descriptor_set, &h_renderer->geometry_pass.p_color_attachments[1], binding_offset++);
+    tgvk_descriptor_set_update_image(h_renderer->shading_pass.descriptor_set.descriptor_set, &h_renderer->geometry_pass.p_color_attachments[2], binding_offset++);
+    tgvk_descriptor_set_update_image(h_renderer->shading_pass.descriptor_set.descriptor_set, &h_renderer->geometry_pass.p_color_attachments[3], binding_offset++);
+    tgvk_descriptor_set_update_image(h_renderer->shading_pass.descriptor_set.descriptor_set, &h_renderer->render_target.depth_attachment, binding_offset++);
+    tgvk_descriptor_set_update_uniform_buffer(h_renderer->shading_pass.descriptor_set.descriptor_set, h_renderer->shading_pass.fragment_shader_ubo.buffer, binding_offset++);
     for (u32 i = 0; i < TG_CASCADED_SHADOW_MAPS; i++)
     {
-        tgvk_descriptor_set_update_image_array(h_renderer->shading_pass.descriptor_set.descriptor_set, &h_renderer->shadow_pass.p_shadow_maps[i], atmosphere_binding_offset + TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT + 1, i);
+        tgvk_descriptor_set_update_image_array(h_renderer->shading_pass.descriptor_set.descriptor_set, &h_renderer->shadow_pass.p_shadow_maps[i], binding_offset, i);
     }
-    tgvk_descriptor_set_update_image(h_renderer->shading_pass.descriptor_set.descriptor_set, &h_renderer->ssao_pass.blur_attachment, atmosphere_binding_offset + TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT + 2);
-    tgvk_descriptor_set_update_uniform_buffer(h_renderer->shading_pass.descriptor_set.descriptor_set, h_renderer->atmosphere_pass.model.rendering.fragment_shader_ubo.buffer, 11);
-    tgvk_descriptor_set_update_uniform_buffer(h_renderer->shading_pass.descriptor_set.descriptor_set, h_renderer->atmosphere_pass.model.rendering.vertex_shader_ubo.buffer, 12);
+    binding_offset++;
+    tgvk_descriptor_set_update_image(h_renderer->shading_pass.descriptor_set.descriptor_set, &h_renderer->ssao_pass.blur_attachment, binding_offset++);
+    tgvk_descriptor_set_update_uniform_buffer(h_renderer->shading_pass.descriptor_set.descriptor_set, h_renderer->model.rendering.fragment_shader_ubo.buffer, binding_offset++);
+    tgvk_descriptor_set_update_uniform_buffer(h_renderer->shading_pass.descriptor_set.descriptor_set, h_renderer->model.rendering.vertex_shader_ubo.buffer, binding_offset++);
 
     tgvk_command_buffer_begin(&h_renderer->shading_pass.command_buffer, 0);
     {
@@ -310,27 +316,46 @@ static void tg__init_shading_pass(tg_renderer_h h_renderer)
             tgvk_cmd_transition_image_layout(
                 &h_renderer->shading_pass.command_buffer,
                 &h_renderer->geometry_pass.p_color_attachments[i],
-                VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
-                VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
+                VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                VK_ACCESS_SHADER_READ_BIT,
+                VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
             );
         }
+        tgvk_cmd_transition_image_layout(
+            &h_renderer->shading_pass.command_buffer,
+            &h_renderer->render_target.depth_attachment,
+            VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+            VK_ACCESS_SHADER_READ_BIT,
+            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
+            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
+        );
         for (u32 i = 0; i < TG_CASCADED_SHADOW_MAPS; i++)
         {
             tgvk_cmd_transition_image_layout(
                 &h_renderer->shading_pass.command_buffer,
                 &h_renderer->shadow_pass.p_shadow_maps[i],
-                VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
-                VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
+                VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                VK_ACCESS_SHADER_READ_BIT,
+                VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
+                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
             );
         }
         tgvk_cmd_transition_image_layout(
             &h_renderer->shading_pass.command_buffer,
             &h_renderer->ssao_pass.blur_attachment,
-            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
-            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
+            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+            VK_ACCESS_SHADER_READ_BIT,
+            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
         );
 
         vkCmdBindPipeline(h_renderer->shading_pass.command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, h_renderer->shading_pass.graphics_pipeline.pipeline);
@@ -345,41 +370,51 @@ static void tg__init_shading_pass(tg_renderer_h h_renderer)
         vkCmdDrawIndexed(h_renderer->shading_pass.command_buffer.command_buffer, 6, 1, 0, 0, 0);
         vkCmdEndRenderPass(h_renderer->shading_pass.command_buffer.command_buffer);
 
-        // TODO: skydome!!! then remove the clearing of all color images
         for (u32 i = 0; i < TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT; i++)
         {
             tgvk_cmd_transition_image_layout(
                 &h_renderer->shading_pass.command_buffer,
                 &h_renderer->geometry_pass.p_color_attachments[i],
-                VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
-                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT
-            );
-            tgvk_cmd_clear_image(&h_renderer->shading_pass.command_buffer, &h_renderer->geometry_pass.p_color_attachments[i]);
-            tgvk_cmd_transition_image_layout(
-                &h_renderer->shading_pass.command_buffer,
-                &h_renderer->geometry_pass.p_color_attachments[i],
-                VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
+                VK_ACCESS_SHADER_READ_BIT,
+                VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
             );
         }
+        tgvk_cmd_transition_image_layout(
+            &h_renderer->shading_pass.command_buffer,
+            &h_renderer->render_target.depth_attachment,
+            VK_ACCESS_SHADER_READ_BIT,
+            VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+            VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT
+        );
         for (u32 i = 0; i < TG_CASCADED_SHADOW_MAPS; i++)
         {
             tgvk_cmd_transition_image_layout(
                 &h_renderer->shading_pass.command_buffer,
                 &h_renderer->shadow_pass.p_shadow_maps[i],
-                VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT
+                VK_ACCESS_SHADER_READ_BIT,
+                VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT
             );
         }
         tgvk_cmd_transition_image_layout(
             &h_renderer->shading_pass.command_buffer,
             &h_renderer->ssao_pass.blur_attachment,
-            VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
+            VK_ACCESS_SHADER_READ_BIT,
+            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
         );
     }
     TGVK_CALL(vkEndCommandBuffer(h_renderer->shading_pass.command_buffer.command_buffer));
@@ -418,7 +453,7 @@ static void tg__init_tone_mapping_pass(tg_renderer_h h_renderer)
     h_renderer->tone_mapping_pass.finalize_exposure_compute_pipeline = tgvk_pipeline_create_compute(&h_renderer->tone_mapping_pass.finalize_exposure_compute_shader);
     h_renderer->tone_mapping_pass.finalize_exposure_descriptor_set = tgvk_descriptor_set_create(&h_renderer->tone_mapping_pass.finalize_exposure_compute_pipeline);
     h_renderer->tone_mapping_pass.finalize_exposure_storage_buffer = tgvk_buffer_create(sizeof(f32), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    h_renderer->tone_mapping_pass.finalize_exposure_dt_ubo = tgvk_buffer_create(sizeof(f32), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    h_renderer->tone_mapping_pass.finalize_exposure_dt_ubo = tgvk_uniform_buffer_create(sizeof(f32));
 
 
 
@@ -1050,39 +1085,6 @@ void tg_renderer_init_shared_resources(void)
         shared_render_resources.forward_render_pass = tgvk_render_pass_create(p_attachment_descriptions, &subpass_description);
     }
 
-    // atmosphere pass
-    {
-        VkAttachmentDescription attachment_description = { 0 };
-
-        attachment_description.flags = 0;
-        attachment_description.format = TGVK_HDR_FORMAT;
-        attachment_description.samples = VK_SAMPLE_COUNT_1_BIT;
-        attachment_description.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-        attachment_description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        attachment_description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        attachment_description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        attachment_description.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        attachment_description.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-        VkAttachmentReference color_attachment_reference = { 0 };
-        color_attachment_reference.attachment = 0;
-        color_attachment_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-        VkSubpassDescription subpass_description = { 0 };
-        subpass_description.flags = 0;
-        subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subpass_description.inputAttachmentCount = 0;
-        subpass_description.pInputAttachments = TG_NULL;
-        subpass_description.colorAttachmentCount = 1;
-        subpass_description.pColorAttachments = &color_attachment_reference;
-        subpass_description.pResolveAttachments = TG_NULL;
-        subpass_description.pDepthStencilAttachment = TG_NULL;
-        subpass_description.preserveAttachmentCount = 0;
-        subpass_description.pPreserveAttachments = TG_NULL;
-
-        shared_render_resources.atmosphere_render_pass = tgvk_render_pass_create(&attachment_description, &subpass_description);
-    }
-
     // tone mapping pass
     {
         VkAttachmentDescription attachment_description = { 0 };
@@ -1151,7 +1153,6 @@ void tg_renderer_init_shared_resources(void)
 void tg_renderer_shutdown_shared_resources(void)
 {
     tgvk_render_pass_destroy(shared_render_resources.present_render_pass);
-    tgvk_render_pass_destroy(shared_render_resources.atmosphere_render_pass);
     tgvk_render_pass_destroy(shared_render_resources.forward_render_pass);
     tgvk_render_pass_destroy(shared_render_resources.tone_mapping_render_pass);
     tgvk_render_pass_destroy(shared_render_resources.shading_render_pass);
@@ -1171,7 +1172,7 @@ tg_renderer_h tg_renderer_create(tg_camera* p_camera)
 
     tg_renderer_h h_renderer = tgvk_handle_take(TG_STRUCTURE_TYPE_RENDERER);
     h_renderer->p_camera = p_camera;
-    h_renderer->view_projection_ubo = tgvk_buffer_create(2 * sizeof(m4), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT); // TODO: not the latter one!
+    h_renderer->view_projection_ubo = tgvk_uniform_buffer_create(2 * sizeof(m4));
 
     h_renderer->hdr_color_attachment = tgvk_image_create(TGVK_IMAGE_TYPE_COLOR, swapchain_extent.width, swapchain_extent.height, TGVK_HDR_FORMAT, TG_NULL);
 
@@ -1203,7 +1204,7 @@ tg_renderer_h tg_renderer_create(tg_camera* p_camera)
 
     h_renderer->semaphore = tgvk_semaphore_create();
 
-    tgvk_atmosphere_model_create(&h_renderer->hdr_color_attachment, &h_renderer->render_target.depth_attachment, &h_renderer->atmosphere_pass.model);
+    tgvk_atmosphere_model_create(&h_renderer->model);
     tg__init_shadow_pass(h_renderer);
     tg__init_geometry_pass(h_renderer);
     tg__init_ssao_pass(h_renderer);
@@ -1283,7 +1284,7 @@ void tg_renderer_destroy(tg_renderer_h h_renderer)
     TG_INVALID_CODEPATH();
 #endif
 
-    tgvk_atmosphere_model_destroy(&h_renderer->atmosphere_pass.model);
+    tgvk_atmosphere_model_destroy(&h_renderer->model);
 
     tgvk_command_buffer_destroy(&h_renderer->clear_pass.command_buffer);
 
@@ -1359,6 +1360,17 @@ void tg_renderer_enable_shadows(tg_renderer_h h_renderer, b32 enable)
     h_renderer->shadow_pass.enabled = enable;
 }
 
+void tg_renderer_enable_sun(tg_renderer_h h_renderer, b32 enable)
+{
+    TG_ASSERT(h_renderer);
+
+    TGVK_SHADING_UBO.sun_enabled = enable;
+    if (tgm_v3_magsqr(TGVK_SHADING_UBO.sun_direction) == 0.0f)
+    {
+        TGVK_SHADING_UBO.sun_direction = (v3){ 0.0f, -1.0f, 0.0f };
+    }
+}
+
 void tg_renderer_begin(tg_renderer_h h_renderer)
 {
     TG_ASSERT(h_renderer);
@@ -1371,24 +1383,31 @@ void tg_renderer_begin(tg_renderer_h h_renderer)
 #endif
 }
 
+void tg_renderer_set_sun_direction(tg_renderer_h h_renderer, v3 direction)
+{
+    TG_ASSERT(h_renderer && tgm_v3_magsqr(direction));
+
+    TGVK_SHADING_UBO.sun_direction = direction;
+}
+
 void tg_renderer_push_directional_light(tg_renderer_h h_renderer, v3 direction, v3 color)
 {
     TG_ASSERT(h_renderer && tgm_v3_mag(direction) && tgm_v3_mag(color));
 
     // TODO: forward renderer
-    tg_shading_info* p_light_setup = (tg_shading_info*)h_renderer->shading_pass.fragment_shader_ubo.memory.p_mapped_device_memory;
+    tg_shading_ubo* p_shading_ubo = &TGVK_SHADING_UBO;
 
-    p_light_setup->p_directional_light_directions[p_light_setup->directional_light_count].x = direction.x;
-    p_light_setup->p_directional_light_directions[p_light_setup->directional_light_count].y = direction.y;
-    p_light_setup->p_directional_light_directions[p_light_setup->directional_light_count].z = direction.z;
-    p_light_setup->p_directional_light_directions[p_light_setup->directional_light_count].w = 0.0f;
+    p_shading_ubo->p_directional_light_directions[p_shading_ubo->directional_light_count].x = direction.x;
+    p_shading_ubo->p_directional_light_directions[p_shading_ubo->directional_light_count].y = direction.y;
+    p_shading_ubo->p_directional_light_directions[p_shading_ubo->directional_light_count].z = direction.z;
+    p_shading_ubo->p_directional_light_directions[p_shading_ubo->directional_light_count].w = 0.0f;
 
-    p_light_setup->p_directional_light_colors[p_light_setup->directional_light_count].x = color.x;
-    p_light_setup->p_directional_light_colors[p_light_setup->directional_light_count].y = color.y;
-    p_light_setup->p_directional_light_colors[p_light_setup->directional_light_count].z = color.z;
-    p_light_setup->p_directional_light_colors[p_light_setup->directional_light_count].w = 1.0f;
+    p_shading_ubo->p_directional_light_colors[p_shading_ubo->directional_light_count].x = color.x;
+    p_shading_ubo->p_directional_light_colors[p_shading_ubo->directional_light_count].y = color.y;
+    p_shading_ubo->p_directional_light_colors[p_shading_ubo->directional_light_count].z = color.z;
+    p_shading_ubo->p_directional_light_colors[p_shading_ubo->directional_light_count].w = 1.0f;
 
-    p_light_setup->directional_light_count++;
+    p_shading_ubo->directional_light_count++;
 }
 
 void tg_renderer_push_point_light(tg_renderer_h h_renderer, v3 position, v3 color)
@@ -1396,19 +1415,19 @@ void tg_renderer_push_point_light(tg_renderer_h h_renderer, v3 position, v3 colo
     TG_ASSERT(h_renderer && tgm_v3_mag(color));
 
     // TODO: forward renderer
-    tg_shading_info* p_light_setup = (tg_shading_info*)h_renderer->shading_pass.fragment_shader_ubo.memory.p_mapped_device_memory;
+    tg_shading_ubo* p_shading_ubo = &TGVK_SHADING_UBO;
 
-    p_light_setup->p_point_light_positions[p_light_setup->point_light_count].x = position.x;
-    p_light_setup->p_point_light_positions[p_light_setup->point_light_count].y = position.y;
-    p_light_setup->p_point_light_positions[p_light_setup->point_light_count].z = position.z;
-    p_light_setup->p_point_light_positions[p_light_setup->point_light_count].w = 0.0f;
+    p_shading_ubo->p_point_light_positions[p_shading_ubo->point_light_count].x = position.x;
+    p_shading_ubo->p_point_light_positions[p_shading_ubo->point_light_count].y = position.y;
+    p_shading_ubo->p_point_light_positions[p_shading_ubo->point_light_count].z = position.z;
+    p_shading_ubo->p_point_light_positions[p_shading_ubo->point_light_count].w = 0.0f;
 
-    p_light_setup->p_point_light_colors[p_light_setup->point_light_count].x = color.x;
-    p_light_setup->p_point_light_colors[p_light_setup->point_light_count].y = color.y;
-    p_light_setup->p_point_light_colors[p_light_setup->point_light_count].z = color.z;
-    p_light_setup->p_point_light_colors[p_light_setup->point_light_count].w = 1.0f;
+    p_shading_ubo->p_point_light_colors[p_shading_ubo->point_light_count].x = color.x;
+    p_shading_ubo->p_point_light_colors[p_shading_ubo->point_light_count].y = color.y;
+    p_shading_ubo->p_point_light_colors[p_shading_ubo->point_light_count].z = color.z;
+    p_shading_ubo->p_point_light_colors[p_shading_ubo->point_light_count].w = 1.0f;
 
-    p_light_setup->point_light_count++;
+    p_shading_ubo->point_light_count++;
 }
 
 void tg_renderer_exec(tg_renderer_h h_renderer, tg_render_command_h h_render_command)
@@ -1462,11 +1481,16 @@ void tg_renderer_end(tg_renderer_h h_renderer, f32 dt, b32 present)
     TGVK_CAMERA_VIEW(h_renderer->view_projection_ubo) = view;
     TGVK_CAMERA_PROJ(h_renderer->view_projection_ubo) = proj;
 
-    ((tg_ssao_info*)h_renderer->ssao_pass.ssao_ubo.memory.p_mapped_device_memory)->view = view;
-    ((tg_ssao_info*)h_renderer->ssao_pass.ssao_ubo.memory.p_mapped_device_memory)->projection = proj;
+    TGVK_SSAO_UBO.view = view;
+    TGVK_SSAO_UBO.projection = proj;
 
-    tg_shading_info* p_shading_info = (tg_shading_info*)h_renderer->shading_pass.fragment_shader_ubo.memory.p_mapped_device_memory;
-    p_shading_info->camera_position = p_camera->position;
+    tg_shading_ubo* p_shading_ubo = &TGVK_SHADING_UBO;
+    p_shading_ubo->camera_position = p_camera->position;
+
+    if (TGVK_SHADING_UBO.sun_enabled)
+    {
+        tgvk_atmosphere_model_update(&h_renderer->model, tgm_m4_inverse(view), tgm_m4_inverse(proj)); // TODO: is inverse calculated multiple times?
+    }
 
     VkCommandBufferBeginInfo command_buffer_begin_info = { 0 };
     command_buffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -1512,8 +1536,8 @@ void tg_renderer_end(tg_renderer_h h_renderer, f32 dt, b32 present)
                 const u32 minor0 = i % 4;
                 const u32 major1 = (i + 1) / 4;
                 const u32 minor1 = (i + 1) % 4;
-                p_shading_info->p_shadow_distances[major0].p_data[minor0] = d0;
-                p_shading_info->p_shadow_distances[major1].p_data[minor1] = d1;
+                p_shading_ubo->p_shadow_distances[major0].p_data[minor0] = d0;
+                p_shading_ubo->p_shadow_distances[major1].p_data[minor1] = d1;
 
                 for (u8 j = 0; j < 4; j++)
                 {
@@ -1539,10 +1563,8 @@ void tg_renderer_end(tg_renderer_h h_renderer, f32 dt, b32 present)
 
             for (u32 i = 0; i < TG_CASCADED_SHADOW_MAPS; i++)
             {
-                p_shading_info->p_lightspace_matrices[i] = *(m4*)h_renderer->shadow_pass.p_lightspace_ubos[i].memory.p_mapped_device_memory;
+                p_shading_ubo->p_lightspace_matrices[i] = *(m4*)h_renderer->shadow_pass.p_lightspace_ubos[i].memory.p_mapped_device_memory;
             }
-
-            tgvk_buffer_flush_host_to_device(&h_renderer->shading_pass.fragment_shader_ubo);
         }
         TGVK_CALL(vkEndCommandBuffer(h_renderer->shadow_pass.command_buffer.command_buffer));
 
@@ -1558,10 +1580,6 @@ void tg_renderer_end(tg_renderer_h h_renderer, f32 dt, b32 present)
         submit_info.pSignalSemaphores = TG_NULL;
 
         tgvk_queue_submit(TGVK_QUEUE_TYPE_GRAPHICS, 1, &submit_info, VK_NULL_HANDLE);
-    }
-    else
-    {
-        tgvk_buffer_flush_host_to_device(&h_renderer->shading_pass.fragment_shader_ubo);
     }
 
 
@@ -1688,24 +1706,6 @@ void tg_renderer_end(tg_renderer_h h_renderer, f32 dt, b32 present)
 
     tgvk_queue_submit(TGVK_QUEUE_TYPE_GRAPHICS, 1, &forward_submit_info, VK_NULL_HANDLE);
 
-    TG_ASSERT(p_shading_info->directional_light_count);
-    const v3 sun_direction = p_shading_info->p_directional_light_directions[0].xyz;
-    tgvk_atmosphere_model_update(&h_renderer->atmosphere_pass.model, sun_direction, tgm_m4_inverse(view), tgm_m4_inverse(proj));
-
-    const VkPipelineStageFlags atmosphere_pipeline_stage_flags = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    VkSubmitInfo atmosphere_submit_info = { 0 };
-    atmosphere_submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    atmosphere_submit_info.pNext = TG_NULL;
-    atmosphere_submit_info.waitSemaphoreCount = 1;
-    atmosphere_submit_info.pWaitSemaphores = &h_renderer->semaphore;
-    atmosphere_submit_info.pWaitDstStageMask = &atmosphere_pipeline_stage_flags;
-    atmosphere_submit_info.commandBufferCount = 1;
-    atmosphere_submit_info.pCommandBuffers = &h_renderer->atmosphere_pass.model.rendering.command_buffer.command_buffer;
-    atmosphere_submit_info.signalSemaphoreCount = 1;
-    atmosphere_submit_info.pSignalSemaphores = &h_renderer->semaphore;
-
-    //tgvk_queue_submit(TGVK_QUEUE_TYPE_GRAPHICS, 1, &atmosphere_submit_info, VK_NULL_HANDLE);
-
     VkSubmitInfo tone_mapping_submit_info = { 0 };
     tone_mapping_submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     tone_mapping_submit_info.pNext = TG_NULL;
@@ -1797,10 +1797,10 @@ void tg_renderer_clear(tg_renderer_h h_renderer)
     tgvk_queue_submit(TGVK_QUEUE_TYPE_GRAPHICS, 1, &submit_info, h_renderer->render_target.fence);
 
     // TODO: forward renderer
-    tg_shading_info* p_light_setup = (tg_shading_info*)h_renderer->shading_pass.fragment_shader_ubo.memory.p_mapped_device_memory;
+    tg_shading_ubo* p_shading_ubo = &TGVK_SHADING_UBO;
 
-    p_light_setup->directional_light_count = 0;
-    p_light_setup->point_light_count = 0;
+    p_shading_ubo->directional_light_count = 0;
+    p_shading_ubo->point_light_count = 0;
 }
 
 tg_render_target_h tg_renderer_get_render_target(tg_renderer_h h_renderer)
@@ -1925,7 +1925,7 @@ void tg_renderer_draw_cube_DEBUG(tg_renderer_h h_renderer, v3 position, v3 scale
 
     if (h_renderer->DEBUG.p_cubes[h_renderer->DEBUG.cube_count].ubo.buffer == VK_NULL_HANDLE)
     {
-        h_renderer->DEBUG.p_cubes[h_renderer->DEBUG.cube_count].ubo = tgvk_buffer_create(sizeof(m4) + sizeof(v4), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+        h_renderer->DEBUG.p_cubes[h_renderer->DEBUG.cube_count].ubo = tgvk_uniform_buffer_create(sizeof(m4) + sizeof(v4));
     }
 
     *((m4*)h_renderer->DEBUG.p_cubes[h_renderer->DEBUG.cube_count].ubo.memory.p_mapped_device_memory) = tgm_m4_mul(tgm_m4_translate(position), tgm_m4_scale(scale));

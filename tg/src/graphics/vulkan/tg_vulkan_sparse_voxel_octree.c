@@ -42,7 +42,7 @@ void tg_voxelizer_create(tg_voxelizer* p_voxelizer)
         p_voxelizer->p_descriptor_sets[i] = (tgvk_descriptor_set){ 0 };
     }
 
-    p_voxelizer->view_projection_ubo = tgvk_buffer_create(3 * sizeof(m4), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+    p_voxelizer->view_projection_ubo = tgvk_uniform_buffer_create(3 * sizeof(m4));
 
     p_voxelizer->p_image_3ds[0] = tgvk_image_3d_create(TGVK_IMAGE_TYPE_STORAGE, TG_SVO_DIMS, TG_SVO_DIMS, TG_SVO_DIMS, (VkFormat)TG_COLOR_IMAGE_FORMAT_R32_UINT, TG_NULL);
     p_voxelizer->p_image_3ds[1] = tgvk_image_3d_create(TGVK_IMAGE_TYPE_STORAGE, TG_SVO_DIMS, TG_SVO_DIMS, TG_SVO_DIMS, (VkFormat)TG_COLOR_IMAGE_FORMAT_R32_UINT, TG_NULL);
@@ -155,7 +155,6 @@ void tg_voxelizer_end(tg_voxelizer* p_voxelizer, v3i min_corner_index_3d, tg_vox
 
 
     ((m4*)p_voxelizer->view_projection_ubo.memory.p_mapped_device_memory)[1] = tgm_m4_inverse(tgm_m4_euler(0.0f, 0.0f, 0.0f));
-    tgvk_buffer_flush_host_to_device(&p_voxelizer->view_projection_ubo);
 
     VkSubmitInfo submit_info = { 0 };
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -175,7 +174,6 @@ void tg_voxelizer_end(tg_voxelizer* p_voxelizer, v3i min_corner_index_3d, tg_vox
 
 
     ((m4*)p_voxelizer->view_projection_ubo.memory.p_mapped_device_memory)[1] = tgm_m4_inverse(tgm_m4_euler(0.0f, TG_TO_RADIANS(90.0f), 0.0f));
-    tgvk_buffer_flush_host_to_device(&p_voxelizer->view_projection_ubo);
 
     tgvk_queue_submit(TGVK_QUEUE_TYPE_GRAPHICS, 1, &submit_info, p_voxelizer->fence);
     tgvk_fence_wait(p_voxelizer->fence);
@@ -184,7 +182,6 @@ void tg_voxelizer_end(tg_voxelizer* p_voxelizer, v3i min_corner_index_3d, tg_vox
 
 
     ((m4*)p_voxelizer->view_projection_ubo.memory.p_mapped_device_memory)[1] = tgm_m4_inverse(tgm_m4_euler(TG_TO_RADIANS(90.0f), 0.0f, 0.0f));
-    tgvk_buffer_flush_host_to_device(&p_voxelizer->view_projection_ubo);
 
     tgvk_queue_submit(TGVK_QUEUE_TYPE_GRAPHICS, 1, &submit_info, p_voxelizer->fence);
     tgvk_fence_wait(p_voxelizer->fence);

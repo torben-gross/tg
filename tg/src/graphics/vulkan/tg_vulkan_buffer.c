@@ -42,7 +42,7 @@ tg_uniform_buffer_h tg_uniform_buffer_create(u64 size)
 	TG_ASSERT(size);
 
 	tg_uniform_buffer_h h_uniform_buffer = tgvk_handle_take(TG_STRUCTURE_TYPE_UNIFORM_BUFFER);
-	h_uniform_buffer->buffer = tgvk_buffer_create(size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+	h_uniform_buffer->buffer = tgvk_uniform_buffer_create(size);
 	return h_uniform_buffer;
 }
 

@@ -861,7 +861,7 @@ void tg_mesh_regenerate_normals(tg_mesh_h h_mesh)
         p_descriptor_set_layout_bindings[1].pImmutableSamplers = TG_NULL;
 
         compute_pipeline = tgvk_pipeline_create_compute(&compute_shader);
-        uniform_buffer = tgvk_buffer_create(sizeof(tg_normals_compute_shader_uniform_buffer), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        uniform_buffer = tgvk_uniform_buffer_create(sizeof(tg_normals_compute_shader_uniform_buffer));
 
         tgvk_descriptor_set_update_storage_buffer(compute_pipeline.descriptor_set, p_staging_buffer->buffer, 0);
         tgvk_descriptor_set_update_uniform_buffer(compute_pipeline.descriptor_set, uniform_buffer.buffer, 1);
