@@ -12,7 +12,7 @@
 #define TGVK_INV_VIEW_PROJ(projection_matrix, view_matrix)    tgm_m4_inverse(tgm_m4_mul(projection_matrix, view_matrix))
 
 #define TGVK_SHADING_ATTACHMENT_COUNT                         1
-#define TGVK_HDR_FORMAT                                       VK_FORMAT_R16G16B16A16_SFLOAT
+#define TGVK_HDR_FORMAT                                       VK_FORMAT_R32G32B32A32_SFLOAT
 #define TGVK_LINEAR_FORMAT                                    VK_FORMAT_B8G8R8A8_UNORM
 
 #define TGVK_GEOMETRY_FORMATS(var)                            const VkFormat var[TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT] = { VK_FORMAT_R32G32B32A32_SFLOAT, TGVK_HDR_FORMAT, TGVK_HDR_FORMAT, TGVK_HDR_FORMAT }

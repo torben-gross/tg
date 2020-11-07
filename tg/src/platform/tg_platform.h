@@ -149,6 +149,8 @@
 #define TG_RWL_CREATE() \
     ((tg_read_write_lock)SRWLOCK_INIT)
 
+#define TG_RWL_DESTROY(read_write_lock)
+
 #define TG_RWL_LOCK_FOR_WRITE(read_write_lock) \
     AcquireSRWLockExclusive((PSRWLOCK)&(read_write_lock))
 

@@ -8,11 +8,8 @@
 
 
 
-#ifdef TG_DEBUG
-#define TGVK_CALL(x)     TG_ASSERT((x) == VK_SUCCESS) // TODO: how can i make this not be a duplicate?
-#else
-#define TGVK_CALL(x)     x
-#endif
+#define TGVK_MAX_DEVICE_LOCAL_MEMORY_SIZE      (1LL << 32LL)
+#define TGVK_MAX_HOST_VISIBLE_COHERENT_SIZE    (1LL << 25LL)
 
 
 
@@ -37,10 +34,10 @@ typedef struct tgvk_memory_pool
 
 typedef struct tgvk_memory
 {
-    tg_mutex_h          h_mutex;
-    VkDeviceSize        page_size;
-    u32                 pool_count;
-    tgvk_memory_pool    p_pools[VK_MAX_MEMORY_TYPES];
+    tg_read_write_lock    read_write_lock;
+    VkDeviceSize          page_size;
+    u32                   pool_count;
+    tgvk_memory_pool      p_pools[VK_MAX_MEMORY_TYPES];
 } tgvk_memory;
 
 
@@ -57,52 +54,39 @@ void tgvk_memory_allocator_init(VkDevice device, VkPhysicalDevice physical_devic
 {
     TG_ASSERT(!initialized);
 
-    memory.h_mutex = TG_MUTEX_CREATE();
+    memory.read_write_lock = TG_RWL_CREATE();
 
     VkPhysicalDeviceProperties physical_device_properties = { 0 };
     vkGetPhysicalDeviceProperties(physical_device, &physical_device_properties);
+    
+    memory.page_size = TG_MAX(1024, physical_device_properties.limits.bufferImageGranularity);
 
     VkPhysicalDeviceMemoryProperties physical_device_memory_properties = { 0 };
     vkGetPhysicalDeviceMemoryProperties(physical_device, &physical_device_memory_properties);
-    
-    VkDeviceSize p_memory_types_per_memory_heap[VK_MAX_MEMORY_HEAPS] = { 0 };
-    for (u32 i = 0; i < physical_device_memory_properties.memoryTypeCount; i++)
-    {
-        if (physical_device_memory_properties.memoryTypes[i].propertyFlags == (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) ||
-            physical_device_memory_properties.memoryTypes[i].propertyFlags == VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
-        )
-        {
-            p_memory_types_per_memory_heap[physical_device_memory_properties.memoryTypes[i].heapIndex]++;
-        }
-    }
-    VkDeviceSize p_allocation_size_per_memory_heap[VK_MAX_MEMORY_HEAPS] = { 0 };
-
-    memory.page_size = tgm_u64_max(1024, physical_device_properties.limits.bufferImageGranularity);
-
-    const VkDeviceSize heap_size_fraction_denominator = 6;
-    for (u32 i = 0; i < physical_device_memory_properties.memoryHeapCount; i++)
-    {
-        if (p_memory_types_per_memory_heap[i])
-        {
-            const VkDeviceSize size_per_allocation = (physical_device_memory_properties.memoryHeaps[i].size / heap_size_fraction_denominator) / p_memory_types_per_memory_heap[i];
-            const VkDeviceSize aligned_size_per_allocation = TG_CEIL_TO_MULTIPLE(size_per_allocation, memory.page_size);
-            p_allocation_size_per_memory_heap[i] = aligned_size_per_allocation;
-        }
-    }
 
     memory.pool_count = 0;
     for (u32 i = 0; i < physical_device_memory_properties.memoryTypeCount; i++)
     {
-        if (physical_device_memory_properties.memoryTypes[i].propertyFlags == (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) ||
-            physical_device_memory_properties.memoryTypes[i].propertyFlags == VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
-        )
+        const b32 device_local = physical_device_memory_properties.memoryTypes[i].propertyFlags == VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+        const b32 host_visible_coherent = physical_device_memory_properties.memoryTypes[i].propertyFlags == (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+        if (device_local || host_visible_coherent)
         {
+            VkDeviceSize allocation_size = 0;
+            switch (physical_device_memory_properties.memoryTypes[i].propertyFlags)
+            {
+            case VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT:                                        allocation_size = TGVK_MAX_DEVICE_LOCAL_MEMORY_SIZE;   break;
+            case VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT: allocation_size = TGVK_MAX_HOST_VISIBLE_COHERENT_SIZE; break;
+
+            default: TG_INVALID_CODEPATH(); break;
+            }
+            allocation_size = TG_CEIL_TO_MULTIPLE(allocation_size, memory.page_size);
+
             memory.p_pools[memory.pool_count].memory_property_flags = physical_device_memory_properties.memoryTypes[i].propertyFlags;
 
-            const VkDeviceSize allocation_size = p_allocation_size_per_memory_heap[physical_device_memory_properties.memoryTypes[i].heapIndex];
             TG_ASSERT(allocation_size / memory.page_size <= TG_U32_MAX);
             const u32 total_page_count = (u32)(allocation_size / memory.page_size);
-        
+
             memory.p_pools[memory.pool_count].memory_type_bit = i;
             memory.p_pools[memory.pool_count].reserved_page_count = 0;
             memory.p_pools[memory.pool_count].total_page_count = total_page_count;
@@ -150,7 +134,7 @@ void tgvk_memory_allocator_shutdown(VkDevice device)
         vkFreeMemory(device, memory.p_pools[i].device_memory, TG_NULL);
         TG_MEMORY_FREE(memory.p_pools[i].p_entries);
     }
-    TG_MUTEX_DESTROY(memory.h_mutex);
+    TG_RWL_DESTROY(memory.read_write_lock);
 }
 
 VkDeviceSize tgvk_memory_aligned_size(VkDeviceSize size)
@@ -169,7 +153,7 @@ tgvk_memory_block tgvk_memory_allocator_alloc(VkDeviceSize alignment, VkDeviceSi
     const VkDeviceSize aligned_size = TG_CEIL_TO_MULTIPLE(size, memory.page_size);
     const u32 required_page_count = (u32)(aligned_size / memory.page_size);
 
-    TG_MUTEX_LOCK(memory.h_mutex);
+    TG_RWL_LOCK_FOR_WRITE(memory.read_write_lock);
     for (u32 i = 0; i < memory.pool_count; i++)
     {
         tgvk_memory_pool* p_pool = &memory.p_pools[i];
@@ -213,8 +197,8 @@ tgvk_memory_block tgvk_memory_allocator_alloc(VkDeviceSize alignment, VkDeviceSi
         }
     }
 
-    end:
-    TG_MUTEX_UNLOCK(memory.h_mutex);
+end:
+    TG_RWL_UNLOCK_FOR_WRITE(memory.read_write_lock);
     TG_ASSERT(memory_block.device_memory);
 
     return memory_block;
@@ -225,7 +209,7 @@ void tgvk_memory_allocator_free(tgvk_memory_block* p_memory_block)
     TG_ASSERT(p_memory_block);
 
     const u32 page_count = (u32)(p_memory_block->size / memory.page_size);
-    TG_MUTEX_LOCK(memory.h_mutex);
+    TG_RWL_LOCK_FOR_WRITE(memory.read_write_lock);
     memory.p_pools[p_memory_block->pool_index].reserved_page_count -= page_count;
 
     tgvk_memory_pool* p_pool = &memory.p_pools[p_memory_block->pool_index];
@@ -269,7 +253,7 @@ void tgvk_memory_allocator_free(tgvk_memory_block* p_memory_block)
             p_pool->entry_count -= left_merge_count + right_merge_count;
         }
     }
-    TG_MUTEX_UNLOCK(memory.h_mutex);
+    TG_RWL_UNLOCK_FOR_WRITE(memory.read_write_lock);
 }
 
 #endif
