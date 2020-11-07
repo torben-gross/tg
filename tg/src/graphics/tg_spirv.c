@@ -1,4 +1,4 @@
-#include "graphics/vulkan/tg_graphics_vulkan.h"
+#include "graphics/vulkan/tgvk_core.h"
 #include "memory/tg_memory.h"
 #include "util/tg_qsort.h"
 #include "util/tg_string.h"

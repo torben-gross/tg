@@ -1,4 +1,4 @@
-#include "graphics/vulkan/tg_graphics_vulkan.h"
+#include "graphics/vulkan/tgvk_core.h"
 
 #ifdef TG_VULKAN
 
@@ -681,7 +681,7 @@ void tgvk_cmd_copy_buffer(tgvk_command_buffer* p_command_buffer, VkDeviceSize si
     vkCmdCopyBuffer(p_command_buffer->command_buffer, p_src->buffer, p_dst->buffer, 1, &buffer_copy);
 }
 
-void tgvk_cmd_copy_buffer_to_color_image(tgvk_command_buffer* p_command_buffer, VkBuffer source, tgvk_image* p_destination)
+void tgvk_cmd_copy_buffer_to_color_image(tgvk_command_buffer* p_command_buffer, tgvk_buffer* p_source, tgvk_image* p_destination)
 {
     VkBufferImageCopy buffer_image_copy = { 0 };
     buffer_image_copy.bufferOffset = 0;
@@ -698,10 +698,10 @@ void tgvk_cmd_copy_buffer_to_color_image(tgvk_command_buffer* p_command_buffer, 
     buffer_image_copy.imageExtent.height = p_destination->height;
     buffer_image_copy.imageExtent.depth = 1;
 
-    vkCmdCopyBufferToImage(p_command_buffer->command_buffer, source, p_destination->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &buffer_image_copy);
+    vkCmdCopyBufferToImage(p_command_buffer->command_buffer, p_source->buffer, p_destination->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &buffer_image_copy);
 }
 
-void tgvk_cmd_copy_buffer_to_cube_map(tgvk_command_buffer* p_command_buffer, VkBuffer source, tgvk_cube_map* p_destination)
+void tgvk_cmd_copy_buffer_to_cube_map(tgvk_command_buffer* p_command_buffer, tgvk_buffer* p_source, tgvk_cube_map* p_destination)
 {
     VkBufferImageCopy buffer_image_copy = { 0 };
     buffer_image_copy.bufferOffset = 0;
@@ -718,10 +718,10 @@ void tgvk_cmd_copy_buffer_to_cube_map(tgvk_command_buffer* p_command_buffer, VkB
     buffer_image_copy.imageExtent.height = p_destination->dimension;
     buffer_image_copy.imageExtent.depth = 1;
 
-    vkCmdCopyBufferToImage(p_command_buffer->command_buffer, source, p_destination->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &buffer_image_copy);
+    vkCmdCopyBufferToImage(p_command_buffer->command_buffer, p_source->buffer, p_destination->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &buffer_image_copy);
 }
 
-void tgvk_cmd_copy_buffer_to_depth_image(tgvk_command_buffer* p_command_buffer, VkBuffer source, tgvk_image* p_destination)
+void tgvk_cmd_copy_buffer_to_depth_image(tgvk_command_buffer* p_command_buffer, tgvk_buffer* p_source, tgvk_image* p_destination)
 {
     VkBufferImageCopy buffer_image_copy = { 0 };
     buffer_image_copy.bufferOffset = 0;
@@ -738,10 +738,10 @@ void tgvk_cmd_copy_buffer_to_depth_image(tgvk_command_buffer* p_command_buffer, 
     buffer_image_copy.imageExtent.height = p_destination->height;
     buffer_image_copy.imageExtent.depth = 1;
 
-    vkCmdCopyBufferToImage(p_command_buffer->command_buffer, source, p_destination->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &buffer_image_copy);
+    vkCmdCopyBufferToImage(p_command_buffer->command_buffer, p_source->buffer, p_destination->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &buffer_image_copy);
 }
 
-void tgvk_cmd_copy_buffer_to_image_3d(tgvk_command_buffer* p_command_buffer, VkBuffer source, tgvk_image_3d* p_destination)
+void tgvk_cmd_copy_buffer_to_image_3d(tgvk_command_buffer* p_command_buffer, tgvk_buffer* p_source, tgvk_image_3d* p_destination)
 {
     VkBufferImageCopy buffer_image_copy = { 0 };
     buffer_image_copy.bufferOffset = 0;
@@ -758,7 +758,7 @@ void tgvk_cmd_copy_buffer_to_image_3d(tgvk_command_buffer* p_command_buffer, VkB
     buffer_image_copy.imageExtent.height = p_destination->height;
     buffer_image_copy.imageExtent.depth = p_destination->depth;
 
-    vkCmdCopyBufferToImage(p_command_buffer->command_buffer, source, p_destination->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &buffer_image_copy);
+    vkCmdCopyBufferToImage(p_command_buffer->command_buffer, p_source->buffer, p_destination->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &buffer_image_copy);
 }
 
 void tgvk_cmd_copy_color_image(tgvk_command_buffer* p_command_buffer, tgvk_image* p_source, tgvk_image* p_destination)
@@ -785,7 +785,7 @@ void tgvk_cmd_copy_color_image(tgvk_command_buffer* p_command_buffer, tgvk_image
     vkCmdCopyImage(p_command_buffer->command_buffer, p_source->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, p_destination->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &image_copy);
 }
 
-void tgvk_cmd_copy_color_image_to_buffer(tgvk_command_buffer* p_command_buffer, tgvk_image* p_source, VkBuffer destination)
+void tgvk_cmd_copy_color_image_to_buffer(tgvk_command_buffer* p_command_buffer, tgvk_image* p_source, tgvk_buffer* p_destination)
 {
     VkBufferImageCopy buffer_image_copy = { 0 };
     buffer_image_copy.bufferOffset = 0;
@@ -802,10 +802,10 @@ void tgvk_cmd_copy_color_image_to_buffer(tgvk_command_buffer* p_command_buffer, 
     buffer_image_copy.imageExtent.height = p_source->height;
     buffer_image_copy.imageExtent.depth = 1;
 
-    vkCmdCopyImageToBuffer(p_command_buffer->command_buffer, p_source->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, destination, 1, &buffer_image_copy);
+    vkCmdCopyImageToBuffer(p_command_buffer->command_buffer, p_source->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, p_destination->buffer, 1, &buffer_image_copy);
 }
 
-void tgvk_cmd_copy_depth_image_pixel_to_buffer(tgvk_command_buffer* p_command_buffer, tgvk_image* p_source, VkBuffer destination, u32 x, u32 y)
+void tgvk_cmd_copy_depth_image_pixel_to_buffer(tgvk_command_buffer* p_command_buffer, tgvk_image* p_source, tgvk_buffer* p_destination, u32 x, u32 y)
 {
     VkBufferImageCopy buffer_image_copy = { 0 };
     buffer_image_copy.bufferOffset = 0;
@@ -822,10 +822,10 @@ void tgvk_cmd_copy_depth_image_pixel_to_buffer(tgvk_command_buffer* p_command_bu
     buffer_image_copy.imageExtent.height = 1;
     buffer_image_copy.imageExtent.depth = 1;
 
-    vkCmdCopyImageToBuffer(p_command_buffer->command_buffer, p_source->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, destination, 1, &buffer_image_copy);
+    vkCmdCopyImageToBuffer(p_command_buffer->command_buffer, p_source->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, p_destination->buffer, 1, &buffer_image_copy);
 }
 
-void tgvk_cmd_copy_image_3d_to_buffer(tgvk_command_buffer* p_command_buffer, tgvk_image_3d* p_source, VkBuffer destination)
+void tgvk_cmd_copy_image_3d_to_buffer(tgvk_command_buffer* p_command_buffer, tgvk_image_3d* p_source, tgvk_buffer* p_destination)
 {
     VkBufferImageCopy buffer_image_copy = { 0 };
     buffer_image_copy.bufferOffset = 0;
@@ -842,7 +842,7 @@ void tgvk_cmd_copy_image_3d_to_buffer(tgvk_command_buffer* p_command_buffer, tgv
     buffer_image_copy.imageExtent.height = p_source->height;
     buffer_image_copy.imageExtent.depth = p_source->depth;
 
-    vkCmdCopyImageToBuffer(p_command_buffer->command_buffer, p_source->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, destination, 1, &buffer_image_copy);
+    vkCmdCopyImageToBuffer(p_command_buffer->command_buffer, p_source->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, p_destination->buffer, 1, &buffer_image_copy);
 }
 
 void tgvk_cmd_draw_indexed(tgvk_command_buffer* p_command_buffer, u32 index_count)
@@ -1048,14 +1048,14 @@ void tgvk_command_buffer_begin(tgvk_command_buffer* p_command_buffer, VkCommandB
     TGVK_CALL(vkBeginCommandBuffer(p_command_buffer->command_buffer, &command_buffer_begin_info));
 }
 
-void tgvk_command_buffer_begin_secondary(tgvk_command_buffer* p_command_buffer, VkCommandBufferUsageFlags flags, VkRenderPass render_pass, VkFramebuffer framebuffer)
+void tgvk_command_buffer_begin_secondary(tgvk_command_buffer* p_command_buffer, VkCommandBufferUsageFlags flags, VkRenderPass render_pass, tgvk_framebuffer* p_framebuffer)
 {
     VkCommandBufferInheritanceInfo command_buffer_inheritance_info = { 0 };
     command_buffer_inheritance_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
     command_buffer_inheritance_info.pNext = TG_NULL;
     command_buffer_inheritance_info.renderPass = render_pass;
     command_buffer_inheritance_info.subpass = 0;
-    command_buffer_inheritance_info.framebuffer = framebuffer;
+    command_buffer_inheritance_info.framebuffer = p_framebuffer->framebuffer;
     command_buffer_inheritance_info.occlusionQueryEnable = TG_FALSE;
     command_buffer_inheritance_info.queryFlags = 0;
     command_buffer_inheritance_info.pipelineStatistics = 0;
@@ -1252,12 +1252,12 @@ void tgvk_descriptor_set_update(VkDescriptorSet descriptor_set, tg_handle handle
     case TG_STRUCTURE_TYPE_STORAGE_BUFFER:
     {
         tg_storage_buffer_h h_storage_buffer = (tg_storage_buffer_h)handle;
-        tgvk_descriptor_set_update_storage_buffer(descriptor_set, h_storage_buffer->buffer.buffer, dst_binding);
+        tgvk_descriptor_set_update_storage_buffer(descriptor_set, &h_storage_buffer->buffer, dst_binding);
     } break;
     case TG_STRUCTURE_TYPE_UNIFORM_BUFFER:
     {
         tg_uniform_buffer_h h_uniform_buffer = (tg_uniform_buffer_h)handle;
-        tgvk_descriptor_set_update_uniform_buffer(descriptor_set, h_uniform_buffer->buffer.buffer, dst_binding);
+        tgvk_descriptor_set_update_uniform_buffer(descriptor_set, &h_uniform_buffer->buffer, dst_binding);
     } break;
     default: TG_INVALID_CODEPATH(); break;
     }
@@ -1388,10 +1388,10 @@ void tgvk_descriptor_set_update_render_target(VkDescriptorSet descriptor_set, tg
     // TODO: select color or depth somewhere
 }
 
-void tgvk_descriptor_set_update_storage_buffer(VkDescriptorSet descriptor_set, VkBuffer buffer, u32 dst_binding)
+void tgvk_descriptor_set_update_storage_buffer(VkDescriptorSet descriptor_set, tgvk_buffer* p_buffer, u32 dst_binding)
 {
     VkDescriptorBufferInfo descriptor_buffer_info = { 0 };
-    descriptor_buffer_info.buffer = buffer;
+    descriptor_buffer_info.buffer = p_buffer->buffer;
     descriptor_buffer_info.offset = 0;
     descriptor_buffer_info.range = VK_WHOLE_SIZE;
 
@@ -1410,10 +1410,10 @@ void tgvk_descriptor_set_update_storage_buffer(VkDescriptorSet descriptor_set, V
     vkUpdateDescriptorSets(device, 1, &write_descriptor_set, 0, TG_NULL);
 }
 
-void tgvk_descriptor_set_update_storage_buffer_array(VkDescriptorSet descriptor_set, VkBuffer buffer, u32 dst_binding, u32 array_index)
+void tgvk_descriptor_set_update_storage_buffer_array(VkDescriptorSet descriptor_set, tgvk_buffer* p_buffer, u32 dst_binding, u32 array_index)
 {
     VkDescriptorBufferInfo descriptor_buffer_info = { 0 };
-    descriptor_buffer_info.buffer = buffer;
+    descriptor_buffer_info.buffer = p_buffer->buffer;
     descriptor_buffer_info.offset = 0;
     descriptor_buffer_info.range = VK_WHOLE_SIZE;
 
@@ -1432,10 +1432,10 @@ void tgvk_descriptor_set_update_storage_buffer_array(VkDescriptorSet descriptor_
     vkUpdateDescriptorSets(device, 1, &write_descriptor_set, 0, TG_NULL);
 }
 
-void tgvk_descriptor_set_update_uniform_buffer(VkDescriptorSet descriptor_set, VkBuffer buffer, u32 dst_binding)
+void tgvk_descriptor_set_update_uniform_buffer(VkDescriptorSet descriptor_set, tgvk_buffer* p_buffer, u32 dst_binding)
 {
     VkDescriptorBufferInfo descriptor_buffer_info = { 0 };
-    descriptor_buffer_info.buffer = buffer;
+    descriptor_buffer_info.buffer = p_buffer->buffer;
     descriptor_buffer_info.offset = 0;
     descriptor_buffer_info.range = VK_WHOLE_SIZE;
 
@@ -1454,10 +1454,10 @@ void tgvk_descriptor_set_update_uniform_buffer(VkDescriptorSet descriptor_set, V
     vkUpdateDescriptorSets(device, 1, &write_descriptor_set, 0, TG_NULL);
 }
 
-void tgvk_descriptor_set_update_uniform_buffer_array(VkDescriptorSet descriptor_set, VkBuffer buffer, u32 dst_binding, u32 array_index)
+void tgvk_descriptor_set_update_uniform_buffer_array(VkDescriptorSet descriptor_set, tgvk_buffer* p_buffer, u32 dst_binding, u32 array_index)
 {
     VkDescriptorBufferInfo descriptor_buffer_info = { 0 };
-    descriptor_buffer_info.buffer = buffer;
+    descriptor_buffer_info.buffer = p_buffer->buffer;
     descriptor_buffer_info.offset = 0;
     descriptor_buffer_info.range = VK_WHOLE_SIZE;
 
@@ -1476,10 +1476,10 @@ void tgvk_descriptor_set_update_uniform_buffer_array(VkDescriptorSet descriptor_
     vkUpdateDescriptorSets(device, 1, &write_descriptor_set, 0, TG_NULL);
 }
 
-void tgvk_descriptor_set_update_uniform_buffer_range(VkDescriptorSet descriptor_set, VkDeviceSize offset, VkDeviceSize range, VkBuffer buffer, u32 dst_binding)
+void tgvk_descriptor_set_update_uniform_buffer_range(VkDescriptorSet descriptor_set, VkDeviceSize offset, VkDeviceSize range, tgvk_buffer* p_buffer, u32 dst_binding)
 {
     VkDescriptorBufferInfo descriptor_buffer_info = { 0 };
-    descriptor_buffer_info.buffer = buffer;
+    descriptor_buffer_info.buffer = p_buffer->buffer;
     descriptor_buffer_info.offset = offset;
     descriptor_buffer_info.range = range;
 
@@ -1906,7 +1906,7 @@ tgvk_image tgvk_image_create2(tgvk_image_type type, const char* p_filename, cons
     tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
     tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
     tgvk_cmd_transition_image_layout(p_command_buffer, &image, 0, 0, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
-    tgvk_cmd_copy_buffer_to_color_image(p_command_buffer, p_staging_buffer->buffer, &image);
+    tgvk_cmd_copy_buffer_to_color_image(p_command_buffer, p_staging_buffer, &image);
     tgvk_cmd_transition_image_layout(p_command_buffer, &image, 0, 0, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
     tgvk_command_buffer_end_and_submit(p_command_buffer);
     tgvk_global_staging_buffer_release();
@@ -1967,7 +1967,7 @@ b32 tgvk_image_store_to_disc(tgvk_image* p_image, const char* p_filename, b32 fo
             VK_PIPELINE_STAGE_TRANSFER_BIT
         );
 
-        tgvk_cmd_copy_color_image_to_buffer(p_command_buffer, &blit_image, p_staging_buffer->buffer);
+        tgvk_cmd_copy_color_image_to_buffer(p_command_buffer, &blit_image, p_staging_buffer);
     }
 
     tgvk_command_buffer_end_and_submit(p_command_buffer);
@@ -2124,7 +2124,7 @@ b32 tgvk_image_3d_store_slice_to_disc(tgvk_image_3d* p_image_3d, u32 slice_depth
             VK_PIPELINE_STAGE_TRANSFER_BIT
         );
 
-        tgvk_cmd_copy_color_image_to_buffer(p_command_buffer, &blit_image, p_staging_buffer->buffer);
+        tgvk_cmd_copy_color_image_to_buffer(p_command_buffer, &blit_image, p_staging_buffer);
     }
 
     tgvk_command_buffer_end_and_submit(p_command_buffer);
@@ -2313,7 +2313,7 @@ b32 tgvk_layered_image_store_layer_to_disc(tgvk_layered_image* p_image, u32 laye
             VK_PIPELINE_STAGE_TRANSFER_BIT
         );
 
-        tgvk_cmd_copy_color_image_to_buffer(p_command_buffer, &blit_image, p_staging_buffer->buffer);
+        tgvk_cmd_copy_color_image_to_buffer(p_command_buffer, &blit_image, p_staging_buffer);
     }
 
     tgvk_command_buffer_end_and_submit(p_command_buffer);

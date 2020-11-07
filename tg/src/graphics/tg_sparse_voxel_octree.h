@@ -1,7 +1,7 @@
 #ifndef TG_SPARSE_VOXEL_OCTREE
 #define TG_SPARSE_VOXEL_OCTREE
 
-#include "graphics/vulkan/tg_graphics_vulkan.h"
+#include "graphics/vulkan/tgvk_core.h"
 
 #ifdef TG_VULKAN
 

@@ -1,4 +1,4 @@
-#include "graphics/vulkan/tg_graphics_vulkan.h"
+#include "graphics/vulkan/tgvk_core.h"
 
 #ifdef TG_VULKAN
 
@@ -55,7 +55,7 @@ void tg_render_target_get_color_data_copy(tg_render_target_h h_render_target, TG
 				VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
 				VK_PIPELINE_STAGE_TRANSFER_BIT
 			);
-			tgvk_cmd_copy_color_image_to_buffer(p_command_buffer, &h_render_target->color_attachment_copy, p_staging_buffer->buffer);
+			tgvk_cmd_copy_color_image_to_buffer(p_command_buffer, &h_render_target->color_attachment_copy, p_staging_buffer);
 			tgvk_cmd_transition_image_layout(
 				p_command_buffer,
 				&h_render_target->color_attachment_copy,

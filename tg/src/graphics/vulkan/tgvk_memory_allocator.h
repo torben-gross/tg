@@ -5,7 +5,7 @@
 
 #ifdef TG_VULKAN
 
-#include "graphics/vulkan/tg_vulkan_common.h"
+#include "graphics/vulkan/tgvk_common.h"
 
 typedef struct tgvk_memory_block
 {

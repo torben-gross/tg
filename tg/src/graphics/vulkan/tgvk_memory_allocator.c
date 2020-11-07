@@ -1,4 +1,4 @@
-#include "graphics/vulkan/tg_vulkan_memory_allocator.h"
+#include "graphics/vulkan/tgvk_memory_allocator.h"
 
 #ifdef TG_VULKAN
 
@@ -42,10 +42,10 @@ typedef struct tgvk_memory
 
 
 
-tgvk_memory    memory = { 0 };
+static tgvk_memory    memory = { 0 };
 
 #ifdef TG_DEBUG
-b32            initialized = TG_FALSE;
+static b32            initialized = TG_FALSE;
 #endif
 
 

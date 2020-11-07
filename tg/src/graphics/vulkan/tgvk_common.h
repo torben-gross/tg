@@ -5,6 +5,8 @@
 
 #ifdef TG_VULKAN
 
+#include "platform/tg_platform.h"
+
 #pragma warning(push, 3)
 #include <vulkan/vulkan.h>
 #pragma warning(pop)

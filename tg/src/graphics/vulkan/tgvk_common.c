@@ -1,9 +1,8 @@
-#include "graphics/vulkan/tg_vulkan_common.h"
+#include "graphics/vulkan/tgvk_common.h"
 
 #ifdef TG_VULKAN
 
 #include "memory/tg_memory.h"
-#include "platform/tg_platform.h"
 
 void tgvk_vkresult_convert_to_string(char* p_buffer, VkResult result)
 {

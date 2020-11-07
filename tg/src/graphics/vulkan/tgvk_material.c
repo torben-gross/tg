@@ -1,8 +1,6 @@
-#include "graphics/vulkan/tg_graphics_vulkan.h"
+#include "graphics/vulkan/tgvk_core.h"
 
 #ifdef TG_VULKAN
-
-
 
 static tg_material_h tg__create(tgvk_material_type material_type, tg_vertex_shader_h h_vertex_shader, tg_fragment_shader_h h_fragment_shader)
 {

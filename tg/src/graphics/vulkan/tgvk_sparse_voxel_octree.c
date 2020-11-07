@@ -109,8 +109,8 @@ void tg_voxelizer_exec(tg_voxelizer* p_voxelizer, tg_render_command_h h_render_c
     }
     tgvk_descriptor_set* p_descriptor_set = &p_voxelizer->p_descriptor_sets[p_voxelizer->descriptor_set_count++];
 
-    tgvk_descriptor_set_update_uniform_buffer(p_descriptor_set->descriptor_set, h_render_command->model_ubo.buffer, 0);
-    tgvk_descriptor_set_update_uniform_buffer(p_descriptor_set->descriptor_set, p_voxelizer->view_projection_ubo.buffer, 1);
+    tgvk_descriptor_set_update_uniform_buffer(p_descriptor_set->descriptor_set, &h_render_command->model_ubo, 0);
+    tgvk_descriptor_set_update_uniform_buffer(p_descriptor_set->descriptor_set, &p_voxelizer->view_projection_ubo, 1);
     for (u32 i = 0; i < TG_SVO_ATTACHMENTS; i++)
     {
         tgvk_descriptor_set_update_image_3d(p_descriptor_set->descriptor_set, &p_voxelizer->p_image_3ds[i], 2 + i);
@@ -193,7 +193,7 @@ void tg_voxelizer_end(tg_voxelizer* p_voxelizer, v3i min_corner_index_3d, tg_vox
     for (u32 i = 0; i < TG_SVO_ATTACHMENTS; i++)
     {
         tgvk_cmd_transition_image_3d_layout(&p_voxelizer->command_buffer, &p_voxelizer->p_image_3ds[i], VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
-        tgvk_cmd_copy_image_3d_to_buffer(&p_voxelizer->command_buffer, &p_voxelizer->p_image_3ds[i], p_voxelizer->p_voxel_buffers[i].buffer);
+        tgvk_cmd_copy_image_3d_to_buffer(&p_voxelizer->command_buffer, &p_voxelizer->p_image_3ds[i], &p_voxelizer->p_voxel_buffers[i]);
         tgvk_cmd_transition_image_3d_layout(&p_voxelizer->command_buffer, &p_voxelizer->p_image_3ds[i], VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_SHADER_WRITE_BIT, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
     }
     tgvk_command_buffer_end_and_submit(&p_voxelizer->command_buffer);

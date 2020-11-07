@@ -118,27 +118,27 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\graphics\vulkan\tgvk_common.c" />
-    <ClCompile Include="src\graphics\vulkan\tg_vulkan_atmosphere.c" />
+    <ClCompile Include="src\graphics\vulkan\tgvk_atmosphere.c" />
     <ClCompile Include="src\graphics\tg_spirv.c" />
-    <ClCompile Include="src\graphics\vulkan\tg_vulkan_buffer.c" />
-    <ClCompile Include="src\graphics\vulkan\tg_vulkan_image.c" />
+    <ClCompile Include="src\graphics\vulkan\tgvk_buffer.c" />
+    <ClCompile Include="src\graphics\vulkan\tgvk_image.c" />
     <ClCompile Include="src\graphics\tg_shader_library.c" />
-    <ClCompile Include="src\graphics\vulkan\tg_vulkan_render_target.c" />
+    <ClCompile Include="src\graphics\vulkan\tgvk_render_target.c" />
     <ClCompile Include="src\physics\tg_kd_tree.c" />
-    <ClCompile Include="src\graphics\vulkan\tg_vulkan_material.c" />
-    <ClCompile Include="src\graphics\vulkan\tg_vulkan_memory_allocator.c" />
-    <ClCompile Include="src\graphics\vulkan\tg_vulkan_renderer.c" />
-    <ClCompile Include="src\graphics\vulkan\tg_vulkan_render_command.c" />
-    <ClCompile Include="src\graphics\vulkan\tg_vulkan_sparse_voxel_octree.c" />
+    <ClCompile Include="src\graphics\vulkan\tgvk_material.c" />
+    <ClCompile Include="src\graphics\vulkan\tgvk_memory_allocator.c" />
+    <ClCompile Include="src\graphics\vulkan\tgvk_renderer.c" />
+    <ClCompile Include="src\graphics\vulkan\tgvk_render_command.c" />
+    <ClCompile Include="src\graphics\vulkan\tgvk_sparse_voxel_octree.c" />
     <ClCompile Include="src\physics\tg_physics.c" />
     <ClCompile Include="src\tg_marching_cubes.c" />
     <ClCompile Include="src\tg_transvoxel_terrain.c" />
     <ClCompile Include="src\tg_input.c" />
     <ClCompile Include="src\tg_application.c" />
     <ClCompile Include="src\graphics\tg_image_io.c" />
-    <ClCompile Include="src\graphics\vulkan\tg_graphics_vulkan.c" />
-    <ClCompile Include="src\graphics\vulkan\tg_vulkan_mesh.c" />
-    <ClCompile Include="src\graphics\vulkan\tg_vulkan_shader.c" />
+    <ClCompile Include="src\graphics\vulkan\tgvk_core.c" />
+    <ClCompile Include="src\graphics\vulkan\tgvk_mesh.c" />
+    <ClCompile Include="src\graphics\vulkan\tgvk_shader.c" />
     <ClCompile Include="src\math\tg_math.c" />
     <ClCompile Include="src\memory\tg_memory.c" />
     <ClCompile Include="src\platform\tg_platform_win32.c" />
@@ -150,16 +150,16 @@
     <ClCompile Include="src\util\tg_string.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\graphics\vulkan\tg_vulkan_atmosphere_definitions.h" />
-    <ClInclude Include="src\graphics\vulkan\tg_vulkan_atmosphere_functions.h" />
+    <ClInclude Include="src\graphics\vulkan\tgvk_atmosphere_definitions.h" />
+    <ClInclude Include="src\graphics\vulkan\tgvk_atmosphere_functions.h" />
     <ClInclude Include="src\graphics\tg_atmosphere_lookup_tables.h" />
     <ClInclude Include="src\graphics\tg_graphics.h" />
     <ClInclude Include="src\graphics\tg_sparse_voxel_octree.h" />
     <ClInclude Include="src\graphics\tg_spirv.h" />
-    <ClInclude Include="src\graphics\vulkan\tg_graphics_vulkan.h" />
-    <ClInclude Include="src\graphics\vulkan\tg_vulkan_atmosphere_shaders.h" />
-    <ClInclude Include="src\graphics\vulkan\tg_vulkan_common.h" />
-    <ClInclude Include="src\graphics\vulkan\tg_vulkan_memory_allocator.h" />
+    <ClInclude Include="src\graphics\vulkan\tgvk_core.h" />
+    <ClInclude Include="src\graphics\vulkan\tgvk_atmosphere_shaders.h" />
+    <ClInclude Include="src\graphics\vulkan\tgvk_common.h" />
+    <ClInclude Include="src\graphics\vulkan\tgvk_memory_allocator.h" />
     <ClInclude Include="src\graphics\tg_shader_library.h" />
     <ClInclude Include="src\physics\tg_kd_tree.h" />
     <ClInclude Include="src\physics\tg_physics.h" />

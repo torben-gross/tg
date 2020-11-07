@@ -1,4 +1,4 @@
-#include "graphics/vulkan/tg_graphics_vulkan.h"
+#include "graphics/vulkan/tgvk_core.h"
 
 #ifdef TG_VULKAN
 
@@ -112,9 +112,9 @@ void tg_storage_image_3d_set_data(tg_storage_image_3d_h h_storage_image_3d, void
 	TG_ASSERT(h_storage_image_3d && p_data);
 
 	const u64 size = (u64)h_storage_image_3d->image_3d.width * (u64)h_storage_image_3d->image_3d.height * (u64)h_storage_image_3d->image_3d.depth * (u64)tg_color_image_format_size((tg_color_image_format)h_storage_image_3d->image_3d.format);
-	tgvk_buffer staging_buffer = tgvk_buffer_create(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-	tg_memcpy(size, p_data, staging_buffer.memory.p_mapped_device_memory);
-	tgvk_buffer_flush_host_to_device(&staging_buffer);
+	tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take(size);
+	tg_memcpy(size, p_data, p_staging_buffer->memory.p_mapped_device_memory);
+	tgvk_buffer_flush_host_to_device(p_staging_buffer);
 
 	tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
 	tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
@@ -128,7 +128,7 @@ void tg_storage_image_3d_set_data(tg_storage_image_3d_h h_storage_image_3d, void
 		VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
 		VK_PIPELINE_STAGE_TRANSFER_BIT
 	);
-	tgvk_cmd_copy_buffer_to_image_3d(p_command_buffer, staging_buffer.buffer, &h_storage_image_3d->image_3d);
+	tgvk_cmd_copy_buffer_to_image_3d(p_command_buffer, p_staging_buffer, &h_storage_image_3d->image_3d);
 	tgvk_cmd_transition_image_3d_layout(
 		p_command_buffer,
 		&h_storage_image_3d->image_3d,
@@ -141,7 +141,7 @@ void tg_storage_image_3d_set_data(tg_storage_image_3d_h h_storage_image_3d, void
 	);
 	tgvk_command_buffer_end_and_submit(p_command_buffer);
 
-	tgvk_buffer_destroy(&staging_buffer);
+	tgvk_global_staging_buffer_release();
 }
 
 
@@ -183,9 +183,9 @@ void tg_cube_map_set_data(tg_cube_map_h h_cube_map, void* p_data)
 	TG_ASSERT(h_cube_map && p_data);
 
 	const VkDeviceSize size = 6LL * (VkDeviceSize)h_cube_map->cube_map.dimension * (VkDeviceSize)h_cube_map->cube_map.dimension * tg_color_image_format_size((tg_color_image_format)h_cube_map->cube_map.format);
-	tgvk_buffer staging_buffer = tgvk_buffer_create(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-	tg_memcpy(size, p_data, staging_buffer.memory.p_mapped_device_memory);
-	tgvk_buffer_flush_host_to_device(&staging_buffer);
+	tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take(size);
+	tg_memcpy(size, p_data, p_staging_buffer->memory.p_mapped_device_memory);
+	tgvk_buffer_flush_host_to_device(p_staging_buffer);
 
 	tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
 	tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
@@ -199,7 +199,7 @@ void tg_cube_map_set_data(tg_cube_map_h h_cube_map, void* p_data)
 		VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
 		VK_PIPELINE_STAGE_TRANSFER_BIT
 	);
-	tgvk_cmd_copy_buffer_to_cube_map(p_command_buffer, staging_buffer.buffer, &h_cube_map->cube_map);
+	tgvk_cmd_copy_buffer_to_cube_map(p_command_buffer, p_staging_buffer, &h_cube_map->cube_map);
 	tgvk_cmd_transition_cube_map_layout(
 		p_command_buffer,
 		&h_cube_map->cube_map,
@@ -212,7 +212,7 @@ void tg_cube_map_set_data(tg_cube_map_h h_cube_map, void* p_data)
 	);
 	tgvk_command_buffer_end_and_submit(p_command_buffer);
 
-	tgvk_buffer_destroy(&staging_buffer);
+	tgvk_global_staging_buffer_release();
 }
 
 
