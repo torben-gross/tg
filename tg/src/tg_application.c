@@ -86,10 +86,13 @@ typedef struct tg_sample_scene
 b32 running = TG_TRUE;
 tg_sample_scene scene = { 0 };
 
-
+#include "graphics/tg_font_io.h"
 
 static void tg__game_3d_create(void)
 {
+    tg_font font = { 0 };
+    tg_font_load("fonts/arial.ttf", &font);
+
     scene.render_commands = TG_LIST_CREATE(tg_render_command_h);
 
     scene.camera.type = TG_CAMERA_TYPE_PERSPECTIVE;
@@ -98,7 +101,7 @@ static void tg__game_3d_create(void)
     scene.camera.yaw = 0.0f;
     scene.camera.roll = 0.0f;
     scene.camera.persp.fov_y_in_radians = TG_TO_RADIANS(70.0f);
-    scene.camera.persp.aspect = tg_platform_get_window_aspect_ratio();
+    scene.camera.persp.aspect = tgp_get_window_aspect_ratio();
     scene.camera.persp.n = -0.1f;
     scene.camera.persp.f = -1000.0f;
     tg_input_get_mouse_position(&scene.last_mouse_x, &scene.last_mouse_y);
@@ -235,7 +238,7 @@ static void tg__game_3d_update_and_render(f32 dt)
 {
     if (tg_input_is_key_pressed(TG_KEY_F11, TG_TRUE))
     {
-        tg_system_time system_time = tg_platform_get_system_time();
+        tg_system_time system_time = tgp_get_system_time();
         char p_filename_buffer[TG_MAX_PATH] = { 0 };
         tg_stringf(
             sizeof(p_filename_buffer),
@@ -473,8 +476,8 @@ void tg_application_start(void)
     tg_debug_info debug_info = { 0 };
 #endif
 
-    tg_timer_h h_timer = tg_platform_timer_create();
-    tg_platform_timer_start(h_timer);
+    tg_timer_h h_timer = tgp_timer_create();
+    tgp_timer_start(h_timer);
 
     /*--------------------------------------------------------+
     | Start main loop                                         |
@@ -482,10 +485,10 @@ void tg_application_start(void)
 
     while (running)
     {
-        tg_platform_timer_stop(h_timer);
-        const f32 dt = tg_platform_timer_elapsed_milliseconds(h_timer);
-        tg_platform_timer_reset(h_timer);
-        tg_platform_timer_start(h_timer);
+        tgp_timer_stop(h_timer);
+        const f32 dt = tgp_timer_elapsed_milliseconds(h_timer);
+        tgp_timer_reset(h_timer);
+        tgp_timer_start(h_timer);
 
 #ifdef TG_DEBUG
         debug_info.dt_sum += dt;
@@ -505,14 +508,14 @@ void tg_application_start(void)
 #endif
 
         tg_input_clear();
-        tg_platform_handle_events();
+        tgp_handle_events();
         tg__game_3d_update_and_render(dt);
     }
 
     /*--------------------------------------------------------+
     | End main loop                                           |
     +--------------------------------------------------------*/
-    tg_platform_timer_destroy(h_timer);
+    tgp_timer_destroy(h_timer);
     tg_graphics_wait_idle();
     tg__game_3d_destroy();
     tg_graphics_shutdown();

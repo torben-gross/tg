@@ -126,7 +126,7 @@ static void tg__try_load(const tg_file_properties* p_properties)
 static void tg__try_load_directory(const char* p_directory)
 {
 	tg_file_properties file_properties = { 0 };
-	tg_file_iterator_h h_file_iterator = tg_platform_directory_begin_iteration(p_directory, &file_properties);
+	tg_file_iterator_h h_file_iterator = tgp_directory_begin_iteration(p_directory, &file_properties);
 
 	if (h_file_iterator == TG_NULL)
 	{
@@ -143,7 +143,7 @@ static void tg__try_load_directory(const char* p_directory)
 		{
 			tg__try_load(&file_properties);
 		}
-	} while (tg_platform_directory_continue_iteration(h_file_iterator, p_directory, &file_properties));
+	} while (tgp_directory_continue_iteration(h_file_iterator, p_directory, &file_properties));
 }
 
 

@@ -120,26 +120,26 @@ void tg_memory_init(void)
 	h_mutex = TG_MUTEX_CREATE();
 
 	p_memory_stacks[0].exhausted_size = 1;
-	p_memory_stacks[0].p_memory = tg_platform_memory_alloc(TG_MEMORY_STACK_SIZE);
+	p_memory_stacks[0].p_memory = tgp_malloc(TG_MEMORY_STACK_SIZE);
 	TG_ASSERT(p_memory_stacks[0].p_memory);
 	p_memory_stacks[0].p_memory[0] = TG_MEMORY_STACK_MAGIC_NUMBER;
 
 	for (u32 i = 1; i < TG_MAX_THREADS; i++)
 	{
 		p_memory_stacks[i].exhausted_size = 1;
-		p_memory_stacks[i].p_memory = tg_platform_memory_alloc(TG_MEMORY_STACK_SIZE_ASYNC);
+		p_memory_stacks[i].p_memory = tgp_malloc(TG_MEMORY_STACK_SIZE_ASYNC);
 		TG_ASSERT(p_memory_stacks[i].p_memory);
 		p_memory_stacks[i].p_memory[0] = TG_MEMORY_STACK_MAGIC_NUMBER;
 	}
 
 #else
 	p_memory_stacks[0].exhausted_size = 0;
-	p_memory_stacks[0].p_memory = tg_platform_memory_alloc(TG_MEMORY_STACK_SIZE);
+	p_memory_stacks[0].p_memory = tgp_malloc(TG_MEMORY_STACK_SIZE);
 
 	for (u32 i = 1; i < TG_MAX_THREADS; i++)
 	{
 		p_memory_stacks[i].exhausted_size = 0;
-		p_memory_stacks[i].p_memory = tg_platform_memory_alloc(TG_MEMORY_STACK_SIZE_ASYNC);
+		p_memory_stacks[i].p_memory = tgp_malloc(TG_MEMORY_STACK_SIZE_ASYNC);
 	}
 #endif
 }
@@ -167,7 +167,7 @@ void tg_memory_shutdown(void)
 
 	for (u32 i = 0; i < TG_MAX_THREADS; i++)
 	{
-		tg_platform_memory_free(p_memory_stacks[i].p_memory);
+		tgp_free(p_memory_stacks[i].p_memory);
 		p_memory_stacks[i].exhausted_size = 0;
 	}
 
@@ -212,11 +212,11 @@ void* tg_memory_alloc_impl(u64 size, const char* p_filename, u32 line, b32 nulli
 
 	if (nullify)
 	{
-		p_memory = tg_platform_memory_alloc_nullify(size);
+		p_memory = tgp_malloc_nullify(size);
 	}
 	else
 	{
-		p_memory = tg_platform_memory_alloc(size);
+		p_memory = tgp_malloc(size);
 	}
 	TG_ASSERT(p_memory);
 
@@ -236,11 +236,11 @@ void* tg_memory_realloc_impl(u64 size, void* p_memory, const char* p_filename, u
 	{
 		if (nullify)
 		{
-			p_reallocated_memory = tg_platform_memory_realloc_nullify(size, p_memory);
+			p_reallocated_memory = tgp_realloc_nullify(size, p_memory);
 		}
 		else
 		{
-			p_reallocated_memory = tg_platform_memory_realloc(size, p_memory);
+			p_reallocated_memory = tgp_realloc(size, p_memory);
 		}
 		TG_ASSERT(p_reallocated_memory);
 
@@ -266,7 +266,7 @@ void tg_memory_free_impl(void* p_memory)
 	tg__remove(p_memory);
 	TG_MUTEX_UNLOCK(h_mutex);
 
-	tg_platform_memory_free(p_memory);
+	tgp_free(p_memory);
 }
 
 u32 tg_memory_active_allocation_count(void)
@@ -281,7 +281,7 @@ u32 tg_memory_active_allocation_count(void)
 void* tg_memory_stack_alloc(u64 size)
 {
 #ifdef TG_DEBUG
-	TG_ASSERT(tg_platform_get_thread_id() == 0);
+	TG_ASSERT(tgp_get_thread_id() == 0);
 	TG_ASSERT(size && p_memory_stacks[0].exhausted_size + size + 1 < TG_MEMORY_STACK_SIZE);
 
 	void* memory = &p_memory_stacks[0].p_memory[p_memory_stacks[0].exhausted_size];
@@ -300,7 +300,7 @@ void* tg_memory_stack_alloc(u64 size)
 void tg_memory_stack_free(u64 size)
 {
 #ifdef TG_DEBUG
-	TG_ASSERT(tg_platform_get_thread_id() == 0);
+	TG_ASSERT(tgp_get_thread_id() == 0);
 	TG_ASSERT(size && p_memory_stacks[0].exhausted_size - 1 >= size + 1);
 
 	TG_ASSERT(p_memory_stacks[0].p_memory[p_memory_stacks[0].exhausted_size - 1] == TG_MEMORY_STACK_MAGIC_NUMBER);
@@ -313,7 +313,7 @@ void tg_memory_stack_free(u64 size)
 
 void* tg_memory_stack_alloc_async(u64 size)
 {
-	const u32 i = tg_platform_get_thread_id();
+	const u32 i = tgp_get_thread_id();
 
 #ifdef TG_DEBUG
 	TG_ASSERT(size && p_memory_stacks[i].exhausted_size + size + 1 < TG_MEMORY_STACK_SIZE_ASYNC);
@@ -333,7 +333,7 @@ void* tg_memory_stack_alloc_async(u64 size)
 
 void tg_memory_stack_free_async(u64 size)
 {
-	const u32 i = tg_platform_get_thread_id();
+	const u32 i = tgp_get_thread_id();
 
 #ifdef TG_DEBUG
 	TG_ASSERT(size && p_memory_stacks[i].exhausted_size - 1 >= size + 1);

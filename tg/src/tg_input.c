@@ -73,7 +73,7 @@ u32 tg_input_get_key_repeat_count(tg_key key)
 
 void tg_input_get_mouse_position(u32* x, u32* y)
 {
-	tg_platform_get_mouse_position(x, y);
+	tgp_get_mouse_position(x, y);
 }
 
 f32  tg_input_get_mouse_wheel_detents(b32 consume)

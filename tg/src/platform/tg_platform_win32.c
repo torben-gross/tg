@@ -103,12 +103,17 @@ static void tg__fill_file_properties(const char* p_directory, WIN32_FIND_DATAA* 
     }
 }
 
+void tg__prepend_asset_directory(const char* p_filename, u32 size, char* p_buffer)
+{
+    tg_stringf(size, p_buffer, "%s%c%s", "assets", TG_FILE_SEPERATOR, p_filename);
+}
+
 
 
 
 
 #ifdef TG_DEBUG
-void tg_platform_debug_log(const char* p_format, ...)
+void tgp_debug_log(const char* p_format, ...)
 {
     char p_buffer[4096] = { 0 };
     va_list va = TG_NULL;
@@ -122,7 +127,7 @@ void tg_platform_debug_log(const char* p_format, ...)
 
 
 
-void tg_platform_handle_events(void)
+void tgp_handle_events(void)
 {
     MSG msg = { 0 };
     while (PeekMessageA(&msg, TG_NULL, 0, 0, PM_REMOVE))
@@ -134,7 +139,7 @@ void tg_platform_handle_events(void)
 
 
 
-void* tg_platform_memory_alloc(u64 size)
+void* tgp_malloc(u64 size)
 {
 #ifdef TG_DEBUG
     void* p_memory = HeapAlloc(h_process_heap, HEAP_ZERO_MEMORY, size);
@@ -145,14 +150,14 @@ void* tg_platform_memory_alloc(u64 size)
     return p_memory;
 }
 
-void* tg_platform_memory_alloc_nullify(u64 size)
+void* tgp_malloc_nullify(u64 size)
 {
     void* p_memory = HeapAlloc(h_process_heap, HEAP_ZERO_MEMORY, size);
     TG_ASSERT(p_memory);
     return p_memory;
 }
 
-void* tg_platform_memory_realloc(u64 size, void* p_memory)
+void* tgp_realloc(u64 size, void* p_memory)
 {
 #ifdef TG_DEBUG
     void* p_reallocated_memory = HeapReAlloc(h_process_heap, HEAP_ZERO_MEMORY, p_memory, size);
@@ -163,14 +168,14 @@ void* tg_platform_memory_realloc(u64 size, void* p_memory)
     return p_reallocated_memory;
 }
 
-void* tg_platform_memory_realloc_nullify(u64 size, void* p_memory)
+void* tgp_realloc_nullify(u64 size, void* p_memory)
 {
     void* p_reallocated_memory = HeapReAlloc(h_process_heap, HEAP_ZERO_MEMORY, p_memory, size);
     TG_ASSERT(p_reallocated_memory);
     return p_reallocated_memory;
 }
 
-void tg_platform_memory_free(void* p_memory)
+void tgp_free(void* p_memory)
 {
     const BOOL result = HeapFree(h_process_heap, 0, p_memory);
     TG_ASSERT(result);
@@ -178,19 +183,19 @@ void tg_platform_memory_free(void* p_memory)
 
 
 
-void tg_platform_get_mouse_position(u32* p_x, u32* p_y)
+void tgp_get_mouse_position(u32* p_x, u32* p_y)
 {
     POINT point = { 0 };
     WIN32_CALL(GetCursorPos(&point));
     WIN32_CALL(ScreenToClient(h_window, &point));
     u32 width;
     u32 height;
-    tg_platform_get_window_size(&width, &height);
+    tgp_get_window_size(&width, &height);
     *p_x = (u32)tgm_i32_clamp(point.x, 0, width - 1);
     *p_y = (u32)tgm_i32_clamp(point.y, 0, height - 1);
 }
 
-void tg_platform_get_screen_size(u32* p_width, u32* p_height)
+void tgp_get_screen_size(u32* p_width, u32* p_height)
 {
     RECT rect;
     WIN32_CALL(GetWindowRect(GetDesktopWindow(), &rect));
@@ -198,7 +203,7 @@ void tg_platform_get_screen_size(u32* p_width, u32* p_height)
     *p_height = rect.bottom - rect.top;
 }
 
-tg_system_time tg_platform_get_system_time(void)
+tg_system_time tgp_get_system_time(void)
 {
     SYSTEMTIME system_time = { 0 };
     GetSystemTime(&system_time);
@@ -213,7 +218,7 @@ tg_system_time tg_platform_get_system_time(void)
     return result;
 }
 
-f32 tg_platform_get_seconds_since_startup(void)
+f32 tgp_get_seconds_since_startup(void)
 {
     FILETIME file_time = { 0 };
     GetSystemTimeAsFileTime(&file_time);
@@ -228,12 +233,12 @@ f32 tg_platform_get_seconds_since_startup(void)
     return seconds;
 }
 
-tg_window_h tg_platform_get_window_handle(void)
+tg_window_h tgp_get_window_handle(void)
 {
     return h_window;
 }
 
-void tg_platform_get_window_size(u32* p_width, u32* p_height)
+void tgp_get_window_size(u32* p_width, u32* p_height)
 {
     RECT rect;
     WIN32_CALL(GetWindowRect(h_window, &rect));
@@ -241,33 +246,33 @@ void tg_platform_get_window_size(u32* p_width, u32* p_height)
     *p_height = rect.bottom - rect.top;
 }
 
-f32  tg_platform_get_window_aspect_ratio(void)
+f32  tgp_get_window_aspect_ratio(void)
 {
     u32 width;
     u32 height;
-    tg_platform_get_window_size(&width, &height);
+    tgp_get_window_size(&width, &height);
     return (f32)width / (f32)height;
 }
 
 
 
-b32 tg_platform_file_exists(const char* p_filename)
+b32 tgp_file_exists(const char* p_filename)
 {
     TG_ASSERT(p_filename);
 
     char p_buffer[MAX_PATH] = { 0 };
-    tg_platform_prepend_asset_directory(p_filename, MAX_PATH, p_buffer);
+    tg__prepend_asset_directory(p_filename, MAX_PATH, p_buffer);
 
     const u32 result = GetFileAttributesA(p_buffer) != INVALID_FILE_ATTRIBUTES;
     return result;
 }
 
-void tg_platform_file_read(const char* p_filename, u64 buffer_size, char* p_buffer)
+void tgp_file_load(const char* p_filename, u64 buffer_size, char* p_buffer)
 {
     TG_ASSERT(p_filename && buffer_size && p_buffer);
 
     char p_filename_buffer[MAX_PATH] = { 0 };
-    tg_platform_prepend_asset_directory(p_filename, MAX_PATH, p_filename_buffer);
+    tg__prepend_asset_directory(p_filename, MAX_PATH, p_filename_buffer);
 
     HANDLE h_file = CreateFileA(p_filename_buffer, GENERIC_READ | GENERIC_WRITE, 0, TG_NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, TG_NULL);
     TG_DEBUG_EXEC(
@@ -291,14 +296,14 @@ void tg_platform_file_read(const char* p_filename, u64 buffer_size, char* p_buff
     CloseHandle(h_file);
 }
 
-b32 tg_platform_file_create(const char* p_filename, u32 size, const char* p_data, b32 replace_existing)
+b32 tgp_file_create(const char* p_filename, u32 size, const char* p_data, b32 replace_existing)
 {
     TG_ASSERT(p_filename && size && p_data);
 
     b32 result = TG_FALSE;
 
     char p_buffer[MAX_PATH] = { 0 };
-    tg_platform_prepend_asset_directory(p_filename, MAX_PATH, p_buffer);
+    tg__prepend_asset_directory(p_filename, MAX_PATH, p_buffer);
 
     HANDLE h_file = CreateFileA(p_buffer, GENERIC_READ | GENERIC_WRITE, 0, TG_NULL, replace_existing ? CREATE_ALWAYS : CREATE_NEW, FILE_ATTRIBUTE_NORMAL, TG_NULL);
     if (h_file != INVALID_HANDLE_VALUE)
@@ -342,10 +347,10 @@ b32 tg_platform_file_create(const char* p_filename, u32 size, const char* p_data
     return result;
 }
 
-b32 tg_platform_file_get_properties(const char* p_filename, tg_file_properties* p_properties)
+b32 tgp_file_get_properties(const char* p_filename, tg_file_properties* p_properties)
 {
     char p_buffer[MAX_PATH] = { 0 };
-    tg_platform_prepend_asset_directory(p_filename, MAX_PATH, p_buffer);
+    tg__prepend_asset_directory(p_filename, MAX_PATH, p_buffer);
 
     WIN32_FIND_DATAA find_data = { 0 };
     HANDLE handle = FindFirstFileA(p_buffer, &find_data);
@@ -363,7 +368,7 @@ b32 tg_platform_file_get_properties(const char* p_filename, tg_file_properties* 
     return TG_TRUE;
 }
 
-tg_file_iterator_h tg_platform_directory_begin_iteration(const char* p_directory, tg_file_properties* p_properties)
+tg_file_iterator_h tgp_directory_begin_iteration(const char* p_directory, tg_file_properties* p_properties)
 {
     TG_ASSERT(p_directory && p_properties);
 
@@ -371,7 +376,7 @@ tg_file_iterator_h tg_platform_directory_begin_iteration(const char* p_directory
     tg_stringf(MAX_PATH, p_postfix_buffer, "%s%c%c", p_directory, TG_FILE_SEPERATOR, '*');
 
     char p_buffer[MAX_PATH] = { 0 };
-    tg_platform_prepend_asset_directory(p_postfix_buffer, MAX_PATH, p_buffer);
+    tg__prepend_asset_directory(p_postfix_buffer, MAX_PATH, p_buffer);
 
     WIN32_FIND_DATAA find_data = { 0 };
     HANDLE h_file_iterator = FindFirstFileA(p_buffer, &find_data);
@@ -391,7 +396,7 @@ tg_file_iterator_h tg_platform_directory_begin_iteration(const char* p_directory
     return h_file_iterator;
 }
 
-b32 tg_platform_directory_continue_iteration(tg_file_iterator_h h_file_iterator, const char* p_directory, tg_file_properties* p_properties)
+b32 tgp_directory_continue_iteration(tg_file_iterator_h h_file_iterator, const char* p_directory, tg_file_properties* p_properties)
 {
     TG_ASSERT(h_file_iterator && p_properties);
 
@@ -406,10 +411,10 @@ b32 tg_platform_directory_continue_iteration(tg_file_iterator_h h_file_iterator,
     return TG_TRUE;
 }
 
-u64 tg_platform_directory_get_size(const char* p_directory)
+u64 tgp_directory_get_size(const char* p_directory)
 {
     tg_file_properties file_properties = { 0 };
-    tg_file_iterator_h h_file_iterator = tg_platform_directory_begin_iteration(p_directory, &file_properties);
+    tg_file_iterator_h h_file_iterator = tgp_directory_begin_iteration(p_directory, &file_properties);
 
     if (h_file_iterator == TG_NULL)
     {
@@ -424,24 +429,24 @@ u64 tg_platform_directory_get_size(const char* p_directory)
             if (*p_directory == '.')
             {
                 TG_ASSERT(p_directory[1] == '\0');
-                size += tg_platform_directory_get_size(file_properties.p_filename);
+                size += tgp_directory_get_size(file_properties.p_filename);
             }
             else
             {
                 char p_buffer[MAX_PATH] = { 0 };
                 tg_stringf(MAX_PATH, p_buffer, "%s%c%s", p_directory, TG_FILE_SEPERATOR, file_properties.p_short_filename);
-                size += tg_platform_directory_get_size(p_buffer);
+                size += tgp_directory_get_size(p_buffer);
             }
         }
         else
         {
             size += file_properties.size;
         }
-    } while (tg_platform_directory_continue_iteration(h_file_iterator, p_directory, &file_properties));
+    } while (tgp_directory_continue_iteration(h_file_iterator, p_directory, &file_properties));
     return size;
 }
 
-i8 tg_platform_system_time_compare(tg_system_time* p_time0, tg_system_time* p_time1)
+i8 tgp_system_time_compare(tg_system_time* p_time0, tg_system_time* p_time1)
 {
     if (p_time0->year < p_time1->year)
     {
@@ -509,14 +514,9 @@ i8 tg_platform_system_time_compare(tg_system_time* p_time0, tg_system_time* p_ti
     return 0;
 }
 
-void tg_platform_prepend_asset_directory(const char* p_filename, u32 size, char* p_buffer)
-{
-    tg_stringf(size, p_buffer, "%s%c%s", "assets", TG_FILE_SEPERATOR, p_filename);
-}
 
 
-
-tg_timer_h tg_platform_timer_create(void)
+tg_timer_h tgp_timer_create(void)
 {
     tg_timer_h h_timer = TG_MEMORY_ALLOC(sizeof(*h_timer));
 
@@ -528,7 +528,7 @@ tg_timer_h tg_platform_timer_create(void)
     return h_timer;
 }
 
-void tg_platform_timer_start(tg_timer_h h_timer)
+void tgp_timer_start(tg_timer_h h_timer)
 {
     TG_ASSERT(h_timer);
 
@@ -539,7 +539,7 @@ void tg_platform_timer_start(tg_timer_h h_timer)
     }
 }
 
-void tg_platform_timer_stop(tg_timer_h h_timer)
+void tgp_timer_stop(tg_timer_h h_timer)
 {
     TG_ASSERT(h_timer);
 
@@ -551,7 +551,7 @@ void tg_platform_timer_stop(tg_timer_h h_timer)
     }
 }
 
-void tg_platform_timer_reset(tg_timer_h h_timer)
+void tgp_timer_reset(tg_timer_h h_timer)
 {
     TG_ASSERT(h_timer);
 
@@ -561,14 +561,14 @@ void tg_platform_timer_reset(tg_timer_h h_timer)
     QueryPerformanceCounter(&h_timer->end_performance_counter);
 }
 
-f32  tg_platform_timer_elapsed_milliseconds(tg_timer_h h_timer)
+f32  tgp_timer_elapsed_milliseconds(tg_timer_h h_timer)
 {
     TG_ASSERT(h_timer);
 
     return (f32)((1000000000LL * h_timer->counter_elapsed) / h_timer->performance_frequency.QuadPart) / 1000000.0f;
 }
 
-void tg_platform_timer_destroy(tg_timer_h h_timer)
+void tgp_timer_destroy(tg_timer_h h_timer)
 {
     TG_ASSERT(h_timer);
 
@@ -648,7 +648,7 @@ static DWORD WINAPI tg__worker_thread_proc(LPVOID p_param)
 }
 #pragma warning(pop)
 
-tg_thread_h tg_thread_create(tg_thread_fn* p_thread_fn, volatile void* p_user_data)
+tg_thread_h tgp_thread_create(tg_thread_fn* p_thread_fn, volatile void* p_user_data)
 {
     TG_ASSERT(p_thread_fn);
 
@@ -668,7 +668,7 @@ tg_thread_h tg_thread_create(tg_thread_fn* p_thread_fn, volatile void* p_user_da
     return result;
 }
 
-void tg_thread_destroy(tg_thread_h h_thread)
+void tgp_thread_destroy(tg_thread_h h_thread)
 {
     TG_ASSERT(h_thread);
 
@@ -689,7 +689,7 @@ void tg_thread_destroy(tg_thread_h h_thread)
     TG_MUTEX_UNLOCK(h_thread_mutex);
 }
 
-u32 tg_platform_get_thread_id(void)
+u32 tgp_get_thread_id(void)
 {
     u32 result = 0;
 
@@ -706,7 +706,7 @@ u32 tg_platform_get_thread_id(void)
     return result;
 }
 
-void tg_platform_work_queue_add_entry(tg_thread_fn* p_thread_fn, volatile void* p_user_data)
+void tgp_work_queue_add_entry(tg_thread_fn* p_thread_fn, volatile void* p_user_data)
 {
     TG_ASSERT(p_thread_fn);
 
@@ -718,7 +718,7 @@ void tg_platform_work_queue_add_entry(tg_thread_fn* p_thread_fn, volatile void* 
     TG_SEMAPHORE_RELEASE(work_queue.h_semaphore);
 }
 
-void tg_platform_work_queue_wait_for_completion(void)
+void tgp_work_queue_wait_for_completion(void)
 {
     while (work_queue.first != work_queue.one_past_last || work_queue.active_thread_count)
     {
@@ -824,7 +824,7 @@ int CALLBACK WinMain(_In_ HINSTANCE h_instance, _In_opt_ HINSTANCE h_prev_instan
 
     SetProcessDPIAware();
     u32 w, h;
-    tg_platform_get_screen_size(&w, &h);
+    tgp_get_screen_size(&w, &h);
     h_window = CreateWindowExA(0, window_class_id, window_title, WS_OVERLAPPEDWINDOW, 0, 0, w, h, TG_NULL, TG_NULL, h_instance, TG_NULL);
     TG_ASSERT(h_window);
 

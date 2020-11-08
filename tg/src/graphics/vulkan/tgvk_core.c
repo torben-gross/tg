@@ -109,7 +109,7 @@ TGVK_DEFINE_STRUCTURE_BUFFER(vertex_shader, TG_MAX_VERTEX_SHADERS);
 static VKAPI_ATTR VkBool32 VKAPI_CALL tg__debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity, VkDebugUtilsMessageTypeFlagsEXT message_type, const VkDebugUtilsMessengerCallbackDataEXT* p_callback_data, void* user_data)
 {
     TG_DEBUG_LOG("%s\n", p_callback_data->pMessage);
-    tg_platform_file_create("tgvk_last_error.txt", tg_strlen_no_nul(p_callback_data->pMessage), p_callback_data->pMessage, TG_TRUE);
+    tgp_file_create("tgvk_last_error.txt", tg_strlen_no_nul(p_callback_data->pMessage), p_callback_data->pMessage, TG_TRUE);
     return VK_TRUE;
 }
 #pragma warning(pop)
@@ -295,7 +295,7 @@ u32 tg_vertex_input_attribute_format_get_size(tg_vertex_input_attribute_format f
 
 void tgvk_buffer_copy(VkDeviceSize size, tgvk_buffer* p_src, tgvk_buffer* p_dst)
 {
-    const u32 thread_id = tg_platform_get_thread_id();
+    const u32 thread_id = tgp_get_thread_id();
     tgvk_command_buffer_begin(&p_global_graphics_command_buffers[thread_id], VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
     tgvk_cmd_copy_buffer(&p_global_graphics_command_buffers[thread_id], size, p_src, p_dst);
     tgvk_command_buffer_end_and_submit(&p_global_graphics_command_buffers[thread_id]);
@@ -940,7 +940,7 @@ tgvk_command_buffer* tgvk_command_buffer_get_global(tgvk_command_pool_type type)
 {
     tgvk_command_buffer* p_command_buffer = TG_NULL;
 
-    const u32 thread_id = tg_platform_get_thread_id();
+    const u32 thread_id = tgp_get_thread_id();
     switch (type)
     {
     case TGVK_COMMAND_POOL_TYPE_COMPUTE:
@@ -975,12 +975,12 @@ tgvk_command_buffer tgvk_command_buffer_create(tgvk_command_pool_type type, VkCo
     {
     case TGVK_COMMAND_POOL_TYPE_COMPUTE:
     {
-        const u32 thread_id = tg_platform_get_thread_id();
+        const u32 thread_id = tgp_get_thread_id();
         command_buffer_allocate_info.commandPool = p_compute_command_pools[thread_id];
     } break;
     case TGVK_COMMAND_POOL_TYPE_GRAPHICS:
     {
-        const u32 thread_id = tg_platform_get_thread_id();
+        const u32 thread_id = tgp_get_thread_id();
         command_buffer_allocate_info.commandPool = p_graphics_command_pools[thread_id];
     } break;
     case TGVK_COMMAND_POOL_TYPE_PRESENT:
@@ -1011,12 +1011,12 @@ void tgvk_command_buffer_destroy(tgvk_command_buffer* p_command_buffer)
     {
     case TGVK_COMMAND_POOL_TYPE_COMPUTE:
     {
-        const u32 thread_id = tg_platform_get_thread_id();
+        const u32 thread_id = tgp_get_thread_id();
         command_pool = p_compute_command_pools[thread_id];
     } break;
     case TGVK_COMMAND_POOL_TYPE_GRAPHICS:
     {
-        const u32 thread_id = tg_platform_get_thread_id();
+        const u32 thread_id = tgp_get_thread_id();
         command_pool = p_graphics_command_pools[thread_id];
     } break;
     case TGVK_COMMAND_POOL_TYPE_PRESENT:
@@ -2666,7 +2666,7 @@ tg_render_target tgvk_render_target_create(u32 color_width, u32 color_height, Vk
     render_target.depth_attachment = tgvk_image_create(TGVK_IMAGE_TYPE_DEPTH, depth_width, depth_height, depth_format, p_depth_sampler_create_info);
     render_target.depth_attachment_copy = tgvk_image_create(TGVK_IMAGE_TYPE_DEPTH, depth_width, depth_height, depth_format, p_depth_sampler_create_info);
 
-    const u32 thread_id = tg_platform_get_thread_id();
+    const u32 thread_id = tgp_get_thread_id();
     tgvk_command_buffer_begin(&p_global_graphics_command_buffers[thread_id], VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
     tgvk_cmd_transition_image_layout(&p_global_graphics_command_buffers[thread_id], &render_target.color_attachment, 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
     tgvk_cmd_transition_image_layout(&p_global_graphics_command_buffers[thread_id], &render_target.color_attachment_copy, 0, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
@@ -2718,22 +2718,22 @@ tgvk_shader tgvk_shader_create(const char* p_filename)
 
 #ifndef TG_DISTRIBUTE
     tg_file_properties uncompiled_properties = { 0 };
-    const b32 get_uncompiled_properties_result = tg_platform_file_get_properties(p_filename, &uncompiled_properties);
+    const b32 get_uncompiled_properties_result = tgp_file_get_properties(p_filename, &uncompiled_properties);
     TG_ASSERT(get_uncompiled_properties_result);
 
     tg_file_properties compiled_properties = { 0 };
-    const b32 spv_exists = tg_platform_file_get_properties(p_filename_buffer, &compiled_properties);
+    const b32 spv_exists = tgp_file_get_properties(p_filename_buffer, &compiled_properties);
 
     b32 recompile = TG_FALSE;
     if (spv_exists)
     {
-        recompile = tg_platform_system_time_compare(&compiled_properties.last_write_time, &uncompiled_properties.last_write_time) == -1;
+        recompile = tgp_system_time_compare(&compiled_properties.last_write_time, &uncompiled_properties.last_write_time) == -1;
     }
 
     if (!spv_exists || recompile)
     {
         char* p_data = TG_MEMORY_STACK_ALLOC(uncompiled_properties.size);
-        tg_platform_file_read(p_filename, uncompiled_properties.size, p_data);
+        tgp_file_load(p_filename, uncompiled_properties.size, p_data);
 
         TG_ASSERT(shaderc_compiler);
 
@@ -2774,18 +2774,18 @@ tgvk_shader tgvk_shader_create(const char* p_filename)
         const size_t length = shaderc_result_get_length(result);
         const char* p_bytes = shaderc_result_get_bytes(result);
 
-        tg_platform_file_create(p_filename_buffer, (u32)length, p_bytes, TG_TRUE);
+        tgp_file_create(p_filename_buffer, (u32)length, p_bytes, TG_TRUE);
 
         shaderc_result_release(result);
     }
 #endif
 
     tg_file_properties file_properties = { 0 };
-    const b32 get_properties_result = tg_platform_file_get_properties(p_filename_buffer, &file_properties);
+    const b32 get_properties_result = tgp_file_get_properties(p_filename_buffer, &file_properties);
     TG_ASSERT(get_properties_result);
 
     char* p_content = TG_MEMORY_STACK_ALLOC(file_properties.size);
-    tg_platform_file_read(p_filename_buffer, file_properties.size, p_content);
+    tgp_file_load(p_filename_buffer, file_properties.size, p_content);
 
     const tgvk_shader shader = tgvk_shader_create_from_spirv((u32)file_properties.size, p_content);
 
@@ -3226,7 +3226,7 @@ static tgvk_surface tg__surface_create(void)
     win32_surface_create_info.pNext = TG_NULL;
     win32_surface_create_info.flags = 0;
     win32_surface_create_info.hinstance = GetModuleHandle(TG_NULL);
-    win32_surface_create_info.hwnd = tg_platform_get_window_handle();
+    win32_surface_create_info.hwnd = tgp_get_window_handle();
 
     TGVK_CALL(vkCreateWin32SurfaceKHR(instance, &win32_surface_create_info, TG_NULL, &s.surface));
 
@@ -3477,7 +3477,7 @@ static void tg__swapchain_create(void)
         }
     }
 
-    tg_platform_get_window_size(&swapchain_extent.width, &swapchain_extent.height);
+    tgp_get_window_size(&swapchain_extent.width, &swapchain_extent.height);
     swapchain_extent.width = tgm_u32_clamp(swapchain_extent.width, surface_capabilities.minImageExtent.width, surface_capabilities.maxImageExtent.width);
     swapchain_extent.height = tgm_u32_clamp(swapchain_extent.height, surface_capabilities.minImageExtent.height, surface_capabilities.maxImageExtent.height);
 

@@ -335,9 +335,9 @@ void tg_image_load(const char* p_filename, TG_OUT u32* p_width, TG_OUT u32* p_he
 	TG_ASSERT(p_filename && p_width && p_height && p_format && pp_data);
 
 	tg_file_properties file_properties = { 0 };
-	tg_platform_file_get_properties(p_filename, &file_properties);
+	tgp_file_get_properties(p_filename, &file_properties);
 	char* p_memory = TG_MEMORY_STACK_ALLOC(file_properties.size);
-	tg_platform_file_read(p_filename, file_properties.size, p_memory);
+	tgp_file_load(p_filename, file_properties.size, p_memory);
 
 	if (file_properties.size >= 2 && *(u16*)p_memory == TG_BMP_IDENTIFIER)
 	{
@@ -530,7 +530,7 @@ b32 tg_image_store_to_disc(const char* p_filename, u32 width, u32 height, tg_col
 			}
 		}
 
-		result = tg_platform_file_create(p_filename, bmp_size, p_buffer, replace_existing);
+		result = tgp_file_create(p_filename, bmp_size, p_buffer, replace_existing);
 		
 		TG_MEMORY_STACK_FREE(buffer_size);
 	}

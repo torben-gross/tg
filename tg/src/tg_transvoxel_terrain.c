@@ -998,7 +998,7 @@ static void tg__build_octree(volatile tg_terrain* p_terrain, volatile tg_terrain
 
 		char p_filename_buffer[TG_MAX_PATH] = { 0 };
 		tg_stringf(sizeof(p_filename_buffer), p_filename_buffer, "terrain/octree_%i_%i_%i.txt", octree_index_3d.x, octree_index_3d.y, octree_index_3d.z);
-		const b32 exists = tg_platform_file_exists(p_filename_buffer);
+		const b32 exists = tgp_file_exists(p_filename_buffer);
 		if (!exists)
 		{
 			tg__fill_voxel_map(p_octree->min_coords, p_octree->p_voxel_map);
@@ -1006,15 +1006,15 @@ static void tg__build_octree(volatile tg_terrain* p_terrain, volatile tg_terrain
 			u32 compressed_voxel_map_size;
 			void* p_compressed_voxel_map_buffer = TG_MEMORY_STACK_ALLOC_ASYNC(voxel_map_size);
 			tg__compress_voxel_map(p_octree->p_voxel_map, &compressed_voxel_map_size, p_compressed_voxel_map_buffer);
-			tg_platform_file_create(p_filename_buffer, compressed_voxel_map_size, p_compressed_voxel_map_buffer, TG_FALSE);
+			tgp_file_create(p_filename_buffer, compressed_voxel_map_size, p_compressed_voxel_map_buffer, TG_FALSE);
 			TG_MEMORY_STACK_FREE_ASYNC(voxel_map_size);
 		}
 		else
 		{
 			tg_file_properties file_properties = { 0 };
-			tg_platform_file_get_properties(p_filename_buffer, &file_properties);
+			tgp_file_get_properties(p_filename_buffer, &file_properties);
 			i8* p_file_data = TG_MEMORY_STACK_ALLOC_ASYNC(file_properties.size);
-			tg_platform_file_read(p_filename_buffer, file_properties.size, p_file_data);
+			tgp_file_load(p_filename_buffer, file_properties.size, p_file_data);
 			tg__decompress_voxel_map(p_file_data, p_octree->p_voxel_map);
 			TG_MEMORY_STACK_FREE_ASYNC(file_properties.size);
 		}
@@ -1030,7 +1030,7 @@ static void tg__destroy_marked_nodes(volatile tg_terrain_octree* p_octree)
 	for (u32 i = 0; i < TG_TERRAIN_OCTREE_NODES; i++)
 	{
 		p_node = &p_octree->p_nodes[i];
-		if ((p_node->flags & TG_TERRAIN_FLAG_DESTROY) && (tg_platform_get_seconds_since_startup() - p_node->seconds_since_startup_on_destroy_mark > TG_TERRAIN_NODE_DESTROY_AFTER_SECONDS))
+		if ((p_node->flags & TG_TERRAIN_FLAG_DESTROY) && (tgp_get_seconds_since_startup() - p_node->seconds_since_startup_on_destroy_mark > TG_TERRAIN_NODE_DESTROY_AFTER_SECONDS))
 		{
 			tg__destroy_node(p_node);
 		}
@@ -1045,7 +1045,7 @@ static void tg__mark_nodes(volatile tg_terrain_octree* p_octree)
 		{
 			volatile tg_terrain_octree_node* p_node = &p_octree->p_nodes[node_index];
 			p_node->flags |= TG_TERRAIN_FLAG_DESTROY;
-			p_node->seconds_since_startup_on_destroy_mark = tg_platform_get_seconds_since_startup();
+			p_node->seconds_since_startup_on_destroy_mark = tgp_get_seconds_since_startup();
 		}
 	}
 }
@@ -1218,7 +1218,7 @@ tg_terrain* tg_terrain_create(tg_camera* p_camera)
 	p_terrain->p_normal_buffer = (v3*)&((u8*)p_terrain->p_position_buffer)[vertices_size];
 	
 	p_terrain->is_thread_running = TG_TRUE;
-	p_terrain->h_thread = tg_thread_create(tg__thread_fn, p_terrain);
+	p_terrain->h_thread = tgp_thread_create(tg__thread_fn, p_terrain);
 
 	return p_terrain;
 }
@@ -1228,7 +1228,7 @@ void tg_terrain_destroy(tg_terrain* p_terrain)
 	TG_ASSERT(p_terrain);
 
 	p_terrain->is_thread_running = TG_FALSE;
-	tg_thread_destroy(p_terrain->h_thread);
+	tgp_thread_destroy(p_terrain->h_thread);
 	TG_EVENT_DESTROY(p_terrain->h_event);
 	TG_MEMORY_FREE(p_terrain->p_position_buffer);
 	tg_material_destroy(p_terrain->h_material);

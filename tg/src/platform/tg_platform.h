@@ -180,7 +180,7 @@ TG_DECLARE_HANDLE(tg_timer);
 
 
 #ifdef TG_DEBUG
-#define TG_DEBUG_LOG(x, ...) tg_platform_debug_log(x, __VA_ARGS__)
+#define TG_DEBUG_LOG(x, ...) tgp_debug_log(x, __VA_ARGS__)
 #else
 #define TG_DEBUG_LOG(x, ...)
 #endif
@@ -218,47 +218,46 @@ typedef struct tg_file_properties
 
 
 #ifdef TG_DEBUG
-void                  tg_platform_debug_log(const char* p_format, ...);
+void                  tgp_debug_log(const char* p_format, ...);
 #endif
 
-void                  tg_platform_handle_events(void);
+void                  tgp_handle_events(void);
 
-void*                 tg_platform_memory_alloc(u64 size);
-void*                 tg_platform_memory_alloc_nullify(u64 size);
-void*                 tg_platform_memory_realloc(u64 size, void* p_memory);
-void*                 tg_platform_memory_realloc_nullify(u64 size, void* p_memory);
-void                  tg_platform_memory_free(void* p_memory);
+void*                 tgp_malloc(u64 size);
+void*                 tgp_malloc_nullify(u64 size);
+void*                 tgp_realloc(u64 size, void* p_memory);
+void*                 tgp_realloc_nullify(u64 size, void* p_memory);
+void                  tgp_free(void* p_memory);
 
-void                  tg_platform_get_mouse_position(u32* p_x, u32* p_y);
-void                  tg_platform_get_screen_size(u32* p_width, u32* p_height);
-tg_system_time        tg_platform_get_system_time(void);
-f32                   tg_platform_get_seconds_since_startup(void);
-tg_window_h           tg_platform_get_window_handle(void);
-void                  tg_platform_get_window_size(u32* p_width, u32* p_height);
-f32                   tg_platform_get_window_aspect_ratio(void);
+void                  tgp_get_mouse_position(u32* p_x, u32* p_y);
+void                  tgp_get_screen_size(u32* p_width, u32* p_height);
+tg_system_time        tgp_get_system_time(void);
+f32                   tgp_get_seconds_since_startup(void);
+tg_window_h           tgp_get_window_handle(void);
+void                  tgp_get_window_size(u32* p_width, u32* p_height);
+f32                   tgp_get_window_aspect_ratio(void);
 
-b32                   tg_platform_file_exists(const char* p_filename);
-void                  tg_platform_file_read(const char* p_filename, u64 buffer_size, char* p_buffer);
-b32                   tg_platform_file_create(const char* p_filename, u32 size, const char* p_data, b32 replace_existing);
-b32                   tg_platform_file_get_properties(const char* p_filename, tg_file_properties* p_properties);
-tg_file_iterator_h    tg_platform_directory_begin_iteration(const char* p_directory, tg_file_properties* p_properties);
-b32                   tg_platform_directory_continue_iteration(tg_file_iterator_h h_file_iterator, const char* p_directory, tg_file_properties* p_properties);
-u64                   tg_platform_directory_get_size(const char* p_directory);
-i8                    tg_platform_system_time_compare(tg_system_time* p_time0, tg_system_time* p_time1);
-void                  tg_platform_prepend_asset_directory(const char* p_filename, u32 size, char* p_buffer);
+b32                   tgp_file_exists(const char* p_filename);
+void                  tgp_file_load(const char* p_filename, u64 buffer_size, char* p_buffer);
+b32                   tgp_file_create(const char* p_filename, u32 size, const char* p_data, b32 replace_existing);
+b32                   tgp_file_get_properties(const char* p_filename, tg_file_properties* p_properties);
+tg_file_iterator_h    tgp_directory_begin_iteration(const char* p_directory, tg_file_properties* p_properties);
+b32                   tgp_directory_continue_iteration(tg_file_iterator_h h_file_iterator, const char* p_directory, tg_file_properties* p_properties);
+u64                   tgp_directory_get_size(const char* p_directory);
+i8                    tgp_system_time_compare(tg_system_time* p_time0, tg_system_time* p_time1);
 
-tg_timer_h            tg_platform_timer_create(void);
-void                  tg_platform_timer_start(tg_timer_h h_timer);
-void                  tg_platform_timer_stop(tg_timer_h h_timer);
-void                  tg_platform_timer_reset(tg_timer_h h_timer);
-f32                   tg_platform_timer_elapsed_milliseconds(tg_timer_h h_timer);
-void                  tg_platform_timer_destroy(tg_timer_h h_timer);
+tg_timer_h            tgp_timer_create(void);
+void                  tgp_timer_start(tg_timer_h h_timer);
+void                  tgp_timer_stop(tg_timer_h h_timer);
+void                  tgp_timer_reset(tg_timer_h h_timer);
+f32                   tgp_timer_elapsed_milliseconds(tg_timer_h h_timer);
+void                  tgp_timer_destroy(tg_timer_h h_timer);
 
-tg_thread_h           tg_thread_create(tg_thread_fn* p_thread_fn, volatile void* p_user_data);
-void                  tg_thread_destroy(tg_thread_h h_thread);
+tg_thread_h           tgp_thread_create(tg_thread_fn* p_thread_fn, volatile void* p_user_data);
+void                  tgp_thread_destroy(tg_thread_h h_thread);
 
-u32                   tg_platform_get_thread_id(void);
-void                  tg_platform_work_queue_add_entry(tg_thread_fn* p_thread_fn, volatile void* p_user_data);
-void                  tg_platform_work_queue_wait_for_completion(void);
+u32                   tgp_get_thread_id(void);
+void                  tgp_work_queue_add_entry(tg_thread_fn* p_thread_fn, volatile void* p_user_data);
+void                  tgp_work_queue_wait_for_completion(void);
 
 #endif

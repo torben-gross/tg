@@ -117,6 +117,7 @@
     </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\graphics\tg_font_io.c" />
     <ClCompile Include="src\graphics\vulkan\tgvk_common.c" />
     <ClCompile Include="src\graphics\vulkan\tgvk_atmosphere.c" />
     <ClCompile Include="src\graphics\tg_spirv.c" />
@@ -150,6 +151,7 @@
     <ClCompile Include="src\util\tg_string.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\graphics\tg_font_io.h" />
     <ClInclude Include="src\graphics\vulkan\tgvk_atmosphere_definitions.h" />
     <ClInclude Include="src\graphics\vulkan\tgvk_atmosphere_functions.h" />
     <ClInclude Include="src\graphics\tg_atmosphere_lookup_tables.h" />

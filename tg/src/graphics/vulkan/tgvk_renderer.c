@@ -264,7 +264,7 @@ static void tg__init_shading_pass(tg_renderer_h h_renderer)
     graphics_pipeline_create_info.p_vertex_shader = &tg_vertex_shader_create("shaders/renderer/shading.vert")->shader;
 
     tg_file_properties file_properties = { 0 };
-    const b32 result = tg_platform_file_get_properties("shaders/renderer/shading.inc", &file_properties);
+    const b32 result = tgp_file_get_properties("shaders/renderer/shading.inc", &file_properties);
     TG_ASSERT(result);
 
     const u32 api_shader_size = h_renderer->model.api_shader.total_count;
@@ -272,7 +272,7 @@ static void tg__init_shading_pass(tg_renderer_h h_renderer)
     char* p_fragment_shader_buffer = TG_MEMORY_STACK_ALLOC((u64)fragment_shader_buffer_size);
     const u32 fragment_shader_buffer_offset = tg_strncpy(fragment_shader_buffer_size, p_fragment_shader_buffer, api_shader_size, h_renderer->model.api_shader.p_source);
 
-    tg_platform_file_read("shaders/renderer/shading.inc", fragment_shader_buffer_size - fragment_shader_buffer_offset, &p_fragment_shader_buffer[fragment_shader_buffer_offset]);
+    tgp_file_load("shaders/renderer/shading.inc", fragment_shader_buffer_size - fragment_shader_buffer_offset, &p_fragment_shader_buffer[fragment_shader_buffer_offset]);
     p_fragment_shader_buffer[fragment_shader_buffer_size - 1] = '\0';
     h_renderer->shading_pass.fragment_shader = tgvk_shader_create_from_glsl(TG_SHADER_TYPE_FRAGMENT, p_fragment_shader_buffer);
 

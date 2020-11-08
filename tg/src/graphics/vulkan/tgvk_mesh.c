@@ -172,9 +172,9 @@ tg_mesh_h tg_mesh_create2(const char* p_filename, v3 scale) // TODO: scale is te
     tg_mesh_h h_mesh = tgvk_handle_take(TG_STRUCTURE_TYPE_MESH);
 
     tg_file_properties file_properties = { 0 };
-    tg_platform_file_get_properties(p_filename, &file_properties);
+    tgp_file_get_properties(p_filename, &file_properties);
     char* p_data = TG_MEMORY_STACK_ALLOC(file_properties.size);
-    tg_platform_file_read(p_filename, file_properties.size, p_data);
+    tgp_file_load(p_filename, file_properties.size, p_data);
 
     if (tg_string_equal(file_properties.p_extension, "obj"))
     {

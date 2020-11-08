@@ -62,7 +62,7 @@ static void tg__stack_push(tg_work_thread_info* p_work_thread_info, u32 node_ind
 	p_stack_node->p_tris = p_tris;
 
 	TG_MUTEX_UNLOCK(p_work_thread_info->h_stack_mutex);
-	tg_platform_work_queue_add_entry(tg__thread_fn, p_work_thread_info);
+	tgp_work_queue_add_entry(tg__thread_fn, p_work_thread_info);
 }
 
 static void tg__split_count(u32 split_axis, f32 split_position, u32 tri_count, const tg_construction_triangle* p_tris, u32* p_n0, u32* p_n1)
@@ -327,7 +327,7 @@ tg_kd_tree* tg_kd_tree_create(tg_mesh_h h_mesh)
 	}
 
 	tg__stack_push(&work_thread_info, 0, tg_mesh_get_bounds(p_tree->h_mesh), initial_tri_count, p_initial_tris);
-	tg_platform_work_queue_wait_for_completion();
+	tgp_work_queue_wait_for_completion();
 
 	TG_MEMORY_STACK_FREE(nodes_size);
 	TG_MEMORY_STACK_FREE(position_count * sizeof(*p_positions));
