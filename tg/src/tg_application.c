@@ -86,7 +86,7 @@ typedef struct tg_sample_scene
 b32 running = TG_TRUE;
 tg_sample_scene scene = { 0 };
 
-#include "graphics/tg_font_io.h"
+#include "graphics/font/tg_font_io.h"
 
 static void tg__game_3d_create(void)
 {
