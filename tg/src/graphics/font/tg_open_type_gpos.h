@@ -49,7 +49,7 @@ typedef enum tg_open_type__value_format__flags
 	TG_OPEN_TYPE__VALUE_FORMAT__Y_PLACEMENT_DEVICE    = 0x0020, // Y_PLACEMENT_DEVICE: Includes Device table (non-variable font) / VariationIndex table (variable font) for vertical placement
 	TG_OPEN_TYPE__VALUE_FORMAT__X_ADVANCE_DEVICE      = 0x0040, // X_ADVANCE_DEVICE: Includes Device table (non-variable font) / VariationIndex table (variable font) for horizontal advance
 	TG_OPEN_TYPE__VALUE_FORMAT__Y_ADVANCE_DEVICE      = 0x0080, // Y_ADVANCE_DEVICE: Includes Device table (non-variable font) / VariationIndex table (variable font) for vertical advance
-	TG_OPEN_TYPE__VALUE_FORMAT__RESERVED              = 0xFF00  // Reserved: For future use (set to zero)
+	TG_OPEN_TYPE__VALUE_FORMAT__RESERVED              = 0xff00  // Reserved: For future use (set to zero)
 } tg_open_type__value_format__flags;
 
 typedef struct tg_open_type__value_record
@@ -365,7 +365,13 @@ typedef struct tg_open_type__gpos_header_v10
 	tg_offset16    script_list_offset;  // scriptListOffset: Offset to ScriptList table, from beginning of GPOS table
 	tg_offset16    feature_list_offset; // featureListOffset: Offset to FeatureList table, from beginning of GPOS table
 	tg_offset16    lookup_list_offset;  // lookupListOffset: Offset to LookupList table, from beginning of GPOS table
-} tg_open_type_gpos_header_v10;
+} tg_open_type__gpos_header_v10;
+
+typedef union tg_open_type__gpos_header
+{
+	tg_open_type__gpos_header_v10    v10;
+	tg_open_type__gpos_header_v11    v11;
+} tg_open_type__gpos_header;
 
 typedef enum tg_open_type__gpos__lookup_type__enumeration
 {

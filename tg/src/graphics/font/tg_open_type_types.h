@@ -3,6 +3,8 @@
 
 #include "tg_common.h"
 
+typedef struct u24 { u8 p_values[3]; } u24;
+typedef f32 tg_fixed;
 typedef i16 tg_fword;
 typedef u16 tg_ufword;
 typedef i16 tg_f2dot14;

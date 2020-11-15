@@ -1,5 +1,5 @@
-#ifndef TG_OPEN_TYPE_COMMON_TABLE_FORMATS_H
-#define TG_OPEN_TYPE_COMMON_TABLE_FORMATS_H
+#ifndef TG_OPEN_TYPE_LAYOUT_COMMON_TABLE_FORMATS_H
+#define TG_OPEN_TYPE_LAYOUT_COMMON_TABLE_FORMATS_H
 
 #include "graphics/font/tg_open_type_types.h"
 
@@ -66,7 +66,7 @@ typedef enum tg_open_type__delta_format__values
 	TG_OPEN_TYPE__DELTA_FORMAT__LOCAL_4_BIT_DELTAS    = 0x0002, // LOCAL_4_BIT_DELTAS: Signed 4 - bit value, 4 values per uint16
 	TG_OPEN_TYPE__DELTA_FORMAT__LOCAL_8_BIT_DELTAS    = 0x0003, // LOCAL_8_BIT_DELTAS: Signed 8 - bit value, 2 values per uint16
 	TG_OPEN_TYPE__DELTA_FORMAT__VARIATION_INDEX       = 0x8000, // VARIATION_INDEX: VariationIndex table, contains a delta - set index pair.
-	TG_OPEN_TYPE__DELTA_FORMAT__RESERVED              = 0x7FFC  // Reserved: For future use — set to 0
+	TG_OPEN_TYPE__DELTA_FORMAT__RESERVED              = 0x7ffc  // Reserved: For future use — set to 0
 } tg_open_type__delta_format__values;
 
 typedef struct tg_open_type__class_range_record
@@ -114,13 +114,13 @@ typedef struct tg_open_type__coverage_format_1__table // Individual glyph indice
 
 typedef enum tg_open_type__lookup_flag__bit__enumeration
 {
-	TG_OPEN_TYPE__LOOKUP_FLAG__RIGHT_TO_LEFT             = 0x0001, // rightToLeft: This bit relates only to the correct processing of the cursive attachment lookup type(GPOS lookup type 3). When this bit is set, the last glyph in a given sequence to which the cursive attachment lookup is applied, will be positioned on the baseline. Note: Setting of this bit is not intended to be used by operating systems or applications to determine text direction.
+	TG_OPEN_TYPE__LOOKUP_FLAG__RIGHT_TO_LEFT             = 0x0001, // rightToLeft: This bit relates only to the correct processing of the cursive attachment lookup type (GPOS lookup type 3). When this bit is set, the last glyph in a given sequence to which the cursive attachment lookup is applied, will be positioned on the baseline. Note: Setting of this bit is not intended to be used by operating systems or applications to determine text direction.
 	TG_OPEN_TYPE__LOOKUP_FLAG__IGNORE_BASE_GLYPHS        = 0x0002, // ignoreBaseGlyphs: If set, skips over base glyphs
 	TG_OPEN_TYPE__LOOKUP_FLAG__IGNORE_LIGATURES          = 0x0004, // ignoreLigatures: If set, skips over ligatures
 	TG_OPEN_TYPE__LOOKUP_FLAG__IGNORE_MARKS              = 0x0008, // ignoreMarks: If set, skips over all combining marks
 	TG_OPEN_TYPE__LOOKUP_FLAG__USE_MARK_FILTERING_SET    = 0x0010, // useMarkFilteringSet: If set, indicates that the lookup table structure is followed by a MarkFilteringSet field. The layout engine skips over all mark glyphs not in the mark filtering set indicated.
-	TG_OPEN_TYPE__LOOKUP_FLAG__RESERVED                  = 0x00E0, // reserved: For future use(Set to zero)
-	TG_OPEN_TYPE__LOOKUP_FLAG__MARK_ATTACHMENT_TYPE      = 0xFF00  // markAttachmentType: If not zero, skips over all marks of attachment type different from specified.
+	TG_OPEN_TYPE__LOOKUP_FLAG__RESERVED                  = 0x00e0, // reserved: For future use (Set to zero)
+	TG_OPEN_TYPE__LOOKUP_FLAG__MARK_ATTACHMENT_TYPE      = 0xff00  // markAttachmentType: If not zero, skips over all marks of attachment type different from specified.
 } tg_open_type__lookup_flag__bit__enumeration;
 
 typedef struct tg_open_type__lookup__table
@@ -128,14 +128,14 @@ typedef struct tg_open_type__lookup__table
 	u16             lookup_type;        // lookupType: Different enumerations for GSUB and GPOS
 	u16             lookup_flag;        // lookupFlag: Lookup qualifiers
 	u16             subtable_count;     // subTableCount: Number of subtables for this lookup
-	tg_offset16*    p_subtable_offsets; // subtableOffsets[subTableCount]: Array of offsets to lookup subtables, from beginning of Lookup table
-	u16             mark_filtering_set; // markFilteringSet: Index (base 0) into GDEF mark glyph sets structure. This field is only present if bit useMarkFilteringSet of lookup flags is set.
+	//tg_offset16*    p_subtable_offsets; // subtableOffsets[subTableCount]: Array of offsets to lookup subtables, from beginning of Lookup table
+	//u16             mark_filtering_set; // markFilteringSet: Index (base 0) into GDEF mark glyph sets structure. This field is only present if bit useMarkFilteringSet of lookup flags is set.
 } tg_open_type__lookup__table;
 
 typedef struct tg_open_type__lookup_list__table
 {
 	u16            lookup_count; // lookupCount: Number of lookups in this table
-	tg_offset16    p_lookups[0]; // lookups[lookupCount]: Array of offsets to Lookup tables, from beginning of LookupList — zero based(first lookup is Lookup index = 0)
+	tg_offset16    p_lookups[0]; // lookups[lookupCount]: Array of offsets to Lookup tables, from beginning of LookupList — zero based (first lookup is Lookup index = 0)
 } tg_open_type__lookup_list__table;
 
 typedef struct tg_open_type__feature__table

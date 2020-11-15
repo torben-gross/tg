@@ -35,10 +35,12 @@
 #define TG_ASSERT(x)                       if (!(x)) *(int*)0 = 0
 #define TG_DEBUG_EXEC(x)                   x
 #define TG_INVALID_CODEPATH()              *(int*)0 = 0
+#define TG_NOT_IMPLEMENTED()               *(int*)0 = 0
 #else
 #define TG_ASSERT(x)
 #define TG_DEBUG_EXEC(x)
 #define TG_INVALID_CODEPATH()
+#define TG_NOT_IMPLEMENTED()
 #endif
 
 #define TG_INOUT

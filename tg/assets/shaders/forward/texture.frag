@@ -23,4 +23,8 @@ void main()
 	{
 		out_color.a = smoothstep(1.0, 0.0, (d - start) / (0.25 - start));
 	}
+	if (dot(texture(tex, v_uv).rgb, texture(tex, v_uv).rgb) == 0.0)
+	{
+		out_color.a *= 0.5;
+	}
 }

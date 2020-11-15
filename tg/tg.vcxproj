@@ -152,10 +152,15 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\graphics\font\tg_font_io.h" />
+    <ClInclude Include="src\graphics\font\tg_open_type_cmap.h" />
+    <ClInclude Include="src\graphics\font\tg_open_type_glyf.h" />
+    <ClInclude Include="src\graphics\font\tg_open_type_head.h" />
     <ClInclude Include="src\graphics\font\tg_open_type_layout_common_table_formats.h" />
     <ClInclude Include="src\graphics\font\tg_open_type_dsig.h" />
     <ClInclude Include="src\graphics\font\tg_open_type_gdef.h" />
     <ClInclude Include="src\graphics\font\tg_open_type_gpos.h" />
+    <ClInclude Include="src\graphics\font\tg_open_type_loca.h" />
+    <ClInclude Include="src\graphics\font\tg_open_type_maxp.h" />
     <ClInclude Include="src\graphics\font\tg_open_type_types.h" />
     <ClInclude Include="src\graphics\font\tg_open_type_font_variations_common_table_formats.h" />
     <ClInclude Include="src\graphics\vulkan\tgvk_atmosphere_definitions.h" />
