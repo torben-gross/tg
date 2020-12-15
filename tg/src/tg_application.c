@@ -90,7 +90,7 @@ tg_sample_scene scene = { 0 };
 
 static void tg__game_3d_create(void)
 {
-    tg_font font = { 0 };
+    tg_open_type_font font = { 0 };
     tg_font_load("fonts/arial.ttf", &font);
 
     scene.render_commands = TG_LIST_CREATE(tg_render_command_h);
@@ -289,34 +289,34 @@ static void tg__game_3d_update_and_render(f32 dt)
     }
     const m4 camera_rotation = tgm_m4_euler(scene.camera.pitch, scene.camera.yaw, scene.camera.roll);
 
-    const v4 right = { camera_rotation.m00, camera_rotation.m10, camera_rotation.m20, camera_rotation.m30 }; // TODO: make these camera functions
-    const v4 up = { 0.0f, 1.0f, 0.0f, 0.0f };
-    const v4 forward = { -camera_rotation.m02, -camera_rotation.m12, -camera_rotation.m22, -camera_rotation.m32 };
+    const v3 right = { camera_rotation.m00, camera_rotation.m10, camera_rotation.m20 }; // TODO: make these camera functions
+    const v3 up = { 0.0f, 1.0f, 0.0f };
+    const v3 forward = { -camera_rotation.m02, -camera_rotation.m12, -camera_rotation.m22 };
 
     v3 velocity = { 0 };
     if (tg_input_is_key_down(TG_KEY_W))
     {
-        velocity = tgm_v3_add(velocity, tgm_v4_to_v3(forward));
+        velocity = tgm_v3_add(velocity, forward);
     }
     if (tg_input_is_key_down(TG_KEY_A))
     {
-        velocity = tgm_v3_add(velocity, tgm_v3_mulf(tgm_v4_to_v3(right), -1.0f));
+        velocity = tgm_v3_sub(velocity, right);
     }
     if (tg_input_is_key_down(TG_KEY_S))
     {
-        velocity = tgm_v3_add(velocity, tgm_v3_mulf(tgm_v4_to_v3(forward), -1.0f));
+        velocity = tgm_v3_sub(velocity, forward);
     }
     if (tg_input_is_key_down(TG_KEY_D))
     {
-        velocity = tgm_v3_add(velocity, tgm_v4_to_v3(right));
+        velocity = tgm_v3_add(velocity, right);
     }
     if (tg_input_is_key_down(TG_KEY_SPACE))
     {
-        velocity = tgm_v3_add(velocity, tgm_v4_to_v3(up));
+        velocity = tgm_v3_add(velocity, up);
     }
     if (tg_input_is_key_down(TG_KEY_CONTROL))
     {
-        velocity = tgm_v3_add(velocity, tgm_v3_mulf(tgm_v4_to_v3(up), -1.0f));
+        velocity = tgm_v3_sub(velocity, up);
     }
 
     if (tgm_v3_magsqr(velocity) != 0.0f)

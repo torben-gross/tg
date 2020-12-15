@@ -61,16 +61,6 @@ typedef enum tg_open_type__simple_glyph__flags
 	TG_OPEN_TYPE__SIMPLE_GLYPH__Reserved                                = 0x80 // Reserved: Bit 7 is reserved: set to zero.
 } tg_open_type__simple_glyph__flags;
 
-typedef struct tg_open_type__simple_glyph__table
-{
-	u16       p_end_pts_of_contour[0]; // endPtsOfContours[numberOfContours]: Array of point indices for the last point of each contour, in increasing numeric order.
-	//u16       instruction_length;      // instructionLength: Total number of bytes for instructions. If instructionLength is zero, no instructions are present for this glyph, and this field is followed directly by the flags field.
-	//u8        p_instructions[0];       // instructions[instructionLength]: Array of instruction byte code for the glyph.
-	//u8        p_flags[0];              // flags[variable]: Array of flag elements. See below for details regarding the number of flag array elements.
-	//u8 or i16 p_x_coordinates[0];      // uint8 or int16	xCoordinates[variable]: Contour point x-coordinates. See below for details regarding the number of coordinate array elements. Coordinate for the first point is relative to (0,0); others are relative to previous point.
-	//u8 or i16 p_y_coordinates[0];      // uint8 or int16	yCoordinates[variable]: Contour point y-coordinates. See below for details regarding the number of coordinate array elements. Coordinate for the first point is relative to (0,0); others are relative to previous point.
-} tg_open_type__simple_glyph__table;
-
 typedef struct tg_open_type__glyf
 {
 	i16    number_of_contours; // numberOfContours: If the number of contours is greater than or equal to zero, this is a simple glyph. If negative, this is a composite glyph — the value -1 should be used for composite glyphs.

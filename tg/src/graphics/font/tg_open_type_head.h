@@ -26,8 +26,10 @@ typedef struct tg_open_type__head
 	u16                flags;               // flags
 
 	u16                units_per_em;        // unitsPerEm: Set to a value from 16 to 16384. Any value in this range is valid. In fonts that have TrueType outlines, a power of 2 is recommended as this allows performance optimizations in some rasterizers.
-	tg_longdatetime    created;             // created: Number of seconds since 12:00 midnight that started January 1st 1904 in GMT/UTC time zone. 64-bit integer
-	tg_longdatetime    modified;            // modified: Number of seconds since 12:00 midnight that started January 1st 1904 in GMT/UTC time zone. 64-bit integer
+	u32                created0;            // created: Number of seconds since 12:00 midnight that started January 1st 1904 in GMT/UTC time zone. 64-bit integer
+	u32                created1;            // created: Number of seconds since 12:00 midnight that started January 1st 1904 in GMT/UTC time zone. 64-bit integer
+	u32                modified0;           // modified: Number of seconds since 12:00 midnight that started January 1st 1904 in GMT/UTC time zone. 64-bit integer
+	u32                modified1;           // modified: Number of seconds since 12:00 midnight that started January 1st 1904 in GMT/UTC time zone. 64-bit integer
 	i16                x_min;               // xMin: For all glyph bounding boxes.
 	i16                y_min;               // yMin: For all glyph bounding boxes.
 	i16                x_max;               // xMax: For all glyph bounding boxes.

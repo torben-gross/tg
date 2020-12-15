@@ -3,6 +3,9 @@
 
 #include "graphics/font/tg_open_type_types.h"
 
+#define TG_OPEN_TYPE__MAXP_VERSION_10 0x00010000
+#define TG_OPEN_TYPE__MAXP_VERSION_05 0x00005000
+
 typedef struct tg_open_type__maxp__version_10
 {
 	tg_fixed    version;                  // version: 0x00010000 for version 1.0.
