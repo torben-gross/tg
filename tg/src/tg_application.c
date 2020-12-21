@@ -92,6 +92,7 @@ static void tg__game_3d_create(void)
 {
     tg_open_type_font font = { 0 };
     tg_font_load("fonts/arial.ttf", &font);
+    tg_font_free(&font);
 
     scene.render_commands = TG_LIST_CREATE(tg_render_command_h);
 

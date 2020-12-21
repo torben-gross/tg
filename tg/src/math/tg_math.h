@@ -184,10 +184,6 @@ typedef struct m3
 			v3     col2;
 		};
 		f32        p_data[9];
-
-#ifdef TG_CPU_x64 // TODO: ?
-#endif
-
 	};
 } m3;
 

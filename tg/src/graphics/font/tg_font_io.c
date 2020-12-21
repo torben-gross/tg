@@ -11,6 +11,7 @@
 #include "graphics/font/tg_open_type_head.h"
 #include "graphics/font/tg_open_type_loca.h"
 #include "graphics/font/tg_open_type_maxp.h"
+#include "math/tg_math.h"
 #include "memory/tg_memory.h"
 #include "platform/tg_platform.h"
 #include "util/tg_string.h"
@@ -48,6 +49,8 @@
     (((*(u64*)&(x)) & 0x00ff000000000000) >> 40) | \
     (((*(u64*)&(x)) & 0xff00000000000000) >> 56)   \
     )
+
+#define TG_OPEN_TYPE_F2DOT14      TG_OPEN_TYPE_I16
 
 
 
@@ -180,8 +183,7 @@ static void tg__open_type__fill_mapping(const tg_open_type__cmap* p_cmap, TG_OUT
 		const tg_open_type__platform platform_id = (tg_open_type__platform)TG_OPEN_TYPE_U16(p_encoding_record->platform_id);
 		if (platform_id == TG_OPEN_TYPE__PLATFORM__WINDOWS)
 		{
-			const tg_open_type__windows__encodings encoding_id = (tg_open_type__windows__encodings)TG_OPEN_TYPE_U16(p_encoding_record->encoding_id);
-			TG_ASSERT(encoding_id == TG_OPEN_TYPE__WINDOWS__ENCODING__Unicode_BMP);
+			TG_ASSERT((tg_open_type__windows__encodings)TG_OPEN_TYPE_U16(p_encoding_record->encoding_id) == TG_OPEN_TYPE__WINDOWS__ENCODING__Unicode_BMP);
 			const tg_offset32 offset = TG_OPEN_TYPE_U32(p_encoding_record->offset);
 
 			const tg_open_type__cmap_subtable_format_4* p_cmap_subtable_format_4 = (tg_open_type__cmap_subtable_format_4*)&((u8*)p_cmap)[offset];
@@ -194,194 +196,444 @@ static void tg__open_type__fill_mapping(const tg_open_type__cmap* p_cmap, TG_OUT
 			const u16 seg_count = subtable__seg_count_x_2 / 2;
 
 			const u16* p_end_code = p_cmap_subtable_format_4->p_end_code;
-			const u16* p_start_code = &p_cmap_subtable_format_4->p_end_code[seg_count + 1];
+			const u16* p_start_code = &p_end_code[seg_count + 1];
 			const i16* p_id_delta = (i16*)&p_start_code[seg_count];
 			const u16* p_id_range_offset = (u16*)&p_id_delta[seg_count];
-			const u16* p_glyph_id_array = &p_id_range_offset[seg_count];
 
-			for (u16 glyph_idx = 0; glyph_idx < 256; glyph_idx++)
-			{
-				p_font->p_character_to_glyph[glyph_idx] = TG_OPEN_TYPE_U16(p_glyph_id_array[glyph_idx]);
-			}
-
-			// TODO: non ascii characters
-#if 0
 			TG_ASSERT(p_end_code[seg_count - 1] == 0xffff);
 			TG_ASSERT(p_end_code[seg_count] == 0);
 			TG_ASSERT(p_start_code[seg_count - 1] == 0xffff);
 
-			for (u16 seg_idx = 0; seg_idx < seg_count - 1; seg_idx++)
+			for (u16 i = 0; i < seg_count - 1; i++)
 			{
-				const u16 start_code = TG_OPEN_TYPE_U16(p_start_code[seg_idx]);
-				const u16 end_code = TG_OPEN_TYPE_U16(p_end_code[seg_idx]);
+				const u16 start_code = TG_OPEN_TYPE_U16(p_start_code[i]);
+				if (start_code > 255)// TODO: support more than 256 characters
+				{
+					break;
+				}
+				const u16 end_code = TG_OPEN_TYPE_U16(p_end_code[i]);
 				TG_ASSERT(start_code <= end_code); // TODO: return missingGlyph
-				const u16 id_range_offset = TG_OPEN_TYPE_U16(p_id_range_offset[seg_idx]);
+				const u16 id_range_offset = TG_OPEN_TYPE_U16(p_id_range_offset[i]);
 
-				u16 glyph_id;
 				if (id_range_offset != 0)
 				{
-					// glyphId = *(idRangeOffset[i] / 2 + (c - startCode[i]) + &idRangeOffset[i])
-
-					const u16 c = start_code; // TODO: this character is the input and this is an example
-					glyph_id = TG_OPEN_TYPE_U16(p_id_range_offset[seg_idx + (id_range_offset / 2 + (c - start_code))]);
+					const u16 end = TG_MIN(end_code, 255);
+					for (u16 c = start_code; c <= end; c++)
+					{
+						const u16 off = id_range_offset / 2 + (c - start_code);
+						TG_ASSERT(((u32)id_range_offset / 2 + ((u32)c - (u32)start_code)) % 65536 == off);
+						const u16 glyph_id = TG_OPEN_TYPE_U16(p_id_range_offset[(u64)i + (u64)off]);
+#ifdef TG_DEBUG
+						// TODO: keep this for testing for now. this indexing is described here:
+						// https://developer.apple.com/fonts/TrueType-Reference-Manual/RM06/Chap6cmap.html
+						// glyphIndex = *( &idRangeOffset[i] + idRangeOffset[i] / 2 + (c - startCode[i]) )
+						const u16 alt_glyph_id = TG_OPEN_TYPE_U16(*(&p_id_range_offset[i] + id_range_offset / 2 + (c - start_code)));
+						TG_ASSERT(glyph_id == alt_glyph_id);
+#endif
+						p_font->p_character_to_glyph[c] = glyph_id;
+					}
 				}
 				else
 				{
-					const u16 c = start_code; // TODO: this character is the input and this is an example
-					const u16 id_delta = TG_OPEN_TYPE_U16(p_id_delta[seg_idx]);
-					glyph_id = id_delta + c;
+					const u16 end = TG_MIN(end_code, 255);
+					for (u16 c = start_code; c <= end; c++)
+					{
+						const u16 id_delta = TG_OPEN_TYPE_U16(p_id_delta[i]);
+						const u16 glyph_id = id_delta + c;
+						TG_ASSERT((u16)(((u32)id_delta + (u32)c) % 65536) == glyph_id);
+						p_font->p_character_to_glyph[c] = glyph_id;
+					}
 				}
 			}
-#endif
+
+			break;
+		}
+	}
+}
+
+#define TG_LOCA(glyph_idx) \
+    (index_to_loc_format == 0 \
+        ? 2 * (tg_offset32)TG_OPEN_TYPE_U16(p_loca->short_version.p_offsets[glyph_idx]) \
+        : TG_OPEN_TYPE_U32(p_loca->long_version.p_offsets[glyph_idx]))
+
+static void tg__open_type__glyph_size(
+	u32                          glyph_idx,
+	i16                          index_to_loc_format,
+	const tg_open_type__loca*    p_loca,
+	const u8*                    p_glyf,
+	TG_OUT i16*                  p_number_of_contours,
+	TG_OUT u32*                  p_number_of_points,
+	TG_OUT u64*                  p_glyph_size
+)
+{
+	i16 alt_number_of_contours = 0;
+	u32 alt_number_of_points = 0;
+	u64 alt_glyph_size = 0;
+
+	if (!p_number_of_contours)
+	{
+		p_number_of_contours = &alt_number_of_contours;
+	}
+	if (!p_number_of_points)
+	{
+		p_number_of_points = &alt_number_of_points;
+	}
+	if (!p_glyph_size)
+	{
+		p_glyph_size = &alt_glyph_size;
+	}
+
+	const tg_offset32 start_offset = TG_LOCA(glyph_idx);
+	const tg_offset32 end_offset = TG_LOCA(glyph_idx + 1);
+	const u32 size = end_offset - start_offset;
+
+	if (size > 0)
+	{
+		const u8* p_src_it = &p_glyf[start_offset];
+		const i16 number_of_contours = TG_OPEN_TYPE_I16(*(i16*)p_src_it);
+		*p_number_of_contours += number_of_contours;
+		p_src_it += sizeof(tg_open_type__glyf);
+
+		if (number_of_contours >= 0)
+		{
+			*p_glyph_size += number_of_contours * sizeof(tg_open_type_contour);
+			const u32 logical_point_count = (u32)TG_OPEN_TYPE_U16(((u16*)p_src_it)[number_of_contours - 1]) + 1;
+			*p_number_of_points += logical_point_count;
+			*p_glyph_size += logical_point_count * sizeof(tg_open_type_point);
+		}
+		else
+		{
+			b32 more_components = TG_TRUE;
+			while (more_components)
+			{
+				const u16 flags = TG_OPEN_TYPE_U16(((u16*)p_src_it)[0]);
+				const u16 glyph_index = TG_OPEN_TYPE_U16(((u16*)p_src_it)[1]);
+
+				p_src_it += 4;
+				p_src_it += flags & TG_OPEN_TYPE__COMPOSITE_GLYPH__ARG_1_AND_2_ARE_WORDS ? 4 : 2;
+				if (flags & TG_OPEN_TYPE__COMPOSITE_GLYPH__WE_HAVE_A_SCALE)
+				{
+					p_src_it += 2;
+				}
+				else if (flags & TG_OPEN_TYPE__COMPOSITE_GLYPH__WE_HAVE_AN_X_AND_Y_SCALE)
+				{
+					p_src_it += 4;
+				}
+				else if (flags & TG_OPEN_TYPE__COMPOSITE_GLYPH__WE_HAVE_A_TWO_BY_TWO)
+				{
+					p_src_it += 8;
+				}
+
+				tg__open_type__glyph_size(glyph_index, index_to_loc_format, p_loca, p_glyf, p_number_of_contours, p_number_of_points, p_glyph_size);
+				more_components = flags & TG_OPEN_TYPE__COMPOSITE_GLYPH__MORE_COMPONENTS;
+			}
+		}
+	}
+}
+
+static void tg__open_type__fill_glyph_outline(
+	u32                           glyph_idx,
+	i16                           index_to_loc_format,
+	const tg_open_type__loca*     p_loca,
+	const u8*                     p_glyf,
+	TG_INOUT u8**                 pp_data,
+	TG_OUT tg_open_type_glyph*    p_glyph
+)
+{
+	const tg_offset32 start_offset = TG_LOCA(glyph_idx);
+	const tg_offset32 end_offset = TG_LOCA(glyph_idx + 1);
+	const u32 size = end_offset - start_offset;
+
+	if (size > 0)
+	{
+		const tg_open_type__glyf* p_glyf_entry = (tg_open_type__glyf*)&p_glyf[start_offset];
+		const i16 number_of_contours = TG_OPEN_TYPE_I16(p_glyf_entry->number_of_contours);
+		const i16 x_min = TG_OPEN_TYPE_I16(p_glyf_entry->x_min);
+		const i16 y_min = TG_OPEN_TYPE_I16(p_glyf_entry->y_min);
+		const i16 x_max = TG_OPEN_TYPE_I16(p_glyf_entry->x_max);
+		const i16 y_max = TG_OPEN_TYPE_I16(p_glyf_entry->y_max);
+
+		if (number_of_contours >= 0)
+		{
+			TG_ASSERT(number_of_contours > 0);
+
+			const u16* p_end_pts_of_contours = (u16*)&p_glyf_entry[1];
+			const u16* p_instruction_length = (u16*)&p_end_pts_of_contours[number_of_contours];
+			const u16 instruction_length = TG_OPEN_TYPE_U16(*p_instruction_length);
+			const u8* p_instructions = (u8*)&p_instruction_length[1];
+
+			const u32 logical_point_count = (u32)TG_OPEN_TYPE_U16(p_end_pts_of_contours[number_of_contours - 1]) + 1;
+
+			u8* p_flags = TG_NULL;
+			i16* p_x_coordinates = TG_NULL;
+			i16* p_y_coordinates = TG_NULL;
+
+			const u32 flags_capacity = logical_point_count * sizeof(*p_flags);
+			const u32 x_coordinates_capacity = logical_point_count * sizeof(*p_x_coordinates);
+			const u32 y_coordinates_capacity = logical_point_count * sizeof(*p_y_coordinates);
+
+			p_flags = TG_MEMORY_STACK_ALLOC(flags_capacity);
+			p_x_coordinates = TG_MEMORY_STACK_ALLOC(x_coordinates_capacity);
+			p_y_coordinates = TG_MEMORY_STACK_ALLOC(y_coordinates_capacity);
+
+			// Unpack flags
+			const u8* p_it = &p_instructions[instruction_length];
+			u32 logical_point_idx = 0;
+			while (logical_point_idx < logical_point_count)
+			{
+				const u8 flags = *p_it++;
+				TG_ASSERT(!(flags & TG_OPEN_TYPE__SIMPLE_GLYPH__Reserved));
+				p_flags[logical_point_idx++] = flags;
+				if (flags & TG_OPEN_TYPE__SIMPLE_GLYPH__REPEAT_FLAG)
+				{
+					const u8 repeat_count = *p_it++;
+					for (u8 i = 0; i < repeat_count; i++)
+					{
+						p_flags[logical_point_idx++] = flags;
+					}
+				}
+			}
+
+			// Unpack x coordinates
+			logical_point_idx = 0;
+			while (logical_point_idx < logical_point_count)
+			{
+				const u8 flags = p_flags[logical_point_idx];
+
+				const b32 x_is_same_or_positive_x_short_vector = flags & TG_OPEN_TYPE__SIMPLE_GLYPH__X_IS_SAME_OR_POSITIVE_X_SHORT_VECTOR;
+				i16 relative_x_coordinate = 0;
+				if (flags & TG_OPEN_TYPE__SIMPLE_GLYPH__X_SHORT_VECTOR)
+				{
+					relative_x_coordinate = (i16)*p_it++;
+					if (!x_is_same_or_positive_x_short_vector)
+					{
+						relative_x_coordinate = -relative_x_coordinate;
+					}
+				}
+				else
+				{
+					if (!x_is_same_or_positive_x_short_vector)
+					{
+						relative_x_coordinate = 256 * (i16)p_it[0] + (i16)p_it[1];
+						p_it = &p_it[2];
+					}
+				}
+
+				const i16 absolute_x_coordinate = (logical_point_idx == 0 ? 0 : p_x_coordinates[logical_point_idx - 1]) + relative_x_coordinate;
+				TG_ASSERT(absolute_x_coordinate >= x_min && absolute_x_coordinate <= x_max);
+				p_x_coordinates[logical_point_idx++] = absolute_x_coordinate;
+			}
+
+			// Unpack y coordinates
+			logical_point_idx = 0;
+			while (logical_point_idx < logical_point_count)
+			{
+				const u8 flags = p_flags[logical_point_idx];
+
+				const b32 y_is_same_or_positive_y_short_vector = flags & TG_OPEN_TYPE__SIMPLE_GLYPH__Y_IS_SAME_OR_POSITIVE_Y_SHORT_VECTOR;
+				i16 relative_y_coordinate = 0;
+				if (flags & TG_OPEN_TYPE__SIMPLE_GLYPH__Y_SHORT_VECTOR)
+				{
+					relative_y_coordinate = (i16)*p_it++;
+					if (!y_is_same_or_positive_y_short_vector)
+					{
+						relative_y_coordinate = -relative_y_coordinate;
+					}
+				}
+				else
+				{
+					if (!y_is_same_or_positive_y_short_vector)
+					{
+						relative_y_coordinate = 256 * (i16)p_it[0] + (i16)p_it[1];
+						p_it = &p_it[2];
+					}
+				}
+
+				const i16 absolute_y_coordinate = (logical_point_idx == 0 ? 0 : p_y_coordinates[logical_point_idx - 1]) + relative_y_coordinate;
+				TG_ASSERT(absolute_y_coordinate >= y_min && absolute_y_coordinate <= y_max);
+				p_y_coordinates[logical_point_idx++] = absolute_y_coordinate;
+			}
+
+			p_glyph->contour_count = number_of_contours;
+			p_glyph->p_contours = (tg_open_type_contour*)*pp_data;
+			*pp_data += p_glyph->contour_count * sizeof(*p_glyph->p_contours);
+
+			u32 first_point_idx = 0;
+			for (u32 contour_idx = 0; contour_idx < p_glyph->contour_count; contour_idx++)
+			{
+				const u32 one_past_last_point_idx = (u32)TG_OPEN_TYPE_U16(p_end_pts_of_contours[contour_idx]) + 1;
+
+				tg_open_type_contour* p_contour = &p_glyph->p_contours[contour_idx];
+				p_contour->point_count = one_past_last_point_idx - first_point_idx;
+				p_contour->p_points = (tg_open_type_point*)*pp_data;
+				*pp_data += p_contour->point_count * sizeof(*p_contour->p_points);
+
+				for (u32 point_idx = 0; point_idx < p_contour->point_count; point_idx++)
+				{
+					tg_open_type_point* p_point = &p_contour->p_points[point_idx];
+					p_point->x_coordinate = p_x_coordinates[point_idx];
+					p_point->y_coordinate = p_y_coordinates[point_idx];
+					p_point->flags = p_flags[point_idx];
+				}
+
+				first_point_idx = one_past_last_point_idx;
+			}
+
+			TG_MEMORY_STACK_FREE(y_coordinates_capacity);
+			TG_MEMORY_STACK_FREE(x_coordinates_capacity);
+			TG_MEMORY_STACK_FREE(flags_capacity);
+		}
+		else
+		{
+			TG_ASSERT(number_of_contours == -1);
+
+			p_glyph->contour_count = 0;
+
+			const u8* p_src_it = (u8*)&p_glyf_entry[1];
+			b32 more_components = TG_TRUE;
+			while (more_components)
+			{
+				const u16 flags = TG_OPEN_TYPE_U16(((u16*)p_src_it)[0]);
+				const u16 glyph_index = TG_OPEN_TYPE_U16(((u16*)p_src_it)[1]);
+
+				p_src_it += 4;
+				p_src_it += flags & TG_OPEN_TYPE__COMPOSITE_GLYPH__ARG_1_AND_2_ARE_WORDS ? 4 : 2;
+				if (flags & TG_OPEN_TYPE__COMPOSITE_GLYPH__WE_HAVE_A_SCALE)
+				{
+					p_src_it += 2;
+				}
+				else if (flags & TG_OPEN_TYPE__COMPOSITE_GLYPH__WE_HAVE_AN_X_AND_Y_SCALE)
+				{
+					p_src_it += 4;
+				}
+				else if (flags & TG_OPEN_TYPE__COMPOSITE_GLYPH__WE_HAVE_A_TWO_BY_TWO)
+				{
+					p_src_it += 8;
+				}
+
+				i16 num_of_contours = 0;
+				tg__open_type__glyph_size(glyph_index, index_to_loc_format, p_loca, p_glyf, &num_of_contours, TG_NULL, TG_NULL);
+
+				p_glyph->contour_count += num_of_contours;
+				more_components = flags & TG_OPEN_TYPE__COMPOSITE_GLYPH__MORE_COMPONENTS;
+			}
+
+			p_glyph->p_contours = (tg_open_type_contour*)*pp_data;
+			*pp_data += p_glyph->contour_count * sizeof(*p_glyph->p_contours);
+
+			p_src_it = (u8*)&p_glyf_entry[1];
+			more_components = TG_TRUE;
+			u32 contour_idx = 0;
+			while (more_components)
+			{
+				const u16 flags = TG_OPEN_TYPE_U16(((u16*)p_src_it)[0]);
+				const u16 glyph_index = TG_OPEN_TYPE_U16(((u16*)p_src_it)[1]);
+				p_src_it += 4;
+
+				m3 matrix = tgm_m3_identity();
+				if (flags & TG_OPEN_TYPE__COMPOSITE_GLYPH__ARGS_ARE_XY_VALUES)
+				{
+					if (flags & TG_OPEN_TYPE__COMPOSITE_GLYPH__ARG_1_AND_2_ARE_WORDS)
+					{
+						matrix.m02 = (f32)TG_OPEN_TYPE_I16(((i16*)p_src_it)[0]);
+						matrix.m12 = (f32)TG_OPEN_TYPE_I16(((i16*)p_src_it)[1]);
+						p_src_it += 4;
+					}
+					else
+					{
+						matrix.m02 = (f32)((i8*)p_src_it)[0];
+						matrix.m12 = (f32)((i8*)p_src_it)[1];
+						p_src_it += 2;
+					}
+				}
+				else
+				{
+					TG_NOT_IMPLEMENTED();
+				}
+
+				if (flags & TG_OPEN_TYPE__COMPOSITE_GLYPH__WE_HAVE_A_SCALE)
+				{
+					matrix.m00 = TG_OPEN_TYPE_F2DOT14_2_F32(TG_OPEN_TYPE_F2DOT14(((tg_f2dot14*)p_src_it)[0]));
+					matrix.m11 = matrix.m00;
+					p_src_it += 2;
+				}
+				else if (flags & TG_OPEN_TYPE__COMPOSITE_GLYPH__WE_HAVE_AN_X_AND_Y_SCALE)
+				{
+					matrix.m00 = TG_OPEN_TYPE_F2DOT14_2_F32(TG_OPEN_TYPE_F2DOT14(((tg_f2dot14*)p_src_it)[0]));
+					matrix.m11 = TG_OPEN_TYPE_F2DOT14_2_F32(TG_OPEN_TYPE_F2DOT14(((tg_f2dot14*)p_src_it)[1]));
+					p_src_it += 4;
+				}
+				else if (flags & TG_OPEN_TYPE__COMPOSITE_GLYPH__WE_HAVE_A_TWO_BY_TWO)
+				{
+					matrix.m00 = TG_OPEN_TYPE_F2DOT14_2_F32(TG_OPEN_TYPE_F2DOT14(((tg_f2dot14*)p_src_it)[0]));
+					matrix.m01 = TG_OPEN_TYPE_F2DOT14_2_F32(TG_OPEN_TYPE_F2DOT14(((tg_f2dot14*)p_src_it)[1]));
+					matrix.m10 = TG_OPEN_TYPE_F2DOT14_2_F32(TG_OPEN_TYPE_F2DOT14(((tg_f2dot14*)p_src_it)[2]));
+					matrix.m11 = TG_OPEN_TYPE_F2DOT14_2_F32(TG_OPEN_TYPE_F2DOT14(((tg_f2dot14*)p_src_it)[3]));
+					p_src_it += 8;
+				}
+
+				u64 temp_glyph_size = 0;
+				tg__open_type__glyph_size(glyph_index, index_to_loc_format, p_loca, p_glyf, TG_NULL, TG_NULL, &temp_glyph_size);
+
+				tg_open_type_glyph temp_glyph = { 0 };
+				u8* p_temp_data = TG_MEMORY_STACK_ALLOC(temp_glyph_size);
+
+				tg__open_type__fill_glyph_outline(glyph_index, index_to_loc_format, p_loca, p_glyf, &p_temp_data, &temp_glyph);
+
+				for (u32 cont_idx = 0; cont_idx < temp_glyph.contour_count; cont_idx++)
+				{
+					tg_open_type_contour* p_contour = &p_glyph->p_contours[contour_idx++];
+					const tg_open_type_contour* p_temp_contour = &temp_glyph.p_contours[cont_idx];
+					TG_ASSERT(p_temp_contour->point_count > 0);
+
+					p_contour->point_count = p_temp_contour->point_count;
+					p_contour->p_points = (tg_open_type_point*)*pp_data;
+					*pp_data += p_contour->point_count * sizeof(*p_contour->p_points);
+
+					for (u32 point_idx = 0; point_idx < p_temp_contour->point_count; point_idx++)
+					{
+						const tg_open_type_point* p_temp_point = &p_temp_contour->p_points[point_idx];
+						const v3 c0 = { (f32)p_temp_point->x_coordinate, (f32)p_temp_point->y_coordinate, 1.0f };
+						const v3 c1 = tgm_m3_mulv3(matrix, c0);
+
+						p_contour->p_points[point_idx].x_coordinate = (i16)c1.x; // TODO: rounding? iirc, there's a flag for that...
+						p_contour->p_points[point_idx].y_coordinate = (i16)c1.y;
+						p_contour->p_points[point_idx].flags = p_temp_point->flags;
+					}
+				}
+
+				TG_MEMORY_STACK_FREE(temp_glyph_size);
+
+				more_components = flags & TG_OPEN_TYPE__COMPOSITE_GLYPH__MORE_COMPONENTS;
+			}
 		}
 	}
 }
 
 static void tg__open_type__fill_glyph_outlines(u32 glyph_count, i16 index_to_loc_format, const tg_open_type__loca* p_loca, const tg_open_type__glyf* p_glyf, TG_OUT tg_open_type_font* p_font)
 {
-#define TG_LOCA(glyph_idx) \
-    (index_to_loc_format == 0 \
-        ? 2 * (tg_offset32)TG_OPEN_TYPE_U16(p_loca->short_version.p_offsets[glyph_idx]) \
-        : TG_OPEN_TYPE_U32(p_loca->long_version.p_offsets[glyph_idx]))
-
-	tg_offset32 start_offset = TG_LOCA(0);
-	for (u32 glyph_idx = 1; glyph_idx < glyph_count + 1; glyph_idx++)
+	// Allocate memory
+	u64 data_size = glyph_count * sizeof(*p_font->p_glyphs);
+	for (u32 glyph_idx = 0; glyph_idx < glyph_count; glyph_idx++)
 	{
-		const tg_offset32 end_offset = TG_LOCA(glyph_idx);
-		const u32 size = end_offset - start_offset;
-
-		if (size > 0)
-		{
-			const tg_open_type__glyf* p_glyf_entry = (tg_open_type__glyf*)&((u8*)p_glyf)[start_offset];
-			const i16 number_of_contours = TG_OPEN_TYPE_I16(p_glyf_entry->number_of_contours);
-			const i16 x_min = TG_OPEN_TYPE_I16(p_glyf_entry->x_min);
-			const i16 y_min = TG_OPEN_TYPE_I16(p_glyf_entry->y_min);
-			const i16 x_max = TG_OPEN_TYPE_I16(p_glyf_entry->x_max);
-			const i16 y_max = TG_OPEN_TYPE_I16(p_glyf_entry->y_max);
-
-			if (number_of_contours >= 0)
-			{
-				// Simple Glyph Table
-				// https://docs.microsoft.com/en-us/typography/opentype/spec/glyf#simple-glyph-description
-
-				const u16* p_end_pts_of_contours = (u16*)&p_glyf_entry[1];
-				const u16* p_instruction_length = (u16*)&p_end_pts_of_contours[number_of_contours];
-				const u16 instruction_length = TG_OPEN_TYPE_U16(*p_instruction_length);
-				const u8* p_instructions = (u8*)&p_instruction_length[1];
-
-				const u32 logical_point_count = (u32)TG_OPEN_TYPE_U16(p_end_pts_of_contours[number_of_contours - 1]) + 1;
-
-				u8* p_flags = TG_NULL;
-				i16* p_x_coordinates = TG_NULL;
-				i16* p_y_coordinates = TG_NULL;
-
-				const u32 flags_capacity = logical_point_count * sizeof(*p_flags);
-				const u32 x_coordinates_capacity = logical_point_count * sizeof(*p_x_coordinates);
-				const u32 y_coordinates_capacity = logical_point_count * sizeof(*p_y_coordinates);
-
-				p_flags = TG_MEMORY_STACK_ALLOC(flags_capacity);
-				p_x_coordinates = TG_MEMORY_STACK_ALLOC(x_coordinates_capacity);
-				p_y_coordinates = TG_MEMORY_STACK_ALLOC(y_coordinates_capacity);
-
-				// Unpack flags
-				const u8* p_it = &p_instructions[instruction_length];
-				u32 logical_point_idx = 0;
-				while (logical_point_idx < logical_point_count)
-				{
-					const u8 flags = *p_it++;
-					TG_ASSERT(!(flags & TG_OPEN_TYPE__SIMPLE_GLYPH__Reserved));
-					p_flags[logical_point_idx++] = flags;
-					if (flags & TG_OPEN_TYPE__SIMPLE_GLYPH__REPEAT_FLAG)
-					{
-						const u8 repeat_count = *p_it++;
-						for (u8 i = 0; i < repeat_count; i++)
-						{
-							p_flags[logical_point_idx++] = flags;
-						}
-					}
-				}
-
-				// Unpack x coordinates
-				logical_point_idx = 0;
-				while (logical_point_idx < logical_point_count)
-				{
-					const u8 flags = p_flags[logical_point_idx];
-
-					const b32 x_is_same_or_positive_x_short_vector = flags & TG_OPEN_TYPE__SIMPLE_GLYPH__X_IS_SAME_OR_POSITIVE_X_SHORT_VECTOR;
-					i16 relative_x_coordinate = 0;
-					if (flags & TG_OPEN_TYPE__SIMPLE_GLYPH__X_SHORT_VECTOR)
-					{
-						relative_x_coordinate = (i16)*p_it++;
-						if (!x_is_same_or_positive_x_short_vector)
-						{
-							relative_x_coordinate = -relative_x_coordinate;
-						}
-					}
-					else
-					{
-						if (!x_is_same_or_positive_x_short_vector)
-						{
-							relative_x_coordinate = 256 * (i16)p_it[0] + (i16)p_it[1];
-							p_it = &p_it[2];
-						}
-					}
-
-					const i16 absolute_x_coordinate = (logical_point_idx == 0 ? 0 : p_x_coordinates[logical_point_idx - 1]) + relative_x_coordinate;
-					TG_ASSERT(absolute_x_coordinate >= x_min && absolute_x_coordinate <= x_max);
-					p_x_coordinates[logical_point_idx++] = absolute_x_coordinate;
-				}
-
-				// Unpack y coordinates
-				logical_point_idx = 0;
-				while (logical_point_idx < logical_point_count)
-				{
-					const u8 flags = p_flags[logical_point_idx];
-
-					const b32 y_is_same_or_positive_y_short_vector = flags & TG_OPEN_TYPE__SIMPLE_GLYPH__Y_IS_SAME_OR_POSITIVE_Y_SHORT_VECTOR;
-					i16 relative_y_coordinate = 0;
-					if (flags & TG_OPEN_TYPE__SIMPLE_GLYPH__Y_SHORT_VECTOR)
-					{
-						relative_y_coordinate = (i16)*p_it++;
-						if (!y_is_same_or_positive_y_short_vector)
-						{
-							relative_y_coordinate = -relative_y_coordinate;
-						}
-					}
-					else
-					{
-						if (!y_is_same_or_positive_y_short_vector)
-						{
-							relative_y_coordinate = 256 * (i16)p_it[0] + (i16)p_it[1];
-							p_it = &p_it[2];
-						}
-					}
-
-					const i16 absolute_y_coordinate = (logical_point_idx == 0 ? 0 : p_y_coordinates[logical_point_idx - 1]) + relative_y_coordinate;
-					TG_ASSERT(absolute_y_coordinate >= y_min && absolute_y_coordinate <= y_max);
-					p_y_coordinates[logical_point_idx++] = absolute_y_coordinate;
-				}
-
-				TG_MEMORY_STACK_FREE(y_coordinates_capacity);
-				TG_MEMORY_STACK_FREE(x_coordinates_capacity);
-				TG_MEMORY_STACK_FREE(flags_capacity);
-			}
-			else
-			{
-				TG_NOT_IMPLEMENTED();
-				// TODO: composite glyph...
-			}
-		}
-		else
-		{
-			//TG_NOT_IMPLEMENTED();
-			// TODO: glyph does not exist, make it TG_NULL somehow
-		}
-
-		start_offset = end_offset;
+		u64 size = 0;
+		tg__open_type__glyph_size(glyph_idx, index_to_loc_format, p_loca, (u8*)p_glyf, TG_NULL, TG_NULL, &size);
+		data_size += size;
 	}
+	u8* p_data = TG_MEMORY_ALLOC(data_size);
+
+	p_font->glyph_count = glyph_count;
+	p_font->p_glyphs = (tg_open_type_glyph*)p_data;
+	p_data += glyph_count * sizeof(*p_font->p_glyphs);
+
+	// Simple glyphs
+	for (u32 glyph_idx = 0; glyph_idx < glyph_count; glyph_idx++)
+	{
+		tg__open_type__fill_glyph_outline(glyph_idx, index_to_loc_format, p_loca, (u8*)p_glyf, &p_data, &p_font->p_glyphs[glyph_idx]);
+	}
+}
 
 #undef TG_LOCA
-}
 
 static void* tg__open_type__find_table(const tg_open_type* p_open_type, tg_open_type__tag tag)
 {
@@ -403,18 +655,6 @@ static void* tg__open_type__find_table(const tg_open_type* p_open_type, tg_open_
 	return p_result;
 }
 
-static u16 tg__open_type__get_glyph_count(const tg_open_type__maxp* p_maxp)
-{
-	u16 result = TG_OPEN_TYPE_U16(p_maxp->version_05.num_glyphs);
-	return result;
-}
-
-static i16 tg__open_type__get_index_to_loc_format(const tg_open_type__head* p_head)
-{
-	const i16 result = TG_OPEN_TYPE_I16(p_head->index_to_loc_format);
-	return result;
-}
-
 static void tg__font_load_open_type(char* p_buffer, TG_OUT tg_open_type_font* p_font)
 {
 	const tg_open_type* p_open_type = (tg_open_type*)p_buffer;
@@ -426,339 +666,13 @@ static void tg__font_load_open_type(char* p_buffer, TG_OUT tg_open_type_font* p_
 	const tg_open_type__maxp* p_maxp = tg__open_type__find_table(p_open_type, TG_OPEN_TYPE__TAG__maxp);
 
 	tg__open_type__fill_mapping(p_cmap, p_font);
-	const u16 glyph_count = tg__open_type__get_glyph_count(p_maxp);
-	const i16 index_to_loc_format = tg__open_type__get_index_to_loc_format(p_head);
+	const u16 glyph_count = TG_OPEN_TYPE_U16(p_maxp->version_05.num_glyphs);
+	const i16 index_to_loc_format = TG_OPEN_TYPE_I16(p_head->index_to_loc_format);
 	tg__open_type__fill_glyph_outlines(glyph_count, index_to_loc_format, p_loca, p_glyf, p_font);
 
-
-
-
-
-	const u16 offset_table__num_tables = TG_OPEN_TYPE_U16(p_open_type->offset_table.num_tables);
-
-	for (u32 table_idx = 0; table_idx < offset_table__num_tables; table_idx++)
-	{
-		const tg_open_type__table_record* p_table_record = &p_open_type->p_table_records[table_idx];
-
-		const tg_open_type__tag table_record__table_tag = (tg_open_type__tag)TG_OPEN_TYPE_U32(*(u32*)p_table_record->p_table_tag);
-		const tg_offset32 table_record__offset = TG_OPEN_TYPE_U32(p_table_record->offset);
-
-		switch (table_record__table_tag)
-		{
-		case TG_OPEN_TYPE__TAG__AVAR: break;
-		case TG_OPEN_TYPE__TAG__BASE: break;
-		case TG_OPEN_TYPE__TAG__CBDT: break;
-		case TG_OPEN_TYPE__TAG__CBLC: break;
-		case TG_OPEN_TYPE__TAG__CFF:  break;
-		case TG_OPEN_TYPE__TAG__CFF2: break;
-		case TG_OPEN_TYPE__TAG__cmap: break;
-		case TG_OPEN_TYPE__TAG__COLR: break;
-		case TG_OPEN_TYPE__TAG__CPAL: break;
-		case TG_OPEN_TYPE__TAG__cvar: break;
-		case TG_OPEN_TYPE__TAG__cvt:  break;
-		case TG_OPEN_TYPE__TAG__DSIG: break;
-		case TG_OPEN_TYPE__TAG__EBDT: break;
-		case TG_OPEN_TYPE__TAG__EBLC: break;
-		case TG_OPEN_TYPE__TAG__EBSC: break;
-		case TG_OPEN_TYPE__TAG__fpgm: break;
-		case TG_OPEN_TYPE__TAG__fvar: break;
-		case TG_OPEN_TYPE__TAG__gasp: break;
-		case TG_OPEN_TYPE__TAG__GDEF:
-		{
-#ifdef TG_DEBUG
-			const tg_open_type__gdef_header_v10* p_gdef_header = (tg_open_type__gdef_header_v10*)&p_buffer[table_record__offset];
-			const u16 gdef_header__major_version = TG_OPEN_TYPE_U16(p_gdef_header->major_version);
-			const u16 gdef_header__minor_version = TG_OPEN_TYPE_U16(p_gdef_header->minor_version);
-			const tg_offset16 gdef_header__glyph_class_def_offset = TG_OPEN_TYPE_U16(p_gdef_header->glyph_class_def_offset);
-			//const tg_offset16 gdef_header__attach_list_offset = TG_OPEN_TYPE_U16(p_gdef_header->attach_list_offset);
-			//const tg_offset16 gdef_header__lig_caret_list_offset = TG_OPEN_TYPE_U16(p_gdef_header->lig_caret_list_offset);
-			//const tg_offset16 gdef_header__mark_attach_class_def_offset = TG_OPEN_TYPE_U16(p_gdef_header->mark_attach_class_def_offset);
-
-			// TODO: only version 1.0 is supported at the moment
-			TG_ASSERT(gdef_header__major_version == 1);
-			TG_ASSERT(gdef_header__minor_version == 0);
-
-			tg_open_type__class_def_format_1__table* p_glyph_class_def = TG_NULL;
-			//tg_open_type__attach_list__table* p_attach_list = TG_NULL;
-			//tg_open_type__lig_caret_list__table* p_lig_caret_list = TG_NULL;
-			//tg_open_type__class_def_format_1__table* p_mark_attach_class_def = TG_NULL;
-
-			if (gdef_header__glyph_class_def_offset)
-			{
-				p_glyph_class_def = (tg_open_type__class_def_format_1__table*)&((u8*)p_gdef_header)[gdef_header__glyph_class_def_offset];
-				tg__open_type__convert_class_def_format(p_glyph_class_def, p_glyph_class_def);
-				if (p_glyph_class_def->class_format == 1)
-				{
-					TG_NOT_IMPLEMENTED();
-				}
-				else
-				{
-					TG_ASSERT(p_glyph_class_def->class_format == 2);
-					const tg_open_type__class_def_format_2__table* p_glyph_class_def_format_2 = (const tg_open_type__class_def_format_2__table*)p_glyph_class_def;
-
-					u16 glyph = 0;
-					for (u16 i = 0; i < p_glyph_class_def_format_2->class_range_count; i++)
-					{
-						const tg_open_type__class_range_record* p_class_range_record = &p_glyph_class_def_format_2->p_class_range_records[i];
-						if (p_class_range_record->class == TG_OPEN_TYPE__GLYPH_CLASS_DEF__BASE)
-						{
-							TG_ASSERT(p_class_range_record->start_glyph == glyph);
-							glyph = p_class_range_record->end_glyph;
-							if (glyph >= 255)
-							{
-								break;
-							}
-						}
-					}
-					TG_ASSERT(glyph >= 255);
-				}
-			}
-#if 0
-			if (gdef_header__attach_list_offset)
-			{
-				TG_INVALID_CODEPATH(); // TODO: untested
-
-				p_attach_list = (tg_open_type__attach_list__table*)&((u8*)p_gdef_header)[gdef_header__attach_list_offset];
-				p_attach_list->coverage_offset = TG_OPEN_TYPE_U16(p_attach_list->coverage_offset);
-				p_attach_list->glyph_count = TG_OPEN_TYPE_U16(p_attach_list->glyph_count);
-				for (u32 glyph_idx = 0; glyph_idx < p_attach_list->glyph_count; glyph_idx++)
-				{
-					p_attach_list->p_attach_point_offsets[glyph_idx] = TG_OPEN_TYPE_U16(p_attach_list->p_attach_point_offsets[glyph_idx]);
-				}
-			}
-			if (gdef_header__lig_caret_list_offset)
-			{
-				p_lig_caret_list = (tg_open_type__lig_caret_list__table*)&((u8*)p_gdef_header)[gdef_header__lig_caret_list_offset];
-				p_lig_caret_list->coverage_offset = TG_OPEN_TYPE_U16(p_lig_caret_list->coverage_offset);
-				p_lig_caret_list->lig_glyph_count = TG_OPEN_TYPE_U16(p_lig_caret_list->lig_glyph_count);
-				for (u32 lig_glyph_idx = 0; lig_glyph_idx < p_lig_caret_list->lig_glyph_count; lig_glyph_idx++)
-				{
-					p_lig_caret_list->p_lig_glyph_offsets[lig_glyph_idx] = TG_OPEN_TYPE_U16(p_lig_caret_list->p_lig_glyph_offsets[lig_glyph_idx]);
-				}
-
-				tg_open_type__coverage_format_1__table* p_coverage_format_1 = (tg_open_type__coverage_format_1__table*)&((u8*)p_lig_caret_list)[p_lig_caret_list->coverage_offset];
-				p_coverage_format_1->coverage_format = TG_OPEN_TYPE_U16(p_coverage_format_1->coverage_format);
-				if (p_coverage_format_1->coverage_format == 1)
-				{
-					p_coverage_format_1->glyph_count = TG_OPEN_TYPE_U16(p_coverage_format_1->glyph_count);
-					for (u32 glyph_idx = 0; glyph_idx < p_coverage_format_1->glyph_count; glyph_idx++)
-					{
-						p_coverage_format_1->p_glyph_attay[glyph_idx] = TG_OPEN_TYPE_U16(p_coverage_format_1->p_glyph_attay[glyph_idx]);
-					}
-				}
-				else
-				{
-					TG_INVALID_CODEPATH(); // TODO: 2 not yet supported
-				}
-			}
-			if (gdef_header__mark_attach_class_def_offset)
-			{
-				p_mark_attach_class_def = (tg_open_type__class_def_format_1__table*)&((u8*)p_gdef_header)[gdef_header__mark_attach_class_def_offset];
-				tg__open_type__convert_class_def_format(p_mark_attach_class_def, p_mark_attach_class_def);
-			}
-#endif
-#endif
-		} break;
-		case TG_OPEN_TYPE__TAG__glyf: break;
-		case TG_OPEN_TYPE__TAG__GPOS:
-		{
-#if 0
-			u16* p_major = &((u16*)&p_buffer[table_record__offset])[0];
-			u16* p_minor = &((u16*)&p_buffer[table_record__offset])[1];
-			*p_major = TG_OPEN_TYPE_U16(*p_major);
-			*p_minor = TG_OPEN_TYPE_U16(*p_minor);
-
-			if (*p_major == 1)
-			{
-				if (*p_minor == 0)
-				{
-					tg_open_type__gpos_header_v10* p_gpos_header = (tg_open_type__gpos_header_v10*)&p_buffer[table_record__offset];
-					p_gpos_header->script_list_offset = TG_OPEN_TYPE_U16(p_gpos_header->script_list_offset);
-					p_gpos_header->feature_list_offset = TG_OPEN_TYPE_U16(p_gpos_header->feature_list_offset);
-					p_gpos_header->lookup_list_offset = TG_OPEN_TYPE_U16(p_gpos_header->lookup_list_offset);
-
-					const tg_open_type__script_list__table* p_script_list = (tg_open_type__script_list__table*)&((u8*)p_gpos_header)[p_gpos_header->script_list_offset];
-					//const tg_open_type__feature_list__table* p_feature_list = (tg_open_type__feature_list__table*)&((u8*)p_gpos_header)[p_gpos_header->feature_list_offset];
-					const tg_open_type__lookup_list__table* p_lookup_list = (tg_open_type__lookup_list__table*)&((u8*)p_gpos_header)[p_gpos_header->lookup_list_offset];
-
-#if 0
-					p_feature_list->feature_count = TG_OPEN_TYPE_U16(p_feature_list->feature_count);
-					for (u32 feature_idx = 0; feature_idx < p_feature_list->feature_count; feature_idx++)
-					{
-						tg_open_type__feature_record* p_feature_record = &p_feature_list->p_feature_records[feature_idx];
-						*(u32*)p_feature_record->p_feature_tag = TG_OPEN_TYPE_U32(p_feature_record->p_feature_tag);
-						p_feature_record->feature_offset = TG_OPEN_TYPE_U16(p_feature_record->feature_offset);
-					}
-#endif
-
-#ifdef TG_DEBUG
-					const u16 script_list__script_count = TG_OPEN_TYPE_U16(p_script_list->script_count);
-					b32 latin_supported = TG_FALSE;
-					for (u16 script_record_idx = 0; script_record_idx < script_list__script_count; script_record_idx++)
-					{
-						const tg_open_type__script_record* p_script_record = &p_script_list->p_script_records[script_record_idx];
-						const u32 script_record__script_tag = TG_OPEN_TYPE_U32(p_script_record->p_script_tag);
-							
-						if (script_record__script_tag == 'latn')
-						{
-							latin_supported = TG_TRUE;
-							const u16 script_record__script_offset = TG_OPEN_TYPE_U16(p_script_record->script_offset);
-
-							tg_open_type__script__table* p_script = (tg_open_type__script__table*)&((u8*)p_script_list)[script_record__script_offset];
-							const tg_offset16 script__default_lang_sys = TG_OPEN_TYPE_U16(p_script->default_lang_sys);
-
-							if (script__default_lang_sys)
-							{
-								tg_open_type__lang_sys__table* p_lang_sys = (tg_open_type__lang_sys__table*)&((u8*)p_script)[script__default_lang_sys];
-								TG_ASSERT(TG_OPEN_TYPE_U16(p_lang_sys->lookup_order) == 0);
-								TG_ASSERT(TG_OPEN_TYPE_U16(p_lang_sys->required_feature_index) == 0xffff);
-								break;
-							}
-						}
-					}
-					TG_ASSERT(latin_supported);
-#endif
-
-					const u16 lookup_list__lookup_count = TG_OPEN_TYPE_U16(p_lookup_list->lookup_count);
-					for (u16 lookup_idx = 0; lookup_idx < lookup_list__lookup_count; lookup_idx++)
-					{
-						const tg_offset16 lookup = TG_OPEN_TYPE_U16(p_lookup_list->p_lookups[lookup_idx]);
-						const tg_open_type__lookup__table* p_lookup = (tg_open_type__lookup__table*)&((u8*)p_lookup_list)[lookup];
-						const tg_open_type__gpos__lookup_type__enumeration lookup__lookup_type = (tg_open_type__gpos__lookup_type__enumeration)TG_OPEN_TYPE_U16(p_lookup->lookup_type);
-
-#ifdef TG_DEBUG
-						const tg_open_type__lookup_flag__bit__enumeration lookup_flags = (tg_open_type__lookup_flag__bit__enumeration)TG_OPEN_TYPE_U16(p_lookup->lookup_flag);
-						TG_ASSERT((lookup_flags & TG_OPEN_TYPE__LOOKUP_FLAG__IGNORE_BASE_GLYPHS) == 0);
-#endif
-
-						if (lookup__lookup_type == TG_OPEN_TYPE__GPOS__LOOKUP_TYPE__SINGLE_ADJUSTMENT)
-						{
-							TG_NOT_IMPLEMENTED();
-						}
-						else if (lookup__lookup_type == TG_OPEN_TYPE__GPOS__LOOKUP_TYPE__EXTENSION_POSITIONING)
-						{
-							const u16 lookup__subtable_count = TG_OPEN_TYPE_U16(p_lookup->subtable_count);
-
-							for (u16 subtable_idx = 0; subtable_idx < lookup__subtable_count; subtable_idx++)
-							{
-								const u16 lookup__subtable_offset = TG_OPEN_TYPE_U16(((u16*)&((u8*)p_lookup)[6])[subtable_idx]);
-								const tg_open_type__extension_pos_format_1__subtable* p_extension_pos_format_1 = (const tg_open_type__extension_pos_format_1__subtable*)&((u8*)p_lookup)[lookup__subtable_offset];
-
-								TG_ASSERT(TG_OPEN_TYPE_U16(p_extension_pos_format_1->pos_format) == 1);
-
-								const tg_open_type__gpos__lookup_type__enumeration extension_pos_format_1__extension_lookup_type = (tg_open_type__gpos__lookup_type__enumeration)TG_OPEN_TYPE_U16(p_extension_pos_format_1->extension_lookup_type);
-								TG_ASSERT(extension_pos_format_1__extension_lookup_type != TG_OPEN_TYPE__GPOS__LOOKUP_TYPE__EXTENSION_POSITIONING);
-
-								if (extension_pos_format_1__extension_lookup_type == TG_OPEN_TYPE__GPOS__LOOKUP_TYPE__SINGLE_ADJUSTMENT)
-								{
-									const tg_offset32 extension_pos_format_1__extension_offset = TG_OPEN_TYPE_U32(p_extension_pos_format_1->extension_offset);
-									const u16 single_pos__pos_format = TG_OPEN_TYPE_U16(((u8*)p_extension_pos_format_1)[extension_pos_format_1__extension_offset]);
-									if (single_pos__pos_format == 1)
-									{
-										break;
-										TG_NOT_IMPLEMENTED();
-									}
-									else if (single_pos__pos_format == 2)
-									{
-										const tg_open_type__single_pos_format_2__subtable* p_single_pos_format_2 = (tg_open_type__single_pos_format_2__subtable*)&((u8*)p_extension_pos_format_1)[extension_pos_format_1__extension_offset];
-
-										const tg_offset16 single_pos_format_2__coverage_offset = TG_OPEN_TYPE_U16(p_single_pos_format_2->coverage_offset);
-										const u16 coverage_format = TG_OPEN_TYPE_U16(*(u16*)&((u8*)p_single_pos_format_2)[single_pos_format_2__coverage_offset]);
-
-										if (coverage_format == 1)
-										{
-											break;
-											TG_NOT_IMPLEMENTED();
-										}
-										else if (coverage_format == 2)
-										{
-											const tg_open_type__coverage_format_2__table* p_coverage_format_2 = (tg_open_type__coverage_format_2__table*)&((u8*)p_single_pos_format_2)[single_pos_format_2__coverage_offset];
-
-											const u16 coverage_format_2__range_count = TG_OPEN_TYPE_U16(p_coverage_format_2->range_count);
-											for (u16 range_idx = 0; range_idx < coverage_format_2__range_count; range_idx++)
-											{
-												const tg_open_type__range_record* p_range_record = &p_coverage_format_2->p_range_records[range_idx];
-												const u16 range_record__start_glyph_id = TG_OPEN_TYPE_U16(p_range_record->start_glyph_id);
-												const u16 range_record__end_glyph_id = TG_OPEN_TYPE_U16(p_range_record->end_glyph_id);
-												const u16 range_record__start_coverage_index = TG_OPEN_TYPE_U16(p_range_record->start_coverage_index);
-											}
-										}
-
-#ifdef TG_DEBUG
-										const tg_open_type__value_format__flags single_pos_format_2__value_format = (tg_open_type__value_format__flags)TG_OPEN_TYPE_U16(p_single_pos_format_2->value_format);
-										const tg_open_type__value_format__flags required_flags = TG_OPEN_TYPE__VALUE_FORMAT__X_PLACEMENT | TG_OPEN_TYPE__VALUE_FORMAT__X_ADVANCE;
-										TG_ASSERT((single_pos_format_2__value_format & required_flags) == required_flags);
-#endif
-
-										const u16 single_pos_format_2__value_count = TG_OPEN_TYPE_U16(p_single_pos_format_2->value_count);
-										for (u16 value_idx = 0; value_idx < single_pos_format_2__value_count; value_idx++)
-										{
-											const tg_open_type__value_record* p_value_record = &p_single_pos_format_2->p_value_records[value_idx];
-											const i16 value_record__x_placement = TG_OPEN_TYPE_I16(p_value_record->x_placement);
-											const i16 value_record__x_advance = TG_OPEN_TYPE_I16(p_value_record->x_advance);
-										}
-									}
-									else
-									{
-										TG_INVALID_CODEPATH();
-									}
-								}
-							}
-						}
-						else
-						{
-							TG_INVALID_CODEPATH();
-						}
-					}
-				}
-				else if (*p_minor == 1)
-				{
-					TG_NOT_IMPLEMENTED();
-				}
-				else
-				{
-					TG_INVALID_CODEPATH();
-				}
-			}
-			else
-			{
-				TG_INVALID_CODEPATH();
-			}
-#endif
-		} break;
-		case TG_OPEN_TYPE__TAG__GSUB: break;
-		case TG_OPEN_TYPE__TAG__gvar: break;
-		case TG_OPEN_TYPE__TAG__hdmx: break;
-		case TG_OPEN_TYPE__TAG__head: break;
-		case TG_OPEN_TYPE__TAG__hhea: break;
-		case TG_OPEN_TYPE__TAG__hmtx: break;
-		case TG_OPEN_TYPE__TAG__HVAR: break;
-		case TG_OPEN_TYPE__TAG__JSTF: break;
-		case TG_OPEN_TYPE__TAG__kern: break;
-		case TG_OPEN_TYPE__TAG__loca: break;
-		case TG_OPEN_TYPE__TAG__LTSH: break;
-		case TG_OPEN_TYPE__TAG__MATH: break;
-		case TG_OPEN_TYPE__TAG__maxp: break;
-		case TG_OPEN_TYPE__TAG__MERG: break;
-		case TG_OPEN_TYPE__TAG__meta: break;
-		case TG_OPEN_TYPE__TAG__MVAR: break;
-		case TG_OPEN_TYPE__TAG__NAME: break;
-		case TG_OPEN_TYPE__TAG__OS2:  break;
-		case TG_OPEN_TYPE__TAG__PCLT: break;
-		case TG_OPEN_TYPE__TAG__post: break;
-		case TG_OPEN_TYPE__TAG__prep: break;
-		case TG_OPEN_TYPE__TAG__sbix: break;
-		case TG_OPEN_TYPE__TAG__STAT: break;
-		case TG_OPEN_TYPE__TAG__SVG:  break;
-		case TG_OPEN_TYPE__TAG__VDMX: break;
-		case TG_OPEN_TYPE__TAG__vhea: break;
-		case TG_OPEN_TYPE__TAG__vmtx: break;
-		case TG_OPEN_TYPE__TAG__VORG: break;
-		case TG_OPEN_TYPE__TAG__VVAR: break;
-
-		default: TG_INVALID_CODEPATH(); break;
-		}
-	}
+	const u16 glyph_idx = p_font->p_character_to_glyph[(unsigned char)'8'];
+	tg_open_type_glyph* p_glyph = &p_font->p_glyphs[glyph_idx];
+	int bh = 0;
 }
 
 
@@ -786,5 +700,7 @@ void tg_font_load(const char* p_filename, TG_OUT tg_open_type_font* p_font)
 
 void tg_font_free(tg_open_type_font* p_font)
 {
+	TG_ASSERT(p_font && p_font->p_glyphs);
 
+	TG_MEMORY_FREE(p_font->p_glyphs);
 }

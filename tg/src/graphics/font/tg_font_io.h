@@ -10,10 +10,16 @@ typedef struct tg_open_type_point
 	u8     flags;
 } tg_open_type_point;
 
-typedef struct tg_open_type_glyph
+typedef struct tg_open_type_contour
 {
 	u32                    point_count;
 	tg_open_type_point*    p_points;
+} tg_open_type_contour;
+
+typedef struct tg_open_type_glyph
+{
+	u32                      contour_count;
+	tg_open_type_contour*    p_contours;
 } tg_open_type_glyph;
 
 typedef struct tg_open_type_font
