@@ -86,12 +86,20 @@ typedef struct tg_sample_scene
 b32 running = TG_TRUE;
 tg_sample_scene scene = { 0 };
 
-#include "graphics/font/tg_font_io.h"
+#include "graphics/font/tg_font.h"
+#include "graphics/tg_image_io.h"
 
 static void tg__game_3d_create(void)
 {
     tg_open_type_font font = { 0 };
     tg_font_load("fonts/arial.ttf", &font);
+    u32 w = 64;
+    u32 h = w;
+    u64 s = (u64)w * (u64)h;
+    u8* p_image_data = TG_MEMORY_STACK_ALLOC(s);
+    tg_font_rasterize(&font, 'e', w, h, p_image_data);
+    tg_image_store_to_disc("font_test.bmp", w, h, TG_COLOR_IMAGE_FORMAT_R8_UNORM, p_image_data, TG_TRUE, TG_TRUE);
+    TG_MEMORY_STACK_FREE(s);
     tg_font_free(&font);
 
     scene.render_commands = TG_LIST_CREATE(tg_render_command_h);

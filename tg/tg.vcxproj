@@ -117,7 +117,7 @@
     </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\graphics\font\tg_font_io.c" />
+    <ClCompile Include="src\graphics\font\tg_font.c" />
     <ClCompile Include="src\graphics\vulkan\tgvk_common.c" />
     <ClCompile Include="src\graphics\vulkan\tgvk_atmosphere.c" />
     <ClCompile Include="src\graphics\tg_spirv.c" />
@@ -151,7 +151,7 @@
     <ClCompile Include="src\util\tg_string.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\graphics\font\tg_font_io.h" />
+    <ClInclude Include="src\graphics\font\tg_font.h" />
     <ClInclude Include="src\graphics\font\tg_open_type_cmap.h" />
     <ClInclude Include="src\graphics\font\tg_open_type_glyf.h" />
     <ClInclude Include="src\graphics\font\tg_open_type_head.h" />

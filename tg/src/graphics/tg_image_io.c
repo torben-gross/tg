@@ -435,7 +435,7 @@ void tg_image_convert_format(TG_INOUT u32* p_data, u32 width, u32 height, tg_col
 	}
 }
 
-b32 tg_image_store_to_disc(const char* p_filename, u32 width, u32 height, tg_color_image_format format, const u32* p_data, b32 force_alpha_one, b32 replace_existing)
+b32 tg_image_store_to_disc(const char* p_filename, u32 width, u32 height, tg_color_image_format format, const u8* p_data, b32 force_alpha_one, b32 replace_existing)
 {
 	b32 result = TG_FALSE;
 
@@ -454,19 +454,17 @@ b32 tg_image_store_to_disc(const char* p_filename, u32 width, u32 height, tg_col
 	if (tg_string_equal(p_extension, "bmp"))
 	{
 		const u32 in_pixel_size = tg_color_image_format_size(format);
-		TG_ASSERT(in_pixel_size == 4);
 		const u32 in_channels = tg_color_image_format_channels(format);
-		TG_ASSERT(in_channels == 4);
 		const u32 in_data_size = width * height * in_pixel_size;
 
-		const u32 out_pixel_size = TG_MIN(sizeof(u32), in_pixel_size);
-		//const u32 out_channels = in_channels;
+		const u32 out_pixel_size = 4;//TG_MIN(sizeof(u32), in_pixel_size);
+		const u32 out_channels = 4;
 		const u32 out_data_size = width * height * out_pixel_size;
 
-		const u32 buffer_size = TG_BMP_BITMAPFILEHEADER_SIZE + TG_BMP_BITMAPV5HEADER_SIZE + 3 * sizeof(tg_rgb_quad) + in_data_size;
-		const u32 bmp_size = TG_BMP_BITMAPFILEHEADER_SIZE + TG_BMP_BITMAPV5HEADER_SIZE + 3 * sizeof(tg_rgb_quad) + out_data_size;
+		const tg_color_image_format out_format = in_pixel_size == out_pixel_size && in_channels == out_channels ? format : TG_COLOR_IMAGE_FORMAT_R8G8B8A8_UNORM;
 
-		char* p_buffer = TG_MEMORY_STACK_ALLOC(buffer_size);
+		const u32 bmp_size = TG_BMP_BITMAPFILEHEADER_SIZE + TG_BMP_BITMAPV5HEADER_SIZE + 3 * sizeof(tg_rgb_quad) + out_data_size;
+		char* p_buffer = TG_MEMORY_STACK_ALLOC(bmp_size);
 
 		const u32 offset_bits = 150;
 
@@ -486,7 +484,7 @@ b32 tg_image_store_to_disc(const char* p_filename, u32 width, u32 height, tg_col
 		*(i32*)&p_bitmap_info_header[  4] = (i32)width;                              // width
 		*(i32*)&p_bitmap_info_header[  8] = -(i32)height;                            // height
 		*(u16*)&p_bitmap_info_header[ 12] = 1;                                       // planes
-		*(u16*)&p_bitmap_info_header[ 14] = 32;                                      // bit_count
+		*(u16*)&p_bitmap_info_header[ 14] = 8 * (u16)out_pixel_size;                 // bit_count
 		*(u32*)&p_bitmap_info_header[ 16] = TG_BMP_COMPRESSION_BI_BITFIELDS;         // compression
 		*(u32*)&p_bitmap_info_header[ 20] = bmp_size;                                // size_image
 		*(i32*)&p_bitmap_info_header[ 24] = 0;                                       // x_pels_per_meter
@@ -494,10 +492,9 @@ b32 tg_image_store_to_disc(const char* p_filename, u32 width, u32 height, tg_col
 		*(u32*)&p_bitmap_info_header[ 32] = 0;                                       // clr_used
 		*(u32*)&p_bitmap_info_header[ 36] = 0;                                       // clr_important
 
-
 		// bitmap v5 header
 		tg__convert_format_to_masks(
-			format,
+			out_format,
 			(u32*)&p_bitmap_info_header[40],
 			(u32*)&p_bitmap_info_header[44],
 			(u32*)&p_bitmap_info_header[48],
@@ -520,19 +517,46 @@ b32 tg_image_store_to_disc(const char* p_filename, u32 width, u32 height, tg_col
 
 		// color-index array
 		u32* p_pixels = (u32*)&p_buffer[offset_bits];
-		tg_memcpy(in_data_size, p_data, p_pixels);
+		if (in_data_size == out_data_size && in_pixel_size == out_pixel_size && in_channels == out_channels)
+		{
+			tg_memcpy(in_data_size, p_data, p_pixels);
+		}
+		else
+		{
+			if (in_pixel_size == 1 && in_channels == 1)
+			{
+				for (u32 i = 0; i < in_data_size; i++)
+				{
+					// TODO: format could vary!
+					const u32 brightness = (u32)p_data[i];
+					p_pixels[i] = brightness | brightness << 8 | brightness << 16;
+				}
+			}
+			else
+			{
+				TG_NOT_IMPLEMENTED();
+			}
+		}
+
 		if (force_alpha_one)
 		{
-			const u32 alpha_mask = *(u32*)&p_bitmap_info_header[52];
-			for (u32 i = 0; i < in_data_size / 4; i++)
+			if (out_pixel_size == 4)
 			{
-				p_pixels[i] |= alpha_mask;
+				const u32 alpha_mask = *(u32*)&p_bitmap_info_header[52];
+				for (u32 i = 0; i < in_data_size / 4; i++)
+				{
+					p_pixels[i] |= alpha_mask;
+				}
+			}
+			else
+			{
+				TG_NOT_IMPLEMENTED();
 			}
 		}
 
 		result = tgp_file_create(p_filename, bmp_size, p_buffer, replace_existing);
 		
-		TG_MEMORY_STACK_FREE(buffer_size);
+		TG_MEMORY_STACK_FREE(bmp_size);
 	}
 	else
 	{

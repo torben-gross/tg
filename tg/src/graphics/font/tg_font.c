@@ -1,4 +1,4 @@
-#include "graphics/font/tg_font_io.h"
+#include "graphics/font/tg_font.h"
 
 #include "graphics/font/tg_open_type_types.h"
 #include "graphics/font/tg_open_type_layout_common_table_formats.h"
@@ -348,10 +348,11 @@ static void tg__open_type__fill_glyph_outline(
 	{
 		const tg_open_type__glyf* p_glyf_entry = (tg_open_type__glyf*)&p_glyf[start_offset];
 		const i16 number_of_contours = TG_OPEN_TYPE_I16(p_glyf_entry->number_of_contours);
-		const i16 x_min = TG_OPEN_TYPE_I16(p_glyf_entry->x_min);
-		const i16 y_min = TG_OPEN_TYPE_I16(p_glyf_entry->y_min);
-		const i16 x_max = TG_OPEN_TYPE_I16(p_glyf_entry->x_max);
-		const i16 y_max = TG_OPEN_TYPE_I16(p_glyf_entry->y_max);
+
+		p_glyph->x_min = TG_OPEN_TYPE_I16(p_glyf_entry->x_min);
+		p_glyph->y_min = TG_OPEN_TYPE_I16(p_glyf_entry->y_min);
+		p_glyph->x_max = TG_OPEN_TYPE_I16(p_glyf_entry->x_max);
+		p_glyph->y_max = TG_OPEN_TYPE_I16(p_glyf_entry->y_max);
 
 		if (number_of_contours >= 0)
 		{
@@ -420,7 +421,7 @@ static void tg__open_type__fill_glyph_outline(
 				}
 
 				const i16 absolute_x_coordinate = (logical_point_idx == 0 ? 0 : p_x_coordinates[logical_point_idx - 1]) + relative_x_coordinate;
-				TG_ASSERT(absolute_x_coordinate >= x_min && absolute_x_coordinate <= x_max);
+				TG_ASSERT(absolute_x_coordinate >= p_glyph->x_min && absolute_x_coordinate <= p_glyph->x_max);
 				p_x_coordinates[logical_point_idx++] = absolute_x_coordinate;
 			}
 
@@ -450,7 +451,7 @@ static void tg__open_type__fill_glyph_outline(
 				}
 
 				const i16 absolute_y_coordinate = (logical_point_idx == 0 ? 0 : p_y_coordinates[logical_point_idx - 1]) + relative_y_coordinate;
-				TG_ASSERT(absolute_y_coordinate >= y_min && absolute_y_coordinate <= y_max);
+				TG_ASSERT(absolute_y_coordinate >= p_glyph->y_min && absolute_y_coordinate <= p_glyph->y_max);
 				p_y_coordinates[logical_point_idx++] = absolute_y_coordinate;
 			}
 
@@ -461,6 +462,8 @@ static void tg__open_type__fill_glyph_outline(
 			u32 first_point_idx = 0;
 			for (u32 contour_idx = 0; contour_idx < p_glyph->contour_count; contour_idx++)
 			{
+				int bh;
+				//TG_ASSERT(p_flags[TG_OPEN_TYPE_I16(p_end_pts_of_contours[contour_idx])] & TG_OPEN_TYPE__SIMPLE_GLYPH__ON_CURVE_POINT);
 				const u32 one_past_last_point_idx = (u32)TG_OPEN_TYPE_U16(p_end_pts_of_contours[contour_idx]) + 1;
 
 				tg_open_type_contour* p_contour = &p_glyph->p_contours[contour_idx];
@@ -471,9 +474,9 @@ static void tg__open_type__fill_glyph_outline(
 				for (u32 point_idx = 0; point_idx < p_contour->point_count; point_idx++)
 				{
 					tg_open_type_point* p_point = &p_contour->p_points[point_idx];
-					p_point->x_coordinate = p_x_coordinates[point_idx];
-					p_point->y_coordinate = p_y_coordinates[point_idx];
-					p_point->flags = p_flags[point_idx];
+					p_point->x = p_x_coordinates[first_point_idx + point_idx];
+					p_point->y = p_y_coordinates[first_point_idx + point_idx];
+					p_point->flags = p_flags[first_point_idx + point_idx];
 				}
 
 				first_point_idx = one_past_last_point_idx;
@@ -593,11 +596,11 @@ static void tg__open_type__fill_glyph_outline(
 					for (u32 point_idx = 0; point_idx < p_temp_contour->point_count; point_idx++)
 					{
 						const tg_open_type_point* p_temp_point = &p_temp_contour->p_points[point_idx];
-						const v3 c0 = { (f32)p_temp_point->x_coordinate, (f32)p_temp_point->y_coordinate, 1.0f };
+						const v3 c0 = { (f32)p_temp_point->x, (f32)p_temp_point->y, 1.0f };
 						const v3 c1 = tgm_m3_mulv3(matrix, c0);
 
-						p_contour->p_points[point_idx].x_coordinate = (i16)c1.x; // TODO: rounding? iirc, there's a flag for that...
-						p_contour->p_points[point_idx].y_coordinate = (i16)c1.y;
+						p_contour->p_points[point_idx].x = (i16)c1.x; // TODO: rounding? iirc, there's a flag for that...
+						p_contour->p_points[point_idx].y = (i16)c1.y;
 						p_contour->p_points[point_idx].flags = p_temp_point->flags;
 					}
 				}
@@ -669,10 +672,6 @@ static void tg__font_load_open_type(char* p_buffer, TG_OUT tg_open_type_font* p_
 	const u16 glyph_count = TG_OPEN_TYPE_U16(p_maxp->version_05.num_glyphs);
 	const i16 index_to_loc_format = TG_OPEN_TYPE_I16(p_head->index_to_loc_format);
 	tg__open_type__fill_glyph_outlines(glyph_count, index_to_loc_format, p_loca, p_glyf, p_font);
-
-	const u16 glyph_idx = p_font->p_character_to_glyph[(unsigned char)'8'];
-	tg_open_type_glyph* p_glyph = &p_font->p_glyphs[glyph_idx];
-	int bh = 0;
 }
 
 
@@ -703,4 +702,113 @@ void tg_font_free(tg_open_type_font* p_font)
 	TG_ASSERT(p_font && p_font->p_glyphs);
 
 	TG_MEMORY_FREE(p_font->p_glyphs);
+}
+
+void tg_font_rasterize(const tg_open_type_font* p_font, unsigned char character, u32 width, u32 height, TG_OUT u8* p_image_data)
+{
+	const u16 glyph_idx = p_font->p_character_to_glyph[character];
+	const tg_open_type_glyph* p_glyph = &p_font->p_glyphs[glyph_idx];
+	for (u32 y = 0; y < height; y++)
+	{
+		const f32 normalized_y = ((f32)height - (f32)y - 0.5f) / (f32)height;
+		const u32 glyph_y = (u32)tgm_f32_round((f32)p_glyph->y_min + normalized_y * (f32)(p_glyph->y_max - p_glyph->y_min));
+
+		for (u32 x = 0; x < width; x++)
+		{
+			const f32 normalized_x = ((f32)x + 0.5f) / (f32)width;
+			const u32 glyph_x = (u32)tgm_f32_round((f32)p_glyph->x_min + normalized_x * (f32)(p_glyph->x_max - p_glyph->x_min));
+
+			u32 hit_count = 0;
+
+			for (u32 contour_idx = 0; contour_idx < p_glyph->contour_count; contour_idx++)
+			{
+				const tg_open_type_contour* p_contour = &p_glyph->p_contours[contour_idx];
+				u32 point_idx = 0;
+				tg_open_type_point p0 = p_contour->p_points[point_idx++];
+				while (point_idx < p_contour->point_count)
+				{
+					TG_ASSERT(p0.flags & TG_OPEN_TYPE__SIMPLE_GLYPH__ON_CURVE_POINT);
+					const tg_open_type_point p1 = p_contour->p_points[point_idx++];
+			
+					if (p1.flags & TG_OPEN_TYPE__SIMPLE_GLYPH__ON_CURVE_POINT) // straight line
+					{
+						const f32 denom_y = (f32)p1.y - (f32)p0.y;
+						if (denom_y != 0.0f)
+						{
+							const f32 t = ((f32)glyph_y - (f32)p0.y) / denom_y;
+							if (t >= 0.0f && t <= 1.0f)
+							{
+								const f32 x0 = p0.x + t * ((f32)p1.x - (f32)p0.x);
+								if (x0 >= glyph_x)
+								{
+									hit_count++;
+								}
+							}
+						}
+
+						p0 = p1;
+					}
+					else // quadratic second-order bezier splines
+					{
+						TG_ASSERT(point_idx < p_contour->point_count);
+						tg_open_type_point p2 = p_contour->p_points[point_idx];
+
+						const b32 end_point_omitted = !(p2.flags & TG_OPEN_TYPE__SIMPLE_GLYPH__ON_CURVE_POINT);
+						if (end_point_omitted)
+						{
+							TG_ASSERT(point_idx != p_contour->point_count);
+							p2.x = (p1.x + p2.x) / 2;
+							p2.y = (p1.y + p2.y) / 2;
+							p2.flags |= TG_OPEN_TYPE__SIMPLE_GLYPH__ON_CURVE_POINT;
+						}
+						else
+						{
+							p2 = p_contour->p_points[point_idx++];
+						}
+
+						const f32 d = p0.y - 2.0f * p1.y + p2.y;
+						if (d != 0.0f)
+						{
+							const f32 n0 = (f32)p0.y - (f32)p1.y;
+							const f32 n1 = (f32)p1.y - (f32)p0.y;
+							const f32 n2 = (f32)p0.y - glyph_y;
+							const f32 a = n0 / d;
+							const f32 b0 = n1 / d;
+							const f32 b = b0 * b0;
+							const f32 c = n2 / d;
+							if (b - c >= 0.0f)
+							{
+								const f32 r = tgm_f32_sqrt(b - c);
+								const f32 t0 = a + r;
+								const f32 t1 = a - r;
+								if (t0 >= 0.0f && t0 <= 1.0f)
+								{
+									const f32 omt0 = 1.0f - t0;
+									const f32 x0 = omt0 * omt0 * p0.x + 2.0f * omt0 * t0 * p1.x + t0 * t0 * p2.x;
+									if (x0 >= glyph_x)
+									{
+										hit_count++;
+									}
+								}
+								if (t1 != t0 && t1 >= 0.0f && t1 <= 1.0f)
+								{
+									const f32 omt1 = 1.0f - t1;
+									const f32 x1 = omt1 * omt1 * p0.x + 2.0f * omt1 * t1 * p1.x + t1 * t1 * p2.x;
+									if (x1 >= glyph_x)
+									{
+										hit_count++;
+									}
+								}
+							}
+						}
+
+						p0 = p2;
+					}
+				}
+				break;
+			}
+
+			p_image_data[y * width + x] = (hit_count & 1) * 0xff;
+		}
+	}
 }
