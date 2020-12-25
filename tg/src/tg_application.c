@@ -97,7 +97,7 @@ static void tg__game_3d_create(void)
     u32 h = w;
     u64 s = (u64)w * (u64)h;
     u8* p_image_data = TG_MEMORY_STACK_ALLOC(s);
-    tg_font_rasterize(&font, 'e', w, h, p_image_data);
+    tg_font_rasterize(&font, '@', w, h, p_image_data);
     tg_image_store_to_disc("font_test.bmp", w, h, TG_COLOR_IMAGE_FORMAT_R8_UNORM, p_image_data, TG_TRUE, TG_TRUE);
     TG_MEMORY_STACK_FREE(s);
     tg_font_free(&font);

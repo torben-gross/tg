@@ -5,8 +5,8 @@
 
 typedef struct tg_open_type_point
 {
-	i16    x;
-	i16    y;
+	f32    x;
+	f32    y;
 	u8     flags;
 } tg_open_type_point;
 
