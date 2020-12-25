@@ -93,11 +93,24 @@ static void tg__game_3d_create(void)
 {
     tg_open_type_font font = { 0 };
     tg_font_load("fonts/arial.ttf", &font);
-    u32 w = 64;
+    u32 w = 512;
     u32 h = w;
     u64 s = (u64)w * (u64)h;
     u8* p_image_data = TG_MEMORY_STACK_ALLOC(s);
-    tg_font_rasterize(&font, '@', w, h, p_image_data);
+    tg_memory_nullify(s, p_image_data);
+
+    char hey[3] = "hey";
+    u32 x_off = 0;
+    u32 y_off = 0;
+    const u32 ww = w / 4;
+    for (u32 i = 0; i < sizeof(hey); i++)
+    {
+        const tg_open_type_glyph* p_glyph = tg_font_get_glyph(&font, hey[i]);
+        const f32 lsb = (f32)ww / (f32)(p_glyph->x_max - p_glyph->x_min) * (f32)p_glyph->left_side_bearing;
+        tg_font_rasterize(p_glyph, x_off + lsb, y_off, ww, h/4, w, h, p_image_data);
+        x_off += (f32)ww / (f32)(p_glyph->x_max - p_glyph->x_min) * (f32)p_glyph->advance_width;
+    }
+
     tg_image_store_to_disc("font_test.bmp", w, h, TG_COLOR_IMAGE_FORMAT_R8_UNORM, p_image_data, TG_TRUE, TG_TRUE);
     TG_MEMORY_STACK_FREE(s);
     tg_font_free(&font);
