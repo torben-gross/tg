@@ -234,8 +234,9 @@ void                  tgp_get_screen_size(u32* p_width, u32* p_height);
 tg_system_time        tgp_get_system_time(void);
 f32                   tgp_get_seconds_since_startup(void);
 tg_window_h           tgp_get_window_handle(void);
-void                  tgp_get_window_size(u32* p_width, u32* p_height);
 f32                   tgp_get_window_aspect_ratio(void);
+u32                   tgp_get_window_dpi(void);
+void                  tgp_get_window_size(u32* p_width, u32* p_height);
 
 b32                   tgp_file_exists(const char* p_filename);
 void                  tgp_file_load(const char* p_filename, u64 buffer_size, char* p_buffer);

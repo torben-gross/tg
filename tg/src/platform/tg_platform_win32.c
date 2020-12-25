@@ -238,20 +238,26 @@ tg_window_h tgp_get_window_handle(void)
     return h_window;
 }
 
+f32 tgp_get_window_aspect_ratio(void)
+{
+    u32 width;
+    u32 height;
+    tgp_get_window_size(&width, &height);
+    return (f32)width / (f32)height;
+}
+
+u32 tgp_get_window_dpi(void)
+{
+    const u32 result = (u32)GetDpiForWindow(h_window);
+    return result;
+}
+
 void tgp_get_window_size(u32* p_width, u32* p_height)
 {
     RECT rect;
     WIN32_CALL(GetWindowRect(h_window, &rect));
     *p_width = rect.right - rect.left;
     *p_height = rect.bottom - rect.top;
-}
-
-f32  tgp_get_window_aspect_ratio(void)
-{
-    u32 width;
-    u32 height;
-    tgp_get_window_size(&width, &height);
-    return (f32)width / (f32)height;
 }
 
 

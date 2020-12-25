@@ -97,18 +97,16 @@ static void tg__game_3d_create(void)
     u32 h = w;
     u64 s = (u64)w * (u64)h;
     u8* p_image_data = TG_MEMORY_STACK_ALLOC(s);
-    tg_memory_nullify(s, p_image_data);
+    //tg_memory_nullify(s, p_image_data);
 
-    char hey[3] = "hey";
-    u32 x_off = 0;
-    u32 y_off = 0;
-    const u32 ww = w / 4;
-    for (u32 i = 0; i < sizeof(hey); i++)
+    char p_text[] = "funny";
+    f32 x_offset = 0.0f;
+    const u32 size_pt = 64;
+    for (u32 i = 0; i < sizeof(p_text) - 1; i++)
     {
-        const tg_open_type_glyph* p_glyph = tg_font_get_glyph(&font, hey[i]);
-        const f32 lsb = (f32)ww / (f32)(p_glyph->x_max - p_glyph->x_min) * (f32)p_glyph->left_side_bearing;
-        tg_font_rasterize(p_glyph, x_off + lsb, y_off, ww, h/4, w, h, p_image_data);
-        x_off += (f32)ww / (f32)(p_glyph->x_max - p_glyph->x_min) * (f32)p_glyph->advance_width;
+        const tg_open_type_glyph* p_glyph = tg_font_get_glyph(&font, p_text[i]);
+        tg_font_rasterize_pt(&font, p_glyph, (u32)x_offset, 0, size_pt, w, h, p_image_data);
+        x_offset += TG_FONT_GRID2PX(font, size_pt, p_glyph->advance_width);
     }
 
     tg_image_store_to_disc("font_test.bmp", w, h, TG_COLOR_IMAGE_FORMAT_R8_UNORM, p_image_data, TG_TRUE, TG_TRUE);
