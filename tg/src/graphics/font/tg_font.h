@@ -5,6 +5,12 @@
 
 #define TG_FONT_GRID2PX(font, size_pt, grid_pt)    ((f32)(grid_pt) * ((f32)(size_pt) * (f32)tgp_get_window_dpi() / 72.0f) / (f32)(font).units_per_em)
 
+typedef struct tg_open_type_kerning
+{
+	u16    right;
+	i16    value;
+} tg_open_type_kerning;
+
 typedef struct tg_open_type_point
 {
 	f32    x;
@@ -26,8 +32,10 @@ typedef struct tg_open_type_glyph
 	i16                      y_max;
 	u16                      advance_width;
 	i16                      left_side_bearing;
-	u32                      contour_count;
+	u16                      contour_count;
+	u16                      kerning_count;
 	tg_open_type_contour*    p_contours;
+	tg_open_type_kerning*    p_kernings;
 } tg_open_type_glyph;
 
 typedef struct tg_open_type_font
@@ -44,7 +52,8 @@ typedef struct tg_open_type_font
 
 void                         tg_font_load(const char* p_filename, TG_OUT tg_open_type_font* p_font);
 void                         tg_font_free(tg_open_type_font* p_font);
-const tg_open_type_glyph*    tg_font_get_glyph(const tg_open_type_font* p_font, unsigned char character);
+const tg_open_type_glyph*    tg_font_get_glyph(const tg_open_type_font* p_font, unsigned char c);
+i16                          tg_font_get_kerning(const tg_open_type_font* p_font, unsigned char left_c, unsigned char right_c);
 void                         tg_font_rasterize_pt(const tg_open_type_font* p_font, const tg_open_type_glyph* p_glyph, u32 glyph_off_x, u32 glyph_off_y, u32 size_pt, u32 img_w, u32 img_h, TG_OUT u8* p_image_data);
 void                         tg_font_rasterize_wh(const tg_open_type_glyph* p_glyph, u32 glyph_off_x, u32 glyph_off_y, u32 glyph_w, u32 glyph_h, u32 img_w, u32 img_h, TG_OUT u8* p_image_data);
 

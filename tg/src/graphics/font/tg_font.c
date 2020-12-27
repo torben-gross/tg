@@ -20,11 +20,11 @@
 
 // source: https://docs.microsoft.com/en-us/typography/opentype/spec/
 
-#define TG_SFNT_VERSION_TRUE_TYPE        0x00010000
-#define TG_SFNT_VERSION_OPEN_TYPE        'OTTO'
+#define TG_SFNT_VERSION_TRUE_TYPE          0x00010000
+#define TG_SFNT_VERSION_OPEN_TYPE          'OTTO'
 
-#define TG_OPEN_TYPE_I16(x)       ((((x) & 0x00ff) << 8) | (((x) & 0xff00) >> 8))
-#define TG_OPEN_TYPE_I32(x)       ((((x) & 0x000000ff) << 24) | (((x) & 0x0000ff00) << 8) | (((x) & 0x00ff0000) >> 8) | ((x) & 0xff000000) >> 24))
+#define TG_OPEN_TYPE_I16(x)                ((((x) & 0x00ff) << 8) | (((x) & 0xff00) >> 8))
+#define TG_OPEN_TYPE_I32(x)                ((((x) & 0x000000ff) << 24) | (((x) & 0x0000ff00) << 8) | (((x) & 0x00ff0000) >> 8) | ((x) & 0xff000000) >> 24))
 #define TG_OPEN_TYPE_I64(x)                        \
     (                                              \
     (((*(i64*)&(x)) & 0x00000000000000ff) << 56) | \
@@ -36,8 +36,8 @@
     (((*(i64*)&(x)) & 0x00ff000000000000) >> 40) | \
     (((*(i64*)&(x)) & 0xff00000000000000) >> 56)   \
     )
-#define TG_OPEN_TYPE_U16(x)       ((((x) & 0x00ff) << 8) | (((x) & 0xff00) >> 8))
-#define TG_OPEN_TYPE_U32(x)       ((((x) & 0x000000ff) << 24) | (((x) & 0x0000ff00) << 8) | (((x) & 0x00ff0000) >> 8) | (((x) & 0xff000000) >> 24))
+#define TG_OPEN_TYPE_U16(x)                ((((x) & 0x00ff) << 8) | (((x) & 0xff00) >> 8))
+#define TG_OPEN_TYPE_U32(x)                ((((x) & 0x000000ff) << 24) | (((x) & 0x0000ff00) << 8) | (((x) & 0x00ff0000) >> 8) | (((x) & 0xff000000) >> 24))
 #define TG_OPEN_TYPE_U64(x)                        \
     (                                              \
     (((*(u64*)&(x)) & 0x00000000000000ff) << 56) | \
@@ -49,8 +49,17 @@
     (((*(u64*)&(x)) & 0x00ff000000000000) >> 40) | \
     (((*(u64*)&(x)) & 0xff00000000000000) >> 56)   \
     )
+#define TG_OPEN_TYPE_F2DOT14               TG_OPEN_TYPE_I16
+#define TG_OPEN_TYPE_FWORD                 TG_OPEN_TYPE_I16
 
-#define TG_OPEN_TYPE_F2DOT14      TG_OPEN_TYPE_I16
+#define TG_OPEN_TYPE_NEXT_I16(p_it)        TG_OPEN_TYPE_I16(*(i16*)p_it); p_it += 2
+#define TG_OPEN_TYPE_NEXT_I32(p_it)        TG_OPEN_TYPE_I32(*(i32*)p_it); p_it += 4
+#define TG_OPEN_TYPE_NEXT_I64(p_it)        TG_OPEN_TYPE_I64(*(i64*)p_it); p_it += 8
+#define TG_OPEN_TYPE_NEXT_U16(p_it)        TG_OPEN_TYPE_U16(*(u16*)p_it); p_it += 2
+#define TG_OPEN_TYPE_NEXT_U32(p_it)        TG_OPEN_TYPE_U32(*(u32*)p_it); p_it += 4
+#define TG_OPEN_TYPE_NEXT_U64(p_it)        TG_OPEN_TYPE_U64(*(u64*)p_it); p_it += 8
+#define TG_OPEN_TYPE_NEXT_F2DOT14(p_it)    TG_OPEN_TYPE_F2DOT14(*(tg_f2dot14*)p_it); p_it += 2
+#define TG_OPEN_TYPE_NEXT_FWORD(p_it)      TG_OPEN_TYPE_FWORD(*(tg_fword*)p_it); p_it += 2
 
 
 
@@ -291,15 +300,15 @@ static void tg__open_type__glyph_size(
 	{
 		const u8* p_src_it = &p_glyf[start_offset];
 		const i16 number_of_contours = TG_OPEN_TYPE_I16(*(i16*)p_src_it);
-		*p_number_of_contours += number_of_contours;
 		p_src_it += sizeof(tg_open_type__glyf);
 
 		if (number_of_contours >= 0)
 		{
-			*p_glyph_size += number_of_contours * sizeof(tg_open_type_contour);
 			const u32 logical_point_count = (u32)TG_OPEN_TYPE_U16(((u16*)p_src_it)[number_of_contours - 1]) + 1;
+
+			*p_number_of_contours += number_of_contours;
 			*p_number_of_points += logical_point_count;
-			*p_glyph_size += logical_point_count * sizeof(tg_open_type_point);
+			*p_glyph_size += number_of_contours * sizeof(tg_open_type_contour) + logical_point_count * sizeof(tg_open_type_point);
 		}
 		else
 		{
@@ -329,6 +338,65 @@ static void tg__open_type__glyph_size(
 			}
 		}
 	}
+}
+
+static void tg__open_type__allocate(
+	tg_open_type_font*           p_font,
+	i16                          index_to_loc_format,
+	const u8*                    p_kern,
+	const tg_open_type__loca*    p_loca,
+	const u8*                    p_glyf,
+	TG_OUT u64*                  p_size,
+	TG_OUT void**                pp_memory
+)
+{
+	TG_ASSERT(pp_memory);
+
+	u64 size = (u64)p_font->glyph_count * sizeof(*p_font->p_glyphs);
+	for (u16 glyph_idx = 0; glyph_idx < p_font->glyph_count; glyph_idx++)
+	{
+		u64 s = 0;
+		tg__open_type__glyph_size(glyph_idx, index_to_loc_format, p_loca, (u8*)p_glyf, TG_NULL, TG_NULL, &s);
+		size += s;
+	}
+
+	if (p_kern)
+	{
+		const u8* p_src_it = p_kern;
+
+		const u16 header_version = TG_OPEN_TYPE_NEXT_U16(p_src_it);
+		const u16 n_tables = TG_OPEN_TYPE_NEXT_U16(p_src_it);
+
+		TG_ASSERT(header_version == 0);
+		TG_ASSERT(n_tables == 1); // TODO: are tables packed tightly right behind each other? arial only has one table...
+
+		for (u32 table_idx = 0; table_idx < n_tables; table_idx++)
+		{
+			const u8* p_temp_src_it = p_src_it;
+
+			const u16 subtable_version = TG_OPEN_TYPE_NEXT_U16(p_src_it);
+			const u16 length = TG_OPEN_TYPE_NEXT_U16(p_src_it);
+			p_src_it += 2;
+
+			if (subtable_version == 0)
+			{
+				const u16 n_pairs = TG_OPEN_TYPE_NEXT_U16(p_src_it);
+				size += n_pairs * sizeof(tg_open_type_kerning);
+			}
+			else
+			{
+				TG_INVALID_CODEPATH();
+			}
+
+			p_src_it = &p_temp_src_it[length];
+		}
+	}
+
+	if (p_size)
+	{
+		*p_size = size;
+	}
+	*pp_memory = TG_MEMORY_ALLOC(size);
 }
 
 static void tg__open_type__fill_glyph_outline(
@@ -455,12 +523,12 @@ static void tg__open_type__fill_glyph_outline(
 				p_y_coordinates[logical_point_idx++] = absolute_y_coordinate;
 			}
 
-			p_glyph->contour_count = number_of_contours;
+			p_glyph->contour_count = (u16)number_of_contours;
 			p_glyph->p_contours = (tg_open_type_contour*)*pp_data;
 			*pp_data += p_glyph->contour_count * sizeof(*p_glyph->p_contours);
 
 			u32 first_point_idx = 0;
-			for (u32 contour_idx = 0; contour_idx < p_glyph->contour_count; contour_idx++)
+			for (u16 contour_idx = 0; contour_idx < p_glyph->contour_count; contour_idx++)
 			{
 				const u32 one_past_last_point_idx = (u32)TG_OPEN_TYPE_U16(p_end_pts_of_contours[contour_idx]) + 1;
 
@@ -515,7 +583,8 @@ static void tg__open_type__fill_glyph_outline(
 				i16 num_of_contours = 0;
 				tg__open_type__glyph_size(glyph_index, index_to_loc_format, p_loca, p_glyf, &num_of_contours, TG_NULL, TG_NULL);
 
-				p_glyph->contour_count += num_of_contours;
+				TG_ASSERT(num_of_contours > 0);
+				p_glyph->contour_count += (u16)num_of_contours;
 				more_components = flags & TG_OPEN_TYPE__COMPOSITE_GLYPH__MORE_COMPONENTS;
 			}
 
@@ -581,7 +650,7 @@ static void tg__open_type__fill_glyph_outline(
 
 				tg__open_type__fill_glyph_outline(glyph_index, index_to_loc_format, p_loca, p_glyf, &p_temp_data, &temp_glyph);
 
-				for (u32 cont_idx = 0; cont_idx < temp_glyph.contour_count; cont_idx++)
+				for (u16 cont_idx = 0; cont_idx < temp_glyph.contour_count; cont_idx++)
 				{
 					tg_open_type_contour* p_contour = &p_glyph->p_contours[contour_idx++];
 					const tg_open_type_contour* p_temp_contour = &temp_glyph.p_contours[cont_idx];
@@ -611,29 +680,18 @@ static void tg__open_type__fill_glyph_outline(
 	}
 }
 
-static void tg__open_type__fill_glyph_outlines(i16 index_to_loc_format, const tg_open_type__loca* p_loca, const tg_open_type__glyf* p_glyf, TG_OUT tg_open_type_font* p_font)
+static void tg__open_type__fill_glyph_outlines(i16 index_to_loc_format, const tg_open_type__loca* p_loca, const tg_open_type__glyf* p_glyf, TG_INOUT u8** pp_memory, TG_INOUT tg_open_type_font* p_font)
 {
-	// Allocate memory
-	u64 data_size = (u64)p_font->glyph_count * sizeof(*p_font->p_glyphs);
+	p_font->p_glyphs = (tg_open_type_glyph*)*pp_memory;
+	*pp_memory += p_font->glyph_count * sizeof(*p_font->p_glyphs);
+
 	for (u16 glyph_idx = 0; glyph_idx < p_font->glyph_count; glyph_idx++)
 	{
-		u64 size = 0;
-		tg__open_type__glyph_size(glyph_idx, index_to_loc_format, p_loca, (u8*)p_glyf, TG_NULL, TG_NULL, &size);
-		data_size += size;
-	}
-	u8* p_data = TG_MEMORY_ALLOC(data_size);
-
-	p_font->p_glyphs = (tg_open_type_glyph*)p_data;
-	p_data += p_font->glyph_count * sizeof(*p_font->p_glyphs);
-
-	// Simple glyphs
-	for (u16 glyph_idx = 0; glyph_idx < p_font->glyph_count; glyph_idx++)
-	{
-		tg__open_type__fill_glyph_outline(glyph_idx, index_to_loc_format, p_loca, (u8*)p_glyf, &p_data, &p_font->p_glyphs[glyph_idx]);
+		tg__open_type__fill_glyph_outline(glyph_idx, index_to_loc_format, p_loca, (u8*)p_glyf, pp_memory, &p_font->p_glyphs[glyph_idx]);
 	}
 }
 
-static void tg__open_type__fill_metrics(const u8* p_hhea, const u8* p_hmtx, TG_OUT tg_open_type_font* p_font)
+static void tg__open_type__fill_metrics(const u8* p_hhea, const u8* p_hmtx, TG_INOUT tg_open_type_font* p_font)
 {
 	TG_ASSERT(TG_OPEN_TYPE_U16(((u16*)p_hhea)[0]) == 1); // Major version number of the horizontal header table — set to 1.
 	TG_ASSERT(TG_OPEN_TYPE_U16(((u16*)p_hhea)[1]) == 0); // Minor version number of the horizontal header table — set to 0.
@@ -661,6 +719,79 @@ static void tg__open_type__fill_metrics(const u8* p_hhea, const u8* p_hmtx, TG_O
 
 			p_font->p_glyphs[glyph_idx].left_side_bearing = TG_OPEN_TYPE_I16(*(i16*)p_it);
 			p_it += 2;
+		}
+	}
+}
+
+static void tg__open_type__fill_kerning(const u8* p_kern, u8** pp_memory, TG_INOUT tg_open_type_font* p_font)
+{
+	// TODO: this probably can be removed, if i decide to nullify all allocated memory
+	for (u16 glyph_idx = 0; glyph_idx < p_font->glyph_count; glyph_idx++)
+	{
+		tg_open_type_glyph* p_glyph = &p_font->p_glyphs[glyph_idx];
+		p_glyph->kerning_count = 0;
+		p_glyph->p_kernings = TG_NULL;
+	}
+
+	if (p_kern)
+	{
+		const u8* p_src_it = p_kern;
+
+		const u16 header_version = TG_OPEN_TYPE_NEXT_U16(p_src_it);
+		const u16 n_tables = TG_OPEN_TYPE_NEXT_U16(p_src_it);
+
+		TG_ASSERT(header_version == 0);
+		TG_ASSERT(n_tables == 1); // TODO: are tables packed tightly right behind each other? arial only has one table...
+
+		for (u32 table_idx = 0; table_idx < n_tables; table_idx++)
+		{
+			const u16 subtable_version = TG_OPEN_TYPE_NEXT_U16(p_src_it);
+			p_src_it += 2;
+			const u16 coverage = TG_OPEN_TYPE_NEXT_U16(p_src_it);
+
+			TG_ASSERT(subtable_version == 0);
+			TG_ASSERT(coverage & 1);
+
+			if (subtable_version == 0)
+			{
+				const u16 n_pairs = TG_OPEN_TYPE_NEXT_U16(p_src_it);
+				p_src_it += 6;
+
+				u16 last_left = 0;
+				u16 last_right = 0;
+				tg_open_type_glyph* p_glyph = &p_font->p_glyphs[0];
+				p_glyph->kerning_count = 0;
+				p_glyph->p_kernings = *(tg_open_type_kerning**)pp_memory;
+				for (u32 pair_idx = 0; pair_idx < n_pairs; pair_idx++)
+				{
+					const u16 left = TG_OPEN_TYPE_NEXT_U16(p_src_it);
+					const u16 right = TG_OPEN_TYPE_NEXT_U16(p_src_it);
+					const tg_fword value = TG_OPEN_TYPE_NEXT_FWORD(p_src_it);
+
+					if (left != last_left)
+					{
+						*pp_memory += p_glyph->kerning_count * sizeof(*p_glyph->p_kernings);
+						p_glyph = &p_font->p_glyphs[left];
+						p_glyph->kerning_count = 0;
+						p_glyph->p_kernings = *(tg_open_type_kerning**)pp_memory;
+					}
+
+					tg_open_type_kerning* p_kerning = &p_glyph->p_kernings[p_glyph->kerning_count++];
+					p_kerning->right = right;
+					p_kerning->value = value;
+
+#ifdef TG_DEBUG
+					TG_ASSERT(last_left <= left);
+					if (last_left == left)
+					{
+						TG_ASSERT(last_right <= right);
+					}
+					last_left = left;
+					last_right = right;
+#endif
+				}
+				*pp_memory += p_glyph->kerning_count * sizeof(*p_glyph->p_kernings);
+			}
 		}
 	}
 }
@@ -696,6 +827,7 @@ static void tg__open_type__load(char* p_buffer, TG_OUT tg_open_type_font* p_font
 	const tg_open_type__head* p_head = tg__open_type__find_table(p_open_type, TG_OPEN_TYPE__TAG__head);
 	const u8* p_hhea = (u8*)tg__open_type__find_table(p_open_type, TG_OPEN_TYPE__TAG__hhea);
 	const u8* p_hmtx = (u8*)tg__open_type__find_table(p_open_type, TG_OPEN_TYPE__TAG__hmtx);
+	const u8* p_kern = (u8*)tg__open_type__find_table(p_open_type, TG_OPEN_TYPE__TAG__kern);
 	const tg_open_type__loca* p_loca = tg__open_type__find_table(p_open_type, TG_OPEN_TYPE__TAG__loca);
 	const tg_open_type__maxp* p_maxp = tg__open_type__find_table(p_open_type, TG_OPEN_TYPE__TAG__maxp);
 
@@ -707,10 +839,24 @@ static void tg__open_type__load(char* p_buffer, TG_OUT tg_open_type_font* p_font
 	p_font->glyph_count = TG_OPEN_TYPE_U16(p_maxp->version_05.num_glyphs);
 	TG_ASSERT(TG_OPEN_TYPE_U16(p_head->flags) & 1); // Left sidebearing point at x=0 (relevant only for TrueType rasterizers) — see the note below regarding variable fonts.
 
-	tg__open_type__fill_mapping(p_cmap, p_font);
 	const i16 index_to_loc_format = TG_OPEN_TYPE_I16(p_head->index_to_loc_format);
-	tg__open_type__fill_glyph_outlines(index_to_loc_format, p_loca, p_glyf, p_font);
+
+	u64 size = 0;
+	void* p_memory = TG_NULL;
+	tg__open_type__allocate(p_font, index_to_loc_format, p_kern, p_loca, (u8*)p_glyf, &size, &p_memory);
+#ifdef TG_DEBUG
+	const u8* p_memory_start = (u8*)p_memory;
+#endif
+
+	tg__open_type__fill_mapping(p_cmap, p_font);
+	tg__open_type__fill_glyph_outlines(index_to_loc_format, p_loca, p_glyf, (u8**)&p_memory, p_font);
 	tg__open_type__fill_metrics(p_hhea, p_hmtx, p_font);
+	tg__open_type__fill_kerning(p_kern, (u8**)&p_memory, p_font);
+
+#ifdef TG_DEBUG
+	const u64 used_size = (u8*)p_memory - p_memory_start;
+	TG_ASSERT(used_size == size);
+#endif
 }
 
 
@@ -743,11 +889,30 @@ void tg_font_free(tg_open_type_font* p_font)
 	TG_MEMORY_FREE(p_font->p_glyphs);
 }
 
-const tg_open_type_glyph* tg_font_get_glyph(const tg_open_type_font* p_font, unsigned char character)
+const tg_open_type_glyph* tg_font_get_glyph(const tg_open_type_font* p_font, unsigned char c)
 {
-	const u16 glyph_idx = p_font->p_character_to_glyph[character];
+	const u16 glyph_idx = p_font->p_character_to_glyph[c];
 	const tg_open_type_glyph* p_glyph = &p_font->p_glyphs[glyph_idx];
 	return p_glyph;
+}
+
+i16 tg_font_get_kerning(const tg_open_type_font* p_font, unsigned char left_c, unsigned char right_c)
+{
+	i16 result = 0;
+
+	const tg_open_type_glyph* p_left_glyph = tg_font_get_glyph(p_font, left_c);
+	const u16 right_glyph_idx = p_font->p_character_to_glyph[right_c];
+	for (u16 kerning_idx = 0; kerning_idx < p_left_glyph->kerning_count; kerning_idx++) // TODO: binary search
+	{
+		const tg_open_type_kerning* p_kerning = &p_left_glyph->p_kernings[kerning_idx];
+		if (p_kerning->right == right_glyph_idx)
+		{
+			result = p_kerning->value;
+			break;
+		}
+	}
+
+	return result;
 }
 
 void tg_font_rasterize_pt(const tg_open_type_font* p_font, const tg_open_type_glyph* p_glyph, u32 glyph_off_x, u32 glyph_off_y, u32 size_pt, u32 img_w, u32 img_h, TG_OUT u8* p_image_data)
@@ -766,7 +931,7 @@ void tg_font_rasterize_wh(const tg_open_type_glyph* p_glyph, u32 glyph_off_x, u3
 
 	for (u32 y = 0; y < glyph_h; y++)
 	{
-		const f32 normalized_y = ((f32)y - 0.5f) / (f32)glyph_h;
+		const f32 normalized_y = ((f32)y + 0.5f) / (f32)glyph_h;
 		const f32 glyph_y = (f32)p_glyph->y_min + normalized_y * (f32)(p_glyph->y_max - p_glyph->y_min);
 
 		for (u32 x = 0; x < glyph_w; x++)
@@ -776,7 +941,7 @@ void tg_font_rasterize_wh(const tg_open_type_glyph* p_glyph, u32 glyph_off_x, u3
 
 			u32 hit_count = 0;
 
-			for (u32 contour_idx = 0; contour_idx < p_glyph->contour_count; contour_idx++)
+			for (u16 contour_idx = 0; contour_idx < p_glyph->contour_count; contour_idx++)
 			{
 				const tg_open_type_contour* p_contour = &p_glyph->p_contours[contour_idx];
 				u32 point_idx = 0;
@@ -820,19 +985,20 @@ void tg_font_rasterize_wh(const tg_open_type_glyph* p_glyph, u32 glyph_off_x, u3
 							p2.flags |= TG_OPEN_TYPE__SIMPLE_GLYPH__ON_CURVE_POINT;
 						}
 
-						const f32 d = p0.y - 2.0f * p1.y + p2.y;
-						if (d != 0.0f)
+						const f32 dy = p0.y - 2.0f * p1.y + p2.y;
+						if (dy != 0.0f)
 						{
 							const f32 n0 = p0.y - p1.y;
 							const f32 n1 = p1.y - p0.y;
 							const f32 n2 = p0.y - glyph_y;
-							const f32 a = n0 / d;
-							const f32 b0 = n1 / d;
+							const f32 a = n0 / dy;
+							const f32 b0 = n1 / dy;
 							const f32 b = b0 * b0;
-							const f32 c = n2 / d;
-							if (b - c >= 0.0f)
+							const f32 c = n2 / dy;
+							const f32 s = b - c;
+							if (s >= 0.0f)
 							{
-								const f32 r = tgm_f32_sqrt(b - c);
+								const f32 r = tgm_f32_sqrt(s);
 								const f32 t0 = a + r;
 								const f32 t1 = a - r;
 								if (t0 >= 0.0f && t0 <= 1.0f)
@@ -861,7 +1027,10 @@ void tg_font_rasterize_wh(const tg_open_type_glyph* p_glyph, u32 glyph_off_x, u3
 				}
 			}
 
-			p_image_data[(img_h - 1 - y - glyph_off_y) * img_w + (x + glyph_off_x)] = (hit_count & 1) * 0xff;
+			if (hit_count & 1)
+			{
+				p_image_data[(img_h - 1 - y - glyph_off_y) * img_w + (x + glyph_off_x)] = (hit_count & 1) * 0xff;
+			}
 		}
 	}
 }
