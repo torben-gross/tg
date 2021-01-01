@@ -985,16 +985,16 @@ void tg_font_rasterize_wh(const tg_open_type_glyph* p_glyph, u32 glyph_off_x, u3
 							p2.flags |= TG_OPEN_TYPE__SIMPLE_GLYPH__ON_CURVE_POINT;
 						}
 
-						const f32 dy = p0.y - 2.0f * p1.y + p2.y;
-						if (dy != 0.0f)
+						const f32 d0 = p0.y - 2.0f * p1.y + p2.y;
+						if (d0 != 0.0f)
 						{
 							const f32 n0 = p0.y - p1.y;
 							const f32 n1 = p1.y - p0.y;
 							const f32 n2 = p0.y - glyph_y;
-							const f32 a = n0 / dy;
-							const f32 b0 = n1 / dy;
+							const f32 a = n0 / d0;
+							const f32 b0 = n1 / d0;
 							const f32 b = b0 * b0;
-							const f32 c = n2 / dy;
+							const f32 c = n2 / d0;
 							const f32 s = b - c;
 							if (s >= 0.0f)
 							{
@@ -1018,6 +1018,23 @@ void tg_font_rasterize_wh(const tg_open_type_glyph* p_glyph, u32 glyph_off_x, u3
 									{
 										hit_count++;
 									}
+								}
+							}
+						}
+						else
+						{
+							TG_ASSERT(p1.y != p2.y);
+
+							const f32 n = glyph_y - 2.0f * p1.y + p2.y;
+							const f32 d1 = 2.0f * (p1.y - p2.y);
+							const f32 t = -(n / d1);
+							if (t >= 0.0f && t <= 1.0f)
+							{
+								const f32 omt0 = 1.0f - t;
+								const f32 x0 = omt0 * omt0 * p0.x + 2.0f * omt0 * t * p1.x + t * t * p2.x;
+								if (x0 >= glyph_x)
+								{
+									hit_count++;
 								}
 							}
 						}
