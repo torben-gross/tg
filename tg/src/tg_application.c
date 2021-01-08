@@ -93,29 +93,57 @@ static void tg__game_3d_create(void)
 {
     tg_open_type_font font = { 0 };
     tg_font_load("fonts/arial.ttf", &font);
-    u32 w = 1024;
-    u32 h = w;
-    u64 s = (u64)w * (u64)h;
-    u8* p_image_data = TG_MEMORY_STACK_ALLOC(s);
-    //tg_memory_nullify(s, p_image_data);
 
-    char p_text[] = "AWAY";
-    f32 x_offset = 0.0f;
-    const u32 size_pt = w / 14;
-    for (u32 i = 0; i < sizeof(p_text) - 1; i++)
+#define TG_MAX_FONT_SIZE 64
+
+    u16 p_glyph_indices[256] = { 0 };
+    u32 p_glyph_x_max[257] = { 0 };
+    u32 p_glyph_heights[256] = { 0 };
+    u32 max_glyph_height = 0;
+    u32 glyph_count = 0;
+
+    for (u32 char_idx = 0; char_idx < 256; char_idx++)
     {
-        const tg_open_type_glyph* p_glyph = tg_font_get_glyph(&font, p_text[i]);
-        tg_font_rasterize_pt(&font, p_glyph, (u32)x_offset, 0, size_pt, w, h, p_image_data);
-        f32 advance_width = (f32)p_glyph->advance_width;
-        if (i + 1 < (u32)sizeof(p_text) - 1)
+        const u16 glyph_idx = font.p_character_to_glyph[char_idx];
+        b32 exists = TG_FALSE;
+        for (u32 i = 0; i < glyph_count; i++)
         {
-            advance_width += (f32)tg_font_get_kerning(&font, p_text[i], p_text[i + 1]);
+            if (p_glyph_indices[i] == glyph_idx)
+            {
+                exists = TG_TRUE;
+                break;
+            }
         }
-        x_offset += TG_FONT_GRID2PX(font, size_pt, advance_width);
+        if (!exists)
+        {
+            const tg_open_type_glyph* p_glyph = &font.p_glyphs[glyph_idx];
+            const u32 h = (u32)TG_FONT_GRID2PX(font, TG_MAX_FONT_SIZE, p_glyph->y_max - p_glyph->y_min);
+
+            p_glyph_indices[glyph_count] = glyph_idx;
+            p_glyph_x_max[glyph_count + 1] = p_glyph_x_max[glyph_count] + (u32)TG_FONT_GRID2PX(font, TG_MAX_FONT_SIZE, p_glyph->x_max - p_glyph->x_min);
+            p_glyph_heights[glyph_count] = h;
+            max_glyph_height = TG_MAX(max_glyph_height, h);
+            glyph_count++;
+        }
     }
 
-    tg_image_store_to_disc("font_test.bmp", w, h, TG_COLOR_IMAGE_FORMAT_R8_UNORM, p_image_data, TG_TRUE, TG_TRUE);
-    TG_MEMORY_STACK_FREE(s);
+    const u32 bitmap_width = p_glyph_x_max[glyph_count];
+    const u32 bitmap_height = max_glyph_height;
+    const u64 bitmap_size = (u64)bitmap_width * (u64)bitmap_height;
+    u8* p_bitmap = TG_MEMORY_STACK_ALLOC(bitmap_size);
+    tg_memory_nullify(bitmap_size, p_bitmap);
+
+    for (u32 i = 0; i < glyph_count; i++)
+    {
+        const tg_open_type_glyph* p_glyph = &font.p_glyphs[p_glyph_indices[i]];
+        const u32 x_offset = p_glyph_x_max[i];
+        const u32 w = p_glyph_x_max[i + 1] - p_glyph_x_max[i];
+        const u32 h = p_glyph_heights[i];
+        tg_font_rasterize_wh(p_glyph, x_offset, 0, w, h, bitmap_width, bitmap_height, p_bitmap);
+    }
+    tg_image_store_to_disc("fonts/arial.bmp", bitmap_width, bitmap_height, TG_COLOR_IMAGE_FORMAT_R8_UNORM, p_bitmap, TG_TRUE, TG_TRUE);
+
+    TG_MEMORY_STACK_FREE(bitmap_size);
     tg_font_free(&font);
 
     scene.render_commands = TG_LIST_CREATE(tg_render_command_h);
