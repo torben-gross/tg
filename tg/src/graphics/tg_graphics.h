@@ -12,7 +12,7 @@
 #define TG_MAX_COMPUTE_SHADERS            16
 #define TG_MAX_CUBE_MAPS                  16
 #define TG_MAX_DEPTH_IMAGES               8
-#define TG_MAX_FONTS                      1
+#define TG_MAX_FONTS                      TG_MAX_RENDERERS
 #define TG_MAX_FRAGMENT_SHADERS           32
 #define TG_MAX_MATERIALS                  512
 #define TG_MAX_MESHES                     65536
@@ -290,7 +290,8 @@ void                     tg_renderer_begin(tg_renderer_h h_renderer);
 void                     tg_renderer_set_sun_direction(tg_renderer_h h_renderer, v3 direction);
 void                     tg_renderer_push_directional_light(tg_renderer_h h_renderer, v3 direction, v3 color);
 void                     tg_renderer_push_point_light(tg_renderer_h h_renderer, v3 position, v3 color);
-void                     tg_renderer_exec(tg_renderer_h h_renderer, tg_render_command_h h_render_command);
+void                     tg_renderer_push_render_command(tg_renderer_h h_renderer, tg_render_command_h h_render_command);
+void                     tg_renderer_push_text(tg_renderer_h h_renderer, char* p_text);
 void                     tg_renderer_end(tg_renderer_h h_renderer, f32 dt, b32 present);
 void                     tg_renderer_clear(tg_renderer_h h_renderer);
 tg_render_target_h       tg_renderer_get_render_target(tg_renderer_h h_renderer);

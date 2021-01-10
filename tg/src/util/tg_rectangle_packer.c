@@ -32,7 +32,7 @@ void tg_rectangle_packer_pack(u32 rect_count, tg_rectangle_packer_rect* p_rects,
 
     TG_QSORT(rect_count, p_rects, tg__compare, TG_NULL);
 
-    tg_list spaces = TG_LIST_CREATE__CAPACITY(tg_rectangle_packer_rect, rect_count * rect_count);
+    tg_list spaces = tg_list_create(sizeof(tg_rectangle_packer_rect), rect_count * rect_count, TG_NULL); // TODO: do i need a list here?
 
     tg_rectangle_packer_rect start_rect = { 0 };
     start_rect.left = 0;
@@ -47,7 +47,7 @@ void tg_rectangle_packer_pack(u32 rect_count, tg_rectangle_packer_rect* p_rects,
         tg_rectangle_packer_rect* p_rect = &p_rects[i];
         for (u32 j = 0; j < spaces.count; j++)
         {
-            tg_rectangle_packer_rect* p_space = TG_LIST_POINTER_TO(spaces, spaces.count - 1 - j);
+            tg_rectangle_packer_rect* p_space = TG_LIST_AT(spaces, spaces.count - 1 - j);
 
             if (p_rect->width > p_space->width || p_rect->height > p_space->height)
             {

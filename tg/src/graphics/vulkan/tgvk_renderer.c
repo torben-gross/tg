@@ -1207,11 +1207,14 @@ tg_renderer_h tg_renderer_create(tg_camera* p_camera)
         VK_FENCE_CREATE_SIGNALED_BIT
     );
 
+    h_renderer->semaphore = tgvk_semaphore_create();
+
     h_renderer->deferred_command_buffer_count = 0;
     h_renderer->shadow_command_buffer_count = 0;
     h_renderer->forward_render_command_count = 0;
 
-    h_renderer->semaphore = tgvk_semaphore_create();
+    h_renderer->h_font = tg_font_create("fonts/arial.ttf");
+    h_renderer->texts = tg_list_create(sizeof(tg_string), TG_LIST_DEFAULT_CAPACITY, tg_string_destroy);
 
     tgvk_atmosphere_model_create(&h_renderer->model);
     tg__init_shadow_pass(h_renderer);
@@ -1294,8 +1297,6 @@ void tg_renderer_destroy(tg_renderer_h h_renderer)
     TG_INVALID_CODEPATH();
 #endif
 
-    tgvk_atmosphere_model_destroy(&h_renderer->model);
-
     tgvk_command_buffer_destroy(&h_renderer->clear_pass.command_buffer);
 
     tg__destroy_present_pass(h_renderer);
@@ -1352,6 +1353,14 @@ void tg_renderer_destroy(tg_renderer_h h_renderer)
         tgvk_image_destroy(&h_renderer->shadow_pass.p_shadow_maps[i]);
     }
 
+    tgvk_atmosphere_model_destroy(&h_renderer->model);
+
+    for (u32 i = 0; i < h_renderer->texts.count; i++)
+    {
+        tg_string_destroy((tg_string*)TG_LIST_AT(h_renderer->texts, i));
+    }
+    tg_list_destroy(&h_renderer->texts);
+    tg_font_destroy(h_renderer->h_font);
     tgvk_semaphore_destroy(h_renderer->semaphore);
     tgvk_render_target_destroy(&h_renderer->render_target);
     tgvk_image_destroy(&h_renderer->hdr_color_attachment);
@@ -1384,6 +1393,7 @@ void tg_renderer_begin(tg_renderer_h h_renderer)
     h_renderer->deferred_command_buffer_count = 0;
     h_renderer->shadow_command_buffer_count = 0;
     h_renderer->forward_render_command_count = 0;
+    tg_list_clear(&h_renderer->texts);
 #if TG_ENABLE_DEBUG_TOOLS == 1
     h_renderer->DEBUG.cube_count = 0;
 #endif
@@ -1436,7 +1446,7 @@ void tg_renderer_push_point_light(tg_renderer_h h_renderer, v3 position, v3 colo
     p_shading_ubo->point_light_count++;
 }
 
-void tg_renderer_exec(tg_renderer_h h_renderer, tg_render_command_h h_render_command)
+void tg_renderer_push_render_command(tg_renderer_h h_renderer, tg_render_command_h h_render_command)
 {
     TG_ASSERT(h_renderer && h_render_command);
 
@@ -1472,6 +1482,13 @@ void tg_renderer_exec(tg_renderer_h h_renderer, tg_render_command_h h_render_com
         TG_ASSERT(h_renderer->forward_render_command_count < TG_MAX_RENDER_COMMANDS);
         h_renderer->ph_forward_render_commands[h_renderer->forward_render_command_count++] = h_render_command;
     }
+}
+
+void tg_renderer_push_text(tg_renderer_h h_renderer, char* p_text)
+{
+    tg_string string = { 0 };
+    tg_string_create(p_text, &string);
+    tg_list_insert(&h_renderer->texts, &string);
 }
 
 void tg_renderer_end(tg_renderer_h h_renderer, f32 dt, b32 present)

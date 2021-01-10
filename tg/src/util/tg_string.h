@@ -4,6 +4,16 @@
 #include "tg_common.h"
 #include "tg_variadic.h"
 
+typedef struct tg_string
+{
+	tg_size    capacity;
+	u32        count_no_nul;
+	char*      p_data;
+} tg_string;
+
+void           tg_string_create(char* p_data, TG_INOUT tg_string* p_string);
+void           tg_string_destroy(tg_string* p_string);
+
 tg_size        tg_strcpy(tg_size size, char* p_buffer, const char* p_string);
 tg_size        tg_strcpy_no_nul(tg_size size, char* p_buffer, const char* p_string);
 tg_size        tg_strncpy(tg_size size, char* p_buffer, tg_size size_to_copy, const char* p_string);

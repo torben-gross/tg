@@ -1064,7 +1064,7 @@ static void tg__render_nodes(volatile tg_terrain* p_terrain, volatile tg_terrain
 
 		if (p_node->h_block_render_command)
 		{
-			tg_renderer_exec(h_renderer, p_node->h_block_render_command);
+			tg_renderer_push_render_command(h_renderer, p_node->h_block_render_command);
 		}
 
 		const u8 transition_mask = tg__get_transition_mask(p_terrain, p_octree, node_index_3d, lod, first_index_of_lod);
@@ -1072,7 +1072,7 @@ static void tg__render_nodes(volatile tg_terrain* p_terrain, volatile tg_terrain
 		{
 			if ((transition_mask & (1 << transition_index)) && p_node->ph_transition_render_commands[transition_index])
 			{
-				tg_renderer_exec(h_renderer, p_node->ph_transition_render_commands[transition_index]);
+				tg_renderer_push_render_command(h_renderer, p_node->ph_transition_render_commands[transition_index]);
 			}
 		}
 	}

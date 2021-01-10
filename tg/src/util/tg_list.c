@@ -4,11 +4,11 @@
 
 
 
-#define TG_LIST_SET_AT(list, index, p_value)    tg_memcpy((list).element_size, p_value, TG_LIST_POINTER_TO(list, index))
+#define TG_LIST_SET_AT(list, index, p_value)    tg_memcpy((list).element_size, p_value, TG_LIST_AT(list, index))
 
 
 
-tg_list tg_list_create_impl(u32 element_size, u32 capacity)
+tg_list tg_list_create(tg_size element_size, u32 capacity, tg_destroy_fn* p_destroy_fn)
 {
 	TG_ASSERT(element_size && capacity);
 
@@ -16,6 +16,7 @@ tg_list tg_list_create_impl(u32 element_size, u32 capacity)
 	list.element_size = element_size;
 	list.capacity = capacity;
 	list.count = 0;
+	list.p_destroy_fn = p_destroy_fn;
 	list.p_elements = TG_MEMORY_ALLOC((tg_size)capacity * (tg_size)element_size);
 
 	return list;
@@ -25,6 +26,13 @@ void tg_list_destroy(tg_list* p_list)
 {
 	TG_ASSERT(p_list);
 
+	if (p_list->p_destroy_fn)
+	{
+		for (u32 i = 0; i < p_list->count; i++)
+		{
+			p_list->p_destroy_fn(TG_LIST_AT(*p_list, i));
+		}
+	}
 	TG_MEMORY_FREE(p_list->p_elements);
 }
 
@@ -34,6 +42,13 @@ void tg_list_clear(tg_list* p_list)
 {
 	TG_ASSERT(p_list);
 
+	if (p_list->p_destroy_fn)
+	{
+		for (u32 i = 0; i < p_list->count; i++)
+		{
+			p_list->p_destroy_fn(TG_LIST_AT(*p_list, i));
+		}
+	}
 	p_list->count = 0;
 }
 
@@ -86,7 +101,7 @@ void tg_list_insert_at_unchecked(tg_list* p_list, u32 index, const void* p_value
 
 	for (u32 i = p_list->count - 1; i >= index; i--)
 	{
-		TG_LIST_SET_AT(*p_list, i + 1, TG_LIST_POINTER_TO(*p_list, i));
+		TG_LIST_SET_AT(*p_list, i + 1, TG_LIST_AT(*p_list, i));
 	}
 	TG_LIST_SET_AT(*p_list, index, p_value);
 	p_list->count++;
@@ -98,7 +113,7 @@ void tg_list_insert_list(tg_list* p_list0, tg_list* p_list1)
 
 	for (u32 i = 0; i < p_list1->count; i++)
 	{
-		tg_list_insert(p_list0, TG_LIST_POINTER_TO(*p_list1, i));
+		tg_list_insert(p_list0, TG_LIST_AT(*p_list1, i));
 	}
 }
 
@@ -116,7 +131,7 @@ void tg_list_remove(tg_list* p_list, const void* p_value)
 
 	for (u32 i = 0; i < p_list->count; i++)
 	{
-		if (TG_LIST_POINTER_TO(*p_list, i) == p_value)
+		if (TG_LIST_AT(*p_list, i) == p_value)
 		{
 			tg_list_remove_at(p_list, i);
 			return;
@@ -130,7 +145,7 @@ void tg_list_remove_at(tg_list* p_list, u32 index)
 
 	for (u32 i = index + 1; i < p_list->count; i++)
 	{
-		TG_LIST_SET_AT(*p_list, i - 1, TG_LIST_POINTER_TO(*p_list, i));
+		TG_LIST_SET_AT(*p_list, i - 1, TG_LIST_AT(*p_list, i));
 	}
 	p_list->count--;
 }

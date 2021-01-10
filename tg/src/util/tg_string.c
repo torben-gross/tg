@@ -1,6 +1,39 @@
 #include "util/tg_string.h"
 
 #include "math/tg_math.h"
+#include "memory/tg_memory.h"
+
+void tg_string_create(char* p_data, TG_INOUT tg_string* p_string)
+{
+	TG_ASSERT(p_data && p_string);
+
+	p_string->count_no_nul = tg_strlen_no_nul(p_data);
+	if (p_string->capacity < (tg_size)p_string->count_no_nul + 1LL)
+	{
+		p_string->capacity = (tg_size)p_string->count_no_nul + 1LL;
+		if (p_string->p_data)
+		{
+			TG_MEMORY_REALLOC(p_string->capacity, p_string->p_data);
+		}
+		else
+		{
+			p_string->p_data = TG_MEMORY_ALLOC(p_string->capacity);
+		}
+	}
+	tg_strcpy(p_string->capacity, p_string->p_data, p_data);
+}
+
+void tg_string_destroy(tg_string* p_string)
+{
+	TG_ASSERT(p_string);
+
+	if (p_string->p_data)
+	{
+		TG_MEMORY_FREE(p_string->p_data);
+	}
+	p_string->count_no_nul = 0;
+	p_string->capacity = 0;
+}
 
 tg_size tg_strcpy(tg_size size, char* p_buffer, const char* p_string)
 {

@@ -46,8 +46,8 @@ tg_hashmap tg_hashmap_create_impl(u32 key_size, u32 value_size, u32 bucket_count
 
 	for (u32 i = 0; i < bucket_count; i++)
 	{
-		hashmap.p_buckets[i].keys = TG_LIST_CREATE__ELEMENT_SIZE__CAPACITY(key_size, bucket_capacity);
-		hashmap.p_buckets[i].values = TG_LIST_CREATE__ELEMENT_SIZE__CAPACITY(value_size, bucket_capacity);
+		hashmap.p_buckets[i].keys = tg_list_create(key_size, bucket_capacity, TG_NULL);
+		hashmap.p_buckets[i].values = tg_list_create(value_size, bucket_capacity, TG_NULL);
 	}
 
 	return hashmap;
@@ -69,7 +69,7 @@ tg_hashmap tg_hashmap_create_copy(const tg_hashmap* p_hashmap)
 
 tg_list tg_hashmap_key_list_create(const tg_hashmap* p_hashmap)
 {
-	tg_list list = TG_LIST_CREATE__ELEMENT_SIZE__CAPACITY(p_hashmap->key_size, p_hashmap->element_count);
+	tg_list list = tg_list_create(p_hashmap->key_size, p_hashmap->element_count, TG_NULL);
 	for (u32 i = 0; i < p_hashmap->bucket_count; i++)
 	{
 		tg_hashmap_bucket* p_bucket = &p_hashmap->p_buckets[i];
@@ -80,7 +80,7 @@ tg_list tg_hashmap_key_list_create(const tg_hashmap* p_hashmap)
 
 tg_list tg_hashmap_value_list_create(const tg_hashmap* p_hashmap)
 {
-	tg_list list = TG_LIST_CREATE__ELEMENT_SIZE__CAPACITY(p_hashmap->value_size, p_hashmap->element_count);
+	tg_list list = tg_list_create(p_hashmap->value_size, p_hashmap->element_count, TG_NULL);
 	for (u32 i = 0; i < p_hashmap->bucket_count; i++)
 	{
 		tg_hashmap_bucket* p_bucket = &p_hashmap->p_buckets[i];
@@ -120,7 +120,7 @@ b32 tg_hashmap_contains(tg_hashmap* p_hashmap, const void* p_key)
 	tg_hashmap_bucket* p_bucket = &p_hashmap->p_buckets[index];
 	for (u32 i = 0; i < p_bucket->keys.count; i++)
 	{
-		const void* p_bucket_entry_key = TG_LIST_POINTER_TO(p_bucket->keys, i);
+		const void* p_bucket_entry_key = TG_LIST_AT(p_bucket->keys, i);
 		const b32 equal = tg__keys_equal(p_hashmap, p_key, p_bucket_entry_key);
 		if (equal)
 		{
@@ -152,7 +152,7 @@ void tg_hashmap_insert(tg_hashmap* p_hashmap, const void* p_key, const void* p_v
 	const u32 bucket_element_count = p_bucket->keys.count;
 	for (u32 i = 0; i < bucket_element_count; i++)
 	{
-		const void* p_bucket_entry_key = TG_LIST_POINTER_TO(p_bucket->keys, i);
+		const void* p_bucket_entry_key = TG_LIST_AT(p_bucket->keys, i);
 		const b32 equal = tg__keys_equal(p_hashmap, p_key, p_bucket_entry_key);
 		if (equal)
 		{
@@ -179,11 +179,11 @@ void* tg_hashmap_pointer_to(tg_hashmap* p_hashmap, const void* p_key)
 	const u32 bucket_element_count = p_bucket->keys.count;
 	for (u32 i = 0; i < bucket_element_count; i++)
 	{
-		const void* p_bucket_entry_key = TG_LIST_POINTER_TO(p_bucket->keys, i);
+		const void* p_bucket_entry_key = TG_LIST_AT(p_bucket->keys, i);
 		const b32 equal = tg__keys_equal(p_hashmap, p_key, p_bucket_entry_key);
 		if (equal)
 		{
-			p_found_bucket_entry_value = TG_LIST_POINTER_TO(p_bucket->values, i);
+			p_found_bucket_entry_value = TG_LIST_AT(p_bucket->values, i);
 			break;
 		}
 	}
@@ -211,7 +211,7 @@ b32 tg_hashmap_try_remove(tg_hashmap* p_hashmap, const void* p_key)
 	const u32 bucket_element_count = p_bucket->keys.count;
 	for (u32 i = 0; i < bucket_element_count; i++)
 	{
-		const void* p_bucket_entry_key = TG_LIST_POINTER_TO(p_bucket->keys, i);
+		const void* p_bucket_entry_key = TG_LIST_AT(p_bucket->keys, i);
 		const b32 equal = tg__keys_equal(p_hashmap, p_key, p_bucket_entry_key);
 		if (equal)
 		{
@@ -255,8 +255,8 @@ tg_string_hashmap tg_string_hashmap_create_impl(u32 value_size, u32 bucket_count
 
 	for (u32 i = 0; i < bucket_count; i++)
 	{
-		string_hashmap.p_buckets[i].keys = TG_LIST_CREATE__CAPACITY(char*, bucket_capacity);
-		string_hashmap.p_buckets[i].values = TG_LIST_CREATE__ELEMENT_SIZE__CAPACITY(value_size, bucket_capacity);
+		string_hashmap.p_buckets[i].keys = tg_list_create(sizeof(char*), bucket_capacity, TG_NULL);
+		string_hashmap.p_buckets[i].values = tg_list_create(value_size, bucket_capacity, TG_NULL);
 	}
 
 	return string_hashmap;
@@ -290,7 +290,7 @@ void tg_string_hashmap_insert(tg_string_hashmap* p_string_hashmap, const char* p
 	const u32 bucket_element_count = p_bucket->keys.count;
 	for (u32 i = 0; i < bucket_element_count; i++)
 	{
-		const char* p_bucket_entry_key = *(char**)TG_LIST_POINTER_TO(p_bucket->keys, i);
+		const char* p_bucket_entry_key = *(char**)TG_LIST_AT(p_bucket->keys, i);
 		const b32 equal = tg_string_equal(p_key, p_bucket_entry_key);
 		if (equal)
 		{
@@ -320,11 +320,11 @@ void* tg_string_hashmap_pointer_to(tg_string_hashmap* p_string_hashmap, const ch
 	const u32 bucket_element_count = p_bucket->keys.count;
 	for (u32 i = 0; i < bucket_element_count; i++)
 	{
-		const char* p_bucket_entry_key = *(char**)TG_LIST_POINTER_TO(p_bucket->keys, i);
+		const char* p_bucket_entry_key = *(char**)TG_LIST_AT(p_bucket->keys, i);
 		const b32 equal = tg_string_equal(p_key, p_bucket_entry_key);
 		if (equal)
 		{
-			p_found_bucket_entry_value = TG_LIST_POINTER_TO(p_bucket->values, i);
+			p_found_bucket_entry_value = TG_LIST_AT(p_bucket->values, i);
 			break;
 		}
 	}

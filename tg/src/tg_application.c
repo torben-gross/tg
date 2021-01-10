@@ -90,10 +90,7 @@ tg_sample_scene scene = { 0 };
 
 static void tg__game_3d_create(void)
 {
-    tg_font_h h_font = tg_font_create("fonts/arial.ttf");
-    tg_font_destroy(h_font);
-
-    scene.render_commands = TG_LIST_CREATE(tg_render_command_h);
+    scene.render_commands = tg_list_create(sizeof(tg_render_command_h), TG_LIST_DEFAULT_CAPACITY, TG_NULL);
 
     scene.camera.type = TG_CAMERA_TYPE_PERSPECTIVE;
     scene.camera.position = (v3) { 128.0f, 141.0f + 50.0f, 128.0f };
@@ -358,10 +355,10 @@ static void tg__game_3d_update_and_render(f32 dt)
     tg_renderer_begin(scene.h_secondary_renderer);
     tg_renderer_push_directional_light(scene.h_secondary_renderer, d0, (v3) { 4.0f, 4.0f, 10.0f });
     tg_terrain_render(scene.p_terrain, scene.h_secondary_renderer);
-    tg_render_command_h* ph_render_commands = TG_LIST_POINTER_TO(scene.render_commands, 0);
+    tg_render_command_h* ph_render_commands = TG_LIST_AT(scene.render_commands, 0);
     for (u32 i = 0; i < scene.render_commands.count; i++)
     {
-        tg_renderer_exec(scene.h_secondary_renderer, ph_render_commands[i]);
+        tg_renderer_push_render_command(scene.h_secondary_renderer, ph_render_commands[i]);
     }
     tg_renderer_end(scene.h_secondary_renderer, dt, TG_FALSE);
 
@@ -370,11 +367,12 @@ static void tg__game_3d_update_and_render(f32 dt)
     //tg_renderer_push_directional_light(scene.h_main_renderer, d0, c0);
     tg_renderer_push_point_light(scene.h_main_renderer, (v3) { lx1, ly1, lz1 }, (v3){ 8.0f, 8.0f, 16.0f });
     tg_terrain_render(scene.p_terrain, scene.h_main_renderer);
-    ph_render_commands = TG_LIST_POINTER_TO(scene.render_commands, 0);
+    ph_render_commands = TG_LIST_AT(scene.render_commands, 0);
     for (u32 i = 0; i < scene.render_commands.count; i++)
     {
-        tg_renderer_exec(scene.h_main_renderer, ph_render_commands[i]);
+        tg_renderer_push_render_command(scene.h_main_renderer, ph_render_commands[i]);
     }
+    tg_renderer_push_text(scene.h_main_renderer, "This is a text field!");
 
 #if TG_ENABLE_DEBUG_TOOLS == 1
     tg_renderer_draw_cube_DEBUG(scene.h_main_renderer, (v3) { 108.5f, 138.5f, 116.5f }, (v3) { 1.0f, 1.0f, 1.0f }, (v4) { 1.0f, 0.0f, 0.0f, 1.0f });

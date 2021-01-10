@@ -23,7 +23,7 @@ tg_font_h tg_font_create(const char* p_filename)
     u32 p_glyph_x_max[257] = { 0 };
     u32 p_glyph_heights[256] = { 0 };
     u32 max_glyph_height = 0;
-
+    
     for (u32 char_idx = 0; char_idx < 256; char_idx++)
     {
         const u16 glyph_idx = font.p_character_to_glyph[char_idx];
@@ -41,9 +41,9 @@ tg_font_h tg_font_create(const char* p_filename)
         {
             const tg_open_type_glyph* p_glyph = &font.p_glyphs[glyph_idx];
             const u32 h = (u32)TG_FONT_GRID2PX(font, TG_MAX_FONT_SIZE, p_glyph->y_max - p_glyph->y_min);
-
+    
             h_font->p_char_to_glyph[char_idx] = (u8)h_font->glyph_count;
-
+    
             p_glyph_indices[h_font->glyph_count] = glyph_idx;
             p_glyph_x_max[h_font->glyph_count + 1] = p_glyph_x_max[h_font->glyph_count] + (u32)TG_FONT_GRID2PX(font, TG_MAX_FONT_SIZE, p_glyph->x_max - p_glyph->x_min);
             p_glyph_heights[h_font->glyph_count] = h;
@@ -148,6 +148,9 @@ tg_font_h tg_font_create(const char* p_filename)
 
     TG_ASSERT(allocation_size > 0);
     u8* p_it = TG_MEMORY_ALLOC(allocation_size);
+#ifdef TG_DEBUG
+    const u8* p_start = p_it;
+#endif
     h_font->p_glyphs = (struct tg_font_glyph*)p_it; p_it += (tg_size)h_font->glyph_count * sizeof(*h_font->p_glyphs);
 
     for (u32 i = 0; i < (u32)h_font->glyph_count; i++)
@@ -190,6 +193,11 @@ tg_font_h tg_font_create(const char* p_filename)
             h_font->p_glyphs[i].p_kernings = TG_NULL;
         }
     }
+
+#ifdef TG_DEBUG
+    const tg_size delta = (tg_size)(p_it - p_start);
+    TG_ASSERT(delta == allocation_size);
+#endif
 
 
 

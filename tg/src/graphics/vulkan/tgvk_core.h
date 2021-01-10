@@ -10,6 +10,7 @@
 #include "graphics/vulkan/tgvk_memory_allocator.h"
 #include "memory/tg_memory.h"
 #include "platform/tg_platform.h"
+#include "util/tg_list.h"
 
 
 
@@ -418,6 +419,9 @@ typedef struct tg_renderer
     VkCommandBuffer              p_deferred_command_buffers[TG_MAX_RENDER_COMMANDS];
     VkCommandBuffer              p_shadow_command_buffers[TG_CASCADED_SHADOW_MAPS][TG_MAX_RENDER_COMMANDS];
     tg_render_command_h          ph_forward_render_commands[TG_MAX_RENDER_COMMANDS];
+
+    tg_font_h                    h_font; // TODO: tg_font and have an internal creator function for the font
+    tg_list                      texts;
 
     tgvk_atmosphere_model        model;
 
