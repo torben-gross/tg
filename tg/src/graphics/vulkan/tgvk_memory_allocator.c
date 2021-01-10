@@ -15,9 +15,9 @@
 
 typedef struct tgvk_memory_entry
 {
-    b32      reserved;
-    u32      page_count;
-    u64      offset;
+    b32        reserved;
+    u32        page_count;
+    tg_size    offset;
 } tgvk_memory_entry;
 
 typedef struct tgvk_memory_pool

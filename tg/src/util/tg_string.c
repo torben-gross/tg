@@ -2,9 +2,9 @@
 
 #include "math/tg_math.h"
 
-u32 tg_strcpy(u32 size, char* p_buffer, const char* p_string)
+tg_size tg_strcpy(tg_size size, char* p_buffer, const char* p_string)
 {
-	u32 i = 0;
+	tg_size i = 0;
 	for (; i < size; i++)
 	{
 		p_buffer[i] = p_string[i];
@@ -18,9 +18,9 @@ u32 tg_strcpy(u32 size, char* p_buffer, const char* p_string)
 	return i;
 }
 
-u32 tg_strcpy_no_nul(u32 size, char* p_buffer, const char* p_string)
+tg_size tg_strcpy_no_nul(tg_size size, char* p_buffer, const char* p_string)
 {
-	u32 i = 0;
+	tg_size i = 0;
 	for (; i < size; i++)
 	{
 		if (p_string[i] == '\0')
@@ -33,11 +33,11 @@ u32 tg_strcpy_no_nul(u32 size, char* p_buffer, const char* p_string)
 	return i;
 }
 
-u32 tg_strncpy(u32 size, char* p_buffer, u32 size_to_copy, const char* p_string)
+tg_size tg_strncpy(tg_size size, char* p_buffer, tg_size size_to_copy, const char* p_string)
 {
 	TG_ASSERT(size >= size_to_copy + 1);
 
-	u32 i = 0;
+	tg_size i = 0;
 	for (; i < size_to_copy; i++)
 	{
 		p_buffer[i] = p_string[i];
@@ -51,11 +51,11 @@ u32 tg_strncpy(u32 size, char* p_buffer, u32 size_to_copy, const char* p_string)
 	return i;
 }
 
-u32 tg_strncpy_no_nul(u32 size, char* p_buffer, u32 size_to_copy, const char* p_string)
+tg_size tg_strncpy_no_nul(tg_size size, char* p_buffer, tg_size size_to_copy, const char* p_string)
 {
 	TG_ASSERT(size >= size_to_copy);
 
-	u32 i = 0;
+	tg_size i = 0;
 	for (; i < size_to_copy; i++)
 	{
 		if (p_string[i] == '\0')

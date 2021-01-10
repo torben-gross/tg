@@ -66,17 +66,18 @@ static shaderc_compiler_t          shaderc_compiler;
 #define TGVK_STRUCTURE_FREE_LIST_COUNT_NAME(name)    name##_free_list_count
 #define TGVK_STRUCTURE_FREE_LIST_NAME(name)          p_##name##_free_list
 
-#define TGVK_DEFINE_STRUCTURE_BUFFER(name, count)                                  \
-    static u64 TGVK_STRUCTURE_SIZE_NAME(name) = sizeof(TGVK_STRUCTURE_NAME(name)); \
-    static u16 TGVK_STRUCTURE_BUFFER_COUNT_NAME(name);                             \
-    static TGVK_STRUCTURE_NAME(name) TGVK_STRUCTURE_BUFFER_NAME(name)[count];      \
-    static u16 TGVK_STRUCTURE_FREE_LIST_COUNT_NAME(name);                          \
+#define TGVK_DEFINE_STRUCTURE_BUFFER(name, count)                                      \
+    static tg_size TGVK_STRUCTURE_SIZE_NAME(name) = sizeof(TGVK_STRUCTURE_NAME(name)); \
+    static u16 TGVK_STRUCTURE_BUFFER_COUNT_NAME(name);                                 \
+    static TGVK_STRUCTURE_NAME(name) TGVK_STRUCTURE_BUFFER_NAME(name)[count];          \
+    static u16 TGVK_STRUCTURE_FREE_LIST_COUNT_NAME(name);                              \
     static u16 TGVK_STRUCTURE_FREE_LIST_NAME(name)[count]
 
 TGVK_DEFINE_STRUCTURE_BUFFER(color_image, TG_MAX_COLOR_IMAGES);
 TGVK_DEFINE_STRUCTURE_BUFFER(compute_shader, TG_MAX_COMPUTE_SHADERS);
 TGVK_DEFINE_STRUCTURE_BUFFER(cube_map, TG_MAX_CUBE_MAPS);
 TGVK_DEFINE_STRUCTURE_BUFFER(depth_image, TG_MAX_DEPTH_IMAGES);
+TGVK_DEFINE_STRUCTURE_BUFFER(font, TG_MAX_FONTS);
 TGVK_DEFINE_STRUCTURE_BUFFER(fragment_shader, TG_MAX_FRAGMENT_SHADERS);
 TGVK_DEFINE_STRUCTURE_BUFFER(material, TG_MAX_MATERIALS);
 TGVK_DEFINE_STRUCTURE_BUFFER(mesh, TG_MAX_MESHES);
@@ -936,6 +937,13 @@ void tgvk_cmd_transition_layered_image_layout(tgvk_command_buffer* p_command_buf
 
 
 
+tgvk_command_buffer* tgvk_command_buffer_get_and_begin_global(tgvk_command_pool_type type)
+{
+    tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_global(type);
+    tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+    return p_command_buffer;
+}
+
 tgvk_command_buffer* tgvk_command_buffer_get_global(tgvk_command_pool_type type)
 {
     tgvk_command_buffer* p_command_buffer = TG_NULL;
@@ -1642,6 +1650,7 @@ void* tgvk_handle_array(tg_structure_type type)
     case TG_STRUCTURE_TYPE_COMPUTE_SHADER:   p_array = TGVK_STRUCTURE_BUFFER_NAME(compute_shader);   break;
     case TG_STRUCTURE_TYPE_CUBE_MAP:         p_array = TGVK_STRUCTURE_BUFFER_NAME(cube_map);         break;
     case TG_STRUCTURE_TYPE_DEPTH_IMAGE:      p_array = TGVK_STRUCTURE_BUFFER_NAME(depth_image);      break;
+    case TG_STRUCTURE_TYPE_FONT:             p_array = TGVK_STRUCTURE_BUFFER_NAME(font);             break;
     case TG_STRUCTURE_TYPE_FRAGMENT_SHADER:  p_array = TGVK_STRUCTURE_BUFFER_NAME(fragment_shader);  break;
     case TG_STRUCTURE_TYPE_MATERIAL:         p_array = TGVK_STRUCTURE_BUFFER_NAME(material);         break;
     case TG_STRUCTURE_TYPE_MESH:             p_array = TGVK_STRUCTURE_BUFFER_NAME(mesh);             break;
@@ -1669,6 +1678,7 @@ void* tgvk_handle_take(tg_structure_type type)
     case TG_STRUCTURE_TYPE_COMPUTE_SHADER:   { TGVK_STRUCTURE_TAKE(compute_shader, p_handle);   } break;
     case TG_STRUCTURE_TYPE_CUBE_MAP:         { TGVK_STRUCTURE_TAKE(cube_map, p_handle);         } break;
     case TG_STRUCTURE_TYPE_DEPTH_IMAGE:      { TGVK_STRUCTURE_TAKE(depth_image, p_handle);      } break;
+    case TG_STRUCTURE_TYPE_FONT:             { TGVK_STRUCTURE_TAKE(font, p_handle);             } break;
     case TG_STRUCTURE_TYPE_FRAGMENT_SHADER:  { TGVK_STRUCTURE_TAKE(fragment_shader, p_handle);  } break;
     case TG_STRUCTURE_TYPE_MATERIAL:         { TGVK_STRUCTURE_TAKE(material, p_handle);         } break;
     case TG_STRUCTURE_TYPE_MESH:             { TGVK_STRUCTURE_TAKE(mesh, p_handle);             } break;
@@ -1699,6 +1709,7 @@ void tgvk_handle_release(void* p_handle)
     case TG_STRUCTURE_TYPE_COMPUTE_SHADER:   { TGVK_STRUCTURE_RELEASE(compute_shader, p_handle);   } break;
     case TG_STRUCTURE_TYPE_CUBE_MAP:         { TGVK_STRUCTURE_RELEASE(cube_map, p_handle);         } break;
     case TG_STRUCTURE_TYPE_DEPTH_IMAGE:      { TGVK_STRUCTURE_RELEASE(depth_image, p_handle);      } break;
+    case TG_STRUCTURE_TYPE_FONT:             { TGVK_STRUCTURE_RELEASE(font, p_handle);             } break;
     case TG_STRUCTURE_TYPE_FRAGMENT_SHADER:  { TGVK_STRUCTURE_RELEASE(fragment_shader, p_handle);  } break;
     case TG_STRUCTURE_TYPE_MATERIAL:         { TGVK_STRUCTURE_RELEASE(material, p_handle);         } break;
     case TG_STRUCTURE_TYPE_MESH:             { TGVK_STRUCTURE_RELEASE(mesh, p_handle);             } break;
@@ -1896,9 +1907,9 @@ tgvk_image tgvk_image_create2(tgvk_image_type type, const char* p_filename, cons
     u32* p_data = TG_NULL;
     tg_image_load(p_filename, &w, &h, &f, &p_data);
     //h_color_image->mip_levels = TG_IMAGE_MAX_MIP_LEVELS(h_color_image->width, h_color_image->height);// TODO: mipmapping
-    const u64 size = (u64)w * (u64)h * sizeof(*p_data);
+    const tg_size size = (tg_size)w * (tg_size)h * sizeof(*p_data);
 
-    tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take(size);
+    tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take((VkDeviceSize)size);
     tg_memcpy(size, p_data, p_staging_buffer->memory.p_mapped_device_memory);
 
     tgvk_image image = tgvk_image_create(type, w, h, (VkFormat)f, p_sampler_create_info);
@@ -1937,8 +1948,8 @@ b32 tgvk_image_store_to_disc(tgvk_image* p_image, const char* p_filename, b32 fo
 
     tgvk_image blit_image = tgvk_image_create(TGVK_IMAGE_TYPE_COLOR, width, height, (VkFormat)TG_COLOR_IMAGE_FORMAT_B8G8R8A8_UNORM, TG_NULL);
 
-    const u32 staging_buffer_size = width * height * tg_color_image_format_size((tg_color_image_format)blit_image.format);
-    tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take((u64)staging_buffer_size);
+    const VkDeviceSize staging_buffer_size = (VkDeviceSize)width * (VkDeviceSize)height * (VkDeviceSize)tg_color_image_format_size((tg_color_image_format)blit_image.format);
+    tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take(staging_buffer_size);
 
     tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
     tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
@@ -2094,8 +2105,8 @@ b32 tgvk_image_3d_store_slice_to_disc(tgvk_image_3d* p_image_3d, u32 slice_depth
 
     tgvk_image blit_image = tgvk_image_create(TGVK_IMAGE_TYPE_COLOR, width, height, (VkFormat)TG_COLOR_IMAGE_FORMAT_B8G8R8A8_UNORM, TG_NULL);
 
-    const u32 staging_buffer_size = width * height * tg_color_image_format_size((tg_color_image_format)blit_image.format);
-    tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take((u64)staging_buffer_size);
+    const VkDeviceSize staging_buffer_size = (VkDeviceSize)width * (VkDeviceSize)height * (VkDeviceSize)tg_color_image_format_size((tg_color_image_format)blit_image.format);
+    tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take(staging_buffer_size);
 
     tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
     tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
@@ -2283,8 +2294,8 @@ b32 tgvk_layered_image_store_layer_to_disc(tgvk_layered_image* p_image, u32 laye
 
     tgvk_image blit_image = tgvk_image_create(TGVK_IMAGE_TYPE_COLOR, width, height, (VkFormat)TG_COLOR_IMAGE_FORMAT_B8G8R8A8_UNORM, TG_NULL);
 
-    const u32 staging_buffer_size = width * height * tg_color_image_format_size((tg_color_image_format)blit_image.format);
-    tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take((u64)staging_buffer_size);
+    const VkDeviceSize staging_buffer_size = (VkDeviceSize)width * (VkDeviceSize)height * (VkDeviceSize)tg_color_image_format_size((tg_color_image_format)blit_image.format);
+    tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take(staging_buffer_size);
 
     tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
     tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
@@ -2919,7 +2930,7 @@ static b32 tg__physical_device_supports_required_queue_families(VkPhysicalDevice
         return TG_FALSE;
     }
 
-    const u64 queue_family_properties_size = queue_family_property_count * sizeof(VkQueueFamilyProperties);
+    const tg_size queue_family_properties_size = (tg_size)queue_family_property_count * sizeof(VkQueueFamilyProperties);
     VkQueueFamilyProperties* p_queue_family_properties = TG_MEMORY_STACK_ALLOC(queue_family_properties_size);
     vkGetPhysicalDeviceQueueFamilyProperties(pd, &queue_family_property_count, p_queue_family_properties);
 
@@ -2947,7 +2958,7 @@ static void tg__physical_device_find_queue_family_indices(VkPhysicalDevice pd, u
     u32 queue_family_property_count;
     vkGetPhysicalDeviceQueueFamilyProperties(pd, &queue_family_property_count, TG_NULL);
     TG_ASSERT(queue_family_property_count);
-    const u64 queue_family_properties_size = queue_family_property_count * sizeof(VkQueueFamilyProperties);
+    const tg_size queue_family_properties_size = (tg_size)queue_family_property_count * sizeof(VkQueueFamilyProperties);
     VkQueueFamilyProperties* p_queue_family_properties = TG_MEMORY_STACK_ALLOC(queue_family_properties_size);
     vkGetPhysicalDeviceQueueFamilyProperties(pd, &queue_family_property_count, p_queue_family_properties);
 
@@ -3060,7 +3071,7 @@ static b32 tg__physical_device_supports_extension(VkPhysicalDevice pd)
 {
     u32 device_extension_property_count;
     TGVK_CALL(vkEnumerateDeviceExtensionProperties(pd, TG_NULL, &device_extension_property_count, TG_NULL));
-    const u64 device_extension_properties_size = device_extension_property_count * sizeof(VkExtensionProperties);
+    const tg_size device_extension_properties_size = (tg_size)device_extension_property_count * sizeof(VkExtensionProperties);
     VkExtensionProperties* device_extension_properties = TG_MEMORY_STACK_ALLOC(device_extension_properties_size);
     TGVK_CALL(vkEnumerateDeviceExtensionProperties(pd, TG_NULL, &device_extension_property_count, device_extension_properties));
 
@@ -3136,7 +3147,7 @@ static VkInstance tg__instance_create(void)
     {
         u32 layer_property_count;
         vkEnumerateInstanceLayerProperties(&layer_property_count, TG_NULL);
-        const u64 layer_properties_size = layer_property_count * sizeof(VkLayerProperties);
+        const tg_size layer_properties_size = (tg_size)layer_property_count * sizeof(VkLayerProperties);
         VkLayerProperties* p_layer_properties = TG_MEMORY_STACK_ALLOC(layer_properties_size);
         vkEnumerateInstanceLayerProperties(&layer_property_count, p_layer_properties);
 
@@ -3241,7 +3252,7 @@ static VkPhysicalDevice tg__physical_device_create(void)
     u32 physical_device_count;
     TGVK_CALL(vkEnumeratePhysicalDevices(instance, &physical_device_count, TG_NULL));
     TG_ASSERT(physical_device_count);
-    const u64 physical_devices_size = physical_device_count * sizeof(VkPhysicalDevice);
+    const tg_size physical_devices_size = (tg_size)physical_device_count * sizeof(VkPhysicalDevice);
     VkPhysicalDevice* p_physical_devices = TG_MEMORY_STACK_ALLOC(physical_devices_size);
     TGVK_CALL(vkEnumeratePhysicalDevices(instance, &physical_device_count, p_physical_devices));
 
@@ -3447,7 +3458,7 @@ static void tg__swapchain_create(void)
 
     u32 surface_format_count;
     TGVK_CALL(vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface.surface, &surface_format_count, TG_NULL));
-    const u64 surface_formats_size = surface_format_count * sizeof(VkSurfaceFormatKHR);
+    const tg_size surface_formats_size = (tg_size)surface_format_count * sizeof(VkSurfaceFormatKHR);
     VkSurfaceFormatKHR* p_surface_formats = TG_MEMORY_STACK_ALLOC(surface_formats_size);
     TGVK_CALL(vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface.surface, &surface_format_count, p_surface_formats));
 

@@ -253,10 +253,10 @@ static u32 tg__glsl_header_factory(const tgvk_atmosphere_model* p_model, u32 siz
 #pragma warning(disable:4296)
 #pragma warning(disable:6294)
 
-#define PUSH(p_string)     ((void)(i += tg_strcpy_no_nul(size - i, &p_buffer[i], p_string)))
-#define PUSH_F32(value)    ((void)(i += tg_string_parse_f32_no_nul(size - i, &p_buffer[i], value)))
-#define PUSH_F64(value)    ((void)(i += tg_string_parse_f64_no_nul(size - i, &p_buffer[i], value)))
-#define PUSH_I32(value)    ((void)(i += tg_string_parse_i32_no_nul(size - i, &p_buffer[i], value)))
+#define PUSH(p_string)     ((void)(i += (u32)tg_strcpy_no_nul((tg_size)size - (tg_size)i, &p_buffer[i], p_string)))
+#define PUSH_F32(value)    ((void)(i += (u32)tg_string_parse_f32_no_nul((tg_size)size - (tg_size)i, &p_buffer[i], value)))
+#define PUSH_F64(value)    ((void)(i += (u32)tg_string_parse_f64_no_nul((tg_size)size - (tg_size)i, &p_buffer[i], value)))
+#define PUSH_I32(value)    ((void)(i += (u32)tg_string_parse_i32_no_nul((tg_size)size - (tg_size)i, &p_buffer[i], value)))
 #define TO_STRING(p_v, scale)                                                                     \
 	{                                                                                             \
 		const f64 r = tg__interpolate(48, p_wavelengths, p_v, TG_LAMBDA_R) * scale;               \
@@ -474,25 +474,25 @@ static void tg__precompute(tgvk_atmosphere_model* p_model, VkFormat layered_imag
 	p_model->api_shader.total_count = 0;
 	p_model->api_shader.header_count = tg__glsl_header_factory(p_model, p_model->api_shader.capacity, p_model->api_shader.p_source);
 	p_model->api_shader.total_count = p_model->api_shader.header_count;
-	p_model->api_shader.total_count += tg_strcpy_no_nul(p_model->api_shader.capacity - p_model->api_shader.total_count, &p_model->api_shader.p_source[p_model->api_shader.total_count], "\r\n");
+	p_model->api_shader.total_count += (u32)tg_strcpy_no_nul((tg_size)p_model->api_shader.capacity - (tg_size)p_model->api_shader.total_count, &p_model->api_shader.p_source[p_model->api_shader.total_count], "\r\n");
 	const b32 precompute_illuminance = p_model->settings.precomputed_wavelength_count > 3;
 	if (!precompute_illuminance)
 	{
-		p_model->api_shader.total_count += tg_strcpy_no_nul(
-			p_model->api_shader.capacity - p_model->api_shader.total_count,
+		p_model->api_shader.total_count += (u32)tg_strcpy_no_nul(
+			(tg_size)p_model->api_shader.capacity - (tg_size)p_model->api_shader.total_count,
 			&p_model->api_shader.p_source[p_model->api_shader.total_count],
 			"#define TG_RADIANCE_API_ENABLED\r\n\r\n"
 		);
 	}
-	p_model->api_shader.total_count += tg_strcpy_no_nul(
-		p_model->api_shader.capacity - p_model->api_shader.total_count,
+	p_model->api_shader.total_count += (u32)tg_strcpy_no_nul(
+		(tg_size)p_model->api_shader.capacity - (tg_size)p_model->api_shader.total_count,
 		&p_model->api_shader.p_source[p_model->api_shader.total_count],
 		p_atmosphere_shader
 	);
 	if (p_model->settings.use_luminance)
 	{
-		p_model->api_shader.total_count += tg_strcpy_no_nul(
-			p_model->api_shader.capacity - p_model->api_shader.total_count,
+		p_model->api_shader.total_count += (u32)tg_strcpy_no_nul(
+			(tg_size)p_model->api_shader.capacity - (tg_size)p_model->api_shader.total_count,
 			&p_model->api_shader.p_source[p_model->api_shader.total_count],
 			"#define TG_USE_LUMINANCE\r\n\r\n"
 		);
@@ -504,10 +504,10 @@ static void tg__precompute(tgvk_atmosphere_model* p_model, VkFormat layered_imag
 		const m4 luminance_from_radiance = tgm_m4_identity();
 		const tg_blend_mode blend = TG_BLEND_MODE_NONE;
 
-		const u32 fragment_shader_buffer_size = 1 << 16;
-		char* p_fragment_shader_buffer = TG_MEMORY_STACK_ALLOC((u64)fragment_shader_buffer_size);
+		const tg_size fragment_shader_buffer_size = 1 << 16;
+		char* p_fragment_shader_buffer = TG_MEMORY_STACK_ALLOC(fragment_shader_buffer_size);
 
-		u32 header_count = tg_strncpy_no_nul(fragment_shader_buffer_size, p_fragment_shader_buffer, p_model->api_shader.header_count, p_model->api_shader.p_source);
+		tg_size header_count = tg_strncpy_no_nul(fragment_shader_buffer_size, p_fragment_shader_buffer, (tg_size)p_model->api_shader.header_count, p_model->api_shader.p_source);
 		header_count += tg_strcpy_no_nul(fragment_shader_buffer_size - header_count, &p_fragment_shader_buffer[header_count], "\r\n");
 
 		tgvk_shader* p_vertex_shader = TG_MEMORY_STACK_ALLOC(sizeof(*p_vertex_shader));

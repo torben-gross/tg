@@ -122,6 +122,7 @@
     <ClCompile Include="src\graphics\vulkan\tgvk_atmosphere.c" />
     <ClCompile Include="src\graphics\tg_spirv.c" />
     <ClCompile Include="src\graphics\vulkan\tgvk_buffer.c" />
+    <ClCompile Include="src\graphics\vulkan\tgvk_font.c" />
     <ClCompile Include="src\graphics\vulkan\tgvk_image.c" />
     <ClCompile Include="src\graphics\tg_shader_library.c" />
     <ClCompile Include="src\graphics\vulkan\tgvk_render_target.c" />
@@ -156,13 +157,9 @@
     <ClInclude Include="src\graphics\font\tg_open_type_glyf.h" />
     <ClInclude Include="src\graphics\font\tg_open_type_head.h" />
     <ClInclude Include="src\graphics\font\tg_open_type_layout_common_table_formats.h" />
-    <ClInclude Include="src\graphics\font\tg_open_type_dsig.h" />
-    <ClInclude Include="src\graphics\font\tg_open_type_gdef.h" />
-    <ClInclude Include="src\graphics\font\tg_open_type_gpos.h" />
     <ClInclude Include="src\graphics\font\tg_open_type_loca.h" />
     <ClInclude Include="src\graphics\font\tg_open_type_maxp.h" />
     <ClInclude Include="src\graphics\font\tg_open_type_types.h" />
-    <ClInclude Include="src\graphics\font\tg_open_type_font_variations_common_table_formats.h" />
     <ClInclude Include="src\graphics\vulkan\tgvk_atmosphere_definitions.h" />
     <ClInclude Include="src\graphics\vulkan\tgvk_atmosphere_functions.h" />
     <ClInclude Include="src\graphics\tg_atmosphere_lookup_tables.h" />

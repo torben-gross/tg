@@ -7,6 +7,6 @@
 
 typedef i32 tg_qsort_compare_fn(const void* p_v0, const void* p_v1, void* p_user_data);
 
-void tg_qsort_impl(u32 element_size, u32 element_count, void* p_elements, tg_qsort_compare_fn* p_compare_fn, void* p_user_data);
+void tg_qsort_impl(tg_size element_size, u32 element_count, void* p_elements, tg_qsort_compare_fn* p_compare_fn, void* p_user_data);
 
 #endif

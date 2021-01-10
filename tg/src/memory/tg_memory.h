@@ -34,22 +34,22 @@ void       tg_memory_shutdown(void);
 
 
 
-void       tg_memcpy(u64 size, const void* p_source, void* p_destination);
-void       tg_memory_nullify(u64 size, void* p_memory);
-void       tg_memory_set_all_bits(u64 size, void* p_memory);
+void       tg_memcpy(tg_size size, const void* p_source, void* p_destination);
+void       tg_memory_nullify(tg_size size, void* p_memory);
+void       tg_memory_set_all_bits(tg_size size, void* p_memory);
 
 #ifdef TG_DEBUG
 
-void*      tg_memory_alloc_impl(u64 size, const char* p_filename, u32 line, b32 nullify);
-void*      tg_memory_realloc_impl(u64 size, void* p_memory, const char* p_filename, u32 line, b32 nullify);
+void*      tg_memory_alloc_impl(tg_size size, const char* p_filename, u32 line, b32 nullify);
+void*      tg_memory_realloc_impl(tg_size size, void* p_memory, const char* p_filename, u32 line, b32 nullify);
 void       tg_memory_free_impl(void* p_memory);
 u32        tg_memory_active_allocation_count(void);
 
 #endif
 
-void*      tg_memory_stack_alloc(u64 size);
-void       tg_memory_stack_free(u64 size);
-void*      tg_memory_stack_alloc_async(u64 size);
-void       tg_memory_stack_free_async(u64 size);
+void*      tg_memory_stack_alloc(tg_size size);
+void       tg_memory_stack_free(tg_size size);
+void*      tg_memory_stack_alloc_async(tg_size size);
+void       tg_memory_stack_free_async(tg_size size);
 
 #endif

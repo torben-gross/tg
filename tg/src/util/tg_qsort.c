@@ -12,20 +12,20 @@
 #define TG_STACK_POP(p_low, p_high)     ((void) (--p_top, (p_low = p_top->p_lo), (p_high = p_top->p_hi)))
 #define TG_STACK_NOT_EMPTY              (p_stack < p_top)
 
-#define TG_SWAP(element_size, p_left, p_right) \
-    do                                         \
-    {                                          \
-        u32 s = (u32)(element_size);           \
-        i8* p_l = (i8*)(p_left);               \
-        i8* p_r = (i8*)(p_right);              \
-        do                                     \
-        {                                      \
-            const i8 temp = *p_l;              \
-            *p_l++ = *p_r;                     \
-            *p_r++ = temp;                     \
-        }                                      \
-        while (--s > 0);                       \
-    }                                          \
+#define TG_SWAP(element_size, p_left, p_right)  \
+    do                                          \
+    {                                           \
+        tg_size s = (tg_size)(element_size);    \
+        i8* p_l = (i8*)(p_left);                \
+        i8* p_r = (i8*)(p_right);               \
+        do                                      \
+        {                                       \
+            const i8 temp = *p_l;               \
+            *p_l++ = *p_r;                      \
+            *p_r++ = temp;                      \
+        }                                       \
+        while (--s > 0);                        \
+    }                                           \
     while (TG_FALSE)
 
 
@@ -38,12 +38,12 @@ typedef struct tg_stack_node
 
 
 
-void tg_qsort_impl(u32 element_size, u32 element_count, void* p_elements, tg_qsort_compare_fn* p_compare_fn, void* p_user_data)
+void tg_qsort_impl(tg_size element_size, u32 element_count, void* p_elements, tg_qsort_compare_fn* p_compare_fn, void* p_user_data)
 {
     TG_ASSERT(element_size && element_count && p_elements && p_compare_fn);
 
     i8* p_base = (i8*)p_elements;
-    const u64 max_thresh = TG_MAX_THRESH * (u64)element_size;
+    const tg_size max_thresh = TG_MAX_THRESH * element_size;
 
     if (element_count > TG_MAX_THRESH)
     {
@@ -117,9 +117,9 @@ void tg_qsort_impl(u32 element_size, u32 element_count, void* p_elements, tg_qso
             }
             while (p_left <= p_right);
 
-            if ((u64)(p_right - p_lo) <= max_thresh)
+            if ((tg_size)(p_right - p_lo) <= max_thresh)
             {
-                if ((u64)(p_hi - p_left) <= max_thresh)
+                if ((tg_size)(p_hi - p_left) <= max_thresh)
                 {
                     TG_STACK_POP(p_lo, p_hi);
                 }
@@ -128,7 +128,7 @@ void tg_qsort_impl(u32 element_size, u32 element_count, void* p_elements, tg_qso
                     p_lo = p_left;
                 }
             }
-            else if ((u64)(p_hi - p_left) <= max_thresh)
+            else if ((tg_size)(p_hi - p_left) <= max_thresh)
             {
                 p_hi = p_right;
             }

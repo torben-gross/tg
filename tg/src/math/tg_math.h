@@ -9,7 +9,9 @@
 #define TG_GOLDEN_RATIO                            1.61803401f
 #define TG_CEIL_TO_MULTIPLE(value, multiple_of)    ((((value) + (multiple_of) - 1) / (multiple_of)) * (multiple_of))
 #define TG_MAX(v0, v1)                             ((v0) > (v1) ? (v0) : (v1))
+#define TG_MAX3(x0, x1, x2)                        ((x0) > (x1) ? ((x0) > (x2) ? (x0) : (x2)) : ((x1) > (x2) ? (x1) : (x2)))
 #define TG_MIN(v0, v1)                             ((v0) < (v1) ? (v0) : (v1))
+#define TG_MIN3(x0, x1, x2)                        ((x0) < (x1) ? ((x0) < (x2) ? (x0) : (x2)) : ((x1) < (x2) ? (x1) : (x2)))
 #define TG_CLAMP(v, low, high)                     ((v) < (low) ? low : ((v) > (high) ? (high) : (v)))
 #define TG_TO_DEGREES(radians)                     (radians * (360.0f / (TG_PI * 2.0f)))
 #define TG_TO_RADIANS(degrees)                     (degrees * ((TG_PI * 2.0f) / 360.0f))
@@ -286,8 +288,10 @@ f32    tgm_u32_log10(u32 v);
 f32    tgm_u32_log2(u32 v);
 u32    tgm_u32_pow(u32 base, u32 exponent);
 
+#ifdef TG_CPU_x64
 f64    tgm_u64_log10(u64 v);
 u64    tgm_u64_pow(u64 base, u64 exponent);
+#endif
 
 
 
@@ -329,9 +333,11 @@ b32    tgm_u32_is_power_of_two(u32 v);
 u32    tgm_u32_max(u32 v0, u32 v1);
 u32    tgm_u32_min(u32 v0, u32 v1);
 
+#ifdef TG_CPU_x64
 u32    tgm_u64_digits(u64 v);
 u64    tgm_u64_max(u64 v0, u64 v1);
 u64    tgm_u64_min(u64 v0, u64 v1);
+#endif
 
 
 

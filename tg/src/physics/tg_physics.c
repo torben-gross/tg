@@ -10,7 +10,7 @@ b32 tg__traverse(v3 ray_origin, v3 ray_direction, const tg_kd_tree* p_kd_tree, c
     if (p_node->flags == 0)
     {
         const u32 position_count = tg_mesh_get_vertex_count(p_kd_tree->h_mesh);
-        const u64 positions_size = position_count * sizeof(v3);
+        const tg_size positions_size = (tg_size)position_count * sizeof(v3);
         v3* p_positions = TG_MEMORY_STACK_ALLOC(positions_size);
         tg_mesh_copy_positions(p_kd_tree->h_mesh, 0, position_count, p_positions); // TODO: this will be insanely slow now! keep copy of positions in tree!
 

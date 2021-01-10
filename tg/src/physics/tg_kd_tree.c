@@ -261,7 +261,7 @@ static void tg__thread_fn(volatile void* p_user_data)
 			TG_MUTEX_LOCK(p_work_thread_info->h_indices_mutex);
 			p_node->leaf.first_index_offset = p_work_thread_info->p_tree->index_count;
 			p_work_thread_info->p_tree->index_count += p_node->leaf.index_count;
-			const u64 required_index_capacity = (u64)p_work_thread_info->p_tree->index_count * sizeof(*p_work_thread_info->p_tree->p_indices);
+			const tg_size required_index_capacity = (tg_size)p_work_thread_info->p_tree->index_count * sizeof(*p_work_thread_info->p_tree->p_indices);
 			if (p_work_thread_info->p_tree->index_capacity < required_index_capacity)
 			{
 				p_work_thread_info->p_tree->index_capacity *= 2;
@@ -298,21 +298,21 @@ tg_kd_tree* tg_kd_tree_create(tg_mesh_h h_mesh)
 	const u32 max_node_count = 2 * initial_tri_count - 1; // this is only true as long as each child contains at least one triangle less than it's parent
 	tg_kd_tree* p_tree = TG_MEMORY_ALLOC_NULLIFY(sizeof(*p_tree) + max_node_count * sizeof(*p_tree->p_nodes));
 	p_tree->h_mesh = h_mesh;
-	p_tree->index_capacity = (u64)position_count * sizeof(*p_tree->p_indices);
+	p_tree->index_capacity = (u32)((tg_size)position_count * sizeof(*p_tree->p_indices));
 	p_tree->index_count = 0;
 	p_tree->node_count = 1;
 	p_tree->p_indices = TG_MEMORY_ALLOC(p_tree->index_capacity);
 
 	tg_work_thread_info work_thread_info = { 0 };
 	work_thread_info.p_tree = p_tree;
-	const u64 nodes_size = ((u64)initial_tri_count + 1LL) * sizeof(tg_stack_node);
+	const tg_size nodes_size = ((tg_size)initial_tri_count + 1LL) * sizeof(tg_stack_node);
 	work_thread_info.h_stack_mutex = TG_MUTEX_CREATE();
 	work_thread_info.h_indices_mutex = TG_MUTEX_CREATE();
 	work_thread_info.p_stack_nodes = TG_MEMORY_STACK_ALLOC(nodes_size);
 	tg_memory_nullify(nodes_size, work_thread_info.p_stack_nodes);
 	work_thread_info.stack_node_count = 0;
 
-	const u64 initial_tris_size = (u64)initial_tri_count * sizeof(tg_construction_triangle);
+	const tg_size initial_tris_size = (tg_size)initial_tri_count * sizeof(tg_construction_triangle);
 	tg_construction_triangle* p_initial_tris = TG_MEMORY_ALLOC(initial_tris_size);
 	for (u32 i = 0; i < initial_tri_count; i++)
 	{

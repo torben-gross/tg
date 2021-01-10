@@ -255,7 +255,7 @@ static void tg__convert_masks_to_format(u32 r_mask, u32 g_mask, u32 b_mask, u32 
 	}
 }
 
-static void tg__load_bmp_from_memory(u64 file_size, const char* p_file_memory, TG_OUT u32* p_width, TG_OUT u32* p_height, TG_OUT tg_color_image_format* p_format, TG_OUT u32** pp_data)
+static void tg__load_bmp_from_memory(tg_size file_size, const char* p_file_memory, TG_OUT u32* p_width, TG_OUT u32* p_height, TG_OUT tg_color_image_format* p_format, TG_OUT u32** pp_data)
 {
 	TG_ASSERT(p_file_memory && p_width && p_height && p_format && pp_data);
 	TG_ASSERT(*(u16*)p_file_memory == TG_BMP_IDENTIFIER);
@@ -284,7 +284,7 @@ static void tg__load_bmp_from_memory(u64 file_size, const char* p_file_memory, T
 	bitmap_info_header.clr_used              = *(u32*)&p_bitmap_info_header[ 32];
 	bitmap_info_header.clr_important         = *(u32*)&p_bitmap_info_header[ 36];
 
-	TG_ASSERT(file_size >= (u64)bitmap_file_header.offset_bits + ((u64)bitmap_info_header.width * (u64)bitmap_info_header.height * (u64)sizeof(u32)));
+	TG_ASSERT(file_size >= (tg_size)bitmap_file_header.offset_bits + ((tg_size)bitmap_info_header.width * (tg_size)bitmap_info_header.height * sizeof(u32)));
 	TG_ASSERT((tg_bitmapinfoheader_type)bitmap_info_header.size == TG_BMP_BITMAPV5HEADER_SIZE);
 	TG_ASSERT(bitmap_info_header.compression == TG_BMP_COMPRESSION_BI_BITFIELDS);
 
@@ -323,7 +323,7 @@ static void tg__load_bmp_from_memory(u64 file_size, const char* p_file_memory, T
 	*p_width = bitmap_v5_header.width;
 	*p_height = bitmap_v5_header.height;
 	tg__convert_masks_to_format(bitmap_v5_header.r_mask, bitmap_v5_header.g_mask, bitmap_v5_header.b_mask, bitmap_v5_header.a_mask, p_format);
-	const u64 size = (u64)bitmap_v5_header.width * (u64)bitmap_v5_header.height * (u64)sizeof(**pp_data);
+	const tg_size size = (tg_size)bitmap_v5_header.width * (tg_size)bitmap_v5_header.height * sizeof(**pp_data);
 	*pp_data = TG_MEMORY_ALLOC(size);
 	tg_memcpy(size, &p_file_memory[bitmap_file_header.offset_bits], *pp_data);
 }

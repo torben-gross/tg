@@ -2,12 +2,8 @@
 
 #include "graphics/font/tg_open_type_types.h"
 #include "graphics/font/tg_open_type_layout_common_table_formats.h"
-#include "graphics/font/tg_open_type_font_variations_common_table_formats.h"
 #include "graphics/font/tg_open_type_cmap.h"
-#include "graphics/font/tg_open_type_dsig.h"
-#include "graphics/font/tg_open_type_gdef.h"
 #include "graphics/font/tg_open_type_glyf.h"
-#include "graphics/font/tg_open_type_gpos.h"
 #include "graphics/font/tg_open_type_head.h"
 #include "graphics/font/tg_open_type_loca.h"
 #include "graphics/font/tg_open_type_maxp.h"
@@ -231,7 +227,7 @@ static void tg__open_type__fill_mapping(const tg_open_type__cmap* p_cmap, TG_OUT
 					{
 						const u16 off = id_range_offset / 2 + (c - start_code);
 						TG_ASSERT(((u32)id_range_offset / 2 + ((u32)c - (u32)start_code)) % 65536 == off);
-						const u16 glyph_id = TG_OPEN_TYPE_U16(p_id_range_offset[(u64)i + (u64)off]);
+						const u16 glyph_id = TG_OPEN_TYPE_U16(p_id_range_offset[(tg_size)i + (tg_size)off]);
 #ifdef TG_DEBUG
 						// TODO: keep this for testing for now. this indexing is described here:
 						// https://developer.apple.com/fonts/TrueType-Reference-Manual/RM06/Chap6cmap.html
@@ -272,12 +268,12 @@ static void tg__open_type__glyph_size(
 	const u8*                    p_glyf,
 	TG_OUT i16*                  p_number_of_contours,
 	TG_OUT u32*                  p_number_of_points,
-	TG_OUT u64*                  p_glyph_size
+	TG_OUT tg_size*              p_glyph_size
 )
 {
 	i16 alt_number_of_contours = 0;
 	u32 alt_number_of_points = 0;
-	u64 alt_glyph_size = 0;
+	tg_size alt_glyph_size = 0;
 
 	if (!p_number_of_contours)
 	{
@@ -346,16 +342,16 @@ static void tg__open_type__allocate(
 	const u8*                    p_kern,
 	const tg_open_type__loca*    p_loca,
 	const u8*                    p_glyf,
-	TG_OUT u64*                  p_size,
+	TG_OUT tg_size*              p_size,
 	TG_OUT void**                pp_memory
 )
 {
 	TG_ASSERT(pp_memory);
 
-	u64 size = (u64)p_font->glyph_count * sizeof(*p_font->p_glyphs);
+	tg_size size = (tg_size)p_font->glyph_count * sizeof(*p_font->p_glyphs);
 	for (u16 glyph_idx = 0; glyph_idx < p_font->glyph_count; glyph_idx++)
 	{
-		u64 s = 0;
+		tg_size s = 0;
 		tg__open_type__glyph_size(glyph_idx, index_to_loc_format, p_loca, (u8*)p_glyf, TG_NULL, TG_NULL, &s);
 		size += s;
 	}
@@ -642,7 +638,7 @@ static void tg__open_type__fill_glyph_outline(
 					p_src_it += 8;
 				}
 
-				u64 temp_glyph_size = 0;
+				tg_size temp_glyph_size = 0;
 				tg__open_type__glyph_size(glyph_index, index_to_loc_format, p_loca, p_glyf, TG_NULL, TG_NULL, &temp_glyph_size);
 
 				tg_open_type_glyph temp_glyph = { 0 };
@@ -841,7 +837,7 @@ static void tg__open_type__load(char* p_buffer, TG_OUT tg_open_type_font* p_font
 
 	const i16 index_to_loc_format = TG_OPEN_TYPE_I16(p_head->index_to_loc_format);
 
-	u64 size = 0;
+	tg_size size = 0;
 	void* p_memory = TG_NULL;
 	tg__open_type__allocate(p_font, index_to_loc_format, p_kern, p_loca, (u8*)p_glyf, &size, &p_memory);
 #ifdef TG_DEBUG
@@ -854,7 +850,7 @@ static void tg__open_type__load(char* p_buffer, TG_OUT tg_open_type_font* p_font
 	tg__open_type__fill_kerning(p_kern, (u8**)&p_memory, p_font);
 
 #ifdef TG_DEBUG
-	const u64 used_size = (u8*)p_memory - p_memory_start;
+	const tg_size used_size = (u8*)p_memory - p_memory_start;
 	TG_ASSERT(used_size == size);
 #endif
 }

@@ -16,7 +16,7 @@ tg_list tg_list_create_impl(u32 element_size, u32 capacity)
 	list.element_size = element_size;
 	list.capacity = capacity;
 	list.count = 0;
-	list.p_elements = TG_MEMORY_ALLOC((u64)capacity * (u64)element_size);
+	list.p_elements = TG_MEMORY_ALLOC((tg_size)capacity * (tg_size)element_size);
 
 	return list;
 }
@@ -147,5 +147,5 @@ void tg_list_reserve(tg_list* p_list, u32 capacity)
 	TG_ASSERT(p_list && capacity > p_list->capacity);
 
 	p_list->capacity = capacity;
-	p_list->p_elements = TG_MEMORY_REALLOC((u64)capacity * (u64)p_list->element_size, p_list->p_elements);
+	p_list->p_elements = TG_MEMORY_REALLOC((tg_size)capacity * (tg_size)p_list->element_size, p_list->p_elements);
 }

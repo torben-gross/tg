@@ -993,7 +993,7 @@ static void tg__build_octree(volatile tg_terrain* p_terrain, volatile tg_terrain
 
 	if (!p_octree->p_voxel_map)
 	{
-		const u64 voxel_map_size = TG_TERRAIN_VOXEL_MAP_VOXELS * sizeof(*p_octree->p_voxel_map);
+		const tg_size voxel_map_size = TG_TERRAIN_VOXEL_MAP_VOXELS * sizeof(*p_octree->p_voxel_map);
 		p_octree->p_voxel_map = TG_MEMORY_ALLOC(voxel_map_size);
 
 		char p_filename_buffer[TG_MAX_PATH] = { 0 };
@@ -1213,7 +1213,7 @@ tg_terrain* tg_terrain_create(tg_camera* p_camera)
 	p_terrain->render_read_write_lock = TG_RWL_CREATE();
 	p_terrain->h_event = TG_EVENT_CREATE();
 
-	const u64 vertices_size = 15 * TG_TERRAIN_NODE_CELLS * sizeof(v3);
+	const tg_size vertices_size = 15 * TG_TERRAIN_NODE_CELLS * sizeof(v3);
 	p_terrain->p_position_buffer = TG_MEMORY_ALLOC(2 * vertices_size);
 	p_terrain->p_normal_buffer = (v3*)&((u8*)p_terrain->p_position_buffer)[vertices_size];
 	

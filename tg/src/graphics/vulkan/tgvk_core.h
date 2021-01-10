@@ -272,6 +272,28 @@ typedef struct tg_depth_image
     tgvk_image           image;
 } tg_depth_image;
 
+typedef struct tg_font
+{
+    tg_structure_type    type;
+	u16                  glyph_count;
+	u8                   p_char_to_glyph[256];
+	tgvk_image           texture_atlas;
+    struct tg_font_glyph
+    {
+        v2               uv_min;
+        v2               uv_max;
+        f32              advance_width;
+        f32              left_side_bearing;
+        f32              bottom_side_bearing;
+        u16              kerning_count;
+        struct tg_font_glyph_kerning
+        {
+            u8           right_glyph_idx;
+            f32          kerning;
+        }* p_kernings;
+    }* p_glyphs;
+} tg_font;
+
 typedef struct tg_fragment_shader
 {
     tg_structure_type    type;
@@ -560,6 +582,7 @@ void                    tgvk_cmd_transition_image_layout(tgvk_command_buffer* p_
 void                    tgvk_cmd_transition_image_3d_layout(tgvk_command_buffer* p_command_buffer, tgvk_image_3d* p_image_3d, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits);
 void                    tgvk_cmd_transition_layered_image_layout(tgvk_command_buffer* p_command_buffer, tgvk_layered_image* p_image, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits);
 
+tgvk_command_buffer*    tgvk_command_buffer_get_and_begin_global(tgvk_command_pool_type type);
 tgvk_command_buffer*    tgvk_command_buffer_get_global(tgvk_command_pool_type type);
 tgvk_command_buffer     tgvk_command_buffer_create(tgvk_command_pool_type type, VkCommandBufferLevel level);
 void                    tgvk_command_buffers_create(tgvk_command_pool_type type, VkCommandBufferLevel level, u32 count, tgvk_command_buffer* p_command_buffers);

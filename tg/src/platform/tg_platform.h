@@ -208,7 +208,7 @@ typedef struct tg_file_properties
     tg_system_time    creation_time;
     tg_system_time    last_access_time;
     tg_system_time    last_write_time;
-    u64               size;
+    tg_size           size;
     char              p_filename[TG_MAX_PATH];
     char              p_directory[TG_MAX_PATH];
     char*             p_short_filename;
@@ -223,10 +223,10 @@ void                  tgp_debug_log(const char* p_format, ...);
 
 void                  tgp_handle_events(void);
 
-void*                 tgp_malloc(u64 size);
-void*                 tgp_malloc_nullify(u64 size);
-void*                 tgp_realloc(u64 size, void* p_memory);
-void*                 tgp_realloc_nullify(u64 size, void* p_memory);
+void*                 tgp_malloc(tg_size size);
+void*                 tgp_malloc_nullify(tg_size size);
+void*                 tgp_realloc(tg_size size, void* p_memory);
+void*                 tgp_realloc_nullify(tg_size size, void* p_memory);
 void                  tgp_free(void* p_memory);
 
 void                  tgp_get_mouse_position(u32* p_x, u32* p_y);
@@ -239,12 +239,12 @@ u32                   tgp_get_window_dpi(void);
 void                  tgp_get_window_size(u32* p_width, u32* p_height);
 
 b32                   tgp_file_exists(const char* p_filename);
-void                  tgp_file_load(const char* p_filename, u64 buffer_size, char* p_buffer);
+void                  tgp_file_load(const char* p_filename, tg_size buffer_size, char* p_buffer);
 b32                   tgp_file_create(const char* p_filename, u32 size, const char* p_data, b32 replace_existing);
 b32                   tgp_file_get_properties(const char* p_filename, tg_file_properties* p_properties);
 tg_file_iterator_h    tgp_directory_begin_iteration(const char* p_directory, tg_file_properties* p_properties);
 b32                   tgp_directory_continue_iteration(tg_file_iterator_h h_file_iterator, const char* p_directory, tg_file_properties* p_properties);
-u64                   tgp_directory_get_size(const char* p_directory);
+tg_size               tgp_directory_get_size(const char* p_directory);
 i8                    tgp_system_time_compare(tg_system_time* p_time0, tg_system_time* p_time1);
 
 tg_timer_h            tgp_timer_create(void);

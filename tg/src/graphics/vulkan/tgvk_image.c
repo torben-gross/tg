@@ -111,7 +111,7 @@ void tg_storage_image_3d_set_data(tg_storage_image_3d_h h_storage_image_3d, void
 {
 	TG_ASSERT(h_storage_image_3d && p_data);
 
-	const u64 size = (u64)h_storage_image_3d->image_3d.width * (u64)h_storage_image_3d->image_3d.height * (u64)h_storage_image_3d->image_3d.depth * (u64)tg_color_image_format_size((tg_color_image_format)h_storage_image_3d->image_3d.format);
+	const tg_size size = (tg_size)h_storage_image_3d->image_3d.width * (tg_size)h_storage_image_3d->image_3d.height * (tg_size)h_storage_image_3d->image_3d.depth * (tg_size)tg_color_image_format_size((tg_color_image_format)h_storage_image_3d->image_3d.format);
 	tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take(size);
 	tg_memcpy(size, p_data, p_staging_buffer->memory.p_mapped_device_memory);
 	tgvk_buffer_flush_host_to_device(p_staging_buffer);

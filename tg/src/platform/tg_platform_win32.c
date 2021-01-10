@@ -62,7 +62,7 @@ void tg__extract_directory(char* p_buffer, const char* p_filename)
         p_it++;
     }
 
-    tg_memcpy((u64)character_count, p_filename, p_buffer);
+    tg_memcpy((tg_size)character_count, p_filename, p_buffer);
     p_buffer[character_count] = '\0';
 }
 
@@ -139,38 +139,38 @@ void tgp_handle_events(void)
 
 
 
-void* tgp_malloc(u64 size)
+void* tgp_malloc(tg_size size)
 {
 #ifdef TG_DEBUG
-    void* p_memory = HeapAlloc(h_process_heap, HEAP_ZERO_MEMORY, size);
+    void* p_memory = HeapAlloc(h_process_heap, HEAP_ZERO_MEMORY, (SIZE_T)size);
 #else
-    void* p_memory = HeapAlloc(h_process_heap, 0, size);
+    void* p_memory = HeapAlloc(h_process_heap, 0, (SIZE_T)size);
 #endif
     TG_ASSERT(p_memory);
     return p_memory;
 }
 
-void* tgp_malloc_nullify(u64 size)
+void* tgp_malloc_nullify(tg_size size)
 {
-    void* p_memory = HeapAlloc(h_process_heap, HEAP_ZERO_MEMORY, size);
+    void* p_memory = HeapAlloc(h_process_heap, HEAP_ZERO_MEMORY, (SIZE_T)size);
     TG_ASSERT(p_memory);
     return p_memory;
 }
 
-void* tgp_realloc(u64 size, void* p_memory)
+void* tgp_realloc(tg_size size, void* p_memory)
 {
 #ifdef TG_DEBUG
-    void* p_reallocated_memory = HeapReAlloc(h_process_heap, HEAP_ZERO_MEMORY, p_memory, size);
+    void* p_reallocated_memory = HeapReAlloc(h_process_heap, HEAP_ZERO_MEMORY, p_memory, (SIZE_T)size);
 #else
-    void* p_reallocated_memory = HeapReAlloc(h_process_heap, 0, p_memory, size);
+    void* p_reallocated_memory = HeapReAlloc(h_process_heap, 0, p_memory, (SIZE_T)size);
 #endif
     TG_ASSERT(p_reallocated_memory);
     return p_reallocated_memory;
 }
 
-void* tgp_realloc_nullify(u64 size, void* p_memory)
+void* tgp_realloc_nullify(tg_size size, void* p_memory)
 {
-    void* p_reallocated_memory = HeapReAlloc(h_process_heap, HEAP_ZERO_MEMORY, p_memory, size);
+    void* p_reallocated_memory = HeapReAlloc(h_process_heap, HEAP_ZERO_MEMORY, p_memory, (SIZE_T)size);
     TG_ASSERT(p_reallocated_memory);
     return p_reallocated_memory;
 }
@@ -273,7 +273,7 @@ b32 tgp_file_exists(const char* p_filename)
     return result;
 }
 
-void tgp_file_load(const char* p_filename, u64 buffer_size, char* p_buffer)
+void tgp_file_load(const char* p_filename, tg_size buffer_size, char* p_buffer)
 {
     TG_ASSERT(p_filename && buffer_size && p_buffer);
 
@@ -417,7 +417,7 @@ b32 tgp_directory_continue_iteration(tg_file_iterator_h h_file_iterator, const c
     return TG_TRUE;
 }
 
-u64 tgp_directory_get_size(const char* p_directory)
+tg_size tgp_directory_get_size(const char* p_directory)
 {
     tg_file_properties file_properties = { 0 };
     tg_file_iterator_h h_file_iterator = tgp_directory_begin_iteration(p_directory, &file_properties);
@@ -427,7 +427,7 @@ u64 tgp_directory_get_size(const char* p_directory)
         return 0;
     }
 
-    u64 size = 0;
+    tg_size size = 0;
     do
     {
         if (file_properties.is_directory)

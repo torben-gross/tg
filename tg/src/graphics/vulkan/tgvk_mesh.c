@@ -62,7 +62,7 @@ void tg__copy(VkDeviceSize offset, VkDeviceSize size, tgvk_buffer* p_src, void* 
     tgvk_buffer_destroy(&buffer);
 }
 
-void tg__set_buffer_data(tgvk_buffer* p_buffer, u64 size, const void* p_data, VkBufferUsageFlagBits buffer_type_flag)
+void tg__set_buffer_data(tgvk_buffer* p_buffer, tg_size size, const void* p_data, VkBufferUsageFlagBits buffer_type_flag)
 {
     if (size && p_data)
     {
@@ -88,7 +88,7 @@ void tg__set_buffer_data(tgvk_buffer* p_buffer, u64 size, const void* p_data, Vk
     }
 }
 
-void tg__set_buffer_data2(tgvk_buffer* p_buffer, u64 size, tg_storage_buffer_h h_storage_buffer, VkBufferUsageFlagBits buffer_type_flag)
+void tg__set_buffer_data2(tgvk_buffer* p_buffer, tg_size size, tg_storage_buffer_h h_storage_buffer, VkBufferUsageFlagBits buffer_type_flag)
 {
     if (size && h_storage_buffer)
     {
@@ -314,9 +314,9 @@ tg_mesh_h tg_mesh_create2(const char* p_filename, v3 scale) // TODO: scale is te
         // TODO: u16 is not enough in some cases
         //TG_ASSERT(3 * total_triangle_count < TG_U16_MAX);
 
-        v3* p_positions = TG_MEMORY_STACK_ALLOC(3 * (u64)total_triangle_count * sizeof(v3));
-        v3* p_normals = TG_MEMORY_STACK_ALLOC(3 * (u64)total_triangle_count * sizeof(v3));
-        v2* p_uvs = TG_MEMORY_STACK_ALLOC(3 * (u64)total_triangle_count * sizeof(v2));
+        v3* p_positions = TG_MEMORY_STACK_ALLOC(3LL * (tg_size)total_triangle_count * sizeof(v3));
+        v3* p_normals = TG_MEMORY_STACK_ALLOC(3LL * (tg_size)total_triangle_count * sizeof(v3));
+        v2* p_uvs = TG_MEMORY_STACK_ALLOC(3LL * (tg_size)total_triangle_count * sizeof(v2));
 
         for (u32 i = 0; i < total_triangle_count; i++)
         {
@@ -344,9 +344,9 @@ tg_mesh_h tg_mesh_create2(const char* p_filename, v3 scale) // TODO: scale is te
         // TODO: i feel like the normals are wrong, if included here! e.g. sponza.obj
         //tg_mesh_set_indices(&mesh, ..., ...);
 
-        TG_MEMORY_STACK_FREE(3 * (u64)total_triangle_count * sizeof(v2));
-        TG_MEMORY_STACK_FREE(3 * (u64)total_triangle_count * sizeof(v3));
-        TG_MEMORY_STACK_FREE(3 * (u64)total_triangle_count * sizeof(v3));
+        TG_MEMORY_STACK_FREE(3LL * (tg_size)total_triangle_count * sizeof(v2));
+        TG_MEMORY_STACK_FREE(3LL * (tg_size)total_triangle_count * sizeof(v3));
+        TG_MEMORY_STACK_FREE(3LL * (tg_size)total_triangle_count * sizeof(v3));
 
         TG_MEMORY_STACK_FREE(total_triangle_count * sizeof(v3i));
         TG_MEMORY_STACK_FREE(total_triangle_count * sizeof(v3i));
@@ -373,7 +373,7 @@ tg_mesh_h tg_mesh_create_sphere(f32 radius, u32 sector_count, u32 stack_count, b
     v3* p_positions = TG_MEMORY_STACK_ALLOC(vertex_count * sizeof(*p_positions));
     v3* p_normals = normals ? TG_MEMORY_STACK_ALLOC(vertex_count * sizeof(*p_normals)) : TG_NULL;
     v2* p_uvs = uvs ? TG_MEMORY_STACK_ALLOC(vertex_count * sizeof(*p_uvs)) : TG_NULL;
-    u16* p_indices = TG_MEMORY_STACK_ALLOC((u64)index_count * sizeof(*p_indices));
+    u16* p_indices = TG_MEMORY_STACK_ALLOC((tg_size)index_count * sizeof(*p_indices));
 
     const f32 sector_step = 2.0f * TG_PI / sector_count;
     const f32 stack_step = TG_PI / stack_count;
@@ -476,7 +476,7 @@ tg_mesh_h tg_mesh_create_sphere(f32 radius, u32 sector_count, u32 stack_count, b
         tg_mesh_regenerate_tangents_bitangents(h_mesh);
     }
 
-    TG_MEMORY_STACK_FREE((u64)index_count * sizeof(*p_indices));
+    TG_MEMORY_STACK_FREE((tg_size)index_count * sizeof(*p_indices));
     if (uvs)
     {
         TG_MEMORY_STACK_FREE(vertex_count * sizeof(*p_uvs));
@@ -603,9 +603,9 @@ tg_mesh_h tg_mesh_create_sphere_flat(f32 radius, u32 sector_count, u32 stack_cou
 
     const u32 max_vertex_count = 4 * unique_vertex_count;
     const u32 max_index_count = 6 * unique_vertex_count;
-    v3* p_positions = TG_MEMORY_STACK_ALLOC((u64)max_vertex_count * sizeof(*p_positions));
-    v2* p_uvs = uvs ? TG_MEMORY_STACK_ALLOC((u64)max_vertex_count * sizeof(*p_uvs)) : TG_NULL;
-    u16* p_indices = TG_MEMORY_STACK_ALLOC((u64)max_index_count * sizeof(*p_indices));
+    v3* p_positions = TG_MEMORY_STACK_ALLOC((tg_size)max_vertex_count * sizeof(*p_positions));
+    v2* p_uvs = uvs ? TG_MEMORY_STACK_ALLOC((tg_size)max_vertex_count * sizeof(*p_uvs)) : TG_NULL;
+    u16* p_indices = TG_MEMORY_STACK_ALLOC((tg_size)max_index_count * sizeof(*p_indices));
 
     u32 vertex_count = 0;
     u32 index_count = 0;
@@ -721,12 +721,12 @@ tg_mesh_h tg_mesh_create_sphere_flat(f32 radius, u32 sector_count, u32 stack_cou
         tg_mesh_regenerate_tangents_bitangents(h_mesh);
     }
 
-    TG_MEMORY_STACK_FREE((u64)max_index_count * sizeof(*p_indices));
+    TG_MEMORY_STACK_FREE((tg_size)max_index_count * sizeof(*p_indices));
     if (uvs)
     {
-        TG_MEMORY_STACK_FREE((u64)max_vertex_count * sizeof(*p_uvs));
+        TG_MEMORY_STACK_FREE((tg_size)max_vertex_count * sizeof(*p_uvs));
     }
-    TG_MEMORY_STACK_FREE((u64)max_vertex_count * sizeof(*p_positions));
+    TG_MEMORY_STACK_FREE((tg_size)max_vertex_count * sizeof(*p_positions));
 
     if (uvs)
     {

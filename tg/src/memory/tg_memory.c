@@ -12,14 +12,14 @@
 #define TG_MEMORY_STACK_SIZE              (1LL << 30LL)
 #define TG_MEMORY_STACK_SIZE_ASYNC        (1LL << 25LL)
 #define TG_MEMORY_STACK_MAGIC_NUMBER      163ui8
-#define TG_MEMORY_HASH(p_key)             ((u32)((u64)(p_key) >> 3LL) % TG_MEMORY_MAX_ALLOCATION_COUNT)
+#define TG_MEMORY_HASH(p_key)             ((u32)((tg_size)(p_key) >> 3LL) % TG_MEMORY_MAX_ALLOCATION_COUNT)
 
 
 
 typedef struct tg_memory_stack
 {
-	u64    exhausted_size;
-	u8*    p_memory;
+	tg_size    exhausted_size;
+	u8*        p_memory;
 } tg_memory_stack;
 
 #ifdef TG_DEBUG
@@ -35,7 +35,7 @@ typedef struct tg_memory_hashmap
 	u32                               count;
 	void*                             pp_keys[TG_MEMORY_MAX_ALLOCATION_COUNT];
 	tg_memory_allocator_allocation    p_values[TG_MEMORY_MAX_ALLOCATION_COUNT];
-	u64                               count_since_startup;
+	u32                               count_since_startup;
 	u32                               max_count;
 	u32                               max_step_count;
 } tg_memory_hashmap;
@@ -179,25 +179,25 @@ void tg_memory_shutdown(void)
 
 
 
-void tg_memcpy(u64 size, const void* p_source, void* p_destination)
+void tg_memcpy(tg_size size, const void* p_source, void* p_destination)
 {
-	for (u64 i = 0; i < size; i++)
+	for (tg_size i = 0; i < size; i++)
 	{
 		((u8*)p_destination)[i] = ((u8*)p_source)[i];
 	}
 }
 
-void tg_memory_nullify(u64 size, void* p_memory)
+void tg_memory_nullify(tg_size size, void* p_memory)
 {
-	for (u64 i = 0; i < size; i++)
+	for (tg_size i = 0; i < size; i++)
 	{
 		((u8*)p_memory)[i] = 0;
 	}
 }
 
-void tg_memory_set_all_bits(u64 size, void* p_memory)
+void tg_memory_set_all_bits(tg_size size, void* p_memory)
 {
-	for (u64 i = 0; i < size; i++)
+	for (tg_size i = 0; i < size; i++)
 	{
 		((u8*)p_memory)[i] = 0xff;
 	}
@@ -205,7 +205,7 @@ void tg_memory_set_all_bits(u64 size, void* p_memory)
 
 #ifdef TG_DEBUG
 
-void* tg_memory_alloc_impl(u64 size, const char* p_filename, u32 line, b32 nullify)
+void* tg_memory_alloc_impl(tg_size size, const char* p_filename, u32 line, b32 nullify)
 {
 	TG_ASSERT(size);
 	void* p_memory = TG_NULL;
@@ -227,7 +227,7 @@ void* tg_memory_alloc_impl(u64 size, const char* p_filename, u32 line, b32 nulli
 	return p_memory;
 }
 
-void* tg_memory_realloc_impl(u64 size, void* p_memory, const char* p_filename, u32 line, b32 nullify)
+void* tg_memory_realloc_impl(tg_size size, void* p_memory, const char* p_filename, u32 line, b32 nullify)
 {
 	TG_ASSERT(size);
 	
@@ -278,7 +278,7 @@ u32 tg_memory_active_allocation_count(void)
 
 
 
-void* tg_memory_stack_alloc(u64 size)
+void* tg_memory_stack_alloc(tg_size size)
 {
 #ifdef TG_DEBUG
 	TG_ASSERT(tgp_get_thread_id() == 0);
@@ -297,7 +297,7 @@ void* tg_memory_stack_alloc(u64 size)
 #endif
 }
 
-void tg_memory_stack_free(u64 size)
+void tg_memory_stack_free(tg_size size)
 {
 #ifdef TG_DEBUG
 	TG_ASSERT(tgp_get_thread_id() == 0);
@@ -311,7 +311,7 @@ void tg_memory_stack_free(u64 size)
 #endif
 }
 
-void* tg_memory_stack_alloc_async(u64 size)
+void* tg_memory_stack_alloc_async(tg_size size)
 {
 	const u32 i = tgp_get_thread_id();
 
@@ -331,7 +331,7 @@ void* tg_memory_stack_alloc_async(u64 size)
 #endif
 }
 
-void tg_memory_stack_free_async(u64 size)
+void tg_memory_stack_free_async(tg_size size)
 {
 	const u32 i = tgp_get_thread_id();
 

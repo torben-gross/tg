@@ -11,7 +11,15 @@ typedef f32 tg_fixed;
 typedef i16 tg_fword;
 typedef u16 tg_ufword;
 typedef i16 tg_f2dot14;
+#ifdef TG_CPU_x64
 typedef i64 tg_longdatetime;
+#else
+typedef struct tg_longdatetime
+{
+	i32    v0;
+	i32    v1;
+} tg_longdatetime;
+#endif
 typedef u16 tg_offset16;
 typedef u32 tg_offset32;
 

@@ -521,6 +521,8 @@ u32 tgm_u32_pow(u32 base, u32 exponent)
 
 
 
+#ifdef TG_CPU_x64
+
 f64 tgm_u64_log10(u64 v)
 {
 	const f64 result = log10((f64)v);
@@ -532,6 +534,8 @@ u64 tgm_u64_pow(u64 base, u64 exponent)
 	const u64 result = (u64)pow((f64)base, (f64)exponent);
 	return result;
 }
+
+#endif
 
 
 
@@ -721,6 +725,8 @@ u32 tgm_u32_min(u32 v0, u32 v1)
 	return result;
 }
 
+#ifdef TG_CPU_x64
+
 u32 tgm_u64_digits(u64 v)
 {
 	const u32 result = v == 0 ? 1 : (u32)tgm_f32_floor((f32)tgm_u64_log10(v)) + 1;
@@ -738,6 +744,8 @@ u64 tgm_u64_min(u64 v0, u64 v1)
 	const u64 result = v0 < v1 ? v0 : v1;
 	return result;
 }
+
+#endif
 
 
 

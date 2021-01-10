@@ -94,10 +94,17 @@ typedef double                             f64;
 typedef signed char                        i8;
 typedef short                              i16;
 typedef int                                i32;
+#ifdef TG_CPU_x64
 typedef long long                          i64;
+#endif
 typedef unsigned char                      u8;
 typedef unsigned short                     u16;
 typedef unsigned int                       u32;
+#ifdef TG_CPU_x64
 typedef unsigned long long                 u64;
+typedef unsigned long long                 tg_size;
+#else
+typedef unsigned long                      tg_size;
+#endif
 
 #endif

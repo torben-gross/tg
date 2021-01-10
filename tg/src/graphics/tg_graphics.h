@@ -12,6 +12,7 @@
 #define TG_MAX_COMPUTE_SHADERS            16
 #define TG_MAX_CUBE_MAPS                  16
 #define TG_MAX_DEPTH_IMAGES               8
+#define TG_MAX_FONTS                      1
 #define TG_MAX_FRAGMENT_SHADERS           32
 #define TG_MAX_MATERIALS                  512
 #define TG_MAX_MESHES                     65536
@@ -22,6 +23,7 @@
 #define TG_MAX_UNIFORM_BUFFERS            64
 #define TG_MAX_VERTEX_SHADERS             32
 
+#define TG_MAX_FONT_SIZE                  64
 #define TG_MAX_SHADER_ATTACHMENTS         8
 #define TG_MAX_SHADER_GLOBAL_RESOURCES    16
 #define TG_MAX_SHADER_INPUTS              16
@@ -50,6 +52,7 @@ TG_DECLARE_HANDLE(tg_color_image);
 TG_DECLARE_HANDLE(tg_compute_shader);
 TG_DECLARE_HANDLE(tg_cube_map);
 TG_DECLARE_HANDLE(tg_depth_image);
+TG_DECLARE_HANDLE(tg_font);
 TG_DECLARE_HANDLE(tg_fragment_shader);
 TG_DECLARE_HANDLE(tg_material);
 TG_DECLARE_HANDLE(tg_mesh);
@@ -127,6 +130,7 @@ typedef enum tg_structure_type
 	TG_STRUCTURE_TYPE_COMPUTE_SHADER,
     TG_STRUCTURE_TYPE_CUBE_MAP,
 	TG_STRUCTURE_TYPE_DEPTH_IMAGE,
+	TG_STRUCTURE_TYPE_FONT,
 	TG_STRUCTURE_TYPE_FRAGMENT_SHADER,
 	TG_STRUCTURE_TYPE_MATERIAL,
 	TG_STRUCTURE_TYPE_MESH,
@@ -206,8 +210,6 @@ void                     tg_graphics_wait_idle(void);
 
 
 
-void                     tg_atmosphere_precompute(void);
-
 tg_color_image_h         tg_color_image_create(u32 width, u32 height, tg_color_image_format format, const tg_sampler_create_info* p_sampler_create_info);
 tg_color_image_h         tg_color_image_create2(const char* p_filename, const tg_sampler_create_info* p_sampler_create_info);
 void                     tg_color_image_destroy(tg_color_image_h h_color_image);
@@ -230,6 +232,9 @@ void                     tg_cube_map_set_data(tg_cube_map_h h_cube_map, void* p_
 
 tg_depth_image_h         tg_depth_image_create(u32 width, u32 height, tg_depth_image_format format, const tg_sampler_create_info* p_sampler_create_info);
 void                     tg_depth_image_destroy(tg_depth_image_h h_depth_image);
+
+tg_font_h                tg_font_create(const char* p_filename);
+void                     tg_font_destroy(tg_font_h h_font);
 
 tg_fragment_shader_h     tg_fragment_shader_create(const char* p_filename);
 void                     tg_fragment_shader_destroy(tg_fragment_shader_h h_fragment_shader);
@@ -297,13 +302,13 @@ void                     tg_renderer_draw_cube_DEBUG(tg_renderer_h h_renderer, v
 #define                  tg_renderer_draw_cube_DEBUG(h_renderer, position, scale, color)
 #endif
 
-tg_storage_buffer_h      tg_storage_buffer_create(u64 size, b32 visible);
-u64                      tg_storage_buffer_size(tg_storage_buffer_h h_storage_buffer);
+tg_storage_buffer_h      tg_storage_buffer_create(tg_size size, b32 visible);
+tg_size                  tg_storage_buffer_size(tg_storage_buffer_h h_storage_buffer);
 void*                    tg_storage_buffer_data(tg_storage_buffer_h h_storage_buffer);
 void                     tg_storage_buffer_destroy(tg_storage_buffer_h h_storage_buffer);
 
-tg_uniform_buffer_h      tg_uniform_buffer_create(u64 size);
-u64                      tg_uniform_buffer_size(tg_uniform_buffer_h h_uniform_buffer);
+tg_uniform_buffer_h      tg_uniform_buffer_create(tg_size size);
+tg_size                  tg_uniform_buffer_size(tg_uniform_buffer_h h_uniform_buffer);
 void*                    tg_uniform_buffer_data(tg_uniform_buffer_h h_uniform_buffer);
 void                     tg_uniform_buffer_destroy(tg_uniform_buffer_h h_uniform_buffer);
 

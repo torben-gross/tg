@@ -267,10 +267,10 @@ static void tg__init_shading_pass(tg_renderer_h h_renderer)
     const b32 result = tgp_file_get_properties("shaders/renderer/shading.inc", &file_properties);
     TG_ASSERT(result);
 
-    const u32 api_shader_size = h_renderer->model.api_shader.total_count;
-    const u32 fragment_shader_buffer_size = (u32)api_shader_size + (u32)file_properties.size + 1;
-    char* p_fragment_shader_buffer = TG_MEMORY_STACK_ALLOC((u64)fragment_shader_buffer_size);
-    const u32 fragment_shader_buffer_offset = tg_strncpy(fragment_shader_buffer_size, p_fragment_shader_buffer, api_shader_size, h_renderer->model.api_shader.p_source);
+    const tg_size api_shader_size = (tg_size)h_renderer->model.api_shader.total_count;
+    const tg_size fragment_shader_buffer_size = api_shader_size + file_properties.size + 1LL;
+    char* p_fragment_shader_buffer = TG_MEMORY_STACK_ALLOC(fragment_shader_buffer_size);
+    const tg_size fragment_shader_buffer_offset = tg_strncpy(fragment_shader_buffer_size, p_fragment_shader_buffer, api_shader_size, h_renderer->model.api_shader.p_source);
 
     tgp_file_load("shaders/renderer/shading.inc", fragment_shader_buffer_size - fragment_shader_buffer_offset, &p_fragment_shader_buffer[fragment_shader_buffer_offset]);
     p_fragment_shader_buffer[fragment_shader_buffer_size - 1] = '\0';
@@ -287,7 +287,7 @@ static void tg__init_shading_pass(tg_renderer_h h_renderer)
     graphics_pipeline_create_info.polygon_mode = VK_POLYGON_MODE_FILL;
 
     h_renderer->shading_pass.graphics_pipeline = tgvk_pipeline_create_graphics(&graphics_pipeline_create_info);
-    TG_MEMORY_STACK_FREE((u64)fragment_shader_buffer_size);
+    TG_MEMORY_STACK_FREE(fragment_shader_buffer_size);
 
     h_renderer->shading_pass.descriptor_set = tgvk_descriptor_set_create(&h_renderer->shading_pass.graphics_pipeline);
     tgvk_atmosphere_model_update_descriptor_set(&h_renderer->model, &h_renderer->shading_pass.descriptor_set);
@@ -857,7 +857,8 @@ void tg_renderer_init_shared_resources(void)
     p_uvs[2] = (v2){ 1.0f,  0.0f };
     p_uvs[3] = (v2){ 0.0f,  0.0f };
 
-    tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take(tgm_u64_max(sizeof(p_indices), tgm_u64_max(sizeof(p_positions), sizeof(p_uvs))));
+    const tg_size staging_buffer_size = TG_MAX3(sizeof(p_indices), sizeof(p_positions), sizeof(p_uvs));
+    tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take(staging_buffer_size);
 
     tg_memcpy(sizeof(p_indices), p_indices, p_staging_buffer->memory.p_mapped_device_memory);
     tgvk_buffer_flush_host_to_device(p_staging_buffer);
