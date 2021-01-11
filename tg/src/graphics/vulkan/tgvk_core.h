@@ -234,8 +234,9 @@ typedef struct tgvk_shared_render_resources
     VkRenderPass     ssao_render_pass;
     VkRenderPass     ssao_blur_render_pass;
     VkRenderPass     shading_render_pass;
-    VkRenderPass     tone_mapping_render_pass;
     VkRenderPass     forward_render_pass;
+    VkRenderPass     tone_mapping_render_pass;
+    VkRenderPass     ui_render_pass;
     VkRenderPass     present_render_pass;
 } tgvk_shared_render_resources;
 
@@ -276,11 +277,13 @@ typedef struct tg_depth_image
 typedef struct tg_font
 {
     tg_structure_type    type;
+    f32                  max_glyph_height;
 	u16                  glyph_count;
 	u8                   p_char_to_glyph[256];
 	tgvk_image           texture_atlas;
     struct tg_font_glyph
     {
+        v2               size;
         v2               uv_min;
         v2               uv_max;
         f32              advance_width;
@@ -420,8 +423,15 @@ typedef struct tg_renderer
     VkCommandBuffer              p_shadow_command_buffers[TG_CASCADED_SHADOW_MAPS][TG_MAX_RENDER_COMMANDS];
     tg_render_command_h          ph_forward_render_commands[TG_MAX_RENDER_COMMANDS];
 
-    tg_font_h                    h_font; // TODO: tg_font and have an internal creator function for the font
-    tg_list                      texts;
+    struct
+    {
+        tg_font_h                h_font; // TODO: tg_font and have an internal creator function for the font
+        u32                      capacity;
+        u32                      count;
+        u32                      total_letter_count;
+        u32*                     p_string_capacities;
+        char**                   pp_strings;
+    } text;
 
     tgvk_atmosphere_model        model;
 
@@ -493,6 +503,14 @@ typedef struct tg_renderer
         tgvk_descriptor_set      adapt_exposure_descriptor_set;
         tgvk_command_buffer      adapt_exposure_command_buffer;
     } tone_mapping_pass;
+
+    struct
+    {
+        tgvk_framebuffer         framebuffer;
+        tgvk_pipeline            pipeline;
+        tgvk_descriptor_set      descriptor_set;
+        tgvk_command_buffer      command_buffer;
+    } ui_pass;
 
     struct
     {

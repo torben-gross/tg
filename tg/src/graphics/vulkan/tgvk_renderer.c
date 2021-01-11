@@ -562,6 +562,34 @@ static void tg__init_tone_mapping_pass(tg_renderer_h h_renderer)
     TGVK_CALL(vkEndCommandBuffer(h_renderer->tone_mapping_pass.adapt_exposure_command_buffer.command_buffer));
 }
 
+static void tg__init_ui_pass(tg_renderer_h h_renderer)
+{
+    const u32 w = h_renderer->render_target.color_attachment.width;
+    const u32 h = h_renderer->render_target.color_attachment.height;
+
+    h_renderer->ui_pass.framebuffer = tgvk_framebuffer_create(shared_render_resources.ui_render_pass, 1, &h_renderer->render_target.color_attachment.image_view, w, h);
+
+    tg_blend_mode blend_mode = TG_BLEND_MODE_BLEND;
+    tgvk_graphics_pipeline_create_info pipeline_create_info = { 0 };
+    pipeline_create_info.p_vertex_shader = &tg_vertex_shader_create("shaders/ui/text.vert")->shader;
+    pipeline_create_info.p_fragment_shader = &tg_fragment_shader_create("shaders/ui/text.frag")->shader;
+    pipeline_create_info.cull_mode = VK_CULL_MODE_NONE;
+    pipeline_create_info.depth_test_enable = TG_FALSE;
+    pipeline_create_info.depth_write_enable = TG_FALSE;
+    pipeline_create_info.p_blend_modes = &blend_mode;
+    pipeline_create_info.render_pass = shared_render_resources.ui_render_pass;
+    pipeline_create_info.viewport_size.x = (f32)w;
+    pipeline_create_info.viewport_size.y = (f32)h;
+    pipeline_create_info.polygon_mode = VK_POLYGON_MODE_FILL;
+
+    h_renderer->ui_pass.pipeline = tgvk_pipeline_create_graphics(&pipeline_create_info);
+    h_renderer->ui_pass.descriptor_set = tgvk_descriptor_set_create(&h_renderer->ui_pass.pipeline);
+
+    tgvk_descriptor_set_update_image(h_renderer->ui_pass.descriptor_set.descriptor_set, &h_renderer->text.h_font->texture_atlas, 0);
+    
+    h_renderer->ui_pass.command_buffer = tgvk_command_buffer_create(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+}
+
 static void tg__init_blit_pass(tg_renderer_h h_renderer)
 {
     h_renderer->blit_pass.command_buffer = tgvk_command_buffer_create(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
@@ -1126,6 +1154,38 @@ void tg_renderer_init_shared_resources(void)
         shared_render_resources.tone_mapping_render_pass = tgvk_render_pass_create(&attachment_description, &subpass_description);
     }
 
+    // ui pass
+    {
+        VkAttachmentDescription attachment_description = { 0 };
+        attachment_description.flags = 0;
+        attachment_description.format = TGVK_HDR_FORMAT;
+        attachment_description.samples = VK_SAMPLE_COUNT_1_BIT;
+        attachment_description.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        attachment_description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        attachment_description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        attachment_description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        attachment_description.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        attachment_description.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+        VkAttachmentReference attachment_reference = { 0 };
+        attachment_reference.attachment = 0;
+        attachment_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+        VkSubpassDescription subpass_description = { 0 };
+        subpass_description.flags = 0;
+        subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+        subpass_description.inputAttachmentCount = 0;
+        subpass_description.pInputAttachments = TG_NULL;
+        subpass_description.colorAttachmentCount = 1;
+        subpass_description.pColorAttachments = &attachment_reference;
+        subpass_description.pResolveAttachments = TG_NULL;
+        subpass_description.pDepthStencilAttachment = TG_NULL;
+        subpass_description.preserveAttachmentCount = 0;
+        subpass_description.pPreserveAttachments = TG_NULL;
+
+        shared_render_resources.ui_render_pass = tgvk_render_pass_create(&attachment_description, &subpass_description);
+    }
+
     // present pass
     {
         VkAttachmentReference color_attachment_reference = { 0 };
@@ -1162,8 +1222,9 @@ void tg_renderer_init_shared_resources(void)
 void tg_renderer_shutdown_shared_resources(void)
 {
     tgvk_render_pass_destroy(shared_render_resources.present_render_pass);
-    tgvk_render_pass_destroy(shared_render_resources.forward_render_pass);
+    tgvk_render_pass_destroy(shared_render_resources.ui_render_pass);
     tgvk_render_pass_destroy(shared_render_resources.tone_mapping_render_pass);
+    tgvk_render_pass_destroy(shared_render_resources.forward_render_pass);
     tgvk_render_pass_destroy(shared_render_resources.shading_render_pass);
     tgvk_render_pass_destroy(shared_render_resources.ssao_blur_render_pass);
     tgvk_render_pass_destroy(shared_render_resources.ssao_render_pass);
@@ -1213,8 +1274,12 @@ tg_renderer_h tg_renderer_create(tg_camera* p_camera)
     h_renderer->shadow_command_buffer_count = 0;
     h_renderer->forward_render_command_count = 0;
 
-    h_renderer->h_font = tg_font_create("fonts/arial.ttf");
-    h_renderer->texts = tg_list_create(sizeof(tg_string), TG_LIST_DEFAULT_CAPACITY, tg_string_destroy);
+    h_renderer->text.h_font = tg_font_create("fonts/arial.ttf");
+    h_renderer->text.capacity = 32;
+    h_renderer->text.count = 0;
+    h_renderer->text.total_letter_count = 0;
+    h_renderer->text.p_string_capacities = TG_MEMORY_ALLOC(h_renderer->text.capacity * sizeof(*h_renderer->text.p_string_capacities));
+    h_renderer->text.pp_strings = TG_MEMORY_ALLOC(h_renderer->text.capacity * sizeof(*h_renderer->text.pp_strings));
 
     tgvk_atmosphere_model_create(&h_renderer->model);
     tg__init_shadow_pass(h_renderer);
@@ -1223,6 +1288,7 @@ tg_renderer_h tg_renderer_create(tg_camera* p_camera)
     tg__init_shading_pass(h_renderer);
     tg__init_forward_pass(h_renderer);
     tg__init_tone_mapping_pass(h_renderer);
+    tg__init_ui_pass(h_renderer);
     tg__init_blit_pass(h_renderer);
     tg__init_clear_pass(h_renderer);
     tg__init_present_pass(h_renderer);
@@ -1303,6 +1369,10 @@ void tg_renderer_destroy(tg_renderer_h h_renderer)
 
     tgvk_command_buffer_destroy(&h_renderer->blit_pass.command_buffer);
 
+    tgvk_command_buffer_destroy(&h_renderer->ui_pass.command_buffer);
+    tgvk_pipeline_destroy(&h_renderer->ui_pass.pipeline);
+    tgvk_framebuffer_destroy(&h_renderer->ui_pass.framebuffer);
+
     tgvk_command_buffer_destroy(&h_renderer->tone_mapping_pass.adapt_exposure_command_buffer);
     tgvk_descriptor_set_destroy(&h_renderer->tone_mapping_pass.adapt_exposure_descriptor_set);
     tgvk_pipeline_destroy(&h_renderer->tone_mapping_pass.adapt_exposure_graphics_pipeline);
@@ -1355,12 +1425,20 @@ void tg_renderer_destroy(tg_renderer_h h_renderer)
 
     tgvk_atmosphere_model_destroy(&h_renderer->model);
 
-    for (u32 i = 0; i < h_renderer->texts.count; i++)
+    if (h_renderer->text.capacity > 0)
     {
-        tg_string_destroy((tg_string*)TG_LIST_AT(h_renderer->texts, i));
+        for (u32 i = 0; i < h_renderer->text.capacity; i++)
+        {
+            if (!h_renderer->text.pp_strings[i])
+            {
+                break;
+            }
+            TG_MEMORY_FREE(h_renderer->text.pp_strings[i]);
+        }
+        TG_MEMORY_FREE(h_renderer->text.pp_strings);
+        TG_MEMORY_FREE(h_renderer->text.p_string_capacities);
     }
-    tg_list_destroy(&h_renderer->texts);
-    tg_font_destroy(h_renderer->h_font);
+    tg_font_destroy(h_renderer->text.h_font);
     tgvk_semaphore_destroy(h_renderer->semaphore);
     tgvk_render_target_destroy(&h_renderer->render_target);
     tgvk_image_destroy(&h_renderer->hdr_color_attachment);
@@ -1393,7 +1471,7 @@ void tg_renderer_begin(tg_renderer_h h_renderer)
     h_renderer->deferred_command_buffer_count = 0;
     h_renderer->shadow_command_buffer_count = 0;
     h_renderer->forward_render_command_count = 0;
-    tg_list_clear(&h_renderer->texts);
+    h_renderer->text.count = 0;
 #if TG_ENABLE_DEBUG_TOOLS == 1
     h_renderer->DEBUG.cube_count = 0;
 #endif
@@ -1486,9 +1564,42 @@ void tg_renderer_push_render_command(tg_renderer_h h_renderer, tg_render_command
 
 void tg_renderer_push_text(tg_renderer_h h_renderer, char* p_text)
 {
-    tg_string string = { 0 };
-    tg_string_create(p_text, &string);
-    tg_list_insert(&h_renderer->texts, &string);
+    TG_ASSERT(h_renderer && p_text);
+
+    if (h_renderer->text.count + 1 >= h_renderer->text.capacity)
+    {
+        if (h_renderer->text.capacity == 0)
+        {
+            h_renderer->text.capacity = 32;
+            h_renderer->text.p_string_capacities = TG_MEMORY_ALLOC(h_renderer->text.capacity * sizeof(*h_renderer->text.p_string_capacities));
+            h_renderer->text.pp_strings = TG_MEMORY_ALLOC(h_renderer->text.capacity * sizeof(*h_renderer->text.pp_strings));
+        }
+        else
+        {
+            h_renderer->text.p_string_capacities = TG_MEMORY_REALLOC(h_renderer->text.capacity * sizeof(*h_renderer->text.p_string_capacities), h_renderer->text.p_string_capacities);
+            h_renderer->text.pp_strings = TG_MEMORY_REALLOC(h_renderer->text.capacity * sizeof(*h_renderer->text.pp_strings), h_renderer->text.pp_strings);
+        }
+    }
+
+    const tg_size string_size = tg_strsize(p_text);
+    if (string_size > h_renderer->text.p_string_capacities[h_renderer->text.count])
+    {
+        if (h_renderer->text.p_string_capacities[h_renderer->text.count] == 0)
+        {
+            TG_ASSERT(h_renderer->text.pp_strings[h_renderer->text.count] == TG_NULL);
+            h_renderer->text.pp_strings[h_renderer->text.count] = TG_MEMORY_ALLOC(string_size * sizeof(h_renderer->text.pp_strings));
+        }
+        else
+        {
+            TG_ASSERT(h_renderer->text.pp_strings[h_renderer->text.count] != TG_NULL);
+            h_renderer->text.pp_strings[h_renderer->text.count] = TG_MEMORY_REALLOC(string_size * sizeof(h_renderer->text.pp_strings), h_renderer->text.pp_strings[h_renderer->text.count]);
+        }
+        h_renderer->text.p_string_capacities[h_renderer->text.count] = (u32)string_size;
+    }
+
+    tg_strcpy(string_size, h_renderer->text.pp_strings[h_renderer->text.count], p_text);
+    h_renderer->text.count++;
+    h_renderer->text.total_letter_count += (u32)(string_size - 1);
 }
 
 void tg_renderer_end(tg_renderer_h h_renderer, f32 dt, b32 present)
@@ -1742,6 +1853,111 @@ void tg_renderer_end(tg_renderer_h h_renderer, f32 dt, b32 present)
 
     *(f32*)h_renderer->tone_mapping_pass.finalize_exposure_dt_ubo.memory.p_mapped_device_memory = dt;
     tgvk_queue_submit(TGVK_QUEUE_TYPE_GRAPHICS, 1, &tone_mapping_submit_info, VK_NULL_HANDLE);
+
+    // ui pass
+    tgvk_buffer ui_positions_buffer = { 0 };
+    tgvk_buffer ui_uvs_buffer = { 0 };
+    if (h_renderer->text.total_letter_count > 0)
+    {
+        const u32 vertex_count = 6 * h_renderer->text.total_letter_count;
+        const tg_size positions_size = (tg_size)vertex_count * (2LL * sizeof(f32));
+        const tg_size uvs_size = (tg_size)vertex_count * (2LL * sizeof(f32));
+        ui_positions_buffer = tgvk_buffer_create(positions_size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        ui_uvs_buffer = tgvk_buffer_create(uvs_size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+        const f32 w = (f32)h_renderer->render_target.color_attachment.width;
+        const f32 h = (f32)h_renderer->render_target.color_attachment.height;
+        const u32 text_count = h_renderer->text.count;
+        f32* p_positions_it = (f32*)ui_positions_buffer.memory.p_mapped_device_memory;
+        f32* p_uvs_it = (f32*)ui_uvs_buffer.memory.p_mapped_device_memory;
+        f32 y_offset = 0.0f;
+        u32 render_letter_count = 0;
+        for (u32 text_idx = 0; text_idx < text_count; text_idx++)
+        {
+            f32 x_offset = 0.0f;
+            const unsigned char* p_text_it = (unsigned char*)h_renderer->text.pp_strings[text_idx];
+            while (*p_text_it != '\0')
+            {
+                const unsigned char c = *p_text_it++;
+                const u8 glyph_idx = h_renderer->text.h_font->p_char_to_glyph[c];
+                const struct tg_font_glyph* p_glyph = &h_renderer->text.h_font->p_glyphs[glyph_idx];
+
+                const f32 x0 = x_offset + p_glyph->left_side_bearing;
+                const f32 x1 = x0 + p_glyph->size.x;
+                const f32 y0 = y_offset + p_glyph->bottom_side_bearing;
+                const f32 y1 = y0 + p_glyph->size.y;
+
+                if (x0 != x1 && y0 != y1)
+                {
+                    render_letter_count++;
+
+                    const f32 rel_x0 = (x0 / w) * 2.0f - 1.0f;
+                    const f32 rel_x1 = (x1 / w) * 2.0f - 1.0f;
+                    const f32 rel_y0 = -((y0 / h) * 2.0f - 1.0f);
+                    const f32 rel_y1 = -((y1 / h) * 2.0f - 1.0f);
+
+                    *p_positions_it++ = rel_x0;
+                    *p_positions_it++ = rel_y0;
+                    *p_positions_it++ = rel_x1;
+                    *p_positions_it++ = rel_y0;
+                    *p_positions_it++ = rel_x1;
+                    *p_positions_it++ = rel_y1;
+                    *p_positions_it++ = rel_x1;
+                    *p_positions_it++ = rel_y1;
+                    *p_positions_it++ = rel_x0;
+                    *p_positions_it++ = rel_y1;
+                    *p_positions_it++ = rel_x0;
+                    *p_positions_it++ = rel_y0;
+
+                    *p_uvs_it++ = p_glyph->uv_min.x;
+                    *p_uvs_it++ = 1.0f - p_glyph->uv_min.y;
+                    *p_uvs_it++ = p_glyph->uv_max.x;
+                    *p_uvs_it++ = 1.0f - p_glyph->uv_min.y;
+                    *p_uvs_it++ = p_glyph->uv_max.x;
+                    *p_uvs_it++ = 1.0f - p_glyph->uv_max.y;
+                    *p_uvs_it++ = p_glyph->uv_max.x;
+                    *p_uvs_it++ = 1.0f - p_glyph->uv_max.y;
+                    *p_uvs_it++ = p_glyph->uv_min.x;
+                    *p_uvs_it++ = 1.0f - p_glyph->uv_max.y;
+                    *p_uvs_it++ = p_glyph->uv_min.x;
+                    *p_uvs_it++ = 1.0f - p_glyph->uv_min.y;
+                }
+
+                x_offset += p_glyph->advance_width;
+            }
+            y_offset += h_renderer->text.h_font->max_glyph_height;
+        }
+
+        tgvk_command_buffer_begin(&h_renderer->ui_pass.command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+        {
+            const VkDeviceSize vertex_buffer_offset = 0;
+            vkCmdBindPipeline(h_renderer->ui_pass.command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, h_renderer->ui_pass.pipeline.pipeline);
+            vkCmdBindVertexBuffers(h_renderer->ui_pass.command_buffer.command_buffer, 0, 1, &ui_positions_buffer.buffer, &vertex_buffer_offset);
+            vkCmdBindVertexBuffers(h_renderer->ui_pass.command_buffer.command_buffer, 1, 1, &ui_uvs_buffer.buffer, &vertex_buffer_offset);
+            vkCmdBindDescriptorSets(h_renderer->ui_pass.command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, h_renderer->ui_pass.pipeline.layout.pipeline_layout, 0, 1, &h_renderer->ui_pass.descriptor_set.descriptor_set, 0, TG_NULL);
+            tgvk_cmd_begin_render_pass(&h_renderer->ui_pass.command_buffer, shared_render_resources.ui_render_pass, &h_renderer->ui_pass.framebuffer, VK_SUBPASS_CONTENTS_INLINE);
+            vkCmdDraw(h_renderer->ui_pass.command_buffer.command_buffer, 6 * render_letter_count, 1, 0, 0);
+            vkCmdEndRenderPass(h_renderer->ui_pass.command_buffer.command_buffer);
+        }
+        vkEndCommandBuffer(h_renderer->ui_pass.command_buffer.command_buffer);
+
+        VkSubmitInfo ui_submit_info = { 0 };
+        ui_submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        ui_submit_info.pNext = TG_NULL;
+        ui_submit_info.waitSemaphoreCount = 1;
+        ui_submit_info.pWaitSemaphores = &h_renderer->semaphore;
+        ui_submit_info.pWaitDstStageMask = &color_attachment_pipeline_stage_flags;
+        ui_submit_info.commandBufferCount = 1;
+        ui_submit_info.pCommandBuffers = &h_renderer->ui_pass.command_buffer.command_buffer;
+        ui_submit_info.signalSemaphoreCount = 1;
+        ui_submit_info.pSignalSemaphores = &h_renderer->semaphore;
+
+        tgvk_queue_submit(TGVK_QUEUE_TYPE_GRAPHICS, 1, &ui_submit_info, h_renderer->render_target.fence);
+        tgvk_fence_wait(h_renderer->render_target.fence);
+        tgvk_fence_reset(h_renderer->render_target.fence);
+        tgvk_buffer_destroy(&ui_uvs_buffer);
+        tgvk_buffer_destroy(&ui_positions_buffer);
+    }
 
     VkSubmitInfo blit_submit_info = { 0 };
     blit_submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;

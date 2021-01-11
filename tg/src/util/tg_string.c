@@ -245,6 +245,16 @@ u32 tg_strlen_no_nul(const char* p_string)
 	return result;
 }
 
+tg_size tg_strsize(const char* p_string)
+{
+	TG_ASSERT(p_string);
+
+	const char* p_it = p_string;
+	while (*p_it++);
+	const tg_size result = (tg_size)(p_it - p_string);
+	return result;
+}
+
 u32 tg_string_parse_f32(u32 size, char* p_buffer, f32 v)
 {
 	const u32 result = tg_string_parse_f32_no_nul(size, p_buffer, v) + 1;
