@@ -590,9 +590,8 @@ void                    tgvk_cmd_clear_image(tgvk_command_buffer* p_command_buff
 void                    tgvk_cmd_clear_image_3d(tgvk_command_buffer* p_command_buffer, tgvk_image_3d* p_image_3d);
 void                    tgvk_cmd_clear_layered_image(tgvk_command_buffer* p_command_buffer, tgvk_layered_image* p_image);
 void                    tgvk_cmd_copy_buffer(tgvk_command_buffer* p_command_buffer, VkDeviceSize size, tgvk_buffer* p_src, tgvk_buffer* p_dst);
-void                    tgvk_cmd_copy_buffer_to_color_image(tgvk_command_buffer* p_command_buffer, tgvk_buffer* p_source, tgvk_image* p_destination);
 void                    tgvk_cmd_copy_buffer_to_cube_map(tgvk_command_buffer* p_command_buffer, tgvk_buffer* p_source, tgvk_cube_map* p_destination);
-void                    tgvk_cmd_copy_buffer_to_depth_image(tgvk_command_buffer* p_command_buffer, tgvk_buffer* p_source, tgvk_image* p_destination);
+void                    tgvk_cmd_copy_buffer_to_image(tgvk_command_buffer* p_command_buffer, tgvk_buffer* p_source, tgvk_image* p_destination);
 void                    tgvk_cmd_copy_buffer_to_image_3d(tgvk_command_buffer* p_command_buffer, tgvk_buffer* p_source, tgvk_image_3d* p_destination);
 void                    tgvk_cmd_copy_color_image(tgvk_command_buffer* p_command_buffer, tgvk_image* p_source, tgvk_image* p_destination);
 void                    tgvk_cmd_copy_color_image_to_buffer(tgvk_command_buffer* p_command_buffer, tgvk_image* p_source, tgvk_buffer* p_destination);
@@ -656,6 +655,8 @@ void                    tgvk_handle_release(void* p_handle);
 tgvk_image              tgvk_image_create(tgvk_image_type type, u32 width, u32 height, VkFormat format, const tg_sampler_create_info* p_sampler_create_info);
 tgvk_image              tgvk_image_create2(tgvk_image_type type, const char* p_filename, const tg_sampler_create_info* p_sampler_create_info);
 void                    tgvk_image_destroy(tgvk_image* p_image);
+b32                     tgvk_image_serialize(tgvk_image* p_image, const char* p_filename);
+b32                     tgvk_image_deserialize(const char* p_filename, TG_OUT tgvk_image* p_image);
 b32                     tgvk_image_store_to_disc(tgvk_image* p_image, const char* p_filename, b32 force_alpha_one, b32 replace_existing);
 
 tgvk_image_3d           tgvk_image_3d_create(tgvk_image_type type, u32 width, u32 height, u32 depth, VkFormat format, const tg_sampler_create_info* p_sampler_create_info);

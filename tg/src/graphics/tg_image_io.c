@@ -306,19 +306,19 @@ static void tg__load_bmp_from_memory(tg_size file_size, const char* p_file_memor
 
 	TG_ASSERT(bitmap_v5_header.cs_type == TG_BMP_CS_TYPE_LCS_WINDOWS_COLOR_SPACE);
 
-	TG_DEBUG_EXEC(
-		const u32 rgb_quad_count = (bitmap_file_header.offset_bits - (bitmap_info_header.size + TG_BMP_BITMAPINFOHEADER_OFFSET)) / sizeof(tg_rgb_quad);
-		TG_ASSERT(rgb_quad_count == 3);
+#ifdef TG_DEBUG
+	const u32 rgb_quad_count = (bitmap_file_header.offset_bits - (bitmap_info_header.size + TG_BMP_BITMAPINFOHEADER_OFFSET)) / sizeof(tg_rgb_quad);
+	TG_ASSERT(rgb_quad_count == 3);
 
-		tg_rgb_quad* p_rgb_quad_r = (tg_rgb_quad*)&p_bitmap_info_header[bitmap_info_header.size];
-		TG_ASSERT(*(u32*)p_rgb_quad_r == 0x000000ff);
+	tg_rgb_quad* p_rgb_quad_r = (tg_rgb_quad*)&p_bitmap_info_header[bitmap_info_header.size];
+	TG_ASSERT(*(u32*)p_rgb_quad_r == 0x000000ff);
 
-		tg_rgb_quad* p_rgb_quad_g = &p_rgb_quad_r[1];
-		TG_ASSERT(*(u32*)p_rgb_quad_g == 0x0000ff00);
+	tg_rgb_quad* p_rgb_quad_g = &p_rgb_quad_r[1];
+	TG_ASSERT(*(u32*)p_rgb_quad_g == 0x0000ff00);
 
-		tg_rgb_quad* p_rgb_quad_b = &p_rgb_quad_g[1];
-		TG_ASSERT(*(u32*)p_rgb_quad_b == 0x00ff0000);
-	);
+	tg_rgb_quad* p_rgb_quad_b = &p_rgb_quad_g[1];
+	TG_ASSERT(*(u32*)p_rgb_quad_b == 0x00ff0000);
+#endif
 
 	*p_width = bitmap_v5_header.width;
 	*p_height = bitmap_v5_header.height;
@@ -453,7 +453,7 @@ b32 tg_image_store_to_disc(const char* p_filename, u32 width, u32 height, tg_col
 
 	if (tg_string_equal(p_extension, "bmp"))
 	{
-		const u32 in_pixel_size = tg_color_image_format_size(format);
+		const u32 in_pixel_size = (u32)tg_color_image_format_size(format);
 		const u32 in_channels = tg_color_image_format_channels(format);
 		const u32 in_data_size = width * height * in_pixel_size;
 
@@ -554,7 +554,7 @@ b32 tg_image_store_to_disc(const char* p_filename, u32 width, u32 height, tg_col
 			}
 		}
 
-		result = tgp_file_create(p_filename, bmp_size, p_buffer, replace_existing);
+		result = tgp_file_create(p_filename, (size_t)bmp_size, p_buffer, replace_existing);
 		
 		TG_MEMORY_STACK_FREE(bmp_size);
 	}

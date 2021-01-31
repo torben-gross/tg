@@ -820,10 +820,10 @@ void tg_spirv_fill_layout(u32 word_count, const u32* p_words, tg_spirv_layout* p
                 default: TG_INVALID_CODEPATH(); break;
                 }
 
-                TG_DEBUG_EXEC(
-                    const char* p_entry_point_name = (char*)&p_words[processed_word_count + 3];
-                    tg_string_equal(p_entry_point_name, "main");
-                );
+#ifdef TG_DEBUG
+                const char* p_entry_point_name = (char*)&p_words[processed_word_count + 3];
+                tg_string_equal(p_entry_point_name, "main");
+#endif
             }
             processed_word_count += op_word_count;
         }

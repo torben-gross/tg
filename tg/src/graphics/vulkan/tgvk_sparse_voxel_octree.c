@@ -63,7 +63,7 @@ void tg_voxelizer_create(tg_voxelizer* p_voxelizer)
     tgvk_command_buffer_end_and_submit(&p_voxelizer->command_buffer);
     for (u32 i = 0; i < TG_SVO_ATTACHMENTS; i++)
     {
-        const VkDeviceSize format_size = (VkDeviceSize)tg_color_image_format_size((tg_color_image_format)p_voxelizer->p_image_3ds[i].format);
+        const VkDeviceSize format_size = tg_color_image_format_size((tg_color_image_format)p_voxelizer->p_image_3ds[i].format);
         p_voxelizer->p_voxel_buffers[i] = tgvk_buffer_create(TG_SVO_DIMS3 * format_size, VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
     }
 }
@@ -86,7 +86,7 @@ void tg_voxelizer_begin(tg_voxelizer* p_voxelizer)
     for (u32 i = 0; i < TG_SVO_ATTACHMENTS; i++)
     {
         u8* p_it = (u8*)p_voxelizer->p_voxel_buffers[i].memory.p_mapped_device_memory;
-        const VkDeviceSize format_size = (VkDeviceSize)tg_color_image_format_size((tg_color_image_format)p_voxelizer->p_image_3ds[i].format);
+        const VkDeviceSize format_size = tg_color_image_format_size((tg_color_image_format)p_voxelizer->p_image_3ds[i].format);
         for (u32 j = 0; j < TG_SVO_DIMS3 * format_size; j++)
         {
             *p_it++ = 0;

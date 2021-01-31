@@ -1006,7 +1006,7 @@ static void tg__build_octree(volatile tg_terrain* p_terrain, volatile tg_terrain
 			u32 compressed_voxel_map_size;
 			void* p_compressed_voxel_map_buffer = TG_MEMORY_STACK_ALLOC_ASYNC(voxel_map_size);
 			tg__compress_voxel_map(p_octree->p_voxel_map, &compressed_voxel_map_size, p_compressed_voxel_map_buffer);
-			tgp_file_create(p_filename_buffer, compressed_voxel_map_size, p_compressed_voxel_map_buffer, TG_FALSE);
+			tgp_file_create(p_filename_buffer, (tg_size)compressed_voxel_map_size, p_compressed_voxel_map_buffer, TG_FALSE);
 			TG_MEMORY_STACK_FREE_ASYNC(voxel_map_size);
 		}
 		else

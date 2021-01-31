@@ -181,7 +181,7 @@ static void tg__init_ssao_pass(tg_renderer_h h_renderer)
     {
         tgvk_cmd_transition_image_layout(&h_renderer->ssao_pass.command_buffer, &h_renderer->ssao_pass.ssao_attachment, 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
         tgvk_cmd_transition_image_layout(&h_renderer->ssao_pass.command_buffer, &h_renderer->ssao_pass.ssao_noise_image, 0, VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
-        tgvk_cmd_copy_buffer_to_color_image(&h_renderer->ssao_pass.command_buffer, p_staging_buffer, &h_renderer->ssao_pass.ssao_noise_image);
+        tgvk_cmd_copy_buffer_to_image(&h_renderer->ssao_pass.command_buffer, p_staging_buffer, &h_renderer->ssao_pass.ssao_noise_image);
         tgvk_cmd_transition_image_layout(&h_renderer->ssao_pass.command_buffer, &h_renderer->ssao_pass.ssao_noise_image, 0, 0, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
         tgvk_cmd_transition_image_layout(&h_renderer->ssao_pass.command_buffer, &h_renderer->ssao_pass.blur_attachment, 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
     }
@@ -1370,6 +1370,7 @@ void tg_renderer_destroy(tg_renderer_h h_renderer)
     tgvk_command_buffer_destroy(&h_renderer->blit_pass.command_buffer);
 
     tgvk_command_buffer_destroy(&h_renderer->ui_pass.command_buffer);
+    tgvk_descriptor_set_destroy(&h_renderer->ui_pass.descriptor_set);
     tgvk_pipeline_destroy(&h_renderer->ui_pass.pipeline);
     tgvk_framebuffer_destroy(&h_renderer->ui_pass.framebuffer);
 
@@ -1562,7 +1563,7 @@ void tg_renderer_push_render_command(tg_renderer_h h_renderer, tg_render_command
     }
 }
 
-void tg_renderer_push_text(tg_renderer_h h_renderer, char* p_text)
+void tg_renderer_push_text(tg_renderer_h h_renderer, const char* p_text)
 {
     TG_ASSERT(h_renderer && p_text);
 

@@ -66,40 +66,40 @@ void tg__extract_directory(char* p_buffer, const char* p_filename)
     p_buffer[character_count] = '\0';
 }
 
-static void tg__fill_file_properties(const char* p_directory, WIN32_FIND_DATAA* p_find_data, tg_file_properties* p_properties)
+static void tg__fill_file_properties(const char* p_directory, WIN32_FIND_DATAA* p_find_data, tg_file_properties* p_file_properties)
 {
-    p_properties->is_directory = (p_find_data->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+    p_file_properties->is_directory = (p_find_data->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
 
-    tg__convert_filetime_to_systemtime(&p_find_data->ftCreationTime, &p_properties->creation_time);
-    tg__convert_filetime_to_systemtime(&p_find_data->ftLastAccessTime, &p_properties->last_access_time);
-    tg__convert_filetime_to_systemtime(&p_find_data->ftLastWriteTime, &p_properties->last_write_time);
+    tg__convert_filetime_to_systemtime(&p_find_data->ftCreationTime, &p_file_properties->creation_time);
+    tg__convert_filetime_to_systemtime(&p_find_data->ftLastAccessTime, &p_file_properties->last_access_time);
+    tg__convert_filetime_to_systemtime(&p_find_data->ftLastWriteTime, &p_file_properties->last_write_time);
 
     LARGE_INTEGER size = { 0 };
     size.LowPart = p_find_data->nFileSizeLow;
     size.HighPart = p_find_data->nFileSizeHigh;
-    p_properties->size = size.QuadPart;
+    p_file_properties->size = size.QuadPart;
 
     if (*p_directory == '.')
     {
         TG_ASSERT(p_directory[1] == '\0');
-        tg_strcpy(MAX_PATH, p_properties->p_filename, p_find_data->cFileName);
-        p_properties->p_short_filename = p_properties->p_filename;
+        tg_strcpy(MAX_PATH, p_file_properties->p_filename, p_find_data->cFileName);
+        p_file_properties->p_short_filename = p_file_properties->p_filename;
     }
     else
     {
-        tg_stringf(MAX_PATH, p_properties->p_filename, "%s%c%s", p_directory, TG_FILE_SEPERATOR, p_find_data->cFileName);
-        p_properties->p_short_filename = &p_properties->p_filename[tg_strlen_no_nul(p_directory) + 1];
+        tg_stringf(MAX_PATH, p_file_properties->p_filename, "%s%c%s", p_directory, TG_FILE_SEPERATOR, p_find_data->cFileName);
+        p_file_properties->p_short_filename = &p_file_properties->p_filename[tg_strlen_no_nul(p_directory) + 1];
     }
-    tg_strcpy(MAX_PATH, p_properties->p_directory, p_directory);
-    if (p_properties->is_directory)
+    tg_strcpy(MAX_PATH, p_file_properties->p_directory, p_directory);
+    if (p_file_properties->is_directory)
     {
-        p_properties->p_extension = TG_NULL;
+        p_file_properties->p_extension = TG_NULL;
     }
     else
     {
-        p_properties->p_extension = p_properties->p_short_filename;
-        while (*p_properties->p_extension != '\0' && *p_properties->p_extension++ != '.');
-        TG_ASSERT(*p_properties->p_extension != '\0');
+        p_file_properties->p_extension = p_file_properties->p_short_filename;
+        while (*p_file_properties->p_extension != '\0' && *p_file_properties->p_extension++ != '.');
+        TG_ASSERT(*p_file_properties->p_extension != '\0');
     }
 }
 
@@ -273,38 +273,46 @@ b32 tgp_file_exists(const char* p_filename)
     return result;
 }
 
-void tgp_file_load(const char* p_filename, tg_size buffer_size, char* p_buffer)
+b32 tgp_file_load(const char* p_filename, tg_size buffer_size, void* p_buffer)
 {
     TG_ASSERT(p_filename && buffer_size && p_buffer);
+
+    b32 result = TG_FALSE;
 
     char p_filename_buffer[MAX_PATH] = { 0 };
     tg__prepend_asset_directory(p_filename, MAX_PATH, p_filename_buffer);
 
     HANDLE h_file = CreateFileA(p_filename_buffer, GENERIC_READ | GENERIC_WRITE, 0, TG_NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, TG_NULL);
-    TG_DEBUG_EXEC(
-        if (h_file == INVALID_HANDLE_VALUE)
-        {
-            const u32 last_error = GetLastError();
-            TG_DEBUG_LOG("Error while trying to read file \"%s\". #%u\n", p_filename, last_error);
-        }
-    );
-    TG_ASSERT(h_file != INVALID_HANDLE_VALUE);
-    TG_ASSERT(GetLastError() != ERROR_FILE_NOT_FOUND);
+    if (h_file != INVALID_HANDLE_VALUE)
+    {
+        result = TG_TRUE;
 
-    const u32 size = GetFileSize(h_file, TG_NULL);
-    TG_ASSERT(buffer_size >= size);
-    u32 number_of_bytes_read = 0;
+        const u32 size = GetFileSize(h_file, TG_NULL);
+        TG_ASSERT(buffer_size >= size);
+        u32 number_of_bytes_read = 0;
 #pragma warning(push)
 #pragma warning(disable:6031)
-    WIN32_CALL(ReadFile(h_file, p_buffer, size, (LPDWORD)&number_of_bytes_read, TG_NULL));
+        WIN32_CALL(ReadFile(h_file, p_buffer, size, (LPDWORD)&number_of_bytes_read, TG_NULL));
 #pragma warning(pop)
 
-    CloseHandle(h_file);
+        CloseHandle(h_file);
+    }
+#ifdef TG_DEBUG
+    else
+    {
+        const u32 last_error = GetLastError();
+        TG_DEBUG_LOG("Error while trying to read file \"%s\". #%u\n", p_filename, last_error);
+        TG_INVALID_CODEPATH();
+    }
+    TG_ASSERT(GetLastError() != ERROR_FILE_NOT_FOUND);
+#endif
+
+    return result;
 }
 
-b32 tgp_file_create(const char* p_filename, u32 size, const char* p_data, b32 replace_existing)
+b32 tgp_file_create(const char* p_filename, tg_size size, const void* p_data, b32 replace_existing)
 {
-    TG_ASSERT(p_filename && size && p_data);
+    TG_ASSERT(p_filename && size && size <= TG_U32_MAX && p_data);
 
     b32 result = TG_FALSE;
 
@@ -312,10 +320,36 @@ b32 tgp_file_create(const char* p_filename, u32 size, const char* p_data, b32 re
     tg__prepend_asset_directory(p_filename, MAX_PATH, p_buffer);
 
     HANDLE h_file = CreateFileA(p_buffer, GENERIC_READ | GENERIC_WRITE, 0, TG_NULL, replace_existing ? CREATE_ALWAYS : CREATE_NEW, FILE_ATTRIBUTE_NORMAL, TG_NULL);
-    if (h_file != INVALID_HANDLE_VALUE)
+#ifdef TG_DEBUG
+    if (h_file == INVALID_HANDLE_VALUE)
+    {
+        const DWORD last_error = GetLastError();
+        if (replace_existing)
+        {
+            LPVOID p_message_buffer = TG_NULL;
+            FormatMessageA(
+                FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+                TG_NULL,
+                last_error,
+                MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US),
+                (LPSTR)&p_message_buffer,
+                0, TG_NULL
+            );
+            TG_DEBUG_LOG(p_message_buffer);
+            LocalFree(p_message_buffer);
+            p_message_buffer = TG_NULL;
+            TG_INVALID_CODEPATH();
+        }
+        else
+        {
+            TG_ASSERT(last_error == ERROR_FILE_EXISTS);
+        }
+    }
+    else
+#endif
     {
         u32 written_size = 0;
-        const BOOL write_result = WriteFile(h_file, p_data, size, (LPDWORD)&written_size, TG_NULL);
+        const BOOL write_result = WriteFile(h_file, p_data, (DWORD)size, (LPDWORD)&written_size, TG_NULL);
         TG_ASSERT(write_result);
 
         const BOOL close_result = CloseHandle(h_file);
@@ -323,60 +357,36 @@ b32 tgp_file_create(const char* p_filename, u32 size, const char* p_data, b32 re
 
         result = TG_TRUE;
     }
-    else
-    {
-        TG_DEBUG_EXEC(
-            const DWORD last_error = GetLastError();
-            if (replace_existing)
-            {
-                LPVOID p_message_buffer = TG_NULL;
-                FormatMessageA(
-                    FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-                    NULL,
-                    last_error,
-                    MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US),
-                    (LPSTR)&p_message_buffer,
-                    0, NULL
-                );
-                TG_DEBUG_LOG(p_message_buffer);
-                TG_INVALID_CODEPATH();
-            }
-            else
-            {
-                TG_ASSERT(last_error == ERROR_FILE_EXISTS);
-            }
-        );
-
-        result = TG_FALSE;
-    }
 
     return result;
 }
 
-b32 tgp_file_get_properties(const char* p_filename, tg_file_properties* p_properties)
+b32 tgp_file_get_properties(const char* p_filename, tg_file_properties* p_file_properties)
 {
+    b32 result = TG_FALSE;
+
     char p_buffer[MAX_PATH] = { 0 };
     tg__prepend_asset_directory(p_filename, MAX_PATH, p_buffer);
 
     WIN32_FIND_DATAA find_data = { 0 };
     HANDLE handle = FindFirstFileA(p_buffer, &find_data);
-    if (handle == INVALID_HANDLE_VALUE)
+    if (handle != INVALID_HANDLE_VALUE)
     {
-        return TG_FALSE;
+        result = TG_TRUE;
+
+        char p_directory_buffer[MAX_PATH] = { 0 };
+        tg__extract_directory(p_directory_buffer, p_filename);
+
+        tg__fill_file_properties(p_directory_buffer, &find_data, p_file_properties);
+        FindClose(handle);
     }
 
-    char p_directory_buffer[MAX_PATH] = { 0 };
-    tg__extract_directory(p_directory_buffer, p_filename);
-
-    tg__fill_file_properties(p_directory_buffer, &find_data, p_properties);
-    FindClose(handle);
-
-    return TG_TRUE;
+    return result;
 }
 
-tg_file_iterator_h tgp_directory_begin_iteration(const char* p_directory, tg_file_properties* p_properties)
+tg_file_iterator_h tgp_directory_begin_iteration(const char* p_directory, tg_file_properties* p_file_properties)
 {
-    TG_ASSERT(p_directory && p_properties);
+    TG_ASSERT(p_directory && p_file_properties);
 
     char p_postfix_buffer[MAX_PATH] = { 0 };
     tg_stringf(MAX_PATH, p_postfix_buffer, "%s%c%c", p_directory, TG_FILE_SEPERATOR, '*');
@@ -397,14 +407,14 @@ tg_file_iterator_h tgp_directory_begin_iteration(const char* p_directory, tg_fil
             return TG_NULL;
         }
     }
-    tg__fill_file_properties(p_directory, &find_data, p_properties);
+    tg__fill_file_properties(p_directory, &find_data, p_file_properties);
 
     return h_file_iterator;
 }
 
-b32 tgp_directory_continue_iteration(tg_file_iterator_h h_file_iterator, const char* p_directory, tg_file_properties* p_properties)
+b32 tgp_directory_continue_iteration(tg_file_iterator_h h_file_iterator, const char* p_directory, tg_file_properties* p_file_properties)
 {
-    TG_ASSERT(h_file_iterator && p_properties);
+    TG_ASSERT(h_file_iterator && p_file_properties);
 
     WIN32_FIND_DATAA find_data = { 0 };
     if (!FindNextFileA(h_file_iterator, &find_data))
@@ -413,7 +423,7 @@ b32 tgp_directory_continue_iteration(tg_file_iterator_h h_file_iterator, const c
         FindClose(h_file_iterator);
         return TG_FALSE;
     }
-    tg__fill_file_properties(p_directory, &find_data, p_properties);
+    tg__fill_file_properties(p_directory, &find_data, p_file_properties);
     return TG_TRUE;
 }
 

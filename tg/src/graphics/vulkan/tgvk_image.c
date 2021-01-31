@@ -40,6 +40,7 @@ u32 tg_color_image_format_channels(tg_color_image_format format)
 	case TG_COLOR_IMAGE_FORMAT_R16G16B16A16_SFLOAT:    result = 4; break;
 	case TG_COLOR_IMAGE_FORMAT_R32G32B32A32_SFLOAT:    result = 4; break;
 	case TG_COLOR_IMAGE_FORMAT_R32_UINT:               result = 1; break;
+	case TG_COLOR_IMAGE_FORMAT_R8_UINT:                result = 1; break;
 	case TG_COLOR_IMAGE_FORMAT_R8_UNORM:               result = 1; break;
 	case TG_COLOR_IMAGE_FORMAT_R8G8_UNORM:             result = 2; break;
 	case TG_COLOR_IMAGE_FORMAT_R8G8B8_UNORM:           result = 3; break;
@@ -51,9 +52,9 @@ u32 tg_color_image_format_channels(tg_color_image_format format)
 	return result;
 }
 
-u32 tg_color_image_format_size(tg_color_image_format format)
+tg_size tg_color_image_format_size(tg_color_image_format format)
 {
-	u32 result = 0;
+	tg_size result = 0;
 
 	switch (format)
 	{
@@ -62,6 +63,7 @@ u32 tg_color_image_format_size(tg_color_image_format format)
 	case TG_COLOR_IMAGE_FORMAT_R16G16B16A16_SFLOAT:    result =  8; break;
 	case TG_COLOR_IMAGE_FORMAT_R32G32B32A32_SFLOAT:    result = 16; break;
 	case TG_COLOR_IMAGE_FORMAT_R32_UINT:               result =  4; break;
+	case TG_COLOR_IMAGE_FORMAT_R8_UINT:                result =  1; break;
 	case TG_COLOR_IMAGE_FORMAT_R8_UNORM:               result =  1; break;
 	case TG_COLOR_IMAGE_FORMAT_R8G8_UNORM:             result =  2; break;
 	case TG_COLOR_IMAGE_FORMAT_R8G8B8_UNORM:           result =  3; break;
@@ -111,7 +113,7 @@ void tg_storage_image_3d_set_data(tg_storage_image_3d_h h_storage_image_3d, void
 {
 	TG_ASSERT(h_storage_image_3d && p_data);
 
-	const tg_size size = (tg_size)h_storage_image_3d->image_3d.width * (tg_size)h_storage_image_3d->image_3d.height * (tg_size)h_storage_image_3d->image_3d.depth * (tg_size)tg_color_image_format_size((tg_color_image_format)h_storage_image_3d->image_3d.format);
+	const tg_size size = (tg_size)h_storage_image_3d->image_3d.width * (tg_size)h_storage_image_3d->image_3d.height * (tg_size)h_storage_image_3d->image_3d.depth * tg_color_image_format_size((tg_color_image_format)h_storage_image_3d->image_3d.format);
 	tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take(size);
 	tg_memcpy(size, p_data, p_staging_buffer->memory.p_mapped_device_memory);
 	tgvk_buffer_flush_host_to_device(p_staging_buffer);

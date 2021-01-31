@@ -88,6 +88,7 @@ typedef enum tg_color_image_format
 	TG_COLOR_IMAGE_FORMAT_R16G16B16A16_SFLOAT     = 97,
     TG_COLOR_IMAGE_FORMAT_R32_UINT                = 98,
 	TG_COLOR_IMAGE_FORMAT_R32G32B32A32_SFLOAT     = 109,
+	TG_COLOR_IMAGE_FORMAT_R8_UINT                 = 13,
 	TG_COLOR_IMAGE_FORMAT_R8_UNORM                = 9,
 	TG_COLOR_IMAGE_FORMAT_R8G8_UNORM              = 16,
 	TG_COLOR_IMAGE_FORMAT_R8G8B8_UNORM            = 23,
@@ -215,7 +216,7 @@ tg_color_image_h         tg_color_image_create2(const char* p_filename, const tg
 void                     tg_color_image_destroy(tg_color_image_h h_color_image);
 
 u32                      tg_color_image_format_channels(tg_color_image_format format);
-u32                      tg_color_image_format_size(tg_color_image_format format);
+tg_size                  tg_color_image_format_size(tg_color_image_format format);
 
 tg_storage_image_3d_h    tg_storage_image_3d_create(u32 width, u32 height, u32 depth, tg_color_image_format format, const tg_sampler_create_info* p_sampler_create_info);
 void                     tg_storage_image_3d_destroy(tg_storage_image_3d_h h_storage_image_3d);
@@ -291,7 +292,7 @@ void                     tg_renderer_set_sun_direction(tg_renderer_h h_renderer,
 void                     tg_renderer_push_directional_light(tg_renderer_h h_renderer, v3 direction, v3 color);
 void                     tg_renderer_push_point_light(tg_renderer_h h_renderer, v3 position, v3 color);
 void                     tg_renderer_push_render_command(tg_renderer_h h_renderer, tg_render_command_h h_render_command);
-void                     tg_renderer_push_text(tg_renderer_h h_renderer, char* p_text);
+void                     tg_renderer_push_text(tg_renderer_h h_renderer, const char* p_text);
 void                     tg_renderer_end(tg_renderer_h h_renderer, f32 dt, b32 present);
 void                     tg_renderer_clear(tg_renderer_h h_renderer);
 tg_render_target_h       tg_renderer_get_render_target(tg_renderer_h h_renderer);

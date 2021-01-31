@@ -373,6 +373,7 @@ static void tg__game_3d_update_and_render(f32 dt)
         tg_renderer_push_render_command(scene.h_main_renderer, ph_render_commands[i]);
     }
     tg_renderer_push_text(scene.h_main_renderer, "&This is a text field!");
+    tg_renderer_push_text(scene.h_main_renderer, "Kathy!");
 
 #if TG_ENABLE_DEBUG_TOOLS == 1
     tg_renderer_draw_cube_DEBUG(scene.h_main_renderer, (v3) { 108.5f, 138.5f, 116.5f }, (v3) { 1.0f, 1.0f, 1.0f }, (v4) { 1.0f, 0.0f, 0.0f, 1.0f });

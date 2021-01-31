@@ -994,10 +994,10 @@ v3 tgm_v3_normalized_not_null(v3 v, v3 alt)
 
 v3 tgm_v3_reflect(v3 d, v3 n)
 {
-	TG_DEBUG_EXEC(
-		const f32 ms = tgm_v3_magsqr(n);
-		TG_ASSERT(ms < 1.02f && ms > 0.98f)
-	);
+#ifdef TG_DEBUG
+	const f32 ms = tgm_v3_magsqr(n);
+	TG_ASSERT(ms < 1.02f && ms > 0.98f);
+#endif
 
 	const v3 result = tgm_v3_sub(d, tgm_v3_mulf(n, 2.0f * tgm_v3_dot(n, d)));
 	return result;
@@ -1005,11 +1005,11 @@ v3 tgm_v3_reflect(v3 d, v3 n)
 
 v3 tgm_v3_refract(v3 d, v3 n, f32 eta)
 {
-	TG_DEBUG_EXEC(
-		const f32 msd = tgm_v3_magsqr(d);
-		const f32 msn = tgm_v3_magsqr(n);
-		TG_ASSERT(msd < 1.02f && msd > 0.98f && msn < 1.02f && msn > 0.98f)
-	);
+#ifdef TG_DEBUG
+	const f32 msd = tgm_v3_magsqr(d);
+	const f32 msn = tgm_v3_magsqr(n);
+	TG_ASSERT(msd < 1.02f && msd > 0.98f && msn < 1.02f && msn > 0.98f);
+#endif
 
 	v3 result = { 0 };
 	const f32 dot = tgm_v3_dot(n, d);

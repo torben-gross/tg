@@ -30,7 +30,7 @@ void tg_render_target_get_color_data_copy(tg_render_target_h h_render_target, TG
 {
 	TG_ASSERT(h_render_target && p_buffer_size);
 
-	const u32 pixel_size = tg_color_image_format_size((tg_color_image_format)h_render_target->color_attachment.format);
+	const u32 pixel_size = (u32)tg_color_image_format_size((tg_color_image_format)h_render_target->color_attachment.format);
 	const u32 required_size = h_render_target->color_attachment.width * h_render_target->color_attachment.height * pixel_size;
 
 	if (!*p_buffer_size || !p_buffer)

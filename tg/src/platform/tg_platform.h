@@ -25,6 +25,7 @@
 
 #define TG_MAX_PATH                                              MAX_PATH
 #define TG_FILE_SEPERATOR                                        '\\'
+#define TG_FILE_SEPERATOR_STR                                    "\\"
 
 
 
@@ -239,11 +240,11 @@ u32                   tgp_get_window_dpi(void);
 void                  tgp_get_window_size(u32* p_width, u32* p_height);
 
 b32                   tgp_file_exists(const char* p_filename);
-void                  tgp_file_load(const char* p_filename, tg_size buffer_size, char* p_buffer);
-b32                   tgp_file_create(const char* p_filename, u32 size, const char* p_data, b32 replace_existing);
-b32                   tgp_file_get_properties(const char* p_filename, tg_file_properties* p_properties);
-tg_file_iterator_h    tgp_directory_begin_iteration(const char* p_directory, tg_file_properties* p_properties);
-b32                   tgp_directory_continue_iteration(tg_file_iterator_h h_file_iterator, const char* p_directory, tg_file_properties* p_properties);
+b32                   tgp_file_load(const char* p_filename, tg_size buffer_size, void* p_buffer);
+b32                   tgp_file_create(const char* p_filename, tg_size size, const void* p_data, b32 replace_existing);
+b32                   tgp_file_get_properties(const char* p_filename, tg_file_properties* p_file_properties);
+tg_file_iterator_h    tgp_directory_begin_iteration(const char* p_directory, tg_file_properties* p_file_properties);
+b32                   tgp_directory_continue_iteration(tg_file_iterator_h h_file_iterator, const char* p_directory, tg_file_properties* p_file_properties);
 tg_size               tgp_directory_get_size(const char* p_directory);
 i8                    tgp_system_time_compare(tg_system_time* p_time0, tg_system_time* p_time1);
 
