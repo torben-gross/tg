@@ -3,6 +3,7 @@
 
 #include "math/tg_math.h"
 #include "tg_common.h"
+#include "tg_rtvx_terrain.h"
 
 
 
@@ -292,6 +293,7 @@ void                     tg_renderer_set_sun_direction(tg_renderer_h h_renderer,
 void                     tg_renderer_push_directional_light(tg_renderer_h h_renderer, v3 direction, v3 color);
 void                     tg_renderer_push_point_light(tg_renderer_h h_renderer, v3 position, v3 color);
 void                     tg_renderer_push_render_command(tg_renderer_h h_renderer, tg_render_command_h h_render_command);
+void                     tg_renderer_push_terrain(tg_renderer_h h_renderer, tg_rtvx_terrain_h h_terrain);
 void                     tg_renderer_push_text(tg_renderer_h h_renderer, const char* p_text);
 void                     tg_renderer_end(tg_renderer_h h_renderer, f32 dt, b32 present);
 void                     tg_renderer_clear(tg_renderer_h h_renderer);

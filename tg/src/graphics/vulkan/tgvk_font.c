@@ -298,10 +298,6 @@ tg_font_h tg_font_create(const char* p_filename)
         tgvk_command_buffer_end_and_submit(p_command_buffer);
         tgvk_global_staging_buffer_release();
 
-        // TODO: generate this only once and read the next time
-        // i'll also have to generate uv's etc. and store/load them
-        tg_image_store_to_disc("fonts/arial.bmp", bitmap_width, bitmap_height, TG_COLOR_IMAGE_FORMAT_R8_UNORM, p_bitmap, TG_TRUE, TG_TRUE);
-
 
 
         // determine allocation size

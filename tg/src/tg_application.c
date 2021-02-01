@@ -6,6 +6,7 @@
 #include "physics/tg_physics.h"
 #include "platform/tg_platform.h"
 #include "tg_input.h"
+#include "tg_rtvx_terrain.h"
 #include "tg_transvoxel_terrain.h"
 #include "util/tg_list.h"
 #include "util/tg_string.h"
@@ -76,7 +77,8 @@ typedef struct tg_sample_scene
     tg_material_h              h_probe_material;
     tg_render_command_h        h_probe_render_command;
 
-    tg_terrain*                p_terrain;
+    //tg_terrain*                p_terrain;
+    tg_rtvx_terrain_h          h_terrain;
     
     f32                        light_timer;
 } tg_sample_scene;
@@ -109,7 +111,9 @@ static void tg__game_3d_create(void)
     tg_renderer_enable_sun(scene.h_main_renderer, TG_TRUE);
     tg_renderer_enable_shadows(scene.h_secondary_renderer, TG_FALSE);
 
-    scene.p_terrain = tg_terrain_create(&scene.camera);
+    //scene.p_terrain = tg_terrain_create(&scene.camera);
+    scene.h_terrain = tg_rtvx_terrain_create();
+
 
 
 
@@ -354,7 +358,7 @@ static void tg__game_3d_update_and_render(f32 dt)
 
     tg_renderer_begin(scene.h_secondary_renderer);
     tg_renderer_push_directional_light(scene.h_secondary_renderer, d0, (v3) { 4.0f, 4.0f, 10.0f });
-    tg_terrain_render(scene.p_terrain, scene.h_secondary_renderer);
+    //tg_terrain_render(scene.p_terrain, scene.h_secondary_renderer);
     tg_render_command_h* ph_render_commands = TG_LIST_AT(scene.render_commands, 0);
     for (u32 i = 0; i < scene.render_commands.count; i++)
     {
@@ -366,7 +370,8 @@ static void tg__game_3d_update_and_render(f32 dt)
     tg_renderer_set_sun_direction(scene.h_main_renderer, d0);
     //tg_renderer_push_directional_light(scene.h_main_renderer, d0, c0);
     tg_renderer_push_point_light(scene.h_main_renderer, (v3) { lx1, ly1, lz1 }, (v3){ 8.0f, 8.0f, 16.0f });
-    tg_terrain_render(scene.p_terrain, scene.h_main_renderer);
+    //tg_terrain_render(scene.p_terrain, scene.h_main_renderer);
+    tg_renderer_push_terrain(scene.h_main_renderer, scene.h_terrain);
     ph_render_commands = TG_LIST_AT(scene.render_commands, 0);
     for (u32 i = 0; i < scene.render_commands.count; i++)
     {
@@ -425,14 +430,14 @@ static void tg__game_3d_update_and_render(f32 dt)
         const v3 world_position = tg_renderer_screen_to_world(scene.h_main_renderer, mouse_x, mouse_y);
         if (tgm_v3_magsqr(tgm_v3_sub(world_position, scene.camera.position)) < 0.9f * scene.camera.persp.f * scene.camera.persp.f)
         {
-            tg_terrain_shape(scene.p_terrain, world_position, 1.5f, delta); // TODO: why does this not work with a radius of less than 1.0f, e.g. TG_PI * 0.25f?
+            //tg_terrain_shape(scene.p_terrain, world_position, 1.5f, delta); // TODO: why does this not work with a radius of less than 1.0f, e.g. TG_PI * 0.25f?
         }
     }
 }
 
 static void tg__game_3d_destroy(void)
 {
-    tg_terrain_destroy(scene.p_terrain);
+    //tg_terrain_destroy(scene.p_terrain);
 
     tg_render_command_destroy(scene.h_probe_render_command);
     tg_material_destroy(scene.h_probe_material);

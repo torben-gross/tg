@@ -122,7 +122,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL tg__debug_callback(VkDebugUtilsMessageSeve
 | General utilities                                           |
 +------------------------------------------------------------*/
 
-#define TGVK_QUEUE_TAKE(type, p_queue)    (p_queue) = &p_queues[type]; TG_MUTEX_LOCK((p_queue)->h_mutex)
+#define TGVK_QUEUE_TAKE(type_mask, p_queue)    (p_queue) = &p_queues[type_mask]; TG_MUTEX_LOCK((p_queue)->h_mutex)
 #define TGVK_QUEUE_RELEASE(p_queue)       TG_MUTEX_UNLOCK((p_queue)->h_mutex)
 
 
@@ -513,7 +513,7 @@ void tgvk_cmd_blit_layered_image_layer_to_image(tgvk_command_buffer* p_command_b
 
 void tgvk_cmd_clear_image(tgvk_command_buffer* p_command_buffer, tgvk_image* p_image)
 {
-    if (p_image->type == TGVK_IMAGE_TYPE_COLOR || p_image->type == TGVK_IMAGE_TYPE_STORAGE)
+    if (p_image->type & (TGVK_IMAGE_TYPE_COLOR | TGVK_IMAGE_TYPE_STORAGE))
     {
         VkImageSubresourceRange image_subresource_range = { 0 };
         image_subresource_range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -1247,6 +1247,28 @@ void tgvk_descriptor_set_update_image(VkDescriptorSet descriptor_set, tgvk_image
     vkUpdateDescriptorSets(device, 1, &write_descriptor_set, 0, TG_NULL);
 }
 
+void tgvk_descriptor_set_update_image2(VkDescriptorSet descriptor_set, tgvk_image* p_image, u32 dst_binding, VkDescriptorType descriptor_type)
+{
+    VkDescriptorImageInfo descriptor_image_info = { 0 };
+    descriptor_image_info.sampler = p_image->sampler.sampler;
+    descriptor_image_info.imageView = p_image->image_view;
+    descriptor_image_info.imageLayout = descriptor_type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL : VK_IMAGE_LAYOUT_GENERAL;
+
+    VkWriteDescriptorSet write_descriptor_set = { 0 };
+    write_descriptor_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    write_descriptor_set.pNext = TG_NULL;
+    write_descriptor_set.dstSet = descriptor_set;
+    write_descriptor_set.dstBinding = dst_binding;
+    write_descriptor_set.dstArrayElement = 0;
+    write_descriptor_set.descriptorCount = 1;
+    write_descriptor_set.descriptorType = descriptor_type;
+    write_descriptor_set.pImageInfo = &descriptor_image_info;
+    write_descriptor_set.pBufferInfo = TG_NULL;
+    write_descriptor_set.pTexelBufferView = TG_NULL;
+
+    vkUpdateDescriptorSets(device, 1, &write_descriptor_set, 0, TG_NULL);
+}
+
 void tgvk_descriptor_set_update_image_array(VkDescriptorSet descriptor_set, tgvk_image* p_image, u32 dst_binding, u32 array_index)
 {
     VkDescriptorImageInfo descriptor_image_info = { 0 };
@@ -1659,33 +1681,29 @@ void tgvk_handle_release(void* p_handle)
 
 
 
-tgvk_image tgvk_image_create(tgvk_image_type type, u32 width, u32 height, VkFormat format, const tg_sampler_create_info* p_sampler_create_info)
+tgvk_image tgvk_image_create(tgvk_image_type_flags type_flags, u32 width, u32 height, VkFormat format, const tg_sampler_create_info* p_sampler_create_info)
 {
     tgvk_image image = { 0 };
 
     VkImageUsageFlags usage = 0;
     VkImageAspectFlagBits aspect_mask = 0;
-    if (type == TGVK_IMAGE_TYPE_COLOR)
+    if (type_flags & TGVK_IMAGE_TYPE_COLOR)
     {
-        usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-        aspect_mask = VK_IMAGE_ASPECT_COLOR_BIT;
+        usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        aspect_mask |= VK_IMAGE_ASPECT_COLOR_BIT;
     }
-    else if (type == TGVK_IMAGE_TYPE_DEPTH)
+    if (type_flags & TGVK_IMAGE_TYPE_DEPTH)
     {
-        usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-        aspect_mask = VK_IMAGE_ASPECT_DEPTH_BIT;
+        usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+        aspect_mask |= VK_IMAGE_ASPECT_DEPTH_BIT;
     }
-    else if (type == TGVK_IMAGE_TYPE_STORAGE)
+    if (type_flags & TGVK_IMAGE_TYPE_STORAGE)
     {
-        usage = VK_IMAGE_USAGE_STORAGE_BIT;
-        aspect_mask = VK_IMAGE_ASPECT_COLOR_BIT;
-    }
-    else
-    {
-        TG_INVALID_CODEPATH();
+        usage |= VK_IMAGE_USAGE_STORAGE_BIT;
+        aspect_mask |= VK_IMAGE_ASPECT_COLOR_BIT;
     }
 
-    image.type = type;
+    image.type = type_flags;
     image.width = width;
     image.height = height;
     image.format = format;
@@ -2687,8 +2705,8 @@ tg_render_target tgvk_render_target_create(u32 color_width, u32 color_height, Vk
     tg_render_target render_target = { 0 };
     render_target.type = TG_STRUCTURE_TYPE_RENDER_TARGET;
 
-    render_target.color_attachment = tgvk_image_create(TGVK_IMAGE_TYPE_COLOR, color_width, color_height, color_format, p_color_sampler_create_info);
-    render_target.color_attachment_copy = tgvk_image_create(TGVK_IMAGE_TYPE_COLOR, color_width, color_height, color_format, p_color_sampler_create_info);
+    render_target.color_attachment = tgvk_image_create(TGVK_IMAGE_TYPE_COLOR | TGVK_IMAGE_TYPE_STORAGE, color_width, color_height, color_format, p_color_sampler_create_info);
+    render_target.color_attachment_copy = tgvk_image_create(TGVK_IMAGE_TYPE_COLOR | TGVK_IMAGE_TYPE_STORAGE, color_width, color_height, color_format, p_color_sampler_create_info);
     render_target.depth_attachment = tgvk_image_create(TGVK_IMAGE_TYPE_DEPTH, depth_width, depth_height, depth_format, p_depth_sampler_create_info);
     render_target.depth_attachment_copy = tgvk_image_create(TGVK_IMAGE_TYPE_DEPTH, depth_width, depth_height, depth_format, p_depth_sampler_create_info);
 

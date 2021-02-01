@@ -1,0 +1,88 @@
+#version 450
+
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+#define TG_RTVX_TERRAIN_CELL_STRIDE    16
+#define TG_RTVX_TERRAIN_VX_STRIDE      (TG_RTVX_TERRAIN_CELL_STRIDE + 1)
+
+#define f32                            float
+#define i32                            int
+#define u32                            uint
+#define v2                             vec2
+#define v2i                            ivec2
+#define v3                             vec3
+#define v3i                            ivec3
+#define v4                             vec4
+#define v4i                            ivec4
+
+
+
+readonly layout(set = 0, binding = 0, r8i) uniform iimage3D u_voxels;
+
+readonly layout(set = 0, binding = 1) uniform uniforms
+{
+    v3    u_camera;
+    v3    u_ray00;
+    v3    u_ray10;
+    v3    u_ray01;
+    v3    u_ray11;
+};
+
+
+
+writeonly layout(set = 0, binding = 2, rgba32f) uniform image2D u_color_attachment;
+//layout(set = 0, binding = 3, r32f) uniform image2D u_depth_attachment;
+
+struct tg_ray
+{
+    v3    o;
+    v3    d;
+    v3    invd;
+};
+
+struct tg_box
+{
+    v3    min;
+    v3    max;
+};
+
+bool tg_intersect_ray_box(tg_ray r, tg_box b)
+{
+    v3 tbot = r.invd * (b.min - r.o);
+    v3 ttop = r.invd * (b.max - r.o);
+    v3 tmin = min(ttop, tbot);
+    v3 tmax = max(ttop, tbot);
+    v2 t = max(tmin.xx, tmin.yz);
+    f32 t0 = max(t.x, t.y);
+    t = min(tmax.xx, tmax.yz);
+    f32 t1 = min(t.x, t.y);
+    //hit.tmin = t0;
+    //hit.tmax = t1;
+    return t1 > max(t0, 0.0);
+}
+
+void main()
+{
+    u32 x = gl_GlobalInvocationID.x;
+    u32 y = gl_GlobalInvocationID.y;
+
+    v2i size = imageSize(u_color_attachment);
+    if (x < size.x && y < size.y)
+    {
+        f32 fx = f32(x) / (f32(gl_NumWorkGroups.x * gl_WorkGroupSize.x));
+        f32 fy = 1.0 - (f32(y) / (f32(gl_NumWorkGroups.y * gl_WorkGroupSize.y)));
+        v3 ray_direction = normalize(mix(mix(u_ray00, u_ray10, fy), mix(u_ray01, u_ray11, fy), fx));
+
+
+
+        v3 min = v3(0.0);
+        v3 max = v3(f32(TG_RTVX_TERRAIN_CELL_STRIDE));
+        tg_ray r = tg_ray(u_camera, ray_direction, v3(1.0) / ray_direction);
+        tg_box b = tg_box(min, max);
+
+        if (tg_intersect_ray_box(r, b))
+        {
+            imageStore(u_color_attachment, ivec2(x, y), v4(ray_direction, 1.0));
+        }
+    }
+}

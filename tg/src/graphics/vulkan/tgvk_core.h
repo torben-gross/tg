@@ -30,10 +30,11 @@ typedef enum tgvk_command_pool_type
 
 typedef enum tgvk_image_type
 {
-    TGVK_IMAGE_TYPE_COLOR,
-    TGVK_IMAGE_TYPE_DEPTH,
-    TGVK_IMAGE_TYPE_STORAGE
+    TGVK_IMAGE_TYPE_COLOR      = (1 << 0),
+    TGVK_IMAGE_TYPE_DEPTH      = (1 << 1),
+    TGVK_IMAGE_TYPE_STORAGE    = (1 << 2)
 } tgvk_image_type;
+typedef u32 tgvk_image_type_flags;
 
 typedef enum tgvk_material_type
 {
@@ -360,6 +361,11 @@ typedef struct tg_mesh
     tgvk_buffer          bitangent_buffer;
 } tg_mesh;
 
+typedef struct tg_rtvx_terrain
+{
+    tgvk_image_3d    voxels;
+} tg_rtvx_terrain;
+
 typedef struct tg_storage_buffer
 {
     tg_structure_type    type;
@@ -432,6 +438,7 @@ typedef struct tg_renderer
     VkCommandBuffer              p_deferred_command_buffers[TG_MAX_RENDER_COMMANDS];
     VkCommandBuffer              p_shadow_command_buffers[TG_CASCADED_SHADOW_MAPS][TG_MAX_RENDER_COMMANDS];
     tg_render_command_h          ph_forward_render_commands[TG_MAX_RENDER_COMMANDS];
+    tg_rtvx_terrain_h            h_terrain;
 
     struct
     {
@@ -493,6 +500,15 @@ typedef struct tg_renderer
         tgvk_framebuffer         framebuffer;
         tgvk_command_buffer      command_buffer;
     } forward_pass;
+
+    struct
+    {
+        tgvk_shader              shader;
+        tgvk_pipeline            pipeline;
+        tgvk_descriptor_set      descriptor_set;
+        tgvk_buffer              ubo;
+        tgvk_command_buffer      command_buffer;
+    } ray_trace_pass;
 
     struct
     {
@@ -632,6 +648,7 @@ void                    tgvk_descriptor_set_destroy(tgvk_descriptor_set* p_descr
 void                    tgvk_descriptor_set_update(VkDescriptorSet descriptor_set, tg_handle shader_input_element_handle, u32 dst_binding);
 void                    tgvk_descriptor_set_update_cube_map(VkDescriptorSet descriptor_set, tgvk_cube_map* p_cube_map, u32 dst_binding);
 void                    tgvk_descriptor_set_update_image(VkDescriptorSet descriptor_set, tgvk_image* p_image, u32 dst_binding);
+void                    tgvk_descriptor_set_update_image2(VkDescriptorSet descriptor_set, tgvk_image* p_image, u32 dst_binding, VkDescriptorType descriptor_type);
 void                    tgvk_descriptor_set_update_image_array(VkDescriptorSet descriptor_set, tgvk_image* p_image, u32 dst_binding, u32 array_index);
 void                    tgvk_descriptor_set_update_image_3d(VkDescriptorSet descriptor_set, tgvk_image_3d* p_image_3d, u32 dst_binding);
 void                    tgvk_descriptor_set_update_layered_image(VkDescriptorSet descriptor_set, tgvk_layered_image* p_image, u32 dst_binding);
@@ -662,7 +679,7 @@ void*                   tgvk_handle_array(tg_structure_type type);
 void*                   tgvk_handle_take(tg_structure_type type);
 void                    tgvk_handle_release(void* p_handle);
 
-tgvk_image              tgvk_image_create(tgvk_image_type type, u32 width, u32 height, VkFormat format, const tg_sampler_create_info* p_sampler_create_info);
+tgvk_image              tgvk_image_create(tgvk_image_type_flags type_flags, u32 width, u32 height, VkFormat format, const tg_sampler_create_info* p_sampler_create_info);
 tgvk_image              tgvk_image_create2(tgvk_image_type type, const char* p_filename, const tg_sampler_create_info* p_sampler_create_info);
 void                    tgvk_image_destroy(tgvk_image* p_image);
 b32                     tgvk_image_serialize(tgvk_image* p_image, const char* p_filename);

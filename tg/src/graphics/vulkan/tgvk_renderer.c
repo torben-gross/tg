@@ -7,17 +7,16 @@
 
 
 
-#define TGVK_CAMERA_VIEW(view_projection_ubo)                 (((m4*)(view_projection_ubo).memory.p_mapped_device_memory)[0])
-#define TGVK_CAMERA_PROJ(view_projection_ubo)                 (((m4*)(view_projection_ubo).memory.p_mapped_device_memory)[1])
-#define TGVK_INV_VIEW_PROJ(projection_matrix, view_matrix)    tgm_m4_inverse(tgm_m4_mul(projection_matrix, view_matrix))
+#define TGVK_CAMERA_VIEW(view_projection_ubo)             (((m4*)(view_projection_ubo).memory.p_mapped_device_memory)[0])
+#define TGVK_CAMERA_PROJ(view_projection_ubo)             (((m4*)(view_projection_ubo).memory.p_mapped_device_memory)[1])
 
-#define TGVK_SHADING_ATTACHMENT_COUNT                         1
-#define TGVK_HDR_FORMAT                                       VK_FORMAT_R32G32B32A32_SFLOAT
+#define TGVK_SHADING_ATTACHMENT_COUNT                     1
+#define TGVK_HDR_FORMAT                                   VK_FORMAT_R32G32B32A32_SFLOAT
 
-#define TGVK_GEOMETRY_FORMATS(var)                            const VkFormat var[TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT] = { VK_FORMAT_R32G32B32A32_SFLOAT, TGVK_HDR_FORMAT, TGVK_HDR_FORMAT, TGVK_HDR_FORMAT }
+#define TGVK_GEOMETRY_FORMATS(var)                        const VkFormat var[TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT] = { VK_FORMAT_R32G32B32A32_SFLOAT, TGVK_HDR_FORMAT, TGVK_HDR_FORMAT, TGVK_HDR_FORMAT }
 
-#define TGVK_SSAO_UBO                                         (*(tg_ssao_ubo*)h_renderer->ssao_pass.ssao_ubo.memory.p_mapped_device_memory)
-#define TGVK_SHADING_UBO                                      (*(tg_shading_ubo*)h_renderer->shading_pass.fragment_shader_ubo.memory.p_mapped_device_memory)
+#define TGVK_SSAO_UBO                                     (*(tg_ssao_ubo*)h_renderer->ssao_pass.ssao_ubo.memory.p_mapped_device_memory)
+#define TGVK_SHADING_UBO                                  (*(tg_shading_ubo*)h_renderer->shading_pass.fragment_shader_ubo.memory.p_mapped_device_memory)
 
 
 
@@ -43,6 +42,15 @@ typedef struct tg_shading_ubo
     m4     p_lightspace_matrices[TG_CASCADED_SHADOW_MAPS];
     v4     p_shadow_distances[(TG_CASCADED_SHADOW_MAPS + 3) / 4]; // because of padding in the shader, this must at least be a vec4 in the shader
 } tg_shading_ubo;
+
+typedef struct tg_ray_tracer_ubo
+{
+    v4    camera;
+    v4    ray00;
+    v4    ray10;
+    v4    ray01;
+    v4    ray11;
+} tg_ray_tracer_ubo;
 
 
 
@@ -429,6 +437,23 @@ static void tg__init_forward_pass(tg_renderer_h h_renderer)
     h_renderer->forward_pass.command_buffer = tgvk_command_buffer_create(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 }
 
+static void tg__init_ray_tracing_pass(tg_renderer_h h_renderer)
+{
+    /*
+    
+        tgvk_shader              shader;
+        tgvk_pipeline            pipeline;
+        tgvk_descriptor_set      descriptor_set;
+        tgvk_buffer              ubo;
+        tgvk_command_buffer      command_buffer;
+    */
+    h_renderer->ray_trace_pass.shader = tg_compute_shader_create("shaders/renderer/terrain_ray_tracer.comp")->shader;
+    h_renderer->ray_trace_pass.pipeline = tgvk_pipeline_create_compute(&h_renderer->ray_trace_pass.shader);
+    h_renderer->ray_trace_pass.descriptor_set = tgvk_descriptor_set_create(&h_renderer->ray_trace_pass.pipeline);
+    h_renderer->ray_trace_pass.ubo = tgvk_buffer_create(sizeof(tg_ray_tracer_ubo), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    h_renderer->ray_trace_pass.command_buffer = tgvk_command_buffer_create(TGVK_COMMAND_POOL_TYPE_COMPUTE, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+}
+
 static void tg__init_tone_mapping_pass(tg_renderer_h h_renderer)
 {
     const VkDeviceSize exposure_sum_buffer_size = 2 * sizeof(u32);
@@ -553,10 +578,12 @@ static void tg__init_tone_mapping_pass(tg_renderer_h h_renderer)
         tgvk_cmd_transition_image_layout(
             &h_renderer->tone_mapping_pass.adapt_exposure_command_buffer,
             &h_renderer->hdr_color_attachment,
-            VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+            VK_ACCESS_SHADER_READ_BIT,
+            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
+            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
         );
     }
     TGVK_CALL(vkEndCommandBuffer(h_renderer->tone_mapping_pass.adapt_exposure_command_buffer.command_buffer));
@@ -571,8 +598,8 @@ static void tg__init_ui_pass(tg_renderer_h h_renderer)
 
     tg_blend_mode blend_mode = TG_BLEND_MODE_BLEND;
     tgvk_graphics_pipeline_create_info pipeline_create_info = { 0 };
-    pipeline_create_info.p_vertex_shader = &tg_vertex_shader_create("shaders/ui/text.vert")->shader;
-    pipeline_create_info.p_fragment_shader = &tg_fragment_shader_create("shaders/ui/text.frag")->shader;
+    pipeline_create_info.p_vertex_shader = &tg_vertex_shader_create("shaders/renderer/ui/text.vert")->shader;
+    pipeline_create_info.p_fragment_shader = &tg_fragment_shader_create("shaders/renderer/ui/text.frag")->shader;
     pipeline_create_info.cull_mode = VK_CULL_MODE_NONE;
     pipeline_create_info.depth_test_enable = TG_FALSE;
     pipeline_create_info.depth_write_enable = TG_FALSE;
@@ -1244,7 +1271,7 @@ tg_renderer_h tg_renderer_create(tg_camera* p_camera)
     h_renderer->p_camera = p_camera;
     h_renderer->view_projection_ubo = tgvk_uniform_buffer_create(2 * sizeof(m4));
 
-    h_renderer->hdr_color_attachment = tgvk_image_create(TGVK_IMAGE_TYPE_COLOR, swapchain_extent.width, swapchain_extent.height, TGVK_HDR_FORMAT, TG_NULL);
+    h_renderer->hdr_color_attachment = tgvk_image_create(TGVK_IMAGE_TYPE_COLOR | TGVK_IMAGE_TYPE_STORAGE, swapchain_extent.width, swapchain_extent.height, TGVK_HDR_FORMAT, TG_NULL);
 
     tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
     tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
@@ -1287,6 +1314,7 @@ tg_renderer_h tg_renderer_create(tg_camera* p_camera)
     tg__init_ssao_pass(h_renderer);
     tg__init_shading_pass(h_renderer);
     tg__init_forward_pass(h_renderer);
+    tg__init_ray_tracing_pass(h_renderer);
     tg__init_tone_mapping_pass(h_renderer);
     tg__init_ui_pass(h_renderer);
     tg__init_blit_pass(h_renderer);
@@ -1563,6 +1591,13 @@ void tg_renderer_push_render_command(tg_renderer_h h_renderer, tg_render_command
     }
 }
 
+void tg_renderer_push_terrain(tg_renderer_h h_renderer, tg_rtvx_terrain_h h_terrain)
+{
+    TG_ASSERT(h_renderer && h_terrain);
+
+    h_renderer->h_terrain = h_terrain;
+}
+
 void tg_renderer_push_text(tg_renderer_h h_renderer, const char* p_text)
 {
     TG_ASSERT(h_renderer && p_text);
@@ -1607,24 +1642,27 @@ void tg_renderer_end(tg_renderer_h h_renderer, f32 dt, b32 present)
 {
     TG_ASSERT(h_renderer);
     
-    const tg_camera* p_camera = h_renderer->p_camera;
-    const m4 view = tgm_m4_mul(tgm_m4_inverse(tgm_m4_euler(p_camera->pitch, p_camera->yaw, p_camera->roll)), tgm_m4_translate(tgm_v3_neg(p_camera->position)));
-    const m4 proj = p_camera->type == TG_CAMERA_TYPE_ORTHOGRAPHIC
-        ? tgm_m4_orthographic(p_camera->ortho.l, p_camera->ortho.r, p_camera->ortho.b, p_camera->ortho.t, p_camera->ortho.f, p_camera->ortho.n)
-        : tgm_m4_perspective(p_camera->persp.fov_y_in_radians, p_camera->persp.aspect, p_camera->persp.n, p_camera->persp.f);
+    const tg_camera c = *h_renderer->p_camera;
 
-    TGVK_CAMERA_VIEW(h_renderer->view_projection_ubo) = view;
-    TGVK_CAMERA_PROJ(h_renderer->view_projection_ubo) = proj;
+    const m4 r = tgm_m4_inverse(tgm_m4_euler(c.pitch, c.yaw, c.roll));
+    const m4 t = tgm_m4_translate(tgm_v3_neg(c.position));
+    const m4 v = tgm_m4_mul(r, t);
+    const m4 p = c.type == TG_CAMERA_TYPE_ORTHOGRAPHIC ? tgm_m4_orthographic(c.ortho.l, c.ortho.r, c.ortho.b, c.ortho.t, c.ortho.f, c.ortho.n) : tgm_m4_perspective(c.persp.fov_y_in_radians, c.persp.aspect, c.persp.n, c.persp.f);
+    const m4 vp = tgm_m4_mul(p, v);
+    const m4 ivp = tgm_m4_inverse(vp);
 
-    TGVK_SSAO_UBO.view = view;
-    TGVK_SSAO_UBO.projection = proj;
+    TGVK_CAMERA_VIEW(h_renderer->view_projection_ubo) = v;
+    TGVK_CAMERA_PROJ(h_renderer->view_projection_ubo) = p;
+
+    TGVK_SSAO_UBO.view = v;
+    TGVK_SSAO_UBO.projection = p;
 
     tg_shading_ubo* p_shading_ubo = &TGVK_SHADING_UBO;
-    p_shading_ubo->camera_position = p_camera->position;
+    p_shading_ubo->camera_position = c.position;
 
     if (TGVK_SHADING_UBO.sun_enabled)
     {
-        tgvk_atmosphere_model_update(&h_renderer->model, tgm_m4_inverse(view), tgm_m4_inverse(proj)); // TODO: is inverse calculated multiple times?
+        tgvk_atmosphere_model_update(&h_renderer->model, tgm_m4_inverse(v), tgm_m4_inverse(p)); // TODO: is inverse calculated multiple times?
     }
 
     VkCommandBufferBeginInfo command_buffer_begin_info = { 0 };
@@ -1655,7 +1693,6 @@ void tg_renderer_end(tg_renderer_h h_renderer, f32 dt, b32 present)
                     {  1.0f, -1.0f,  1.0f,  1.0f }
                 };
 
-                const m4 ivp = TGVK_INV_VIEW_PROJ(proj, view);
                 v3 p_corners_ws[8] = { 0 };
                 for (u8 j = 0; j < 8; j++)
                 {
@@ -1684,13 +1721,13 @@ void tg_renderer_end(tg_renderer_h h_renderer, f32 dt, b32 present)
                 v3 center; f32 radius;
                 tgm_enclosing_sphere(8, p_corners_ws, &center, &radius);
 
-                const m4 t = tgm_m4_translate(tgm_v3_neg(center));
-                const m4 r = tgm_m4_inverse(tgm_m4_euler(-TG_PI * 0.4f, -TG_PI * 0.4f, 0.0f));
-                const m4 v = tgm_m4_mul(r, t);
-                const m4 p = tgm_m4_orthographic(-radius, radius, -radius, radius, -radius, radius);
-                const m4 vp = tgm_m4_mul(p, v);
+                const m4 st = tgm_m4_translate(tgm_v3_neg(center));
+                const m4 sr = tgm_m4_inverse(tgm_m4_euler(-TG_PI * 0.4f, -TG_PI * 0.4f, 0.0f));
+                const m4 sv = tgm_m4_mul(sr, st);
+                const m4 sp = tgm_m4_orthographic(-radius, radius, -radius, radius, -radius, radius);
+                const m4 svp = tgm_m4_mul(sp, sv);
 
-                *((m4*)h_renderer->shadow_pass.p_lightspace_ubos[i].memory.p_mapped_device_memory) = vp;
+                *((m4*)h_renderer->shadow_pass.p_lightspace_ubos[i].memory.p_mapped_device_memory) = svp;
 
                 vkCmdExecuteCommands(h_renderer->shadow_pass.command_buffer.command_buffer, h_renderer->shadow_command_buffer_count, h_renderer->p_shadow_command_buffers[i]);
                 vkCmdEndRenderPass(h_renderer->shadow_pass.command_buffer.command_buffer);
@@ -1841,6 +1878,77 @@ void tg_renderer_end(tg_renderer_h h_renderer, f32 dt, b32 present)
 
     tgvk_queue_submit(TGVK_QUEUE_TYPE_GRAPHICS, 1, &forward_submit_info, VK_NULL_HANDLE);
 
+    if (h_renderer->h_terrain)
+    {
+        const m4 rt_vp = tgm_m4_mul(p, r);
+        const m4 rt_ivp = tgm_m4_inverse(rt_vp);
+
+        //const v3 ray00 = tgm_v3_normalized(tgm_m4_mulv4(rt_ivp, (v4){ -1.0f,  1.0f,  1.0,  1.0 }).xyz);
+        //const v3 ray10 = tgm_v3_normalized(tgm_m4_mulv4(rt_ivp, (v4){  1.0f,  1.0f,  1.0,  1.0 }).xyz);
+        //const v3 ray01 = tgm_v3_normalized(tgm_m4_mulv4(rt_ivp, (v4){ -1.0f, -1.0f,  1.0,  1.0 }).xyz);
+        //const v3 ray11 = tgm_v3_normalized(tgm_m4_mulv4(rt_ivp, (v4){  1.0f, -1.0f,  1.0,  1.0 }).xyz);
+
+        v4 ray00 = { -1.0f,  1.0f,  1.0f,  1.0f };
+        v4 ray10 = { -1.0f, -1.0f,  1.0f,  1.0f };
+        v4 ray01 = {  1.0f,  1.0f,  1.0f,  1.0f };
+        v4 ray11 = {  1.0f, -1.0f,  1.0f,  1.0f };
+
+        ray00 = tgm_m4_mulv4(ivp, ray00);
+        ray10 = tgm_m4_mulv4(ivp, ray10);
+        ray01 = tgm_m4_mulv4(ivp, ray01);
+        ray11 = tgm_m4_mulv4(ivp, ray11);
+
+        ray00.xyz = tgm_v3_divf(ray00.xyz, ray00.w); ray00.w = 0.0f;
+        ray10.xyz = tgm_v3_divf(ray10.xyz, ray10.w); ray10.w = 0.0f;
+        ray01.xyz = tgm_v3_divf(ray01.xyz, ray01.w); ray01.w = 0.0f;
+        ray11.xyz = tgm_v3_divf(ray11.xyz, ray11.w); ray11.w = 0.0f;
+
+        ray00.xyz = tgm_v3_sub(ray00.xyz, c.position);
+        ray10.xyz = tgm_v3_sub(ray10.xyz, c.position);
+        ray01.xyz = tgm_v3_sub(ray01.xyz, c.position);
+        ray11.xyz = tgm_v3_sub(ray11.xyz, c.position);
+
+        ray00.xyz = tgm_v3_normalized(ray00.xyz);
+        ray10.xyz = tgm_v3_normalized(ray10.xyz);
+        ray01.xyz = tgm_v3_normalized(ray01.xyz);
+        ray11.xyz = tgm_v3_normalized(ray11.xyz);
+
+        tg_ray_tracer_ubo* p_ubo = h_renderer->ray_trace_pass.ubo.memory.p_mapped_device_memory;
+        p_ubo->camera.xyz = c.position;
+        p_ubo->ray00.xyz = ray00.xyz;
+        p_ubo->ray10.xyz = ray10.xyz;
+        p_ubo->ray01.xyz = ray01.xyz;
+        p_ubo->ray11.xyz = ray11.xyz;
+
+        tgvk_descriptor_set_update_image_3d(h_renderer->ray_trace_pass.descriptor_set.descriptor_set, &h_renderer->h_terrain->voxels, 0);
+        tgvk_descriptor_set_update_uniform_buffer(h_renderer->ray_trace_pass.descriptor_set.descriptor_set, &h_renderer->ray_trace_pass.ubo, 1);
+        tgvk_descriptor_set_update_image2(h_renderer->ray_trace_pass.descriptor_set.descriptor_set, &h_renderer->hdr_color_attachment, 2, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+        //tgvk_descriptor_set_update_image2(h_renderer->ray_trace_pass.descriptor_set.descriptor_set, &h_renderer->render_target.depth_attachment, 3, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+
+        tgvk_command_buffer_begin(&h_renderer->ray_trace_pass.command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+        {
+            tgvk_cmd_transition_image_layout(&h_renderer->ray_trace_pass.command_buffer, &h_renderer->hdr_color_attachment, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+            tgvk_cmd_bind_pipeline(&h_renderer->ray_trace_pass.command_buffer, &h_renderer->ray_trace_pass.pipeline);
+            tgvk_cmd_bind_descriptor_set(&h_renderer->ray_trace_pass.command_buffer, &h_renderer->ray_trace_pass.pipeline, &h_renderer->ray_trace_pass.descriptor_set);
+            vkCmdDispatch(h_renderer->ray_trace_pass.command_buffer.command_buffer, h_renderer->hdr_color_attachment.width, h_renderer->hdr_color_attachment.height, 1);
+            tgvk_cmd_transition_image_layout(&h_renderer->ray_trace_pass.command_buffer, &h_renderer->hdr_color_attachment, VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+        }
+        vkEndCommandBuffer(h_renderer->ray_trace_pass.command_buffer.command_buffer);
+
+        VkSubmitInfo ray_trace_submit_info = { 0 };
+        ray_trace_submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        ray_trace_submit_info.pNext = TG_NULL;
+        ray_trace_submit_info.waitSemaphoreCount = 1;
+        ray_trace_submit_info.pWaitSemaphores = &h_renderer->semaphore;
+        ray_trace_submit_info.pWaitDstStageMask = &color_attachment_pipeline_stage_flags;
+        ray_trace_submit_info.commandBufferCount = 1;
+        ray_trace_submit_info.pCommandBuffers = &h_renderer->ray_trace_pass.command_buffer.command_buffer;
+        ray_trace_submit_info.signalSemaphoreCount = 1;
+        ray_trace_submit_info.pSignalSemaphores = &h_renderer->semaphore;
+
+        tgvk_queue_submit(TGVK_QUEUE_TYPE_GRAPHICS, 1, &ray_trace_submit_info, VK_NULL_HANDLE);
+    }
+
     VkSubmitInfo tone_mapping_submit_info = { 0 };
     tone_mapping_submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     tone_mapping_submit_info.pNext = TG_NULL;
@@ -1879,8 +1987,7 @@ void tg_renderer_end(tg_renderer_h h_renderer, f32 dt, b32 present)
             const unsigned char* p_text_it = (unsigned char*)h_renderer->text.pp_strings[text_idx];
             while (*p_text_it != '\0')
             {
-                const unsigned char c = *p_text_it++;
-                const u8 glyph_idx = h_renderer->text.h_font->p_char_to_glyph[c];
+                const u8 glyph_idx = h_renderer->text.h_font->p_char_to_glyph[*p_text_it++];
                 const struct tg_font_glyph* p_glyph = &h_renderer->text.h_font->p_glyphs[glyph_idx];
 
                 const f32 x0 = x_offset + p_glyph->left_side_bearing;
@@ -2111,8 +2218,9 @@ v3 tg_renderer_screen_to_world(tg_renderer_h h_renderer, u32 x, u32 y)
     
     const v4 screen = { rel_x, rel_y, depth, 1.0f };
     // TODO: cache the ivp in the renderer instead of calculating it here again
-    const m4 inverse_view_projection_matrix = TGVK_INV_VIEW_PROJ(TGVK_CAMERA_PROJ(h_renderer->view_projection_ubo), TGVK_CAMERA_VIEW(h_renderer->view_projection_ubo));
-    const v4 world = tgm_m4_mulv4(inverse_view_projection_matrix, screen);
+    const m4 vp = tgm_m4_mul(TGVK_CAMERA_PROJ(h_renderer->view_projection_ubo), TGVK_CAMERA_VIEW(h_renderer->view_projection_ubo));
+    const m4 ivp = tgm_m4_inverse(vp);
+    const v4 world = tgm_m4_mulv4(ivp, screen);
     result = tgm_v4_to_v3(world);
 
     return result;
