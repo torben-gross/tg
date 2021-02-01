@@ -234,8 +234,8 @@ static void tg__thread_fn(volatile void* p_user_data)
 			tg_bounds b0, b1;
 			tg__split_bounds(&bounds, split_axis, split_position, &b0, &b1);
 
-			tg_construction_triangle* p_tris0 = TG_MEMORY_ALLOC(n0 * sizeof(tg_construction_triangle));
-			tg_construction_triangle* p_tris1 = TG_MEMORY_ALLOC(n1 * sizeof(tg_construction_triangle));
+			tg_construction_triangle* p_tris0 = TG_MALLOC(n0 * sizeof(tg_construction_triangle));
+			tg_construction_triangle* p_tris1 = TG_MALLOC(n1 * sizeof(tg_construction_triangle));
 
 			n0 = 0; n1 = 0;
 			for (u32 i = 0; i < tri_count; i++)
@@ -265,7 +265,7 @@ static void tg__thread_fn(volatile void* p_user_data)
 			if (p_work_thread_info->p_tree->index_capacity < required_index_capacity)
 			{
 				p_work_thread_info->p_tree->index_capacity *= 2;
-				p_work_thread_info->p_tree->p_indices = TG_MEMORY_REALLOC(p_work_thread_info->p_tree->index_capacity, p_work_thread_info->p_tree->p_indices);
+				p_work_thread_info->p_tree->p_indices = TG_REALLOC(p_work_thread_info->p_tree->index_capacity, p_work_thread_info->p_tree->p_indices);
 			}
 			TG_MUTEX_UNLOCK(p_work_thread_info->h_indices_mutex);
 
@@ -280,7 +280,7 @@ static void tg__thread_fn(volatile void* p_user_data)
 			} while (p_it < p_end);
 		}
 
-		TG_MEMORY_FREE(p_tris);
+		TG_FREE(p_tris);
 	}
 }
 
@@ -291,29 +291,29 @@ tg_kd_tree* tg_kd_tree_create(tg_mesh_h h_mesh)
 
 	const u32 position_count = tg_mesh_get_vertex_count(h_mesh);
 	TG_ASSERT(position_count);
-	v3* p_positions = TG_MEMORY_STACK_ALLOC(position_count * sizeof(*p_positions));
+	v3* p_positions = TG_MALLOC_STACK(position_count * sizeof(*p_positions));
 	tg_mesh_copy_positions(h_mesh, 0, position_count, p_positions);
 	const u32 initial_tri_count = position_count / 3;
 
 	const u32 max_node_count = 2 * initial_tri_count - 1; // this is only true as long as each child contains at least one triangle less than it's parent
-	tg_kd_tree* p_tree = TG_MEMORY_ALLOC_NULLIFY(sizeof(*p_tree) + max_node_count * sizeof(*p_tree->p_nodes));
+	tg_kd_tree* p_tree = TG_MALLOC(sizeof(*p_tree) + max_node_count * sizeof(*p_tree->p_nodes));
 	p_tree->h_mesh = h_mesh;
 	p_tree->index_capacity = (u32)((tg_size)position_count * sizeof(*p_tree->p_indices));
 	p_tree->index_count = 0;
 	p_tree->node_count = 1;
-	p_tree->p_indices = TG_MEMORY_ALLOC(p_tree->index_capacity);
+	p_tree->p_indices = TG_MALLOC(p_tree->index_capacity);
 
 	tg_work_thread_info work_thread_info = { 0 };
 	work_thread_info.p_tree = p_tree;
 	const tg_size nodes_size = ((tg_size)initial_tri_count + 1LL) * sizeof(tg_stack_node);
 	work_thread_info.h_stack_mutex = TG_MUTEX_CREATE();
 	work_thread_info.h_indices_mutex = TG_MUTEX_CREATE();
-	work_thread_info.p_stack_nodes = TG_MEMORY_STACK_ALLOC(nodes_size);
+	work_thread_info.p_stack_nodes = TG_MALLOC_STACK(nodes_size);
 	tg_memory_nullify(nodes_size, work_thread_info.p_stack_nodes);
 	work_thread_info.stack_node_count = 0;
 
 	const tg_size initial_tris_size = (tg_size)initial_tri_count * sizeof(tg_construction_triangle);
-	tg_construction_triangle* p_initial_tris = TG_MEMORY_ALLOC(initial_tris_size);
+	tg_construction_triangle* p_initial_tris = TG_MALLOC(initial_tris_size);
 	for (u32 i = 0; i < initial_tri_count; i++)
 	{
 		p_initial_tris[i].i0 = 3 * i;
@@ -329,8 +329,8 @@ tg_kd_tree* tg_kd_tree_create(tg_mesh_h h_mesh)
 	tg__stack_push(&work_thread_info, 0, tg_mesh_get_bounds(p_tree->h_mesh), initial_tri_count, p_initial_tris);
 	tgp_work_queue_wait_for_completion();
 
-	TG_MEMORY_STACK_FREE(nodes_size);
-	TG_MEMORY_STACK_FREE(position_count * sizeof(*p_positions));
+	TG_FREE_STACK(nodes_size);
+	TG_FREE_STACK(position_count * sizeof(*p_positions));
 
 	return p_tree;
 }

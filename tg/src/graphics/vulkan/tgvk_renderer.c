@@ -269,7 +269,7 @@ static void tg__init_shading_pass(tg_renderer_h h_renderer)
 
     const tg_size api_shader_size = (tg_size)h_renderer->model.api_shader.total_count;
     const tg_size fragment_shader_buffer_size = api_shader_size + file_properties.size + 1LL;
-    char* p_fragment_shader_buffer = TG_MEMORY_STACK_ALLOC(fragment_shader_buffer_size);
+    char* p_fragment_shader_buffer = TG_MALLOC_STACK(fragment_shader_buffer_size);
     const tg_size fragment_shader_buffer_offset = tg_strncpy(fragment_shader_buffer_size, p_fragment_shader_buffer, api_shader_size, h_renderer->model.api_shader.p_source);
 
     tgp_file_load("shaders/renderer/shading.inc", fragment_shader_buffer_size - fragment_shader_buffer_offset, &p_fragment_shader_buffer[fragment_shader_buffer_offset]);
@@ -287,7 +287,7 @@ static void tg__init_shading_pass(tg_renderer_h h_renderer)
     graphics_pipeline_create_info.polygon_mode = VK_POLYGON_MODE_FILL;
 
     h_renderer->shading_pass.graphics_pipeline = tgvk_pipeline_create_graphics(&graphics_pipeline_create_info);
-    TG_MEMORY_STACK_FREE(fragment_shader_buffer_size);
+    TG_FREE_STACK(fragment_shader_buffer_size);
 
     h_renderer->shading_pass.descriptor_set = tgvk_descriptor_set_create(&h_renderer->shading_pass.graphics_pipeline);
     tgvk_atmosphere_model_update_descriptor_set(&h_renderer->model, &h_renderer->shading_pass.descriptor_set);
@@ -777,7 +777,7 @@ static void tg__init_present_pass(tg_renderer_h h_renderer)
     const VkDeviceSize vertex_buffer_offset = 0;
 
     VkDescriptorImageInfo descriptor_image_info = { 0 };
-    descriptor_image_info.sampler = h_renderer->render_target.color_attachment.sampler;
+    descriptor_image_info.sampler = h_renderer->render_target.color_attachment.sampler.sampler;
     descriptor_image_info.imageView = h_renderer->render_target.color_attachment.image_view;
     descriptor_image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
@@ -1278,8 +1278,8 @@ tg_renderer_h tg_renderer_create(tg_camera* p_camera)
     h_renderer->text.capacity = 32;
     h_renderer->text.count = 0;
     h_renderer->text.total_letter_count = 0;
-    h_renderer->text.p_string_capacities = TG_MEMORY_ALLOC(h_renderer->text.capacity * sizeof(*h_renderer->text.p_string_capacities));
-    h_renderer->text.pp_strings = TG_MEMORY_ALLOC(h_renderer->text.capacity * sizeof(*h_renderer->text.pp_strings));
+    h_renderer->text.p_string_capacities = TG_MALLOC(h_renderer->text.capacity * sizeof(*h_renderer->text.p_string_capacities));
+    h_renderer->text.pp_strings = TG_MALLOC(h_renderer->text.capacity * sizeof(*h_renderer->text.pp_strings));
 
     tgvk_atmosphere_model_create(&h_renderer->model);
     tg__init_shadow_pass(h_renderer);
@@ -1295,7 +1295,7 @@ tg_renderer_h tg_renderer_create(tg_camera* p_camera)
 
 
 #if TG_ENABLE_DEBUG_TOOLS == 1
-    h_renderer->DEBUG.p_cubes = TG_MEMORY_ALLOC(TG_DEBUG_MAX_CUBES * sizeof(*h_renderer->DEBUG.p_cubes));
+    h_renderer->DEBUG.p_cubes = TG_MALLOC(TG_DEBUG_MAX_CUBES * sizeof(*h_renderer->DEBUG.p_cubes));
 
     tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take(24 * sizeof(v3));
     v3* p_pit = (v3*)p_staging_buffer->memory.p_mapped_device_memory;
@@ -1434,10 +1434,10 @@ void tg_renderer_destroy(tg_renderer_h h_renderer)
             {
                 break;
             }
-            TG_MEMORY_FREE(h_renderer->text.pp_strings[i]);
+            TG_FREE(h_renderer->text.pp_strings[i]);
         }
-        TG_MEMORY_FREE(h_renderer->text.pp_strings);
-        TG_MEMORY_FREE(h_renderer->text.p_string_capacities);
+        TG_FREE(h_renderer->text.pp_strings);
+        TG_FREE(h_renderer->text.p_string_capacities);
     }
     tg_font_destroy(h_renderer->text.h_font);
     tgvk_semaphore_destroy(h_renderer->semaphore);
@@ -1572,13 +1572,13 @@ void tg_renderer_push_text(tg_renderer_h h_renderer, const char* p_text)
         if (h_renderer->text.capacity == 0)
         {
             h_renderer->text.capacity = 32;
-            h_renderer->text.p_string_capacities = TG_MEMORY_ALLOC(h_renderer->text.capacity * sizeof(*h_renderer->text.p_string_capacities));
-            h_renderer->text.pp_strings = TG_MEMORY_ALLOC(h_renderer->text.capacity * sizeof(*h_renderer->text.pp_strings));
+            h_renderer->text.p_string_capacities = TG_MALLOC(h_renderer->text.capacity * sizeof(*h_renderer->text.p_string_capacities));
+            h_renderer->text.pp_strings = TG_MALLOC(h_renderer->text.capacity * sizeof(*h_renderer->text.pp_strings));
         }
         else
         {
-            h_renderer->text.p_string_capacities = TG_MEMORY_REALLOC(h_renderer->text.capacity * sizeof(*h_renderer->text.p_string_capacities), h_renderer->text.p_string_capacities);
-            h_renderer->text.pp_strings = TG_MEMORY_REALLOC(h_renderer->text.capacity * sizeof(*h_renderer->text.pp_strings), h_renderer->text.pp_strings);
+            h_renderer->text.p_string_capacities = TG_REALLOC(h_renderer->text.capacity * sizeof(*h_renderer->text.p_string_capacities), h_renderer->text.p_string_capacities);
+            h_renderer->text.pp_strings = TG_REALLOC(h_renderer->text.capacity * sizeof(*h_renderer->text.pp_strings), h_renderer->text.pp_strings);
         }
     }
 
@@ -1588,12 +1588,12 @@ void tg_renderer_push_text(tg_renderer_h h_renderer, const char* p_text)
         if (h_renderer->text.p_string_capacities[h_renderer->text.count] == 0)
         {
             TG_ASSERT(h_renderer->text.pp_strings[h_renderer->text.count] == TG_NULL);
-            h_renderer->text.pp_strings[h_renderer->text.count] = TG_MEMORY_ALLOC(string_size * sizeof(h_renderer->text.pp_strings));
+            h_renderer->text.pp_strings[h_renderer->text.count] = TG_MALLOC(string_size);
         }
         else
         {
             TG_ASSERT(h_renderer->text.pp_strings[h_renderer->text.count] != TG_NULL);
-            h_renderer->text.pp_strings[h_renderer->text.count] = TG_MEMORY_REALLOC(string_size * sizeof(h_renderer->text.pp_strings), h_renderer->text.pp_strings[h_renderer->text.count]);
+            h_renderer->text.pp_strings[h_renderer->text.count] = TG_REALLOC(string_size, h_renderer->text.pp_strings[h_renderer->text.count]);
         }
         h_renderer->text.p_string_capacities[h_renderer->text.count] = (u32)string_size;
     }

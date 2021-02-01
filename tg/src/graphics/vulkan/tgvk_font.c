@@ -58,7 +58,7 @@ static void tg__serialize(tg_font_h h_font, const char* p_filename)
         size += h_font->p_glyphs[i].kerning_count * sizeof(tg_sfont_kerning);
     }
 
-    u8* p_memory = TG_MEMORY_STACK_ALLOC(size);
+    u8* p_memory = TG_MALLOC_STACK(size);
     tg_sfont* p_sfont = (tg_sfont*)p_memory;
     tg_sfont_kerning* p_skerning_it = (tg_sfont_kerning*)(p_memory + kernings_offset);
 
@@ -94,7 +94,7 @@ static void tg__serialize(tg_font_h h_font, const char* p_filename)
     const b32 create_file_result = tgp_file_create(p_filename, size, p_memory, TG_TRUE);
     TG_ASSERT(create_file_result);
 
-    TG_MEMORY_STACK_FREE(size);
+    TG_FREE_STACK(size);
 }
 
 static void tg__deserialize(const char* p_filename, TG_OUT tg_font_h h_font)
@@ -102,7 +102,7 @@ static void tg__deserialize(const char* p_filename, TG_OUT tg_font_h h_font)
     tg_file_properties file_properties = { 0 };
     tgp_file_get_properties(p_filename, &file_properties);
 
-    u8* p_buffer = TG_MEMORY_STACK_ALLOC(file_properties.size);
+    u8* p_buffer = TG_MALLOC_STACK(file_properties.size);
     tgp_file_load(p_filename, file_properties.size, p_buffer);
 
     const tg_sfont* p_sfont = (tg_sfont*)p_buffer;
@@ -142,7 +142,7 @@ static void tg__deserialize(const char* p_filename, TG_OUT tg_font_h h_font)
         size += (tg_size)*(u16*)p_sfont_glyph->p_kerning_count * sizeof(*h_font->p_glyphs->p_kernings);
     }
 
-    u8* p_memory = TG_MEMORY_ALLOC(size);
+    u8* p_memory = TG_MALLOC(size);
     h_font->p_glyphs = (struct tg_font_glyph*)p_memory;
     struct tg_font_glyph_kerning* p_kerning_it = (struct tg_font_glyph_kerning*)(p_memory + kernings_offset);
     
@@ -171,7 +171,7 @@ static void tg__deserialize(const char* p_filename, TG_OUT tg_font_h h_font)
     }
     TG_ASSERT((tg_size)((u8*)p_kerning_it - p_memory) == size);
     
-    TG_MEMORY_STACK_FREE(file_properties.size);
+    TG_FREE_STACK(file_properties.size);
 }
 
 
@@ -250,7 +250,7 @@ tg_font_h tg_font_create(const char* p_filename)
         const u32 bitmap_width = p_glyph_x_max[h_font->glyph_count] + 1;
         const u32 bitmap_height = max_glyph_height + 2;
         const tg_size bitmap_size = (tg_size)bitmap_width * (tg_size)bitmap_height;
-        u8* p_bitmap = TG_MEMORY_STACK_ALLOC(bitmap_size);
+        u8* p_bitmap = TG_MALLOC_STACK(bitmap_size);
         tg_memory_nullify(bitmap_size, p_bitmap);
 
         for (u32 i = 0; i < h_font->glyph_count; i++)
@@ -337,7 +337,7 @@ tg_font_h tg_font_create(const char* p_filename)
         // allocate and fill glyphs and kernings
 
         TG_ASSERT(allocation_size > 0);
-        u8* p_it = TG_MEMORY_ALLOC(allocation_size);
+        u8* p_it = TG_MALLOC(allocation_size);
 #ifdef TG_DEBUG
         const u8* p_start = p_it;
 #endif
@@ -405,7 +405,7 @@ tg_font_h tg_font_create(const char* p_filename)
         );
         tgvk_command_buffer_end_and_submit(p_command_buffer);
 
-        TG_MEMORY_STACK_FREE(bitmap_size);
+        TG_FREE_STACK(bitmap_size);
         tg_font_free(&font);
     }
 
@@ -416,7 +416,7 @@ void tg_font_destroy(tg_font_h h_font)
 {
 	TG_ASSERT(h_font);
 
-    TG_MEMORY_FREE(h_font->p_glyphs);
+    TG_FREE(h_font->p_glyphs);
     tgvk_image_destroy(&h_font->texture_atlas);
 	tgvk_handle_release(h_font);
 }

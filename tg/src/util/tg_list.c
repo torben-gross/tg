@@ -17,7 +17,7 @@ tg_list tg_list_create(tg_size element_size, u32 capacity, tg_destroy_fn* p_dest
 	list.capacity = capacity;
 	list.count = 0;
 	list.p_destroy_fn = p_destroy_fn;
-	list.p_elements = TG_MEMORY_ALLOC((tg_size)capacity * (tg_size)element_size);
+	list.p_elements = TG_MALLOC((tg_size)capacity * (tg_size)element_size);
 
 	return list;
 }
@@ -33,7 +33,7 @@ void tg_list_destroy(tg_list* p_list)
 			p_list->p_destroy_fn(TG_LIST_AT(*p_list, i));
 		}
 	}
-	TG_MEMORY_FREE(p_list->p_elements);
+	TG_FREE(p_list->p_elements);
 }
 
 
@@ -162,5 +162,5 @@ void tg_list_reserve(tg_list* p_list, u32 capacity)
 	TG_ASSERT(p_list && capacity > p_list->capacity);
 
 	p_list->capacity = capacity;
-	p_list->p_elements = TG_MEMORY_REALLOC((tg_size)capacity * (tg_size)p_list->element_size, p_list->p_elements);
+	p_list->p_elements = TG_REALLOC((tg_size)capacity * (tg_size)p_list->element_size, p_list->p_elements);
 }

@@ -505,15 +505,15 @@ static void tg__precompute(tgvk_atmosphere_model* p_model, VkFormat layered_imag
 		const tg_blend_mode blend = TG_BLEND_MODE_NONE;
 
 		const tg_size fragment_shader_buffer_size = 1 << 16;
-		char* p_fragment_shader_buffer = TG_MEMORY_STACK_ALLOC(fragment_shader_buffer_size);
+		char* p_fragment_shader_buffer = TG_MALLOC_STACK(fragment_shader_buffer_size);
 
 		tg_size header_count = tg_strncpy_no_nul(fragment_shader_buffer_size, p_fragment_shader_buffer, (tg_size)p_model->api_shader.header_count, p_model->api_shader.p_source);
 		header_count += tg_strcpy_no_nul(fragment_shader_buffer_size - header_count, &p_fragment_shader_buffer[header_count], "\r\n");
 
-		tgvk_shader* p_vertex_shader = TG_MEMORY_STACK_ALLOC(sizeof(*p_vertex_shader));
+		tgvk_shader* p_vertex_shader = TG_MALLOC_STACK(sizeof(*p_vertex_shader));
 		*p_vertex_shader = tgvk_shader_create_from_glsl(TG_SHADER_TYPE_VERTEX, p_atmosphere_vertex_shader);
 
-		tgvk_shader* p_geometry_shader = TG_MEMORY_STACK_ALLOC(sizeof(*p_geometry_shader));
+		tgvk_shader* p_geometry_shader = TG_MALLOC_STACK(sizeof(*p_geometry_shader));
 		*p_geometry_shader = tgvk_shader_create_from_glsl(TG_SHADER_TYPE_GEOMETRY, p_atmosphere_geometry_shader);
 
 		// TODO: use
@@ -575,7 +575,7 @@ static void tg__precompute(tgvk_atmosphere_model* p_model, VkFormat layered_imag
 		tgvk_pipeline transmittance_pipeline;
 
 		tg_strcpy(fragment_shader_buffer_size - header_count, &p_fragment_shader_buffer[header_count], p_atmosphere_compute_transmittance_shader);
-		tgvk_shader* p_transmittance_fragment_shader = TG_MEMORY_STACK_ALLOC(sizeof(*p_transmittance_fragment_shader));
+		tgvk_shader* p_transmittance_fragment_shader = TG_MALLOC_STACK(sizeof(*p_transmittance_fragment_shader));
 		*p_transmittance_fragment_shader = tgvk_shader_create_from_glsl(TG_SHADER_TYPE_FRAGMENT, p_fragment_shader_buffer);
 
 		p_attachment_descriptions[0].format = p_model->rendering.transmittance_texture.format;
@@ -623,7 +623,7 @@ static void tg__precompute(tgvk_atmosphere_model* p_model, VkFormat layered_imag
 		direct_irradiance_framebuffer = tgvk_framebuffer_create(direct_irradiance_render_pass, 2, p_attachments, TG_IRRADIANCE_TEXTURE_WIDTH, TG_IRRADIANCE_TEXTURE_HEIGHT);
 
 		tg_strcpy(fragment_shader_buffer_size - header_count, &p_fragment_shader_buffer[header_count], p_atmosphere_compute_direct_irradiance_shader);
-		p_direct_irradiance_fragment_shader = TG_MEMORY_STACK_ALLOC(sizeof(*p_direct_irradiance_fragment_shader));
+		p_direct_irradiance_fragment_shader = TG_MALLOC_STACK(sizeof(*p_direct_irradiance_fragment_shader));
 		*p_direct_irradiance_fragment_shader = tgvk_shader_create_from_glsl(TG_SHADER_TYPE_FRAGMENT, p_fragment_shader_buffer);
 
 		graphics_pipeline_create_info.p_fragment_shader = p_direct_irradiance_fragment_shader;
@@ -655,7 +655,7 @@ static void tg__precompute(tgvk_atmosphere_model* p_model, VkFormat layered_imag
 		tgvk_descriptor_set_destroy(&direct_irradiance_descriptor_set);
 		tgvk_pipeline_destroy(&direct_irradiance_pipeline);
 		tgvk_shader_destroy(p_direct_irradiance_fragment_shader);
-		TG_MEMORY_STACK_FREE(sizeof(*p_direct_irradiance_fragment_shader));
+		TG_FREE_STACK(sizeof(*p_direct_irradiance_fragment_shader));
 		tgvk_framebuffer_destroy(&direct_irradiance_framebuffer);
 		tgvk_render_pass_destroy(direct_irradiance_render_pass);
 
@@ -701,7 +701,7 @@ static void tg__precompute(tgvk_atmosphere_model* p_model, VkFormat layered_imag
 			tg_strcpy(fragment_shader_buffer_size - header_count, &p_fragment_shader_buffer[header_count], p_atmosphere_compute_single_scattering_shader_no_single_mie_scattering_texture);
 		}
 
-		p_single_scattering_fragment_shader = TG_MEMORY_STACK_ALLOC(sizeof(*p_single_scattering_fragment_shader));
+		p_single_scattering_fragment_shader = TG_MALLOC_STACK(sizeof(*p_single_scattering_fragment_shader));
 		*p_single_scattering_fragment_shader = tgvk_shader_create_from_glsl(TG_SHADER_TYPE_FRAGMENT, p_fragment_shader_buffer);
 
 		graphics_pipeline_create_info.p_fragment_shader = p_single_scattering_fragment_shader;
@@ -752,7 +752,7 @@ static void tg__precompute(tgvk_atmosphere_model* p_model, VkFormat layered_imag
 		tgvk_descriptor_set_destroy(&single_scattering_descriptor_set);
 		tgvk_pipeline_destroy(&single_scattering_pipeline);
 		tgvk_shader_destroy(p_single_scattering_fragment_shader);
-		TG_MEMORY_STACK_FREE(sizeof(*p_single_scattering_fragment_shader));
+		TG_FREE_STACK(sizeof(*p_single_scattering_fragment_shader));
 		tgvk_framebuffer_destroy(&single_scattering_framebuffer);
 		tgvk_render_pass_destroy(single_scattering_render_pass);
 
@@ -774,7 +774,7 @@ static void tg__precompute(tgvk_atmosphere_model* p_model, VkFormat layered_imag
 		scattering_density_framebuffer = tgvk_framebuffer_create_layered(scattering_density_render_pass, 1, p_attachments, TG_SCATTERING_TEXTURE_WIDTH, TG_SCATTERING_TEXTURE_HEIGHT, TG_SCATTERING_TEXTURE_DEPTH);
 
 		tg_strcpy(fragment_shader_buffer_size - header_count, &p_fragment_shader_buffer[header_count], p_atmosphere_compute_scattering_density_shader);
-		p_scattering_density_fragment_shader = TG_MEMORY_STACK_ALLOC(sizeof(*p_scattering_density_fragment_shader));
+		p_scattering_density_fragment_shader = TG_MALLOC_STACK(sizeof(*p_scattering_density_fragment_shader));
 		*p_scattering_density_fragment_shader = tgvk_shader_create_from_glsl(TG_SHADER_TYPE_FRAGMENT, p_fragment_shader_buffer);
 
 		graphics_pipeline_create_info.p_fragment_shader = p_scattering_density_fragment_shader;
@@ -807,7 +807,7 @@ static void tg__precompute(tgvk_atmosphere_model* p_model, VkFormat layered_imag
 		indirect_irradiance_framebuffer = tgvk_framebuffer_create(indirect_irradiance_render_pass, 2, p_attachments, TG_IRRADIANCE_TEXTURE_WIDTH, TG_IRRADIANCE_TEXTURE_HEIGHT);
 
 		tg_strcpy(fragment_shader_buffer_size - header_count, &p_fragment_shader_buffer[header_count], p_atmosphere_compute_indirect_irradiance_shader);
-		p_indirect_irradiance_fragment_shader = TG_MEMORY_STACK_ALLOC(sizeof(*p_indirect_irradiance_fragment_shader));
+		p_indirect_irradiance_fragment_shader = TG_MALLOC_STACK(sizeof(*p_indirect_irradiance_fragment_shader));
 		*p_indirect_irradiance_fragment_shader = tgvk_shader_create_from_glsl(TG_SHADER_TYPE_FRAGMENT, p_fragment_shader_buffer);
 
 		graphics_pipeline_create_info.p_fragment_shader = p_indirect_irradiance_fragment_shader;
@@ -839,7 +839,7 @@ static void tg__precompute(tgvk_atmosphere_model* p_model, VkFormat layered_imag
 		multiple_scattering_framebuffer = tgvk_framebuffer_create_layered(multiple_scattering_render_pass, 2, p_attachments, TG_SCATTERING_TEXTURE_WIDTH, TG_SCATTERING_TEXTURE_HEIGHT, TG_SCATTERING_TEXTURE_DEPTH);
 
 		tg_strcpy(fragment_shader_buffer_size - header_count, &p_fragment_shader_buffer[header_count], p_atmosphere_compute_multiple_scattering_shader);
-		p_multiple_scattering_fragment_shader = TG_MEMORY_STACK_ALLOC(sizeof(*p_multiple_scattering_fragment_shader));
+		p_multiple_scattering_fragment_shader = TG_MALLOC_STACK(sizeof(*p_multiple_scattering_fragment_shader));
 		*p_multiple_scattering_fragment_shader = tgvk_shader_create_from_glsl(TG_SHADER_TYPE_FRAGMENT, p_fragment_shader_buffer);
 
 		graphics_pipeline_create_info.p_fragment_shader = p_multiple_scattering_fragment_shader;
@@ -944,21 +944,21 @@ static void tg__precompute(tgvk_atmosphere_model* p_model, VkFormat layered_imag
 		tgvk_descriptor_set_destroy(&multiple_scattering_descriptor_set);
 		tgvk_pipeline_destroy(&multiple_scattering_pipeline);
 		tgvk_shader_destroy(p_multiple_scattering_fragment_shader);
-		TG_MEMORY_STACK_FREE(sizeof(*p_multiple_scattering_fragment_shader));
+		TG_FREE_STACK(sizeof(*p_multiple_scattering_fragment_shader));
 		tgvk_framebuffer_destroy(&multiple_scattering_framebuffer);
 		tgvk_render_pass_destroy(multiple_scattering_render_pass);
 
 		tgvk_descriptor_set_destroy(&indirect_irradiance_descriptor_set);
 		tgvk_pipeline_destroy(&indirect_irradiance_pipeline);
 		tgvk_shader_destroy(p_indirect_irradiance_fragment_shader);
-		TG_MEMORY_STACK_FREE(sizeof(*p_indirect_irradiance_fragment_shader));
+		TG_FREE_STACK(sizeof(*p_indirect_irradiance_fragment_shader));
 		tgvk_framebuffer_destroy(&indirect_irradiance_framebuffer);
 		tgvk_render_pass_destroy(indirect_irradiance_render_pass);
 
 		tgvk_descriptor_set_destroy(&scattering_density_descriptor_set);
 		tgvk_pipeline_destroy(&scattering_density_pipeline);
 		tgvk_shader_destroy(p_scattering_density_fragment_shader);
-		TG_MEMORY_STACK_FREE(sizeof(*p_scattering_density_fragment_shader));
+		TG_FREE_STACK(sizeof(*p_scattering_density_fragment_shader));
 		tgvk_framebuffer_destroy(&scattering_density_framebuffer);
 		tgvk_render_pass_destroy(scattering_density_render_pass);
 
@@ -981,7 +981,7 @@ static void tg__precompute(tgvk_atmosphere_model* p_model, VkFormat layered_imag
 		tgvk_command_buffer_end_and_submit(p_command_buffer);
 
 		tgvk_pipeline_destroy(&transmittance_pipeline);
-		TG_MEMORY_STACK_FREE(sizeof(*p_transmittance_fragment_shader));
+		TG_FREE_STACK(sizeof(*p_transmittance_fragment_shader));
 		tgvk_shader_destroy(p_transmittance_fragment_shader);
 		tgvk_framebuffer_destroy(&transmittance_framebuffer);
 		tgvk_render_pass_destroy(transmittance_render_pass);
@@ -993,10 +993,10 @@ static void tg__precompute(tgvk_atmosphere_model* p_model, VkFormat layered_imag
 		tgvk_semaphore_destroy(semaphore);
 
 		tgvk_shader_destroy(p_geometry_shader);
-		TG_MEMORY_STACK_FREE(sizeof(*p_geometry_shader));
+		TG_FREE_STACK(sizeof(*p_geometry_shader));
 		tgvk_shader_destroy(p_vertex_shader);
-		TG_MEMORY_STACK_FREE(sizeof(*p_vertex_shader));
-		TG_MEMORY_STACK_FREE(fragment_shader_buffer_size);
+		TG_FREE_STACK(sizeof(*p_vertex_shader));
+		TG_FREE_STACK(fragment_shader_buffer_size);
 	}
 	else
 	{
@@ -1075,7 +1075,7 @@ void tgvk_atmosphere_model_create(TG_OUT tgvk_atmosphere_model* p_model)
 
 
 	p_model->api_shader.capacity = 1 << 16;
-	p_model->api_shader.p_source = TG_MEMORY_ALLOC(p_model->api_shader.capacity);
+	p_model->api_shader.p_source = TG_MALLOC(p_model->api_shader.capacity);
 	tg__precompute(p_model, layered_image_format);
 
 
@@ -1172,7 +1172,7 @@ void tgvk_atmosphere_model_destroy(tgvk_atmosphere_model* p_model)
 
 	if (p_model->api_shader.p_source)
 	{
-		TG_MEMORY_FREE(p_model->api_shader.p_source);
+		TG_FREE(p_model->api_shader.p_source);
 	}
 
 	tgvk_image_destroy(&p_model->rendering.irradiance_texture);

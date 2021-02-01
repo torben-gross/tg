@@ -91,7 +91,7 @@ void tgvk_memory_allocator_init(VkDevice device, VkPhysicalDevice physical_devic
             memory.p_pools[memory.pool_count].reserved_page_count = 0;
             memory.p_pools[memory.pool_count].total_page_count = total_page_count;
             memory.p_pools[memory.pool_count].entry_count = 1;
-            memory.p_pools[memory.pool_count].p_entries = TG_MEMORY_ALLOC(total_page_count * sizeof(*memory.p_pools[memory.pool_count].p_entries));
+            memory.p_pools[memory.pool_count].p_entries = TG_MALLOC(total_page_count * sizeof(*memory.p_pools[memory.pool_count].p_entries));
             memory.p_pools[memory.pool_count].p_entries[0].reserved = TG_FALSE;
             memory.p_pools[memory.pool_count].p_entries[0].page_count = total_page_count;
             memory.p_pools[memory.pool_count].p_entries[0].offset = 0;
@@ -132,7 +132,7 @@ void tgvk_memory_allocator_shutdown(VkDevice device)
             TG_DEBUG_LOG("%u unfreed pages in pool #%u in vulkan allocator!\n", memory.p_pools[i].reserved_page_count, i);
         }
         vkFreeMemory(device, memory.p_pools[i].device_memory, TG_NULL);
-        TG_MEMORY_FREE(memory.p_pools[i].p_entries);
+        TG_FREE(memory.p_pools[i].p_entries);
     }
     TG_RWL_DESTROY(memory.read_write_lock);
 }

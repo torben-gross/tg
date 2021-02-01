@@ -11,7 +11,7 @@ b32 tg__traverse(v3 ray_origin, v3 ray_direction, const tg_kd_tree* p_kd_tree, c
     {
         const u32 position_count = tg_mesh_get_vertex_count(p_kd_tree->h_mesh);
         const tg_size positions_size = (tg_size)position_count * sizeof(v3);
-        v3* p_positions = TG_MEMORY_STACK_ALLOC(positions_size);
+        v3* p_positions = TG_MALLOC_STACK(positions_size);
         tg_mesh_copy_positions(p_kd_tree->h_mesh, 0, position_count, p_positions); // TODO: this will be insanely slow now! keep copy of positions in tree!
 
         f32 distance = TG_F32_MAX;
@@ -40,7 +40,7 @@ b32 tg__traverse(v3 ray_origin, v3 ray_direction, const tg_kd_tree* p_kd_tree, c
                 }
             }
         }
-        TG_MEMORY_STACK_FREE(positions_size);
+        TG_FREE_STACK(positions_size);
         result = distance < TG_F32_MAX;
         return result;
     }

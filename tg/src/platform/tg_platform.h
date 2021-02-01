@@ -225,9 +225,7 @@ void                  tgp_debug_log(const char* p_format, ...);
 void                  tgp_handle_events(void);
 
 void*                 tgp_malloc(tg_size size);
-void*                 tgp_malloc_nullify(tg_size size);
 void*                 tgp_realloc(tg_size size, void* p_memory);
-void*                 tgp_realloc_nullify(tg_size size, void* p_memory);
 void                  tgp_free(void* p_memory);
 
 void                  tgp_get_mouse_position(u32* p_x, u32* p_y);

@@ -324,7 +324,7 @@ static void tg__load_bmp_from_memory(tg_size file_size, const char* p_file_memor
 	*p_height = bitmap_v5_header.height;
 	tg__convert_masks_to_format(bitmap_v5_header.r_mask, bitmap_v5_header.g_mask, bitmap_v5_header.b_mask, bitmap_v5_header.a_mask, p_format);
 	const tg_size size = (tg_size)bitmap_v5_header.width * (tg_size)bitmap_v5_header.height * sizeof(**pp_data);
-	*pp_data = TG_MEMORY_ALLOC(size);
+	*pp_data = TG_MALLOC(size);
 	tg_memcpy(size, &p_file_memory[bitmap_file_header.offset_bits], *pp_data);
 }
 
@@ -336,7 +336,7 @@ void tg_image_load(const char* p_filename, TG_OUT u32* p_width, TG_OUT u32* p_he
 
 	tg_file_properties file_properties = { 0 };
 	tgp_file_get_properties(p_filename, &file_properties);
-	char* p_memory = TG_MEMORY_STACK_ALLOC(file_properties.size);
+	char* p_memory = TG_MALLOC_STACK(file_properties.size);
 	tgp_file_load(p_filename, file_properties.size, p_memory);
 
 	if (file_properties.size >= 2 && *(u16*)p_memory == TG_BMP_IDENTIFIER)
@@ -344,12 +344,12 @@ void tg_image_load(const char* p_filename, TG_OUT u32* p_width, TG_OUT u32* p_he
 		tg__load_bmp_from_memory(file_properties.size, p_memory, p_width, p_height, p_format, pp_data);
 	}
 
-	TG_MEMORY_STACK_FREE(file_properties.size);
+	TG_FREE_STACK(file_properties.size);
 }
 
 void tg_image_free(u32* p_data)
 {
-	TG_MEMORY_FREE(p_data);
+	TG_FREE(p_data);
 }
 
 void tg_image_convert_format(TG_INOUT u32* p_data, u32 width, u32 height, tg_color_image_format old_format, tg_color_image_format new_format)
@@ -464,7 +464,7 @@ b32 tg_image_store_to_disc(const char* p_filename, u32 width, u32 height, tg_col
 		const tg_color_image_format out_format = in_pixel_size == out_pixel_size && in_channels == out_channels ? format : TG_COLOR_IMAGE_FORMAT_R8G8B8A8_UNORM;
 
 		const u32 bmp_size = TG_BMP_BITMAPFILEHEADER_SIZE + TG_BMP_BITMAPV5HEADER_SIZE + 3 * sizeof(tg_rgb_quad) + out_data_size;
-		char* p_buffer = TG_MEMORY_STACK_ALLOC(bmp_size);
+		char* p_buffer = TG_MALLOC_STACK(bmp_size);
 
 		const u32 offset_bits = 150;
 
@@ -556,7 +556,7 @@ b32 tg_image_store_to_disc(const char* p_filename, u32 width, u32 height, tg_col
 
 		result = tgp_file_create(p_filename, (size_t)bmp_size, p_buffer, replace_existing);
 		
-		TG_MEMORY_STACK_FREE(bmp_size);
+		TG_FREE_STACK(bmp_size);
 	}
 	else
 	{

@@ -392,7 +392,7 @@ static void tg__open_type__allocate(
 	{
 		*p_size = size;
 	}
-	*pp_memory = TG_MEMORY_ALLOC(size);
+	*pp_memory = TG_MALLOC(size);
 }
 
 static void tg__open_type__fill_glyph_outline(
@@ -437,9 +437,9 @@ static void tg__open_type__fill_glyph_outline(
 			const u32 x_coordinates_capacity = logical_point_count * sizeof(*p_x_coordinates);
 			const u32 y_coordinates_capacity = logical_point_count * sizeof(*p_y_coordinates);
 
-			p_flags = TG_MEMORY_STACK_ALLOC(flags_capacity);
-			p_x_coordinates = TG_MEMORY_STACK_ALLOC(x_coordinates_capacity);
-			p_y_coordinates = TG_MEMORY_STACK_ALLOC(y_coordinates_capacity);
+			p_flags = TG_MALLOC_STACK(flags_capacity);
+			p_x_coordinates = TG_MALLOC_STACK(x_coordinates_capacity);
+			p_y_coordinates = TG_MALLOC_STACK(y_coordinates_capacity);
 
 			// Unpack flags
 			const u8* p_it = &p_instructions[instruction_length];
@@ -544,9 +544,9 @@ static void tg__open_type__fill_glyph_outline(
 				first_point_idx = one_past_last_point_idx;
 			}
 
-			TG_MEMORY_STACK_FREE(y_coordinates_capacity);
-			TG_MEMORY_STACK_FREE(x_coordinates_capacity);
-			TG_MEMORY_STACK_FREE(flags_capacity);
+			TG_FREE_STACK(y_coordinates_capacity);
+			TG_FREE_STACK(x_coordinates_capacity);
+			TG_FREE_STACK(flags_capacity);
 		}
 		else
 		{
@@ -642,7 +642,7 @@ static void tg__open_type__fill_glyph_outline(
 				tg__open_type__glyph_size(glyph_index, index_to_loc_format, p_loca, p_glyf, TG_NULL, TG_NULL, &temp_glyph_size);
 
 				tg_open_type_glyph temp_glyph = { 0 };
-				u8* p_temp_data = TG_MEMORY_STACK_ALLOC(temp_glyph_size);
+				u8* p_temp_data = TG_MALLOC_STACK(temp_glyph_size);
 
 				tg__open_type__fill_glyph_outline(glyph_index, index_to_loc_format, p_loca, p_glyf, &p_temp_data, &temp_glyph);
 
@@ -668,7 +668,7 @@ static void tg__open_type__fill_glyph_outline(
 					}
 				}
 
-				TG_MEMORY_STACK_FREE(temp_glyph_size);
+				TG_FREE_STACK(temp_glyph_size);
 
 				more_components = flags & TG_OPEN_TYPE__COMPOSITE_GLYPH__MORE_COMPONENTS;
 			}
@@ -863,7 +863,7 @@ void tg_font_load(const char* p_filename, TG_OUT tg_open_type_font* p_font)
 	const b32 get_file_properties_result = tgp_file_get_properties(p_filename, &file_properties);
 	TG_ASSERT(get_file_properties_result);
 	
-	char* p_buffer = TG_MEMORY_STACK_ALLOC(file_properties.size);
+	char* p_buffer = TG_MALLOC_STACK(file_properties.size);
 	tgp_file_load(p_filename, file_properties.size, p_buffer);
 
 	if (tg_string_equal(file_properties.p_extension, "ttf"))
@@ -875,14 +875,14 @@ void tg_font_load(const char* p_filename, TG_OUT tg_open_type_font* p_font)
 		TG_INVALID_CODEPATH();
 	}
 
-	TG_MEMORY_STACK_FREE(file_properties.size);
+	TG_FREE_STACK(file_properties.size);
 }
 
 void tg_font_free(tg_open_type_font* p_font)
 {
 	TG_ASSERT(p_font && p_font->p_glyphs);
 
-	TG_MEMORY_FREE(p_font->p_glyphs);
+	TG_FREE(p_font->p_glyphs);
 }
 
 const tg_open_type_glyph* tg_font_get_glyph(const tg_open_type_font* p_font, unsigned char c)

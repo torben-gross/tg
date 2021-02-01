@@ -13,11 +13,11 @@ void tg_string_create(char* p_data, TG_INOUT tg_string* p_string)
 		p_string->capacity = (tg_size)p_string->count_no_nul + 1LL;
 		if (p_string->p_data)
 		{
-			TG_MEMORY_REALLOC(p_string->capacity, p_string->p_data);
+			TG_REALLOC(p_string->capacity, p_string->p_data);
 		}
 		else
 		{
-			p_string->p_data = TG_MEMORY_ALLOC(p_string->capacity);
+			p_string->p_data = TG_MALLOC(p_string->capacity);
 		}
 	}
 	tg_strcpy(p_string->capacity, p_string->p_data, p_data);
@@ -29,7 +29,7 @@ void tg_string_destroy(tg_string* p_string)
 
 	if (p_string->p_data)
 	{
-		TG_MEMORY_FREE(p_string->p_data);
+		TG_FREE(p_string->p_data);
 	}
 	p_string->count_no_nul = 0;
 	p_string->capacity = 0;

@@ -994,7 +994,7 @@ static void tg__build_octree(volatile tg_terrain* p_terrain, volatile tg_terrain
 	if (!p_octree->p_voxel_map)
 	{
 		const tg_size voxel_map_size = TG_TERRAIN_VOXEL_MAP_VOXELS * sizeof(*p_octree->p_voxel_map);
-		p_octree->p_voxel_map = TG_MEMORY_ALLOC(voxel_map_size);
+		p_octree->p_voxel_map = TG_MALLOC(voxel_map_size);
 
 		char p_filename_buffer[TG_MAX_PATH] = { 0 };
 		tg_stringf(sizeof(p_filename_buffer), p_filename_buffer, "terrain/octree_%i_%i_%i.txt", octree_index_3d.x, octree_index_3d.y, octree_index_3d.z);
@@ -1004,19 +1004,19 @@ static void tg__build_octree(volatile tg_terrain* p_terrain, volatile tg_terrain
 			tg__fill_voxel_map(p_octree->min_coords, p_octree->p_voxel_map);
 
 			u32 compressed_voxel_map_size;
-			void* p_compressed_voxel_map_buffer = TG_MEMORY_STACK_ALLOC_ASYNC(voxel_map_size);
+			void* p_compressed_voxel_map_buffer = TG_MALLOC_STACK_ASYNC(voxel_map_size);
 			tg__compress_voxel_map(p_octree->p_voxel_map, &compressed_voxel_map_size, p_compressed_voxel_map_buffer);
 			tgp_file_create(p_filename_buffer, (tg_size)compressed_voxel_map_size, p_compressed_voxel_map_buffer, TG_FALSE);
-			TG_MEMORY_STACK_FREE_ASYNC(voxel_map_size);
+			TG_FREE_STACK_ASYNC(voxel_map_size);
 		}
 		else
 		{
 			tg_file_properties file_properties = { 0 };
 			tgp_file_get_properties(p_filename_buffer, &file_properties);
-			i8* p_file_data = TG_MEMORY_STACK_ALLOC_ASYNC(file_properties.size);
+			i8* p_file_data = TG_MALLOC_STACK_ASYNC(file_properties.size);
 			tgp_file_load(p_filename_buffer, file_properties.size, p_file_data);
 			tg__decompress_voxel_map(p_file_data, p_octree->p_voxel_map);
-			TG_MEMORY_STACK_FREE_ASYNC(file_properties.size);
+			TG_FREE_STACK_ASYNC(file_properties.size);
 		}
 	}
 
@@ -1198,7 +1198,7 @@ static void tg__thread_fn(volatile tg_terrain* p_terrain)
 			tg__destroy_node(&p_octree->p_nodes[j]);
 		}
 
-		TG_MEMORY_FREE(p_octree->p_voxel_map);
+		TG_FREE(p_octree->p_voxel_map);
 	}
 }
 
@@ -1206,7 +1206,7 @@ tg_terrain* tg_terrain_create(tg_camera* p_camera)
 {
 	TG_ASSERT(p_camera);
 
-	tg_terrain* p_terrain = TG_MEMORY_ALLOC_NULLIFY(sizeof(*p_terrain));
+	tg_terrain* p_terrain = TG_MALLOC(sizeof(*p_terrain));
 	
 	p_terrain->p_camera = p_camera;
 	p_terrain->h_material = tg_material_create_deferred(tg_vertex_shader_create("shaders/deferred/terrain.vert"), tg_fragment_shader_create("shaders/deferred/terrain.frag"));
@@ -1214,7 +1214,7 @@ tg_terrain* tg_terrain_create(tg_camera* p_camera)
 	p_terrain->h_event = TG_EVENT_CREATE();
 
 	const tg_size vertices_size = 15 * TG_TERRAIN_NODE_CELLS * sizeof(v3);
-	p_terrain->p_position_buffer = TG_MEMORY_ALLOC(2 * vertices_size);
+	p_terrain->p_position_buffer = TG_MALLOC(2 * vertices_size);
 	p_terrain->p_normal_buffer = (v3*)&((u8*)p_terrain->p_position_buffer)[vertices_size];
 	
 	p_terrain->is_thread_running = TG_TRUE;
@@ -1230,10 +1230,10 @@ void tg_terrain_destroy(tg_terrain* p_terrain)
 	p_terrain->is_thread_running = TG_FALSE;
 	tgp_thread_destroy(p_terrain->h_thread);
 	TG_EVENT_DESTROY(p_terrain->h_event);
-	TG_MEMORY_FREE(p_terrain->p_position_buffer);
+	TG_FREE(p_terrain->p_position_buffer);
 	tg_material_destroy(p_terrain->h_material);
 
-	TG_MEMORY_FREE(p_terrain);
+	TG_FREE(p_terrain);
 }
 
 void tg_terrain_render(tg_terrain* p_terrain, tg_renderer_h h_renderer)

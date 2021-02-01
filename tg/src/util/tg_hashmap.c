@@ -42,7 +42,7 @@ tg_hashmap tg_hashmap_create_impl(u32 key_size, u32 value_size, u32 bucket_count
 	hashmap.element_count = 0;
 	hashmap.key_size = key_size;
 	hashmap.value_size = value_size;
-	hashmap.p_buckets = TG_MEMORY_ALLOC(bucket_count * sizeof(*hashmap.p_buckets));
+	hashmap.p_buckets = TG_MALLOC(bucket_count * sizeof(*hashmap.p_buckets));
 
 	for (u32 i = 0; i < bucket_count; i++)
 	{
@@ -98,7 +98,7 @@ void tg_hashmap_destroy(tg_hashmap* p_hashmap)
 		tg_list_destroy(&p_hashmap->p_buckets[i].keys);
 		tg_list_destroy(&p_hashmap->p_buckets[i].values);
 	}
-	TG_MEMORY_FREE(p_hashmap->p_buckets);
+	TG_FREE(p_hashmap->p_buckets);
 }
 
 
@@ -251,7 +251,7 @@ tg_string_hashmap tg_string_hashmap_create_impl(u32 value_size, u32 bucket_count
 	string_hashmap.bucket_count = bucket_count;
 	string_hashmap.element_count = 0;
 	string_hashmap.value_size = value_size;
-	string_hashmap.p_buckets = TG_MEMORY_ALLOC(bucket_count * sizeof(*string_hashmap.p_buckets));
+	string_hashmap.p_buckets = TG_MALLOC(bucket_count * sizeof(*string_hashmap.p_buckets));
 
 	for (u32 i = 0; i < bucket_count; i++)
 	{
@@ -270,12 +270,12 @@ void tg_string_hashmap_destroy(tg_string_hashmap* p_string_hashmap)
 	{
 		for (u32 j = 0; j < p_string_hashmap->p_buckets[i].keys.count; j++)
 		{
-			TG_MEMORY_FREE(((char**)p_string_hashmap->p_buckets[i].keys.p_elements)[j]);
+			TG_FREE(((char**)p_string_hashmap->p_buckets[i].keys.p_elements)[j]);
 		}
 		tg_list_destroy(&p_string_hashmap->p_buckets[i].keys);
 		tg_list_destroy(&p_string_hashmap->p_buckets[i].values);
 	}
-	TG_MEMORY_FREE(p_string_hashmap->p_buckets);
+	TG_FREE(p_string_hashmap->p_buckets);
 }
 
 void tg_string_hashmap_insert(tg_string_hashmap* p_string_hashmap, const char* p_key, const void* p_value)
@@ -301,7 +301,7 @@ void tg_string_hashmap_insert(tg_string_hashmap* p_string_hashmap, const char* p
 
 	p_string_hashmap->element_count++;
 	tg_size key_size = ((tg_size)tg_strlen_no_nul(p_key) + 1) * sizeof(char);
-	char* p_key_copy = TG_MEMORY_ALLOC(key_size);
+	char* p_key_copy = TG_MALLOC(key_size);
 	tg_memcpy(key_size, p_key, p_key_copy);
 	tg_list_insert(&p_bucket->keys, &p_key_copy);
 	tg_list_insert(&p_bucket->values, p_value);

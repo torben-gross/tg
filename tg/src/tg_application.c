@@ -221,14 +221,14 @@ static void tg__game_3d_create(void)
     tg_handle p_sponza_handles[1] = { scene.h_sponza_ubo };
     scene.h_sponza_render_command = tg_render_command_create(scene.h_sponza_mesh, scene.h_sponza_material, (v3) { 128.0f, 140.0f, 128.0f }, 1, p_sponza_handles);
     tg_list_insert(&scene.render_commands, &scene.h_sponza_render_command);
-    tg_voxelizer* p_voxelizer = TG_MEMORY_STACK_ALLOC(sizeof(*p_voxelizer));
+    tg_voxelizer* p_voxelizer = TG_MALLOC_STACK(sizeof(*p_voxelizer));
     tg_voxelizer_create(p_voxelizer);
     tg_voxelizer_begin(p_voxelizer);
     tg_voxelizer_exec(p_voxelizer, scene.h_sponza_render_command);
     tg_voxelizer_exec(p_voxelizer, scene.p_pbr_spheres[48].h_render_command);
     tg_voxelizer_end(p_voxelizer, (v3i) { 1, 2, 1 }, scene.p_voxels);
     tg_voxelizer_destroy(p_voxelizer);
-    TG_MEMORY_STACK_FREE(sizeof(*p_voxelizer));
+    TG_FREE_STACK(sizeof(*p_voxelizer));
 }
 
 static void tg__game_3d_update_and_render(f32 dt)
@@ -372,8 +372,12 @@ static void tg__game_3d_update_and_render(f32 dt)
     {
         tg_renderer_push_render_command(scene.h_main_renderer, ph_render_commands[i]);
     }
-    tg_renderer_push_text(scene.h_main_renderer, "&This is a text field!");
-    tg_renderer_push_text(scene.h_main_renderer, "Kathy!");
+
+    {
+        char p_ms_buffer[256] = { 0 };
+        tg_stringf(256, p_ms_buffer, "Time %dms", dt);
+        tg_renderer_push_text(scene.h_main_renderer, p_ms_buffer);
+    }
 
 #if TG_ENABLE_DEBUG_TOOLS == 1
     tg_renderer_draw_cube_DEBUG(scene.h_main_renderer, (v3) { 108.5f, 138.5f, 116.5f }, (v3) { 1.0f, 1.0f, 1.0f }, (v4) { 1.0f, 0.0f, 0.0f, 1.0f });

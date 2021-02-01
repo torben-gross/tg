@@ -88,6 +88,16 @@ typedef struct tgvk_command_buffer
     VkCommandBufferLevel      command_buffer_level;
 } tgvk_command_buffer;
 
+typedef struct tgvk_sampler
+{
+    VkFilter                mag_filter;
+    VkFilter                min_filter;
+    VkSamplerAddressMode    address_mode_u;
+    VkSamplerAddressMode    address_mode_v;
+    VkSamplerAddressMode    address_mode_w;
+    VkSampler               sampler;
+} tgvk_sampler;
+
 typedef struct tgvk_cube_map
 {
     u32                  dimension;
@@ -95,7 +105,7 @@ typedef struct tgvk_cube_map
     VkImage              image;
     tgvk_memory_block    memory;
     VkImageView          image_view;
-    VkSampler            sampler;
+    tgvk_sampler         sampler;
 } tgvk_cube_map;
 
 typedef struct tgvk_pipeline_layout
@@ -123,7 +133,7 @@ typedef struct tgvk_image
     VkImage              image;
     tgvk_memory_block    memory;
     VkImageView          image_view;
-    VkSampler            sampler;
+    tgvk_sampler         sampler;
 } tgvk_image;
 
 typedef struct tgvk_image_3d
@@ -136,7 +146,7 @@ typedef struct tgvk_image_3d
     VkImage              image;
     tgvk_memory_block    memory;
     VkImageView          image_view;
-    VkSampler            sampler;
+    tgvk_sampler         sampler;
 } tgvk_image_3d;
 
 typedef struct tgvk_framebuffer
@@ -181,7 +191,7 @@ typedef struct tgvk_layered_image
     tgvk_memory_block    memory;
     VkImageView          read_image_view;
     VkImageView          write_image_view;
-    VkSampler            sampler;
+    tgvk_sampler         sampler;
 } tgvk_layered_image;
 
 typedef struct tgvk_pipeline
@@ -681,6 +691,10 @@ tg_render_target        tgvk_render_target_create(u32 color_width, u32 color_hei
 void                    tgvk_render_target_destroy(tg_render_target* p_render_target);
 
 void                    tgvk_renderer_on_window_resize(tg_renderer_h h_renderer, u32 width, u32 height);
+
+tgvk_sampler            tgvk_sampler_create(void);
+tgvk_sampler            tgvk_sampler_create2(const tg_sampler_create_info* p_sampler_create_info);
+void                    tgvk_sampler_destroy(tgvk_sampler* p_sampler);
 
 VkSemaphore             tgvk_semaphore_create(void);
 void                    tgvk_semaphore_destroy(VkSemaphore semaphore);

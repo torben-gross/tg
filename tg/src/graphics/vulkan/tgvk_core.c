@@ -197,47 +197,6 @@ static tgvk_pipeline_layout tg__pipeline_layout_create(u32 shader_count, const t
 
 
 
-static VkSampler tg__sampler_create_custom(u32 mip_levels, VkFilter min_filter, VkFilter mag_filter, VkSamplerAddressMode address_mode_u, VkSamplerAddressMode address_mode_v, VkSamplerAddressMode address_mode_w)
-{
-    VkSampler sampler = VK_NULL_HANDLE;
-
-    VkSamplerCreateInfo sampler_create_info = { 0 };
-    sampler_create_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    sampler_create_info.pNext = TG_NULL;
-    sampler_create_info.flags = 0;
-    sampler_create_info.magFilter = mag_filter;
-    sampler_create_info.minFilter = min_filter;
-    sampler_create_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-    sampler_create_info.addressModeU = address_mode_u;
-    sampler_create_info.addressModeV = address_mode_v;
-    sampler_create_info.addressModeW = address_mode_w;
-    sampler_create_info.mipLodBias = 0.0f;
-    sampler_create_info.anisotropyEnable = VK_TRUE;
-    sampler_create_info.maxAnisotropy = 16.0f;
-    sampler_create_info.compareEnable = VK_FALSE;
-    sampler_create_info.compareOp = VK_COMPARE_OP_ALWAYS;
-    sampler_create_info.minLod = 0.0f;
-    sampler_create_info.maxLod = (f32)mip_levels;
-    sampler_create_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-    sampler_create_info.unnormalizedCoordinates = VK_FALSE;
-
-    TGVK_CALL(vkCreateSampler(device, &sampler_create_info, TG_NULL, &sampler));
-
-    return sampler;
-}
-
-static VkSampler tg__sampler_create(u32 mip_levels)
-{
-    return tg__sampler_create_custom(mip_levels, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT);
-}
-
-static void tg__sampler_destroy(VkSampler sampler)
-{
-    vkDestroySampler(device, sampler, TG_NULL);
-}
-
-
-
 
 
 u32 tg_vertex_input_attribute_format_get_alignment(tg_vertex_input_attribute_format format)
@@ -1137,18 +1096,11 @@ tgvk_cube_map tgvk_cube_map_create(u32 dimension, VkFormat format, const tg_samp
 
     if (p_sampler_create_info)
     {
-        cube_map.sampler = tg__sampler_create_custom(
-            1,
-            p_sampler_create_info->min_filter,
-            p_sampler_create_info->mag_filter,
-            p_sampler_create_info->address_mode_u,
-            p_sampler_create_info->address_mode_v,
-            p_sampler_create_info->address_mode_w
-        );
+        cube_map.sampler = tgvk_sampler_create2(p_sampler_create_info);
     }
     else
     {
-        cube_map.sampler = tg__sampler_create(1);
+        cube_map.sampler = tgvk_sampler_create();
     }
 
     return cube_map;
@@ -1156,7 +1108,7 @@ tgvk_cube_map tgvk_cube_map_create(u32 dimension, VkFormat format, const tg_samp
 
 void tgvk_cube_map_destroy(tgvk_cube_map* p_cube_map)
 {
-    vkDestroySampler(device, p_cube_map->sampler, TG_NULL);
+    tgvk_sampler_destroy(&p_cube_map->sampler);
     vkDestroyImageView(device, p_cube_map->image_view, TG_NULL);
     tgvk_memory_allocator_free(&p_cube_map->memory);
     vkDestroyImage(device, p_cube_map->image, TG_NULL);
@@ -1254,7 +1206,7 @@ void tgvk_descriptor_set_update(VkDescriptorSet descriptor_set, tg_handle handle
 void tgvk_descriptor_set_update_cube_map(VkDescriptorSet descriptor_set, tgvk_cube_map* p_cube_map, u32 dst_binding)
 {
     VkDescriptorImageInfo descriptor_image_info = { 0 };
-    descriptor_image_info.sampler = p_cube_map->sampler;
+    descriptor_image_info.sampler = p_cube_map->sampler.sampler;
     descriptor_image_info.imageView = p_cube_map->image_view;
     descriptor_image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
@@ -1276,7 +1228,7 @@ void tgvk_descriptor_set_update_cube_map(VkDescriptorSet descriptor_set, tgvk_cu
 void tgvk_descriptor_set_update_image(VkDescriptorSet descriptor_set, tgvk_image* p_image, u32 dst_binding)
 {
     VkDescriptorImageInfo descriptor_image_info = { 0 };
-    descriptor_image_info.sampler = p_image->sampler;
+    descriptor_image_info.sampler = p_image->sampler.sampler;
     descriptor_image_info.imageView = p_image->image_view;
     descriptor_image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
@@ -1298,7 +1250,7 @@ void tgvk_descriptor_set_update_image(VkDescriptorSet descriptor_set, tgvk_image
 void tgvk_descriptor_set_update_image_array(VkDescriptorSet descriptor_set, tgvk_image* p_image, u32 dst_binding, u32 array_index)
 {
     VkDescriptorImageInfo descriptor_image_info = { 0 };
-    descriptor_image_info.sampler = p_image->sampler;
+    descriptor_image_info.sampler = p_image->sampler.sampler;
     descriptor_image_info.imageView = p_image->image_view;
     descriptor_image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
@@ -1320,7 +1272,7 @@ void tgvk_descriptor_set_update_image_array(VkDescriptorSet descriptor_set, tgvk
 void tgvk_descriptor_set_update_image_3d(VkDescriptorSet descriptor_set, tgvk_image_3d* p_image_3d, u32 dst_binding)
 {
     VkDescriptorImageInfo descriptor_image_info = { 0 };
-    descriptor_image_info.sampler = p_image_3d->sampler;
+    descriptor_image_info.sampler = p_image_3d->sampler.sampler;
     descriptor_image_info.imageView = p_image_3d->image_view;
 
     VkWriteDescriptorSet write_descriptor_set = { 0 };
@@ -1351,7 +1303,7 @@ void tgvk_descriptor_set_update_image_3d(VkDescriptorSet descriptor_set, tgvk_im
 void tgvk_descriptor_set_update_layered_image(VkDescriptorSet descriptor_set, tgvk_layered_image* p_image, u32 dst_binding)
 {
     VkDescriptorImageInfo descriptor_image_info = { 0 };
-    descriptor_image_info.sampler = p_image->sampler;
+    descriptor_image_info.sampler = p_image->sampler.sampler;
     descriptor_image_info.imageView = p_image->read_image_view;
     descriptor_image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
@@ -1863,18 +1815,11 @@ tgvk_image tgvk_image_create(tgvk_image_type type, u32 width, u32 height, VkForm
 
     if (p_sampler_create_info)
     {
-        image.sampler = tg__sampler_create_custom(
-            1,
-            p_sampler_create_info->min_filter,
-            p_sampler_create_info->mag_filter,
-            p_sampler_create_info->address_mode_u,
-            p_sampler_create_info->address_mode_v,
-            p_sampler_create_info->address_mode_w
-        );
+        image.sampler = tgvk_sampler_create2(p_sampler_create_info);
     }
     else
     {
-        image.sampler = tg__sampler_create(1);
+        image.sampler = tgvk_sampler_create();
     }
 
     return image;
@@ -1909,9 +1854,9 @@ tgvk_image tgvk_image_create2(tgvk_image_type type, const char* p_filename, cons
 
 void tgvk_image_destroy(tgvk_image* p_image)
 {
-    if (p_image->sampler)
+    if (p_image->sampler.sampler)
     {
-        vkDestroySampler(device, p_image->sampler, TG_NULL);
+        tgvk_sampler_destroy(&p_image->sampler);
     }
     if (p_image->image_view)
     {
@@ -1923,23 +1868,33 @@ void tgvk_image_destroy(tgvk_image* p_image)
 
 typedef struct tgvk_simage
 {
-    tgvk_image_type    type;
-    u32                width;
-    u32                height;
-    VkFormat           format;
-    u8                 p_memory[0];
+    tgvk_image_type         type;
+    u32                     width;
+    u32                     height;
+    VkFormat                format;
+    VkFilter                sampler_mag_filter;
+    VkFilter                sampler_min_filter;
+    VkSamplerAddressMode    sampler_address_mode_u;
+    VkSamplerAddressMode    sampler_address_mode_v;
+    VkSamplerAddressMode    sampler_address_mode_w;
+    u8                      p_memory[0];
 } tgvk_simage;
 
 b32 tgvk_image_serialize(tgvk_image* p_image, const char* p_filename)
 {
     const tg_size staging_buffer_size = (tg_size)p_image->width * (tg_size)p_image->height * tg_color_image_format_size((tg_color_image_format)p_image->format);
     const tg_size size = sizeof(tgvk_simage) + staging_buffer_size;
-    tgvk_simage* p_simage = (tgvk_simage*)TG_MEMORY_STACK_ALLOC(size);
+    tgvk_simage* p_simage = (tgvk_simage*)TG_MALLOC_STACK(size);
 
     p_simage->type = p_image->type;
     p_simage->width = p_image->width;
     p_simage->height = p_image->height;
     p_simage->format = p_image->format;
+    p_simage->sampler_mag_filter = p_image->sampler.mag_filter;
+    p_simage->sampler_min_filter = p_image->sampler.min_filter;
+    p_simage->sampler_address_mode_u = p_image->sampler.address_mode_u;
+    p_simage->sampler_address_mode_v = p_image->sampler.address_mode_v;
+    p_simage->sampler_address_mode_w = p_image->sampler.address_mode_w;
 
     tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take(staging_buffer_size);
     tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
@@ -1950,7 +1905,7 @@ b32 tgvk_image_serialize(tgvk_image* p_image, const char* p_filename)
     tgvk_global_staging_buffer_release();
 
     const b32 result = tgp_file_create(p_filename, size, p_simage, TG_TRUE);
-    TG_MEMORY_STACK_FREE(size);
+    TG_FREE_STACK(size);
 
     return result;
 }
@@ -1963,14 +1918,22 @@ b32 tgvk_image_deserialize(const char* p_filename, TG_OUT tgvk_image* p_image)
     const b32 get_file_properties_result = tgp_file_get_properties(p_filename, &file_properties);
     if (get_file_properties_result)
     {
-        u8* p_buffer = (u8*)TG_MEMORY_STACK_ALLOC(file_properties.size);
+        u8* p_buffer = (u8*)TG_MALLOC_STACK(file_properties.size);
         const b32 load_file_result = tgp_file_load(p_filename, file_properties.size, p_buffer);
         if (load_file_result)
         {
             result = TG_TRUE;
 
             const tgvk_simage* p_simage = (tgvk_simage*)p_buffer;
-            *p_image = tgvk_image_create(p_simage->type, p_simage->width, p_simage->height, p_simage->format, TG_NULL); // TODO: serialize VkSampler
+
+            tg_sampler_create_info sampler_create_info = { 0 };
+            sampler_create_info.mag_filter = p_simage->sampler_mag_filter;
+            sampler_create_info.min_filter = p_simage->sampler_min_filter;
+            sampler_create_info.address_mode_u = p_simage->sampler_address_mode_u;
+            sampler_create_info.address_mode_v = p_simage->sampler_address_mode_v;
+            sampler_create_info.address_mode_w = p_simage->sampler_address_mode_w;
+
+            *p_image = tgvk_image_create(p_simage->type, p_simage->width, p_simage->height, p_simage->format, &sampler_create_info);
 
             const VkDeviceSize staging_buffer_size = file_properties.size - sizeof(tgvk_simage);
             tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take(staging_buffer_size);
@@ -2001,7 +1964,7 @@ b32 tgvk_image_deserialize(const char* p_filename, TG_OUT tgvk_image* p_image)
             tgvk_command_buffer_end_and_submit(p_command_buffer);
             tgvk_global_staging_buffer_release();
         }
-        TG_MEMORY_STACK_FREE(file_properties.size);
+        TG_FREE_STACK(file_properties.size);
     }
 
     return result;
@@ -2139,18 +2102,11 @@ tgvk_image_3d tgvk_image_3d_create(tgvk_image_type type, u32 width, u32 height, 
     if (p_sampler_create_info)
     {
         // TODO: mip levels, also above and below, once respectively
-        image_3d.sampler = tg__sampler_create_custom(
-            1,
-            p_sampler_create_info->min_filter,
-            p_sampler_create_info->mag_filter,
-            p_sampler_create_info->address_mode_u,
-            p_sampler_create_info->address_mode_v,
-            p_sampler_create_info->address_mode_w
-        );
+        image_3d.sampler = tgvk_sampler_create2(p_sampler_create_info);
     }
     else
     {
-        image_3d.sampler = tg__sampler_create(1);
+        image_3d.sampler = tgvk_sampler_create();
     }
 
     return image_3d;
@@ -2158,7 +2114,7 @@ tgvk_image_3d tgvk_image_3d_create(tgvk_image_type type, u32 width, u32 height, 
 
 void tgvk_image_3d_destroy(tgvk_image_3d* p_image_3d)
 {
-    vkDestroySampler(device, p_image_3d->sampler, TG_NULL);
+    tgvk_sampler_destroy(&p_image_3d->sampler);
     vkDestroyImageView(device, p_image_3d->image_view, TG_NULL);
     tgvk_memory_allocator_free(&p_image_3d->memory);
     vkDestroyImage(device, p_image_3d->image, TG_NULL);
@@ -2316,18 +2272,11 @@ tgvk_layered_image tgvk_layered_image_create(tgvk_image_type type, u32 width, u3
 
     if (p_sampler_create_info)
     {
-        image.sampler = tg__sampler_create_custom(
-            1,
-            p_sampler_create_info->min_filter,
-            p_sampler_create_info->mag_filter,
-            p_sampler_create_info->address_mode_u,
-            p_sampler_create_info->address_mode_v,
-            p_sampler_create_info->address_mode_w
-        );
+        image.sampler = tgvk_sampler_create2(p_sampler_create_info);
     }
     else
     {
-        image.sampler = tg__sampler_create(1);
+        image.sampler = tgvk_sampler_create();
     }
 
     return image;
@@ -2335,9 +2284,9 @@ tgvk_layered_image tgvk_layered_image_create(tgvk_image_type type, u32 width, u3
 
 void tgvk_layered_image_destroy(tgvk_layered_image* p_image)
 {
-    if (p_image->sampler)
+    if (p_image->sampler.sampler)
     {
-        vkDestroySampler(device, p_image->sampler, TG_NULL);
+        tgvk_sampler_destroy(&p_image->sampler);
     }
     if (p_image->read_image_view)
     {
@@ -2767,6 +2716,63 @@ void tgvk_render_target_destroy(tg_render_target* p_render_target)
 
 
 
+tgvk_sampler tgvk_sampler_create(void)
+{
+    tgvk_sampler sampler = { 0 };
+
+    tg_sampler_create_info sampler_create_info = { 0 };
+    sampler_create_info.min_filter = VK_FILTER_LINEAR;
+    sampler_create_info.mag_filter = VK_FILTER_LINEAR;
+    sampler_create_info.address_mode_u = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    sampler_create_info.address_mode_v = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    sampler_create_info.address_mode_w = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+
+    sampler = tgvk_sampler_create2(&sampler_create_info);
+
+    return sampler;
+}
+
+tgvk_sampler tgvk_sampler_create2(const tg_sampler_create_info* p_sampler_create_info)
+{
+    tgvk_sampler sampler = { 0 };
+    sampler.mag_filter = (VkFilter)p_sampler_create_info->mag_filter;
+    sampler.min_filter = (VkFilter)p_sampler_create_info->min_filter;
+    sampler.address_mode_u = (VkSamplerAddressMode)p_sampler_create_info->address_mode_u;
+    sampler.address_mode_v = (VkSamplerAddressMode)p_sampler_create_info->address_mode_v;
+    sampler.address_mode_w = (VkSamplerAddressMode)p_sampler_create_info->address_mode_w;
+
+    VkSamplerCreateInfo sampler_create_info = { 0 };
+    sampler_create_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    sampler_create_info.pNext = TG_NULL;
+    sampler_create_info.flags = 0;
+    sampler_create_info.magFilter = p_sampler_create_info->mag_filter;
+    sampler_create_info.minFilter = p_sampler_create_info->min_filter;
+    sampler_create_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    sampler_create_info.addressModeU = sampler.address_mode_u;
+    sampler_create_info.addressModeV = sampler.address_mode_v;
+    sampler_create_info.addressModeW = sampler.address_mode_w;
+    sampler_create_info.mipLodBias = 0.0f;
+    sampler_create_info.anisotropyEnable = VK_TRUE;
+    sampler_create_info.maxAnisotropy = 16.0f;
+    sampler_create_info.compareEnable = VK_FALSE;
+    sampler_create_info.compareOp = VK_COMPARE_OP_ALWAYS;
+    sampler_create_info.minLod = 0.0f;
+    sampler_create_info.maxLod = 1.0f;
+    sampler_create_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    sampler_create_info.unnormalizedCoordinates = VK_FALSE;
+
+    TGVK_CALL(vkCreateSampler(device, &sampler_create_info, TG_NULL, &sampler.sampler));
+
+    return sampler;
+}
+
+void tgvk_sampler_destroy(tgvk_sampler* p_sampler)
+{
+    vkDestroySampler(device, p_sampler->sampler, TG_NULL);
+}
+
+
+
 VkSemaphore tgvk_semaphore_create(void)
 {
     VkSemaphore semaphore = VK_NULL_HANDLE;
@@ -2809,7 +2815,7 @@ tgvk_shader tgvk_shader_create(const char* p_filename)
 
     if (!spv_exists || recompile)
     {
-        char* p_data = TG_MEMORY_STACK_ALLOC(uncompiled_properties.size);
+        char* p_data = TG_MALLOC_STACK(uncompiled_properties.size);
         tgp_file_load(p_filename, uncompiled_properties.size, p_data);
 
         TG_ASSERT(shaderc_compiler);
@@ -2861,12 +2867,12 @@ tgvk_shader tgvk_shader_create(const char* p_filename)
     const b32 get_properties_result = tgp_file_get_properties(p_filename_buffer, &file_properties);
     TG_ASSERT(get_properties_result);
 
-    char* p_content = TG_MEMORY_STACK_ALLOC(file_properties.size);
+    char* p_content = TG_MALLOC_STACK(file_properties.size);
     tgp_file_load(p_filename_buffer, file_properties.size, p_content);
 
     const tgvk_shader shader = tgvk_shader_create_from_spirv((u32)file_properties.size, p_content);
 
-    TG_MEMORY_STACK_FREE(file_properties.size);
+    TG_FREE_STACK(file_properties.size);
 
     return shader;
 }
@@ -2997,7 +3003,7 @@ static b32 tg__physical_device_supports_required_queue_families(VkPhysicalDevice
     }
 
     const tg_size queue_family_properties_size = (tg_size)queue_family_property_count * sizeof(VkQueueFamilyProperties);
-    VkQueueFamilyProperties* p_queue_family_properties = TG_MEMORY_STACK_ALLOC(queue_family_properties_size);
+    VkQueueFamilyProperties* p_queue_family_properties = TG_MALLOC_STACK(queue_family_properties_size);
     vkGetPhysicalDeviceQueueFamilyProperties(pd, &queue_family_property_count, p_queue_family_properties);
 
     b32 supports_compute_family = TG_FALSE;
@@ -3012,7 +3018,7 @@ static b32 tg__physical_device_supports_required_queue_families(VkPhysicalDevice
         supports_present_family |= spf != 0;
     }
 
-    TG_MEMORY_STACK_FREE(queue_family_properties_size);
+    TG_FREE_STACK(queue_family_properties_size);
     const b32 result = supports_graphics_family && supports_present_family && supports_compute_family;
     return result;
 }
@@ -3025,7 +3031,7 @@ static void tg__physical_device_find_queue_family_indices(VkPhysicalDevice pd, u
     vkGetPhysicalDeviceQueueFamilyProperties(pd, &queue_family_property_count, TG_NULL);
     TG_ASSERT(queue_family_property_count);
     const tg_size queue_family_properties_size = (tg_size)queue_family_property_count * sizeof(VkQueueFamilyProperties);
-    VkQueueFamilyProperties* p_queue_family_properties = TG_MEMORY_STACK_ALLOC(queue_family_properties_size);
+    VkQueueFamilyProperties* p_queue_family_properties = TG_MALLOC_STACK(queue_family_properties_size);
     vkGetPhysicalDeviceQueueFamilyProperties(pd, &queue_family_property_count, p_queue_family_properties);
 
     b32 resolved = TG_FALSE;
@@ -3093,7 +3099,7 @@ static void tg__physical_device_find_queue_family_indices(VkPhysicalDevice pd, u
     }
 
     TG_ASSERT(resolved);
-    TG_MEMORY_STACK_FREE(queue_family_properties_size);
+    TG_FREE_STACK(queue_family_properties_size);
 }
 
 static VkSampleCountFlagBits tg__physical_device_find_max_sample_count(VkPhysicalDevice pd)
@@ -3138,7 +3144,7 @@ static b32 tg__physical_device_supports_extension(VkPhysicalDevice pd)
     u32 device_extension_property_count;
     TGVK_CALL(vkEnumerateDeviceExtensionProperties(pd, TG_NULL, &device_extension_property_count, TG_NULL));
     const tg_size device_extension_properties_size = (tg_size)device_extension_property_count * sizeof(VkExtensionProperties);
-    VkExtensionProperties* device_extension_properties = TG_MEMORY_STACK_ALLOC(device_extension_properties_size);
+    VkExtensionProperties* device_extension_properties = TG_MALLOC_STACK(device_extension_properties_size);
     TGVK_CALL(vkEnumerateDeviceExtensionProperties(pd, TG_NULL, &device_extension_property_count, device_extension_properties));
 
     b32 supports_extensions = TG_TRUE;
@@ -3156,7 +3162,7 @@ static b32 tg__physical_device_supports_extension(VkPhysicalDevice pd)
         supports_extensions &= supports_extension;
     }
 
-    TG_MEMORY_STACK_FREE(device_extension_properties_size);
+    TG_FREE_STACK(device_extension_properties_size);
     return supports_extensions;
 }
 
@@ -3214,7 +3220,7 @@ static VkInstance tg__instance_create(void)
         u32 layer_property_count;
         vkEnumerateInstanceLayerProperties(&layer_property_count, TG_NULL);
         const tg_size layer_properties_size = (tg_size)layer_property_count * sizeof(VkLayerProperties);
-        VkLayerProperties* p_layer_properties = TG_MEMORY_STACK_ALLOC(layer_properties_size);
+        VkLayerProperties* p_layer_properties = TG_MALLOC_STACK(layer_properties_size);
         vkEnumerateInstanceLayerProperties(&layer_property_count, p_layer_properties);
 
         const char* p_validation_layer_names[TGVK_VALIDATION_LAYER_COUNT] = TGVK_VALIDATION_LAYER_NAMES;
@@ -3231,7 +3237,7 @@ static VkInstance tg__instance_create(void)
             }
             TG_ASSERT(layer_found);
         }
-        TG_MEMORY_STACK_FREE(layer_properties_size);
+        TG_FREE_STACK(layer_properties_size);
     }
 #endif
 
@@ -3319,7 +3325,7 @@ static VkPhysicalDevice tg__physical_device_create(void)
     TGVK_CALL(vkEnumeratePhysicalDevices(instance, &physical_device_count, TG_NULL));
     TG_ASSERT(physical_device_count);
     const tg_size physical_devices_size = (tg_size)physical_device_count * sizeof(VkPhysicalDevice);
-    VkPhysicalDevice* p_physical_devices = TG_MEMORY_STACK_ALLOC(physical_devices_size);
+    VkPhysicalDevice* p_physical_devices = TG_MALLOC_STACK(physical_devices_size);
     TGVK_CALL(vkEnumeratePhysicalDevices(instance, &physical_device_count, p_physical_devices));
 
     u32 best_physical_device_index = 0;
@@ -3338,7 +3344,7 @@ static VkPhysicalDevice tg__physical_device_create(void)
     pd = p_physical_devices[best_physical_device_index];
     TG_ASSERT(pd != VK_NULL_HANDLE);
 
-    TG_MEMORY_STACK_FREE(physical_devices_size);
+    TG_FREE_STACK(physical_devices_size);
     tg__physical_device_find_queue_family_indices(
         pd,
         &p_queues[0].queue_family_index,
@@ -3525,7 +3531,7 @@ static void tg__swapchain_create(void)
     u32 surface_format_count;
     TGVK_CALL(vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface.surface, &surface_format_count, TG_NULL));
     const tg_size surface_formats_size = (tg_size)surface_format_count * sizeof(VkSurfaceFormatKHR);
-    VkSurfaceFormatKHR* p_surface_formats = TG_MEMORY_STACK_ALLOC(surface_formats_size);
+    VkSurfaceFormatKHR* p_surface_formats = TG_MALLOC_STACK(surface_formats_size);
     TGVK_CALL(vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface.surface, &surface_format_count, p_surface_formats));
 
     surface.format = p_surface_formats[0];
@@ -3537,7 +3543,7 @@ static void tg__swapchain_create(void)
             break;
         }
     }
-    TG_MEMORY_STACK_FREE(surface_formats_size);
+    TG_FREE_STACK(surface_formats_size);
 
     VkPresentModeKHR p_present_modes[9] = { 0 };
     u32 present_mode_count = 0;

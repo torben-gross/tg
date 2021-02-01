@@ -141,34 +141,12 @@ void tgp_handle_events(void)
 
 void* tgp_malloc(tg_size size)
 {
-#ifdef TG_DEBUG
-    void* p_memory = HeapAlloc(h_process_heap, HEAP_ZERO_MEMORY, (SIZE_T)size);
-#else
-    void* p_memory = HeapAlloc(h_process_heap, 0, (SIZE_T)size);
-#endif
-    TG_ASSERT(p_memory);
-    return p_memory;
-}
-
-void* tgp_malloc_nullify(tg_size size)
-{
     void* p_memory = HeapAlloc(h_process_heap, HEAP_ZERO_MEMORY, (SIZE_T)size);
     TG_ASSERT(p_memory);
     return p_memory;
 }
 
 void* tgp_realloc(tg_size size, void* p_memory)
-{
-#ifdef TG_DEBUG
-    void* p_reallocated_memory = HeapReAlloc(h_process_heap, HEAP_ZERO_MEMORY, p_memory, (SIZE_T)size);
-#else
-    void* p_reallocated_memory = HeapReAlloc(h_process_heap, 0, p_memory, (SIZE_T)size);
-#endif
-    TG_ASSERT(p_reallocated_memory);
-    return p_reallocated_memory;
-}
-
-void* tgp_realloc_nullify(tg_size size, void* p_memory)
 {
     void* p_reallocated_memory = HeapReAlloc(h_process_heap, HEAP_ZERO_MEMORY, p_memory, (SIZE_T)size);
     TG_ASSERT(p_reallocated_memory);
@@ -534,7 +512,7 @@ i8 tgp_system_time_compare(tg_system_time* p_time0, tg_system_time* p_time1)
 
 tg_timer_h tgp_timer_create(void)
 {
-    tg_timer_h h_timer = TG_MEMORY_ALLOC(sizeof(*h_timer));
+    tg_timer_h h_timer = TG_MALLOC(sizeof(*h_timer));
 
     h_timer->running = TG_FALSE;
     QueryPerformanceFrequency(&h_timer->performance_frequency);
@@ -588,7 +566,7 @@ void tgp_timer_destroy(tg_timer_h h_timer)
 {
     TG_ASSERT(h_timer);
 
-    TG_MEMORY_FREE(h_timer);
+    TG_FREE(h_timer);
 }
 
 

@@ -173,7 +173,7 @@ tg_mesh_h tg_mesh_create2(const char* p_filename, v3 scale) // TODO: scale is te
 
     tg_file_properties file_properties = { 0 };
     tgp_file_get_properties(p_filename, &file_properties);
-    char* p_data = TG_MEMORY_STACK_ALLOC(file_properties.size);
+    char* p_data = TG_MALLOC_STACK(file_properties.size);
     tgp_file_load(p_filename, file_properties.size, p_data);
 
     if (tg_string_equal(file_properties.p_extension, "obj"))
@@ -213,13 +213,13 @@ tg_mesh_h tg_mesh_create2(const char* p_filename, v3 scale) // TODO: scale is te
             p_it = tg__skip_line(p_it, p_eof);
         }
 
-        v3* p_unique_positions = TG_MEMORY_STACK_ALLOC(unique_vertex_count * sizeof(v3));
-        v3* p_unique_normals = TG_MEMORY_STACK_ALLOC(unique_normal_count * sizeof(v3));
-        v2* p_unique_uvs = unique_uv_count == 0 ? TG_NULL : TG_MEMORY_STACK_ALLOC(unique_uv_count * sizeof(v2));
+        v3* p_unique_positions = TG_MALLOC_STACK(unique_vertex_count * sizeof(v3));
+        v3* p_unique_normals = TG_MALLOC_STACK(unique_normal_count * sizeof(v3));
+        v2* p_unique_uvs = unique_uv_count == 0 ? TG_NULL : TG_MALLOC_STACK(unique_uv_count * sizeof(v2));
 
-        v3i* p_triangle_positions = TG_MEMORY_STACK_ALLOC(total_triangle_count * sizeof(v3i));
-        v3i* p_triangle_normals = TG_MEMORY_STACK_ALLOC(total_triangle_count * sizeof(v3i));
-        v3i* p_triangle_uvs = TG_MEMORY_STACK_ALLOC(total_triangle_count * sizeof(v3i));
+        v3i* p_triangle_positions = TG_MALLOC_STACK(total_triangle_count * sizeof(v3i));
+        v3i* p_triangle_normals = TG_MALLOC_STACK(total_triangle_count * sizeof(v3i));
+        v3i* p_triangle_uvs = TG_MALLOC_STACK(total_triangle_count * sizeof(v3i));
 
         unique_vertex_count = 0;
         unique_uv_count = 0;
@@ -314,9 +314,9 @@ tg_mesh_h tg_mesh_create2(const char* p_filename, v3 scale) // TODO: scale is te
         // TODO: u16 is not enough in some cases
         //TG_ASSERT(3 * total_triangle_count < TG_U16_MAX);
 
-        v3* p_positions = TG_MEMORY_STACK_ALLOC(3LL * (tg_size)total_triangle_count * sizeof(v3));
-        v3* p_normals = TG_MEMORY_STACK_ALLOC(3LL * (tg_size)total_triangle_count * sizeof(v3));
-        v2* p_uvs = TG_MEMORY_STACK_ALLOC(3LL * (tg_size)total_triangle_count * sizeof(v2));
+        v3* p_positions = TG_MALLOC_STACK(3LL * (tg_size)total_triangle_count * sizeof(v3));
+        v3* p_normals = TG_MALLOC_STACK(3LL * (tg_size)total_triangle_count * sizeof(v3));
+        v2* p_uvs = TG_MALLOC_STACK(3LL * (tg_size)total_triangle_count * sizeof(v2));
 
         for (u32 i = 0; i < total_triangle_count; i++)
         {
@@ -344,23 +344,23 @@ tg_mesh_h tg_mesh_create2(const char* p_filename, v3 scale) // TODO: scale is te
         // TODO: i feel like the normals are wrong, if included here! e.g. sponza.obj
         //tg_mesh_set_indices(&mesh, ..., ...);
 
-        TG_MEMORY_STACK_FREE(3LL * (tg_size)total_triangle_count * sizeof(v2));
-        TG_MEMORY_STACK_FREE(3LL * (tg_size)total_triangle_count * sizeof(v3));
-        TG_MEMORY_STACK_FREE(3LL * (tg_size)total_triangle_count * sizeof(v3));
+        TG_FREE_STACK(3LL * (tg_size)total_triangle_count * sizeof(v2));
+        TG_FREE_STACK(3LL * (tg_size)total_triangle_count * sizeof(v3));
+        TG_FREE_STACK(3LL * (tg_size)total_triangle_count * sizeof(v3));
 
-        TG_MEMORY_STACK_FREE(total_triangle_count * sizeof(v3i));
-        TG_MEMORY_STACK_FREE(total_triangle_count * sizeof(v3i));
-        TG_MEMORY_STACK_FREE(total_triangle_count * sizeof(v3i));
+        TG_FREE_STACK(total_triangle_count * sizeof(v3i));
+        TG_FREE_STACK(total_triangle_count * sizeof(v3i));
+        TG_FREE_STACK(total_triangle_count * sizeof(v3i));
 
         if (unique_uv_count != 0)
         {
-            TG_MEMORY_STACK_FREE(unique_uv_count * sizeof(v2));
+            TG_FREE_STACK(unique_uv_count * sizeof(v2));
         }
-        TG_MEMORY_STACK_FREE(unique_normal_count * sizeof(v3));
-        TG_MEMORY_STACK_FREE(unique_vertex_count * sizeof(v3));
+        TG_FREE_STACK(unique_normal_count * sizeof(v3));
+        TG_FREE_STACK(unique_vertex_count * sizeof(v3));
     }
 
-    TG_MEMORY_STACK_FREE(file_properties.size);
+    TG_FREE_STACK(file_properties.size);
 
     return h_mesh;
 }
@@ -370,10 +370,10 @@ tg_mesh_h tg_mesh_create_sphere(f32 radius, u32 sector_count, u32 stack_count, b
     const u32 vertex_count = (sector_count + 1) * (stack_count + 1) - 2;
     const u32 index_count = 6 * sector_count * (stack_count - 1);
 
-    v3* p_positions = TG_MEMORY_STACK_ALLOC(vertex_count * sizeof(*p_positions));
-    v3* p_normals = normals ? TG_MEMORY_STACK_ALLOC(vertex_count * sizeof(*p_normals)) : TG_NULL;
-    v2* p_uvs = uvs ? TG_MEMORY_STACK_ALLOC(vertex_count * sizeof(*p_uvs)) : TG_NULL;
-    u16* p_indices = TG_MEMORY_STACK_ALLOC((tg_size)index_count * sizeof(*p_indices));
+    v3* p_positions = TG_MALLOC_STACK(vertex_count * sizeof(*p_positions));
+    v3* p_normals = normals ? TG_MALLOC_STACK(vertex_count * sizeof(*p_normals)) : TG_NULL;
+    v2* p_uvs = uvs ? TG_MALLOC_STACK(vertex_count * sizeof(*p_uvs)) : TG_NULL;
+    u16* p_indices = TG_MALLOC_STACK((tg_size)index_count * sizeof(*p_indices));
 
     const f32 sector_step = 2.0f * TG_PI / sector_count;
     const f32 stack_step = TG_PI / stack_count;
@@ -476,16 +476,16 @@ tg_mesh_h tg_mesh_create_sphere(f32 radius, u32 sector_count, u32 stack_count, b
         tg_mesh_regenerate_tangents_bitangents(h_mesh);
     }
 
-    TG_MEMORY_STACK_FREE((tg_size)index_count * sizeof(*p_indices));
+    TG_FREE_STACK((tg_size)index_count * sizeof(*p_indices));
     if (uvs)
     {
-        TG_MEMORY_STACK_FREE(vertex_count * sizeof(*p_uvs));
+        TG_FREE_STACK(vertex_count * sizeof(*p_uvs));
     }
     if (normals)
     {
-        TG_MEMORY_STACK_FREE(vertex_count * sizeof(*p_normals));
+        TG_FREE_STACK(vertex_count * sizeof(*p_normals));
     }
-    TG_MEMORY_STACK_FREE(vertex_count * sizeof(*p_positions));
+    TG_FREE_STACK(vertex_count * sizeof(*p_positions));
 
     return h_mesh;
 }
@@ -568,8 +568,8 @@ void tg_mesh_copy_bitangents(tg_mesh_h h_mesh, u32 first, u32 count, v3* p_buffe
 tg_mesh_h tg_mesh_create_sphere_flat(f32 radius, u32 sector_count, u32 stack_count, b32 normals, b32 uvs, b32 tangents_bitangents)
 {
     const u32 unique_vertex_count = (sector_count + 1) * (stack_count + 1);
-    v3* p_unique_positions = TG_MEMORY_STACK_ALLOC(unique_vertex_count * sizeof(*p_unique_positions));
-    v2* p_unique_uvs = uvs ? TG_MEMORY_STACK_ALLOC(unique_vertex_count * sizeof(*p_unique_uvs)) : TG_NULL;
+    v3* p_unique_positions = TG_MALLOC_STACK(unique_vertex_count * sizeof(*p_unique_positions));
+    v2* p_unique_uvs = uvs ? TG_MALLOC_STACK(unique_vertex_count * sizeof(*p_unique_uvs)) : TG_NULL;
 
     const f32 sector_step = 2.0f * TG_PI / sector_count;
     const f32 stack_step = TG_PI / stack_count;
@@ -603,9 +603,9 @@ tg_mesh_h tg_mesh_create_sphere_flat(f32 radius, u32 sector_count, u32 stack_cou
 
     const u32 max_vertex_count = 4 * unique_vertex_count;
     const u32 max_index_count = 6 * unique_vertex_count;
-    v3* p_positions = TG_MEMORY_STACK_ALLOC((tg_size)max_vertex_count * sizeof(*p_positions));
-    v2* p_uvs = uvs ? TG_MEMORY_STACK_ALLOC((tg_size)max_vertex_count * sizeof(*p_uvs)) : TG_NULL;
-    u16* p_indices = TG_MEMORY_STACK_ALLOC((tg_size)max_index_count * sizeof(*p_indices));
+    v3* p_positions = TG_MALLOC_STACK((tg_size)max_vertex_count * sizeof(*p_positions));
+    v2* p_uvs = uvs ? TG_MALLOC_STACK((tg_size)max_vertex_count * sizeof(*p_uvs)) : TG_NULL;
+    u16* p_indices = TG_MALLOC_STACK((tg_size)max_index_count * sizeof(*p_indices));
 
     u32 vertex_count = 0;
     u32 index_count = 0;
@@ -721,18 +721,18 @@ tg_mesh_h tg_mesh_create_sphere_flat(f32 radius, u32 sector_count, u32 stack_cou
         tg_mesh_regenerate_tangents_bitangents(h_mesh);
     }
 
-    TG_MEMORY_STACK_FREE((tg_size)max_index_count * sizeof(*p_indices));
+    TG_FREE_STACK((tg_size)max_index_count * sizeof(*p_indices));
     if (uvs)
     {
-        TG_MEMORY_STACK_FREE((tg_size)max_vertex_count * sizeof(*p_uvs));
+        TG_FREE_STACK((tg_size)max_vertex_count * sizeof(*p_uvs));
     }
-    TG_MEMORY_STACK_FREE((tg_size)max_vertex_count * sizeof(*p_positions));
+    TG_FREE_STACK((tg_size)max_vertex_count * sizeof(*p_positions));
 
     if (uvs)
     {
-        TG_MEMORY_STACK_FREE(unique_vertex_count * sizeof(*p_unique_uvs));
+        TG_FREE_STACK(unique_vertex_count * sizeof(*p_unique_uvs));
     }
-    TG_MEMORY_STACK_FREE(unique_vertex_count * sizeof(*p_unique_positions));
+    TG_FREE_STACK(unique_vertex_count * sizeof(*p_unique_positions));
 
     return h_mesh;
 }
@@ -814,14 +814,14 @@ void tg_mesh_regenerate_normals(tg_mesh_h h_mesh)
 
     TG_INVALID_CODEPATH(); // TODO: create tg_mesh_generate_normals(u32 count, const v3* p_positions, v3* p_normals_buffer); instead!
 
-    v3* p_positions = TG_MEMORY_STACK_ALLOC(h_mesh->vertex_count * sizeof(*p_positions));
+    v3* p_positions = TG_MALLOC_STACK(h_mesh->vertex_count * sizeof(*p_positions));
     tg_mesh_copy_positions(h_mesh, 0, h_mesh->vertex_count, p_positions);
 
-    v3* p_normals = TG_MEMORY_STACK_ALLOC(h_mesh->vertex_count * sizeof(*p_normals));
+    v3* p_normals = TG_MALLOC_STACK(h_mesh->vertex_count * sizeof(*p_normals));
 
     if (h_mesh->index_count != 0)
     {
-        u16* p_indices = TG_MEMORY_STACK_ALLOC(h_mesh->index_count * sizeof(*p_indices));
+        u16* p_indices = TG_MALLOC_STACK(h_mesh->index_count * sizeof(*p_indices));
         tg_mesh_copy_indices(h_mesh, 0, h_mesh->index_count, p_indices);
 
         for (u32 i = 0; i < h_mesh->index_count; i += 3)
@@ -833,7 +833,7 @@ void tg_mesh_regenerate_normals(tg_mesh_h h_mesh)
             p_normals[p_indices[i + 2]] = normal;
         }
 
-        TG_MEMORY_STACK_FREE(h_mesh->index_count * sizeof(*p_indices));
+        TG_FREE_STACK(h_mesh->index_count * sizeof(*p_indices));
     }
     else
     {
@@ -891,8 +891,8 @@ void tg_mesh_regenerate_normals(tg_mesh_h h_mesh)
 
     tg_mesh_set_normals(h_mesh, h_mesh->vertex_count, p_normals);
 
-    TG_MEMORY_STACK_FREE(h_mesh->vertex_count * sizeof(*p_normals));
-    TG_MEMORY_STACK_FREE(h_mesh->vertex_count * sizeof(*p_positions));
+    TG_FREE_STACK(h_mesh->vertex_count * sizeof(*p_normals));
+    TG_FREE_STACK(h_mesh->vertex_count * sizeof(*p_positions));
 }
 
 void tg_mesh_regenerate_tangents_bitangents(tg_mesh_h h_mesh)

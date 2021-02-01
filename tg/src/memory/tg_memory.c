@@ -205,19 +205,12 @@ void tg_memory_set_all_bits(tg_size size, void* p_memory)
 
 #ifdef TG_DEBUG
 
-void* tg_memory_alloc_impl(tg_size size, const char* p_filename, u32 line, b32 nullify)
+void* tg_memory_alloc_impl(tg_size size, const char* p_filename, u32 line)
 {
 	TG_ASSERT(size);
 	void* p_memory = TG_NULL;
 
-	if (nullify)
-	{
-		p_memory = tgp_malloc_nullify(size);
-	}
-	else
-	{
-		p_memory = tgp_malloc(size);
-	}
+	p_memory = tgp_malloc(size);
 	TG_ASSERT(p_memory);
 
 	TG_MUTEX_LOCK(h_mutex);
@@ -227,21 +220,14 @@ void* tg_memory_alloc_impl(tg_size size, const char* p_filename, u32 line, b32 n
 	return p_memory;
 }
 
-void* tg_memory_realloc_impl(tg_size size, void* p_memory, const char* p_filename, u32 line, b32 nullify)
+void* tg_memory_realloc_impl(tg_size size, void* p_memory, const char* p_filename, u32 line)
 {
 	TG_ASSERT(size);
 	
 	void* p_reallocated_memory = TG_NULL;
 	if (p_memory)
 	{
-		if (nullify)
-		{
-			p_reallocated_memory = tgp_realloc_nullify(size, p_memory);
-		}
-		else
-		{
-			p_reallocated_memory = tgp_realloc(size, p_memory);
-		}
+		p_reallocated_memory = tgp_realloc(size, p_memory);
 		TG_ASSERT(p_reallocated_memory);
 
 		if (p_memory != p_reallocated_memory)
@@ -254,7 +240,7 @@ void* tg_memory_realloc_impl(tg_size size, void* p_memory, const char* p_filenam
 	}
 	else
 	{
-		p_reallocated_memory = tg_memory_alloc_impl(size, p_filename, line, nullify);
+		p_reallocated_memory = tg_memory_alloc_impl(size, p_filename, line);
 	}
 
 	return p_reallocated_memory;
