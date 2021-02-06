@@ -1,8 +1,10 @@
 #version 450
 
-layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
-#define TG_RTVX_TERRAIN_CELL_STRIDE    16
+#define TG_F32_MAX                     3.402823466e+38
+
+#define TG_RTVX_TERRAIN_CELL_STRIDE    64
 #define TG_RTVX_TERRAIN_VX_STRIDE      (TG_RTVX_TERRAIN_CELL_STRIDE + 1)
 
 #define f32                            float
@@ -46,7 +48,13 @@ struct tg_box
     v3    max;
 };
 
-bool tg_intersect_ray_box(tg_ray r, tg_box b)
+struct tg_boxhit
+{
+    f32    tmin;
+    f32    tmax;
+};
+
+bool tg_intersect_ray_box(tg_ray r, tg_box b, out tg_boxhit hit)
 {
     v3 tbot = r.invd * (b.min - r.o);
     v3 ttop = r.invd * (b.max - r.o);
@@ -56,33 +64,135 @@ bool tg_intersect_ray_box(tg_ray r, tg_box b)
     f32 t0 = max(t.x, t.y);
     t = min(tmax.xx, tmax.yz);
     f32 t1 = min(t.x, t.y);
-    //hit.tmin = t0;
-    //hit.tmax = t1;
+    hit.tmin = t0;
+    hit.tmax = t1;
     return t1 > max(t0, 0.0);
 }
 
 void main()
 {
-    u32 x = gl_GlobalInvocationID.x;
-    u32 y = gl_GlobalInvocationID.y;
+    u32 giid_x = gl_GlobalInvocationID.x;
+    u32 giid_y = gl_GlobalInvocationID.y;
 
     v2i size = imageSize(u_color_attachment);
-    if (x < size.x && y < size.y)
+    if (giid_x < size.x && giid_y < size.y)
     {
-        f32 fx = f32(x) / (f32(gl_NumWorkGroups.x * gl_WorkGroupSize.x));
-        f32 fy = 1.0 - (f32(y) / (f32(gl_NumWorkGroups.y * gl_WorkGroupSize.y)));
+        f32 fx = f32(giid_x) / (f32(gl_NumWorkGroups.x * gl_WorkGroupSize.x));
+        f32 fy = 1.0 - (f32(giid_y) / (f32(gl_NumWorkGroups.y * gl_WorkGroupSize.y)));
         v3 ray_direction = normalize(mix(mix(u_ray00, u_ray10, fy), mix(u_ray01, u_ray11, fy), fx));
-
-
-
-        v3 min = v3(0.0);
-        v3 max = v3(f32(TG_RTVX_TERRAIN_CELL_STRIDE));
         tg_ray r = tg_ray(u_camera, ray_direction, v3(1.0) / ray_direction);
-        tg_box b = tg_box(min, max);
 
-        if (tg_intersect_ray_box(r, b))
+        v3 bmin = v3(0.0);
+        v3 bmax = v3(f32(TG_RTVX_TERRAIN_CELL_STRIDE));
+        tg_box b = tg_box(bmin, bmax);
+
+        tg_boxhit bh;
+        if (tg_intersect_ray_box(r, b, bh))
         {
-            imageStore(u_color_attachment, ivec2(x, y), v4(ray_direction, 1.0));
+            // supercover
+            // https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.42.3443&rep=rep1&type=pdf
+            
+            v3 hit = bh.tmin > 0.0 ? r.o + bh.tmin * r.d : r.o;
+
+            i32 x = min(TG_RTVX_TERRAIN_CELL_STRIDE, i32(ceil(hit.x)));
+            i32 y = min(TG_RTVX_TERRAIN_CELL_STRIDE, i32(ceil(hit.y)));
+            i32 z = min(TG_RTVX_TERRAIN_CELL_STRIDE, i32(ceil(hit.z)));
+
+            i32 step_x = 0;
+            i32 step_y = 0;
+            i32 step_z = 0;
+
+            f32 t_max_x = TG_F32_MAX;
+            f32 t_max_y = TG_F32_MAX;
+            f32 t_max_z = TG_F32_MAX;
+
+            f32 t_delta_x = TG_F32_MAX;
+            f32 t_delta_y = TG_F32_MAX;
+            f32 t_delta_z = TG_F32_MAX;
+
+            if (r.d.x > 0.0)
+            {
+                step_x = 1;
+                t_delta_x = 1.0 / r.d.x;
+                t_max_x = bh.tmin + (x - r.o.x) / r.d.x;
+            }
+            else if (r.d.x < 0.0)
+            {
+                step_x = -1;
+                t_delta_x = 1.0 / -r.d.x;
+                t_max_x = bh.tmin + ((x - 1) - r.o.x) / r.d.x;
+            }
+            if (r.d.y > 0.0)
+            {
+                step_y = 1;
+                t_delta_y = 1.0 / r.d.y;
+                t_max_y = bh.tmin + (y - r.o.y) / r.d.y;
+            }
+            else if (r.d.y < 0.0)
+            {
+                step_y = -1;
+                t_delta_y = 1.0 / -r.d.y;
+                t_max_y = bh.tmin + ((y - 1) - r.o.y) / r.d.y;
+            }
+            if (r.d.z > 0.0)
+            {
+                step_z = 1;
+                t_delta_z = 1.0 / r.d.z;
+                t_max_z = bh.tmin + (z - r.o.z) / r.d.z;
+            }
+            else if (r.d.z < 0.0)
+            {
+                step_z = -1;
+                t_delta_z = 1.0 / -r.d.z;
+                t_max_z = bh.tmin + ((z - 1) - r.o.z) / r.d.z;
+            }
+
+            while (x > -1 && x < TG_RTVX_TERRAIN_CELL_STRIDE + 1 && y > -1 && y < TG_RTVX_TERRAIN_CELL_STRIDE + 1 && z > -1 && z < TG_RTVX_TERRAIN_CELL_STRIDE + 1)
+            {
+                if (t_max_x < t_max_y)
+                {
+                    if (t_max_x < t_max_z)
+                    {
+                        x += step_x;
+                        t_max_x += t_delta_x;
+                    }
+                    else
+                    {
+                        z += step_z;
+                        t_max_z += t_delta_z;
+                    }
+                }
+                else
+                {
+                    if (t_max_y < t_max_z)
+                    {
+                        y += step_y;
+                        t_max_y += t_delta_y;
+                    }
+                    else
+                    {
+                        z += step_z;
+                        t_max_z += t_delta_z;
+                    }
+                }
+                i32 v000 = imageLoad(u_voxels, ivec3(x,     y,     z    )).x;
+                i32 v001 = imageLoad(u_voxels, ivec3(x,     y,     z + 1)).x;
+                i32 v010 = imageLoad(u_voxels, ivec3(x,     y + 1, z    )).x;
+                i32 v011 = imageLoad(u_voxels, ivec3(x,     y + 1, z + 1)).x;
+                i32 v100 = imageLoad(u_voxels, ivec3(x + 1, y,     z    )).x;
+                i32 v101 = imageLoad(u_voxels, ivec3(x + 1, y,     z + 1)).x;
+                i32 v110 = imageLoad(u_voxels, ivec3(x + 1, y + 1, z    )).x;
+                i32 v111 = imageLoad(u_voxels, ivec3(x + 1, y + 1, z + 1)).x;
+                if (v000 < 0 || v001 < 0 || v010 < 0 || v011 < 0 || v100 < 0 || v101 < 0 || v110 < 0 || v111 < 0)
+                {
+                    v4 color = v4(bh.tmin > 0.0 ? ray_direction : -ray_direction, 1.0);
+                    color.r = f32(x) / f32(TG_RTVX_TERRAIN_VX_STRIDE);
+                    color.g = f32(y) / f32(TG_RTVX_TERRAIN_VX_STRIDE);
+                    color.b = f32(z) / f32(TG_RTVX_TERRAIN_VX_STRIDE);
+                    imageStore(u_color_attachment, ivec2(giid_x, giid_y), color);
+                    return;
+                }
+            }
         }
     }
 }

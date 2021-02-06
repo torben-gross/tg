@@ -14,12 +14,12 @@ layout(set = 0, binding = 1) uniform view_projection
     mat4    u_projection;
 };
 
-layout(location = 0) out vec4    v_position;
+layout(location = 0) out vec3    v_position;
 layout(location = 1) out vec3    v_normal;
 
 void main()
 {
     gl_Position    = u_projection * u_view * u_model * vec4(in_position, 1.0);
-	v_position     = vec4(in_position, 1.0);
-	v_normal       = vec4(in_normal, 0.0).xyz;
+	v_position     = in_position;
+	v_normal       = in_normal;
 }

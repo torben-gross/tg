@@ -55,14 +55,12 @@ typedef enum tgvk_queue_type
 
 typedef enum tgvk_geometry_attachment
 {
-    TGVK_GEOMETRY_ATTACHMENT_POSITION                 = 0,
-    TGVK_GEOMETRY_ATTACHMENT_NORMAL                   = 1,
-    TGVK_GEOMETRY_ATTACHMENT_ALBEDO                   = 2,
-    TGVK_GEOMETRY_ATTACHMENT_METALLIC_ROUGHNESS_AO    = 3,
-    TGVK_GEOMETRY_ATTACHMENT_DEPTH                    = 4,
-    TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT              = TGVK_GEOMETRY_ATTACHMENT_METALLIC_ROUGHNESS_AO + 1,
-    TGVK_GEOMETRY_ATTACHMENT_DEPTH_COUNT              = 1,
-    TGVK_GEOMETRY_ATTACHMENT_COUNT                    = TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT + TGVK_GEOMETRY_ATTACHMENT_DEPTH_COUNT
+    TGVK_GEOMETRY_ATTACHMENT_POSITION_3xF32_NORMAL_3xU8_METALLIC_1xU8    = 0,
+    TGVK_GEOMETRY_ATTACHMENT_ALBEDO_3xU8_ROUGHNESS_1xU8                  = 1,
+    TGVK_GEOMETRY_ATTACHMENT_DEPTH                                       = 2,
+    TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT                                 = 2,
+    TGVK_GEOMETRY_ATTACHMENT_DEPTH_COUNT                                 = 1,
+    TGVK_GEOMETRY_ATTACHMENT_COUNT                                       = TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT + TGVK_GEOMETRY_ATTACHMENT_DEPTH_COUNT
 } tgvk_geometry_attachment;
 
 
@@ -217,8 +215,6 @@ typedef struct tgvk_render_command_renderer_info
     tg_renderer_h          h_renderer;
     tgvk_descriptor_set    descriptor_set;
     tgvk_command_buffer    command_buffer;
-    tgvk_descriptor_set    p_shadow_descriptor_sets[TG_CASCADED_SHADOW_MAPS];
-    tgvk_command_buffer    p_shadow_command_buffers[TG_CASCADED_SHADOW_MAPS];
 } tgvk_render_command_renderer_info;
 
 typedef struct tgvk_screen_vertex
@@ -239,11 +235,7 @@ typedef struct tgvk_shared_render_resources
     tgvk_buffer      screen_quad_positions_buffer;
     tgvk_buffer      screen_quad_uvs_buffer;
 
-    VkRenderPass     shadow_render_pass;
-    tgvk_pipeline    shadow_pipeline;
     VkRenderPass     geometry_render_pass;
-    VkRenderPass     ssao_render_pass;
-    VkRenderPass     ssao_blur_render_pass;
     VkRenderPass     shading_render_pass;
     VkRenderPass     forward_render_pass;
     VkRenderPass     tone_mapping_render_pass;
@@ -426,6 +418,7 @@ typedef struct tgvk_atmosphere_model
 typedef struct tg_renderer
 {
     tg_structure_type            type;
+
     const tg_camera*             p_camera;
     tgvk_buffer                  view_projection_ubo;
     tgvk_image                   hdr_color_attachment;
@@ -433,10 +426,8 @@ typedef struct tg_renderer
     VkSemaphore                  semaphore;
 
     u32                          deferred_command_buffer_count;
-    u32                          shadow_command_buffer_count;
     u32                          forward_render_command_count;
     VkCommandBuffer              p_deferred_command_buffers[TG_MAX_RENDER_COMMANDS];
-    VkCommandBuffer              p_shadow_command_buffers[TG_CASCADED_SHADOW_MAPS][TG_MAX_RENDER_COMMANDS];
     tg_render_command_h          ph_forward_render_commands[TG_MAX_RENDER_COMMANDS];
     tg_rtvx_terrain_h            h_terrain;
 
@@ -454,64 +445,40 @@ typedef struct tg_renderer
 
     struct
     {
-        b32                      enabled;
-        tgvk_image               p_shadow_maps[TG_CASCADED_SHADOW_MAPS];
-        tgvk_framebuffer         p_framebuffers[TG_CASCADED_SHADOW_MAPS];
         tgvk_command_buffer      command_buffer;
-        tgvk_buffer              p_lightspace_ubos[TG_CASCADED_SHADOW_MAPS];
-    } shadow_pass;
-
-    struct
-    {
         tgvk_image               p_color_attachments[TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT];
         tgvk_framebuffer         framebuffer;
-        tgvk_command_buffer      command_buffer;
     } geometry_pass;
 
     struct
     {
-        tgvk_image               ssao_attachment;
-        tgvk_framebuffer         ssao_framebuffer;
-        tgvk_pipeline            ssao_graphics_pipeline;
-        tgvk_descriptor_set      ssao_descriptor_set;
-        tgvk_image               ssao_noise_image;
-        tgvk_buffer              ssao_ubo;
-
-        tgvk_image               blur_attachment;
-        tgvk_framebuffer         blur_framebuffer;
-        tgvk_pipeline            blur_graphics_pipeline;
-        tgvk_descriptor_set      blur_descriptor_set;
-
         tgvk_command_buffer      command_buffer;
-    } ssao_pass;
-
-    struct
-    {
         tgvk_framebuffer         framebuffer;
         tgvk_shader              fragment_shader;
         tgvk_pipeline            graphics_pipeline;
         tgvk_descriptor_set      descriptor_set;
-        tgvk_command_buffer      command_buffer;
         tgvk_buffer              fragment_shader_ubo;
     } shading_pass;
 
     struct
     {
-        tgvk_framebuffer         framebuffer;
         tgvk_command_buffer      command_buffer;
+        tgvk_framebuffer         framebuffer;
     } forward_pass;
 
     struct
     {
+        tgvk_command_buffer      command_buffer;
         tgvk_shader              shader;
         tgvk_pipeline            pipeline;
         tgvk_descriptor_set      descriptor_set;
         tgvk_buffer              ubo;
-        tgvk_command_buffer      command_buffer;
     } ray_trace_pass;
 
     struct
     {
+        tgvk_command_buffer      command_buffer;
+
         tgvk_buffer              acquire_exposure_clear_storage_buffer;
         tgvk_shader              acquire_exposure_compute_shader;
         tgvk_pipeline            acquire_exposure_compute_pipeline;
@@ -527,15 +494,14 @@ typedef struct tg_renderer
         tgvk_framebuffer         adapt_exposure_framebuffer;
         tgvk_pipeline            adapt_exposure_graphics_pipeline;
         tgvk_descriptor_set      adapt_exposure_descriptor_set;
-        tgvk_command_buffer      adapt_exposure_command_buffer;
     } tone_mapping_pass;
 
     struct
     {
+        tgvk_command_buffer      command_buffer;
         tgvk_framebuffer         framebuffer;
         tgvk_pipeline            pipeline;
         tgvk_descriptor_set      descriptor_set;
-        tgvk_command_buffer      command_buffer;
     } ui_pass;
 
     struct
@@ -545,11 +511,11 @@ typedef struct tg_renderer
 
     struct
     {
+        tgvk_command_buffer      p_command_buffers[TG_MAX_SWAPCHAIN_IMAGES];
         VkSemaphore              image_acquired_semaphore;
         tgvk_framebuffer         p_framebuffers[TG_MAX_SWAPCHAIN_IMAGES];
         tgvk_pipeline            graphics_pipeline;
         tgvk_descriptor_set      descriptor_set;
-        tgvk_command_buffer      p_command_buffers[TG_MAX_SWAPCHAIN_IMAGES];
     } present_pass;
 
     struct

@@ -91,51 +91,6 @@ static void tg__register(tg_render_command_h h_render_command, tg_renderer_h h_r
         }
     }
     TGVK_CALL(vkEndCommandBuffer(p_renderer_info->command_buffer.command_buffer));
-
-
-
-
-
-    TG_ASSERT(h_render_command->h_mesh->position_buffer.buffer); // TODO: add flag for non shadow casting
-
-    for (u32 i = 0; i < TG_CASCADED_SHADOW_MAPS; i++)
-    {
-        p_renderer_info->p_shadow_descriptor_sets[i] = tgvk_descriptor_set_create(&shared_render_resources.shadow_pipeline);
-        tgvk_descriptor_set_update_uniform_buffer(p_renderer_info->p_shadow_descriptor_sets[i].descriptor_set, &h_render_command->model_ubo, 0);
-        tgvk_descriptor_set_update_uniform_buffer(p_renderer_info->p_shadow_descriptor_sets[i].descriptor_set, &h_renderer->shadow_pass.p_lightspace_ubos[i], 1);
-
-        VkCommandBufferInheritanceInfo shadow_command_buffer_inheritance_info = { 0 };
-        shadow_command_buffer_inheritance_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
-        shadow_command_buffer_inheritance_info.pNext = TG_NULL;
-        shadow_command_buffer_inheritance_info.renderPass = shared_render_resources.shadow_render_pass;
-        shadow_command_buffer_inheritance_info.subpass = 0;
-        shadow_command_buffer_inheritance_info.framebuffer = h_renderer->shadow_pass.p_framebuffers[i].framebuffer;
-        shadow_command_buffer_inheritance_info.occlusionQueryEnable = VK_FALSE;
-        shadow_command_buffer_inheritance_info.queryFlags = 0;
-        shadow_command_buffer_inheritance_info.pipelineStatistics = 0;
-        
-        p_renderer_info->p_shadow_command_buffers[i] = tgvk_command_buffer_create(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_SECONDARY);
-        tgvk_command_buffer_begin_secondary(&p_renderer_info->p_shadow_command_buffers[i], VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, shared_render_resources.shadow_render_pass, &h_renderer->shadow_pass.p_framebuffers[i]);
-        {
-            vkCmdBindPipeline(p_renderer_info->p_shadow_command_buffers[i].command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shared_render_resources.shadow_pipeline.pipeline);
-            const VkDeviceSize vertex_buffer_offset = 0;
-            if (h_render_command->h_mesh->index_buffer.memory.size != 0)
-            {
-                vkCmdBindIndexBuffer(p_renderer_info->p_shadow_command_buffers[i].command_buffer, h_render_command->h_mesh->index_buffer.buffer, 0, VK_INDEX_TYPE_UINT16);
-            }
-            vkCmdBindVertexBuffers(p_renderer_info->p_shadow_command_buffers[i].command_buffer, 0, 1, &h_render_command->h_mesh->position_buffer.buffer, &vertex_buffer_offset);
-            vkCmdBindDescriptorSets(p_renderer_info->p_shadow_command_buffers[i].command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shared_render_resources.shadow_pipeline.layout.pipeline_layout, 0, 1, &p_renderer_info->p_shadow_descriptor_sets[i].descriptor_set, 0, TG_NULL);
-            if (h_render_command->h_mesh->index_count != 0)
-            {
-                vkCmdDrawIndexed(p_renderer_info->p_shadow_command_buffers[i].command_buffer, (u32)(h_render_command->h_mesh->index_count), 1, 0, 0, 0); // TODO: u16
-            }
-            else
-            {
-                vkCmdDraw(p_renderer_info->p_shadow_command_buffers[i].command_buffer, (u32)(h_render_command->h_mesh->vertex_count), 1, 0, 0);
-            }
-        }
-        TGVK_CALL(vkEndCommandBuffer(p_renderer_info->p_shadow_command_buffers[i].command_buffer));
-    }
 }
 
 
@@ -171,11 +126,6 @@ void tg_render_command_destroy(tg_render_command_h h_render_command)
     {
         // TODO: lock fence
         //tgvk_fence_wait(h_render_command->p_renderer_infos[i].h_renderer->render_target.fence);
-        for (u32 j = 0; j < TG_CASCADED_SHADOW_MAPS; j++)
-        {
-            tgvk_command_buffer_destroy(&h_render_command->p_renderer_infos[i].p_shadow_command_buffers[j]);
-            tgvk_descriptor_set_destroy(&h_render_command->p_renderer_infos[i].p_shadow_descriptor_sets[j]);
-        }
         tgvk_command_buffer_destroy(&h_render_command->p_renderer_infos[i].command_buffer);
         tgvk_descriptor_set_destroy(&h_render_command->p_renderer_infos[i].descriptor_set);
     }

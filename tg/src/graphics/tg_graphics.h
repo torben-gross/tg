@@ -30,11 +30,6 @@
 #define TG_MAX_SHADER_INPUTS              16
 #define TG_SHADER_RESERVED_BINDINGS       2
 
-#define TG_CASCADED_SHADOW_MAPS           4
-#define TG_CASCADED_SHADOW_MAP_SIZE       1024
-
-#define TG_SSAO_MAP_SIZE                  2048
-
 #define TG_MAX_DIRECTIONAL_LIGHTS         512
 #define TG_MAX_POINT_LIGHTS               512
 
@@ -286,8 +281,6 @@ void                     tg_renderer_init_shared_resources(void);
 void                     tg_renderer_shutdown_shared_resources(void);
 tg_renderer_h            tg_renderer_create(tg_camera* p_camera);
 void                     tg_renderer_destroy(tg_renderer_h h_renderer);
-void                     tg_renderer_enable_shadows(tg_renderer_h h_renderer, b32 enable);
-void                     tg_renderer_enable_sun(tg_renderer_h h_renderer, b32 enable);
 void                     tg_renderer_begin(tg_renderer_h h_renderer);
 void                     tg_renderer_set_sun_direction(tg_renderer_h h_renderer, v3 direction);
 void                     tg_renderer_push_directional_light(tg_renderer_h h_renderer, v3 direction, v3 color);

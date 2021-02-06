@@ -101,7 +101,7 @@ void tg_list_insert_at_unchecked(tg_list* p_list, u32 index, const void* p_value
 
 	for (u32 i = p_list->count - 1; i >= index; i--)
 	{
-		TG_LIST_SET_AT(*p_list, i + 1, TG_LIST_AT(*p_list, i));
+		TG_LIST_SET_AT(*p_list, (tg_size)i + 1, TG_LIST_AT(*p_list, i));
 	}
 	TG_LIST_SET_AT(*p_list, index, p_value);
 	p_list->count++;

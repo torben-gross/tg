@@ -3,7 +3,7 @@
 
 #include "tg_common.h"
 
-#define TG_RTVX_TERRAIN_CELL_STRIDE    16
+#define TG_RTVX_TERRAIN_CELL_STRIDE    64
 #define TG_RTVX_TERRAIN_VX_STRIDE      (TG_RTVX_TERRAIN_CELL_STRIDE + 1)
 
 TG_DECLARE_HANDLE(tg_rtvx_terrain);

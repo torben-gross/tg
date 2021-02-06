@@ -33,7 +33,6 @@ typedef struct tg_pbr_material
     v4     albedo;
     f32    metallic;
     f32    roughness;
-    f32    ao;
 } tg_pbr_material;
 
 typedef struct tg_sample_scene
@@ -77,8 +76,8 @@ typedef struct tg_sample_scene
     tg_material_h              h_probe_material;
     tg_render_command_h        h_probe_render_command;
 
-    //tg_terrain*                p_terrain;
-    tg_rtvx_terrain_h          h_terrain;
+    tg_terrain*                p_terrain;
+    //tg_rtvx_terrain_h          h_terrain;
     
     f32                        light_timer;
 } tg_sample_scene;
@@ -107,12 +106,9 @@ static void tg__game_3d_create(void)
 
     scene.h_main_renderer = tg_renderer_create(&scene.camera);
     scene.h_secondary_renderer = tg_renderer_create(&scene.camera);
-    tg_renderer_enable_shadows(scene.h_main_renderer, TG_FALSE);
-    tg_renderer_enable_sun(scene.h_main_renderer, TG_TRUE);
-    tg_renderer_enable_shadows(scene.h_secondary_renderer, TG_FALSE);
 
-    //scene.p_terrain = tg_terrain_create(&scene.camera);
-    scene.h_terrain = tg_rtvx_terrain_create();
+    scene.p_terrain = tg_terrain_create(&scene.camera);
+    //scene.h_terrain = tg_rtvx_terrain_create();
 
 
 
@@ -187,10 +183,9 @@ static void tg__game_3d_create(void)
 
             const v3 sphere_translation = { 128.0f - 7.0f + (f32)x * 2.0f, 143.0f + (f32)y * 2.0f, 112.0f };
             scene.p_pbr_spheres[i].h_ubo = tg_uniform_buffer_create(sizeof(tg_pbr_material));
-            ((tg_pbr_material*)tg_uniform_buffer_data(scene.p_pbr_spheres[i].h_ubo))->albedo = (v4){ 4.0f, 2.0f, 1.0f, 1.0f };
+            ((tg_pbr_material*)tg_uniform_buffer_data(scene.p_pbr_spheres[i].h_ubo))->albedo = (v4){ 1.0f, 0.5f, 0.25f, 1.0f };
             ((tg_pbr_material*)tg_uniform_buffer_data(scene.p_pbr_spheres[i].h_ubo))->metallic = (f32)x / 6.0f;
             ((tg_pbr_material*)tg_uniform_buffer_data(scene.p_pbr_spheres[i].h_ubo))->roughness = ((f32)y + 0.1f) / 6.5f;
-            ((tg_pbr_material*)tg_uniform_buffer_data(scene.p_pbr_spheres[i].h_ubo))->ao = 1.0f;
             scene.p_pbr_spheres[i].h_material = tg_material_create_deferred(tg_vertex_shader_create("shaders/deferred/pbr.vert"), tg_fragment_shader_create("shaders/deferred/pbr.frag"));
             tg_handle p_handles[1] = { scene.p_pbr_spheres[i].h_ubo };
             if (x == 6 && y == 6)
@@ -220,7 +215,6 @@ static void tg__game_3d_create(void)
     ((tg_pbr_material*)tg_uniform_buffer_data(scene.h_sponza_ubo))->albedo = (v4) { 1.0f, 1.0f, 1.0f, 1.0f };
     ((tg_pbr_material*)tg_uniform_buffer_data(scene.h_sponza_ubo))->metallic = 0.1f;
     ((tg_pbr_material*)tg_uniform_buffer_data(scene.h_sponza_ubo))->roughness = 0.4f;
-    ((tg_pbr_material*)tg_uniform_buffer_data(scene.h_sponza_ubo))->ao = 1.0f;
     scene.h_sponza_material = tg_material_create_deferred(tg_vertex_shader_create("shaders/deferred/pbr.vert"), tg_fragment_shader_create("shaders/deferred/pbr.frag"));
     tg_handle p_sponza_handles[1] = { scene.h_sponza_ubo };
     scene.h_sponza_render_command = tg_render_command_create(scene.h_sponza_mesh, scene.h_sponza_material, (v3) { 128.0f, 140.0f, 128.0f }, 1, p_sponza_handles);
@@ -358,7 +352,7 @@ static void tg__game_3d_update_and_render(f32 dt)
 
     tg_renderer_begin(scene.h_secondary_renderer);
     tg_renderer_push_directional_light(scene.h_secondary_renderer, d0, (v3) { 4.0f, 4.0f, 10.0f });
-    //tg_terrain_render(scene.p_terrain, scene.h_secondary_renderer);
+    tg_terrain_render(scene.p_terrain, scene.h_secondary_renderer);
     tg_render_command_h* ph_render_commands = TG_LIST_AT(scene.render_commands, 0);
     for (u32 i = 0; i < scene.render_commands.count; i++)
     {
@@ -370,8 +364,8 @@ static void tg__game_3d_update_and_render(f32 dt)
     tg_renderer_set_sun_direction(scene.h_main_renderer, d0);
     //tg_renderer_push_directional_light(scene.h_main_renderer, d0, c0);
     tg_renderer_push_point_light(scene.h_main_renderer, (v3) { lx1, ly1, lz1 }, (v3){ 8.0f, 8.0f, 16.0f });
-    //tg_terrain_render(scene.p_terrain, scene.h_main_renderer);
-    tg_renderer_push_terrain(scene.h_main_renderer, scene.h_terrain);
+    tg_terrain_render(scene.p_terrain, scene.h_main_renderer);
+    //tg_renderer_push_terrain(scene.h_main_renderer, scene.h_terrain);
     ph_render_commands = TG_LIST_AT(scene.render_commands, 0);
     for (u32 i = 0; i < scene.render_commands.count; i++)
     {
@@ -430,14 +424,14 @@ static void tg__game_3d_update_and_render(f32 dt)
         const v3 world_position = tg_renderer_screen_to_world(scene.h_main_renderer, mouse_x, mouse_y);
         if (tgm_v3_magsqr(tgm_v3_sub(world_position, scene.camera.position)) < 0.9f * scene.camera.persp.f * scene.camera.persp.f)
         {
-            //tg_terrain_shape(scene.p_terrain, world_position, 1.5f, delta); // TODO: why does this not work with a radius of less than 1.0f, e.g. TG_PI * 0.25f?
+            tg_terrain_shape(scene.p_terrain, world_position, 1.5f, delta); // TODO: why does this not work with a radius of less than 1.0f, e.g. TG_PI * 0.25f?
         }
     }
 }
 
 static void tg__game_3d_destroy(void)
 {
-    //tg_terrain_destroy(scene.p_terrain);
+    tg_terrain_destroy(scene.p_terrain);
 
     tg_render_command_destroy(scene.h_probe_render_command);
     tg_material_destroy(scene.h_probe_material);
