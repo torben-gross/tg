@@ -13,7 +13,7 @@
 #define TGVK_SHADING_ATTACHMENT_COUNT                     1
 #define TGVK_HDR_FORMAT                                   VK_FORMAT_R32G32B32A32_SFLOAT
 
-#define TGVK_GEOMETRY_FORMATS(var)                        const VkFormat var[TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT] = { VK_FORMAT_R32G32B32A32_SFLOAT, VK_FORMAT_R8G8B8A8_SNORM }
+#define TGVK_GEOMETRY_FORMATS(var)                        const VkFormat var[TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT] = { VK_FORMAT_R32G32B32A32_UINT, VK_FORMAT_R8G8B8A8_SNORM }
 
 #define TGVK_SHADING_UBO                                  (*(tg_shading_ubo*)h_renderer->shading_pass.fragment_shader_ubo.memory.p_mapped_device_memory)
 

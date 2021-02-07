@@ -1,40 +1,56 @@
 #version 450
 
-#define TG_PACK(position_3xf32, normal_3xf32, albedo_3xf32, metallic_1xf32, roughness_1xf32) \
-    out_position_3xf32_normal_3xu8_metallic_1xu8 = vec4(position_3xf32, tg_pack_4xf32_into_1xf32(vec4(normal_3xf32 * vec3(0.5) + vec3(0.5), metallic_1xf32))); \
-    out_albedo_3xu8_roughness_1xu8 = vec4(albedo_3xf32, roughness_1xf32)
+#define f32    float
+#define i32    int
+#define u32    uint
 
-layout(location = 0) in vec3    v_position;
-layout(location = 1) in vec3    v_normal;
-layout(location = 2) in vec2    v_uv;
-//layout(location = 3) in mat3    v_tbn; // TODO: this will be needed for normal mapping
+#define v2     vec2
+#define v2i    ivec2
+#define v2u    uvec2
+#define v3     vec3
+#define v3i    ivec3
+#define v3u    uvec3
+#define v4     vec4
+#define v4i    ivec4
+#define v4u    uvec4
+
+#define m2     mat2
+#define m3     mat3
+#define m4     mat4
+
+layout(location = 0) in v3    v_position;
+layout(location = 1) in v3    v_normal;
+layout(location = 2) in v2    v_uv;
+//layout(location = 3) in m3    v_tbn; // TODO: this will be needed for normal mapping
 
 layout(set = 0, binding = 2) uniform material
 {
-    vec4     albedo;
-    float    metallic;
-    float    roughness;
+    v4     albedo;
+    f32    metallic;
+    f32    roughness;
 };
 
-layout(location = 0) out vec4    out_position_3xf32_normal_3xu8_metallic_1xu8;
-layout(location = 1) out vec4    out_albedo_3xu8_roughness_1xu8;
+layout(location = 0) out v4u    out_position_3xu32_normal_3xu8_metallic_1xu8;
+layout(location = 1) out v4     out_albedo_3xf8_roughness_1xf8;
 
-vec4 tg_unpack_1xf32_into_4xf32(float v)
+void tg_pack(v3 p, v3 n, v3 a, f32 m, f32 r)
 {
-    return vec4(float(uint(v) & 0x3f) / 64.0, float((uint(v) >> 6) & 0x3f) / 64.0, float((uint(v) >> 12) & 0x3f) / 64.0, float((uint(v) >> 18) & 0x3f) / 64.0);
-}
+    v4u v0;
+    v0.xyz = floatBitsToUint(p);
+    v0.w = uint(n.x * 127.5 + 127.5) | (uint(n.y * 127.5 + 127.5) << 8) | (uint(n.z * 127.5 + 127.5) << 16) | (uint(m * 255.0) << 24);
 
-float tg_pack_4xf32_into_1xf32(vec4 v)
-{
-    return float(uint(v.x * 64.0) | (uint(v.y * 64.0) << 6) | (uint(v.z * 64.0) << 12) | (uint(v.w * 64.0) << 18));
+    v4 v1 = v4(a, r);
+
+    out_position_3xu32_normal_3xu8_metallic_1xu8 = v0;
+    out_albedo_3xf8_roughness_1xf8 = v1;
 }
 
 void main()
 {
-    vec3 p = v_position;
-    vec3 n = normalize(v_normal);
-    vec3 a = albedo.xyz;
-    float m = metallic;
-    float r = roughness;
-    TG_PACK(p, n, a, m, r);
+    v3 p = v_position;
+    v3 n = normalize(v_normal);
+    v3 a = albedo.xyz;
+    f32 m = metallic;
+    f32 r = roughness;
+    tg_pack(p, n, a, m, r);
 }

@@ -1,3 +1,21 @@
+#define f32    float
+#define i32    int
+#define u32    uint
+
+#define v2     vec2
+#define v2i    ivec2
+#define v2u    uvec2
+#define v3     vec3
+#define v3i    ivec3
+#define v3u    uvec3
+#define v4     vec4
+#define v4i    ivec4
+#define v4u    uvec4
+
+#define m2     mat2
+#define m3     mat3
+#define m4     mat4
+
 #define TG_MAX_DIRECTIONAL_LIGHTS            512
 #define TG_MAX_POINT_LIGHTS                  512
 #define TG_PI                                3.14159265358979323846
@@ -11,31 +29,9 @@ layout(location = 1) in vec3 v_view_ray;
 
 
 
-layout(set = 0, binding = 4) uniform sampler2D u_position_3xf32_normal_3xu8_metallic_1xu8;
-layout(set = 0, binding = 5) uniform sampler2D u_albedo_3xu8_roughness_1xu8;
+layout(set = 0, binding = 4) uniform usampler2D v_position_3xu32_normal_3xu8_metallic_1xu8;
+layout(set = 0, binding = 5) uniform sampler2D v_albedo_3xf8_roughness_1xf8;
 layout(set = 0, binding = 6) uniform sampler2D u_depth;
-
-#define TG_UNPACK(position_3xf32, normal_3xf32, albedo_3xf32, metallic_1xf32, roughness_1xf32) \
-    {                                                                                          \
-        vec4 v0 = texture(u_position_3xf32_normal_3xu8_metallic_1xu8, v_uv);                   \
-        vec4 v1 = texture(u_albedo_3xu8_roughness_1xu8, v_uv);                                 \
-        vec4 v0w = tg_unpack_1xf32_into_4xf32(v0.w);                                           \
-        (position_3xf32) = v0.xyz;                                                             \
-        (normal_3xf32) = v0w.xyz * vec3(2.0) - vec3(1.0);                                      \
-        (albedo_3xf32) = v1.xyz;                                                               \
-        (metallic_1xf32) = 0.5;                                                              \
-        (roughness_1xf32) = v1.w;                                                              \
-    }
-
-vec4 tg_unpack_1xf32_into_4xf32(float v)
-{
-    return vec4(float(uint(v) & 0x3f) / 64.0, float((uint(v) >> 6) & 0x3f) / 64.0, float((uint(v) >> 12) & 0x3f) / 64.0, float((uint(v) >> 18) & 0x3f) / 64.0);
-}
-
-float tg_pack_4xf32_into_1xf32(vec4 v)
-{
-    return float(uint(v.x * 64.0) | (uint(v.y * 64.0) << 6) | (uint(v.z * 64.0) << 12) | (uint(v.w * 64.0) << 18));
-}
     
 layout(set = 0, binding = 7) uniform ubo
 {
@@ -161,11 +157,23 @@ vec3 tg_shade_with_sun(vec3 position, vec3 n, vec3 v, vec3 l, vec3 diffuse_albed
     return tg_shade(n, v, l, diffuse_albedo, specular_albedo, metallic, roughness, radiance) + in_scatter;
 }
 
+void tg_unpack(out v3 p, out v3 n, out v3 a, out f32 m, out f32 r)
+{
+    v4u v0 = texture(v_position_3xu32_normal_3xu8_metallic_1xu8, v_uv);
+    v4 v1 = texture(v_albedo_3xf8_roughness_1xf8, v_uv);
+
+    p = uintBitsToFloat(v0.xyz);
+    n = v3(f32(v0.w & 0xff), f32((v0.w >> 8) & 0xff), f32((v0.w >> 16) & 0xff)) / v3(127.5) - v3(1.0);
+    a = v1.xyz;
+    m = f32((v0.w >> 24) & 0xff) / 255.0;
+    r = v1.w;
+}
+
 void main()
 {
     vec3 position, normal, albedo;
     float metallic, roughness;
-    TG_UNPACK(position, normal, albedo, metallic, roughness);
+    tg_unpack(position, normal, albedo, metallic, roughness);
 
     if (texture(u_depth, v_uv).x == 1.0)
     {
