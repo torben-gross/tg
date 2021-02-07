@@ -291,7 +291,7 @@ void                     tg_renderer_push_text(tg_renderer_h h_renderer, const c
 void                     tg_renderer_end(tg_renderer_h h_renderer, f32 dt, b32 present);
 void                     tg_renderer_clear(tg_renderer_h h_renderer);
 tg_render_target_h       tg_renderer_get_render_target(tg_renderer_h h_renderer);
-v3                       tg_renderer_screen_to_world(tg_renderer_h h_renderer, u32 x, u32 y);
+v3                       tg_renderer_screen_to_world_position(tg_renderer_h h_renderer, u32 x, u32 y);
 void                     tg_renderer_screenshot(tg_renderer_h h_renderer, const char* p_filename);
 #if TG_ENABLE_DEBUG_TOOLS == 1
 void                     tg_renderer_draw_cube_DEBUG(tg_renderer_h h_renderer, v3 position, v3 scale, v4 color);

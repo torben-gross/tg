@@ -67,16 +67,16 @@ void tgvk_memory_allocator_init(VkDevice device, VkPhysicalDevice physical_devic
     memory.pool_count = 0;
     for (u32 i = 0; i < physical_device_memory_properties.memoryTypeCount; i++)
     {
-        const b32 device_local = physical_device_memory_properties.memoryTypes[i].propertyFlags == VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-        const b32 host_visible_coherent = physical_device_memory_properties.memoryTypes[i].propertyFlags == (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        const b32 device_local = physical_device_memory_properties.memoryTypes[i].propertyFlags == TGVK_MEMORY_DEVICE;
+        const b32 host_visible_coherent = physical_device_memory_properties.memoryTypes[i].propertyFlags == TGVK_MEMORY_HOST;
 
         if (device_local || host_visible_coherent)
         {
             VkDeviceSize allocation_size = 0;
             switch (physical_device_memory_properties.memoryTypes[i].propertyFlags)
             {
-            case VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT:                                        allocation_size = TGVK_MAX_DEVICE_LOCAL_MEMORY_SIZE;   break;
-            case VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT: allocation_size = TGVK_MAX_HOST_VISIBLE_COHERENT_SIZE; break;
+            case TGVK_MEMORY_DEVICE: allocation_size = TGVK_MAX_DEVICE_LOCAL_MEMORY_SIZE;   break;
+            case TGVK_MEMORY_HOST:   allocation_size = TGVK_MAX_HOST_VISIBLE_COHERENT_SIZE; break;
 
             default: TG_INVALID_CODEPATH(); break;
             }
@@ -103,7 +103,7 @@ void tgvk_memory_allocator_init(VkDevice device, VkPhysicalDevice physical_devic
             memory_allocate_info.memoryTypeIndex = i;
 
             TGVK_CALL(vkAllocateMemory(device, &memory_allocate_info, TG_NULL, &memory.p_pools[memory.pool_count].device_memory));
-            if (physical_device_memory_properties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
+            if (physical_device_memory_properties.memoryTypes[i].propertyFlags == TGVK_MEMORY_HOST)
             {
                 TGVK_CALL(vkMapMemory(device, memory.p_pools[memory.pool_count].device_memory, 0, VK_WHOLE_SIZE, 0, &memory.p_pools[memory.pool_count].p_mapped_device_memory));
             }
@@ -143,9 +143,9 @@ VkDeviceSize tgvk_memory_aligned_size(VkDeviceSize size)
     return result;
 }
 
-tgvk_memory_block tgvk_memory_allocator_alloc(VkDeviceSize alignment, VkDeviceSize size, u32 memory_type_bits, VkMemoryPropertyFlags memory_property_flags)
+tgvk_memory_block tgvk_memory_allocator_alloc(VkDeviceSize alignment, VkDeviceSize size, u32 memory_type_bits, tgvk_memory_type type)
 {
-    TG_ASSERT(memory_type_bits && memory_property_flags);
+    TG_ASSERT(memory_type_bits);
     TG_ASSERT(alignment <= memory.page_size); // TODO: consider alignment!
 
     tgvk_memory_block memory_block = { 0 };
@@ -159,7 +159,7 @@ tgvk_memory_block tgvk_memory_allocator_alloc(VkDeviceSize alignment, VkDeviceSi
         tgvk_memory_pool* p_pool = &memory.p_pools[i];
 
         const b32 is_required_memory_type = (b32)(memory_type_bits & (1 << p_pool->memory_type_bit)) == (1 << p_pool->memory_type_bit);
-        const b32 has_required_memory_properties = (p_pool->memory_property_flags & memory_property_flags) == memory_property_flags;
+        const b32 has_required_memory_properties = (p_pool->memory_property_flags & type) == (VkMemoryPropertyFlags)type;
 
         if (is_required_memory_type && has_required_memory_properties && p_pool->reserved_page_count + required_page_count <= p_pool->total_page_count)
         {

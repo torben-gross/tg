@@ -193,6 +193,36 @@ typedef struct tgvk_layered_image
     tgvk_sampler         sampler;
 } tgvk_layered_image;
 
+typedef enum tgvk_layout_type
+{
+    TGVK_LAYOUT_UNDEFINED = 0,
+    TGVK_LAYOUT_COLOR_ATTACHMENT_WRITE,
+    TGVK_LAYOUT_DEPTH_ATTACHMENT_WRITE,
+    TGVK_LAYOUT_SHADER_READ_C,
+    TGVK_LAYOUT_SHADER_READ_CF,
+    TGVK_LAYOUT_SHADER_READ_CFV,
+    TGVK_LAYOUT_SHADER_READ_CV,
+    TGVK_LAYOUT_SHADER_READ_F,
+    TGVK_LAYOUT_SHADER_READ_FV,
+    TGVK_LAYOUT_SHADER_READ_V,
+    TGVK_LAYOUT_SHADER_WRITE_C,
+    TGVK_LAYOUT_SHADER_WRITE_CF,
+    TGVK_LAYOUT_SHADER_WRITE_CFV,
+    TGVK_LAYOUT_SHADER_WRITE_CV,
+    TGVK_LAYOUT_SHADER_WRITE_F,
+    TGVK_LAYOUT_SHADER_WRITE_FV,
+    TGVK_LAYOUT_SHADER_WRITE_V,
+    TGVK_LAYOUT_SHADER_READ_WRITE_C,
+    TGVK_LAYOUT_SHADER_READ_WRITE_CF,
+    TGVK_LAYOUT_SHADER_READ_WRITE_CFV,
+    TGVK_LAYOUT_SHADER_READ_WRITE_CV,
+    TGVK_LAYOUT_SHADER_READ_WRITE_F,
+    TGVK_LAYOUT_SHADER_READ_WRITE_FV,
+    TGVK_LAYOUT_SHADER_READ_WRITE_V,
+    TGVK_LAYOUT_TRANSFER_READ,
+    TGVK_LAYOUT_TRANSFER_WRITE
+} tgvk_layout_type;
+
 typedef struct tgvk_pipeline
 {
     b32                     is_graphics_pipeline;
@@ -411,7 +441,7 @@ typedef struct tgvk_atmosphere_model
 	    tgvk_layered_image           no_single_mie_scattering_black_texture; // TODO: remove this and change 'p_atmosphere_shader' to not use 'single_mie_scattering_texture'
 	    tgvk_image                   irradiance_texture;
         tgvk_buffer                  vertex_shader_ubo;
-        tgvk_buffer                  fragment_shader_ubo;
+        tgvk_buffer                  ubo;
     } rendering;
 } tgvk_atmosphere_model;
 
@@ -457,7 +487,7 @@ typedef struct tg_renderer
         tgvk_shader              fragment_shader;
         tgvk_pipeline            graphics_pipeline;
         tgvk_descriptor_set      descriptor_set;
-        tgvk_buffer              fragment_shader_ubo;
+        tgvk_buffer              ubo;
     } shading_pass;
 
     struct
@@ -564,10 +594,6 @@ void                    tgvk_atmosphere_model_update(tgvk_atmosphere_model* p_mo
 void                    tgvk_buffer_copy(VkDeviceSize size, tgvk_buffer* p_src, tgvk_buffer* p_dst);
 tgvk_buffer             tgvk_buffer_create(VkDeviceSize size, VkBufferUsageFlags buffer_usage_flags, VkMemoryPropertyFlags memory_property_flags);
 void                    tgvk_buffer_destroy(tgvk_buffer* p_buffer);
-void                    tgvk_buffer_flush_device_to_host(tgvk_buffer* p_buffer);
-void                    tgvk_buffer_flush_device_to_host_range(tgvk_buffer* p_buffer, VkDeviceSize offset, VkDeviceSize size);
-void                    tgvk_buffer_flush_host_to_device(tgvk_buffer* p_buffer);
-void                    tgvk_buffer_flush_host_to_device_range(tgvk_buffer* p_buffer, VkDeviceSize offset, VkDeviceSize size);
 
 void                    tgvk_cmd_begin_render_pass(tgvk_command_buffer* p_command_buffer, VkRenderPass render_pass, tgvk_framebuffer* p_framebuffer, VkSubpassContents subpass_contents);
 void                    tgvk_cmd_bind_and_draw_screen_quad(tgvk_command_buffer* p_command_buffer);
@@ -590,10 +616,14 @@ void                    tgvk_cmd_copy_color_image_to_buffer(tgvk_command_buffer*
 void                    tgvk_cmd_copy_depth_image_pixel_to_buffer(tgvk_command_buffer* p_command_buffer, tgvk_image* p_source, tgvk_buffer* p_destination, u32 x, u32 y);
 void                    tgvk_cmd_copy_image_3d_to_buffer(tgvk_command_buffer* p_command_buffer, tgvk_image_3d* p_source, tgvk_buffer* p_destination);
 void                    tgvk_cmd_draw_indexed(tgvk_command_buffer* p_command_buffer, u32 index_count);
-void                    tgvk_cmd_transition_cube_map_layout(tgvk_command_buffer* p_command_buffer, tgvk_cube_map* p_cube_map, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits);
-void                    tgvk_cmd_transition_image_layout(tgvk_command_buffer* p_command_buffer, tgvk_image* p_image, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits);
-void                    tgvk_cmd_transition_image_3d_layout(tgvk_command_buffer* p_command_buffer, tgvk_image_3d* p_image_3d, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits);
-void                    tgvk_cmd_transition_layered_image_layout(tgvk_command_buffer* p_command_buffer, tgvk_layered_image* p_image, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits);
+void                    tgvk_cmd_transition_cube_map_layout(tgvk_command_buffer* p_command_buffer, tgvk_cube_map* p_cube_map, tgvk_layout_type src_type, tgvk_layout_type dst_type);
+void                    tgvk_cmd_transition_cube_map_layout2(tgvk_command_buffer* p_command_buffer, tgvk_cube_map* p_cube_map, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits);
+void                    tgvk_cmd_transition_image_layout(tgvk_command_buffer* p_command_buffer, tgvk_image* p_image, tgvk_layout_type src_type, tgvk_layout_type dst_type);
+void                    tgvk_cmd_transition_image_layout2(tgvk_command_buffer* p_command_buffer, tgvk_image* p_image, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits);
+void                    tgvk_cmd_transition_image_3d_layout(tgvk_command_buffer* p_command_buffer, tgvk_image_3d* p_image_3d, tgvk_layout_type src_type, tgvk_layout_type dst_type);
+void                    tgvk_cmd_transition_image_3d_layout2(tgvk_command_buffer* p_command_buffer, tgvk_image_3d* p_image_3d, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits);
+void                    tgvk_cmd_transition_layered_image_layout(tgvk_command_buffer* p_command_buffer, tgvk_layered_image* p_image, tgvk_layout_type src_type, tgvk_layout_type dst_type);
+void                    tgvk_cmd_transition_layered_image_layout2(tgvk_command_buffer* p_command_buffer, tgvk_layered_image* p_image, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits);
 
 tgvk_command_buffer*    tgvk_command_buffer_get_and_begin_global(tgvk_command_pool_type type);
 tgvk_command_buffer*    tgvk_command_buffer_get_global(tgvk_command_pool_type type);

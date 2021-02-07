@@ -84,18 +84,8 @@ tg_storage_image_3d_h tg_storage_image_3d_create(u32 width, u32 height, u32 dept
 	tg_storage_image_3d_h h_storage_image_3d = tgvk_handle_take(TG_STRUCTURE_TYPE_STORAGE_IMAGE_3D);
 	h_storage_image_3d->image_3d = tgvk_image_3d_create(TGVK_IMAGE_TYPE_STORAGE, width, height, depth, (VkFormat)format, p_sampler_create_info);
 
-	tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
-	tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-	tgvk_cmd_transition_image_3d_layout(
-		p_command_buffer,
-		&h_storage_image_3d->image_3d,
-		0,
-		VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
-		VK_IMAGE_LAYOUT_UNDEFINED,
-		VK_IMAGE_LAYOUT_GENERAL,
-		VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-		VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
-	);
+	tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_and_begin_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
+	tgvk_cmd_transition_image_3d_layout(p_command_buffer, &h_storage_image_3d->image_3d, TGVK_LAYOUT_UNDEFINED, TGVK_LAYOUT_SHADER_READ_WRITE_CFV);
 	tgvk_command_buffer_end_and_submit(p_command_buffer);
 
 	return h_storage_image_3d;
@@ -116,31 +106,11 @@ void tg_storage_image_3d_set_data(tg_storage_image_3d_h h_storage_image_3d, void
 	const tg_size size = (tg_size)h_storage_image_3d->image_3d.width * (tg_size)h_storage_image_3d->image_3d.height * (tg_size)h_storage_image_3d->image_3d.depth * tg_color_image_format_size((tg_color_image_format)h_storage_image_3d->image_3d.format);
 	tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take(size);
 	tg_memcpy(size, p_data, p_staging_buffer->memory.p_mapped_device_memory);
-	tgvk_buffer_flush_host_to_device(p_staging_buffer);
 
-	tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
-	tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-	tgvk_cmd_transition_image_3d_layout(
-		p_command_buffer,
-		&h_storage_image_3d->image_3d,
-		VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
-		VK_ACCESS_TRANSFER_WRITE_BIT,
-		VK_IMAGE_LAYOUT_GENERAL,
-		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-		VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-		VK_PIPELINE_STAGE_TRANSFER_BIT
-	);
+	tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_and_begin_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
+	tgvk_cmd_transition_image_3d_layout(p_command_buffer, &h_storage_image_3d->image_3d, TGVK_LAYOUT_SHADER_READ_WRITE_CFV, TGVK_LAYOUT_TRANSFER_WRITE);
 	tgvk_cmd_copy_buffer_to_image_3d(p_command_buffer, p_staging_buffer, &h_storage_image_3d->image_3d);
-	tgvk_cmd_transition_image_3d_layout(
-		p_command_buffer,
-		&h_storage_image_3d->image_3d,
-		VK_ACCESS_TRANSFER_WRITE_BIT,
-		VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
-		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-		VK_IMAGE_LAYOUT_GENERAL,
-		VK_PIPELINE_STAGE_TRANSFER_BIT,
-		VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
-	);
+	tgvk_cmd_transition_image_3d_layout(p_command_buffer, &h_storage_image_3d->image_3d, TGVK_LAYOUT_TRANSFER_WRITE, TGVK_LAYOUT_SHADER_READ_WRITE_CFV);
 	tgvk_command_buffer_end_and_submit(p_command_buffer);
 
 	tgvk_global_staging_buffer_release();
@@ -156,18 +126,8 @@ tg_cube_map_h tg_cube_map_create(u32 dimension, tg_color_image_format format, co
 
 	h_cube_map->cube_map = tgvk_cube_map_create(dimension, (VkFormat)format, p_sampler_create_info);
 
-	tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
-	tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-	tgvk_cmd_transition_cube_map_layout(
-		p_command_buffer,
-		&h_cube_map->cube_map,
-		0,
-		VK_ACCESS_SHADER_READ_BIT,
-		VK_IMAGE_LAYOUT_UNDEFINED,
-		VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-		VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-		VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
-	);
+	tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_and_begin_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
+	tgvk_cmd_transition_cube_map_layout(p_command_buffer, &h_cube_map->cube_map, TGVK_LAYOUT_UNDEFINED, TGVK_LAYOUT_SHADER_READ_CFV);
 	tgvk_command_buffer_end_and_submit(p_command_buffer);
 
 	return h_cube_map;
@@ -187,31 +147,11 @@ void tg_cube_map_set_data(tg_cube_map_h h_cube_map, void* p_data)
 	const VkDeviceSize size = 6LL * (VkDeviceSize)h_cube_map->cube_map.dimension * (VkDeviceSize)h_cube_map->cube_map.dimension * tg_color_image_format_size((tg_color_image_format)h_cube_map->cube_map.format);
 	tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take(size);
 	tg_memcpy(size, p_data, p_staging_buffer->memory.p_mapped_device_memory);
-	tgvk_buffer_flush_host_to_device(p_staging_buffer);
 
-	tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
-	tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-	tgvk_cmd_transition_cube_map_layout(
-		p_command_buffer,
-		&h_cube_map->cube_map,
-		VK_ACCESS_SHADER_READ_BIT,
-		VK_ACCESS_TRANSFER_WRITE_BIT,
-		VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-		VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-		VK_PIPELINE_STAGE_TRANSFER_BIT
-	);
+	tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_and_begin_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
+	tgvk_cmd_transition_cube_map_layout(p_command_buffer, &h_cube_map->cube_map, TGVK_LAYOUT_SHADER_READ_CFV, TGVK_LAYOUT_TRANSFER_WRITE);
 	tgvk_cmd_copy_buffer_to_cube_map(p_command_buffer, p_staging_buffer, &h_cube_map->cube_map);
-	tgvk_cmd_transition_cube_map_layout(
-		p_command_buffer,
-		&h_cube_map->cube_map,
-		VK_ACCESS_TRANSFER_WRITE_BIT,
-		VK_ACCESS_SHADER_READ_BIT,
-		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-		VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-		VK_PIPELINE_STAGE_TRANSFER_BIT,
-		VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
-	);
+	tgvk_cmd_transition_cube_map_layout(p_command_buffer, &h_cube_map->cube_map, TGVK_LAYOUT_TRANSFER_WRITE, TGVK_LAYOUT_SHADER_READ_CFV);
 	tgvk_command_buffer_end_and_submit(p_command_buffer);
 
 	tgvk_global_staging_buffer_release();

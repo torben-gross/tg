@@ -9,7 +9,7 @@ tg_storage_buffer_h tg_storage_buffer_create(tg_size size, b32 visible)
 	TG_ASSERT(size > 0);
 	
 	tg_storage_buffer_h h_storage_buffer = tgvk_handle_take(TG_STRUCTURE_TYPE_STORAGE_BUFFER);
-	h_storage_buffer->buffer = tgvk_buffer_create(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, visible ? VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT : VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	h_storage_buffer->buffer = tgvk_buffer_create(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, visible ? TGVK_MEMORY_HOST : TGVK_MEMORY_DEVICE);
 	return h_storage_buffer;
 }
 

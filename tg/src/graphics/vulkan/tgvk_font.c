@@ -122,16 +122,7 @@ static void tg__deserialize(const char* p_filename, TG_OUT tg_font_h h_font)
     const b32 deserialize_texture_atlas_result = tgvk_image_deserialize((const char*)p_sfont->p_texture_atlas_filename, &h_font->texture_atlas);
     TG_ASSERT(deserialize_texture_atlas_result);
     tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_and_begin_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
-    tgvk_cmd_transition_image_layout(
-        p_command_buffer,
-        &h_font->texture_atlas,
-        VK_ACCESS_SHADER_READ_BIT,
-        VK_ACCESS_SHADER_READ_BIT,
-        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-        VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
-    );
+    tgvk_cmd_transition_image_layout(p_command_buffer, &h_font->texture_atlas, TGVK_LAYOUT_SHADER_READ_CFV, TGVK_LAYOUT_SHADER_READ_F);
     tgvk_command_buffer_end_and_submit(p_command_buffer);
 
     tg_size size = (tg_size)h_font->glyph_count * sizeof(*h_font->p_glyphs);
@@ -272,29 +263,11 @@ tg_font_h tg_font_create(const char* p_filename)
 
         h_font->texture_atlas = tgvk_image_create(TGVK_IMAGE_TYPE_COLOR, bitmap_width, bitmap_height, VK_FORMAT_R8_UINT, &sampler_create_info);
         tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_and_begin_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
-        tgvk_cmd_transition_image_layout(
-            p_command_buffer,
-            &h_font->texture_atlas,
-            0,
-            VK_ACCESS_TRANSFER_WRITE_BIT,
-            VK_IMAGE_LAYOUT_UNDEFINED,
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-            VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-            VK_PIPELINE_STAGE_TRANSFER_BIT
-        );
+        tgvk_cmd_transition_image_layout(p_command_buffer, &h_font->texture_atlas, TGVK_LAYOUT_UNDEFINED, TGVK_LAYOUT_TRANSFER_WRITE);
         tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take(bitmap_size);
         tg_memcpy(bitmap_size, p_bitmap, p_staging_buffer->memory.p_mapped_device_memory);
         tgvk_cmd_copy_buffer_to_image(p_command_buffer, p_staging_buffer, &h_font->texture_atlas);
-        tgvk_cmd_transition_image_layout(
-            p_command_buffer,
-            &h_font->texture_atlas,
-            VK_ACCESS_TRANSFER_WRITE_BIT,
-            VK_ACCESS_TRANSFER_READ_BIT,
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-            VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-            VK_PIPELINE_STAGE_TRANSFER_BIT,
-            VK_PIPELINE_STAGE_TRANSFER_BIT
-        );
+        tgvk_cmd_transition_image_layout(p_command_buffer, &h_font->texture_atlas, TGVK_LAYOUT_TRANSFER_WRITE, TGVK_LAYOUT_TRANSFER_READ);
         tgvk_command_buffer_end_and_submit(p_command_buffer);
         tgvk_global_staging_buffer_release();
 
@@ -389,16 +362,7 @@ tg_font_h tg_font_create(const char* p_filename)
 
         tg__serialize(h_font, p_internal_filename);
         tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-        tgvk_cmd_transition_image_layout(
-            p_command_buffer,
-            &h_font->texture_atlas,
-            VK_ACCESS_TRANSFER_READ_BIT,
-            VK_ACCESS_SHADER_READ_BIT,
-            VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            VK_PIPELINE_STAGE_TRANSFER_BIT,
-            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
-        );
+        tgvk_cmd_transition_image_layout(p_command_buffer, &h_font->texture_atlas, TGVK_LAYOUT_TRANSFER_READ, TGVK_LAYOUT_SHADER_READ_F);
         tgvk_command_buffer_end_and_submit(p_command_buffer);
 
         TG_FREE_STACK(bitmap_size);

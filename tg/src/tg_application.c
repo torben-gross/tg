@@ -421,7 +421,7 @@ static void tg__game_3d_update_and_render(f32 dt)
     }
     if (delta)
     {
-        const v3 world_position = tg_renderer_screen_to_world(scene.h_main_renderer, mouse_x, mouse_y);
+        const v3 world_position = tg_renderer_screen_to_world_position(scene.h_main_renderer, mouse_x, mouse_y);
         if (tgm_v3_magsqr(tgm_v3_sub(world_position, scene.camera.position)) < 0.9f * scene.camera.persp.f * scene.camera.persp.f)
         {
             tg_terrain_shape(scene.p_terrain, world_position, 1.5f, delta); // TODO: why does this not work with a radius of less than 1.0f, e.g. TG_PI * 0.25f?

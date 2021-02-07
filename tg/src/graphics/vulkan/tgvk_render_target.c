@@ -41,32 +41,11 @@ void tg_render_target_get_color_data_copy(tg_render_target_h h_render_target, TG
 	{
 		TG_ASSERT(p_buffer && *p_buffer_size >= required_size);
 
-		tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
 		tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take(required_size);
-		tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-		{
-			tgvk_cmd_transition_image_layout(
-				p_command_buffer,
-				&h_render_target->color_attachment_copy,
-				VK_ACCESS_SHADER_READ_BIT,
-				VK_ACCESS_TRANSFER_READ_BIT,
-				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-				VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-				VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-				VK_PIPELINE_STAGE_TRANSFER_BIT
-			);
-			tgvk_cmd_copy_color_image_to_buffer(p_command_buffer, &h_render_target->color_attachment_copy, p_staging_buffer);
-			tgvk_cmd_transition_image_layout(
-				p_command_buffer,
-				&h_render_target->color_attachment_copy,
-				VK_ACCESS_TRANSFER_READ_BIT,
-				VK_ACCESS_SHADER_READ_BIT,
-				VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-				VK_PIPELINE_STAGE_TRANSFER_BIT,
-				VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
-			);
-		}
+		tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_and_begin_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
+		tgvk_cmd_transition_image_layout(p_command_buffer, &h_render_target->color_attachment_copy, TGVK_LAYOUT_SHADER_READ_CFV, TGVK_LAYOUT_TRANSFER_READ);
+		tgvk_cmd_copy_color_image_to_buffer(p_command_buffer, &h_render_target->color_attachment_copy, p_staging_buffer);
+		tgvk_cmd_transition_image_layout(p_command_buffer, &h_render_target->color_attachment_copy, TGVK_LAYOUT_TRANSFER_READ, TGVK_LAYOUT_SHADER_READ_CFV);
 		TGVK_CALL(vkEndCommandBuffer(p_command_buffer->command_buffer));
 
 		tgvk_fence_wait(h_render_target->fence);
@@ -86,7 +65,6 @@ void tg_render_target_get_color_data_copy(tg_render_target_h h_render_target, TG
 		tgvk_queue_submit(TGVK_QUEUE_TYPE_GRAPHICS, 1, &submit_info, h_render_target->fence);
 		tgvk_fence_wait(h_render_target->fence);
 		tgvk_fence_reset(h_render_target->fence);
-		tgvk_buffer_flush_device_to_host_range(p_staging_buffer, 0, required_size);
 		tg_memcpy(required_size, p_staging_buffer->memory.p_mapped_device_memory, p_buffer);
 		tgvk_global_staging_buffer_release();
 	}

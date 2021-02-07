@@ -52,9 +52,9 @@ tg_rtvx_terrain_h tg_rtvx_terrain_create(void)
 	h_terrain->voxels = tgvk_image_3d_create(TGVK_IMAGE_TYPE_STORAGE, TG_RTVX_TERRAIN_VX_STRIDE, TG_RTVX_TERRAIN_VX_STRIDE, TG_RTVX_TERRAIN_VX_STRIDE, VK_FORMAT_R8_SINT, TG_NULL);
 
 	tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_and_begin_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
-	tgvk_cmd_transition_image_3d_layout(p_command_buffer, &h_terrain->voxels, 0, VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+	tgvk_cmd_transition_image_3d_layout(p_command_buffer, &h_terrain->voxels, TGVK_LAYOUT_UNDEFINED, TGVK_LAYOUT_TRANSFER_WRITE);
 	tgvk_cmd_copy_buffer_to_image_3d(p_command_buffer, p_staging_buffer, &h_terrain->voxels);
-	tgvk_cmd_transition_image_3d_layout(p_command_buffer, &h_terrain->voxels, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+	tgvk_cmd_transition_image_3d_layout(p_command_buffer, &h_terrain->voxels, TGVK_LAYOUT_TRANSFER_WRITE, TGVK_LAYOUT_SHADER_READ_C);
 	tgvk_command_buffer_end_and_submit(p_command_buffer);
 
 	tgvk_global_staging_buffer_release();

@@ -43,23 +43,20 @@ static v3 tg__calculate_bitangent(v3 normal, v3 tangent)
 
 void tg__copy(VkDeviceSize offset, VkDeviceSize size, tgvk_buffer* p_src, void* p_dst)
 {
-    tgvk_buffer buffer = tgvk_buffer_create(size, VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+    tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take(size);
     
-    tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
-    tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-    {
-        VkBufferCopy buffer_copy = { 0 };
-        buffer_copy.srcOffset = offset;
-        buffer_copy.dstOffset = 0;
-        buffer_copy.size = size;
+    tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_and_begin_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
 
-        vkCmdCopyBuffer(p_command_buffer->command_buffer, p_src->buffer, buffer.buffer, 1, &buffer_copy);
-    }
+    VkBufferCopy buffer_copy = { 0 };
+    buffer_copy.srcOffset = offset;
+    buffer_copy.dstOffset = 0;
+    buffer_copy.size = size;
+
+    vkCmdCopyBuffer(p_command_buffer->command_buffer, p_src->buffer, p_staging_buffer->buffer, 1, &buffer_copy);
     tgvk_command_buffer_end_and_submit(p_command_buffer);
-    tgvk_buffer_flush_host_to_device(&buffer);
-    tg_memcpy(size, buffer.memory.p_mapped_device_memory, p_dst);
+    tg_memcpy(size, p_staging_buffer->memory.p_mapped_device_memory, p_dst);
 
-    tgvk_buffer_destroy(&buffer);
+    tgvk_global_staging_buffer_release();
 }
 
 void tg__set_buffer_data(tgvk_buffer* p_buffer, tg_size size, const void* p_data, VkBufferUsageFlagBits buffer_type_flag)
@@ -72,12 +69,11 @@ void tg__set_buffer_data(tgvk_buffer* p_buffer, tg_size size, const void* p_data
             {
                 tgvk_buffer_destroy(p_buffer);
             }
-            *p_buffer = tgvk_buffer_create(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | buffer_type_flag, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+            *p_buffer = tgvk_buffer_create(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | buffer_type_flag, TGVK_MEMORY_DEVICE);
         }
 
         tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take(size);
         tg_memcpy(size, p_data, p_staging_buffer->memory.p_mapped_device_memory);
-        tgvk_buffer_flush_host_to_device_range(p_staging_buffer, 0, size);
         tgvk_buffer_copy(size, p_staging_buffer, p_buffer);
         tgvk_global_staging_buffer_release();
     }
@@ -98,7 +94,7 @@ void tg__set_buffer_data2(tgvk_buffer* p_buffer, tg_size size, tg_storage_buffer
             {
                 tgvk_buffer_destroy(p_buffer);
             }
-            *p_buffer = tgvk_buffer_create(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | buffer_type_flag, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+            *p_buffer = tgvk_buffer_create(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | buffer_type_flag, TGVK_MEMORY_DEVICE);
         }
         tgvk_buffer_copy(size, &h_storage_buffer->buffer, p_buffer);
     }
