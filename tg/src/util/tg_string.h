@@ -19,6 +19,9 @@ tg_size        tg_strcpy_no_nul(tg_size size, char* p_buffer, const char* p_stri
 tg_size        tg_strncpy(tg_size size, char* p_buffer, tg_size size_to_copy, const char* p_string);
 tg_size        tg_strncpy_no_nul(tg_size size, char* p_buffer, tg_size size_to_copy, const char* p_string);
 b32            tg_string_equal(const char* p_s0, const char* p_s1);
+b32            tg_string_starts_with(const char* p_string, const char* p_prefix);
+const char*    tg_string_next_line(const char* p_string);
+const char*    tg_string_skip_whitespace(const char* p_string);
 
 /*
 %c - char

@@ -29,8 +29,8 @@ layout(location = 1) in vec3 v_view_ray;
 
 
 
-layout(set = 0, binding = 4) uniform usampler2D v_position_3xu32_normal_3xu8_metallic_1xu8;
-layout(set = 0, binding = 5) uniform sampler2D v_albedo_3xf8_roughness_1xf8;
+layout(set = 0, binding = 4) uniform usampler2D u_position_3xu32_normal_3xu8_metallic_1xu8;
+layout(set = 0, binding = 5) uniform sampler2D u_albedo_3xf8_roughness_1xf8;
 layout(set = 0, binding = 6) uniform sampler2D u_depth;
     
 layout(set = 0, binding = 7) uniform ubo
@@ -159,8 +159,8 @@ vec3 tg_shade_with_sun(vec3 position, vec3 n, vec3 v, vec3 l, vec3 diffuse_albed
 
 void tg_unpack(out v3 p, out v3 n, out v3 a, out f32 m, out f32 r)
 {
-    v4u v0 = texture(v_position_3xu32_normal_3xu8_metallic_1xu8, v_uv);
-    v4 v1 = texture(v_albedo_3xf8_roughness_1xf8, v_uv);
+    v4u v0 = texture(u_position_3xu32_normal_3xu8_metallic_1xu8, v_uv);
+    v4 v1 = texture(u_albedo_3xf8_roughness_1xf8, v_uv);
 
     p = uintBitsToFloat(v0.xyz);
     n = v3(f32(v0.w & 0xff), f32((v0.w >> 8) & 0xff), f32((v0.w >> 16) & 0xff)) / v3(127.5) - v3(1.0);

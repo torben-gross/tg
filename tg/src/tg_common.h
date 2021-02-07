@@ -33,6 +33,7 @@
 
 #ifdef TG_DEBUG
 #define TG_ASSERT(x)                       if (!(x)) *(int*)0 = 0
+#define TG_ASSERT2(x, p_message)           if (!(x)) { TG_DEBUG_LOG(p_message); *(int*)0 = 0; }
 #define TG_INVALID_CODEPATH()              *(int*)0 = 0
 #define TG_NOT_IMPLEMENTED()               *(int*)0 = 0
 #else
@@ -89,7 +90,9 @@
 
 typedef int                                b32;
 typedef float                              f32;
+#ifdef TG_CPU_x64
 typedef double                             f64;
+#endif
 typedef signed char                        i8;
 typedef short                              i16;
 typedef int                                i32;

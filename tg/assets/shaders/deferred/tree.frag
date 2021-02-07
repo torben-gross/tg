@@ -1,22 +1,6 @@
 #version 450
 
-#define f32    float
-#define i32    int
-#define u32    uint
-
-#define v2     vec2
-#define v2i    ivec2
-#define v2u    uvec2
-#define v3     vec3
-#define v3i    ivec3
-#define v3u    uvec3
-#define v4     vec4
-#define v4i    ivec4
-#define v4u    uvec4
-
-#define m2     mat2
-#define m3     mat3
-#define m4     mat4
+#include "shaders/common.inc"
 
 layout(location = 0) in vec3    v_position;
 layout(location = 1) in vec3    v_normal;

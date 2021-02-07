@@ -111,6 +111,33 @@ b32 tg_string_equal(const char* p_s0, const char* p_s1)
 	return result;
 }
 
+b32 tg_string_starts_with(const char* p_string, const char* p_prefix)
+{
+	b32 result = TG_TRUE;
+	while (*p_prefix)
+	{
+		result &= *p_string++ == *p_prefix++;
+	}
+	return result;
+}
+
+const char* tg_string_next_line(const char* p_string)
+{
+	const char* p_result = p_string;
+	while (*p_result++ != '\n');
+	return p_result;
+}
+
+const char* tg_string_skip_whitespace(const char* p_string)
+{
+	const char* p_result = p_string;
+	while (*p_result == '\t' || *p_result == '\n' || *p_result == '\r' || *p_result == ' ')
+	{
+		p_result++;
+	}
+	return p_result;
+}
+
 void tg_stringf(u32 size, char* p_buffer, const char* p_format, ...)
 {
 	TG_ASSERT(size && p_buffer && p_format);

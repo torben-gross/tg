@@ -2814,44 +2814,108 @@ void tgvk_semaphore_destroy(VkSemaphore semaphore)
 
 tgvk_shader tgvk_shader_create(const char* p_filename)
 {
-    char p_filename_buffer[TG_MAX_PATH] = { 0 };
-    tg_stringf(sizeof(p_filename_buffer), p_filename_buffer, "%s.spv", p_filename);
+    char p_spv_filename_buffer[TG_MAX_PATH] = { 0 };
+    tg_stringf(sizeof(p_spv_filename_buffer), p_spv_filename_buffer, "%s.spv", p_filename);
 
 #ifndef TG_DISTRIBUTE
-    tg_file_properties uncompiled_properties = { 0 };
-    const b32 get_uncompiled_properties_result = tgp_file_get_properties(p_filename, &uncompiled_properties);
-    TG_ASSERT(get_uncompiled_properties_result);
+    tg_file_properties properties = { 0 };
+    const b32 get_uncompiled_properties_result = tgp_file_get_properties(p_filename, &properties);
+    TG_ASSERT2(get_uncompiled_properties_result, "The shader with given filename does not exist");
 
-    tg_file_properties compiled_properties = { 0 };
-    const b32 spv_exists = tgp_file_get_properties(p_filename_buffer, &compiled_properties);
+    tg_file_properties spv_properties = { 0 };
+    b32 recompile = !tgp_file_get_properties(p_spv_filename_buffer, &spv_properties);
+    recompile |= tgp_system_time_compare(&spv_properties.last_write_time, &properties.last_write_time) == -1;
 
-    b32 recompile = TG_FALSE;
-    if (spv_exists)
+    char* p_src = TG_MALLOC_STACK(properties.size + 1);
+    tgp_file_load(p_filename, properties.size + 1, p_src);
+    p_src[properties.size] = '\0';
+
+    const char* p_src_it = p_src;
+    tg_size max_generated_src_size = properties.size;
+    while (*p_src_it != '\0')
     {
-        recompile = tgp_system_time_compare(&compiled_properties.last_write_time, &uncompiled_properties.last_write_time) == -1;
+        if (tg_string_starts_with(p_src_it, "#include"))
+        {
+            char p_inc_filename[TG_MAX_PATH] = { 0 };
+            p_src_it += sizeof("#include") - 1;
+            p_src_it = tg_string_skip_whitespace(p_src_it);
+            TG_ASSERT2(*p_src_it == '\"', "The included filename must be surrounded by quotation marks");
+            p_src_it++;
+
+            u32 idx = 0;
+            while (*p_src_it != '\"')
+            {
+                p_inc_filename[idx++] = *p_src_it++;
+            }
+
+            tg_file_properties inc_properties = { 0 };
+            const b32 get_inc_properties_result = tgp_file_get_properties(p_inc_filename, &inc_properties);
+            TG_ASSERT2(get_inc_properties_result, "The included file does not exist");
+
+            max_generated_src_size += inc_properties.size;
+            recompile |= tgp_system_time_compare(&spv_properties.last_write_time, &inc_properties.last_write_time) == -1;
+        }
+        p_src_it = tg_string_next_line(p_src_it);
     }
 
-    if (!spv_exists || recompile)
+    if (recompile)
     {
-        char* p_data = TG_MALLOC_STACK(uncompiled_properties.size);
-        tgp_file_load(p_filename, uncompiled_properties.size, p_data);
+        char* p_generated_src = TG_MALLOC_STACK(max_generated_src_size);
+        p_src_it = p_src;
+        char* p_generated_it = p_generated_src;
+
+        while (*p_src_it != '\0')
+        {
+            if (tg_string_starts_with(p_src_it, "#include"))
+            {
+                char p_inc_filename[TG_MAX_PATH] = { 0 };
+                p_src_it += sizeof("#include") - 1;
+                p_src_it = tg_string_skip_whitespace(p_src_it);
+                TG_ASSERT2(*p_src_it == '\"', "The included filename must be surrounded by quotation marks");
+                p_src_it++;
+
+                u32 idx = 0;
+                while (*p_src_it != '\"')
+                {
+                    p_inc_filename[idx++] = *p_src_it++;
+                }
+
+                tg_file_properties inc_properties = { 0 };
+                const b32 get_inc_properties_result = tgp_file_get_properties(p_inc_filename, &inc_properties);
+                TG_ASSERT2(get_inc_properties_result, "The included file doest not exist");
+
+                const b32 load_file_result = tgp_file_load(p_inc_filename, inc_properties.size, p_generated_it);
+                TG_ASSERT2(load_file_result, "The included file could not be loaded");
+                p_generated_it += inc_properties.size;
+
+                p_src_it = tg_string_next_line(p_src_it);
+            }
+            else
+            {
+                do
+                {
+                    *p_generated_it++ = *p_src_it;
+                } while (*p_src_it++ != '\n');
+            }
+        }
+        const tg_size generated_src_size = (tg_size)(p_generated_it - p_generated_src);
 
         TG_ASSERT(shaderc_compiler);
 
         shaderc_shader_kind shader_kind = 0;
-        if (tg_string_equal(uncompiled_properties.p_extension, "vert"))
+        if (tg_string_equal(properties.p_extension, "vert"))
         {
             shader_kind = shaderc_vertex_shader;
         }
-        else if (tg_string_equal(uncompiled_properties.p_extension, "geom"))
+        else if (tg_string_equal(properties.p_extension, "geom"))
         {
             shader_kind = shaderc_geometry_shader;
         }
-        else if (tg_string_equal(uncompiled_properties.p_extension, "frag"))
+        else if (tg_string_equal(properties.p_extension, "frag"))
         {
             shader_kind = shaderc_fragment_shader;
         }
-        else if (tg_string_equal(uncompiled_properties.p_extension, "comp"))
+        else if (tg_string_equal(properties.p_extension, "comp"))
         {
             shader_kind = shaderc_compute_shader;
         }
@@ -2860,7 +2924,7 @@ tgvk_shader tgvk_shader_create(const char* p_filename)
             TG_INVALID_CODEPATH();
         }
 
-        const shaderc_compilation_result_t result = shaderc_compile_into_spv(shaderc_compiler, p_data, uncompiled_properties.size, shader_kind, "", "main", TG_NULL);
+        const shaderc_compilation_result_t result = shaderc_compile_into_spv(shaderc_compiler, p_generated_src, generated_src_size, shader_kind, "", "main", TG_NULL);
         TG_ASSERT(result);
 
 #ifdef TG_DEBUG
@@ -2875,18 +2939,21 @@ tgvk_shader tgvk_shader_create(const char* p_filename)
         const tg_size length = (tg_size)shaderc_result_get_length(result);
         const char* p_bytes = shaderc_result_get_bytes(result);
 
-        tgp_file_create(p_filename_buffer, length, p_bytes, TG_TRUE);
+        tgp_file_create(p_spv_filename_buffer, length, p_bytes, TG_TRUE);
 
         shaderc_result_release(result);
+        TG_FREE_STACK(max_generated_src_size);
     }
+
+    TG_FREE_STACK(properties.size + 1);
 #endif
 
     tg_file_properties file_properties = { 0 };
-    const b32 get_properties_result = tgp_file_get_properties(p_filename_buffer, &file_properties);
+    const b32 get_properties_result = tgp_file_get_properties(p_spv_filename_buffer, &file_properties);
     TG_ASSERT(get_properties_result);
 
     char* p_content = TG_MALLOC_STACK(file_properties.size);
-    tgp_file_load(p_filename_buffer, file_properties.size, p_content);
+    tgp_file_load(p_spv_filename_buffer, file_properties.size, p_content);
 
     const tgvk_shader shader = tgvk_shader_create_from_spirv((u32)file_properties.size, p_content);
 

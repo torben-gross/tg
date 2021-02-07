@@ -1254,8 +1254,8 @@ void tg_renderer_end(tg_renderer_h h_renderer, f32 dt, b32 present)
     const m4 iv = tgm_m4_inverse(v);
     const m4 p = c.type == TG_CAMERA_TYPE_ORTHOGRAPHIC ? tgm_m4_orthographic(c.ortho.l, c.ortho.r, c.ortho.b, c.ortho.t, c.ortho.f, c.ortho.n) : tgm_m4_perspective(c.persp.fov_y_in_radians, c.persp.aspect, c.persp.n, c.persp.f);
     const m4 ip = tgm_m4_inverse(p);
-    const m4 vp = tgm_m4_mul(p, v);
-    const m4 ivp = tgm_m4_inverse(vp);
+    //const m4 vp = tgm_m4_mul(p, v);
+    //const m4 ivp = tgm_m4_inverse(vp);
 
     TGVK_CAMERA_VIEW(h_renderer->view_projection_ubo) = v;
     TGVK_CAMERA_PROJ(h_renderer->view_projection_ubo) = p;
