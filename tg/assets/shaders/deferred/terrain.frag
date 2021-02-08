@@ -25,5 +25,5 @@ void main()
     f32 roughness_stone = 0.5;
     f32 r = mix(roughness_stone, roughness_grass, t);
 
-    tg_out(p, n, a, m, r);
+    tg_out(n, a, m, r);
 }

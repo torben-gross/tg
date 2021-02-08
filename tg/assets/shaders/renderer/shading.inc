@@ -29,20 +29,21 @@ layout(location = 1) in vec3 v_view_ray;
 
 
 
-layout(set = 0, binding = 4) uniform usampler2D u_position_3xu32_normal_3xu8_metallic_1xu8;
+layout(set = 0, binding = 4) uniform sampler2D out_normal_3xf8_metallic_1xf8;
 layout(set = 0, binding = 5) uniform sampler2D u_albedo_3xf8_roughness_1xf8;
 layout(set = 0, binding = 6) uniform sampler2D u_depth;
     
 layout(set = 0, binding = 7) uniform ubo
 {
-    vec4                                       u_camera_position;
-    vec4                                       u_sun_direction;
-    uint                                       u_directional_light_count;
-    uint                                       u_point_light_count;
-    vec4[TG_MAX_DIRECTIONAL_LIGHTS]            u_directional_light_directions;
-    vec4[TG_MAX_DIRECTIONAL_LIGHTS]            u_directional_light_colors;
-    vec4[TG_MAX_POINT_LIGHTS]                  u_point_light_positions;
-    vec4[TG_MAX_POINT_LIGHTS]                  u_point_light_colors;
+    v4                               u_camera_position;
+    v4                               u_sun_direction;
+    u32                              u_directional_light_count;
+    u32                              u_point_light_count;
+    m4                               u_ivp;
+    v4[TG_MAX_DIRECTIONAL_LIGHTS]    u_directional_light_directions;
+    v4[TG_MAX_DIRECTIONAL_LIGHTS]    u_directional_light_colors;
+    v4[TG_MAX_POINT_LIGHTS]          u_point_light_positions;
+    v4[TG_MAX_POINT_LIGHTS]          u_point_light_colors;
 };
 
 layout(set = 0, binding = 8) uniform atmosphere_ubo
@@ -157,25 +158,29 @@ vec3 tg_shade_with_sun(vec3 position, vec3 n, vec3 v, vec3 l, vec3 diffuse_albed
     return tg_shade(n, v, l, diffuse_albedo, specular_albedo, metallic, roughness, radiance) + in_scatter;
 }
 
-void tg_unpack(out v3 p, out v3 n, out v3 a, out f32 m, out f32 r)
+void tg_unpack(out v3 p, out v3 n, out v3 a, out f32 m, out f32 r, out f32 d)
 {
-    v4u v0 = texture(u_position_3xu32_normal_3xu8_metallic_1xu8, v_uv);
+    d = texture(u_depth, v_uv).x;
+    v4 screen = v4(v_uv.x * 2.0 - 1.0, v_uv.y * 2.0 - 1.0, d, 1.0);
+    v4 world = u_ivp * screen;
+    p = v3(world.x / world.w, world.y / world.w, world.z / world.w);
+
+    v4 v0 = texture(out_normal_3xf8_metallic_1xf8, v_uv);
     v4 v1 = texture(u_albedo_3xf8_roughness_1xf8, v_uv);
 
-    p = uintBitsToFloat(v0.xyz);
-    n = v3(f32(v0.w & 0xff), f32((v0.w >> 8) & 0xff), f32((v0.w >> 16) & 0xff)) / v3(127.5) - v3(1.0);
+    n = v0.xyz;
     a = v1.xyz;
-    m = f32((v0.w >> 24) & 0xff) / 255.0;
+    m = v0.w;
     r = v1.w;
 }
 
 void main()
 {
     vec3 position, normal, albedo;
-    float metallic, roughness;
-    tg_unpack(position, normal, albedo, metallic, roughness);
+    float metallic, roughness, depth;
+    tg_unpack(position, normal, albedo, metallic, roughness, depth);
 
-    if (texture(u_depth, v_uv).x == 1.0)
+    if (depth.x == 1.0)
     {
 	    vec3 view_direction = normalize(v_view_ray);
 	    vec3 transmittance;

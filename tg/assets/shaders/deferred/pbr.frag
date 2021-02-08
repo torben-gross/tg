@@ -18,10 +18,9 @@ layout(set = 0, binding = 2) uniform material
 
 void main()
 {
-    v3 p = v_position;
     v3 n = normalize(v_normal);
     v3 a = albedo.xyz;
     f32 m = metallic;
     f32 r = roughness;
-    tg_out(p, n, a, m, r);
+    tg_out(n, a, m, r);
 }

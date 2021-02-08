@@ -12,7 +12,7 @@
 
 #define TGVK_HDR_FORMAT                                   VK_FORMAT_R32G32B32A32_SFLOAT
 
-#define TGVK_GEOMETRY_FORMATS(var)                        const VkFormat var[TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT] = { VK_FORMAT_R32G32B32A32_UINT, VK_FORMAT_R8G8B8A8_SNORM }
+#define TGVK_GEOMETRY_FORMATS(var)                        const VkFormat var[TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT] = { VK_FORMAT_R8G8B8A8_SNORM, VK_FORMAT_R8G8B8A8_SNORM }
 
 #define TGVK_SHADING_UBO                                  (*(tg_shading_ubo*)h_renderer->shading_pass.ubo.memory.p_mapped_device_memory)
 
@@ -24,6 +24,7 @@ typedef struct tg_shading_ubo
     v4     sun_direction;
     u32    directional_light_count;
     u32    point_light_count; u32 pad[2];
+    m4     ivp;
     v4     p_directional_light_directions[TG_MAX_DIRECTIONAL_LIGHTS];
     v4     p_directional_light_colors[TG_MAX_DIRECTIONAL_LIGHTS];
     v4     p_point_light_positions[TG_MAX_POINT_LIGHTS];
@@ -445,17 +446,6 @@ void tg__destroy_present_pass(tg_renderer_h h_renderer)
     tgvk_semaphore_destroy(h_renderer->present_pass.image_acquired_semaphore);
 }
 
-static void tg__init_image_layouts(tg_renderer_h h_renderer)
-{
-    tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_and_begin_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
-    tgvk_cmd_transition_image_layout(p_command_buffer, &h_renderer->hdr_color_attachment, TGVK_LAYOUT_UNDEFINED, TGVK_LAYOUT_COLOR_ATTACHMENT_WRITE);
-    for (u32 i = 0; i < TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT; i++)
-    {
-        tgvk_cmd_transition_image_layout(p_command_buffer, &h_renderer->geometry_pass.p_color_attachments[i], TGVK_LAYOUT_UNDEFINED, TGVK_LAYOUT_COLOR_ATTACHMENT_WRITE);
-    }
-    tgvk_command_buffer_end_and_submit(p_command_buffer);
-}
-
 
 
 void tg_renderer_init_shared_resources(void)
@@ -775,7 +765,13 @@ tg_renderer_h tg_renderer_create(tg_camera* p_camera)
     tg__init_clear_pass(h_renderer);
     tg__init_present_pass(h_renderer);
 
-    tg__init_image_layouts(h_renderer);
+    tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_and_begin_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
+    tgvk_cmd_transition_image_layout(p_command_buffer, &h_renderer->hdr_color_attachment, TGVK_LAYOUT_UNDEFINED, TGVK_LAYOUT_COLOR_ATTACHMENT_WRITE);
+    for (u32 i = 0; i < TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT; i++)
+    {
+        tgvk_cmd_transition_image_layout(p_command_buffer, &h_renderer->geometry_pass.p_color_attachments[i], TGVK_LAYOUT_UNDEFINED, TGVK_LAYOUT_COLOR_ATTACHMENT_WRITE);
+    }
+    tgvk_command_buffer_end_and_submit(p_command_buffer);
 
 
 #if TG_ENABLE_DEBUG_TOOLS == 1
@@ -1058,30 +1054,22 @@ void tg_renderer_end(tg_renderer_h h_renderer, f32 dt, b32 present)
     const m4 iv = tgm_m4_inverse(v);
     const m4 p = c.type == TG_CAMERA_TYPE_ORTHOGRAPHIC ? tgm_m4_orthographic(c.ortho.l, c.ortho.r, c.ortho.b, c.ortho.t, c.ortho.f, c.ortho.n) : tgm_m4_perspective(c.persp.fov_y_in_radians, c.persp.aspect, c.persp.n, c.persp.f);
     const m4 ip = tgm_m4_inverse(p);
-    //const m4 vp = tgm_m4_mul(p, v);
-    //const m4 ivp = tgm_m4_inverse(vp);
+    const m4 vp = tgm_m4_mul(p, v);
+    const m4 ivp = tgm_m4_inverse(vp);
 
     TGVK_CAMERA_VIEW(h_renderer->view_projection_ubo) = v;
     TGVK_CAMERA_PROJ(h_renderer->view_projection_ubo) = p;
 
     tg_shading_ubo* p_shading_ubo = &TGVK_SHADING_UBO;
     p_shading_ubo->camera_position.xyz = c.position;
+    p_shading_ubo->ivp = ivp;
 
     tgvk_atmosphere_model_update(&h_renderer->model, iv, ip);
 
-    VkCommandBufferBeginInfo command_buffer_begin_info = { 0 };
-    command_buffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    command_buffer_begin_info.pNext = TG_NULL;
-    command_buffer_begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
-    command_buffer_begin_info.pInheritanceInfo = TG_NULL;
-
-    TGVK_CALL(vkBeginCommandBuffer(h_renderer->geometry_pass.command_buffer.command_buffer, &command_buffer_begin_info));
-    {
-        tgvk_cmd_begin_render_pass(&h_renderer->geometry_pass.command_buffer, shared_render_resources.geometry_render_pass, &h_renderer->geometry_pass.framebuffer, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
-
-        vkCmdExecuteCommands(h_renderer->geometry_pass.command_buffer.command_buffer, h_renderer->deferred_command_buffer_count, h_renderer->p_deferred_command_buffers);
-        vkCmdEndRenderPass(h_renderer->geometry_pass.command_buffer.command_buffer);
-    }
+    tgvk_command_buffer_begin(&h_renderer->geometry_pass.command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT);
+    tgvk_cmd_begin_render_pass(&h_renderer->geometry_pass.command_buffer, shared_render_resources.geometry_render_pass, &h_renderer->geometry_pass.framebuffer, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+    vkCmdExecuteCommands(h_renderer->geometry_pass.command_buffer.command_buffer, h_renderer->deferred_command_buffer_count, h_renderer->p_deferred_command_buffers);
+    vkCmdEndRenderPass(h_renderer->geometry_pass.command_buffer.command_buffer);
     TGVK_CALL(vkEndCommandBuffer(h_renderer->geometry_pass.command_buffer.command_buffer));
 
     tgvk_fence_wait(h_renderer->render_target.fence); // TODO: isn't this wrong? this means that some buffers are potentially updates too early
@@ -1115,7 +1103,7 @@ void tg_renderer_end(tg_renderer_h h_renderer, f32 dt, b32 present)
 
     tgvk_queue_submit(TGVK_QUEUE_TYPE_GRAPHICS, 1, &shading_submit_info, VK_NULL_HANDLE);
 
-    TGVK_CALL(vkBeginCommandBuffer(h_renderer->forward_pass.command_buffer.command_buffer, &command_buffer_begin_info));
+    tgvk_command_buffer_begin(&h_renderer->forward_pass.command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT);
     {
         tgvk_cmd_begin_render_pass(&h_renderer->forward_pass.command_buffer, shared_render_resources.forward_render_pass, &h_renderer->forward_pass.framebuffer, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 
@@ -1239,16 +1227,13 @@ void tg_renderer_end(tg_renderer_h h_renderer, f32 dt, b32 present)
     *(f32*)h_renderer->tone_mapping_pass.finalize_exposure_dt_ubo.memory.p_mapped_device_memory = dt;
     tgvk_queue_submit(TGVK_QUEUE_TYPE_GRAPHICS, 1, &tone_mapping_submit_info, VK_NULL_HANDLE);
 
-    // ui pass
-    tgvk_buffer ui_positions_buffer = { 0 };
-    tgvk_buffer ui_uvs_buffer = { 0 };
     if (h_renderer->text.total_letter_count > 0)
     {
         const u32 vertex_count = 6 * h_renderer->text.total_letter_count;
         const tg_size positions_size = (tg_size)vertex_count * (2LL * sizeof(f32));
         const tg_size uvs_size = (tg_size)vertex_count * (2LL * sizeof(f32));
-        ui_positions_buffer = tgvk_buffer_create(positions_size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, TGVK_MEMORY_HOST);
-        ui_uvs_buffer = tgvk_buffer_create(uvs_size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, TGVK_MEMORY_HOST);
+        tgvk_buffer ui_positions_buffer = tgvk_buffer_create(positions_size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, TGVK_MEMORY_HOST);
+        tgvk_buffer ui_uvs_buffer = tgvk_buffer_create(uvs_size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, TGVK_MEMORY_HOST);
 
         const f32 w = (f32)h_renderer->render_target.color_attachment.width;
         const f32 h = (f32)h_renderer->render_target.color_attachment.height;
@@ -1313,16 +1298,14 @@ void tg_renderer_end(tg_renderer_h h_renderer, f32 dt, b32 present)
         }
 
         tgvk_command_buffer_begin(&h_renderer->ui_pass.command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-        {
-            const VkDeviceSize vertex_buffer_offset = 0;
-            vkCmdBindPipeline(h_renderer->ui_pass.command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, h_renderer->ui_pass.pipeline.pipeline);
-            vkCmdBindVertexBuffers(h_renderer->ui_pass.command_buffer.command_buffer, 0, 1, &ui_positions_buffer.buffer, &vertex_buffer_offset);
-            vkCmdBindVertexBuffers(h_renderer->ui_pass.command_buffer.command_buffer, 1, 1, &ui_uvs_buffer.buffer, &vertex_buffer_offset);
-            vkCmdBindDescriptorSets(h_renderer->ui_pass.command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, h_renderer->ui_pass.pipeline.layout.pipeline_layout, 0, 1, &h_renderer->ui_pass.descriptor_set.descriptor_set, 0, TG_NULL);
-            tgvk_cmd_begin_render_pass(&h_renderer->ui_pass.command_buffer, shared_render_resources.ui_render_pass, &h_renderer->ui_pass.framebuffer, VK_SUBPASS_CONTENTS_INLINE);
-            vkCmdDraw(h_renderer->ui_pass.command_buffer.command_buffer, 6 * render_letter_count, 1, 0, 0);
-            vkCmdEndRenderPass(h_renderer->ui_pass.command_buffer.command_buffer);
-        }
+        const VkDeviceSize vertex_buffer_offset = 0;
+        vkCmdBindPipeline(h_renderer->ui_pass.command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, h_renderer->ui_pass.pipeline.pipeline);
+        vkCmdBindVertexBuffers(h_renderer->ui_pass.command_buffer.command_buffer, 0, 1, &ui_positions_buffer.buffer, &vertex_buffer_offset);
+        vkCmdBindVertexBuffers(h_renderer->ui_pass.command_buffer.command_buffer, 1, 1, &ui_uvs_buffer.buffer, &vertex_buffer_offset);
+        vkCmdBindDescriptorSets(h_renderer->ui_pass.command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, h_renderer->ui_pass.pipeline.layout.pipeline_layout, 0, 1, &h_renderer->ui_pass.descriptor_set.descriptor_set, 0, TG_NULL);
+        tgvk_cmd_begin_render_pass(&h_renderer->ui_pass.command_buffer, shared_render_resources.ui_render_pass, &h_renderer->ui_pass.framebuffer, VK_SUBPASS_CONTENTS_INLINE);
+        vkCmdDraw(h_renderer->ui_pass.command_buffer.command_buffer, 6 * render_letter_count, 1, 0, 0);
+        vkCmdEndRenderPass(h_renderer->ui_pass.command_buffer.command_buffer);
         vkEndCommandBuffer(h_renderer->ui_pass.command_buffer.command_buffer);
 
         VkSubmitInfo ui_submit_info = { 0 };
@@ -1367,7 +1350,7 @@ void tg_renderer_end(tg_renderer_h h_renderer, f32 dt, b32 present)
         tgvk_queue_submit(TGVK_QUEUE_TYPE_GRAPHICS, 1, &blit_submit_info, VK_NULL_HANDLE);
 
         u32 current_image;
-        TGVK_CALL(vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, h_renderer->present_pass.image_acquired_semaphore, VK_NULL_HANDLE, &current_image));
+        TGVK_CALL(vkAcquireNextImageKHR(device, swapchain, TG_U64_MAX, h_renderer->present_pass.image_acquired_semaphore, VK_NULL_HANDLE, &current_image));
 
         const VkSemaphore p_wait_semaphores[2] = { h_renderer->semaphore, h_renderer->present_pass.image_acquired_semaphore };
         const VkPipelineStageFlags p_pipeline_stage_masks[2] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT };
