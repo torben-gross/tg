@@ -257,6 +257,8 @@ void tg_stringf_va(u32 size, char* p_buffer, const char* p_format, char* p_varia
 		}
 	}
 	*p_buffer_position = '\0';
+
+	TG_ASSERT(p_buffer_position - p_buffer + 1 <= size);
 }
 
 u32 tg_strlen_no_nul(const char* p_string)

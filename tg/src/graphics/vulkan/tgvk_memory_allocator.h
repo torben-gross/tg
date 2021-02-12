@@ -13,13 +13,14 @@ typedef enum tgvk_memory_type
     TGVK_MEMORY_HOST      = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
 } tgvk_memory_type;
 
+typedef struct tgvk_memory_entry tgvk_memory_entry;
 typedef struct tgvk_memory_block
 {
-    u32               pool_index;
-    VkDeviceMemory    device_memory;
-    VkDeviceSize      offset;
-    VkDeviceSize      size;
-    void*             p_mapped_device_memory;
+    tgvk_memory_entry*    p_entry;
+    VkDeviceMemory        device_memory;
+    VkDeviceSize          offset;
+    VkDeviceSize          size;
+    void*                 p_mapped_device_memory;
 } tgvk_memory_block;
 
 void                 tgvk_memory_allocator_init(VkDevice device, VkPhysicalDevice physical_device);
