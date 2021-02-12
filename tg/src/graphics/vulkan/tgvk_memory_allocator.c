@@ -50,22 +50,51 @@
         (p_entry)->p_next_free = TG_NULL;                             \
     }
 
+#define TG_INSERT_FREE(p_pool, p_entry) \
+    {                                                                                                                   \
+        TG_ASSERT(p_pool);                                                                                              \
+        TG_ASSERT(p_entry);                                                                                             \
+        if ((p_pool)->p_first_free_entry == TG_NULL)                                                                    \
+        {                                                                                                               \
+            (p_pool)->p_first_free_entry = p_entry;                                                                     \
+            (p_entry)->p_prev_free = TG_NULL;                                                                           \
+            (p_entry)->p_next_free = TG_NULL;                                                                           \
+        }                                                                                                               \
+        else if ((p_pool)->p_first_free_entry->page_count > (p_entry)->page_count)                                      \
+        {                                                                                                               \
+            (p_entry)->p_prev_free = TG_NULL;                                                                           \
+            TG_LINK_FREE(p_entry, (p_pool)->p_first_free_entry);                                                        \
+            (p_pool)->p_first_free_entry = p_entry;                                                                     \
+        }                                                                                                               \
+        else                                                                                                            \
+        {                                                                                                               \
+            tgvk_memory_entry* p_prev_free = (p_pool)->p_first_free_entry;                                              \
+            while (p_prev_free->p_next_free != TG_NULL && p_prev_free->p_next_free->page_count < (p_entry)->page_count) \
+            {                                                                                                           \
+                p_prev_free = p_prev_free->p_next_free;                                                                 \
+            }                                                                                                           \
+            tgvk_memory_entry* p_next_free = p_prev_free->p_next_free;                                                  \
+            TG_LINK_FREE(p_prev_free, p_entry);                                                                         \
+            TG_LINK_FREE(p_entry, p_next_free);                                                                         \
+        }                                                                                                               \
+    }
 
-
-typedef struct tgvk_memory_pool
-{
-    VkMemoryPropertyFlags    memory_property_flags;
-    VkDeviceMemory           device_memory;
-    void*                    p_mapped_device_memory;
-    u32                      memory_type_bit;
-    u32                      page_count;
-    tgvk_memory_entry*       p_first_free_entry;
+#define TG_BUCKET_ENTRY_COUNT    (TG_U8_MAX + 1)
 
 #ifdef TG_DEBUG
-    u32                      occupied_entry_count;
-    u32                      occupied_page_count;
+#define TG_INIT_BUCKET(p_bucket)                       \
+    for (u16 i = 0; i < TG_BUCKET_ENTRY_COUNT; i++)    \
+        (p_bucket)->p_memory[i].occupied = -1;         \
+    for (u8 i = 0; i < TG_BUCKET_ENTRY_COUNT - 1; i++) \
+        (p_bucket)->p_next_free_indices[i] = i + 1
+#else
+#define TG_INIT_BUCKET(p_bucket)                       \
+    for (u8 i = 0; i < TG_BUCKET_ENTRY_COUNT - 1; i++) \
+        (p_bucket)->p_next_free_indices[i] = i + 1
 #endif
-} tgvk_memory_pool;
+
+
+
 
 typedef struct tgvk_memory_entry
 {
@@ -79,6 +108,31 @@ typedef struct tgvk_memory_entry
     struct tgvk_memory_entry*    p_next_free;
 } tgvk_memory_entry;
 
+typedef struct tg_memory_bucket_entry
+{
+    u8    idx;
+    u8    next_idx;
+} tg_memory_bucket_entry;
+
+typedef struct tgvk_memory_pool
+{
+    VkMemoryPropertyFlags    memory_property_flags;
+    VkDeviceMemory           device_memory;
+    void*                    p_mapped_device_memory;
+    u32                      memory_type_bit;
+    u32                      page_count;
+    tgvk_memory_entry*       p_first_free_entry;
+
+#ifdef TG_DEBUG
+    u32                      occupied_entry_count;
+    u32                      occupied_page_count;
+    u32                      free_entry_count;
+    u32                      max_occupied_entry_count;
+    u32                      max_occupied_page_count;
+    u32                      max_free_entry_count;
+#endif
+} tgvk_memory_pool;
+
 typedef struct tgvk_memory
 {
     tg_read_write_lock    read_write_lock;
@@ -89,7 +143,19 @@ typedef struct tgvk_memory
 
 
 
-static tgvk_memory    memory = { 0 };
+typedef struct tgvk_memory_entry_bucket tgvk_memory_entry_bucket;
+typedef struct tgvk_memory_entry_bucket
+{
+    tgvk_memory_entry            p_memory[TG_BUCKET_ENTRY_COUNT];
+    u8                           first_free_index;
+    u8                           p_next_free_indices[TG_BUCKET_ENTRY_COUNT - 1];
+    tgvk_memory_entry_bucket*    p_next;
+} tgvk_memory_entry_bucket;
+
+
+
+static tgvk_memory                 memory = { 0 };
+static tgvk_memory_entry_bucket    entry_buffer = { 0 };
 
 #ifdef TG_DEBUG
 static b32            initialized = TG_FALSE;
@@ -97,9 +163,61 @@ static b32            initialized = TG_FALSE;
 
 
 
+tgvk_memory_entry* tg__alloc_entry(void)
+{
+    tgvk_memory_entry_bucket* p_bucket = &entry_buffer;
+
+    while (p_bucket->first_free_index == 255)
+    {
+        if (p_bucket->p_next)
+        {
+            p_bucket = p_bucket->p_next;
+        }
+        else
+        {
+            p_bucket->p_next = TG_MALLOC(sizeof(tgvk_memory_entry_bucket));
+            p_bucket = p_bucket->p_next;
+            TG_INIT_BUCKET(p_bucket);
+            break;
+        }
+    }
+
+    const u8 i = p_bucket->first_free_index;
+    p_bucket->first_free_index = p_bucket->p_next_free_indices[i];
+    p_bucket->p_next_free_indices[i] = 0;
+
+    tgvk_memory_entry* p_entry = &p_bucket->p_memory[i];
+    TG_ASSERT(p_entry->occupied == -1);
+    return p_entry;
+}
+
+void tg__free_entry(tgvk_memory_entry* p_entry)
+{
+    tgvk_memory_entry_bucket* p_bucket = &entry_buffer;
+
+    while (p_entry < p_bucket->p_memory || p_entry >= p_bucket->p_memory + TG_BUCKET_ENTRY_COUNT)
+    {
+        p_bucket = p_bucket->p_next;
+        TG_ASSERT(p_bucket);
+    }
+
+    TG_ASSERT(p_entry - p_bucket->p_memory < TG_BUCKET_ENTRY_COUNT);
+    const u8 i = (u8)(p_entry - p_bucket->p_memory);
+    TG_ASSERT(p_bucket->p_next_free_indices[i] == 0);
+    p_bucket->p_next_free_indices[i] = p_bucket->first_free_index;
+    p_bucket->first_free_index = i;
+#ifdef TG_DEBUG
+    p_entry->occupied = -1;
+#endif
+}
+
+
+
 void tgvk_memory_allocator_init(VkDevice device, VkPhysicalDevice physical_device)
 {
     TG_ASSERT(!initialized);
+
+    TG_INIT_BUCKET(&entry_buffer);
 
     memory.read_write_lock = TG_RWL_CREATE();
 
@@ -119,6 +237,8 @@ void tgvk_memory_allocator_init(VkDevice device, VkPhysicalDevice physical_devic
 
         if (device_local || host_visible_coherent)
         {
+            tgvk_memory_pool* p_pool = &memory.p_pools[memory.pool_count];
+
             VkDeviceSize allocation_size = 0;
             switch (physical_device_memory_properties.memoryTypes[i].propertyFlags)
             {
@@ -129,22 +249,31 @@ void tgvk_memory_allocator_init(VkDevice device, VkPhysicalDevice physical_devic
             }
             allocation_size = TG_CEIL_TO_MULTIPLE(allocation_size, memory.page_size);
 
-            memory.p_pools[memory.pool_count].memory_property_flags = physical_device_memory_properties.memoryTypes[i].propertyFlags;
+            p_pool->memory_property_flags = physical_device_memory_properties.memoryTypes[i].propertyFlags;
 
             TG_ASSERT(allocation_size / memory.page_size <= TG_U32_MAX);
             const u32 page_count = (u32)(allocation_size / memory.page_size);
 
-            memory.p_pools[memory.pool_count].memory_type_bit = i;
-            memory.p_pools[memory.pool_count].page_count = page_count;
-            memory.p_pools[memory.pool_count].p_first_free_entry = TG_MALLOC(sizeof(*memory.p_pools[memory.pool_count].p_first_free_entry));
-            memory.p_pools[memory.pool_count].p_first_free_entry->occupied = TG_FALSE;
-            memory.p_pools[memory.pool_count].p_first_free_entry->pool_index = memory.pool_count;
-            memory.p_pools[memory.pool_count].p_first_free_entry->offset_pages = 0;
-            memory.p_pools[memory.pool_count].p_first_free_entry->page_count = page_count;
-            memory.p_pools[memory.pool_count].p_first_free_entry->p_prev = TG_NULL;
-            memory.p_pools[memory.pool_count].p_first_free_entry->p_next = TG_NULL;
-            memory.p_pools[memory.pool_count].p_first_free_entry->p_prev_free = TG_NULL;
-            memory.p_pools[memory.pool_count].p_first_free_entry->p_next_free = TG_NULL;
+            p_pool->memory_type_bit = i;
+            p_pool->page_count = page_count;
+            p_pool->p_first_free_entry = tg__alloc_entry();
+            p_pool->p_first_free_entry->occupied = TG_FALSE;
+            p_pool->p_first_free_entry->pool_index = memory.pool_count;
+            p_pool->p_first_free_entry->offset_pages = 0;
+            p_pool->p_first_free_entry->page_count = page_count;
+            p_pool->p_first_free_entry->p_prev = TG_NULL;
+            p_pool->p_first_free_entry->p_next = TG_NULL;
+            p_pool->p_first_free_entry->p_prev_free = TG_NULL;
+            p_pool->p_first_free_entry->p_next_free = TG_NULL;
+
+#ifdef TG_DEBUG
+            p_pool->occupied_entry_count = 0;
+            p_pool->occupied_page_count = 0;
+            p_pool->free_entry_count = 1;
+            p_pool->max_occupied_entry_count = 0;
+            p_pool->max_occupied_page_count = 0;
+            p_pool->max_free_entry_count = 1;
+#endif
 
             VkMemoryAllocateInfo memory_allocate_info = { 0 };
             memory_allocate_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -152,14 +281,14 @@ void tgvk_memory_allocator_init(VkDevice device, VkPhysicalDevice physical_devic
             memory_allocate_info.allocationSize = allocation_size;
             memory_allocate_info.memoryTypeIndex = i;
 
-            TGVK_CALL(vkAllocateMemory(device, &memory_allocate_info, TG_NULL, &memory.p_pools[memory.pool_count].device_memory));
+            TGVK_CALL(vkAllocateMemory(device, &memory_allocate_info, TG_NULL, &p_pool->device_memory));
             if (physical_device_memory_properties.memoryTypes[i].propertyFlags == TGVK_MEMORY_HOST)
             {
-                TGVK_CALL(vkMapMemory(device, memory.p_pools[memory.pool_count].device_memory, 0, VK_WHOLE_SIZE, 0, &memory.p_pools[memory.pool_count].p_mapped_device_memory));
+                TGVK_CALL(vkMapMemory(device, p_pool->device_memory, 0, VK_WHOLE_SIZE, 0, &p_pool->p_mapped_device_memory));
             }
             else
             {
-                memory.p_pools[memory.pool_count].p_mapped_device_memory = TG_NULL;
+                p_pool->p_mapped_device_memory = TG_NULL;
             }
 
             memory.pool_count++;
@@ -225,7 +354,7 @@ tgvk_memory_block tgvk_memory_allocator_alloc(VkDeviceSize alignment, VkDeviceSi
                 {
                     if (p_entry->page_count > required_page_count)
                     {
-                        tgvk_memory_entry* p_new_entry = TG_MALLOC(sizeof(*p_new_entry));
+                        tgvk_memory_entry* p_new_entry = tg__alloc_entry();
 
                         p_new_entry->occupied = TG_TRUE;
                         p_new_entry->pool_index = i;
@@ -240,6 +369,9 @@ tgvk_memory_block tgvk_memory_allocator_alloc(VkDeviceSize alignment, VkDeviceSi
                         TG_LINK(p_entry->p_prev, p_new_entry);
                         TG_LINK(p_new_entry, p_entry);
 
+                        TG_CUT_FREE(p_pool, p_entry);
+                        TG_INSERT_FREE(p_pool, p_entry);
+
                         p_entry = p_new_entry;
                     }
                     else
@@ -249,7 +381,17 @@ tgvk_memory_block tgvk_memory_allocator_alloc(VkDeviceSize alignment, VkDeviceSi
                         p_entry->occupied = TG_TRUE;
 
                         TG_CUT_FREE(p_pool, p_entry);
+
+#ifdef TG_DEBUG
+                        p_pool->free_entry_count--;
+#endif
                     }
+#ifdef TG_DEBUG
+                    p_pool->occupied_entry_count++;
+                    p_pool->occupied_page_count += required_page_count;
+                    p_pool->max_occupied_entry_count = TG_MAX(p_pool->max_occupied_entry_count, p_pool->occupied_entry_count);
+                    p_pool->max_occupied_page_count = TG_MAX(p_pool->max_occupied_page_count, p_pool->occupied_page_count);
+#endif
 
                     memory_block.p_entry = p_entry;
                     memory_block.device_memory = memory.p_pools[i].device_memory;
@@ -258,11 +400,6 @@ tgvk_memory_block tgvk_memory_allocator_alloc(VkDeviceSize alignment, VkDeviceSi
                     memory_block.p_mapped_device_memory = p_pool->p_mapped_device_memory ? (u8*)p_pool->p_mapped_device_memory + memory_block.offset : TG_NULL;
 
                     TG_ASSERT(memory_block.offset + memory_block.size < (tg_size)p_pool->page_count * memory.page_size);
-
-#ifdef TG_DEBUG
-                    p_pool->occupied_entry_count++;
-                    p_pool->occupied_page_count += required_page_count;
-#endif
 
                     TG_RWL_UNLOCK_FOR_WRITE(memory.read_write_lock);
 
@@ -286,7 +423,9 @@ void tgvk_memory_allocator_free(tgvk_memory_block* p_memory_block)
 
     tgvk_memory_entry* p_entry = p_memory_block->p_entry;
     TG_ASSERT(p_entry->occupied);
+    TG_ASSERT(p_entry->p_prev_free == TG_NULL);
     TG_ASSERT(p_entry->p_next_free == TG_NULL);
+    p_entry->occupied = TG_FALSE;
 
     tgvk_memory_pool* p_pool = &memory.p_pools[p_entry->pool_index];
 
@@ -297,10 +436,8 @@ void tgvk_memory_allocator_free(tgvk_memory_block* p_memory_block)
     p_pool->occupied_page_count -= p_entry->page_count;
 #endif
 
-    b32 merged = TG_FALSE;
     if (p_entry->p_prev != TG_NULL && !p_entry->p_prev->occupied)
     {
-        merged = TG_TRUE;
         TG_ASSERT(p_pool->p_first_free_entry != p_entry);
         tgvk_memory_entry* p_prev = p_entry->p_prev;
         
@@ -308,12 +445,16 @@ void tgvk_memory_allocator_free(tgvk_memory_block* p_memory_block)
         
         TG_CUT(p_entry);
         
-        TG_FREE(p_entry);
+        tg__free_entry(p_entry);
         p_entry = p_prev;
+
+#ifdef TG_DEBUG
+        p_pool->free_entry_count--;
+#endif
     }
+
     if (p_entry->p_next != TG_NULL && !p_entry->p_next->occupied)
     {
-        merged = TG_TRUE;
         tgvk_memory_entry* p_next = p_entry->p_next;
         
         p_next->offset_pages -= p_entry->page_count;
@@ -323,18 +464,21 @@ void tgvk_memory_allocator_free(tgvk_memory_block* p_memory_block)
         TG_CUT(p_entry);
         TG_CUT_FREE(p_pool, p_entry);
 
-        TG_FREE(p_entry);
+        tg__free_entry(p_entry);
         p_entry = p_next;
+
+#ifdef TG_DEBUG
+        p_pool->free_entry_count--;
+#endif
     }
 
-    if (!merged)
-    {
-        p_entry->occupied = TG_FALSE;
+    TG_CUT_FREE(p_pool, p_entry);
+    TG_INSERT_FREE(p_pool, p_entry);
 
-        TG_ASSERT(p_entry != p_pool->p_first_free_entry);
-        TG_LINK_FREE(p_entry, p_pool->p_first_free_entry);
-        p_pool->p_first_free_entry = p_entry;
-    }
+#ifdef TG_DEBUG
+    p_pool->free_entry_count++;
+    p_pool->max_free_entry_count = TG_MAX(p_pool->max_free_entry_count, p_pool->free_entry_count);
+#endif
 
     TG_RWL_UNLOCK_FOR_WRITE(memory.read_write_lock);
 }

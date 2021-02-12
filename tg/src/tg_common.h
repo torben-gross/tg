@@ -38,7 +38,7 @@
 #define TG_NOT_IMPLEMENTED()               *(int*)0 = 0
 #else
 #define TG_ASSERT(x)
-#define TG_ASSERT2(x)
+#define TG_ASSERT2(x, p_message)
 #define TG_INVALID_CODEPATH()
 #define TG_NOT_IMPLEMENTED()
 #endif
