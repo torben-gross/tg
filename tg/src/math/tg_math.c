@@ -685,6 +685,19 @@ u8 tgm_u8_min(u8 v0, u8 v1)
 	return result;
 }
 
+u32 tgm_u32_ceil_to_pow2(u32 v)
+{
+	u32 result = v - 1;
+	result |= result >> 1;
+	result |= result >> 2;
+	result |= result >> 4;
+	result |= result >> 8;
+	result |= result >> 16;
+	result++;
+	result += (result == 0);
+	return result;
+}
+
 u32 tgm_u32_clamp(u32 v, u32 low, u32 high)
 {
 	const u32 result = tgm_u32_max(low, tgm_u32_min(high, v));
@@ -727,6 +740,20 @@ u32 tgm_u32_min(u32 v0, u32 v1)
 
 #ifdef TG_CPU_x64
 
+u64 tgm_u64_ceil_to_pow2(u64 v)
+{
+	u64 result = v - 1;
+	result |= result >> 1;
+	result |= result >> 2;
+	result |= result >> 4;
+	result |= result >> 8;
+	result |= result >> 16;
+	result |= result >> 32;
+	result++;
+	result += (result == 0);
+	return result;
+}
+
 u32 tgm_u64_digits(u64 v)
 {
 	const u32 result = v == 0 ? 1 : (u32)tgm_f32_floor((f32)tgm_u64_log10(v)) + 1;
@@ -744,6 +771,16 @@ u64 tgm_u64_min(u64 v0, u64 v1)
 	const u64 result = v0 < v1 ? v0 : v1;
 	return result;
 }
+
+#endif
+
+#ifdef TG_CPU_x64
+
+tg_size (*tgm_size_ceil_to_pow2)(tg_size) = &tgm_u64_ceil_to_pow2;
+
+#else
+
+tg_size (*tgm_size_ceil_to_pow2)(tg_size) = &tgm_u32_ceil_to_pow2;
 
 #endif
 

@@ -4,7 +4,7 @@
 #include "platform/tg_platform.h"
 #include "tg_common.h"
 
-#ifdef TG_DEBUG
+#ifdef TG_DEBUGd
 #define TG_MALLOC(size)                             tg_memory_alloc_impl(size, __FILE__, __LINE__)
 #define TG_REALLOC(size, p_memory)                  tg_memory_realloc_impl(size, p_memory, __FILE__, __LINE__)
 #define TG_FREE(p_memory)                           tg_memory_free_impl(p_memory)
