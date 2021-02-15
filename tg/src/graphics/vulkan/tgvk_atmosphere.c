@@ -375,21 +375,21 @@ static void tg__precompute(tgvk_atmosphere_model* p_model, VkFormat layered_imag
 	sampler_create_info.address_mode_v = TG_IMAGE_ADDRESS_MODE_CLAMP_TO_EDGE;
 	sampler_create_info.address_mode_w = TG_IMAGE_ADDRESS_MODE_CLAMP_TO_EDGE;
 
-	tgvk_image delta_irradiance_texture = tgvk_image_create(TGVK_IMAGE_TYPE_COLOR, TG_IRRADIANCE_TEXTURE_WIDTH, TG_IRRADIANCE_TEXTURE_HEIGHT, VK_FORMAT_R32G32B32A32_SFLOAT, &sampler_create_info);
+	tgvk_image delta_irradiance_texture = TGVK_IMAGE_CREATE(TGVK_IMAGE_TYPE_COLOR, TG_IRRADIANCE_TEXTURE_WIDTH, TG_IRRADIANCE_TEXTURE_HEIGHT, VK_FORMAT_R32G32B32A32_SFLOAT, &sampler_create_info);
 
-	tgvk_layered_image delta_rayleigh_scattering_texture = tgvk_layered_image_create(
+	tgvk_layered_image delta_rayleigh_scattering_texture = TGVK_LAYERED_IMAGE_CREATE(
 		TGVK_IMAGE_TYPE_COLOR,
 		TG_SCATTERING_TEXTURE_WIDTH, TG_SCATTERING_TEXTURE_HEIGHT, TG_SCATTERING_TEXTURE_DEPTH,
 		layered_image_format, &sampler_create_info
 	);
 
-	tgvk_layered_image delta_mie_scattering_texture = tgvk_layered_image_create(
+	tgvk_layered_image delta_mie_scattering_texture = TGVK_LAYERED_IMAGE_CREATE(
 		TGVK_IMAGE_TYPE_COLOR,
 		TG_SCATTERING_TEXTURE_WIDTH, TG_SCATTERING_TEXTURE_HEIGHT, TG_SCATTERING_TEXTURE_DEPTH,
 		layered_image_format, &sampler_create_info
 	);
 
-	tgvk_layered_image delta_scattering_density_texture = tgvk_layered_image_create(
+	tgvk_layered_image delta_scattering_density_texture = TGVK_LAYERED_IMAGE_CREATE(
 		TGVK_IMAGE_TYPE_COLOR,
 		TG_SCATTERING_TEXTURE_WIDTH, TG_SCATTERING_TEXTURE_HEIGHT, TG_SCATTERING_TEXTURE_DEPTH,
 		layered_image_format, &sampler_create_info
@@ -446,8 +446,8 @@ static void tg__precompute(tgvk_atmosphere_model* p_model, VkFormat layered_imag
 
 		// TODO: use
 		VkSemaphore semaphore = tgvk_semaphore_create();
-		tgvk_buffer ubo = tgvk_uniform_buffer_create(sizeof(m4) + sizeof(i32));
-		tgvk_buffer geometry_ubo = tgvk_uniform_buffer_create(sizeof(i32));
+		tgvk_buffer ubo = TGVK_UNIFORM_BUFFER_CREATE(sizeof(m4) + sizeof(i32));
+		tgvk_buffer geometry_ubo = TGVK_UNIFORM_BUFFER_CREATE(sizeof(i32));
 
 		tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
 
@@ -951,7 +951,7 @@ void tgvk_atmosphere_model_create(TG_OUT tgvk_atmosphere_model* p_model)
 	sampler_create_info.address_mode_v = TG_IMAGE_ADDRESS_MODE_CLAMP_TO_EDGE;
 	sampler_create_info.address_mode_w = TG_IMAGE_ADDRESS_MODE_CLAMP_TO_EDGE;
 
-	p_model->rendering.transmittance_texture = tgvk_image_create(TGVK_IMAGE_TYPE_COLOR, TG_TRANSMITTANCE_TEXTURE_WIDTH, TG_TRANSMITTANCE_TEXTURE_HEIGHT, VK_FORMAT_R32G32B32A32_SFLOAT, &sampler_create_info);
+	p_model->rendering.transmittance_texture = TGVK_IMAGE_CREATE(TGVK_IMAGE_TYPE_COLOR, TG_TRANSMITTANCE_TEXTURE_WIDTH, TG_TRANSMITTANCE_TEXTURE_HEIGHT, VK_FORMAT_R32G32B32A32_SFLOAT, &sampler_create_info);
 
 	VkFormat layered_image_format = VK_FORMAT_UNDEFINED;
 	VkImageFormatProperties image_format_properties = { 0 };
@@ -969,12 +969,18 @@ void tgvk_atmosphere_model_create(TG_OUT tgvk_atmosphere_model* p_model)
 	}
 	else
 	{
-		//tgvk_get_physical_device_format_properties(VK_FORMAT_R32G32B32_SFLOAT, &format_properties);
-		//layered_image_format = format_properties.optimalTilingFeatures & layered_image_required_flags ? VK_FORMAT_R32G32B32_SFLOAT : VK_FORMAT_R32G32B32A32_SFLOAT;
-		TG_NOT_IMPLEMENTED();
+		if (tgvk_get_physical_device_image_format_properties(VK_FORMAT_R32G32B32_SFLOAT, VK_IMAGE_TYPE_2D, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT, &image_format_properties))
+		{
+			layered_image_format = VK_FORMAT_R32G32B32_SFLOAT;
+		}
+		else
+		{
+			TG_ASSERT(tgvk_get_physical_device_image_format_properties(VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_TYPE_2D, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT, &image_format_properties));
+			layered_image_format = VK_FORMAT_R32G32B32A32_SFLOAT;
+		}
 	}
 
-	p_model->rendering.scattering_texture = tgvk_layered_image_create(
+	p_model->rendering.scattering_texture = TGVK_LAYERED_IMAGE_CREATE(
 		TGVK_IMAGE_TYPE_COLOR,
 		TG_SCATTERING_TEXTURE_WIDTH, TG_SCATTERING_TEXTURE_HEIGHT, TG_SCATTERING_TEXTURE_DEPTH,
 		layered_image_format, &sampler_create_info
@@ -984,7 +990,7 @@ void tgvk_atmosphere_model_create(TG_OUT tgvk_atmosphere_model* p_model)
 	if (p_model->settings.combine_scattering_textures)
 	{
 		p_model->rendering.optional_single_mie_scattering_texture = (tgvk_layered_image){ 0 };
-		p_model->rendering.no_single_mie_scattering_black_texture = tgvk_layered_image_create(
+		p_model->rendering.no_single_mie_scattering_black_texture = TGVK_LAYERED_IMAGE_CREATE(
 			TGVK_IMAGE_TYPE_COLOR,
 			TG_SCATTERING_TEXTURE_WIDTH, TG_SCATTERING_TEXTURE_HEIGHT, TG_SCATTERING_TEXTURE_DEPTH,
 			layered_image_format, &sampler_create_info
@@ -992,14 +998,14 @@ void tgvk_atmosphere_model_create(TG_OUT tgvk_atmosphere_model* p_model)
 	}
 	else
 	{
-		p_model->rendering.optional_single_mie_scattering_texture = tgvk_layered_image_create(
+		p_model->rendering.optional_single_mie_scattering_texture = TGVK_LAYERED_IMAGE_CREATE(
 			TGVK_IMAGE_TYPE_COLOR,
 			TG_SCATTERING_TEXTURE_WIDTH, TG_SCATTERING_TEXTURE_HEIGHT, TG_SCATTERING_TEXTURE_DEPTH,
 			layered_image_format, &sampler_create_info
 		);
 	}
 
-	p_model->rendering.irradiance_texture = tgvk_image_create(TGVK_IMAGE_TYPE_COLOR, TG_IRRADIANCE_TEXTURE_WIDTH, TG_IRRADIANCE_TEXTURE_HEIGHT, VK_FORMAT_R32G32B32A32_SFLOAT, &sampler_create_info);
+	p_model->rendering.irradiance_texture = TGVK_IMAGE_CREATE(TGVK_IMAGE_TYPE_COLOR, TG_IRRADIANCE_TEXTURE_WIDTH, TG_IRRADIANCE_TEXTURE_HEIGHT, VK_FORMAT_R32G32B32A32_SFLOAT, &sampler_create_info);
 
 
 
@@ -1009,8 +1015,8 @@ void tgvk_atmosphere_model_create(TG_OUT tgvk_atmosphere_model* p_model)
 
 
 
-	p_model->rendering.vertex_shader_ubo = tgvk_uniform_buffer_create(2 * sizeof(m4));
-	p_model->rendering.ubo = tgvk_uniform_buffer_create(6 * sizeof(v4));
+	p_model->rendering.vertex_shader_ubo = TGVK_UNIFORM_BUFFER_CREATE(2 * sizeof(m4));
+	p_model->rendering.ubo = TGVK_UNIFORM_BUFFER_CREATE(6 * sizeof(v4));
 
 	const f32 exposure = p_model->settings.use_luminance != TG_LUMINANCE_NONE ? 1e-5f : 1.0f;
 	const v3 earth_center = { 0.0f, (f32)(-TG_BOTTOM_RADIUS / TG_LENGTH_UNIT_IN_METERS) + 100.0f, 0.0f };

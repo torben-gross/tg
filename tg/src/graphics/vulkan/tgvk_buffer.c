@@ -9,7 +9,7 @@ tg_storage_buffer_h tg_storage_buffer_create(tg_size size, b32 visible)
 	TG_ASSERT(size > 0);
 	
 	tg_storage_buffer_h h_storage_buffer = tgvk_handle_take(TG_STRUCTURE_TYPE_STORAGE_BUFFER);
-	h_storage_buffer->buffer = tgvk_buffer_create(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, visible ? TGVK_MEMORY_HOST : TGVK_MEMORY_DEVICE);
+	h_storage_buffer->buffer = TGVK_BUFFER_CREATE(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, visible ? TGVK_MEMORY_HOST : TGVK_MEMORY_DEVICE);
 	return h_storage_buffer;
 }
 
@@ -43,7 +43,7 @@ tg_uniform_buffer_h tg_uniform_buffer_create(tg_size size)
 	TG_ASSERT(size);
 
 	tg_uniform_buffer_h h_uniform_buffer = tgvk_handle_take(TG_STRUCTURE_TYPE_UNIFORM_BUFFER);
-	h_uniform_buffer->buffer = tgvk_uniform_buffer_create(size);
+	h_uniform_buffer->buffer = TGVK_UNIFORM_BUFFER_CREATE(size);
 	return h_uniform_buffer;
 }
 

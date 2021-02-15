@@ -119,7 +119,7 @@ static void tg__deserialize(const char* p_filename, TG_OUT tg_font_h h_font)
     sampler_create_info.address_mode_v = TG_IMAGE_ADDRESS_MODE_CLAMP_TO_BORDER;
     sampler_create_info.address_mode_w = TG_IMAGE_ADDRESS_MODE_CLAMP_TO_BORDER;
 
-    const b32 deserialize_texture_atlas_result = tgvk_image_deserialize((const char*)p_sfont->p_texture_atlas_filename, &h_font->texture_atlas);
+    const b32 deserialize_texture_atlas_result = TGVK_IMAGE_DESERIALIZE((const char*)p_sfont->p_texture_atlas_filename, &h_font->texture_atlas);
     TG_ASSERT(deserialize_texture_atlas_result);
     tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_and_begin_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
     tgvk_cmd_transition_image_layout(p_command_buffer, &h_font->texture_atlas, TGVK_LAYOUT_SHADER_READ_CFV, TGVK_LAYOUT_SHADER_READ_F);
@@ -261,7 +261,7 @@ tg_font_h tg_font_create(const char* p_filename)
         sampler_create_info.address_mode_v = TG_IMAGE_ADDRESS_MODE_CLAMP_TO_BORDER;
         sampler_create_info.address_mode_w = TG_IMAGE_ADDRESS_MODE_CLAMP_TO_BORDER;
 
-        h_font->texture_atlas = tgvk_image_create(TGVK_IMAGE_TYPE_COLOR, bitmap_width, bitmap_height, VK_FORMAT_R8_UINT, &sampler_create_info);
+        h_font->texture_atlas = TGVK_IMAGE_CREATE(TGVK_IMAGE_TYPE_COLOR, bitmap_width, bitmap_height, VK_FORMAT_R8_UINT, &sampler_create_info);
         tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_and_begin_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
         tgvk_cmd_transition_image_layout(p_command_buffer, &h_font->texture_atlas, TGVK_LAYOUT_UNDEFINED, TGVK_LAYOUT_TRANSFER_WRITE);
         tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take(bitmap_size);

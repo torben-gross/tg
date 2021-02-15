@@ -14,6 +14,68 @@
 
 
 
+#ifdef TG_DEBUG
+
+#define TGVK_BUFFER_CREATE(size, buffer_usage_flags, type) \
+    tgvk_buffer_create(size, buffer_usage_flags, type, __LINE__, __FILE__)
+
+#define TGVK_CUBE_MAP_CREATE(dimension, format, p_sampler_create_info) \
+    tgvk_cube_map_create(dimension, format, p_sampler_create_info, __LINE__, __FILE__)
+
+#define TGVK_IMAGE_CREATE(type_flags, width, height, format, p_sampler_create_info) \
+    tgvk_image_create(type_flags, width, height, format, p_sampler_create_info, __LINE__, __FILE__)
+
+#define TGVK_IMAGE_CREATE2(type, p_filename, p_sampler_create_info) \
+    tgvk_image_create2(type, p_filename, p_sampler_create_info, __LINE__, __FILE__)
+
+#define TGVK_IMAGE_DESERIALIZE(p_filename, p_image) \
+    tgvk_image_deserialize(p_filename, p_image, __LINE__, __FILE__)
+
+#define TGVK_IMAGE_3D_CREATE(type, width, height, depth, format, p_sampler_create_info) \
+    tgvk_image_3d_create(type, width, height, depth, format, p_sampler_create_info, __LINE__, __FILE__)
+
+#define TGVK_LAYERED_IMAGE_CREATE(type, width, height, layers, format, p_sampler_create_info) \
+    tgvk_layered_image_create(type, width, height, layers, format, p_sampler_create_info, __LINE__, __FILE__)
+
+#define TGVK_RENDER_TARGET_CREATE(color_width, color_height, color_format, p_color_sampler_create_info, depth_width, depth_height, depth_format, p_depth_sampler_create_info, fence_create_flags) \
+    tgvk_render_target_create(color_width, color_height, color_format, p_color_sampler_create_info, depth_width, depth_height, depth_format, p_depth_sampler_create_info, fence_create_flags, __LINE__, __FILE__)
+
+#define TGVK_UNIFORM_BUFFER_CREATE(size) \
+    tgvk_uniform_buffer_create(size, __LINE__, __FILE__)
+
+#else
+
+#define TGVK_BUFFER_CREATE(size, buffer_usage_flags, type) \
+    tgvk_buffer_create(size, buffer_usage_flags, type)
+
+#define TGVK_CUBE_MAP_CREATE(dimension, format, p_sampler_create_info) \
+    tgvk_cube_map_create(dimension, format, p_sampler_create_info)
+
+#define TGVK_IMAGE_CREATE(type_flags, width, height, format, p_sampler_create_info) \
+    tgvk_image_create(type_flags, width, height, format, p_sampler_create_info)
+
+#define TGVK_IMAGE_CREATE2(type, p_filename, p_sampler_create_info) \
+    tgvk_image_create2(type, p_filename, p_sampler_create_info)
+
+#define TGVK_IMAGE_DESERIALIZE(p_filename, p_image) \
+    tgvk_image_deserialize(p_filename, p_image)
+
+#define TGVK_IMAGE_3D_CREATE(type, width, height, depth, format, p_sampler_create_info) \
+    tgvk_image_3d_create(type, width, height, depth, format, p_sampler_create_info)
+
+#define TGVK_LAYERED_IMAGE_CREATE(type, width, height, layers, format, p_sampler_create_info) \
+    tgvk_layered_image_create(type, width, height, layers, format, p_sampler_create_info)
+
+#define TGVK_RENDER_TARGET_CREATE(color_width, color_height, color_format, p_color_sampler_create_info, depth_width, depth_height, depth_format, p_depth_sampler_create_info, fence_create_flags) \
+    tgvk_render_target_create(color_width, color_height, color_format, p_color_sampler_create_info, depth_width, depth_height, depth_format, p_depth_sampler_create_info, fence_create_flags)
+
+#define TGVK_UNIFORM_BUFFER_CREATE(size) \
+    tgvk_uniform_buffer_create(size)
+
+#endif
+
+
+
 typedef enum tgvk_atmosphere_luminance
 {
     TG_LUMINANCE_NONE,
@@ -592,7 +654,7 @@ void                    tgvk_atmosphere_model_update_descriptor_set(tgvk_atmosph
 void                    tgvk_atmosphere_model_update(tgvk_atmosphere_model* p_model, m4 inv_view, m4 inv_proj);
 
 void                    tgvk_buffer_copy(VkDeviceSize size, tgvk_buffer* p_src, tgvk_buffer* p_dst);
-tgvk_buffer             tgvk_buffer_create(VkDeviceSize size, VkBufferUsageFlags buffer_usage_flags, VkMemoryPropertyFlags memory_property_flags);
+tgvk_buffer             tgvk_buffer_create(VkDeviceSize size, VkBufferUsageFlags buffer_usage_flags, tgvk_memory_type type TG_DEBUG_PARAM(u32 line) TG_DEBUG_PARAM(const char* p_filename));
 void                    tgvk_buffer_destroy(tgvk_buffer* p_buffer);
 
 void                    tgvk_cmd_begin_render_pass(tgvk_command_buffer* p_command_buffer, VkRenderPass render_pass, tgvk_framebuffer* p_framebuffer, VkSubpassContents subpass_contents);
@@ -635,7 +697,7 @@ void                    tgvk_command_buffer_begin(tgvk_command_buffer* p_command
 void                    tgvk_command_buffer_begin_secondary(tgvk_command_buffer* p_command_buffer, VkCommandBufferUsageFlags flags, VkRenderPass render_pass, tgvk_framebuffer* p_framebuffer);
 void                    tgvk_command_buffer_end_and_submit(tgvk_command_buffer* p_command_buffer);
 
-tgvk_cube_map           tgvk_cube_map_create(u32 dimension, VkFormat format, const tg_sampler_create_info* p_sampler_create_info);
+tgvk_cube_map           tgvk_cube_map_create(u32 dimension, VkFormat format, const tg_sampler_create_info* p_sampler_create_info TG_DEBUG_PARAM(u32 line) TG_DEBUG_PARAM(const char* p_filename));
 void                    tgvk_cube_map_destroy(tgvk_cube_map* p_cube_map);
 
 tgvk_descriptor_set     tgvk_descriptor_set_create(const tgvk_pipeline* p_pipeline);
@@ -675,18 +737,18 @@ void*                   tgvk_handle_array(tg_structure_type type);
 void*                   tgvk_handle_take(tg_structure_type type);
 void                    tgvk_handle_release(void* p_handle);
 
-tgvk_image              tgvk_image_create(tgvk_image_type_flags type_flags, u32 width, u32 height, VkFormat format, const tg_sampler_create_info* p_sampler_create_info);
-tgvk_image              tgvk_image_create2(tgvk_image_type type, const char* p_filename, const tg_sampler_create_info* p_sampler_create_info);
+tgvk_image              tgvk_image_create(tgvk_image_type_flags type_flags, u32 width, u32 height, VkFormat format, const tg_sampler_create_info* p_sampler_create_info TG_DEBUG_PARAM(u32 line) TG_DEBUG_PARAM(const char* p_filename));
+tgvk_image              tgvk_image_create2(tgvk_image_type type, const char* p_filename, const tg_sampler_create_info* p_sampler_create_info TG_DEBUG_PARAM(u32 line) TG_DEBUG_PARAM(const char* p_filename2));
 void                    tgvk_image_destroy(tgvk_image* p_image);
 b32                     tgvk_image_serialize(tgvk_image* p_image, const char* p_filename);
-b32                     tgvk_image_deserialize(const char* p_filename, TG_OUT tgvk_image* p_image);
+b32                     tgvk_image_deserialize(const char* p_filename, TG_OUT tgvk_image* p_image TG_DEBUG_PARAM(u32 line) TG_DEBUG_PARAM(const char* p_filename2));
 b32                     tgvk_image_store_to_disc(tgvk_image* p_image, const char* p_filename, b32 force_alpha_one, b32 replace_existing);
 
-tgvk_image_3d           tgvk_image_3d_create(tgvk_image_type type, u32 width, u32 height, u32 depth, VkFormat format, const tg_sampler_create_info* p_sampler_create_info);
+tgvk_image_3d           tgvk_image_3d_create(tgvk_image_type type, u32 width, u32 height, u32 depth, VkFormat format, const tg_sampler_create_info* p_sampler_create_info TG_DEBUG_PARAM(u32 line) TG_DEBUG_PARAM(const char* p_filename));
 void                    tgvk_image_3d_destroy(tgvk_image_3d* p_image_3d);
 b32                     tgvk_image_3d_store_slice_to_disc(tgvk_image_3d* p_image_3d, u32 slice_depth, const char* p_filename, b32 force_alpha_one, b32 replace_existing);
 
-tgvk_layered_image      tgvk_layered_image_create(tgvk_image_type type, u32 width, u32 height, u32 layers, VkFormat format, const tg_sampler_create_info* p_sampler_create_info);
+tgvk_layered_image      tgvk_layered_image_create(tgvk_image_type type, u32 width, u32 height, u32 layers, VkFormat format, const tg_sampler_create_info* p_sampler_create_info TG_DEBUG_PARAM(u32 line) TG_DEBUG_PARAM(const char* p_filename));
 void                    tgvk_layered_image_destroy(tgvk_layered_image* p_image);
 b32                     tgvk_layered_image_store_layer_to_disc(tgvk_layered_image* p_image, u32 layer, const char* p_filename, b32 force_alpha_one, b32 replace_existing);
 
@@ -700,7 +762,7 @@ void                    tgvk_queue_wait_idle(tgvk_queue_type type);
 
 VkRenderPass            tgvk_render_pass_create(const VkAttachmentDescription* p_attachment_description, const VkSubpassDescription* p_subpass_description);
 void                    tgvk_render_pass_destroy(VkRenderPass render_pass);
-tg_render_target        tgvk_render_target_create(u32 color_width, u32 color_height, VkFormat color_format, const tg_sampler_create_info* p_color_sampler_create_info, u32 depth_width, u32 depth_height, VkFormat depth_format, const tg_sampler_create_info* p_depth_sampler_create_info, VkFenceCreateFlags fence_create_flags);
+tg_render_target        tgvk_render_target_create(u32 color_width, u32 color_height, VkFormat color_format, const tg_sampler_create_info* p_color_sampler_create_info, u32 depth_width, u32 depth_height, VkFormat depth_format, const tg_sampler_create_info* p_depth_sampler_create_info, VkFenceCreateFlags fence_create_flags TG_DEBUG_PARAM(u32 line) TG_DEBUG_PARAM(const char* p_filename));
 void                    tgvk_render_target_destroy(tg_render_target* p_render_target);
 
 void                    tgvk_renderer_on_window_resize(tg_renderer_h h_renderer, u32 width, u32 height);
@@ -719,7 +781,7 @@ void                    tgvk_shader_destroy(tgvk_shader* p_shader);
 
 VkDescriptorType        tgvk_structure_type_convert_to_descriptor_type(tg_structure_type type);
 
-tgvk_buffer             tgvk_uniform_buffer_create(VkDeviceSize size);
+tgvk_buffer             tgvk_uniform_buffer_create(VkDeviceSize size TG_DEBUG_PARAM(u32 line) TG_DEBUG_PARAM(const char* p_filename));
 
 #endif
 

@@ -34,11 +34,13 @@
 #ifdef TG_DEBUG
 #define TG_ASSERT(x)                       if (!(x)) *(int*)0 = 0
 #define TG_ASSERT2(x, p_message)           if (!(x)) { TG_DEBUG_LOG(p_message); *(int*)0 = 0; }
+#define TG_DEBUG_PARAM(param)              , param
 #define TG_INVALID_CODEPATH()              *(int*)0 = 0
 #define TG_NOT_IMPLEMENTED()               *(int*)0 = 0
 #else
 #define TG_ASSERT(x)
 #define TG_ASSERT2(x, p_message)
+#define TG_DEBUG_PARAM(param)
 #define TG_INVALID_CODEPATH()
 #define TG_NOT_IMPLEMENTED()
 #endif

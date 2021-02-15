@@ -5,6 +5,7 @@
 #include "math/tg_math.h"
 #include "memory/tg_memory.h"
 #include "platform/tg_platform.h"
+#include "util/tg_string.h"
 
 
 
@@ -129,6 +130,10 @@ typedef struct tgvk_memory_entry
     struct tgvk_memory_entry*    p_next;
     struct tgvk_memory_entry*    p_prev_free;
     struct tgvk_memory_entry*    p_next_free;
+#ifdef TG_DEBUG
+    u32                          line;
+    char                         p_filename[TG_MAX_PATH];
+#endif
 } tgvk_memory_entry;
 
 typedef struct tg_memory_bucket_entry
@@ -257,6 +262,10 @@ void tgvk_memory_allocator_init(VkDevice device, VkPhysicalDevice physical_devic
         p_remaining_heap_sizes[i] = properties.memoryHeaps[i].size;
     }
 
+    VkDeviceSize remaining_optimal_device_memory_size = TGVK_MAX_DEVICE_LOCAL_MEMORY_SIZE;
+    VkDeviceSize remaining_optimal_host_memory_size = TGVK_MAX_HOST_VISIBLE_COHERENT_SIZE;
+    const f64 device_fraction = (f64)remaining_optimal_device_memory_size / (f64)(TGVK_MAX_DEVICE_LOCAL_MEMORY_SIZE + TGVK_MAX_HOST_VISIBLE_COHERENT_SIZE);
+
     memory.pool_count = 0;
     for (u32 i = 0; i < properties.memoryTypeCount; i++)
     {
@@ -270,13 +279,12 @@ void tgvk_memory_allocator_init(VkDevice device, VkPhysicalDevice physical_devic
             VkDeviceSize optimal_allocation_size = 0;
             if (device_local)
             {
-                optimal_allocation_size += TGVK_MAX_DEVICE_LOCAL_MEMORY_SIZE;
+                optimal_allocation_size += remaining_optimal_device_memory_size;
             }
             if (host_visible_coherent)
             {
-                optimal_allocation_size += TGVK_MAX_HOST_VISIBLE_COHERENT_SIZE;
+                optimal_allocation_size += remaining_optimal_host_memory_size;
             }
-            TG_ASSERT(optimal_allocation_size);
             optimal_allocation_size = TG_CEIL_TO_MULTIPLE(optimal_allocation_size, memory.page_size);
 
             // Note: It is recommended to only use up to 80 percent of each heap.
@@ -287,6 +295,25 @@ void tgvk_memory_allocator_init(VkDevice device, VkPhysicalDevice physical_devic
             VkDeviceSize allocation_size = TG_MIN(optimal_allocation_size, remaining_heap_size);
             if (allocation_size > 0)
             {
+                // TODO: try to find heap, that has enough memory to allocate the optimal amount at once. split allocations, only if necessary.
+                // TOOD: try to find heap, that is either device OR host. if not everything could be allocated, use shared
+                if (device_local && host_visible_coherent)
+                {
+                    const VkDeviceSize device_size = (VkDeviceSize)(device_fraction * (f64)allocation_size);
+                    const VkDeviceSize host_size = allocation_size - device_size;
+                    remaining_optimal_device_memory_size -= device_size;
+                    remaining_optimal_host_memory_size -= host_size;
+                }
+                else if (device_local)
+                {
+                    remaining_optimal_device_memory_size -= allocation_size;
+                }
+                else
+                {
+                    TG_ASSERT(host_visible_coherent);
+                    remaining_optimal_host_memory_size -= allocation_size;
+                }
+
                 p_remaining_heap_sizes[type.heapIndex] -= allocation_size;
 
                 TG_ASSERT(allocation_size / memory.page_size <= TG_U32_MAX);
@@ -325,6 +352,7 @@ void tgvk_memory_allocator_init(VkDevice device, VkPhysicalDevice physical_devic
                 TGVK_CALL(vkAllocateMemory(device, &memory_allocate_info, TG_NULL, &p_pool->device_memory));
                 if (type.propertyFlags & TGVK_MEMORY_HOST)
                 {
+                    // TODO: maybe only map part of the memory, if the block is shared by host and device. i could also allocate two blocks separately and map only one of them.
                     TGVK_CALL(vkMapMemory(device, p_pool->device_memory, 0, VK_WHOLE_SIZE, 0, &p_pool->p_mapped_device_memory));
                 }
                 else
@@ -346,24 +374,44 @@ void tgvk_memory_allocator_shutdown(VkDevice device)
 {
     TG_ASSERT(initialized);
 
+#ifdef TG_DEBUG
+    TG_DEBUG_LOG("+------------------------+\n");
+    TG_DEBUG_LOG("| TGVK MEMORY DEBUG INFO |\n");
+    TG_DEBUG_LOG("+------------------------+\n");
+#endif
+
     for (u32 i = 0; i < memory.pool_count; i++)
     {
 #ifdef TG_DEBUG
         if (memory.p_pools[i].occupied_entry_count != 0)
         {
-            TG_DEBUG_LOG("%u unfreed entries with a total number of %u pages in pool #%u in vulkan allocator!\n", memory.p_pools[i].occupied_entry_count, memory.p_pools[i].occupied_page_count, i);
+            TG_DEBUG_LOG("tgvk_memory_allocator: %u unfreed entries with a total number of %u pages in pool #%u in vulkan allocator!\n", memory.p_pools[i].occupied_entry_count, memory.p_pools[i].occupied_page_count, i);
         }
 #endif
         vkFreeMemory(device, memory.p_pools[i].device_memory, TG_NULL);
     }
+
+#ifdef TG_DEBUG
+#define TGVK_DEBUG_OUTPUT(p_bucket)                      \
+    for (u16 i = 0; i < TG_BUCKET_ENTRY_COUNT; i++)      \
+        if ((p_bucket)->p_memory[i].occupied == TG_TRUE) \
+            TG_DEBUG_LOG("tgvk_memory_allocator: Unfreed allocation from %s in line %u with %u pages!\n", (p_bucket)->p_memory[i].p_filename, (p_bucket)->p_memory[i].line, (p_bucket)->p_memory[i].page_count)
+#else
+#define TGVK_DEBUG_OUTPUT(p_bucket)
+#endif
+
+    TGVK_DEBUG_OUTPUT(&entry_buffer);
     tgvk_memory_entry_bucket* p_bucket = entry_buffer.p_next;
     while (p_bucket)
     {
+        TGVK_DEBUG_OUTPUT(p_bucket);
         tgvk_memory_entry_bucket* p_next = p_bucket->p_next;
         TG_FREE(p_bucket);
         p_bucket = p_next;
     }
     TG_RWL_DESTROY(memory.read_write_lock);
+
+#undef TGVK_DEBUG_OUTPUT
 }
 
 VkDeviceSize tgvk_memory_aligned_size(VkDeviceSize size)
@@ -372,7 +420,11 @@ VkDeviceSize tgvk_memory_aligned_size(VkDeviceSize size)
     return result;
 }
 
-tgvk_memory_block tgvk_memory_allocator_alloc(VkDeviceSize alignment, VkDeviceSize size, u32 memory_type_bits, tgvk_memory_type type)
+tgvk_memory_block tgvk_memory_allocator_alloc(VkDeviceSize alignment, VkDeviceSize size, u32 memory_type_bits, tgvk_memory_type type
+#ifdef TG_DEBUG
+    , u32 line, const char* p_filename
+#endif
+)
 {
     TG_ASSERT(memory_type_bits);
     TG_ASSERT(memory.page_size % alignment == 0 || alignment % memory.page_size == 0);
@@ -396,6 +448,7 @@ tgvk_memory_block tgvk_memory_allocator_alloc(VkDeviceSize alignment, VkDeviceSi
         const b32 is_required_memory_type = (b32)(memory_type_bits & (1 << p_pool->memory_type_bit)) == (1 << p_pool->memory_type_bit);
         const b32 has_required_memory_properties = (p_pool->memory_property_flags & type) == (VkMemoryPropertyFlags)type;
 
+        // TODO: try to find memory that is not shared by host and device, but fits criteria perfectly. use shared only if necessary
         if (is_required_memory_type && has_required_memory_properties)
         {
             tgvk_memory_entry* p_entry = p_pool->p_first_free_entry;
@@ -501,6 +554,8 @@ tgvk_memory_block tgvk_memory_allocator_alloc(VkDeviceSize alignment, VkDeviceSi
                         }
                     }
 #ifdef TG_DEBUG
+                    p_entry->line = line;
+                    tg_strcpy(sizeof(p_entry->p_filename), p_entry->p_filename, p_filename);
 
                     p_pool->occupied_entry_count++;
                     p_pool->occupied_page_count += required_page_count;
@@ -548,6 +603,8 @@ void tgvk_memory_allocator_free(tgvk_memory_block* p_memory_block)
     p_entry->occupied = TG_FALSE;
 
 #ifdef TG_DEBUG
+    p_entry->line = 0;
+    tg_memory_nullify(sizeof(p_entry->p_filename), p_entry->p_filename);
     p_pool->occupied_entry_count--;
     p_pool->occupied_page_count -= p_entry->page_count;
 #endif

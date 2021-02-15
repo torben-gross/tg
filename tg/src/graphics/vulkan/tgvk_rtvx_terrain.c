@@ -49,7 +49,7 @@ tg_rtvx_terrain_h tg_rtvx_terrain_create(void)
 		}
 	}
 
-	h_terrain->voxels = tgvk_image_3d_create(TGVK_IMAGE_TYPE_STORAGE, TG_RTVX_TERRAIN_VX_STRIDE, TG_RTVX_TERRAIN_VX_STRIDE, TG_RTVX_TERRAIN_VX_STRIDE, VK_FORMAT_R8_SINT, TG_NULL);
+	h_terrain->voxels = TGVK_IMAGE_3D_CREATE(TGVK_IMAGE_TYPE_STORAGE, TG_RTVX_TERRAIN_VX_STRIDE, TG_RTVX_TERRAIN_VX_STRIDE, TG_RTVX_TERRAIN_VX_STRIDE, VK_FORMAT_R8_SINT, TG_NULL);
 
 	tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_and_begin_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
 	tgvk_cmd_transition_image_3d_layout(p_command_buffer, &h_terrain->voxels, TGVK_LAYOUT_UNDEFINED, TGVK_LAYOUT_TRANSFER_WRITE);

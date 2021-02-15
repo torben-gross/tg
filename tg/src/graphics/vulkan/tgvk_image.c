@@ -7,7 +7,7 @@ tg_color_image_h tg_color_image_create(u32 width, u32 height, tg_color_image_for
 	TG_ASSERT(width && height);
 
 	tg_color_image_h h_color_image = tgvk_handle_take(TG_STRUCTURE_TYPE_COLOR_IMAGE);
-	h_color_image->image = tgvk_image_create(TGVK_IMAGE_TYPE_COLOR, width, height, (VkFormat)format, p_sampler_create_info);
+	h_color_image->image = TGVK_IMAGE_CREATE(TGVK_IMAGE_TYPE_COLOR, width, height, (VkFormat)format, p_sampler_create_info);
 	return h_color_image;
 }
 
@@ -16,7 +16,7 @@ tg_color_image_h tg_color_image_create2(const char* p_filename, const tg_sampler
 	TG_ASSERT(p_filename);
 
 	tg_color_image_h h_color_image = tgvk_handle_take(TG_STRUCTURE_TYPE_COLOR_IMAGE);
-	h_color_image->image = tgvk_image_create2(TGVK_IMAGE_TYPE_COLOR, p_filename, p_sampler_create_info);
+	h_color_image->image = TGVK_IMAGE_CREATE2(TGVK_IMAGE_TYPE_COLOR, p_filename, p_sampler_create_info);
 	return h_color_image;
 }
 
@@ -82,7 +82,7 @@ tg_storage_image_3d_h tg_storage_image_3d_create(u32 width, u32 height, u32 dept
 	TG_ASSERT(width && height && depth);
 
 	tg_storage_image_3d_h h_storage_image_3d = tgvk_handle_take(TG_STRUCTURE_TYPE_STORAGE_IMAGE_3D);
-	h_storage_image_3d->image_3d = tgvk_image_3d_create(TGVK_IMAGE_TYPE_STORAGE, width, height, depth, (VkFormat)format, p_sampler_create_info);
+	h_storage_image_3d->image_3d = TGVK_IMAGE_3D_CREATE(TGVK_IMAGE_TYPE_STORAGE, width, height, depth, (VkFormat)format, p_sampler_create_info);
 
 	tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_and_begin_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
 	tgvk_cmd_transition_image_3d_layout(p_command_buffer, &h_storage_image_3d->image_3d, TGVK_LAYOUT_UNDEFINED, TGVK_LAYOUT_SHADER_READ_WRITE_CFV);
@@ -124,7 +124,7 @@ tg_cube_map_h tg_cube_map_create(u32 dimension, tg_color_image_format format, co
 
 	tg_cube_map_h h_cube_map = tgvk_handle_take(TG_STRUCTURE_TYPE_CUBE_MAP);
 
-	h_cube_map->cube_map = tgvk_cube_map_create(dimension, (VkFormat)format, p_sampler_create_info);
+	h_cube_map->cube_map = TGVK_CUBE_MAP_CREATE(dimension, (VkFormat)format, p_sampler_create_info);
 
 	tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_and_begin_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
 	tgvk_cmd_transition_cube_map_layout(p_command_buffer, &h_cube_map->cube_map, TGVK_LAYOUT_UNDEFINED, TGVK_LAYOUT_SHADER_READ_CFV);
@@ -164,7 +164,7 @@ tg_depth_image_h tg_depth_image_create(u32 width, u32 height, tg_depth_image_for
 	TG_ASSERT(width && height);
 
 	tg_depth_image_h h_depth_image = tgvk_handle_take(TG_STRUCTURE_TYPE_DEPTH_IMAGE);
-	h_depth_image->image = tgvk_image_create(TGVK_IMAGE_TYPE_DEPTH, width, height, (VkFormat)format, p_sampler_create_info);
+	h_depth_image->image = TGVK_IMAGE_CREATE(TGVK_IMAGE_TYPE_DEPTH, width, height, (VkFormat)format, p_sampler_create_info);
 	return h_depth_image;
 }
 
