@@ -3225,7 +3225,7 @@ static void tg__command_pool_destroy(VkCommandPool command_pool)
 
 static b32 tg__physical_device_supports_required_queue_families(VkPhysicalDevice pd)
 {
-    u32 queue_family_property_count;
+    u32 queue_family_property_count = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(pd, &queue_family_property_count, TG_NULL);
     if (queue_family_property_count == 0)
     {
@@ -3253,77 +3253,142 @@ static b32 tg__physical_device_supports_required_queue_families(VkPhysicalDevice
     return result;
 }
 
-static void tg__physical_device_find_queue_family_indices(VkPhysicalDevice pd, u32* p_compute_queue_index, u32* p_graphics_queue_index, u32* p_present_queue_index, u32* p_compute_queue_low_prio_index, u32* p_graphics_queue_low_prio_index)
+static void tg__physical_device_find_queue_family_indices(void)
 {
-    TG_ASSERT(tg__physical_device_supports_required_queue_families(pd));
+    TG_ASSERT(tg__physical_device_supports_required_queue_families(physical_device));
+
+    p_queues[TGVK_QUEUE_TYPE_COMPUTE].queue_family_index = TG_U32_MAX;
+    p_queues[TGVK_QUEUE_TYPE_GRAPHICS].queue_family_index = TG_U32_MAX;
+    p_queues[TGVK_QUEUE_TYPE_PRESENT].queue_family_index = TG_U32_MAX;
+    p_queues[TGVK_QUEUE_TYPE_COMPUTE_LOW_PRIORITY].queue_family_index = TG_U32_MAX;
+    p_queues[TGVK_QUEUE_TYPE_GRAPHICS_LOW_PRIORITY].queue_family_index = TG_U32_MAX;
 
     u32 queue_family_property_count;
-    vkGetPhysicalDeviceQueueFamilyProperties(pd, &queue_family_property_count, TG_NULL);
+    vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_property_count, TG_NULL);
     TG_ASSERT(queue_family_property_count);
     const tg_size queue_family_properties_size = (tg_size)queue_family_property_count * sizeof(VkQueueFamilyProperties);
     VkQueueFamilyProperties* p_queue_family_properties = TG_MALLOC_STACK(queue_family_properties_size);
-    vkGetPhysicalDeviceQueueFamilyProperties(pd, &queue_family_property_count, p_queue_family_properties);
+    vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_property_count, p_queue_family_properties);
 
     b32 resolved = TG_FALSE;
+    u32 best_idx = TG_U32_MAX;
+    u32 best_count = 0;
     for (u32 i = 0; i < queue_family_property_count; i++)
     {
         const b32 supports_graphics_family = (p_queue_family_properties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0;
         VkBool32 spf = VK_FALSE;
-        TGVK_CALL(vkGetPhysicalDeviceSurfaceSupportKHR(pd, i, surface.surface, &spf));
+        TGVK_CALL(vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, i, surface.surface, &spf));
         const b32 supports_present_family = spf != 0;
         const b32 supports_compute_family = (p_queue_family_properties[i].queueFlags & VK_QUEUE_COMPUTE_BIT) != 0;
     
-        if (supports_graphics_family && supports_present_family && supports_compute_family && p_queue_family_properties[i].queueCount >= TGVK_QUEUE_TYPE_COUNT)
+        if (supports_graphics_family && supports_present_family && supports_compute_family)
         {
-            *p_compute_queue_index = i;
-            *p_graphics_queue_index = i;
-            *p_present_queue_index = i;
-            *p_compute_queue_low_prio_index = i;
-            *p_graphics_queue_low_prio_index = i;
-            resolved = TG_TRUE;
-            break;
+            if (p_queue_family_properties[i].queueCount >= TGVK_QUEUE_TYPE_COUNT)
+            {
+                p_queues[TGVK_QUEUE_TYPE_COMPUTE].queue_family_index = i;
+                p_queues[TGVK_QUEUE_TYPE_GRAPHICS].queue_family_index = i;
+                p_queues[TGVK_QUEUE_TYPE_PRESENT].queue_family_index = i;
+                p_queues[TGVK_QUEUE_TYPE_COMPUTE_LOW_PRIORITY].queue_family_index = i;
+                p_queues[TGVK_QUEUE_TYPE_GRAPHICS_LOW_PRIORITY].queue_family_index = i;
+
+                resolved = TG_TRUE;
+                break;
+            }
+            else if (p_queue_family_properties[i].queueCount > best_count)
+            {
+                best_idx = i;
+                best_count = p_queue_family_properties[i].queueCount;
+            }
         }
     }
 
     if (!resolved)
     {
-        b32 supports_graphics_family = TG_FALSE;
-        b32 supports_present_family = TG_FALSE;
-        b32 supports_compute_family = TG_FALSE;
-
-        for (u32 i = 0; i < queue_family_property_count; i++)
+        if (best_idx != TG_U32_MAX)
         {
-            if (!supports_graphics_family)
+            resolved = TG_TRUE;
+
+            p_queues[TGVK_QUEUE_TYPE_COMPUTE].queue_family_index = best_idx;
+            p_queues[TGVK_QUEUE_TYPE_GRAPHICS].queue_family_index = best_idx;
+            p_queues[TGVK_QUEUE_TYPE_PRESENT].queue_family_index = best_idx;
+            p_queues[TGVK_QUEUE_TYPE_COMPUTE_LOW_PRIORITY].queue_family_index = best_idx;
+            p_queues[TGVK_QUEUE_TYPE_GRAPHICS_LOW_PRIORITY].queue_family_index = best_idx;
+        }
+        else
+        {
+            b32 supports_compute_family = TG_FALSE;
+            b32 supports_graphics_family = TG_FALSE;
+            b32 supports_present_family = TG_FALSE;
+
+            u32 best_compute_idx = TG_U32_MAX;
+            u32 best_graphics_idx = TG_U32_MAX;
+
+            u32 best_compute_count = 0;
+            u32 best_graphics_count = 0;
+
+            for (u32 i = 0; i < queue_family_property_count; i++)
             {
-                supports_graphics_family |= (p_queue_family_properties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0;
-                if (supports_graphics_family)
+                if (!supports_compute_family && (p_queue_family_properties[i].queueFlags & VK_QUEUE_COMPUTE_BIT) != 0)
                 {
-                    *p_graphics_queue_index = i;
+                    if (p_queue_family_properties[i].queueCount >= 2)
+                    {
+                        supports_compute_family = TG_TRUE;
+                        p_queues[TGVK_QUEUE_TYPE_COMPUTE].queue_family_index = i;
+                        p_queues[TGVK_QUEUE_TYPE_COMPUTE_LOW_PRIORITY].queue_family_index = i;
+                    }
+                    else
+                    {
+                        best_compute_idx = i;
+                        best_compute_count = p_queue_family_properties[i].queueCount;
+                    }
                 }
-            }
-            if (!supports_present_family)
-            {
-                VkBool32 spf = VK_FALSE;
-                TGVK_CALL(vkGetPhysicalDeviceSurfaceSupportKHR(pd, i, surface.surface, &spf));
-                supports_present_family |= spf != 0;
-                if (supports_present_family)
+                if (!supports_graphics_family && (p_queue_family_properties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0)
                 {
-                    *p_present_queue_index = i;
+                    if (p_queue_family_properties[i].queueCount >= 2)
+                    {
+                        supports_graphics_family = TG_TRUE;
+                        p_queues[TGVK_QUEUE_TYPE_GRAPHICS].queue_family_index = i;
+                        p_queues[TGVK_QUEUE_TYPE_GRAPHICS_LOW_PRIORITY].queue_family_index = i;
+                    }
+                    else
+                    {
+                        best_graphics_idx = i;
+                        best_graphics_count = p_queue_family_properties[i].queueCount;
+                    }
                 }
-            }
-            if (!supports_compute_family)
-            {
-                supports_compute_family |= (p_queue_family_properties[i].queueFlags & VK_QUEUE_COMPUTE_BIT) != 0;
-                if (supports_compute_family)
+                if (!supports_present_family)
                 {
-                    *p_compute_queue_index = i;
+                    VkBool32 spf = VK_FALSE;
+                    TGVK_CALL(vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, i, surface.surface, &spf));
+                    if (spf == VK_TRUE)
+                    {
+                        supports_present_family = TG_TRUE;
+                        p_queues[TGVK_QUEUE_TYPE_PRESENT].queue_family_index = i;
+                    }
+                }
+
+                if (supports_graphics_family && supports_present_family && supports_compute_family)
+                {
+                    resolved = TG_TRUE;
+                    break;
                 }
             }
 
-            if (supports_graphics_family && supports_present_family && supports_compute_family)
+            if (!resolved)
             {
-                resolved = TG_TRUE;
-                break;
+                if (!supports_compute_family)
+                {
+                    TG_ASSERT(best_compute_idx != TG_U32_MAX);
+                    p_queues[TGVK_QUEUE_TYPE_COMPUTE].queue_family_index = best_compute_idx;
+                    p_queues[TGVK_QUEUE_TYPE_COMPUTE_LOW_PRIORITY].queue_family_index = best_compute_idx;
+                }
+                if (!supports_graphics_family)
+                {
+                    TG_ASSERT(best_graphics_idx != TG_U32_MAX);
+                    p_queues[TGVK_QUEUE_TYPE_GRAPHICS].queue_family_index = best_graphics_idx;
+                    p_queues[TGVK_QUEUE_TYPE_GRAPHICS_LOW_PRIORITY].queue_family_index = best_graphics_idx;
+                }
+                TG_ASSERT(supports_present_family);
             }
         }
     }
@@ -3575,14 +3640,6 @@ static VkPhysicalDevice tg__physical_device_create(void)
     TG_ASSERT(pd != VK_NULL_HANDLE);
 
     TG_FREE_STACK(physical_devices_size);
-    tg__physical_device_find_queue_family_indices(
-        pd,
-        &p_queues[0].queue_family_index,
-        &p_queues[1].queue_family_index,
-        &p_queues[2].queue_family_index,
-        &p_queues[3].queue_family_index,
-        &p_queues[4].queue_family_index
-    );
 
     return pd;
 }
@@ -3595,26 +3652,37 @@ static VkDevice tg__device_create(void)
     f32 pp_queue_priorities[TGVK_QUEUE_TYPE_COUNT][TGVK_QUEUE_TYPE_COUNT] = { 0 };
     VkDeviceQueueCreateInfo p_device_queue_create_infos[TGVK_QUEUE_TYPE_COUNT] = { 0 };
 
+    tg__physical_device_find_queue_family_indices();
+
     for (u8 i = 0; i < TGVK_QUEUE_TYPE_COUNT; i++)
     {
         p_device_queue_create_infos[i].queueFamilyIndex = TG_U32_MAX;
     }
+
+    // TODO: inline 'tg__physical_device_find_queue_family_indices' to remove redundant code below
+    u32 queue_family_property_count = 0;
+    vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_property_count, TG_NULL);
+    TG_ASSERT(queue_family_property_count);
+    const tg_size queue_family_properties_size = (tg_size)queue_family_property_count * sizeof(VkQueueFamilyProperties);
+    VkQueueFamilyProperties* p_queue_family_properties = TG_MALLOC_STACK(queue_family_properties_size);
 
     u32 device_queue_create_info_count = 0;
     for (u8 i = 0; i < TGVK_QUEUE_TYPE_COUNT; i++)
     {
         p_queues[i].priority = p_queue_priorities[i];
 
-        b32 found = TG_FALSE;
+        b32 queue_submitted = TG_FALSE;
         for (u8 j = 0; j < device_queue_create_info_count; j++)
         {
-            if (p_device_queue_create_infos[j].queueFamilyIndex == p_queues[i].queue_family_index)
+            VkDeviceQueueCreateInfo* p_info = &p_device_queue_create_infos[j];
+
+            if (p_info->queueFamilyIndex == p_queues[i].queue_family_index)
             {
-                found = TG_TRUE;
+                queue_submitted = TG_TRUE;
                 b32 priority_submitted = TG_FALSE;
                 for (u32 k = 0; k < TGVK_QUEUE_TYPE_COUNT; k++)
                 {
-                    if (p_device_queue_create_infos[j].pQueuePriorities[k] == p_queue_priorities[i])
+                    if (p_info->pQueuePriorities[k] == p_queue_priorities[i])
                     {
                         priority_submitted = TG_TRUE;
                         p_queues[i].queue_index = k;
@@ -3623,14 +3691,22 @@ static VkDevice tg__device_create(void)
                 }
                 if (!priority_submitted)
                 {
-                    pp_queue_priorities[j][p_device_queue_create_infos[j].queueCount] = p_queue_priorities[i];
-                    p_queues[i].queue_index = p_device_queue_create_infos[j].queueCount++;
+                    if (p_info->queueCount < p_queue_family_properties[p_info->queueFamilyIndex].queueCount)
+                    {
+                        pp_queue_priorities[j][p_info->queueCount] = p_queue_priorities[i];
+                        p_queues[i].queue_index = p_info->queueCount++;
+                    }
+                    else
+                    {
+                        p_queues[i].queue_index = p_info->queueCount - 1;
+                        p_queues[i].priority = pp_queue_priorities[j][p_queues[i].queue_index];
+                    }
                 }
                 break;
             }
         }
 
-        if (!found)
+        if (!queue_submitted)
         {
             p_device_queue_create_infos[device_queue_create_info_count].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
             p_device_queue_create_infos[device_queue_create_info_count].pNext = TG_NULL;
@@ -3644,6 +3720,8 @@ static VkDevice tg__device_create(void)
             device_queue_create_info_count++;
         }
     }
+
+    TG_FREE_STACK(queue_family_properties_size);
 
     VkPhysicalDeviceFeatures physical_device_features = { 0 };
     physical_device_features.robustBufferAccess = VK_FALSE;
