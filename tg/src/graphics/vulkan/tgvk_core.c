@@ -1788,9 +1788,12 @@ void tgvk_framebuffers_destroy(u32 count, tgvk_framebuffer* p_framebuffers)
 
 
 
-void tgvk_get_physical_device_format_properties(VkFormat format, TG_OUT VkFormatProperties* p_format_properties)
+b32 tgvk_get_physical_device_image_format_properties(VkFormat format, VkImageType type, VkImageTiling tiling, VkImageUsageFlags usage, VkImageCreateFlags flags, TG_OUT VkImageFormatProperties* p_image_format_properties)
 {
-    vkGetPhysicalDeviceFormatProperties(physical_device, format, p_format_properties);
+    const VkResult vk_result = vkGetPhysicalDeviceImageFormatProperties(physical_device, format, type, tiling, usage, flags, p_image_format_properties);
+    TG_ASSERT(vk_result == VK_ERROR_FORMAT_NOT_SUPPORTED || vk_result == VK_SUCCESS);
+    const b32 result = vk_result == VK_SUCCESS;
+    return result;
 }
 
 

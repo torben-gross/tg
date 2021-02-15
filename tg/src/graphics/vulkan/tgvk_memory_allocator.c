@@ -80,6 +80,24 @@
         }                                                                                                               \
     }
 
+#ifdef TG_DEBUG
+#define TG_VALIDATE_LINKAGE(p_entry) \
+    if ((p_entry)->p_prev)                                                                           \
+    {                                                                                                \
+        const tgvk_memory_entry* p_prev_entry = (p_entry)->p_prev;                                   \
+        TG_ASSERT(p_prev_entry->p_next == (p_entry));                                                \
+        TG_ASSERT(p_prev_entry->offset_pages + p_prev_entry->page_count == (p_entry)->offset_pages); \
+    }                                                                                                \
+    if ((p_entry)->p_next)                                                                           \
+    {                                                                                                \
+        const tgvk_memory_entry* p_next_entry = (p_entry)->p_next;                                   \
+        TG_ASSERT(p_next_entry->p_prev == (p_entry));                                                \
+        TG_ASSERT((p_entry)->offset_pages + (p_entry)->page_count == p_next_entry->offset_pages);    \
+    }
+#else
+#define TG_VALIDATE_LINKAGE(p_entry)
+#endif
+
 #define TG_REINSERT_FREE(p_pool, p_entry) \
     TG_CUT_FREE(p_pool, p_entry);         \
     TG_INSERT_FREE(p_pool, p_entry)
@@ -262,57 +280,60 @@ void tgvk_memory_allocator_init(VkDevice device, VkPhysicalDevice physical_devic
             optimal_allocation_size = TG_CEIL_TO_MULTIPLE(optimal_allocation_size, memory.page_size);
 
             // Note: It is recommended to only use up to 80 percent of each heap.
-            const VkDeviceSize max_usable_heap_memory = properties.memoryHeaps[type.heapIndex].size * 8 / 10;
-            const VkDeviceSize remaining_heap_size = TG_MIN(max_usable_heap_memory, p_remaining_heap_sizes[type.heapIndex]);
+            const VkDeviceSize min_heap_remainder = properties.memoryHeaps[type.heapIndex].size * 2 / 10;
+            const VkDeviceSize max_usable_heap_memory = properties.memoryHeaps[type.heapIndex].size - min_heap_remainder;
+            const VkDeviceSize remaining_heap_size = TG_MIN(max_usable_heap_memory, p_remaining_heap_sizes[type.heapIndex] - min_heap_remainder);
 
             VkDeviceSize allocation_size = TG_MIN(optimal_allocation_size, remaining_heap_size);
-            TG_ASSERT(allocation_size);
-            p_remaining_heap_sizes[type.heapIndex] -= allocation_size;
+            if (allocation_size > 0)
+            {
+                p_remaining_heap_sizes[type.heapIndex] -= allocation_size;
 
-            TG_ASSERT(allocation_size / memory.page_size <= TG_U32_MAX);
-            const u32 page_count = (u32)(allocation_size / memory.page_size);
+                TG_ASSERT(allocation_size / memory.page_size <= TG_U32_MAX);
+                const u32 page_count = (u32)(allocation_size / memory.page_size);
 
-            tgvk_memory_pool* p_pool = &memory.p_pools[memory.pool_count];
+                tgvk_memory_pool* p_pool = &memory.p_pools[memory.pool_count];
 
-            p_pool->memory_property_flags = type.propertyFlags;
-            p_pool->memory_type_bit = i;
-            p_pool->page_count = page_count;
-            p_pool->p_first_free_entry = tg__alloc_entry();
-            p_pool->p_first_free_entry->occupied = TG_FALSE;
-            p_pool->p_first_free_entry->pool_index = memory.pool_count;
-            p_pool->p_first_free_entry->offset_pages = 0;
-            p_pool->p_first_free_entry->page_count = page_count;
-            p_pool->p_first_free_entry->p_prev = TG_NULL;
-            p_pool->p_first_free_entry->p_next = TG_NULL;
-            p_pool->p_first_free_entry->p_prev_free = TG_NULL;
-            p_pool->p_first_free_entry->p_next_free = TG_NULL;
+                p_pool->memory_property_flags = type.propertyFlags;
+                p_pool->memory_type_bit = i;
+                p_pool->page_count = page_count;
+                p_pool->p_first_free_entry = tg__alloc_entry();
+                p_pool->p_first_free_entry->occupied = TG_FALSE;
+                p_pool->p_first_free_entry->pool_index = memory.pool_count;
+                p_pool->p_first_free_entry->offset_pages = 0;
+                p_pool->p_first_free_entry->page_count = page_count;
+                p_pool->p_first_free_entry->p_prev = TG_NULL;
+                p_pool->p_first_free_entry->p_next = TG_NULL;
+                p_pool->p_first_free_entry->p_prev_free = TG_NULL;
+                p_pool->p_first_free_entry->p_next_free = TG_NULL;
 
 #ifdef TG_DEBUG
-            p_pool->occupied_entry_count = 0;
-            p_pool->occupied_page_count = 0;
-            p_pool->free_entry_count = 1;
-            p_pool->max_occupied_entry_count = 0;
-            p_pool->max_occupied_page_count = 0;
-            p_pool->max_free_entry_count = 1;
+                p_pool->occupied_entry_count = 0;
+                p_pool->occupied_page_count = 0;
+                p_pool->free_entry_count = 1;
+                p_pool->max_occupied_entry_count = 0;
+                p_pool->max_occupied_page_count = 0;
+                p_pool->max_free_entry_count = 1;
 #endif
 
-            VkMemoryAllocateInfo memory_allocate_info = { 0 };
-            memory_allocate_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-            memory_allocate_info.pNext = TG_NULL;
-            memory_allocate_info.allocationSize = allocation_size;
-            memory_allocate_info.memoryTypeIndex = i;
+                VkMemoryAllocateInfo memory_allocate_info = { 0 };
+                memory_allocate_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+                memory_allocate_info.pNext = TG_NULL;
+                memory_allocate_info.allocationSize = allocation_size;
+                memory_allocate_info.memoryTypeIndex = i;
 
-            TGVK_CALL(vkAllocateMemory(device, &memory_allocate_info, TG_NULL, &p_pool->device_memory));
-            if (type.propertyFlags & TGVK_MEMORY_HOST)
-            {
-                TGVK_CALL(vkMapMemory(device, p_pool->device_memory, 0, VK_WHOLE_SIZE, 0, &p_pool->p_mapped_device_memory));
-            }
-            else
-            {
-                p_pool->p_mapped_device_memory = TG_NULL;
-            }
+                TGVK_CALL(vkAllocateMemory(device, &memory_allocate_info, TG_NULL, &p_pool->device_memory));
+                if (type.propertyFlags & TGVK_MEMORY_HOST)
+                {
+                    TGVK_CALL(vkMapMemory(device, p_pool->device_memory, 0, VK_WHOLE_SIZE, 0, &p_pool->p_mapped_device_memory));
+                }
+                else
+                {
+                    p_pool->p_mapped_device_memory = TG_NULL;
+                }
 
-            memory.pool_count++;
+                memory.pool_count++;
+            }
         }
     }
 
@@ -358,7 +379,7 @@ tgvk_memory_block tgvk_memory_allocator_alloc(VkDeviceSize alignment, VkDeviceSi
 
     tgvk_memory_block memory_block = { 0 };
 
-    const u32 alignment_pages = alignment <= memory.page_size ? 1 : (u32)(alignment % memory.page_size);
+    const u32 alignment_pages = alignment <= memory.page_size ? 1 : (u32)(alignment / memory.page_size);
     const VkDeviceSize aligned_size = TG_CEIL_TO_MULTIPLE(size, memory.page_size);
     u32 required_page_count = (u32)(aligned_size / memory.page_size);
     if (required_page_count < TGVK_CEIL_TO_POW2_LIMIT)
@@ -384,7 +405,7 @@ tgvk_memory_block tgvk_memory_allocator_alloc(VkDeviceSize alignment, VkDeviceSi
 
                 const u32 offset_pages = (alignment_pages - p_entry->offset_pages % alignment_pages) % alignment_pages;
 
-                if (p_entry->page_count - offset_pages >= required_page_count)
+                if (p_entry->page_count >= required_page_count + offset_pages)
                 {
                     if (offset_pages > 0)
                     {
@@ -409,32 +430,37 @@ tgvk_memory_block tgvk_memory_allocator_alloc(VkDeviceSize alignment, VkDeviceSi
                         }
                         else
                         {
-                            tgvk_memory_entry* p_new_prev_entry = tg__alloc_entry();
+                            tgvk_memory_entry* p_entry0 = p_entry->p_prev;
+                            tgvk_memory_entry* p_entry1 = tg__alloc_entry();
+                            tgvk_memory_entry* p_entry2 = tg__alloc_entry();
+                            tgvk_memory_entry* p_entry3 = p_entry;
 
-                            p_new_prev_entry->occupied = TG_FALSE;
-                            p_new_prev_entry->pool_index = i;
-                            p_new_prev_entry->offset_pages = p_entry->offset_pages;
-                            p_new_prev_entry->page_count = offset_pages;
+                            p_entry1->occupied = TG_FALSE;
+                            p_entry1->pool_index = i;
+                            p_entry1->offset_pages = p_entry->offset_pages;
+                            p_entry1->page_count = offset_pages;
 
-                            tgvk_memory_entry* p_new_entry = tg__alloc_entry();
+                            p_entry2->occupied = TG_TRUE;
+                            p_entry2->pool_index = i;
+                            p_entry2->offset_pages = p_entry->offset_pages + offset_pages;
+                            p_entry2->page_count = required_page_count;
+                            p_entry2->p_prev_free = TG_NULL;
+                            p_entry2->p_next_free = TG_NULL;
 
-                            p_new_entry->occupied = TG_TRUE;
-                            p_new_entry->pool_index = i;
-                            p_new_entry->offset_pages = p_entry->offset_pages + offset_pages;
-                            p_new_entry->page_count = required_page_count;
-                            p_new_entry->p_prev_free = TG_NULL;
-                            p_new_entry->p_next_free = TG_NULL;
+                            p_entry3->offset_pages += offset_pages + required_page_count;
+                            p_entry3->page_count -= offset_pages - required_page_count;
 
-                            p_entry->offset_pages += offset_pages + required_page_count;
-                            p_entry->page_count -= offset_pages - required_page_count;
-
-                            TG_LINK(p_entry->p_prev, p_new_prev_entry);
-                            TG_LINK(p_new_prev_entry, p_new_entry);
-                            TG_LINK(p_new_entry, p_entry);
+                            TG_LINK(p_entry0, p_entry1);
+                            TG_LINK(p_entry1, p_entry2);
+                            TG_LINK(p_entry2, p_entry3);
+                            TG_VALIDATE_LINKAGE(p_entry0);
+                            TG_VALIDATE_LINKAGE(p_entry1);
+                            TG_VALIDATE_LINKAGE(p_entry2);
+                            TG_VALIDATE_LINKAGE(p_entry3);
                             TG_REINSERT_FREE(p_pool, p_entry);
-                            TG_INSERT_FREE(p_pool, p_new_prev_entry);
+                            TG_INSERT_FREE(p_pool, p_entry1);
 
-                            p_entry = p_new_entry;
+                            p_entry = p_entry2;
                         }
                     }
                     else
@@ -455,6 +481,8 @@ tgvk_memory_block tgvk_memory_allocator_alloc(VkDeviceSize alignment, VkDeviceSi
 
                             TG_LINK(p_entry->p_prev, p_new_entry);
                             TG_LINK(p_new_entry, p_entry);
+                            TG_VALIDATE_LINKAGE(p_entry);
+                            TG_VALIDATE_LINKAGE(p_new_entry);
                             TG_REINSERT_FREE(p_pool, p_entry);
 
                             p_entry = p_new_entry;
@@ -509,6 +537,7 @@ void tgvk_memory_allocator_free(tgvk_memory_block* p_memory_block)
     TG_ASSERT(p_memory_block);
 
     tgvk_memory_entry* p_entry = p_memory_block->p_entry;
+    TG_VALIDATE_LINKAGE(p_entry);
     TG_ASSERT(p_entry->occupied);
     TG_ASSERT(p_entry->p_prev_free == TG_NULL);
     TG_ASSERT(p_entry->p_next_free == TG_NULL);
@@ -529,8 +558,9 @@ void tgvk_memory_allocator_free(tgvk_memory_block* p_memory_block)
         tgvk_memory_entry* p_prev = p_entry->p_prev;
         
         p_prev->page_count += p_entry->page_count;
-        
+
         TG_CUT(p_entry);
+        TG_VALIDATE_LINKAGE(p_entry);
         
         tg__free_entry(p_entry);
         p_entry = p_prev;
@@ -549,6 +579,7 @@ void tgvk_memory_allocator_free(tgvk_memory_block* p_memory_block)
         p_next->page_count += p_entry->page_count;
 
         TG_CUT(p_entry);
+        TG_VALIDATE_LINKAGE(p_entry);
         TG_CUT_FREE(p_pool, p_entry);
 
         tg__free_entry(p_entry);

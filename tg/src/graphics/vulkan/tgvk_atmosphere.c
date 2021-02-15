@@ -954,17 +954,24 @@ void tgvk_atmosphere_model_create(TG_OUT tgvk_atmosphere_model* p_model)
 	p_model->rendering.transmittance_texture = tgvk_image_create(TGVK_IMAGE_TYPE_COLOR, TG_TRANSMITTANCE_TEXTURE_WIDTH, TG_TRANSMITTANCE_TEXTURE_HEIGHT, VK_FORMAT_R32G32B32A32_SFLOAT, &sampler_create_info);
 
 	VkFormat layered_image_format = VK_FORMAT_UNDEFINED;
-	const VkFormatFeatureFlags layered_image_required_flags = VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT | VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT;
-	VkFormatProperties format_properties = { 0 };
+	VkImageFormatProperties image_format_properties = { 0 };
 	if (p_model->settings.use_half_precision)
 	{
-		tgvk_get_physical_device_format_properties(VK_FORMAT_R16G16B16_SFLOAT, &format_properties);
-		layered_image_format = format_properties.optimalTilingFeatures & layered_image_required_flags ? VK_FORMAT_R16G16B16_SFLOAT : VK_FORMAT_R16G16B16A16_SFLOAT;
+		if (tgvk_get_physical_device_image_format_properties(VK_FORMAT_R16G16B16_SFLOAT, VK_IMAGE_TYPE_2D, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT, &image_format_properties))
+		{
+			layered_image_format = VK_FORMAT_R16G16B16_SFLOAT;
+		}
+		else
+		{
+			TG_ASSERT(tgvk_get_physical_device_image_format_properties(VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_TYPE_2D, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT, &image_format_properties));
+			layered_image_format = VK_FORMAT_R16G16B16A16_SFLOAT;
+		}
 	}
 	else
 	{
-		tgvk_get_physical_device_format_properties(VK_FORMAT_R32G32B32_SFLOAT, &format_properties);
-		layered_image_format = format_properties.optimalTilingFeatures & layered_image_required_flags ? VK_FORMAT_R32G32B32_SFLOAT : VK_FORMAT_R32G32B32A32_SFLOAT;
+		//tgvk_get_physical_device_format_properties(VK_FORMAT_R32G32B32_SFLOAT, &format_properties);
+		//layered_image_format = format_properties.optimalTilingFeatures & layered_image_required_flags ? VK_FORMAT_R32G32B32_SFLOAT : VK_FORMAT_R32G32B32A32_SFLOAT;
+		TG_NOT_IMPLEMENTED();
 	}
 
 	p_model->rendering.scattering_texture = tgvk_layered_image_create(

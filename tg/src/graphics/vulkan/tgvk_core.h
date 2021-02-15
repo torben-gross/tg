@@ -666,7 +666,7 @@ tgvk_framebuffer        tgvk_framebuffer_create_layered(VkRenderPass render_pass
 void                    tgvk_framebuffer_destroy(tgvk_framebuffer* p_framebuffer);
 void                    tgvk_framebuffers_destroy(u32 count, tgvk_framebuffer* p_framebuffers);
 
-void                    tgvk_get_physical_device_format_properties(VkFormat format, TG_OUT VkFormatProperties* p_format_properties);
+b32                     tgvk_get_physical_device_image_format_properties(VkFormat format, VkImageType type, VkImageTiling tiling, VkImageUsageFlags usage, VkImageCreateFlags flags, TG_OUT VkImageFormatProperties* p_image_format_properties);
 
 tgvk_buffer*            tgvk_global_staging_buffer_take(VkDeviceSize size);
 void                    tgvk_global_staging_buffer_release(void);
