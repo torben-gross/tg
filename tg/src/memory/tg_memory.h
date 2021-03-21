@@ -10,8 +10,8 @@
 #define TG_FREE(p_memory)                            tg_memory_free_impl(p_memory)
 #else
 #define TG_MALLOC(size)                              tgp_malloc(size)
-#define TG_REALLOC(size, p_mapped_device_memory)     tgp_realloc(size, p_mapped_device_memory)
-#define TG_FREE(p_mapped_device_memory)              tgp_free(p_mapped_device_memory)
+#define TG_REALLOC(size, p_memory)                   tgp_realloc(size, p_memory)
+#define TG_FREE(p_memory)                            tgp_free(p_memory)
 #endif
 
 #define TG_MALLOC_STACK(size)                        tg_memory_stack_alloc(size)

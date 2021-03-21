@@ -111,7 +111,7 @@ static void tg__game_3d_create(void)
     scene.p_terrain = tg_terrain_create(&scene.camera);
     scene.h_terrain = tg_rtvx_terrain_create();
     scene.h_ray_tracer = tg_ray_tracer_create(&scene.camera);
-    tg_ray_tracer_push_static(scene.h_ray_tracer, scene.h_terrain);
+    tg_ray_tracer_push_static(scene.h_ray_tracer, tg_ray_trace_command_create(TG_NULL, V3(0.0f), (tg_storage_image_3d_h)scene.h_terrain));
 
 
 

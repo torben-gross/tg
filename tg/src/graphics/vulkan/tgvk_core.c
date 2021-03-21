@@ -84,6 +84,7 @@ TGVK_DEFINE_STRUCTURE_BUFFER(font, TG_MAX_FONTS);
 TGVK_DEFINE_STRUCTURE_BUFFER(fragment_shader, TG_MAX_FRAGMENT_SHADERS);
 TGVK_DEFINE_STRUCTURE_BUFFER(material, TG_MAX_MATERIALS);
 TGVK_DEFINE_STRUCTURE_BUFFER(mesh, TG_MAX_MESHES);
+TGVK_DEFINE_STRUCTURE_BUFFER(ray_trace_command, TG_MAX_RAY_TRACE_COMMANDS);
 TGVK_DEFINE_STRUCTURE_BUFFER(ray_tracer, TG_MAX_RAY_TRACERS);
 TGVK_DEFINE_STRUCTURE_BUFFER(render_command, TG_MAX_RENDER_COMMANDS);
 TGVK_DEFINE_STRUCTURE_BUFFER(renderer, TG_MAX_RENDERERS);
@@ -1847,21 +1848,22 @@ void* tgvk_handle_array(tg_structure_type type)
 
     switch (type)
     {
-    case TG_STRUCTURE_TYPE_COLOR_IMAGE:      p_array = TGVK_STRUCTURE_BUFFER_NAME(color_image);      break;
-    case TG_STRUCTURE_TYPE_COMPUTE_SHADER:   p_array = TGVK_STRUCTURE_BUFFER_NAME(compute_shader);   break;
-    case TG_STRUCTURE_TYPE_CUBE_MAP:         p_array = TGVK_STRUCTURE_BUFFER_NAME(cube_map);         break;
-    case TG_STRUCTURE_TYPE_DEPTH_IMAGE:      p_array = TGVK_STRUCTURE_BUFFER_NAME(depth_image);      break;
-    case TG_STRUCTURE_TYPE_FONT:             p_array = TGVK_STRUCTURE_BUFFER_NAME(font);             break;
-    case TG_STRUCTURE_TYPE_FRAGMENT_SHADER:  p_array = TGVK_STRUCTURE_BUFFER_NAME(fragment_shader);  break;
-    case TG_STRUCTURE_TYPE_MATERIAL:         p_array = TGVK_STRUCTURE_BUFFER_NAME(material);         break;
-    case TG_STRUCTURE_TYPE_MESH:             p_array = TGVK_STRUCTURE_BUFFER_NAME(mesh);             break;
-    case TG_STRUCTURE_TYPE_RAY_TRACER:       p_array = TGVK_STRUCTURE_BUFFER_NAME(ray_tracer);       break;
-    case TG_STRUCTURE_TYPE_RENDER_COMMAND:   p_array = TGVK_STRUCTURE_BUFFER_NAME(render_command);   break;
-    case TG_STRUCTURE_TYPE_RENDERER:         p_array = TGVK_STRUCTURE_BUFFER_NAME(renderer);         break;
-    case TG_STRUCTURE_TYPE_STORAGE_BUFFER:   p_array = TGVK_STRUCTURE_BUFFER_NAME(storage_buffer);   break;
-    case TG_STRUCTURE_TYPE_STORAGE_IMAGE_3D: p_array = TGVK_STRUCTURE_BUFFER_NAME(storage_image_3d); break;
-    case TG_STRUCTURE_TYPE_UNIFORM_BUFFER:   p_array = TGVK_STRUCTURE_BUFFER_NAME(uniform_buffer);   break;
-    case TG_STRUCTURE_TYPE_VERTEX_SHADER:    p_array = TGVK_STRUCTURE_BUFFER_NAME(vertex_shader);    break;
+    case TG_STRUCTURE_TYPE_COLOR_IMAGE:       p_array = TGVK_STRUCTURE_BUFFER_NAME(color_image);       break;
+    case TG_STRUCTURE_TYPE_COMPUTE_SHADER:    p_array = TGVK_STRUCTURE_BUFFER_NAME(compute_shader);    break;
+    case TG_STRUCTURE_TYPE_CUBE_MAP:          p_array = TGVK_STRUCTURE_BUFFER_NAME(cube_map);          break;
+    case TG_STRUCTURE_TYPE_DEPTH_IMAGE:       p_array = TGVK_STRUCTURE_BUFFER_NAME(depth_image);       break;
+    case TG_STRUCTURE_TYPE_FONT:              p_array = TGVK_STRUCTURE_BUFFER_NAME(font);              break;
+    case TG_STRUCTURE_TYPE_FRAGMENT_SHADER:   p_array = TGVK_STRUCTURE_BUFFER_NAME(fragment_shader);   break;
+    case TG_STRUCTURE_TYPE_MATERIAL:          p_array = TGVK_STRUCTURE_BUFFER_NAME(material);          break;
+    case TG_STRUCTURE_TYPE_MESH:              p_array = TGVK_STRUCTURE_BUFFER_NAME(mesh);              break;
+    case TG_STRUCTURE_TYPE_RAY_TRACE_COMMAND: p_array = TGVK_STRUCTURE_BUFFER_NAME(ray_trace_command); break;
+    case TG_STRUCTURE_TYPE_RAY_TRACER:        p_array = TGVK_STRUCTURE_BUFFER_NAME(ray_tracer);        break;
+    case TG_STRUCTURE_TYPE_RENDER_COMMAND:    p_array = TGVK_STRUCTURE_BUFFER_NAME(render_command);    break;
+    case TG_STRUCTURE_TYPE_RENDERER:          p_array = TGVK_STRUCTURE_BUFFER_NAME(renderer);          break;
+    case TG_STRUCTURE_TYPE_STORAGE_BUFFER:    p_array = TGVK_STRUCTURE_BUFFER_NAME(storage_buffer);    break;
+    case TG_STRUCTURE_TYPE_STORAGE_IMAGE_3D:  p_array = TGVK_STRUCTURE_BUFFER_NAME(storage_image_3d);  break;
+    case TG_STRUCTURE_TYPE_UNIFORM_BUFFER:    p_array = TGVK_STRUCTURE_BUFFER_NAME(uniform_buffer);    break;
+    case TG_STRUCTURE_TYPE_VERTEX_SHADER:     p_array = TGVK_STRUCTURE_BUFFER_NAME(vertex_shader);     break;
 
     default: TG_INVALID_CODEPATH(); break;
     }
@@ -1876,21 +1878,22 @@ void* tgvk_handle_take(tg_structure_type type)
     TG_RWL_LOCK_FOR_WRITE(handle_lock);
     switch (type)
     {
-    case TG_STRUCTURE_TYPE_COLOR_IMAGE:      { TGVK_STRUCTURE_TAKE(color_image, p_handle);      } break;
-    case TG_STRUCTURE_TYPE_COMPUTE_SHADER:   { TGVK_STRUCTURE_TAKE(compute_shader, p_handle);   } break;
-    case TG_STRUCTURE_TYPE_CUBE_MAP:         { TGVK_STRUCTURE_TAKE(cube_map, p_handle);         } break;
-    case TG_STRUCTURE_TYPE_DEPTH_IMAGE:      { TGVK_STRUCTURE_TAKE(depth_image, p_handle);      } break;
-    case TG_STRUCTURE_TYPE_FONT:             { TGVK_STRUCTURE_TAKE(font, p_handle);             } break;
-    case TG_STRUCTURE_TYPE_FRAGMENT_SHADER:  { TGVK_STRUCTURE_TAKE(fragment_shader, p_handle);  } break;
-    case TG_STRUCTURE_TYPE_MATERIAL:         { TGVK_STRUCTURE_TAKE(material, p_handle);         } break;
-    case TG_STRUCTURE_TYPE_MESH:             { TGVK_STRUCTURE_TAKE(mesh, p_handle);             } break;
-    case TG_STRUCTURE_TYPE_RAY_TRACER:       { TGVK_STRUCTURE_TAKE(ray_tracer, p_handle);       } break;
-    case TG_STRUCTURE_TYPE_RENDER_COMMAND:   { TGVK_STRUCTURE_TAKE(render_command, p_handle);   } break;
-    case TG_STRUCTURE_TYPE_RENDERER:         { TGVK_STRUCTURE_TAKE(renderer, p_handle);         } break;
-    case TG_STRUCTURE_TYPE_STORAGE_BUFFER:   { TGVK_STRUCTURE_TAKE(storage_buffer, p_handle);   } break;
-    case TG_STRUCTURE_TYPE_STORAGE_IMAGE_3D: { TGVK_STRUCTURE_TAKE(storage_image_3d, p_handle); } break;
-    case TG_STRUCTURE_TYPE_UNIFORM_BUFFER:   { TGVK_STRUCTURE_TAKE(uniform_buffer, p_handle);   } break;
-    case TG_STRUCTURE_TYPE_VERTEX_SHADER:    { TGVK_STRUCTURE_TAKE(vertex_shader, p_handle);    } break;
+    case TG_STRUCTURE_TYPE_COLOR_IMAGE:       { TGVK_STRUCTURE_TAKE(color_image, p_handle);       } break;
+    case TG_STRUCTURE_TYPE_COMPUTE_SHADER:    { TGVK_STRUCTURE_TAKE(compute_shader, p_handle);    } break;
+    case TG_STRUCTURE_TYPE_CUBE_MAP:          { TGVK_STRUCTURE_TAKE(cube_map, p_handle);          } break;
+    case TG_STRUCTURE_TYPE_DEPTH_IMAGE:       { TGVK_STRUCTURE_TAKE(depth_image, p_handle);       } break;
+    case TG_STRUCTURE_TYPE_FONT:              { TGVK_STRUCTURE_TAKE(font, p_handle);              } break;
+    case TG_STRUCTURE_TYPE_FRAGMENT_SHADER:   { TGVK_STRUCTURE_TAKE(fragment_shader, p_handle);   } break;
+    case TG_STRUCTURE_TYPE_MATERIAL:          { TGVK_STRUCTURE_TAKE(material, p_handle);          } break;
+    case TG_STRUCTURE_TYPE_MESH:              { TGVK_STRUCTURE_TAKE(mesh, p_handle);              } break;
+    case TG_STRUCTURE_TYPE_RAY_TRACE_COMMAND: { TGVK_STRUCTURE_TAKE(ray_trace_command, p_handle); } break;
+    case TG_STRUCTURE_TYPE_RAY_TRACER:        { TGVK_STRUCTURE_TAKE(ray_tracer, p_handle);        } break;
+    case TG_STRUCTURE_TYPE_RENDER_COMMAND:    { TGVK_STRUCTURE_TAKE(render_command, p_handle);    } break;
+    case TG_STRUCTURE_TYPE_RENDERER:          { TGVK_STRUCTURE_TAKE(renderer, p_handle);          } break;
+    case TG_STRUCTURE_TYPE_STORAGE_BUFFER:    { TGVK_STRUCTURE_TAKE(storage_buffer, p_handle);    } break;
+    case TG_STRUCTURE_TYPE_STORAGE_IMAGE_3D:  { TGVK_STRUCTURE_TAKE(storage_image_3d, p_handle);  } break;
+    case TG_STRUCTURE_TYPE_UNIFORM_BUFFER:    { TGVK_STRUCTURE_TAKE(uniform_buffer, p_handle);    } break;
+    case TG_STRUCTURE_TYPE_VERTEX_SHADER:     { TGVK_STRUCTURE_TAKE(vertex_shader, p_handle);     } break;
 
     default: TG_INVALID_CODEPATH(); break;
     }
@@ -1908,21 +1911,22 @@ void tgvk_handle_release(void* p_handle)
     TG_RWL_LOCK_FOR_WRITE(handle_lock);
     switch (type)
     {
-    case TG_STRUCTURE_TYPE_COLOR_IMAGE:      { TGVK_STRUCTURE_RELEASE(color_image, p_handle);      } break;
-    case TG_STRUCTURE_TYPE_COMPUTE_SHADER:   { TGVK_STRUCTURE_RELEASE(compute_shader, p_handle);   } break;
-    case TG_STRUCTURE_TYPE_CUBE_MAP:         { TGVK_STRUCTURE_RELEASE(cube_map, p_handle);         } break;
-    case TG_STRUCTURE_TYPE_DEPTH_IMAGE:      { TGVK_STRUCTURE_RELEASE(depth_image, p_handle);      } break;
-    case TG_STRUCTURE_TYPE_FONT:             { TGVK_STRUCTURE_RELEASE(font, p_handle);             } break;
-    case TG_STRUCTURE_TYPE_FRAGMENT_SHADER:  { TGVK_STRUCTURE_RELEASE(fragment_shader, p_handle);  } break;
-    case TG_STRUCTURE_TYPE_MATERIAL:         { TGVK_STRUCTURE_RELEASE(material, p_handle);         } break;
-    case TG_STRUCTURE_TYPE_MESH:             { TGVK_STRUCTURE_RELEASE(mesh, p_handle);             } break;
-    case TG_STRUCTURE_TYPE_RAY_TRACER:       { TGVK_STRUCTURE_RELEASE(ray_tracer, p_handle);       } break;
-    case TG_STRUCTURE_TYPE_RENDER_COMMAND:   { TGVK_STRUCTURE_RELEASE(render_command, p_handle);   } break;
-    case TG_STRUCTURE_TYPE_RENDERER:         { TGVK_STRUCTURE_RELEASE(renderer, p_handle);         } break;
-    case TG_STRUCTURE_TYPE_STORAGE_BUFFER:   { TGVK_STRUCTURE_RELEASE(storage_buffer, p_handle);   } break;
-    case TG_STRUCTURE_TYPE_UNIFORM_BUFFER:   { TGVK_STRUCTURE_RELEASE(uniform_buffer, p_handle);   } break;
-    case TG_STRUCTURE_TYPE_STORAGE_IMAGE_3D: { TGVK_STRUCTURE_RELEASE(storage_image_3d, p_handle); } break;
-    case TG_STRUCTURE_TYPE_VERTEX_SHADER:    { TGVK_STRUCTURE_RELEASE(vertex_shader, p_handle);    } break;
+    case TG_STRUCTURE_TYPE_COLOR_IMAGE:       { TGVK_STRUCTURE_RELEASE(color_image, p_handle);       } break;
+    case TG_STRUCTURE_TYPE_COMPUTE_SHADER:    { TGVK_STRUCTURE_RELEASE(compute_shader, p_handle);    } break;
+    case TG_STRUCTURE_TYPE_CUBE_MAP:          { TGVK_STRUCTURE_RELEASE(cube_map, p_handle);          } break;
+    case TG_STRUCTURE_TYPE_DEPTH_IMAGE:       { TGVK_STRUCTURE_RELEASE(depth_image, p_handle);       } break;
+    case TG_STRUCTURE_TYPE_FONT:              { TGVK_STRUCTURE_RELEASE(font, p_handle);              } break;
+    case TG_STRUCTURE_TYPE_FRAGMENT_SHADER:   { TGVK_STRUCTURE_RELEASE(fragment_shader, p_handle);   } break;
+    case TG_STRUCTURE_TYPE_MATERIAL:          { TGVK_STRUCTURE_RELEASE(material, p_handle);          } break;
+    case TG_STRUCTURE_TYPE_MESH:              { TGVK_STRUCTURE_RELEASE(mesh, p_handle);              } break;
+    case TG_STRUCTURE_TYPE_RAY_TRACE_COMMAND: { TGVK_STRUCTURE_RELEASE(ray_trace_command, p_handle); } break;
+    case TG_STRUCTURE_TYPE_RAY_TRACER:        { TGVK_STRUCTURE_RELEASE(ray_tracer, p_handle);        } break;
+    case TG_STRUCTURE_TYPE_RENDER_COMMAND:    { TGVK_STRUCTURE_RELEASE(render_command, p_handle);    } break;
+    case TG_STRUCTURE_TYPE_RENDERER:          { TGVK_STRUCTURE_RELEASE(renderer, p_handle);          } break;
+    case TG_STRUCTURE_TYPE_STORAGE_BUFFER:    { TGVK_STRUCTURE_RELEASE(storage_buffer, p_handle);    } break;
+    case TG_STRUCTURE_TYPE_UNIFORM_BUFFER:    { TGVK_STRUCTURE_RELEASE(uniform_buffer, p_handle);    } break;
+    case TG_STRUCTURE_TYPE_STORAGE_IMAGE_3D:  { TGVK_STRUCTURE_RELEASE(storage_image_3d, p_handle);  } break;
+    case TG_STRUCTURE_TYPE_VERTEX_SHADER:     { TGVK_STRUCTURE_RELEASE(vertex_shader, p_handle);     } break;
     
     default: TG_INVALID_CODEPATH(); break;
     }

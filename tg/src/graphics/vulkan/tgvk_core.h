@@ -334,6 +334,17 @@ typedef struct tgvk_shared_render_resources
     VkRenderPass     tone_mapping_render_pass;
     VkRenderPass     ui_render_pass;
     VkRenderPass     present_render_pass;
+
+    struct
+    {
+        b32              initialized; // TODO: don't waste 32 bit
+        tgvk_buffer      cube_ibo;
+        tgvk_buffer      cube_vbo_p;
+        tgvk_buffer      cube_vbo_n;
+        VkRenderPass     render_pass;
+        tgvk_pipeline    graphics_pipeline;
+        tgvk_buffer      view_projection_ubo;
+    } ray_tracer;
 } tgvk_shared_render_resources;
 
 typedef struct tgvk_surface
@@ -508,61 +519,64 @@ typedef struct tgvk_atmosphere_model
     } rendering;
 } tgvk_atmosphere_model;
 
+typedef struct tg_ray_trace_command
+{
+    tgvk_image_3d          voxel_image;
+    tgvk_buffer            model_ubo;
+    tgvk_buffer            material_ubo;
+    tgvk_descriptor_set    descriptor_set;
+} tg_ray_trace_command;
+
 typedef struct tg_ray_tracer
 {
-    tg_structure_type          type;
+    tg_structure_type              type;
 
-    const tg_camera*           p_camera;
-    tgvk_image                 hdr_color_attachment;
-    tg_render_target           render_target;
-    VkSemaphore                semaphore;
-    tg_rtvx_terrain_h          h_terrain; // TODO: this will be replaced by a list of objects (3d textures, color lut etc.)
+    const tg_camera*               p_camera;
+    tgvk_image                     hdr_color_attachment;
+    tg_render_target               render_target;
+    VkSemaphore                    semaphore;
 
     struct
     {
-        VkRenderPass           render_pass; // TODO: shared
-        tgvk_buffer            cube_ibo; // TODO: shared (AABB, as this is a cube, we need to add a scale to the model matrix)
-        tgvk_buffer            cube_vbo_p; // TODO: shared (AABB, as this is a cube, we need to add a scale to the model matrix)
-        tgvk_buffer            cube_vbo_n; // TODO: shared (AABB, as this is a cube, we need to add a scale to the model matrix)
+        u32                        capacity;
+        u32                        count;
+        tg_ray_trace_command_h*    p_commands;
+    } commands;
 
-        tgvk_command_buffer    command_buffer;
-        tgvk_image             p_color_attachments[TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT];
-        tgvk_framebuffer       framebuffer;
-        tgvk_pipeline          graphics_pipeline; // TODO: per object? or one for all static objects? if only one material is allowed, one pipeline is sufficient
-        tgvk_buffer            view_projection_ubo;
-
-        tgvk_buffer            model_ubo;         // TODO: per object
-        tgvk_buffer            material_ubo;      // TODO: per object
-        tgvk_descriptor_set    descriptor_set;    // TODO: per object? or one for all static objects?
+    struct
+    {
+        tgvk_command_buffer        command_buffer;
+        tgvk_image                 p_color_attachments[TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT];
+        tgvk_framebuffer           framebuffer;
     } geometry_pass;
 
     struct
     {
-        tgvk_command_buffer    command_buffer;
-        tgvk_shader            fragment_shader;
-        tgvk_pipeline          graphics_pipeline;
-        tgvk_buffer            ubo;
-        tgvk_descriptor_set    descriptor_set;
-        tgvk_framebuffer       framebuffer;
+        tgvk_command_buffer        command_buffer;
+        tgvk_shader                fragment_shader;
+        tgvk_pipeline              graphics_pipeline;
+        tgvk_buffer                ubo;
+        tgvk_descriptor_set        descriptor_set;
+        tgvk_framebuffer           framebuffer;
     } shading_pass;
 
     struct
     {
-        tgvk_command_buffer    command_buffer;
+        tgvk_command_buffer        command_buffer;
     } blit_pass;
 
     struct
     {
-        tgvk_command_buffer    p_command_buffers[TG_MAX_SWAPCHAIN_IMAGES];
-        VkSemaphore            image_acquired_semaphore;
-        tgvk_framebuffer       p_framebuffers[TG_MAX_SWAPCHAIN_IMAGES];
-        tgvk_pipeline          graphics_pipeline;
-        tgvk_descriptor_set    descriptor_set;
+        tgvk_command_buffer        p_command_buffers[TG_MAX_SWAPCHAIN_IMAGES];
+        VkSemaphore                image_acquired_semaphore;
+        tgvk_framebuffer           p_framebuffers[TG_MAX_SWAPCHAIN_IMAGES];
+        tgvk_pipeline              graphics_pipeline;
+        tgvk_descriptor_set        descriptor_set;
     } present_pass;
 
     struct
     {
-        tgvk_command_buffer    command_buffer;
+        tgvk_command_buffer        command_buffer;
     } clear_pass;
 } tg_ray_tracer;
 

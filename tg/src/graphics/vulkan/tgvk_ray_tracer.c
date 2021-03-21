@@ -49,7 +49,7 @@ static void tg__init_geometry_pass(tg_ray_tracer_h h_ray_tracer)
 
     for (u32 i = 0; i < TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT; i++)
     {
-        h_ray_tracer->geometry_pass.p_color_attachments[i] = TGVK_IMAGE_CREATE(TGVK_IMAGE_TYPE_COLOR, swapchain_extent.width, swapchain_extent.height, p_formats[i], TG_NULL);
+        h_ray_tracer->geometry_pass.p_color_attachments[i] = TGVK_IMAGE_CREATE(TGVK_IMAGE_TYPE_COLOR, w, h, p_formats[i], TG_NULL);
     }
 
     VkImageView p_framebuffer_attachments[TGVK_GEOMETRY_ATTACHMENT_COUNT] = { 0 };
@@ -59,179 +59,7 @@ static void tg__init_geometry_pass(tg_ray_tracer_h h_ray_tracer)
     }
     p_framebuffer_attachments[TGVK_GEOMETRY_ATTACHMENT_DEPTH] = h_ray_tracer->render_target.depth_attachment.image_view;
 
-    h_ray_tracer->geometry_pass.framebuffer = tgvk_framebuffer_create(shared_render_resources.geometry_render_pass, TGVK_GEOMETRY_ATTACHMENT_COUNT, p_framebuffer_attachments, swapchain_extent.width, swapchain_extent.height);
-    h_ray_tracer->geometry_pass.view_projection_ubo = TGVK_UNIFORM_BUFFER_CREATE(2 * sizeof(m4));
-
-
-
-
-
-    // TODO: shared
-    const u16 p_indices[6 * 6] = {
-         0,  1,  2,  2,  3,  0, // x-
-         4,  5,  6,  6,  7,  4, // x+
-         8,  9, 10, 10, 11,  8, // y-
-        12, 13, 14, 14, 15, 12, // y+
-        16, 17, 18, 18, 19, 16, // z-
-        20, 21, 22, 22, 23, 20  // z+
-    };
-
-    const v3 p_positions[6 * 4] = {
-        (v3){ -0.5f, -0.5f, -0.5f }, // x-
-        (v3){ -0.5f, -0.5f,  0.5f },
-        (v3){ -0.5f,  0.5f,  0.5f },
-        (v3){ -0.5f,  0.5f, -0.5f },
-        (v3){  0.5f, -0.5f, -0.5f }, // x+
-        (v3){  0.5f,  0.5f, -0.5f },
-        (v3){  0.5f,  0.5f,  0.5f },
-        (v3){  0.5f, -0.5f,  0.5f },
-        (v3){ -0.5f, -0.5f, -0.5f }, // y-
-        (v3){  0.5f, -0.5f, -0.5f },
-        (v3){  0.5f, -0.5f,  0.5f },
-        (v3){ -0.5f, -0.5f,  0.5f },
-        (v3){ -0.5f,  0.5f, -0.5f }, // y+
-        (v3){ -0.5f,  0.5f,  0.5f },
-        (v3){  0.5f,  0.5f,  0.5f },
-        (v3){  0.5f,  0.5f, -0.5f },
-        (v3){ -0.5f, -0.5f, -0.5f }, // z-
-        (v3){ -0.5f,  0.5f, -0.5f },
-        (v3){  0.5f,  0.5f, -0.5f },
-        (v3){  0.5f, -0.5f, -0.5f },
-        (v3){ -0.5f, -0.5f,  0.5f }, // z+
-        (v3){  0.5f, -0.5f,  0.5f },
-        (v3){  0.5f,  0.5f,  0.5f },
-        (v3){ -0.5f,  0.5f,  0.5f }
-    };
-
-    const v3 p_normals[6 * 4] = {
-        (v3){ -1.0f,  0.0f,  0.0f }, // x-
-        (v3){ -1.0f,  0.0f,  0.0f },
-        (v3){ -1.0f,  0.0f,  0.0f },
-        (v3){ -1.0f,  0.0f,  0.0f },
-        (v3){  1.0f,  0.0f,  0.0f }, // x+
-        (v3){  1.0f,  0.0f,  0.0f },
-        (v3){  1.0f,  0.0f,  0.0f },
-        (v3){  1.0f,  0.0f,  0.0f },
-        (v3){  0.0f, -1.0f,  0.0f }, // y-
-        (v3){  0.0f, -1.0f,  0.0f },
-        (v3){  0.0f, -1.0f,  0.0f },
-        (v3){  0.0f, -1.0f,  0.0f },
-        (v3){  0.0f,  1.0f,  0.0f }, // y+
-        (v3){  0.0f,  1.0f,  0.0f },
-        (v3){  0.0f,  1.0f,  0.0f },
-        (v3){  0.0f,  1.0f,  0.0f },
-        (v3){  0.0f,  0.0f, -1.0f }, // z-
-        (v3){  0.0f,  0.0f, -1.0f },
-        (v3){  0.0f,  0.0f, -1.0f },
-        (v3){  0.0f,  0.0f, -1.0f },
-        (v3){  0.0f,  0.0f,  1.0f }, // z+
-        (v3){  0.0f,  0.0f,  1.0f },
-        (v3){  0.0f,  0.0f,  1.0f },
-        (v3){  0.0f,  0.0f,  1.0f }
-    };
-
-    const tg_size staging_buffer_size = TG_MAX3(sizeof(p_indices), sizeof(p_positions), sizeof(p_normals));
-    tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take(staging_buffer_size);
-
-    tg_memcpy(sizeof(p_indices), p_indices, p_staging_buffer->memory.p_mapped_device_memory);
-    h_ray_tracer->geometry_pass.cube_ibo = TGVK_BUFFER_CREATE(sizeof(p_indices), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, TGVK_MEMORY_DEVICE);
-    tgvk_buffer_copy(sizeof(p_indices), p_staging_buffer, &h_ray_tracer->geometry_pass.cube_ibo);
-
-    tg_memcpy(sizeof(p_positions), p_positions, p_staging_buffer->memory.p_mapped_device_memory);
-    h_ray_tracer->geometry_pass.cube_vbo_p = TGVK_BUFFER_CREATE(sizeof(p_positions), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, TGVK_MEMORY_DEVICE);
-    tgvk_buffer_copy(sizeof(p_positions), p_staging_buffer, &h_ray_tracer->geometry_pass.cube_vbo_p);
-
-    tg_memcpy(sizeof(p_normals), p_normals, p_staging_buffer->memory.p_mapped_device_memory);
-    h_ray_tracer->geometry_pass.cube_vbo_n = TGVK_BUFFER_CREATE(sizeof(p_normals), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, TGVK_MEMORY_DEVICE);
-    tgvk_buffer_copy(sizeof(p_normals), p_staging_buffer, &h_ray_tracer->geometry_pass.cube_vbo_n);
-
-    tgvk_global_staging_buffer_release();
-
-
-    VkAttachmentDescription p_attachment_descriptions[TGVK_GEOMETRY_ATTACHMENT_COUNT] = { 0 };
-
-    for (u32 i = 0; i < TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT; i++)
-    {
-        p_attachment_descriptions[i].flags = 0;
-        p_attachment_descriptions[i].format = p_formats[i];
-        p_attachment_descriptions[i].samples = VK_SAMPLE_COUNT_1_BIT;
-        p_attachment_descriptions[i].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-        p_attachment_descriptions[i].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        p_attachment_descriptions[i].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        p_attachment_descriptions[i].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        p_attachment_descriptions[i].initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        p_attachment_descriptions[i].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    }
-
-    p_attachment_descriptions[TGVK_GEOMETRY_ATTACHMENT_DEPTH].flags = 0;
-    p_attachment_descriptions[TGVK_GEOMETRY_ATTACHMENT_DEPTH].format = VK_FORMAT_D32_SFLOAT;
-    p_attachment_descriptions[TGVK_GEOMETRY_ATTACHMENT_DEPTH].samples = VK_SAMPLE_COUNT_1_BIT;
-    p_attachment_descriptions[TGVK_GEOMETRY_ATTACHMENT_DEPTH].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-    p_attachment_descriptions[TGVK_GEOMETRY_ATTACHMENT_DEPTH].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    p_attachment_descriptions[TGVK_GEOMETRY_ATTACHMENT_DEPTH].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    p_attachment_descriptions[TGVK_GEOMETRY_ATTACHMENT_DEPTH].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    p_attachment_descriptions[TGVK_GEOMETRY_ATTACHMENT_DEPTH].initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    p_attachment_descriptions[TGVK_GEOMETRY_ATTACHMENT_DEPTH].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-    VkAttachmentReference p_color_attachment_references[TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT] = { 0 };
-
-    for (u32 i = 0; i < TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT; i++)
-    {
-        p_color_attachment_references[i].attachment = i;
-        p_color_attachment_references[i].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    }
-
-    VkAttachmentReference depth_buffer_attachment_reference = { 0 };
-    depth_buffer_attachment_reference.attachment = TGVK_GEOMETRY_ATTACHMENT_DEPTH;
-    depth_buffer_attachment_reference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-    VkSubpassDescription subpass_description = { 0 };
-    subpass_description.flags = 0;
-    subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass_description.inputAttachmentCount = 0;
-    subpass_description.pInputAttachments = TG_NULL;
-    subpass_description.colorAttachmentCount = TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT;
-    subpass_description.pColorAttachments = p_color_attachment_references;
-    subpass_description.pResolveAttachments = TG_NULL;
-    subpass_description.pDepthStencilAttachment = &depth_buffer_attachment_reference;
-    subpass_description.preserveAttachmentCount = 0;
-    subpass_description.pPreserveAttachments = TG_NULL;
-
-    h_ray_tracer->geometry_pass.render_pass = tgvk_render_pass_create(p_attachment_descriptions, &subpass_description);
-
-
-
-
-
-
-    // TODO: per object data
-    tgvk_graphics_pipeline_create_info graphics_pipeline_create_info = { 0 };
-    graphics_pipeline_create_info.p_vertex_shader = &tg_vertex_shader_create("shaders/ray_tracer/geometry.vert")->shader;
-    graphics_pipeline_create_info.p_fragment_shader = &tg_vertex_shader_create("shaders/ray_tracer/geometry.frag")->shader;
-    graphics_pipeline_create_info.cull_mode = VK_CULL_MODE_FRONT_BIT; // TODO: is this okay for ray tracing? this culls the front face
-    graphics_pipeline_create_info.depth_test_enable = VK_TRUE;
-    graphics_pipeline_create_info.depth_write_enable = VK_TRUE;
-    graphics_pipeline_create_info.p_blend_modes = TG_NULL;
-    graphics_pipeline_create_info.render_pass = h_ray_tracer->geometry_pass.render_pass;
-    graphics_pipeline_create_info.viewport_size.x = (f32)w;
-    graphics_pipeline_create_info.viewport_size.y = (f32)h;
-    graphics_pipeline_create_info.polygon_mode = VK_POLYGON_MODE_FILL;
-
-    h_ray_tracer->geometry_pass.graphics_pipeline = tgvk_pipeline_create_graphics(&graphics_pipeline_create_info);
-    h_ray_tracer->geometry_pass.descriptor_set = tgvk_descriptor_set_create(&h_ray_tracer->geometry_pass.graphics_pipeline);
-    h_ray_tracer->geometry_pass.model_ubo = TGVK_UNIFORM_BUFFER_CREATE(sizeof(tg_geometry_ubo));
-    h_ray_tracer->geometry_pass.material_ubo = TGVK_UNIFORM_BUFFER_CREATE(sizeof(tg_material_ubo));
-    m4* p_model = (m4*)h_ray_tracer->geometry_pass.model_ubo.memory.p_mapped_device_memory;
-    tg_material_ubo* p_material = (tg_material_ubo*)h_ray_tracer->geometry_pass.material_ubo.memory.p_mapped_device_memory;
-
-    *p_model = tgm_m4_identity();
-    p_material->albedo = (v4){ 1.0f, 0.0f, 0.1f, 1.0f };
-    p_material->metallic = 0.0f;
-    p_material->roughness = 1.0f;
-
-    tgvk_descriptor_set_update_uniform_buffer(h_ray_tracer->geometry_pass.descriptor_set.descriptor_set, &h_ray_tracer->geometry_pass.model_ubo, 0);
-    tgvk_descriptor_set_update_uniform_buffer(h_ray_tracer->geometry_pass.descriptor_set.descriptor_set, &h_ray_tracer->geometry_pass.view_projection_ubo, 1);
-    tgvk_descriptor_set_update_uniform_buffer(h_ray_tracer->geometry_pass.descriptor_set.descriptor_set, &h_ray_tracer->geometry_pass.material_ubo, 2);
+    h_ray_tracer->geometry_pass.framebuffer = tgvk_framebuffer_create(shared_render_resources.geometry_render_pass, TGVK_GEOMETRY_ATTACHMENT_COUNT, p_framebuffer_attachments, w, h);
 }
 
 static void tg__init_shading_pass(tg_ray_tracer_h h_ray_tracer)
@@ -447,13 +275,169 @@ tg_ray_tracer_h tg_ray_tracer_create(const tg_camera* p_camera)
 {
 	TG_ASSERT(p_camera);
 
+    const u32 w = swapchain_extent.width;
+    const u32 h = swapchain_extent.height;
+
+    if (!shared_render_resources.ray_tracer.initialized)
+    {
+        TGVK_GEOMETRY_FORMATS(p_formats);
+
+        VkAttachmentDescription p_attachment_descriptions[TGVK_GEOMETRY_ATTACHMENT_COUNT] = { 0 };
+
+        for (u32 i = 0; i < TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT; i++)
+        {
+            p_attachment_descriptions[i].flags = 0;
+            p_attachment_descriptions[i].format = p_formats[i];
+            p_attachment_descriptions[i].samples = VK_SAMPLE_COUNT_1_BIT;
+            p_attachment_descriptions[i].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+            p_attachment_descriptions[i].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+            p_attachment_descriptions[i].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+            p_attachment_descriptions[i].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+            p_attachment_descriptions[i].initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            p_attachment_descriptions[i].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        }
+
+        p_attachment_descriptions[TGVK_GEOMETRY_ATTACHMENT_DEPTH].flags = 0;
+        p_attachment_descriptions[TGVK_GEOMETRY_ATTACHMENT_DEPTH].format = VK_FORMAT_D32_SFLOAT;
+        p_attachment_descriptions[TGVK_GEOMETRY_ATTACHMENT_DEPTH].samples = VK_SAMPLE_COUNT_1_BIT;
+        p_attachment_descriptions[TGVK_GEOMETRY_ATTACHMENT_DEPTH].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        p_attachment_descriptions[TGVK_GEOMETRY_ATTACHMENT_DEPTH].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        p_attachment_descriptions[TGVK_GEOMETRY_ATTACHMENT_DEPTH].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        p_attachment_descriptions[TGVK_GEOMETRY_ATTACHMENT_DEPTH].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        p_attachment_descriptions[TGVK_GEOMETRY_ATTACHMENT_DEPTH].initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        p_attachment_descriptions[TGVK_GEOMETRY_ATTACHMENT_DEPTH].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+        VkAttachmentReference p_color_attachment_references[TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT] = { 0 };
+
+        for (u32 i = 0; i < TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT; i++)
+        {
+            p_color_attachment_references[i].attachment = i;
+            p_color_attachment_references[i].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        }
+
+        VkAttachmentReference depth_buffer_attachment_reference = { 0 };
+        depth_buffer_attachment_reference.attachment = TGVK_GEOMETRY_ATTACHMENT_DEPTH;
+        depth_buffer_attachment_reference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+        VkSubpassDescription subpass_description = { 0 };
+        subpass_description.flags = 0;
+        subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+        subpass_description.inputAttachmentCount = 0;
+        subpass_description.pInputAttachments = TG_NULL;
+        subpass_description.colorAttachmentCount = TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT;
+        subpass_description.pColorAttachments = p_color_attachment_references;
+        subpass_description.pResolveAttachments = TG_NULL;
+        subpass_description.pDepthStencilAttachment = &depth_buffer_attachment_reference;
+        subpass_description.preserveAttachmentCount = 0;
+        subpass_description.pPreserveAttachments = TG_NULL;
+
+        shared_render_resources.ray_tracer.render_pass = tgvk_render_pass_create(p_attachment_descriptions, &subpass_description);
+
+        tgvk_graphics_pipeline_create_info graphics_pipeline_create_info = { 0 };
+        graphics_pipeline_create_info.p_vertex_shader = &tg_vertex_shader_create("shaders/ray_tracer/geometry.vert")->shader;
+        graphics_pipeline_create_info.p_fragment_shader = &tg_vertex_shader_create("shaders/ray_tracer/geometry.frag")->shader;
+        graphics_pipeline_create_info.cull_mode = VK_CULL_MODE_FRONT_BIT; // TODO: is this okay for ray tracing? this culls the front face
+        graphics_pipeline_create_info.depth_test_enable = VK_TRUE;
+        graphics_pipeline_create_info.depth_write_enable = VK_TRUE;
+        graphics_pipeline_create_info.p_blend_modes = TG_NULL;
+        graphics_pipeline_create_info.render_pass = shared_render_resources.ray_tracer.render_pass;
+        graphics_pipeline_create_info.viewport_size.x = (f32)w;
+        graphics_pipeline_create_info.viewport_size.y = (f32)h;
+        graphics_pipeline_create_info.polygon_mode = VK_POLYGON_MODE_FILL;
+
+        shared_render_resources.ray_tracer.graphics_pipeline = tgvk_pipeline_create_graphics(&graphics_pipeline_create_info);
+        shared_render_resources.ray_tracer.view_projection_ubo = TGVK_UNIFORM_BUFFER_CREATE(2 * sizeof(m4));
+
+        const u16 p_indices[6 * 6] = {
+             0,  1,  2,  2,  3,  0, // x-
+             4,  5,  6,  6,  7,  4, // x+
+             8,  9, 10, 10, 11,  8, // y-
+            12, 13, 14, 14, 15, 12, // y+
+            16, 17, 18, 18, 19, 16, // z-
+            20, 21, 22, 22, 23, 20  // z+
+        };
+
+        const v3 p_positions[6 * 4] = {
+            (v3){ -0.5f, -0.5f, -0.5f }, // x-
+            (v3){ -0.5f, -0.5f,  0.5f },
+            (v3){ -0.5f,  0.5f,  0.5f },
+            (v3){ -0.5f,  0.5f, -0.5f },
+            (v3){  0.5f, -0.5f, -0.5f }, // x+
+            (v3){  0.5f,  0.5f, -0.5f },
+            (v3){  0.5f,  0.5f,  0.5f },
+            (v3){  0.5f, -0.5f,  0.5f },
+            (v3){ -0.5f, -0.5f, -0.5f }, // y-
+            (v3){  0.5f, -0.5f, -0.5f },
+            (v3){  0.5f, -0.5f,  0.5f },
+            (v3){ -0.5f, -0.5f,  0.5f },
+            (v3){ -0.5f,  0.5f, -0.5f }, // y+
+            (v3){ -0.5f,  0.5f,  0.5f },
+            (v3){  0.5f,  0.5f,  0.5f },
+            (v3){  0.5f,  0.5f, -0.5f },
+            (v3){ -0.5f, -0.5f, -0.5f }, // z-
+            (v3){ -0.5f,  0.5f, -0.5f },
+            (v3){  0.5f,  0.5f, -0.5f },
+            (v3){  0.5f, -0.5f, -0.5f },
+            (v3){ -0.5f, -0.5f,  0.5f }, // z+
+            (v3){  0.5f, -0.5f,  0.5f },
+            (v3){  0.5f,  0.5f,  0.5f },
+            (v3){ -0.5f,  0.5f,  0.5f }
+        };
+
+        const v3 p_normals[6 * 4] = {
+            (v3){ -1.0f,  0.0f,  0.0f }, // x-
+            (v3){ -1.0f,  0.0f,  0.0f },
+            (v3){ -1.0f,  0.0f,  0.0f },
+            (v3){ -1.0f,  0.0f,  0.0f },
+            (v3){  1.0f,  0.0f,  0.0f }, // x+
+            (v3){  1.0f,  0.0f,  0.0f },
+            (v3){  1.0f,  0.0f,  0.0f },
+            (v3){  1.0f,  0.0f,  0.0f },
+            (v3){  0.0f, -1.0f,  0.0f }, // y-
+            (v3){  0.0f, -1.0f,  0.0f },
+            (v3){  0.0f, -1.0f,  0.0f },
+            (v3){  0.0f, -1.0f,  0.0f },
+            (v3){  0.0f,  1.0f,  0.0f }, // y+
+            (v3){  0.0f,  1.0f,  0.0f },
+            (v3){  0.0f,  1.0f,  0.0f },
+            (v3){  0.0f,  1.0f,  0.0f },
+            (v3){  0.0f,  0.0f, -1.0f }, // z-
+            (v3){  0.0f,  0.0f, -1.0f },
+            (v3){  0.0f,  0.0f, -1.0f },
+            (v3){  0.0f,  0.0f, -1.0f },
+            (v3){  0.0f,  0.0f,  1.0f }, // z+
+            (v3){  0.0f,  0.0f,  1.0f },
+            (v3){  0.0f,  0.0f,  1.0f },
+            (v3){  0.0f,  0.0f,  1.0f }
+        };
+
+        const tg_size staging_buffer_size = TG_MAX3(sizeof(p_indices), sizeof(p_positions), sizeof(p_normals));
+        tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take(staging_buffer_size);
+
+        tg_memcpy(sizeof(p_indices), p_indices, p_staging_buffer->memory.p_mapped_device_memory);
+        shared_render_resources.ray_tracer.cube_ibo = TGVK_BUFFER_CREATE(sizeof(p_indices), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, TGVK_MEMORY_DEVICE);
+        tgvk_buffer_copy(sizeof(p_indices), p_staging_buffer, &shared_render_resources.ray_tracer.cube_ibo);
+
+        tg_memcpy(sizeof(p_positions), p_positions, p_staging_buffer->memory.p_mapped_device_memory);
+        shared_render_resources.ray_tracer.cube_vbo_p = TGVK_BUFFER_CREATE(sizeof(p_positions), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, TGVK_MEMORY_DEVICE);
+        tgvk_buffer_copy(sizeof(p_positions), p_staging_buffer, &shared_render_resources.ray_tracer.cube_vbo_p);
+
+        tg_memcpy(sizeof(p_normals), p_normals, p_staging_buffer->memory.p_mapped_device_memory);
+        shared_render_resources.ray_tracer.cube_vbo_n = TGVK_BUFFER_CREATE(sizeof(p_normals), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, TGVK_MEMORY_DEVICE);
+        tgvk_buffer_copy(sizeof(p_normals), p_staging_buffer, &shared_render_resources.ray_tracer.cube_vbo_n);
+
+        tgvk_global_staging_buffer_release();
+
+        shared_render_resources.ray_tracer.initialized = TG_TRUE;
+    }
+
 	tg_ray_tracer_h h_ray_tracer = tgvk_handle_take(TG_STRUCTURE_TYPE_RAY_TRACER);
 
     h_ray_tracer->p_camera = p_camera;
-    h_ray_tracer->hdr_color_attachment = TGVK_IMAGE_CREATE(TGVK_IMAGE_TYPE_COLOR | TGVK_IMAGE_TYPE_STORAGE, swapchain_extent.width, swapchain_extent.height, TGVK_HDR_FORMAT, TG_NULL);
+    h_ray_tracer->hdr_color_attachment = TGVK_IMAGE_CREATE(TGVK_IMAGE_TYPE_COLOR | TGVK_IMAGE_TYPE_STORAGE, w, h, TGVK_HDR_FORMAT, TG_NULL);
     h_ray_tracer->render_target = TGVK_RENDER_TARGET_CREATE(
-        swapchain_extent.width, swapchain_extent.height, TGVK_HDR_FORMAT, TG_NULL,
-        swapchain_extent.width, swapchain_extent.height, VK_FORMAT_D32_SFLOAT, TG_NULL,
+        w, h, TGVK_HDR_FORMAT, TG_NULL,
+        w, h, VK_FORMAT_D32_SFLOAT, TG_NULL,
         VK_FENCE_CREATE_SIGNALED_BIT
     );
 
@@ -483,11 +467,26 @@ void tg_ray_tracer_destroy(tg_ray_tracer_h h_ray_tracer)
 	TG_NOT_IMPLEMENTED();
 }
 
-void tg_ray_tracer_push_static(tg_ray_tracer_h h_ray_tracer, tg_rtvx_terrain_h h_terrain)
+void tg_ray_tracer_push_static(tg_ray_tracer_h h_ray_tracer, tg_ray_trace_command_h h_command)
 {
     TG_ASSERT(h_ray_tracer);
 
-    h_ray_tracer->h_terrain = h_terrain;
+    if (h_ray_tracer->commands.capacity == h_ray_tracer->commands.count)
+    {
+        if (h_ray_tracer->commands.capacity == 0)
+        {
+            TG_ASSERT(h_ray_tracer->commands.p_commands == TG_NULL);
+            h_ray_tracer->commands.capacity = 8;
+            h_ray_tracer->commands.p_commands = TG_MALLOC(h_ray_tracer->commands.capacity * sizeof(*h_ray_tracer->commands.p_commands));
+        }
+        else
+        {
+            TG_ASSERT(h_ray_tracer->commands.p_commands != TG_NULL);
+            h_ray_tracer->commands.capacity *= 2;
+            h_ray_tracer->commands.p_commands = TG_REALLOC(h_ray_tracer->commands.capacity * sizeof(*h_ray_tracer->commands.p_commands), h_ray_tracer->commands.p_commands);
+        }
+    }
+    h_ray_tracer->commands.p_commands[h_ray_tracer->commands.count++] = h_command;
 }
 
 void tg_ray_tracer_render(tg_ray_tracer_h h_ray_tracer)
@@ -505,8 +504,9 @@ void tg_ray_tracer_render(tg_ray_tracer_h h_ray_tracer)
     const m4 vp = tgm_m4_mul(p, v);
     const m4 ivp = tgm_m4_inverse(vp);
 
-    TGVK_CAMERA_VIEW(h_ray_tracer->geometry_pass.view_projection_ubo) = v;
-    TGVK_CAMERA_PROJ(h_ray_tracer->geometry_pass.view_projection_ubo) = p;
+    // TODO: keep this shared?
+    TGVK_CAMERA_VIEW(shared_render_resources.ray_tracer.view_projection_ubo) = v;
+    TGVK_CAMERA_PROJ(shared_render_resources.ray_tracer.view_projection_ubo) = p;
 
     tg_shading_ubo* p_shading_ubo = &TGVK_SHADING_UBO;
     //p_shading_ubo->camera_position.xyz = c.position;
@@ -518,16 +518,18 @@ void tg_ray_tracer_render(tg_ray_tracer_h h_ray_tracer)
     //tgvk_cmd_begin_render_pass(&h_ray_tracer->geometry_pass.command_buffer, shared_render_resources.geometry_render_pass, &h_ray_tracer->geometry_pass.framebuffer, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
     tgvk_cmd_begin_render_pass(&h_ray_tracer->geometry_pass.command_buffer, shared_render_resources.geometry_render_pass, &h_ray_tracer->geometry_pass.framebuffer, VK_SUBPASS_CONTENTS_INLINE);
 
-
-
-    // TODO: from render command
-    vkCmdBindPipeline(h_ray_tracer->geometry_pass.command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, h_ray_tracer->geometry_pass.graphics_pipeline.pipeline);
-    vkCmdBindIndexBuffer(h_ray_tracer->geometry_pass.command_buffer.command_buffer, h_ray_tracer->geometry_pass.cube_ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
+    
+    
+    vkCmdBindPipeline(h_ray_tracer->geometry_pass.command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shared_render_resources.ray_tracer.graphics_pipeline.pipeline);
+    vkCmdBindIndexBuffer(h_ray_tracer->geometry_pass.command_buffer.command_buffer, shared_render_resources.ray_tracer.cube_ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
     const VkDeviceSize vertex_buffer_offset = 0;
-    vkCmdBindVertexBuffers(h_ray_tracer->geometry_pass.command_buffer.command_buffer, 0, 1, &h_ray_tracer->geometry_pass.cube_vbo_p.buffer, &vertex_buffer_offset);
-    vkCmdBindVertexBuffers(h_ray_tracer->geometry_pass.command_buffer.command_buffer, 1, 1, &h_ray_tracer->geometry_pass.cube_vbo_n.buffer, &vertex_buffer_offset);
-    vkCmdBindDescriptorSets(h_ray_tracer->geometry_pass.command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, h_ray_tracer->geometry_pass.graphics_pipeline.layout.pipeline_layout, 0, 1, &h_ray_tracer->geometry_pass.descriptor_set.descriptor_set, 0, TG_NULL);
-    tgvk_cmd_draw_indexed(&h_ray_tracer->geometry_pass.command_buffer, 6 * 6); // TODO: triangle fans for less indices?
+    vkCmdBindVertexBuffers(h_ray_tracer->geometry_pass.command_buffer.command_buffer, 0, 1, &shared_render_resources.ray_tracer.cube_vbo_p.buffer, &vertex_buffer_offset);
+    vkCmdBindVertexBuffers(h_ray_tracer->geometry_pass.command_buffer.command_buffer, 1, 1, &shared_render_resources.ray_tracer.cube_vbo_n.buffer, &vertex_buffer_offset);
+    for (u32 i = 0; i < h_ray_tracer->commands.count; i++)
+    {
+        vkCmdBindDescriptorSets(h_ray_tracer->geometry_pass.command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shared_render_resources.ray_tracer.graphics_pipeline.layout.pipeline_layout, 0, 1, &h_ray_tracer->commands.p_commands[i]->descriptor_set.descriptor_set, 0, TG_NULL);
+        tgvk_cmd_draw_indexed(&h_ray_tracer->geometry_pass.command_buffer, 6 * 6); // TODO: triangle fans for less indices?
+    }
 
 
 
