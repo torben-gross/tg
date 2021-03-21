@@ -24,8 +24,8 @@
 
 
 
-layout(location = 0) in vec2 v_uv;
-layout(location = 1) in vec3 v_view_ray;
+layout(location = 0) in v2 v_uv;
+layout(location = 1) in v3 v_view_ray;
 
 
 

@@ -283,6 +283,19 @@ void* tg_memory_stack_alloc(tg_size size)
 #endif
 }
 
+void tg_memory_stack_resize(tg_size old_size, tg_size new_size)
+{
+	TG_ASSERT(new_size > old_size);
+
+#ifdef TG_DEBUG
+	TG_FREE_STACK(old_size);
+	TG_MALLOC_STACK(new_size);
+#else
+	const tg_size additional_size = new_size - old_size;
+	p_memory_stacks[0].exhausted_size += additional_size;
+#endif
+}
+
 void tg_memory_stack_free(tg_size size)
 {
 #ifdef TG_DEBUG

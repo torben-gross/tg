@@ -1029,52 +1029,16 @@ void tgvk_atmosphere_model_create(TG_OUT tgvk_atmosphere_model* p_model)
 	tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_and_begin_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
 	{
 		tgvk_cmd_transition_image_layout(p_command_buffer, &p_model->rendering.transmittance_texture, TGVK_LAYOUT_COLOR_ATTACHMENT_WRITE, TGVK_LAYOUT_SHADER_READ_F);
-		tgvk_cmd_transition_layered_image_layout2(
-			p_command_buffer,
-			&p_model->rendering.scattering_texture,
-			VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-			VK_ACCESS_SHADER_READ_BIT,
-			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
-		);
+		tgvk_cmd_transition_layered_image_layout(p_command_buffer, &p_model->rendering.scattering_texture, TGVK_LAYOUT_COLOR_ATTACHMENT_WRITE, TGVK_LAYOUT_SHADER_READ_F);
 		if (!p_model->settings.combine_scattering_textures)
 		{
-			tgvk_cmd_transition_layered_image_layout2(
-				p_command_buffer,
-				&p_model->rendering.optional_single_mie_scattering_texture,
-				VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-				VK_ACCESS_SHADER_READ_BIT,
-				VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-				VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
-			);
+			tgvk_cmd_transition_layered_image_layout(p_command_buffer, &p_model->rendering.optional_single_mie_scattering_texture, TGVK_LAYOUT_COLOR_ATTACHMENT_WRITE, TGVK_LAYOUT_SHADER_READ_F);
 		}
 		else
 		{
-			tgvk_cmd_transition_layered_image_layout2(
-				p_command_buffer,
-				&p_model->rendering.no_single_mie_scattering_black_texture,
-				0,
-				VK_ACCESS_TRANSFER_WRITE_BIT,
-				VK_IMAGE_LAYOUT_UNDEFINED,
-				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-				VK_PIPELINE_STAGE_TRANSFER_BIT
-			);
+			tgvk_cmd_transition_layered_image_layout(p_command_buffer, &p_model->rendering.no_single_mie_scattering_black_texture, TGVK_LAYOUT_UNDEFINED, TGVK_LAYOUT_TRANSFER_WRITE);
 			tgvk_cmd_clear_layered_image(p_command_buffer, &p_model->rendering.no_single_mie_scattering_black_texture);
-			tgvk_cmd_transition_layered_image_layout2(
-				p_command_buffer,
-				&p_model->rendering.no_single_mie_scattering_black_texture,
-				VK_ACCESS_TRANSFER_WRITE_BIT,
-				VK_ACCESS_SHADER_READ_BIT,
-				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-				VK_PIPELINE_STAGE_TRANSFER_BIT,
-				VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
-			);
+			tgvk_cmd_transition_layered_image_layout(p_command_buffer, &p_model->rendering.no_single_mie_scattering_black_texture, TGVK_LAYOUT_TRANSFER_WRITE, TGVK_LAYOUT_SHADER_READ_F);
 		}
 		tgvk_cmd_transition_image_layout(p_command_buffer, &p_model->rendering.irradiance_texture, TGVK_LAYOUT_COLOR_ATTACHMENT_WRITE, TGVK_LAYOUT_SHADER_READ_F);
 	}

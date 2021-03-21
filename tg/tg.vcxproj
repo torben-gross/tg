@@ -125,6 +125,7 @@
     <ClCompile Include="src\graphics\vulkan\tgvk_font.c" />
     <ClCompile Include="src\graphics\vulkan\tgvk_image.c" />
     <ClCompile Include="src\graphics\tg_shader_library.c" />
+    <ClCompile Include="src\graphics\vulkan\tgvk_ray_tracer.c" />
     <ClCompile Include="src\graphics\vulkan\tgvk_render_target.c" />
     <ClCompile Include="src\graphics\vulkan\tgvk_rtvx_terrain.c" />
     <ClCompile Include="src\physics\tg_kd_tree.c" />

@@ -64,8 +64,6 @@ static void tg__init_geometry_pass(tg_renderer_h h_renderer)
 
 static void tg__init_shading_pass(tg_renderer_h h_renderer)
 {
-    TG_ASSERT(h_renderer);
-
     h_renderer->shading_pass.command_buffer = tgvk_command_buffer_create(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     h_renderer->shading_pass.ubo = TGVK_UNIFORM_BUFFER_CREATE(sizeof(tg_shading_ubo));
     h_renderer->shading_pass.framebuffer = tgvk_framebuffer_create(shared_render_resources.shading_render_pass, 1, &h_renderer->hdr_color_attachment.image_view, swapchain_extent.width, swapchain_extent.height);
@@ -347,18 +345,6 @@ static void tg__init_blit_pass(tg_renderer_h h_renderer)
     TGVK_CALL(vkEndCommandBuffer(h_renderer->blit_pass.command_buffer.command_buffer));
 }
 
-static void tg__init_clear_pass(tg_renderer_h h_renderer)
-{
-    h_renderer->clear_pass.command_buffer = tgvk_command_buffer_create(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
-    tgvk_command_buffer_begin(&h_renderer->clear_pass.command_buffer, 0);
-    {
-        tgvk_cmd_transition_image_layout(&h_renderer->clear_pass.command_buffer, &h_renderer->render_target.depth_attachment, TGVK_LAYOUT_DEPTH_ATTACHMENT_WRITE, TGVK_LAYOUT_TRANSFER_WRITE);
-        tgvk_cmd_clear_image(&h_renderer->clear_pass.command_buffer, &h_renderer->render_target.depth_attachment);
-        tgvk_cmd_transition_image_layout(&h_renderer->clear_pass.command_buffer, &h_renderer->render_target.depth_attachment, TGVK_LAYOUT_TRANSFER_WRITE, TGVK_LAYOUT_DEPTH_ATTACHMENT_WRITE);
-    }
-    TGVK_CALL(vkEndCommandBuffer(h_renderer->clear_pass.command_buffer.command_buffer));
-}
-
 static void tg__init_present_pass(tg_renderer_h h_renderer)
 {
     tgvk_command_buffers_create(TGVK_COMMAND_POOL_TYPE_PRESENT, VK_COMMAND_BUFFER_LEVEL_PRIMARY, TG_MAX_SWAPCHAIN_IMAGES, h_renderer->present_pass.p_command_buffers);
@@ -435,6 +421,18 @@ static void tg__init_present_pass(tg_renderer_h h_renderer)
         }
         TGVK_CALL(vkEndCommandBuffer(h_renderer->present_pass.p_command_buffers[i].command_buffer));
     }
+}
+
+static void tg__init_clear_pass(tg_renderer_h h_renderer)
+{
+    h_renderer->clear_pass.command_buffer = tgvk_command_buffer_create(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+    tgvk_command_buffer_begin(&h_renderer->clear_pass.command_buffer, 0);
+    {
+        tgvk_cmd_transition_image_layout(&h_renderer->clear_pass.command_buffer, &h_renderer->render_target.depth_attachment, TGVK_LAYOUT_DEPTH_ATTACHMENT_WRITE, TGVK_LAYOUT_TRANSFER_WRITE);
+        tgvk_cmd_clear_image(&h_renderer->clear_pass.command_buffer, &h_renderer->render_target.depth_attachment);
+        tgvk_cmd_transition_image_layout(&h_renderer->clear_pass.command_buffer, &h_renderer->render_target.depth_attachment, TGVK_LAYOUT_TRANSFER_WRITE, TGVK_LAYOUT_DEPTH_ATTACHMENT_WRITE);
+    }
+    TGVK_CALL(vkEndCommandBuffer(h_renderer->clear_pass.command_buffer.command_buffer));
 }
 
 void tg__destroy_present_pass(tg_renderer_h h_renderer)
@@ -762,8 +760,8 @@ tg_renderer_h tg_renderer_create(tg_camera* p_camera)
     tg__init_tone_mapping_pass(h_renderer);
     tg__init_ui_pass(h_renderer);
     tg__init_blit_pass(h_renderer);
-    tg__init_clear_pass(h_renderer);
     tg__init_present_pass(h_renderer);
+    tg__init_clear_pass(h_renderer);
 
     tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_and_begin_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
     tgvk_cmd_transition_image_layout(p_command_buffer, &h_renderer->hdr_color_attachment, TGVK_LAYOUT_UNDEFINED, TGVK_LAYOUT_COLOR_ATTACHMENT_WRITE);
@@ -843,9 +841,9 @@ void tg_renderer_destroy(tg_renderer_h h_renderer)
     TG_INVALID_CODEPATH();
 #endif
 
-    tgvk_command_buffer_destroy(&h_renderer->clear_pass.command_buffer);
-
     tg__destroy_present_pass(h_renderer);
+
+    tgvk_command_buffer_destroy(&h_renderer->clear_pass.command_buffer);
 
     tgvk_command_buffer_destroy(&h_renderer->blit_pass.command_buffer);
 

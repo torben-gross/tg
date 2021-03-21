@@ -41,6 +41,7 @@ typedef struct tg_sample_scene
     tg_camera                  camera;
     tg_renderer_h              h_main_renderer;
     tg_renderer_h              h_secondary_renderer;
+    tg_ray_tracer_h            h_ray_tracer;
     u32                        last_mouse_x;
     u32                        last_mouse_y;
 
@@ -77,7 +78,7 @@ typedef struct tg_sample_scene
     tg_render_command_h        h_probe_render_command;
 
     tg_terrain*                p_terrain;
-    //tg_rtvx_terrain_h          h_terrain;
+    tg_rtvx_terrain_h          h_terrain;
     
     f32                        light_timer;
 } tg_sample_scene;
@@ -108,7 +109,9 @@ static void tg__game_3d_create(void)
     scene.h_secondary_renderer = tg_renderer_create(&scene.camera);
 
     scene.p_terrain = tg_terrain_create(&scene.camera);
-    //scene.h_terrain = tg_rtvx_terrain_create();
+    scene.h_terrain = tg_rtvx_terrain_create();
+    scene.h_ray_tracer = tg_ray_tracer_create(&scene.camera);
+    tg_ray_tracer_push_static(scene.h_ray_tracer, scene.h_terrain);
 
 
 
@@ -350,6 +353,10 @@ static void tg__game_3d_update_and_render(f32 dt)
     //const v3 c0 = tgm_v3_lerp(c0n, c0d, -d0.y);
     const v3 c0 = V3(3.0f);
 
+    tg_ray_tracer_render(scene.h_ray_tracer);
+    tg_ray_tracer_clear(scene.h_ray_tracer);
+
+#if 0
     tg_renderer_begin(scene.h_secondary_renderer);
     tg_renderer_push_directional_light(scene.h_secondary_renderer, d0, (v3) { 4.0f, 4.0f, 10.0f });
     tg_terrain_render(scene.p_terrain, scene.h_secondary_renderer);
@@ -409,6 +416,7 @@ static void tg__game_3d_update_and_render(f32 dt)
 
     tg_renderer_clear(scene.h_secondary_renderer);
     tg_renderer_clear(scene.h_main_renderer);
+#endif
 
     i8 delta = 0;
     if (tg_input_is_mouse_button_down(TG_BUTTON_LEFT))

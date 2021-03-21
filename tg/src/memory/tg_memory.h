@@ -5,19 +5,20 @@
 #include "tg_common.h"
 
 #ifdef TG_DEBUGd
-#define TG_MALLOC(size)                             tg_memory_alloc_impl(size, __FILE__, __LINE__)
-#define TG_REALLOC(size, p_memory)                  tg_memory_realloc_impl(size, p_memory, __FILE__, __LINE__)
-#define TG_FREE(p_memory)                           tg_memory_free_impl(p_memory)
+#define TG_MALLOC(size)                              tg_memory_alloc_impl(size, __FILE__, __LINE__)
+#define TG_REALLOC(size, p_memory)                   tg_memory_realloc_impl(size, p_memory, __FILE__, __LINE__)
+#define TG_FREE(p_memory)                            tg_memory_free_impl(p_memory)
 #else
-#define TG_MALLOC(size)                             tgp_malloc(size)
-#define TG_REALLOC(size, p_mapped_device_memory)    tgp_realloc(size, p_mapped_device_memory)
-#define TG_FREE(p_mapped_device_memory)             tgp_free(p_mapped_device_memory)
+#define TG_MALLOC(size)                              tgp_malloc(size)
+#define TG_REALLOC(size, p_mapped_device_memory)     tgp_realloc(size, p_mapped_device_memory)
+#define TG_FREE(p_mapped_device_memory)              tgp_free(p_mapped_device_memory)
 #endif
 
-#define TG_MALLOC_STACK(size)                       tg_memory_stack_alloc(size)
-#define TG_FREE_STACK(size)                         tg_memory_stack_free(size)
-#define TG_MALLOC_STACK_ASYNC(size)                 tg_memory_stack_alloc_async(size)
-#define TG_FREE_STACK_ASYNC(size)                   tg_memory_stack_free_async(size)
+#define TG_MALLOC_STACK(size)                        tg_memory_stack_alloc(size)
+#define TG_RESIZE_STACK_ALLOC(old_size, new_size)    tg_memory_stack_resize(old_size, new_size)
+#define TG_FREE_STACK(size)                          tg_memory_stack_free(size)
+#define TG_MALLOC_STACK_ASYNC(size)                  tg_memory_stack_alloc_async(size)
+#define TG_FREE_STACK_ASYNC(size)                    tg_memory_stack_free_async(size)
 
 
 
@@ -40,6 +41,7 @@ u32      tg_memory_active_allocation_count(void);
 #endif
 
 void*    tg_memory_stack_alloc(tg_size size);
+void     tg_memory_stack_resize(tg_size old_size, tg_size new_size);
 void     tg_memory_stack_free(tg_size size);
 void*    tg_memory_stack_alloc_async(tg_size size);
 void     tg_memory_stack_free_async(tg_size size);

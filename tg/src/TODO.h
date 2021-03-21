@@ -24,4 +24,22 @@ typedef struct tg_probe
 	both, if performance allows it
 */
 
+
+
+
+
+
+/*
+VOXEL RAYTRACER
+- 3d textures for objects
+  - 8 bits for color LUT
+- g-buffer (depth, normals, material-properties):
+  - raytracing with OBB and fragment shader ('gl_fragDepth' and 'discard')
+- shading/ao:
+  - raytrace (from position with normal) huge voxel texture of every object
+  - from hit: raycast random towards sky
+  - blur result, but don't blur over edges (compare depths/normals)
+  - apply shading + ao
+*/
+
 #endif

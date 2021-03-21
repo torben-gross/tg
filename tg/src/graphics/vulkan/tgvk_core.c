@@ -84,6 +84,7 @@ TGVK_DEFINE_STRUCTURE_BUFFER(font, TG_MAX_FONTS);
 TGVK_DEFINE_STRUCTURE_BUFFER(fragment_shader, TG_MAX_FRAGMENT_SHADERS);
 TGVK_DEFINE_STRUCTURE_BUFFER(material, TG_MAX_MATERIALS);
 TGVK_DEFINE_STRUCTURE_BUFFER(mesh, TG_MAX_MESHES);
+TGVK_DEFINE_STRUCTURE_BUFFER(ray_tracer, TG_MAX_RAY_TRACERS);
 TGVK_DEFINE_STRUCTURE_BUFFER(render_command, TG_MAX_RENDER_COMMANDS);
 TGVK_DEFINE_STRUCTURE_BUFFER(renderer, TG_MAX_RENDERERS);
 TGVK_DEFINE_STRUCTURE_BUFFER(storage_buffer, TG_MAX_STORAGE_BUFFERS);
@@ -1854,6 +1855,7 @@ void* tgvk_handle_array(tg_structure_type type)
     case TG_STRUCTURE_TYPE_FRAGMENT_SHADER:  p_array = TGVK_STRUCTURE_BUFFER_NAME(fragment_shader);  break;
     case TG_STRUCTURE_TYPE_MATERIAL:         p_array = TGVK_STRUCTURE_BUFFER_NAME(material);         break;
     case TG_STRUCTURE_TYPE_MESH:             p_array = TGVK_STRUCTURE_BUFFER_NAME(mesh);             break;
+    case TG_STRUCTURE_TYPE_RAY_TRACER:       p_array = TGVK_STRUCTURE_BUFFER_NAME(ray_tracer);       break;
     case TG_STRUCTURE_TYPE_RENDER_COMMAND:   p_array = TGVK_STRUCTURE_BUFFER_NAME(render_command);   break;
     case TG_STRUCTURE_TYPE_RENDERER:         p_array = TGVK_STRUCTURE_BUFFER_NAME(renderer);         break;
     case TG_STRUCTURE_TYPE_STORAGE_BUFFER:   p_array = TGVK_STRUCTURE_BUFFER_NAME(storage_buffer);   break;
@@ -1882,6 +1884,7 @@ void* tgvk_handle_take(tg_structure_type type)
     case TG_STRUCTURE_TYPE_FRAGMENT_SHADER:  { TGVK_STRUCTURE_TAKE(fragment_shader, p_handle);  } break;
     case TG_STRUCTURE_TYPE_MATERIAL:         { TGVK_STRUCTURE_TAKE(material, p_handle);         } break;
     case TG_STRUCTURE_TYPE_MESH:             { TGVK_STRUCTURE_TAKE(mesh, p_handle);             } break;
+    case TG_STRUCTURE_TYPE_RAY_TRACER:       { TGVK_STRUCTURE_TAKE(ray_tracer, p_handle);       } break;
     case TG_STRUCTURE_TYPE_RENDER_COMMAND:   { TGVK_STRUCTURE_TAKE(render_command, p_handle);   } break;
     case TG_STRUCTURE_TYPE_RENDERER:         { TGVK_STRUCTURE_TAKE(renderer, p_handle);         } break;
     case TG_STRUCTURE_TYPE_STORAGE_BUFFER:   { TGVK_STRUCTURE_TAKE(storage_buffer, p_handle);   } break;
@@ -1913,6 +1916,7 @@ void tgvk_handle_release(void* p_handle)
     case TG_STRUCTURE_TYPE_FRAGMENT_SHADER:  { TGVK_STRUCTURE_RELEASE(fragment_shader, p_handle);  } break;
     case TG_STRUCTURE_TYPE_MATERIAL:         { TGVK_STRUCTURE_RELEASE(material, p_handle);         } break;
     case TG_STRUCTURE_TYPE_MESH:             { TGVK_STRUCTURE_RELEASE(mesh, p_handle);             } break;
+    case TG_STRUCTURE_TYPE_RAY_TRACER:       { TGVK_STRUCTURE_RELEASE(ray_tracer, p_handle);       } break;
     case TG_STRUCTURE_TYPE_RENDER_COMMAND:   { TGVK_STRUCTURE_RELEASE(render_command, p_handle);   } break;
     case TG_STRUCTURE_TYPE_RENDERER:         { TGVK_STRUCTURE_RELEASE(renderer, p_handle);         } break;
     case TG_STRUCTURE_TYPE_STORAGE_BUFFER:   { TGVK_STRUCTURE_RELEASE(storage_buffer, p_handle);   } break;
@@ -3120,9 +3124,93 @@ tgvk_shader tgvk_shader_create(const char* p_filename)
 
 tgvk_shader tgvk_shader_create_from_glsl(tg_shader_type type, const char* p_source)
 {
-    TG_ASSERT(p_source[tg_strlen_no_nul(p_source)] == '\0');
-
     TG_ASSERT(shaderc_compiler);
+
+    const char* p_it = p_source;
+    tg_size generated_size_upper_bound = 0;
+    b32 contains_includes = TG_FALSE;
+    while (*p_it != '\0')
+    {
+        if (tg_string_starts_with(p_it, "#include"))
+        {
+            contains_includes = TG_TRUE;
+
+            char p_inc_filename[TG_MAX_PATH] = { 0 };
+            p_it += sizeof("#include") - 1;
+            p_it = tg_string_skip_whitespace(p_it);
+            TG_ASSERT2(*p_it == '\"', "The included filename must be surrounded by quotation marks");
+            p_it++;
+
+            u32 idx = 0;
+            while (*p_it != '\"')
+            {
+                p_inc_filename[idx++] = *p_it++;
+            }
+
+            tg_file_properties inc_properties = { 0 };
+            const b32 get_inc_properties_result = tgp_file_get_properties(p_inc_filename, &inc_properties);
+            TG_ASSERT2(get_inc_properties_result, "The included file does not exist");
+
+            generated_size_upper_bound += inc_properties.size;
+            p_it = tg_string_next_line(p_it);
+        }
+        else
+        {
+            do
+            {
+                generated_size_upper_bound++;
+            } while (*p_it++ != '\n');
+        }
+    }
+
+    const char* p_generated_src = p_source;
+    tg_size generated_size = generated_size_upper_bound;
+    TG_ASSERT(contains_includes || tg_strlen_no_nul(p_source) == generated_size_upper_bound);
+
+    if (contains_includes)
+    {
+        p_it = p_source;
+        char* p_generated_it = TG_MALLOC_STACK(generated_size_upper_bound);
+        p_generated_src = p_generated_it;
+
+        while (*p_it != '\0')
+        {
+            if (tg_string_starts_with(p_it, "#include"))
+            {
+                TG_INVALID_CODEPATH(); // TODO: untested
+                
+                char p_inc_filename[TG_MAX_PATH] = { 0 };
+                p_it += sizeof("#include") - 1;
+                p_it = tg_string_skip_whitespace(p_it);
+                TG_ASSERT2(*p_it == '\"', "The included filename must be surrounded by quotation marks");
+                p_it++;
+
+                u32 idx = 0;
+                while (*p_it != '\"')
+                {
+                    p_inc_filename[idx++] = *p_it++;
+                }
+
+                tg_file_properties inc_properties = { 0 };
+                const b32 get_inc_properties_result = tgp_file_get_properties(p_inc_filename, &inc_properties);
+                TG_ASSERT2(get_inc_properties_result, "The included file doest not exist");
+
+                const b32 load_file_result = tgp_file_load(p_inc_filename, inc_properties.size, p_generated_it);
+                TG_ASSERT2(load_file_result, "The included file could not be loaded");
+                p_generated_it += inc_properties.size;
+
+                p_it = tg_string_next_line(p_it);
+            }
+            else
+            {
+                do
+                {
+                    *p_generated_it++ = *p_it;
+                } while (*p_it++ != '\n');
+            }
+        }
+        generated_size = (tg_size)(p_generated_it - p_generated_src);
+    }
 
     shaderc_shader_kind shader_kind = 0;
     switch (type)
@@ -3134,7 +3222,7 @@ tgvk_shader tgvk_shader_create_from_glsl(tg_shader_type type, const char* p_sour
 
     default: TG_INVALID_CODEPATH(); break;
     }
-    const shaderc_compilation_result_t result = shaderc_compile_into_spv(shaderc_compiler, p_source, tg_strlen_no_nul(p_source), shader_kind, "", "main", TG_NULL);
+    const shaderc_compilation_result_t result = shaderc_compile_into_spv(shaderc_compiler, p_generated_src, generated_size, shader_kind, "", "main", TG_NULL);
     TG_ASSERT(result);
 
 #ifdef TG_DEBUG

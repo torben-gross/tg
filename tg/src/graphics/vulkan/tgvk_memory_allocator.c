@@ -149,7 +149,7 @@ typedef struct tgvk_memory_pool
     void*                    p_mapped_device_memory;
     u32                      memory_type_bit;
     u32                      page_count;
-    tgvk_memory_entry*       p_first_free_entry;
+    tgvk_memory_entry*       p_first_free_entry; // TODO: tree structure instead of linked list (red black tree?)
 
 #ifdef TG_DEBUG
     u32                      occupied_entry_count;
@@ -378,6 +378,8 @@ void tgvk_memory_allocator_shutdown(VkDevice device)
     TG_DEBUG_LOG("+------------------------+\n");
     TG_DEBUG_LOG("| TGVK MEMORY DEBUG INFO |\n");
     TG_DEBUG_LOG("+------------------------+\n");
+
+    b32 memory_leaks_detected = TG_FALSE;
 #endif
 
     for (u32 i = 0; i < memory.pool_count; i++)
@@ -394,8 +396,13 @@ void tgvk_memory_allocator_shutdown(VkDevice device)
 #ifdef TG_DEBUG
 #define TGVK_DEBUG_OUTPUT(p_bucket)                      \
     for (u16 i = 0; i < TG_BUCKET_ENTRY_COUNT; i++)      \
+    {                                                    \
         if ((p_bucket)->p_memory[i].occupied == TG_TRUE) \
-            TG_DEBUG_LOG("tgvk_memory_allocator: Unfreed allocation from %s in line %u with %u pages!\n", (p_bucket)->p_memory[i].p_filename, (p_bucket)->p_memory[i].line, (p_bucket)->p_memory[i].page_count)
+        {                                                \
+            TG_DEBUG_LOG("tgvk_memory_allocator: Unfreed allocation from %s in line %u with %u pages!\n", (p_bucket)->p_memory[i].p_filename, (p_bucket)->p_memory[i].line, (p_bucket)->p_memory[i].page_count); \
+            memory_leaks_detected = TG_TRUE;             \
+        }                                                \
+    }
 #else
 #define TGVK_DEBUG_OUTPUT(p_bucket)
 #endif
@@ -409,6 +416,15 @@ void tgvk_memory_allocator_shutdown(VkDevice device)
         TG_FREE(p_bucket);
         p_bucket = p_next;
     }
+
+#ifdef TG_DEBUG
+    if (!memory_leaks_detected)
+    {
+        TG_DEBUG_LOG("tgvk_memory_allocator: No memory leaks detected!\n");
+    }
+    TG_DEBUG_LOG("\n");
+#endif
+
     TG_RWL_DESTROY(memory.read_write_lock);
 
 #undef TGVK_DEBUG_OUTPUT

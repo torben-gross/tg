@@ -112,6 +112,7 @@ typedef enum tgvk_queue_type
     TGVK_QUEUE_TYPE_PRESENT,
     TGVK_QUEUE_TYPE_COMPUTE_LOW_PRIORITY,
     TGVK_QUEUE_TYPE_GRAPHICS_LOW_PRIORITY,
+    // TODO: TGVK_QUEUE_TYPE_TRANSFER,
     TGVK_QUEUE_TYPE_COUNT
 } tgvk_queue_type;
 
@@ -215,7 +216,7 @@ typedef struct tgvk_framebuffer
     u32              width;
     u32              height;
     u32              layers;
-    VkFramebuffer    framebuffer;
+    VkFramebuffer    framebuffer; // TODO: this should contain its render_pass, as its needed later anyway (tgvk_cmd_begin_render_pass)
 } tgvk_framebuffer;
 
 typedef struct tgvk_shader tgvk_shader;
@@ -507,12 +508,70 @@ typedef struct tgvk_atmosphere_model
     } rendering;
 } tgvk_atmosphere_model;
 
+typedef struct tg_ray_tracer
+{
+    tg_structure_type          type;
+
+    const tg_camera*           p_camera;
+    tgvk_image                 hdr_color_attachment;
+    tg_render_target           render_target;
+    VkSemaphore                semaphore;
+    tg_rtvx_terrain_h          h_terrain; // TODO: this will be replaced by a list of objects (3d textures, color lut etc.)
+
+    struct
+    {
+        VkRenderPass           render_pass; // TODO: shared
+        tgvk_buffer            cube_ibo; // TODO: shared (AABB, as this is a cube, we need to add a scale to the model matrix)
+        tgvk_buffer            cube_vbo_p; // TODO: shared (AABB, as this is a cube, we need to add a scale to the model matrix)
+        tgvk_buffer            cube_vbo_n; // TODO: shared (AABB, as this is a cube, we need to add a scale to the model matrix)
+
+        tgvk_command_buffer    command_buffer;
+        tgvk_image             p_color_attachments[TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT];
+        tgvk_framebuffer       framebuffer;
+        tgvk_pipeline          graphics_pipeline; // TODO: per object? or one for all static objects? if only one material is allowed, one pipeline is sufficient
+        tgvk_buffer            view_projection_ubo;
+
+        tgvk_buffer            model_ubo;         // TODO: per object
+        tgvk_buffer            material_ubo;      // TODO: per object
+        tgvk_descriptor_set    descriptor_set;    // TODO: per object? or one for all static objects?
+    } geometry_pass;
+
+    struct
+    {
+        tgvk_command_buffer    command_buffer;
+        tgvk_shader            fragment_shader;
+        tgvk_pipeline          graphics_pipeline;
+        tgvk_buffer            ubo;
+        tgvk_descriptor_set    descriptor_set;
+        tgvk_framebuffer       framebuffer;
+    } shading_pass;
+
+    struct
+    {
+        tgvk_command_buffer    command_buffer;
+    } blit_pass;
+
+    struct
+    {
+        tgvk_command_buffer    p_command_buffers[TG_MAX_SWAPCHAIN_IMAGES];
+        VkSemaphore            image_acquired_semaphore;
+        tgvk_framebuffer       p_framebuffers[TG_MAX_SWAPCHAIN_IMAGES];
+        tgvk_pipeline          graphics_pipeline;
+        tgvk_descriptor_set    descriptor_set;
+    } present_pass;
+
+    struct
+    {
+        tgvk_command_buffer    command_buffer;
+    } clear_pass;
+} tg_ray_tracer;
+
 typedef struct tg_renderer
 {
     tg_structure_type            type;
 
     const tg_camera*             p_camera;
-    tgvk_buffer                  view_projection_ubo;
+    tgvk_buffer                  view_projection_ubo; // TODO: move to g buffer pass
     tgvk_image                   hdr_color_attachment;
     tg_render_target             render_target;
     VkSemaphore                  semaphore;
