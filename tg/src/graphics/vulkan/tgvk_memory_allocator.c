@@ -82,19 +82,7 @@
     }
 
 #ifdef TG_DEBUG
-#define TG_VALIDATE_LINKAGE(p_entry) \
-    if ((p_entry)->p_prev)                                                                           \
-    {                                                                                                \
-        const tgvk_memory_entry* p_prev_entry = (p_entry)->p_prev;                                   \
-        TG_ASSERT(p_prev_entry->p_next == (p_entry));                                                \
-        TG_ASSERT(p_prev_entry->offset_pages + p_prev_entry->page_count == (p_entry)->offset_pages); \
-    }                                                                                                \
-    if ((p_entry)->p_next)                                                                           \
-    {                                                                                                \
-        const tgvk_memory_entry* p_next_entry = (p_entry)->p_next;                                   \
-        TG_ASSERT(p_next_entry->p_prev == (p_entry));                                                \
-        TG_ASSERT((p_entry)->offset_pages + (p_entry)->page_count == p_next_entry->offset_pages);    \
-    }
+#define TG_VALIDATE_LINKAGE(p_entry) tg__validate(p_entry)
 #else
 #define TG_VALIDATE_LINKAGE(p_entry)
 #endif
@@ -238,6 +226,27 @@ void tg__free_entry(tgvk_memory_entry* p_entry)
     p_entry->occupied = -1;
 #endif
 }
+
+#ifdef TG_DEBUG
+void tg__validate(const tgvk_memory_entry* p_entry)
+{
+    if (p_entry)
+    {
+        if (p_entry->p_prev)
+        {
+            const tgvk_memory_entry* p_prev_entry = p_entry->p_prev;
+            TG_ASSERT(p_prev_entry->p_next == p_entry);
+            TG_ASSERT(p_prev_entry->offset_pages + p_prev_entry->page_count == p_entry->offset_pages);
+        }
+        if (p_entry->p_next)
+        {
+            const tgvk_memory_entry* p_next_entry = p_entry->p_next;
+            TG_ASSERT(p_next_entry->p_prev == p_entry);
+            TG_ASSERT(p_entry->offset_pages + p_entry->page_count == p_next_entry->offset_pages);
+        }
+    }
+}
+#endif
 
 
 
@@ -478,6 +487,7 @@ tgvk_memory_block tgvk_memory_allocator_alloc(VkDeviceSize alignment, VkDeviceSi
                 {
                     if (offset_pages > 0)
                     {
+                        // Try to cut off from the back of the entry, if alignment allows it
                         if ((p_entry->offset_pages + p_entry->page_count - required_page_count) % alignment_pages == 0)
                         {
                             tgvk_memory_entry* p_new_entry = tg__alloc_entry();
@@ -517,7 +527,7 @@ tgvk_memory_block tgvk_memory_allocator_alloc(VkDeviceSize alignment, VkDeviceSi
                             p_entry2->p_next_free = TG_NULL;
 
                             p_entry3->offset_pages += offset_pages + required_page_count;
-                            p_entry3->page_count -= offset_pages - required_page_count;
+                            p_entry3->page_count -= offset_pages + required_page_count;
 
                             TG_LINK(p_entry0, p_entry1);
                             TG_LINK(p_entry1, p_entry2);
