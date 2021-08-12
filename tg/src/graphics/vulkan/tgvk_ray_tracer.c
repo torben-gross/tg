@@ -335,7 +335,7 @@ tg_ray_tracer_h tg_ray_tracer_create(const tg_camera* p_camera)
 
         tgvk_graphics_pipeline_create_info graphics_pipeline_create_info = { 0 };
         graphics_pipeline_create_info.p_vertex_shader = &tg_vertex_shader_create("shaders/ray_tracer/geometry.vert")->shader;
-        graphics_pipeline_create_info.p_fragment_shader = &tg_vertex_shader_create("shaders/ray_tracer/geometry.frag")->shader;
+        graphics_pipeline_create_info.p_fragment_shader = &tg_fragment_shader_create("shaders/ray_tracer/geometry.frag")->shader;
         graphics_pipeline_create_info.cull_mode = VK_CULL_MODE_FRONT_BIT; // TODO: is this okay for ray tracing? this culls the front face
         graphics_pipeline_create_info.depth_test_enable = VK_TRUE;
         graphics_pipeline_create_info.depth_write_enable = VK_TRUE;
@@ -346,7 +346,7 @@ tg_ray_tracer_h tg_ray_tracer_create(const tg_camera* p_camera)
         graphics_pipeline_create_info.polygon_mode = VK_POLYGON_MODE_FILL;
 
         shared_render_resources.ray_tracer.graphics_pipeline = tgvk_pipeline_create_graphics(&graphics_pipeline_create_info);
-        shared_render_resources.ray_tracer.view_projection_ubo = TGVK_UNIFORM_BUFFER_CREATE(2 * sizeof(m4));
+        shared_render_resources.ray_tracer.vis.view_projection_ubo = TGVK_UNIFORM_BUFFER_CREATE(2 * sizeof(m4));
 
         const u16 p_indices[6 * 6] = {
              0,  1,  2,  2,  3,  0, // x-
@@ -428,6 +428,29 @@ tg_ray_tracer_h tg_ray_tracer_create(const tg_camera* p_camera)
 
         tgvk_global_staging_buffer_release();
 
+
+
+        VkSubpassDescription vis_subpass_description = { 0 };
+        vis_subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+
+        shared_render_resources.ray_tracer.vis.render_pass = tgvk_render_pass_create(TG_NULL, &vis_subpass_description);
+
+        tgvk_graphics_pipeline_create_info vis_graphics_pipeline_create_info = { 0 };
+        vis_graphics_pipeline_create_info.p_vertex_shader = &tg_vertex_shader_create("shaders/ray_tracer/visibility.vert")->shader;
+        vis_graphics_pipeline_create_info.p_fragment_shader = &tg_fragment_shader_create("shaders/ray_tracer/visibility.frag")->shader;
+        vis_graphics_pipeline_create_info.cull_mode = VK_CULL_MODE_FRONT_BIT; // TODO: is this okay for ray tracing? this culls the front face
+        vis_graphics_pipeline_create_info.depth_test_enable = VK_FALSE;
+        vis_graphics_pipeline_create_info.depth_write_enable = VK_FALSE;
+        vis_graphics_pipeline_create_info.p_blend_modes = TG_NULL;
+        vis_graphics_pipeline_create_info.render_pass = shared_render_resources.ray_tracer.vis.render_pass;
+        vis_graphics_pipeline_create_info.viewport_size.x = (f32)w;
+        vis_graphics_pipeline_create_info.viewport_size.y = (f32)h;
+        vis_graphics_pipeline_create_info.polygon_mode = VK_POLYGON_MODE_FILL;
+
+        shared_render_resources.ray_tracer.vis.pipeline = tgvk_pipeline_create_graphics(&vis_graphics_pipeline_create_info);
+
+
+
         shared_render_resources.ray_tracer.initialized = TG_TRUE;
     }
 
@@ -465,6 +488,12 @@ void tg_ray_tracer_destroy(tg_ray_tracer_h h_ray_tracer)
 	TG_ASSERT(h_ray_tracer);
 
 	TG_NOT_IMPLEMENTED();
+}
+
+void tg_ray_tracer_push_obj(tg_ray_tracer_h h_ray_tracer, tg_obj_h h_obj)
+{
+    TG_ASSERT(h_ray_tracer);
+    TG_ASSERT(h_obj);
 }
 
 void tg_ray_tracer_push_static(tg_ray_tracer_h h_ray_tracer, tg_ray_trace_command_h h_command)
@@ -505,8 +534,8 @@ void tg_ray_tracer_render(tg_ray_tracer_h h_ray_tracer)
     const m4 ivp = tgm_m4_inverse(vp);
 
     // TODO: keep this shared?
-    TGVK_CAMERA_VIEW(shared_render_resources.ray_tracer.view_projection_ubo) = v;
-    TGVK_CAMERA_PROJ(shared_render_resources.ray_tracer.view_projection_ubo) = p;
+    TGVK_CAMERA_VIEW(shared_render_resources.ray_tracer.vis.view_projection_ubo) = v;
+    TGVK_CAMERA_PROJ(shared_render_resources.ray_tracer.vis.view_projection_ubo) = p;
 
     tg_shading_ubo* p_shading_ubo = &TGVK_SHADING_UBO;
     //p_shading_ubo->camera_position.xyz = c.position;

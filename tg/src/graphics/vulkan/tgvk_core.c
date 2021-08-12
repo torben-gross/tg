@@ -26,8 +26,8 @@
 
 #endif
 
-#define TGVK_DEVICE_EXTENSION_COUNT      1
-#define TGVK_DEVICE_EXTENSION_NAMES      { VK_KHR_SWAPCHAIN_EXTENSION_NAME }
+#define TGVK_DEVICE_EXTENSION_COUNT      2
+#define TGVK_DEVICE_EXTENSION_NAMES      { VK_KHR_SWAPCHAIN_EXTENSION_NAME, VK_KHR_SHADER_ATOMIC_INT64_EXTENSION_NAME }
 
 #ifdef TG_DEBUG
 #define TGVK_VALIDATION_LAYER_COUNT      1
@@ -84,6 +84,7 @@ TGVK_DEFINE_STRUCTURE_BUFFER(font, TG_MAX_FONTS);
 TGVK_DEFINE_STRUCTURE_BUFFER(fragment_shader, TG_MAX_FRAGMENT_SHADERS);
 TGVK_DEFINE_STRUCTURE_BUFFER(material, TG_MAX_MATERIALS);
 TGVK_DEFINE_STRUCTURE_BUFFER(mesh, TG_MAX_MESHES);
+TGVK_DEFINE_STRUCTURE_BUFFER(obj, TG_MAX_OBJS);
 TGVK_DEFINE_STRUCTURE_BUFFER(ray_trace_command, TG_MAX_RAY_TRACE_COMMANDS);
 TGVK_DEFINE_STRUCTURE_BUFFER(ray_tracer, TG_MAX_RAY_TRACERS);
 TGVK_DEFINE_STRUCTURE_BUFFER(render_command, TG_MAX_RENDER_COMMANDS);
@@ -1856,6 +1857,7 @@ void* tgvk_handle_array(tg_structure_type type)
     case TG_STRUCTURE_TYPE_FRAGMENT_SHADER:   p_array = TGVK_STRUCTURE_BUFFER_NAME(fragment_shader);   break;
     case TG_STRUCTURE_TYPE_MATERIAL:          p_array = TGVK_STRUCTURE_BUFFER_NAME(material);          break;
     case TG_STRUCTURE_TYPE_MESH:              p_array = TGVK_STRUCTURE_BUFFER_NAME(mesh);              break;
+    case TG_STRUCTURE_TYPE_OBJ:               p_array = TGVK_STRUCTURE_BUFFER_NAME(obj);               break;
     case TG_STRUCTURE_TYPE_RAY_TRACE_COMMAND: p_array = TGVK_STRUCTURE_BUFFER_NAME(ray_trace_command); break;
     case TG_STRUCTURE_TYPE_RAY_TRACER:        p_array = TGVK_STRUCTURE_BUFFER_NAME(ray_tracer);        break;
     case TG_STRUCTURE_TYPE_RENDER_COMMAND:    p_array = TGVK_STRUCTURE_BUFFER_NAME(render_command);    break;
@@ -1886,6 +1888,7 @@ void* tgvk_handle_take(tg_structure_type type)
     case TG_STRUCTURE_TYPE_FRAGMENT_SHADER:   { TGVK_STRUCTURE_TAKE(fragment_shader, p_handle);   } break;
     case TG_STRUCTURE_TYPE_MATERIAL:          { TGVK_STRUCTURE_TAKE(material, p_handle);          } break;
     case TG_STRUCTURE_TYPE_MESH:              { TGVK_STRUCTURE_TAKE(mesh, p_handle);              } break;
+    case TG_STRUCTURE_TYPE_OBJ:               { TGVK_STRUCTURE_TAKE(obj, p_handle);               } break;
     case TG_STRUCTURE_TYPE_RAY_TRACE_COMMAND: { TGVK_STRUCTURE_TAKE(ray_trace_command, p_handle); } break;
     case TG_STRUCTURE_TYPE_RAY_TRACER:        { TGVK_STRUCTURE_TAKE(ray_tracer, p_handle);        } break;
     case TG_STRUCTURE_TYPE_RENDER_COMMAND:    { TGVK_STRUCTURE_TAKE(render_command, p_handle);    } break;
@@ -1919,6 +1922,7 @@ void tgvk_handle_release(void* p_handle)
     case TG_STRUCTURE_TYPE_FRAGMENT_SHADER:   { TGVK_STRUCTURE_RELEASE(fragment_shader, p_handle);   } break;
     case TG_STRUCTURE_TYPE_MATERIAL:          { TGVK_STRUCTURE_RELEASE(material, p_handle);          } break;
     case TG_STRUCTURE_TYPE_MESH:              { TGVK_STRUCTURE_RELEASE(mesh, p_handle);              } break;
+    case TG_STRUCTURE_TYPE_OBJ:               { TGVK_STRUCTURE_RELEASE(obj, p_handle);               } break;
     case TG_STRUCTURE_TYPE_RAY_TRACE_COMMAND: { TGVK_STRUCTURE_RELEASE(ray_trace_command, p_handle); } break;
     case TG_STRUCTURE_TYPE_RAY_TRACER:        { TGVK_STRUCTURE_RELEASE(ray_tracer, p_handle);        } break;
     case TG_STRUCTURE_TYPE_RENDER_COMMAND:    { TGVK_STRUCTURE_RELEASE(render_command, p_handle);    } break;
@@ -3546,12 +3550,13 @@ static b32 tg__physical_device_supports_extension(VkPhysicalDevice pd)
     TGVK_CALL(vkEnumerateDeviceExtensionProperties(pd, TG_NULL, &device_extension_property_count, device_extension_properties));
 
     b32 supports_extensions = TG_TRUE;
+    const char* pp_device_extension_names[] = TGVK_DEVICE_EXTENSION_NAMES;
     for (u32 i = 0; i < TGVK_DEVICE_EXTENSION_COUNT; i++)
     {
         b32 supports_extension = TG_FALSE;
         for (u32 j = 0; j < device_extension_property_count; j++)
         {
-            if (tg_string_equal(((char*[TGVK_DEVICE_EXTENSION_COUNT])TGVK_DEVICE_EXTENSION_NAMES)[i], device_extension_properties[j].extensionName) == 0)
+            if (tg_string_equal(pp_device_extension_names[i], device_extension_properties[j].extensionName))
             {
                 supports_extension = TG_TRUE;
                 break;
@@ -3580,10 +3585,27 @@ static u32 tg__physical_device_rate(VkPhysicalDevice pd)
     u32 physical_device_present_mode_count;
     TGVK_CALL(vkGetPhysicalDeviceSurfacePresentModesKHR(pd, surface.surface, &physical_device_present_mode_count, TG_NULL));
 
+    VkPhysicalDeviceFeatures2 physical_device_features_2 = { 0 };
+    physical_device_features_2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+    vkGetPhysicalDeviceFeatures2(pd, &physical_device_features_2);
+    b32 supports_shader_buffer_int64_atomics = physical_device_features_2.features.shaderInt64 == VK_TRUE;
+    const VkPhysicalDeviceFeatures2* p_features_it = &physical_device_features_2;
+    while (p_features_it)
+    {
+        if (p_features_it->sType == VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_INT64_FEATURES)
+        {
+            const VkPhysicalDeviceShaderAtomicInt64Features* p_shader_atomic_int64_features = (const VkPhysicalDeviceShaderAtomicInt64Features*) p_features_it;
+            supports_shader_buffer_int64_atomics &= p_shader_atomic_int64_features->shaderBufferInt64Atomics == VK_TRUE;
+            break;
+        }
+        p_features_it = p_features_it->pNext;
+    }
+
     if (!tg__physical_device_supports_extension(pd) ||
         !tg__physical_device_supports_required_queue_families(pd) ||
         !physical_device_surface_format_count ||
-        !physical_device_present_mode_count)
+        !physical_device_present_mode_count ||
+        !supports_shader_buffer_int64_atomics)
     {
         return 0;
     }
@@ -3621,7 +3643,7 @@ static VkInstance tg__instance_create(void)
         VkLayerProperties* p_layer_properties = TG_MALLOC_STACK(layer_properties_size);
         vkEnumerateInstanceLayerProperties(&layer_property_count, p_layer_properties);
 
-        const char* p_validation_layer_names[TGVK_VALIDATION_LAYER_COUNT] = TGVK_VALIDATION_LAYER_NAMES;
+        const char* p_validation_layer_names[] = TGVK_VALIDATION_LAYER_NAMES;
         for (u32 i = 0; i < TGVK_VALIDATION_LAYER_COUNT; i++)
         {
             b32 layer_found = TG_FALSE;
@@ -3655,7 +3677,7 @@ static VkInstance tg__instance_create(void)
 #endif
 
 #if TGVK_INSTANCE_EXTENSION_COUNT
-    const char* pp_enabled_extension_names[TGVK_INSTANCE_EXTENSION_COUNT] = TGVK_INSTANCE_EXTENSION_NAMES;
+    const char* pp_enabled_extension_names[] = TGVK_INSTANCE_EXTENSION_NAMES;
 #else
     const char** pp_enabled_extension_names = TG_NULL;
 #endif
@@ -3867,7 +3889,7 @@ static VkDevice tg__device_create(void)
     physical_device_features.shaderClipDistance = VK_FALSE;
     physical_device_features.shaderCullDistance = VK_FALSE;
     physical_device_features.shaderFloat64 = VK_FALSE;
-    physical_device_features.shaderInt64 = VK_FALSE;
+    physical_device_features.shaderInt64 = VK_TRUE;
     physical_device_features.shaderInt16 = VK_FALSE;
     physical_device_features.shaderResourceResidency = VK_FALSE;
     physical_device_features.shaderResourceMinLod = VK_FALSE;
@@ -3883,19 +3905,25 @@ static VkDevice tg__device_create(void)
     physical_device_features.variableMultisampleRate = VK_FALSE;
 
 #if TGVK_VALIDATION_LAYER_COUNT
-    const char* pp_enabled_layer_names[TGVK_VALIDATION_LAYER_COUNT] = TGVK_VALIDATION_LAYER_NAMES;
+    const char* pp_enabled_layer_names[] = TGVK_VALIDATION_LAYER_NAMES;
 #else
     const char** pp_enabled_layer_names = TG_NULL;
 #endif
 #if TGVK_DEVICE_EXTENSION_COUNT
-    const char* pp_enabled_extension_names[TGVK_DEVICE_EXTENSION_COUNT] = TGVK_DEVICE_EXTENSION_NAMES;
+    const char* pp_enabled_extension_names[] = TGVK_DEVICE_EXTENSION_NAMES;
 #else
     const char** pp_enabled_extension_names = TG_NULL;
 #endif
 
+    VkPhysicalDeviceShaderAtomicInt64Features physical_device_shader_atomic_int64_features = { 0 };
+    physical_device_shader_atomic_int64_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_INT64_FEATURES;
+    physical_device_shader_atomic_int64_features.pNext = TG_NULL;
+    physical_device_shader_atomic_int64_features.shaderBufferInt64Atomics = VK_TRUE;
+    physical_device_shader_atomic_int64_features.shaderSharedInt64Atomics = VK_FALSE;
+
     VkDeviceCreateInfo device_create_info = { 0 };
     device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    device_create_info.pNext = TG_NULL;
+    device_create_info.pNext = &physical_device_shader_atomic_int64_features;
     device_create_info.flags = 0;
     device_create_info.queueCreateInfoCount = device_queue_create_info_count;
     device_create_info.pQueueCreateInfos = p_device_queue_create_infos;

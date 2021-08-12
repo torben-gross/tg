@@ -42,7 +42,7 @@ tg_rtvx_terrain_h tg_rtvx_terrain_create(void)
 				const f32 noise_clamped = tgm_f32_clamp(noise, -1.0f, 1.0f);
 				const f32 f0 = (noise_clamped + 1.0f) * 0.5f;
 				const f32 f1 = 254.0f * f0;
-				i8 f2 = -(i8)(tgm_f32_round_to_i32(f1) - 127);
+				const i8 f2 = -(i8)(tgm_f32_round_to_i32(f1) - 127);
 
 				*p_it++ = f2;
 			}

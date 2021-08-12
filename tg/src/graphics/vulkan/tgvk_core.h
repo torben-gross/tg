@@ -337,13 +337,18 @@ typedef struct tgvk_shared_render_resources
 
     struct
     {
-        b32              initialized; // TODO: don't waste 32 bit
-        tgvk_buffer      cube_ibo;
-        tgvk_buffer      cube_vbo_p;
-        tgvk_buffer      cube_vbo_n;
-        VkRenderPass     render_pass;
-        tgvk_pipeline    graphics_pipeline;
-        tgvk_buffer      view_projection_ubo;
+        b32                  initialized; // TODO: don't waste 32 bit
+        struct
+        {
+            tgvk_buffer      view_projection_ubo;
+            VkRenderPass     render_pass;
+            tgvk_pipeline    pipeline;
+        } vis;
+        tgvk_buffer          cube_ibo;
+        tgvk_buffer          cube_vbo_p;
+        tgvk_buffer          cube_vbo_n;
+        VkRenderPass         render_pass;
+        tgvk_pipeline        graphics_pipeline;
     } ray_tracer;
 } tgvk_shared_render_resources;
 
@@ -419,6 +424,22 @@ typedef struct tg_material
     tg_fragment_shader_h    h_fragment_shader;
     tgvk_pipeline           pipeline;
 } tg_material;
+
+// TODO:
+// 32 bits for depth (Karis et al. used 30 bits: http://advances.realtimerendering.com/s2021/Karis_Nanite_SIGGRAPH_Advances_2021_final.pdf p. 84)
+// 32 bits for voxel ids
+typedef struct tg_obj
+{
+    u16                    type;                 // tg_structure_type
+    u32                    first_voxel_id;
+    u16                    packed_log2_whd;      // 5 bits each for log2_w, log2_h, log2_d. One bit unused. TODO: we only need to ensure division by 16 for 3 lods, so just not use lower 3 bits? this member would need to become bigger, though.. but for lod down to w,h,d = 2, we need 2^n?
+    tgvk_buffer            ubo;                  // 32 bits first_voxel_id
+    tgvk_descriptor_set    descriptor_set;
+    tgvk_buffer            voxels;               // (w/(L+1) * h/(L+1)) bits for lod L >= 0, L < TG_MAX_LODS. Data is packed contiguous
+    // TODO: implement below
+    //tgvk_buffer            color_ids;            // 8 bits per voxel
+    //u8                     p_color_lut[3 * 256]; // Three 8 bit components per color, 256 colors // TODO: optionally less colors, less memory. put LUT into one huge array and only reference pointer to location in here?
+} tg_obj;
 
 typedef struct tg_render_command
 {
@@ -532,9 +553,12 @@ typedef struct tg_ray_tracer
     tg_structure_type              type;
 
     const tg_camera*               p_camera;
+    tgvk_buffer                    visibility_buffer;
     tgvk_image                     hdr_color_attachment;
     tg_render_target               render_target;
     VkSemaphore                    semaphore;
+
+
 
     struct
     {

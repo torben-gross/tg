@@ -77,6 +77,7 @@ typedef struct tg_sample_scene
     tg_material_h              h_probe_material;
     tg_render_command_h        h_probe_render_command;
 
+    tg_obj_h                   h_obj;
     tg_terrain*                p_terrain;
     tg_rtvx_terrain_h          h_terrain;
     
@@ -108,10 +109,12 @@ static void tg__game_3d_create(void)
     scene.h_main_renderer = tg_renderer_create(&scene.camera);
     scene.h_secondary_renderer = tg_renderer_create(&scene.camera);
 
-    scene.p_terrain = tg_terrain_create(&scene.camera);
-    scene.h_terrain = tg_rtvx_terrain_create();
     scene.h_ray_tracer = tg_ray_tracer_create(&scene.camera);
-    tg_ray_tracer_push_static(scene.h_ray_tracer, tg_ray_trace_command_create(TG_NULL, V3(0.0f), (tg_storage_image_3d_h)scene.h_terrain));
+    scene.h_obj = tg_obj_create(7, 7, 7);
+    //scene.p_terrain = tg_terrain_create(&scene.camera);
+    //scene.h_terrain = tg_rtvx_terrain_create();
+    //tg_ray_tracer_push_static(scene.h_ray_tracer, tg_ray_trace_command_create(TG_NULL, V3(0.0f), (tg_storage_image_3d_h)scene.h_terrain));
+    tg_ray_tracer_push_obj(scene.h_ray_tracer, scene.h_obj);
 
 
 
@@ -353,10 +356,10 @@ static void tg__game_3d_update_and_render(f32 dt)
     //const v3 c0 = tgm_v3_lerp(c0n, c0d, -d0.y);
     const v3 c0 = V3(3.0f);
 
-    tg_ray_tracer_render(scene.h_ray_tracer);
-    tg_ray_tracer_clear(scene.h_ray_tracer);
+    //tg_ray_tracer_render(scene.h_ray_tracer);
+    //tg_ray_tracer_clear(scene.h_ray_tracer);
 
-#if 0
+#if 1
     tg_renderer_begin(scene.h_secondary_renderer);
     tg_renderer_push_directional_light(scene.h_secondary_renderer, d0, (v3) { 4.0f, 4.0f, 10.0f });
     tg_terrain_render(scene.p_terrain, scene.h_secondary_renderer);

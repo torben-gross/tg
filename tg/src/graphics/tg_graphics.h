@@ -15,8 +15,10 @@
 #define TG_MAX_DEPTH_IMAGES               8
 #define TG_MAX_FONTS                      TG_MAX_RENDERERS
 #define TG_MAX_FRAGMENT_SHADERS           32
+#define TG_MAX_LODS                       3
 #define TG_MAX_MATERIALS                  512
 #define TG_MAX_MESHES                     65536
+#define TG_MAX_OBJS                       65536
 #define TG_MAX_RAY_TRACE_COMMANDS         8
 #define TG_MAX_RAY_TRACERS                4
 #define TG_MAX_RENDER_COMMANDS            65536
@@ -54,6 +56,7 @@ TG_DECLARE_HANDLE(tg_font);
 TG_DECLARE_HANDLE(tg_fragment_shader);
 TG_DECLARE_HANDLE(tg_material);
 TG_DECLARE_HANDLE(tg_mesh);
+TG_DECLARE_HANDLE(tg_obj);
 TG_DECLARE_HANDLE(tg_ray_trace_command);
 TG_DECLARE_HANDLE(tg_ray_tracer);
 TG_DECLARE_HANDLE(tg_render_command);
@@ -135,6 +138,7 @@ typedef enum tg_structure_type
 	TG_STRUCTURE_TYPE_FRAGMENT_SHADER,
 	TG_STRUCTURE_TYPE_MATERIAL,
 	TG_STRUCTURE_TYPE_MESH,
+	TG_STRUCTURE_TYPE_OBJ,
 	TG_STRUCTURE_TYPE_RAY_TRACE_COMMAND,
 	TG_STRUCTURE_TYPE_RAY_TRACER,
 	TG_STRUCTURE_TYPE_RENDER_COMMAND,
@@ -273,11 +277,15 @@ void                     tg_mesh_regenerate_normals(tg_mesh_h h_mesh);
 void                     tg_mesh_regenerate_tangents_bitangents(tg_mesh_h h_mesh);
 void                     tg_mesh_destroy(tg_mesh_h h_mesh);
 
+tg_obj_h                 tg_obj_create(u32 log2_w, u32 log2_h, u32 log2_d);
+void                     tg_obj_destroy(tg_obj_h h_obj);
+
 tg_ray_trace_command_h    tg_ray_trace_command_create(tg_material_h h_material, v3 position, tg_storage_image_3d_h h_voxels);
 void                     tg_ray_trace_command_destroy(tg_ray_trace_command_h h_command);
 
 tg_ray_tracer_h          tg_ray_tracer_create(const tg_camera* p_camera);
 void                     tg_ray_tracer_destroy(tg_ray_tracer_h h_ray_tracer);
+void                     tg_ray_tracer_push_obj(tg_ray_tracer_h h_ray_tracer, tg_obj_h h_obj);
 void                     tg_ray_tracer_push_static(tg_ray_tracer_h h_ray_tracer, tg_ray_trace_command_h h_command);
 void                     tg_ray_tracer_render(tg_ray_tracer_h h_ray_tracer);
 void                     tg_ray_tracer_clear(tg_ray_tracer_h h_ray_tracer);

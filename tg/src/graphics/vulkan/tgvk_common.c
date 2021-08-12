@@ -38,7 +38,6 @@ void tgvk_vkresult_convert_to_string(char* p_buffer, VkResult result)
     case VK_ERROR_INCOMPATIBLE_DISPLAY_KHR:                     { const char p_string[] = "VK_ERROR_INCOMPATIBLE_DISPLAY_KHR";                     tg_memcpy(sizeof(p_string), p_string, p_buffer); } break;
     case VK_ERROR_VALIDATION_FAILED_EXT:                        { const char p_string[] = "VK_ERROR_VALIDATION_FAILED_EXT";                        tg_memcpy(sizeof(p_string), p_string, p_buffer); } break;
     case VK_ERROR_INVALID_SHADER_NV:                            { const char p_string[] = "VK_ERROR_INVALID_SHADER_NV";                            tg_memcpy(sizeof(p_string), p_string, p_buffer); } break;
-    case VK_ERROR_INCOMPATIBLE_VERSION_KHR:                     { const char p_string[] = "VK_ERROR_INCOMPATIBLE_VERSION_KHR";                     tg_memcpy(sizeof(p_string), p_string, p_buffer); } break;
     case VK_ERROR_INVALID_DRM_FORMAT_MODIFIER_PLANE_LAYOUT_EXT: { const char p_string[] = "VK_ERROR_INVALID_DRM_FORMAT_MODIFIER_PLANE_LAYOUT_EXT"; tg_memcpy(sizeof(p_string), p_string, p_buffer); } break;
     case VK_ERROR_NOT_PERMITTED_EXT:                            { const char p_string[] = "VK_ERROR_NOT_PERMITTED_EXT";                            tg_memcpy(sizeof(p_string), p_string, p_buffer); } break;
     case VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT:          { const char p_string[] = "VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT";          tg_memcpy(sizeof(p_string), p_string, p_buffer); } break;
