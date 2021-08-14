@@ -1,0 +1,23 @@
+#version 450
+
+#extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
+#extension GL_EXT_shader_atomic_int64                    : require
+
+#include "shaders/common.inc"
+
+layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in; // TODO: this should be dividable by the screen resolution, such that we dont have to do the compare below
+
+layout(set = 0, binding = 0) buffer visibility_buffer
+{
+    u32         u_w;
+    u32         u_h;
+    uint64_t    u_vb[];
+};
+
+void main()
+{
+    if (gl_GlobalInvocationID.x < u_w && gl_GlobalInvocationID.y < u_h)
+    {
+	    u_vb[u_w * gl_GlobalInvocationID.y + gl_GlobalInvocationID.x] = uint64_t(TG_U32_MAX) << uint64_t(32);
+    }
+}

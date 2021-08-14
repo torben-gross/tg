@@ -18,7 +18,7 @@ tg_ray_trace_command_h tg_ray_trace_command_create(tg_material_h h_material, v3 
 
 	tg_ray_trace_command_h h_command = tgvk_handle_take(TG_STRUCTURE_TYPE_RAY_TRACE_COMMAND);
 
-    h_command->descriptor_set = tgvk_descriptor_set_create(&shared_render_resources.ray_tracer.graphics_pipeline);
+    //h_command->descriptor_set = tgvk_descriptor_set_create(&shared_render_resources.ray_tracer.graphics_pipeline);
     h_command->model_ubo = TGVK_UNIFORM_BUFFER_CREATE(sizeof(m4));
     h_command->material_ubo = TGVK_UNIFORM_BUFFER_CREATE(sizeof(tg_material_ubo));
 
@@ -36,7 +36,7 @@ tg_ray_trace_command_h tg_ray_trace_command_create(tg_material_h h_material, v3 
     p_material->roughness = 1.0f;
 
     tgvk_descriptor_set_update_uniform_buffer(h_command->descriptor_set.descriptor_set, &h_command->model_ubo, 0);
-    tgvk_descriptor_set_update_uniform_buffer(h_command->descriptor_set.descriptor_set, &shared_render_resources.ray_tracer.vis.view_projection_ubo, 1);
+    //tgvk_descriptor_set_update_uniform_buffer(h_command->descriptor_set.descriptor_set, &shared_render_resources.ray_tracer.vis.view_projection_ubo, 1);
     tgvk_descriptor_set_update_uniform_buffer(h_command->descriptor_set.descriptor_set, &h_command->material_ubo, 2);
 
 	return h_command;

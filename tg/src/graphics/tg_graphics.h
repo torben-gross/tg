@@ -286,7 +286,6 @@ void                     tg_ray_trace_command_destroy(tg_ray_trace_command_h h_c
 tg_ray_tracer_h          tg_ray_tracer_create(const tg_camera* p_camera);
 void                     tg_ray_tracer_destroy(tg_ray_tracer_h h_ray_tracer);
 void                     tg_ray_tracer_push_obj(tg_ray_tracer_h h_ray_tracer, tg_obj_h h_obj);
-void                     tg_ray_tracer_push_static(tg_ray_tracer_h h_ray_tracer, tg_ray_trace_command_h h_command);
 void                     tg_ray_tracer_render(tg_ray_tracer_h h_ray_tracer);
 void                     tg_ray_tracer_clear(tg_ray_tracer_h h_ray_tracer);
 

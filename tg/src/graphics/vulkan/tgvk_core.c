@@ -3099,7 +3099,18 @@ tgvk_shader tgvk_shader_create(const char* p_filename)
         if (shaderc_result_get_num_warnings(result) || shaderc_result_get_num_errors(result))
         {
             const char* p_error_message = shaderc_result_get_error_message(result);
-            TG_DEBUG_LOG(p_error_message);
+            char p_buffer[4096] = { 0 };
+            const u32 line = tg_string_to_u32(p_error_message + 1);
+            char p_line_buffer[1024] = { 0 };
+            const char* p_line = p_generated_src;
+            for (u32 i = 1; i < line; i++)
+            {
+                p_line = tg_string_next_line(p_line);
+            }
+            p_line = tg_string_skip_whitespace(p_line);
+            tg_strcpy_line(sizeof(p_line_buffer), p_line_buffer, p_line);
+            tg_stringf(sizeof(p_buffer), p_buffer, "Error compiling \"%s\":\n%sCode at %u: %s", p_filename, p_error_message, line, p_line_buffer);
+            TG_DEBUG_LOG(p_buffer);
             TG_INVALID_CODEPATH();
         }
 #endif
@@ -3601,11 +3612,14 @@ static u32 tg__physical_device_rate(VkPhysicalDevice pd)
         p_features_it = p_features_it->pNext;
     }
 
+    const b32 supports_1024_compute_work_groups = physical_device_properties.limits.maxComputeWorkGroupInvocations >= 1024;
+
     if (!tg__physical_device_supports_extension(pd) ||
         !tg__physical_device_supports_required_queue_families(pd) ||
         !physical_device_surface_format_count ||
         !physical_device_present_mode_count ||
-        !supports_shader_buffer_int64_atomics)
+        !supports_shader_buffer_int64_atomics ||
+        !supports_1024_compute_work_groups)
     {
         return 0;
     }

@@ -338,17 +338,13 @@ typedef struct tgvk_shared_render_resources
     struct
     {
         b32                  initialized; // TODO: don't waste 32 bit
-        struct
-        {
-            tgvk_buffer      view_projection_ubo;
-            VkRenderPass     render_pass;
-            tgvk_pipeline    pipeline;
-        } vis;
+
         tgvk_buffer          cube_ibo;
         tgvk_buffer          cube_vbo_p;
         tgvk_buffer          cube_vbo_n;
-        VkRenderPass         render_pass;
-        tgvk_pipeline        graphics_pipeline;
+
+        VkRenderPass         visibility_render_pass;
+        VkRenderPass         shading_render_pass;
     } ray_tracer;
 } tgvk_shared_render_resources;
 
@@ -426,7 +422,7 @@ typedef struct tg_material
 } tg_material;
 
 // TODO:
-// 32 bits for depth (Karis et al. used 30 bits: http://advances.realtimerendering.com/s2021/Karis_Nanite_SIGGRAPH_Advances_2021_final.pdf p. 84)
+// 32 bits for depth (Karis et al. use 30 bits: http://advances.realtimerendering.com/s2021/Karis_Nanite_SIGGRAPH_Advances_2021_final.pdf p. 84)
 // 32 bits for voxel ids
 typedef struct tg_obj
 {
@@ -439,6 +435,11 @@ typedef struct tg_obj
     // TODO: implement below
     //tgvk_buffer            color_ids;            // 8 bits per voxel
     //u8                     p_color_lut[3 * 256]; // Three 8 bit components per color, 256 colors // TODO: optionally less colors, less memory. put LUT into one huge array and only reference pointer to location in here?
+    struct
+    {
+        tgvk_command_buffer    command_buffer;
+        tgvk_descriptor_set    descriptor_set;
+    } visibility_pass;
 } tg_obj;
 
 typedef struct tg_render_command
@@ -550,57 +551,58 @@ typedef struct tg_ray_trace_command
 
 typedef struct tg_ray_tracer
 {
-    tg_structure_type              type;
+    tg_structure_type          type;
 
-    const tg_camera*               p_camera;
-    tgvk_buffer                    visibility_buffer;
-    tgvk_image                     hdr_color_attachment;
-    tg_render_target               render_target;
-    VkSemaphore                    semaphore;
-
-
+    const tg_camera*           p_camera;
+    tgvk_image                 hdr_color_attachment;
+    tg_render_target           render_target;
+    VkSemaphore                semaphore;
 
     struct
     {
-        u32                        capacity;
-        u32                        count;
-        tg_ray_trace_command_h*    p_commands;
-    } commands;
+        u32                    capacity;
+        u32                    count;
+        tg_obj**               pp_objs;
+    } objs;
 
     struct
     {
-        tgvk_command_buffer        command_buffer;
-        tgvk_image                 p_color_attachments[TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT];
-        tgvk_framebuffer           framebuffer;
-    } geometry_pass;
+        tgvk_command_buffer    command_buffer;
+        tgvk_pipeline          pipeline;
+        tgvk_buffer            view_projection_ubo;
+        tgvk_buffer            visibility_buffer; // u32 w; u32 h; u64 data[w * h];
+        tgvk_framebuffer       framebuffer;
+    } visibility_pass;
 
     struct
     {
-        tgvk_command_buffer        command_buffer;
-        tgvk_shader                fragment_shader;
-        tgvk_pipeline              graphics_pipeline;
-        tgvk_buffer                ubo;
-        tgvk_descriptor_set        descriptor_set;
-        tgvk_framebuffer           framebuffer;
+        tgvk_command_buffer    command_buffer;
+        tgvk_shader            fragment_shader;
+        tgvk_pipeline          graphics_pipeline;
+        tgvk_buffer            ubo;
+        tgvk_descriptor_set    descriptor_set;
+        tgvk_framebuffer       framebuffer;
     } shading_pass;
 
     struct
     {
-        tgvk_command_buffer        command_buffer;
+        tgvk_command_buffer    command_buffer;
     } blit_pass;
 
     struct
     {
-        tgvk_command_buffer        p_command_buffers[TG_MAX_SWAPCHAIN_IMAGES];
-        VkSemaphore                image_acquired_semaphore;
-        tgvk_framebuffer           p_framebuffers[TG_MAX_SWAPCHAIN_IMAGES];
-        tgvk_pipeline              graphics_pipeline;
-        tgvk_descriptor_set        descriptor_set;
+        tgvk_command_buffer    p_command_buffers[TG_MAX_SWAPCHAIN_IMAGES];
+        VkSemaphore            image_acquired_semaphore;
+        tgvk_framebuffer       p_framebuffers[TG_MAX_SWAPCHAIN_IMAGES];
+        tgvk_pipeline          graphics_pipeline;
+        tgvk_descriptor_set    descriptor_set;
     } present_pass;
 
     struct
     {
-        tgvk_command_buffer        command_buffer;
+        tgvk_command_buffer    command_buffer;
+        tgvk_pipeline          compute_pipeline;
+        tgvk_descriptor_set    descriptor_set;
     } clear_pass;
 } tg_ray_tracer;
 

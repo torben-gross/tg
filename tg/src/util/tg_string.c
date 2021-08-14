@@ -47,7 +47,31 @@ tg_size tg_strcpy(tg_size size, char* p_buffer, const char* p_string)
 			break;
 		}
 	}
-	TG_ASSERT(p_string[i - 1] == '\0');
+	TG_ASSERT(p_buffer[i - 1] == '\0');
+	return i;
+}
+
+tg_size tg_strcpy_line(tg_size size, char* p_buffer, const char* p_string)
+{
+	tg_size i = 0;
+	for (; i < size; i++)
+	{
+		p_buffer[i] = p_string[i];
+		if (p_string[i] == '\0')
+		{
+			i++;
+			break;
+		}
+		else if (p_string[i] == '\n')
+		{
+			i++;
+			TG_ASSERT(i < size);
+			p_buffer[i] = '\0';
+			i++;
+			break;
+		}
+	}
+	TG_ASSERT(p_buffer[i - 1] == '\0');
 	return i;
 }
 
@@ -507,5 +531,22 @@ i32 tg_string_to_i32(const char* p_string)
 	}
 
 	const i32 result = sign * decimal;
+	return result;
+}
+
+u32 tg_string_to_u32(const char* p_string)
+{
+	TG_ASSERT(p_string);
+	TG_ASSERT(*p_string >= '0' && *p_string <= '9');
+
+	u32 result = 0;
+
+	while (*p_string >= '0' && *p_string <= '9')
+	{
+		result *= 10;
+		result += (i32)(*p_string - '0');
+		p_string++;
+	}
+
 	return result;
 }

@@ -5,24 +5,33 @@
 
 #include "shaders/common.inc"
 
-layout(location = 0) in v3    v_position;
-layout(location = 1) in v3    v_normal;
+layout(location = 0) in v3 v_position;
 
-layout(set = 0, binding = 2) uniform model
+layout(set = 0, binding = 0) uniform model
 {
-    v2i    window_size;
+    m4     u_model;
+    u32    u_first_voxel_id;
 };
 
-layout(set = 0, binding = 3) buffer visibility_buffer
+layout(set = 0, binding = 2) buffer visibility_buffer
 {
-    uint64_t    u_visibility_buffer[];
+    u32         u_w;
+    u32         u_h;
+    uint64_t    u_vb[];
 };
+
+uint64_t tg_pack(f32 d, u32 id)
+{
+    return uint64_t(id) | (uint64_t(d * f32(TG_U32_MAX)) << uint64_t(32));
+}
 
 void main()
 {
-    u32 x = u32(gl_FragCoord.x * f32(window_size.x));
-    u32 y = u32(gl_FragCoord.y * f32(window_size.y));
-    u32 i = window_size.x * y + x;
-    uint64_t data = uint64_t(3);
-    atomicMin(u_visibility_buffer[i], data);
+    u32 x = u32(gl_FragCoord.x);
+    u32 y = u32(gl_FragCoord.y);
+    f32 d = gl_FragCoord.z / gl_FragCoord.w;
+    u32 id = x*x + y + x*374261; // TODO
+    uint64_t data = tg_pack(d, id);
+    u32 i = u_w * y + x;
+    atomicMin(u_vb[i], data);
 }

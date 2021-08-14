@@ -30,10 +30,16 @@ tg_obj_h tg_obj_create(u32 log2_w, u32 log2_h, u32 log2_d)
 		h_obj->first_voxel_id += prev_num_voxels;
 	}
 
-	h_obj->ubo = TGVK_UNIFORM_BUFFER_CREATE(sizeof(u32));
-	*((u32*)h_obj->ubo.memory.p_mapped_device_memory) = h_obj->first_voxel_id;
+	h_obj->ubo = TGVK_UNIFORM_BUFFER_CREATE(sizeof(m4) + sizeof(u32));
+	m4* p_model = (m4*)h_obj->ubo.memory.p_mapped_device_memory;
+	u32* p_first_voxel_id = (u32*)(p_model + 1);
+	*p_model = tgm_m4_identity();
+	*p_first_voxel_id = h_obj->first_voxel_id;
 
-	h_obj->descriptor_set = tgvk_descriptor_set_create(&shared_render_resources.ray_tracer.vis.pipeline);
+	// TODO: only one ray tracer
+	tg_ray_tracer* p_ray_tracer = (tg_ray_tracer*)tgvk_handle_array(TG_STRUCTURE_TYPE_RAY_TRACER);
+
+	h_obj->descriptor_set = tgvk_descriptor_set_create(&p_ray_tracer->visibility_pass.pipeline);
 	tgvk_descriptor_set_update_uniform_buffer(h_obj->descriptor_set.descriptor_set, &h_obj->ubo, 0);
 
 	u32 packed = log2_w;
@@ -101,6 +107,10 @@ tg_obj_h tg_obj_create(u32 log2_w, u32 log2_h, u32 log2_d)
 	tgvk_cmd_copy_buffer(p_command_buffer, buffer_size, p_staging_buffer, &h_obj->voxels);
 	tgvk_command_buffer_end_and_submit(p_command_buffer);
 	tgvk_global_staging_buffer_release();
+
+	tgvk_descriptor_set_update_uniform_buffer(h_obj->descriptor_set.descriptor_set, &h_obj->ubo, 0);
+	tgvk_descriptor_set_update_uniform_buffer(h_obj->descriptor_set.descriptor_set, &p_ray_tracer->visibility_pass.view_projection_ubo, 1);
+	tgvk_descriptor_set_update_storage_buffer(h_obj->descriptor_set.descriptor_set, &p_ray_tracer->visibility_pass.visibility_buffer, 2);
 
 	return h_obj;
 }

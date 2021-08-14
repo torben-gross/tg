@@ -96,7 +96,8 @@ static void tg__game_3d_create(void)
     scene.render_commands = tg_list_create(sizeof(tg_render_command_h), TG_LIST_DEFAULT_CAPACITY, TG_NULL);
 
     scene.camera.type = TG_CAMERA_TYPE_PERSPECTIVE;
-    scene.camera.position = (v3) { 128.0f, 141.0f + 50.0f, 128.0f };
+    //scene.camera.position = (v3) { 128.0f, 141.0f + 50.0f, 128.0f };
+    scene.camera.position = (v3) { 0.0f, 0.0f, 10.0f };
     scene.camera.pitch = 0.0f;
     scene.camera.yaw = 0.0f;
     scene.camera.roll = 0.0f;
@@ -106,8 +107,8 @@ static void tg__game_3d_create(void)
     scene.camera.persp.f = -1000.0f;
     tg_input_get_mouse_position(&scene.last_mouse_x, &scene.last_mouse_y);
 
-    scene.h_main_renderer = tg_renderer_create(&scene.camera);
-    scene.h_secondary_renderer = tg_renderer_create(&scene.camera);
+    //scene.h_main_renderer = tg_renderer_create(&scene.camera);
+    //scene.h_secondary_renderer = tg_renderer_create(&scene.camera);
 
     scene.h_ray_tracer = tg_ray_tracer_create(&scene.camera);
     scene.h_obj = tg_obj_create(7, 7, 7);
@@ -141,18 +142,18 @@ static void tg__game_3d_create(void)
         0, 1, 2, 2, 3, 0
     };
 
-    scene.h_quad_mesh = tg_mesh_create();
-    tg_mesh_set_indices(scene.h_quad_mesh, 6, p_quad_indices);
-    tg_mesh_set_positions(scene.h_quad_mesh, 4, p_quad_positions);
-    tg_mesh_set_normals(scene.h_quad_mesh, 4, p_quad_normals);
-    tg_mesh_set_uvs(scene.h_quad_mesh, 4, p_quad_uvs);
-    scene.h_quad_color_ubo = tg_uniform_buffer_create(sizeof(v3));
-    *((v3*)tg_uniform_buffer_data(scene.h_quad_color_ubo)) = (v3) { 1.0f, 0.0f, 0.0f };
-    tg_handle p_custom_handles[2] = { scene.h_quad_color_ubo, tg_renderer_get_render_target(scene.h_secondary_renderer) };
-    scene.h_quad_material = tg_material_create_forward(tg_vertex_shader_create("shaders/forward/forward.vert"), tg_fragment_shader_create("shaders/forward/texture.frag"));
-    scene.h_quad_render_command = tg_render_command_create(scene.h_quad_mesh, scene.h_quad_material, (v3) { 0.0f, 133.0f, 0.0f }, 2, p_custom_handles);
-    scene.quad_offset_z = -65.0f;
-    tg_list_insert(&scene.render_commands, &scene.h_quad_render_command);
+    //scene.h_quad_mesh = tg_mesh_create();
+    //tg_mesh_set_indices(scene.h_quad_mesh, 6, p_quad_indices);
+    //tg_mesh_set_positions(scene.h_quad_mesh, 4, p_quad_positions);
+    //tg_mesh_set_normals(scene.h_quad_mesh, 4, p_quad_normals);
+    //tg_mesh_set_uvs(scene.h_quad_mesh, 4, p_quad_uvs);
+    //scene.h_quad_color_ubo = tg_uniform_buffer_create(sizeof(v3));
+    //*((v3*)tg_uniform_buffer_data(scene.h_quad_color_ubo)) = (v3) { 1.0f, 0.0f, 0.0f };
+    //tg_handle p_custom_handles[2] = { scene.h_quad_color_ubo, tg_renderer_get_render_target(scene.h_secondary_renderer) };
+    //scene.h_quad_material = tg_material_create_forward(tg_vertex_shader_create("shaders/forward/forward.vert"), tg_fragment_shader_create("shaders/forward/texture.frag"));
+    //scene.h_quad_render_command = tg_render_command_create(scene.h_quad_mesh, scene.h_quad_material, (v3) { 0.0f, 133.0f, 0.0f }, 2, p_custom_handles);
+    //scene.quad_offset_z = -65.0f;
+    //tg_list_insert(&scene.render_commands, &scene.h_quad_render_command);
 
 
 
@@ -225,14 +226,14 @@ static void tg__game_3d_create(void)
     tg_handle p_sponza_handles[1] = { scene.h_sponza_ubo };
     scene.h_sponza_render_command = tg_render_command_create(scene.h_sponza_mesh, scene.h_sponza_material, (v3) { 128.0f, 140.0f, 128.0f }, 1, p_sponza_handles);
     tg_list_insert(&scene.render_commands, &scene.h_sponza_render_command);
-    tg_voxelizer* p_voxelizer = TG_MALLOC_STACK(sizeof(*p_voxelizer));
-    tg_voxelizer_create(p_voxelizer);
-    tg_voxelizer_begin(p_voxelizer);
-    tg_voxelizer_exec(p_voxelizer, scene.h_sponza_render_command);
-    tg_voxelizer_exec(p_voxelizer, scene.p_pbr_spheres[48].h_render_command);
-    tg_voxelizer_end(p_voxelizer, (v3i) { 1, 2, 1 }, scene.p_voxels);
-    tg_voxelizer_destroy(p_voxelizer);
-    TG_FREE_STACK(sizeof(*p_voxelizer));
+    //tg_voxelizer* p_voxelizer = TG_MALLOC_STACK(sizeof(*p_voxelizer));
+    //tg_voxelizer_create(p_voxelizer);
+    //tg_voxelizer_begin(p_voxelizer);
+    //tg_voxelizer_exec(p_voxelizer, scene.h_sponza_render_command);
+    //tg_voxelizer_exec(p_voxelizer, scene.p_pbr_spheres[48].h_render_command);
+    //tg_voxelizer_end(p_voxelizer, (v3i) { 1, 2, 1 }, scene.p_voxels);
+    //tg_voxelizer_destroy(p_voxelizer);
+    //TG_FREE_STACK(sizeof(*p_voxelizer));
 }
 
 static void tg__game_3d_update_and_render(f32 dt)
@@ -265,7 +266,7 @@ static void tg__game_3d_update_and_render(f32 dt)
         scene.quad_offset_z -= 0.01f * dt;
     }
     v3 quad_offset_translation_z = { 0.0f, 133.0f, scene.quad_offset_z };
-    tg_render_command_set_position(scene.h_quad_render_command, quad_offset_translation_z);
+    //tg_render_command_set_position(scene.h_quad_render_command, quad_offset_translation_z);
 
     scene.quad_delta_time_sum_looped += dt;
     if (scene.quad_delta_time_sum_looped >= 10000.0f)
@@ -276,7 +277,7 @@ static void tg__game_3d_update_and_render(f32 dt)
     const f32 noise_x = tgm_noise(sint, 0.1f, 0.1f) + 0.5f;
     const f32 noise_y = tgm_noise(0.1f, sint, 0.1f) + 0.5f;
     const f32 noise_z = tgm_noise(0.1f, 0.1f, sint) + 0.5f;
-    *((v3*)tg_uniform_buffer_data(scene.h_quad_color_ubo)) = (v3) { noise_x, noise_y, noise_z };
+    //*((v3*)tg_uniform_buffer_data(scene.h_quad_color_ubo)) = (v3) { noise_x, noise_y, noise_z };
 
 
 
@@ -356,10 +357,10 @@ static void tg__game_3d_update_and_render(f32 dt)
     //const v3 c0 = tgm_v3_lerp(c0n, c0d, -d0.y);
     const v3 c0 = V3(3.0f);
 
-    //tg_ray_tracer_render(scene.h_ray_tracer);
-    //tg_ray_tracer_clear(scene.h_ray_tracer);
+    tg_ray_tracer_render(scene.h_ray_tracer);
+    tg_ray_tracer_clear(scene.h_ray_tracer);
 
-#if 1
+#if 0
     tg_renderer_begin(scene.h_secondary_renderer);
     tg_renderer_push_directional_light(scene.h_secondary_renderer, d0, (v3) { 4.0f, 4.0f, 10.0f });
     tg_terrain_render(scene.p_terrain, scene.h_secondary_renderer);

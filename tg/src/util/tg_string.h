@@ -15,6 +15,7 @@ void           tg_string_create(char* p_data, TG_INOUT tg_string* p_string);
 void           tg_string_destroy(tg_string* p_string);
 
 tg_size        tg_strcpy(tg_size size, char* p_buffer, const char* p_string);
+tg_size        tg_strcpy_line(tg_size size, char* p_buffer, const char* p_string);
 tg_size        tg_strcpy_no_nul(tg_size size, char* p_buffer, const char* p_string);
 tg_size        tg_strncpy(tg_size size, char* p_buffer, tg_size size_to_copy, const char* p_string);
 tg_size        tg_strncpy_no_nul(tg_size size, char* p_buffer, tg_size size_to_copy, const char* p_string);
@@ -49,5 +50,6 @@ u32            tg_string_parse_u64_no_nul(u32 size, char* p_buffer, u64 v);
 void           tg_string_replace_characters(char* p_string, char replace, char with);
 f32            tg_string_to_f32(const char* p_string);
 i32            tg_string_to_i32(const char* p_string);
+u32            tg_string_to_u32(const char* p_string);
 
 #endif

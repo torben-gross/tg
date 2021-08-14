@@ -7,7 +7,6 @@
 #define TGVK_CAMERA_VIEW(view_projection_ubo)    (((m4*)(view_projection_ubo).memory.p_mapped_device_memory)[0])
 #define TGVK_CAMERA_PROJ(view_projection_ubo)    (((m4*)(view_projection_ubo).memory.p_mapped_device_memory)[1])
 #define TGVK_HDR_FORMAT                          VK_FORMAT_R32G32B32A32_SFLOAT
-#define TGVK_GEOMETRY_FORMATS(var)               const VkFormat var[TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT] = { VK_FORMAT_R8G8B8A8_SNORM, VK_FORMAT_R8G8B8A8_SNORM }
 #define TGVK_SHADING_UBO                         (*(tg_shading_ubo*)h_ray_tracer->shading_pass.ubo.memory.p_mapped_device_memory)
 
 
@@ -39,27 +38,42 @@ typedef struct tg_shading_ubo
 
 
 
-static void tg__init_geometry_pass(tg_ray_tracer_h h_ray_tracer)
+static void tg__init_visibility_pass(tg_ray_tracer_h h_ray_tracer)
 {
     const u32 w = swapchain_extent.width;
     const u32 h = swapchain_extent.height;
-    TGVK_GEOMETRY_FORMATS(p_formats);
 
-    h_ray_tracer->geometry_pass.command_buffer = tgvk_command_buffer_create(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+    h_ray_tracer->visibility_pass.command_buffer = tgvk_command_buffer_create(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
-    for (u32 i = 0; i < TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT; i++)
-    {
-        h_ray_tracer->geometry_pass.p_color_attachments[i] = TGVK_IMAGE_CREATE(TGVK_IMAGE_TYPE_COLOR, w, h, p_formats[i], TG_NULL);
-    }
+    // TODO shared?
+    tgvk_graphics_pipeline_create_info graphics_pipeline_create_info = { 0 };
+    graphics_pipeline_create_info.p_vertex_shader = &tg_vertex_shader_create("shaders/ray_tracer/visibility.vert")->shader;
+    graphics_pipeline_create_info.p_fragment_shader = &tg_fragment_shader_create("shaders/ray_tracer/visibility.frag")->shader;
+    graphics_pipeline_create_info.cull_mode = VK_CULL_MODE_FRONT_BIT; // TODO: is this okay for ray tracing? this culls the front face
+    graphics_pipeline_create_info.depth_test_enable = VK_FALSE;
+    graphics_pipeline_create_info.depth_write_enable = VK_FALSE;
+    graphics_pipeline_create_info.p_blend_modes = TG_NULL;
+    graphics_pipeline_create_info.render_pass = shared_render_resources.ray_tracer.visibility_render_pass;
+    graphics_pipeline_create_info.viewport_size.x = (f32)w;
+    graphics_pipeline_create_info.viewport_size.y = (f32)h;
+    graphics_pipeline_create_info.polygon_mode = VK_POLYGON_MODE_FILL;
 
-    VkImageView p_framebuffer_attachments[TGVK_GEOMETRY_ATTACHMENT_COUNT] = { 0 };
-    for (u32 i = 0; i < TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT; i++)
-    {
-        p_framebuffer_attachments[i] = h_ray_tracer->geometry_pass.p_color_attachments[i].image_view;
-    }
-    p_framebuffer_attachments[TGVK_GEOMETRY_ATTACHMENT_DEPTH] = h_ray_tracer->render_target.depth_attachment.image_view;
+    h_ray_tracer->visibility_pass.pipeline = tgvk_pipeline_create_graphics(&graphics_pipeline_create_info);
+    h_ray_tracer->visibility_pass.view_projection_ubo = TGVK_UNIFORM_BUFFER_CREATE(2ui64 * sizeof(m4));
 
-    h_ray_tracer->geometry_pass.framebuffer = tgvk_framebuffer_create(shared_render_resources.geometry_render_pass, TGVK_GEOMETRY_ATTACHMENT_COUNT, p_framebuffer_attachments, w, h);
+    const VkDeviceSize staging_buffer_size = 2ui64 * sizeof(u32);
+    const VkDeviceSize visibility_buffer_size = staging_buffer_size + ((VkDeviceSize)w * (VkDeviceSize)h * sizeof(u64));
+    h_ray_tracer->visibility_pass.visibility_buffer = TGVK_BUFFER_CREATE(visibility_buffer_size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, TGVK_MEMORY_DEVICE);
+
+    tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take(staging_buffer_size);
+    ((u32*)p_staging_buffer->memory.p_mapped_device_memory)[0] = w;
+    ((u32*)p_staging_buffer->memory.p_mapped_device_memory)[1] = h;
+    tgvk_command_buffer_begin(&h_ray_tracer->visibility_pass.command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+    tgvk_cmd_copy_buffer(&h_ray_tracer->visibility_pass.command_buffer, staging_buffer_size, p_staging_buffer, &h_ray_tracer->visibility_pass.visibility_buffer);
+    tgvk_command_buffer_end_and_submit(&h_ray_tracer->visibility_pass.command_buffer);
+    tgvk_global_staging_buffer_release();
+
+    h_ray_tracer->visibility_pass.framebuffer = tgvk_framebuffer_create(shared_render_resources.ray_tracer.visibility_render_pass, 0, TG_NULL, w, h);
 }
 
 static void tg__init_shading_pass(tg_ray_tracer_h h_ray_tracer)
@@ -88,14 +102,8 @@ static void tg__init_shading_pass(tg_ray_tracer_h h_ray_tracer)
     //tgvk_atmosphere_model_update_descriptor_set(&h_ray_tracer->model, &h_ray_tracer->shading_pass.descriptor_set);
     const u32 atmosphere_binding_offset = 4;
     u32 binding_offset = atmosphere_binding_offset;
-    for (u32 i = 0; i < TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT; i++)
-    {
-        tgvk_descriptor_set_update_image(h_ray_tracer->shading_pass.descriptor_set.descriptor_set, &h_ray_tracer->geometry_pass.p_color_attachments[i], binding_offset++);
-    }
-    tgvk_descriptor_set_update_image(h_ray_tracer->shading_pass.descriptor_set.descriptor_set, &h_ray_tracer->render_target.depth_attachment, binding_offset++);
+    tgvk_descriptor_set_update_storage_buffer(h_ray_tracer->shading_pass.descriptor_set.descriptor_set, &h_ray_tracer->visibility_pass.visibility_buffer, binding_offset++);
     tgvk_descriptor_set_update_uniform_buffer(h_ray_tracer->shading_pass.descriptor_set.descriptor_set, &h_ray_tracer->shading_pass.ubo, binding_offset++);
-    //tgvk_descriptor_set_update_uniform_buffer(h_ray_tracer->shading_pass.descriptor_set.descriptor_set, &h_ray_tracer->model.rendering.ubo, binding_offset++);
-    //tgvk_descriptor_set_update_uniform_buffer(h_ray_tracer->shading_pass.descriptor_set.descriptor_set, &h_ray_tracer->model.rendering.vertex_shader_ubo, binding_offset++);
 
     // TODO: tone mapping and other passes...
     //h_ray_tracer->shading_pass.framebuffer = tgvk_framebuffer_create(shared_render_resources.shading_render_pass, 1, &h_ray_tracer->hdr_color_attachment.image_view, w, h);
@@ -103,12 +111,6 @@ static void tg__init_shading_pass(tg_ray_tracer_h h_ray_tracer)
 
     tgvk_command_buffer_begin(&h_ray_tracer->shading_pass.command_buffer, 0);
     {
-        for (u32 i = 0; i < TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT; i++)
-        {
-            tgvk_cmd_transition_image_layout(&h_ray_tracer->shading_pass.command_buffer, &h_ray_tracer->geometry_pass.p_color_attachments[i], TGVK_LAYOUT_COLOR_ATTACHMENT_WRITE, TGVK_LAYOUT_SHADER_READ_F);
-        }
-        tgvk_cmd_transition_image_layout(&h_ray_tracer->shading_pass.command_buffer, &h_ray_tracer->render_target.depth_attachment, TGVK_LAYOUT_DEPTH_ATTACHMENT_WRITE, TGVK_LAYOUT_SHADER_READ_F);
-
         vkCmdBindPipeline(h_ray_tracer->shading_pass.command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, h_ray_tracer->shading_pass.graphics_pipeline.pipeline);
 
         const VkDeviceSize vertex_buffer_offset = 0;
@@ -120,12 +122,6 @@ static void tg__init_shading_pass(tg_ray_tracer_h h_ray_tracer)
         tgvk_cmd_begin_render_pass(&h_ray_tracer->shading_pass.command_buffer, shared_render_resources.shading_render_pass, &h_ray_tracer->shading_pass.framebuffer, VK_SUBPASS_CONTENTS_INLINE);
         tgvk_cmd_draw_indexed(&h_ray_tracer->shading_pass.command_buffer, 6);
         vkCmdEndRenderPass(h_ray_tracer->shading_pass.command_buffer.command_buffer);
-
-        for (u32 i = 0; i < TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT; i++)
-        {
-            tgvk_cmd_transition_image_layout(&h_ray_tracer->shading_pass.command_buffer, &h_ray_tracer->geometry_pass.p_color_attachments[i], TGVK_LAYOUT_SHADER_READ_F, TGVK_LAYOUT_COLOR_ATTACHMENT_WRITE);
-        }
-        tgvk_cmd_transition_image_layout(&h_ray_tracer->shading_pass.command_buffer, &h_ray_tracer->render_target.depth_attachment, TGVK_LAYOUT_SHADER_READ_F, TGVK_LAYOUT_DEPTH_ATTACHMENT_WRITE);
     }
     TGVK_CALL(vkEndCommandBuffer(h_ray_tracer->shading_pass.command_buffer.command_buffer));
 }
@@ -259,12 +255,19 @@ static void tg__init_present_pass(tg_ray_tracer_h h_ray_tracer)
 
 static void tg__init_clear_pass(tg_ray_tracer_h h_ray_tracer)
 {
+    const u32 w = swapchain_extent.width;
+    const u32 h = swapchain_extent.height;
+
     h_ray_tracer->clear_pass.command_buffer = tgvk_command_buffer_create(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+    h_ray_tracer->clear_pass.compute_pipeline = tgvk_pipeline_create_compute(&tg_compute_shader_create("shaders/ray_tracer/clear.comp")->shader);
+    h_ray_tracer->clear_pass.descriptor_set = tgvk_descriptor_set_create(&h_ray_tracer->clear_pass.compute_pipeline);
+    tgvk_descriptor_set_update_storage_buffer(h_ray_tracer->clear_pass.descriptor_set.descriptor_set, &h_ray_tracer->visibility_pass.visibility_buffer, 0);
+
     tgvk_command_buffer_begin(&h_ray_tracer->clear_pass.command_buffer, 0);
     {
-        tgvk_cmd_transition_image_layout(&h_ray_tracer->clear_pass.command_buffer, &h_ray_tracer->render_target.depth_attachment, TGVK_LAYOUT_DEPTH_ATTACHMENT_WRITE, TGVK_LAYOUT_TRANSFER_WRITE);
-        tgvk_cmd_clear_image(&h_ray_tracer->clear_pass.command_buffer, &h_ray_tracer->render_target.depth_attachment);
-        tgvk_cmd_transition_image_layout(&h_ray_tracer->clear_pass.command_buffer, &h_ray_tracer->render_target.depth_attachment, TGVK_LAYOUT_TRANSFER_WRITE, TGVK_LAYOUT_DEPTH_ATTACHMENT_WRITE);
+        vkCmdBindPipeline(h_ray_tracer->clear_pass.command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, h_ray_tracer->clear_pass.compute_pipeline.pipeline);
+        vkCmdBindDescriptorSets(h_ray_tracer->clear_pass.command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, h_ray_tracer->clear_pass.compute_pipeline.layout.pipeline_layout, 0, 1, &h_ray_tracer->clear_pass.descriptor_set.descriptor_set, 0, TG_NULL);
+        vkCmdDispatch(h_ray_tracer->clear_pass.command_buffer.command_buffer, (w + 31) / 32, (h + 31) / 32, 1);
     }
     TGVK_CALL(vkEndCommandBuffer(h_ray_tracer->clear_pass.command_buffer.command_buffer));
 }
@@ -280,74 +283,6 @@ tg_ray_tracer_h tg_ray_tracer_create(const tg_camera* p_camera)
 
     if (!shared_render_resources.ray_tracer.initialized)
     {
-        TGVK_GEOMETRY_FORMATS(p_formats);
-
-        VkAttachmentDescription p_attachment_descriptions[TGVK_GEOMETRY_ATTACHMENT_COUNT] = { 0 };
-
-        for (u32 i = 0; i < TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT; i++)
-        {
-            p_attachment_descriptions[i].flags = 0;
-            p_attachment_descriptions[i].format = p_formats[i];
-            p_attachment_descriptions[i].samples = VK_SAMPLE_COUNT_1_BIT;
-            p_attachment_descriptions[i].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-            p_attachment_descriptions[i].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-            p_attachment_descriptions[i].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            p_attachment_descriptions[i].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            p_attachment_descriptions[i].initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-            p_attachment_descriptions[i].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        }
-
-        p_attachment_descriptions[TGVK_GEOMETRY_ATTACHMENT_DEPTH].flags = 0;
-        p_attachment_descriptions[TGVK_GEOMETRY_ATTACHMENT_DEPTH].format = VK_FORMAT_D32_SFLOAT;
-        p_attachment_descriptions[TGVK_GEOMETRY_ATTACHMENT_DEPTH].samples = VK_SAMPLE_COUNT_1_BIT;
-        p_attachment_descriptions[TGVK_GEOMETRY_ATTACHMENT_DEPTH].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-        p_attachment_descriptions[TGVK_GEOMETRY_ATTACHMENT_DEPTH].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        p_attachment_descriptions[TGVK_GEOMETRY_ATTACHMENT_DEPTH].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        p_attachment_descriptions[TGVK_GEOMETRY_ATTACHMENT_DEPTH].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        p_attachment_descriptions[TGVK_GEOMETRY_ATTACHMENT_DEPTH].initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-        p_attachment_descriptions[TGVK_GEOMETRY_ATTACHMENT_DEPTH].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-        VkAttachmentReference p_color_attachment_references[TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT] = { 0 };
-
-        for (u32 i = 0; i < TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT; i++)
-        {
-            p_color_attachment_references[i].attachment = i;
-            p_color_attachment_references[i].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        }
-
-        VkAttachmentReference depth_buffer_attachment_reference = { 0 };
-        depth_buffer_attachment_reference.attachment = TGVK_GEOMETRY_ATTACHMENT_DEPTH;
-        depth_buffer_attachment_reference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-        VkSubpassDescription subpass_description = { 0 };
-        subpass_description.flags = 0;
-        subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subpass_description.inputAttachmentCount = 0;
-        subpass_description.pInputAttachments = TG_NULL;
-        subpass_description.colorAttachmentCount = TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT;
-        subpass_description.pColorAttachments = p_color_attachment_references;
-        subpass_description.pResolveAttachments = TG_NULL;
-        subpass_description.pDepthStencilAttachment = &depth_buffer_attachment_reference;
-        subpass_description.preserveAttachmentCount = 0;
-        subpass_description.pPreserveAttachments = TG_NULL;
-
-        shared_render_resources.ray_tracer.render_pass = tgvk_render_pass_create(p_attachment_descriptions, &subpass_description);
-
-        tgvk_graphics_pipeline_create_info graphics_pipeline_create_info = { 0 };
-        graphics_pipeline_create_info.p_vertex_shader = &tg_vertex_shader_create("shaders/ray_tracer/geometry.vert")->shader;
-        graphics_pipeline_create_info.p_fragment_shader = &tg_fragment_shader_create("shaders/ray_tracer/geometry.frag")->shader;
-        graphics_pipeline_create_info.cull_mode = VK_CULL_MODE_FRONT_BIT; // TODO: is this okay for ray tracing? this culls the front face
-        graphics_pipeline_create_info.depth_test_enable = VK_TRUE;
-        graphics_pipeline_create_info.depth_write_enable = VK_TRUE;
-        graphics_pipeline_create_info.p_blend_modes = TG_NULL;
-        graphics_pipeline_create_info.render_pass = shared_render_resources.ray_tracer.render_pass;
-        graphics_pipeline_create_info.viewport_size.x = (f32)w;
-        graphics_pipeline_create_info.viewport_size.y = (f32)h;
-        graphics_pipeline_create_info.polygon_mode = VK_POLYGON_MODE_FILL;
-
-        shared_render_resources.ray_tracer.graphics_pipeline = tgvk_pipeline_create_graphics(&graphics_pipeline_create_info);
-        shared_render_resources.ray_tracer.vis.view_projection_ubo = TGVK_UNIFORM_BUFFER_CREATE(2 * sizeof(m4));
-
         const u16 p_indices[6 * 6] = {
              0,  1,  2,  2,  3,  0, // x-
              4,  5,  6,  6,  7,  4, // x+
@@ -433,21 +368,7 @@ tg_ray_tracer_h tg_ray_tracer_create(const tg_camera* p_camera)
         VkSubpassDescription vis_subpass_description = { 0 };
         vis_subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 
-        shared_render_resources.ray_tracer.vis.render_pass = tgvk_render_pass_create(TG_NULL, &vis_subpass_description);
-
-        tgvk_graphics_pipeline_create_info vis_graphics_pipeline_create_info = { 0 };
-        vis_graphics_pipeline_create_info.p_vertex_shader = &tg_vertex_shader_create("shaders/ray_tracer/visibility.vert")->shader;
-        vis_graphics_pipeline_create_info.p_fragment_shader = &tg_fragment_shader_create("shaders/ray_tracer/visibility.frag")->shader;
-        vis_graphics_pipeline_create_info.cull_mode = VK_CULL_MODE_FRONT_BIT; // TODO: is this okay for ray tracing? this culls the front face
-        vis_graphics_pipeline_create_info.depth_test_enable = VK_FALSE;
-        vis_graphics_pipeline_create_info.depth_write_enable = VK_FALSE;
-        vis_graphics_pipeline_create_info.p_blend_modes = TG_NULL;
-        vis_graphics_pipeline_create_info.render_pass = shared_render_resources.ray_tracer.vis.render_pass;
-        vis_graphics_pipeline_create_info.viewport_size.x = (f32)w;
-        vis_graphics_pipeline_create_info.viewport_size.y = (f32)h;
-        vis_graphics_pipeline_create_info.polygon_mode = VK_POLYGON_MODE_FILL;
-
-        shared_render_resources.ray_tracer.vis.pipeline = tgvk_pipeline_create_graphics(&vis_graphics_pipeline_create_info);
+        shared_render_resources.ray_tracer.visibility_render_pass = tgvk_render_pass_create(TG_NULL, &vis_subpass_description);
 
 
 
@@ -466,7 +387,7 @@ tg_ray_tracer_h tg_ray_tracer_create(const tg_camera* p_camera)
 
     h_ray_tracer->semaphore = tgvk_semaphore_create();
 
-    tg__init_geometry_pass(h_ray_tracer);
+    tg__init_visibility_pass(h_ray_tracer);
     tg__init_shading_pass(h_ray_tracer);
     tg__init_blit_pass(h_ray_tracer);
     tg__init_present_pass(h_ray_tracer);
@@ -474,10 +395,10 @@ tg_ray_tracer_h tg_ray_tracer_create(const tg_camera* p_camera)
 
     tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_and_begin_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
     tgvk_cmd_transition_image_layout(p_command_buffer, &h_ray_tracer->hdr_color_attachment, TGVK_LAYOUT_UNDEFINED, TGVK_LAYOUT_COLOR_ATTACHMENT_WRITE);
-    for (u32 i = 0; i < TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT; i++)
-    {
-        tgvk_cmd_transition_image_layout(p_command_buffer, &h_ray_tracer->geometry_pass.p_color_attachments[i], TGVK_LAYOUT_UNDEFINED, TGVK_LAYOUT_COLOR_ATTACHMENT_WRITE);
-    }
+    //for (u32 i = 0; i < TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT; i++)
+    //{
+    //    tgvk_cmd_transition_image_layout(p_command_buffer, &h_ray_tracer->geometry_pass.p_color_attachments[i], TGVK_LAYOUT_UNDEFINED, TGVK_LAYOUT_COLOR_ATTACHMENT_WRITE);
+    //}
     tgvk_command_buffer_end_and_submit(p_command_buffer);
 
 	return h_ray_tracer;
@@ -494,28 +415,23 @@ void tg_ray_tracer_push_obj(tg_ray_tracer_h h_ray_tracer, tg_obj_h h_obj)
 {
     TG_ASSERT(h_ray_tracer);
     TG_ASSERT(h_obj);
-}
 
-void tg_ray_tracer_push_static(tg_ray_tracer_h h_ray_tracer, tg_ray_trace_command_h h_command)
-{
-    TG_ASSERT(h_ray_tracer);
-
-    if (h_ray_tracer->commands.capacity == h_ray_tracer->commands.count)
+    if (h_ray_tracer->objs.capacity == h_ray_tracer->objs.count)
     {
-        if (h_ray_tracer->commands.capacity == 0)
+        if (h_ray_tracer->objs.capacity == 0)
         {
-            TG_ASSERT(h_ray_tracer->commands.p_commands == TG_NULL);
-            h_ray_tracer->commands.capacity = 8;
-            h_ray_tracer->commands.p_commands = TG_MALLOC(h_ray_tracer->commands.capacity * sizeof(*h_ray_tracer->commands.p_commands));
+            TG_ASSERT(h_ray_tracer->objs.pp_objs == TG_NULL);
+            h_ray_tracer->objs.capacity = 8;
+            h_ray_tracer->objs.pp_objs = TG_MALLOC(h_ray_tracer->objs.capacity * sizeof(*h_ray_tracer->objs.pp_objs));
         }
         else
         {
-            TG_ASSERT(h_ray_tracer->commands.p_commands != TG_NULL);
-            h_ray_tracer->commands.capacity *= 2;
-            h_ray_tracer->commands.p_commands = TG_REALLOC(h_ray_tracer->commands.capacity * sizeof(*h_ray_tracer->commands.p_commands), h_ray_tracer->commands.p_commands);
+            TG_ASSERT(h_ray_tracer->objs.pp_objs != TG_NULL);
+            h_ray_tracer->objs.capacity *= 2;
+            h_ray_tracer->objs.pp_objs = TG_REALLOC(h_ray_tracer->objs.capacity * sizeof(*h_ray_tracer->objs.pp_objs), h_ray_tracer->objs.pp_objs);
         }
     }
-    h_ray_tracer->commands.p_commands[h_ray_tracer->commands.count++] = h_command;
+    h_ray_tracer->objs.pp_objs[h_ray_tracer->objs.count++] = h_obj;
 }
 
 void tg_ray_tracer_render(tg_ray_tracer_h h_ray_tracer)
@@ -533,9 +449,8 @@ void tg_ray_tracer_render(tg_ray_tracer_h h_ray_tracer)
     const m4 vp = tgm_m4_mul(p, v);
     const m4 ivp = tgm_m4_inverse(vp);
 
-    // TODO: keep this shared?
-    TGVK_CAMERA_VIEW(shared_render_resources.ray_tracer.vis.view_projection_ubo) = v;
-    TGVK_CAMERA_PROJ(shared_render_resources.ray_tracer.vis.view_projection_ubo) = p;
+    TGVK_CAMERA_VIEW(h_ray_tracer->visibility_pass.view_projection_ubo) = v;
+    TGVK_CAMERA_PROJ(h_ray_tracer->visibility_pass.view_projection_ubo) = p;
 
     tg_shading_ubo* p_shading_ubo = &TGVK_SHADING_UBO;
     //p_shading_ubo->camera_position.xyz = c.position;
@@ -543,44 +458,40 @@ void tg_ray_tracer_render(tg_ray_tracer_h h_ray_tracer)
 
     //tgvk_atmosphere_model_update(&h_ray_tracer->model, iv, ip);
 
-    tgvk_command_buffer_begin(&h_ray_tracer->geometry_pass.command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT);
-    //tgvk_cmd_begin_render_pass(&h_ray_tracer->geometry_pass.command_buffer, shared_render_resources.geometry_render_pass, &h_ray_tracer->geometry_pass.framebuffer, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
-    tgvk_cmd_begin_render_pass(&h_ray_tracer->geometry_pass.command_buffer, shared_render_resources.geometry_render_pass, &h_ray_tracer->geometry_pass.framebuffer, VK_SUBPASS_CONTENTS_INLINE);
-
+    tgvk_command_buffer_begin(&h_ray_tracer->visibility_pass.command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT);
+    tgvk_cmd_begin_render_pass(&h_ray_tracer->visibility_pass.command_buffer, shared_render_resources.ray_tracer.visibility_render_pass, &h_ray_tracer->visibility_pass.framebuffer, VK_SUBPASS_CONTENTS_INLINE);
     
-    
-    vkCmdBindPipeline(h_ray_tracer->geometry_pass.command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shared_render_resources.ray_tracer.graphics_pipeline.pipeline);
-    vkCmdBindIndexBuffer(h_ray_tracer->geometry_pass.command_buffer.command_buffer, shared_render_resources.ray_tracer.cube_ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
+    vkCmdBindPipeline(h_ray_tracer->visibility_pass.command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, h_ray_tracer->visibility_pass.pipeline.pipeline);
+    vkCmdBindIndexBuffer(h_ray_tracer->visibility_pass.command_buffer.command_buffer, shared_render_resources.ray_tracer.cube_ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
     const VkDeviceSize vertex_buffer_offset = 0;
-    vkCmdBindVertexBuffers(h_ray_tracer->geometry_pass.command_buffer.command_buffer, 0, 1, &shared_render_resources.ray_tracer.cube_vbo_p.buffer, &vertex_buffer_offset);
-    vkCmdBindVertexBuffers(h_ray_tracer->geometry_pass.command_buffer.command_buffer, 1, 1, &shared_render_resources.ray_tracer.cube_vbo_n.buffer, &vertex_buffer_offset);
-    for (u32 i = 0; i < h_ray_tracer->commands.count; i++)
+    vkCmdBindVertexBuffers(h_ray_tracer->visibility_pass.command_buffer.command_buffer, 0, 1, &shared_render_resources.ray_tracer.cube_vbo_p.buffer, &vertex_buffer_offset);
+    vkCmdBindVertexBuffers(h_ray_tracer->visibility_pass.command_buffer.command_buffer, 1, 1, &shared_render_resources.ray_tracer.cube_vbo_n.buffer, &vertex_buffer_offset);
+    for (u32 i = 0; i < h_ray_tracer->objs.count; i++)
     {
-        vkCmdBindDescriptorSets(h_ray_tracer->geometry_pass.command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shared_render_resources.ray_tracer.graphics_pipeline.layout.pipeline_layout, 0, 1, &h_ray_tracer->commands.p_commands[i]->descriptor_set.descriptor_set, 0, TG_NULL);
-        tgvk_cmd_draw_indexed(&h_ray_tracer->geometry_pass.command_buffer, 6 * 6); // TODO: triangle fans for less indices?
+        vkCmdBindDescriptorSets(h_ray_tracer->visibility_pass.command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, h_ray_tracer->visibility_pass.pipeline.layout.pipeline_layout, 0, 1, &h_ray_tracer->objs.pp_objs[i]->descriptor_set.descriptor_set, 0, TG_NULL);
+        tgvk_cmd_draw_indexed(&h_ray_tracer->visibility_pass.command_buffer, 6 * 6); // TODO: triangle fans for less indices?
     }
 
-
-
+    // TODO look at below
     //vkCmdExecuteCommands(h_ray_tracer->geometry_pass.command_buffer.command_buffer, h_ray_tracer->deferred_command_buffer_count, h_ray_tracer->p_deferred_command_buffers);
-    vkCmdEndRenderPass(h_ray_tracer->geometry_pass.command_buffer.command_buffer);
-    TGVK_CALL(vkEndCommandBuffer(h_ray_tracer->geometry_pass.command_buffer.command_buffer));
+    vkCmdEndRenderPass(h_ray_tracer->visibility_pass.command_buffer.command_buffer);
+    TGVK_CALL(vkEndCommandBuffer(h_ray_tracer->visibility_pass.command_buffer.command_buffer));
 
-    tgvk_fence_wait(h_ray_tracer->render_target.fence); // TODO: isn't this wrong? this means that some buffers are potentially updates too early
+    tgvk_fence_wait(h_ray_tracer->render_target.fence); // TODO: isn't this wrong? this means that some buffers are potentially updated too early
     tgvk_fence_reset(h_ray_tracer->render_target.fence);
 
-    VkSubmitInfo geometry_submit_info = { 0 };
-    geometry_submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    geometry_submit_info.pNext = TG_NULL;
-    geometry_submit_info.waitSemaphoreCount = 0;
-    geometry_submit_info.pWaitSemaphores = TG_NULL;
-    geometry_submit_info.pWaitDstStageMask = TG_NULL;
-    geometry_submit_info.commandBufferCount = 1;
-    geometry_submit_info.pCommandBuffers = &h_ray_tracer->geometry_pass.command_buffer.command_buffer;
-    geometry_submit_info.signalSemaphoreCount = 1;
-    geometry_submit_info.pSignalSemaphores = &h_ray_tracer->semaphore;
+    VkSubmitInfo visibility_submit_info = { 0 };
+    visibility_submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    visibility_submit_info.pNext = TG_NULL;
+    visibility_submit_info.waitSemaphoreCount = 0;
+    visibility_submit_info.pWaitSemaphores = TG_NULL;
+    visibility_submit_info.pWaitDstStageMask = TG_NULL;
+    visibility_submit_info.commandBufferCount = 1;
+    visibility_submit_info.pCommandBuffers = &h_ray_tracer->visibility_pass.command_buffer.command_buffer;
+    visibility_submit_info.signalSemaphoreCount = 1;
+    visibility_submit_info.pSignalSemaphores = &h_ray_tracer->semaphore;
 
-    tgvk_queue_submit(TGVK_QUEUE_TYPE_GRAPHICS, 1, &geometry_submit_info, VK_NULL_HANDLE);
+    tgvk_queue_submit(TGVK_QUEUE_TYPE_GRAPHICS, 1, &visibility_submit_info, VK_NULL_HANDLE);
 
     const VkPipelineStageFlags color_attachment_pipeline_stage_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT; // TODO: don't we have to wait for depth as well? also check stages below (draw)
 
@@ -596,19 +507,6 @@ void tg_ray_tracer_render(tg_ray_tracer_h h_ray_tracer)
     shading_submit_info.pSignalSemaphores = &h_ray_tracer->semaphore;
 
     tgvk_queue_submit(TGVK_QUEUE_TYPE_GRAPHICS, 1, &shading_submit_info, VK_NULL_HANDLE);
-
-    //VkSubmitInfo blit_submit_info = { 0 };
-    //blit_submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    //blit_submit_info.pNext = TG_NULL;
-    //blit_submit_info.waitSemaphoreCount = 1;
-    //blit_submit_info.pWaitSemaphores = &h_ray_tracer->semaphore;
-    //blit_submit_info.pWaitDstStageMask = &color_attachment_pipeline_stage_flags;
-    //blit_submit_info.commandBufferCount = 1;
-    //blit_submit_info.pCommandBuffers = &h_ray_tracer->blit_pass.command_buffer.command_buffer;
-    //blit_submit_info.signalSemaphoreCount = 1;
-    //blit_submit_info.pSignalSemaphores = &h_ray_tracer->semaphore;
-    //
-    //tgvk_queue_submit(TGVK_QUEUE_TYPE_GRAPHICS, 1, &blit_submit_info, VK_NULL_HANDLE); // TODO: the draw_pass does not have to wait for this! they can run in parallel
 
     u32 current_image;
     TGVK_CALL(vkAcquireNextImageKHR(device, swapchain, TG_U64_MAX, h_ray_tracer->present_pass.image_acquired_semaphore, VK_NULL_HANDLE, &current_image));
