@@ -29,16 +29,6 @@ layout(set = 0, binding = 5) uniform ubo
 
 layout(location = 0) out v4 out_color;
 
-void tg_unpack(out f32 d, out u32 id)
-{
-    u32 x = u32(gl_FragCoord.x);
-    u32 y = u32(gl_FragCoord.y);
-    u32 i = u_w * y + x;
-    uint64_t data = u_vb[i];
-    d = f32(data >> uint64_t(32)) / f32(TG_U32_MAX);
-    id = u32(data & uint64_t(4294967295));
-}
-
 u32 tg_hash_u32(u32 v) // Knuth's multiplicative method
 {
     return v * 2654435761;
@@ -46,21 +36,20 @@ u32 tg_hash_u32(u32 v) // Knuth's multiplicative method
 
 void main()
 {
-    f32 d;
-    u32 id;
-    tg_unpack(d, id);
-
-    u32 rui = tg_hash_u32(id);
-    u32 gui = tg_hash_u32(rui);
-    u32 bui = tg_hash_u32(gui);
-    f32 r = f32(rui) / f32(TG_U32_MAX);
-    f32 g = f32(gui) / f32(TG_U32_MAX);
-    f32 b = f32(bui) / f32(TG_U32_MAX);
-
-    out_color = vec4(r, g, b, 1.0);
     u32 x = u32(gl_FragCoord.x);
     u32 y = u32(gl_FragCoord.y);
     u32 i = u_w * y + x;
     uint64_t data = u_vb[i];
-    if (data != uint64_t(TG_U32_MAX) << uint64_t(32)) out_color = vec4(1.0, 0.0, 0.0, 1.0);
+    f32 d = f32(data >> uint64_t(32)) / 4294967295.0;
+    u32 id = u32(data & uint64_t(4294967295));
+
+    u32 rui = tg_hash_u32(id);
+    u32 gui = tg_hash_u32(rui);
+    u32 bui = tg_hash_u32(gui);
+    f32 g = f32(gui) / 4294967295.0;
+    f32 r = f32(rui) / 4294967295.0;
+    f32 b = f32(bui) / 4294967295.0;
+
+    out_color = vec4(r, g, b, 1.0);
+    //out_color = vec4(d, d, d, 1.0);
 }

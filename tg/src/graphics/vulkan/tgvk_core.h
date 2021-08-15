@@ -570,6 +570,7 @@ typedef struct tg_ray_tracer
         tgvk_command_buffer    command_buffer;
         tgvk_pipeline          pipeline;
         tgvk_buffer            view_projection_ubo;
+        tgvk_buffer            ray_tracing_ubo;
         tgvk_buffer            visibility_buffer; // u32 w; u32 h; u64 data[w * h];
         tgvk_framebuffer       framebuffer;
     } visibility_pass;

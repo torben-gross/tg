@@ -11,17 +11,14 @@
 
 
 
-typedef struct tg_geometry_ubo
+typedef struct tg_ray_tracing_ubo
 {
-    m4    m; // model
-} tg_geometry_ubo;
-
-typedef struct tg_material_ubo
-{
-    v4     albedo;
-    f32    metallic;
-    f32    roughness;
-} tg_material_ubo;
+    v4    camera;
+    v4    ray00;
+    v4    ray10;
+    v4    ray01;
+    v4    ray11;
+} tg_ray_tracing_ubo;
 
 typedef struct tg_shading_ubo
 {
@@ -60,6 +57,7 @@ static void tg__init_visibility_pass(tg_ray_tracer_h h_ray_tracer)
 
     h_ray_tracer->visibility_pass.pipeline = tgvk_pipeline_create_graphics(&graphics_pipeline_create_info);
     h_ray_tracer->visibility_pass.view_projection_ubo = TGVK_UNIFORM_BUFFER_CREATE(2ui64 * sizeof(m4));
+    h_ray_tracer->visibility_pass.ray_tracing_ubo = TGVK_UNIFORM_BUFFER_CREATE(sizeof(tg_ray_tracing_ubo));
 
     const VkDeviceSize staging_buffer_size = 2ui64 * sizeof(u32);
     const VkDeviceSize visibility_buffer_size = staging_buffer_size + ((VkDeviceSize)w * (VkDeviceSize)h * sizeof(u64));
@@ -451,6 +449,14 @@ void tg_ray_tracer_render(tg_ray_tracer_h h_ray_tracer)
 
     TGVK_CAMERA_VIEW(h_ray_tracer->visibility_pass.view_projection_ubo) = v;
     TGVK_CAMERA_PROJ(h_ray_tracer->visibility_pass.view_projection_ubo) = p;
+
+    tg_ray_tracing_ubo* p_ray_tracing_ubo = h_ray_tracer->visibility_pass.ray_tracing_ubo.memory.p_mapped_device_memory;
+    const m4 ivp_no_translation = tgm_m4_inverse(tgm_m4_mul(p, r));
+    p_ray_tracing_ubo->camera.xyz = c.position;
+    p_ray_tracing_ubo->ray00.xyz = tgm_v3_normalized(tgm_m4_mulv4(ivp_no_translation, (v4) { -1.0f,  1.0f, 1.0f, 1.0f }).xyz);
+    p_ray_tracing_ubo->ray10.xyz = tgm_v3_normalized(tgm_m4_mulv4(ivp_no_translation, (v4) { -1.0f, -1.0f, 1.0f, 1.0f }).xyz);
+    p_ray_tracing_ubo->ray01.xyz = tgm_v3_normalized(tgm_m4_mulv4(ivp_no_translation, (v4) {  1.0f,  1.0f, 1.0f, 1.0f }).xyz);
+    p_ray_tracing_ubo->ray11.xyz = tgm_v3_normalized(tgm_m4_mulv4(ivp_no_translation, (v4) {  1.0f, -1.0f, 1.0f, 1.0f }).xyz);
 
     tg_shading_ubo* p_shading_ubo = &TGVK_SHADING_UBO;
     //p_shading_ubo->camera_position.xyz = c.position;

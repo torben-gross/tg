@@ -97,7 +97,7 @@ static void tg__game_3d_create(void)
 
     scene.camera.type = TG_CAMERA_TYPE_PERSPECTIVE;
     //scene.camera.position = (v3) { 128.0f, 141.0f + 50.0f, 128.0f };
-    scene.camera.position = (v3) { 0.0f, 0.0f, 10.0f };
+    scene.camera.position = (v3) { 0.0f, 0.0f, 200.0f };
     scene.camera.pitch = 0.0f;
     scene.camera.yaw = 0.0f;
     scene.camera.roll = 0.0f;
