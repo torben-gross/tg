@@ -35,9 +35,9 @@ tg_ray_trace_command_h tg_ray_trace_command_create(tg_material_h h_material, v3 
     p_material->metallic = 0.0f;
     p_material->roughness = 1.0f;
 
-    tgvk_descriptor_set_update_uniform_buffer(h_command->descriptor_set.descriptor_set, &h_command->model_ubo, 0);
+    tgvk_descriptor_set_update_uniform_buffer(h_command->descriptor_set.set, &h_command->model_ubo, 0);
     //tgvk_descriptor_set_update_uniform_buffer(h_command->descriptor_set.descriptor_set, &shared_render_resources.ray_tracer.vis.view_projection_ubo, 1);
-    tgvk_descriptor_set_update_uniform_buffer(h_command->descriptor_set.descriptor_set, &h_command->material_ubo, 2);
+    tgvk_descriptor_set_update_uniform_buffer(h_command->descriptor_set.set, &h_command->material_ubo, 2);
 
 	return h_command;
 }

@@ -102,17 +102,17 @@ void tg_voxelizer_exec(tg_voxelizer* p_voxelizer, tg_render_command_h h_render_c
     TG_ASSERT(p_voxelizer && h_render_command && h_render_command->h_mesh->position_buffer.buffer && h_render_command->h_mesh->normal_buffer.buffer);
     TG_ASSERT(p_voxelizer->descriptor_set_count < TG_MAX_RENDER_COMMANDS);
 
-    if (p_voxelizer->p_descriptor_sets[p_voxelizer->descriptor_set_count].descriptor_pool == VK_NULL_HANDLE)
+    if (p_voxelizer->p_descriptor_sets[p_voxelizer->descriptor_set_count].pool == VK_NULL_HANDLE)
     {
         p_voxelizer->p_descriptor_sets[p_voxelizer->descriptor_set_count] = tgvk_descriptor_set_create(&p_voxelizer->pipeline);
     }
     tgvk_descriptor_set* p_descriptor_set = &p_voxelizer->p_descriptor_sets[p_voxelizer->descriptor_set_count++];
 
-    tgvk_descriptor_set_update_uniform_buffer(p_descriptor_set->descriptor_set, &h_render_command->model_ubo, 0);
-    tgvk_descriptor_set_update_uniform_buffer(p_descriptor_set->descriptor_set, &p_voxelizer->view_projection_ubo, 1);
+    tgvk_descriptor_set_update_uniform_buffer(p_descriptor_set->set, &h_render_command->model_ubo, 0);
+    tgvk_descriptor_set_update_uniform_buffer(p_descriptor_set->set, &p_voxelizer->view_projection_ubo, 1);
     for (u32 i = 0; i < TG_SVO_ATTACHMENTS; i++)
     {
-        tgvk_descriptor_set_update_image_3d(p_descriptor_set->descriptor_set, &p_voxelizer->p_image_3ds[i], 2 + i);
+        tgvk_descriptor_set_update_image_3d(p_descriptor_set->set, &p_voxelizer->p_image_3ds[i], 2 + i);
     }
 
     vkCmdBindPipeline(p_voxelizer->command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_voxelizer->pipeline.pipeline);
@@ -123,7 +123,7 @@ void tg_voxelizer_exec(tg_voxelizer* p_voxelizer, tg_render_command_h h_render_c
     }
     vkCmdBindVertexBuffers(p_voxelizer->command_buffer.command_buffer, 0, 1, &h_render_command->h_mesh->position_buffer.buffer, &offset);
     vkCmdBindVertexBuffers(p_voxelizer->command_buffer.command_buffer, 1, 1, &h_render_command->h_mesh->normal_buffer.buffer, &offset);
-    vkCmdBindDescriptorSets(p_voxelizer->command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_voxelizer->pipeline.layout.pipeline_layout, 0, 1, &p_descriptor_set->descriptor_set, 0, TG_NULL);
+    vkCmdBindDescriptorSets(p_voxelizer->command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_voxelizer->pipeline.layout.pipeline_layout, 0, 1, &p_descriptor_set->set, 0, TG_NULL);
     if (h_render_command->h_mesh->index_count)
     {
         vkCmdDrawIndexed(p_voxelizer->command_buffer.command_buffer, h_render_command->h_mesh->index_count, 1, 0, 0, 0);
@@ -234,7 +234,7 @@ void tg_voxelizer_destroy(tg_voxelizer* p_voxelizer)
     tgvk_pipeline_destroy(&p_voxelizer->pipeline);
     for (u32 i = 0; i < TG_MAX_RENDER_COMMANDS; i++)
     {
-        if (p_voxelizer->p_descriptor_sets[i].descriptor_pool != VK_NULL_HANDLE)
+        if (p_voxelizer->p_descriptor_sets[i].pool != VK_NULL_HANDLE)
         {
             tgvk_descriptor_set_destroy(&p_voxelizer->p_descriptor_sets[i]);
         }

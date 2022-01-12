@@ -100,8 +100,8 @@ static void tg__init_shading_pass(tg_ray_tracer_h h_ray_tracer)
     //tgvk_atmosphere_model_update_descriptor_set(&h_ray_tracer->model, &h_ray_tracer->shading_pass.descriptor_set);
     const u32 atmosphere_binding_offset = 4;
     u32 binding_offset = atmosphere_binding_offset;
-    tgvk_descriptor_set_update_storage_buffer(h_ray_tracer->shading_pass.descriptor_set.descriptor_set, &h_ray_tracer->visibility_pass.visibility_buffer, binding_offset++);
-    tgvk_descriptor_set_update_uniform_buffer(h_ray_tracer->shading_pass.descriptor_set.descriptor_set, &h_ray_tracer->shading_pass.ubo, binding_offset++);
+    tgvk_descriptor_set_update_storage_buffer(h_ray_tracer->shading_pass.descriptor_set.set, &h_ray_tracer->visibility_pass.visibility_buffer, binding_offset++);
+    tgvk_descriptor_set_update_uniform_buffer(h_ray_tracer->shading_pass.descriptor_set.set, &h_ray_tracer->shading_pass.ubo, binding_offset++);
 
     // TODO: tone mapping and other passes...
     //h_ray_tracer->shading_pass.framebuffer = tgvk_framebuffer_create(shared_render_resources.shading_render_pass, 1, &h_ray_tracer->hdr_color_attachment.image_view, w, h);
@@ -115,7 +115,7 @@ static void tg__init_shading_pass(tg_ray_tracer_h h_ray_tracer)
         vkCmdBindIndexBuffer(h_ray_tracer->shading_pass.command_buffer.command_buffer, shared_render_resources.screen_quad_indices.buffer, 0, VK_INDEX_TYPE_UINT16);
         vkCmdBindVertexBuffers(h_ray_tracer->shading_pass.command_buffer.command_buffer, 0, 1, &shared_render_resources.screen_quad_positions_buffer.buffer, &vertex_buffer_offset);
         vkCmdBindVertexBuffers(h_ray_tracer->shading_pass.command_buffer.command_buffer, 1, 1, &shared_render_resources.screen_quad_uvs_buffer.buffer, &vertex_buffer_offset);
-        vkCmdBindDescriptorSets(h_ray_tracer->shading_pass.command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, h_ray_tracer->shading_pass.graphics_pipeline.layout.pipeline_layout, 0, 1, &h_ray_tracer->shading_pass.descriptor_set.descriptor_set, 0, TG_NULL);
+        vkCmdBindDescriptorSets(h_ray_tracer->shading_pass.command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, h_ray_tracer->shading_pass.graphics_pipeline.layout.pipeline_layout, 0, 1, &h_ray_tracer->shading_pass.descriptor_set.set, 0, TG_NULL);
 
         tgvk_cmd_begin_render_pass(&h_ray_tracer->shading_pass.command_buffer, shared_render_resources.shading_render_pass, &h_ray_tracer->shading_pass.framebuffer, VK_SUBPASS_CONTENTS_INLINE);
         tgvk_cmd_draw_indexed(&h_ray_tracer->shading_pass.command_buffer, 6);
@@ -219,7 +219,7 @@ static void tg__init_present_pass(tg_ray_tracer_h h_ray_tracer)
     h_ray_tracer->present_pass.graphics_pipeline = tgvk_pipeline_create_graphics(&graphics_pipeline_create_info);
     h_ray_tracer->present_pass.descriptor_set = tgvk_descriptor_set_create(&h_ray_tracer->present_pass.graphics_pipeline);
 
-    tgvk_descriptor_set_update_image(h_ray_tracer->present_pass.descriptor_set.descriptor_set, &h_ray_tracer->render_target.color_attachment, 0);
+    tgvk_descriptor_set_update_image(h_ray_tracer->present_pass.descriptor_set.set, &h_ray_tracer->render_target.color_attachment, 0);
 
     for (u32 i = 0; i < TG_MAX_SWAPCHAIN_IMAGES; i++)
     {
@@ -232,7 +232,7 @@ static void tg__init_present_pass(tg_ray_tracer_h h_ray_tracer)
             const VkDeviceSize vertex_buffer_offset = 0;
             vkCmdBindVertexBuffers(h_ray_tracer->present_pass.p_command_buffers[i].command_buffer, 0, 1, &shared_render_resources.screen_quad_positions_buffer.buffer, &vertex_buffer_offset);
             vkCmdBindVertexBuffers(h_ray_tracer->present_pass.p_command_buffers[i].command_buffer, 1, 1, &shared_render_resources.screen_quad_uvs_buffer.buffer, &vertex_buffer_offset);
-            vkCmdBindDescriptorSets(h_ray_tracer->present_pass.p_command_buffers[i].command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, h_ray_tracer->present_pass.graphics_pipeline.layout.pipeline_layout, 0, 1, &h_ray_tracer->present_pass.descriptor_set.descriptor_set, 0, TG_NULL);
+            vkCmdBindDescriptorSets(h_ray_tracer->present_pass.p_command_buffers[i].command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, h_ray_tracer->present_pass.graphics_pipeline.layout.pipeline_layout, 0, 1, &h_ray_tracer->present_pass.descriptor_set.set, 0, TG_NULL);
 
             tgvk_cmd_begin_render_pass(&h_ray_tracer->present_pass.p_command_buffers[i], shared_render_resources.present_render_pass, &h_ray_tracer->present_pass.p_framebuffers[i], VK_SUBPASS_CONTENTS_INLINE);
             tgvk_cmd_draw_indexed(&h_ray_tracer->present_pass.p_command_buffers[i], 6);
@@ -259,12 +259,12 @@ static void tg__init_clear_pass(tg_ray_tracer_h h_ray_tracer)
     h_ray_tracer->clear_pass.command_buffer = tgvk_command_buffer_create(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     h_ray_tracer->clear_pass.compute_pipeline = tgvk_pipeline_create_compute(&tg_compute_shader_create("shaders/ray_tracer/clear.comp")->shader);
     h_ray_tracer->clear_pass.descriptor_set = tgvk_descriptor_set_create(&h_ray_tracer->clear_pass.compute_pipeline);
-    tgvk_descriptor_set_update_storage_buffer(h_ray_tracer->clear_pass.descriptor_set.descriptor_set, &h_ray_tracer->visibility_pass.visibility_buffer, 0);
+    tgvk_descriptor_set_update_storage_buffer(h_ray_tracer->clear_pass.descriptor_set.set, &h_ray_tracer->visibility_pass.visibility_buffer, 0);
 
     tgvk_command_buffer_begin(&h_ray_tracer->clear_pass.command_buffer, 0);
     {
         vkCmdBindPipeline(h_ray_tracer->clear_pass.command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, h_ray_tracer->clear_pass.compute_pipeline.pipeline);
-        vkCmdBindDescriptorSets(h_ray_tracer->clear_pass.command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, h_ray_tracer->clear_pass.compute_pipeline.layout.pipeline_layout, 0, 1, &h_ray_tracer->clear_pass.descriptor_set.descriptor_set, 0, TG_NULL);
+        vkCmdBindDescriptorSets(h_ray_tracer->clear_pass.command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, h_ray_tracer->clear_pass.compute_pipeline.layout.pipeline_layout, 0, 1, &h_ray_tracer->clear_pass.descriptor_set.set, 0, TG_NULL);
         vkCmdDispatch(h_ray_tracer->clear_pass.command_buffer.command_buffer, (w + 31) / 32, (h + 31) / 32, 1);
     }
     TGVK_CALL(vkEndCommandBuffer(h_ray_tracer->clear_pass.command_buffer.command_buffer));
@@ -474,7 +474,7 @@ void tg_ray_tracer_render(tg_ray_tracer_h h_ray_tracer)
     vkCmdBindVertexBuffers(h_ray_tracer->visibility_pass.command_buffer.command_buffer, 1, 1, &shared_render_resources.ray_tracer.cube_vbo_n.buffer, &vertex_buffer_offset);
     for (u32 i = 0; i < h_ray_tracer->objs.count; i++)
     {
-        vkCmdBindDescriptorSets(h_ray_tracer->visibility_pass.command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, h_ray_tracer->visibility_pass.pipeline.layout.pipeline_layout, 0, 1, &h_ray_tracer->objs.pp_objs[i]->descriptor_set.descriptor_set, 0, TG_NULL);
+        vkCmdBindDescriptorSets(h_ray_tracer->visibility_pass.command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, h_ray_tracer->visibility_pass.pipeline.layout.pipeline_layout, 0, 1, &h_ray_tracer->objs.pp_objs[i]->descriptor_set.set, 0, TG_NULL);
         tgvk_cmd_draw_indexed(&h_ray_tracer->visibility_pass.command_buffer, 6 * 6); // TODO: triangle fans for less indices?
     }
 

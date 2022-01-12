@@ -182,8 +182,8 @@ typedef struct tgvk_pipeline_layout
 
 typedef struct tgvk_descriptor_set
 {
-    VkDescriptorPool    descriptor_pool;
-    VkDescriptorSet     descriptor_set;
+    VkDescriptorPool    pool;
+    VkDescriptorSet     set;
 } tgvk_descriptor_set;
 
 typedef struct tgvk_image

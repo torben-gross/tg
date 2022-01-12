@@ -97,7 +97,7 @@ static void tg__game_3d_create(void)
 
     scene.camera.type = TG_CAMERA_TYPE_PERSPECTIVE;
     //scene.camera.position = (v3) { 128.0f, 141.0f + 50.0f, 128.0f };
-    scene.camera.position = (v3) { 0.0f, 0.0f, 200.0f };
+    scene.camera.position = (v3) { 0.0f, 0.0f, 10.0f };
     scene.camera.pitch = 0.0f;
     scene.camera.yaw = 0.0f;
     scene.camera.roll = 0.0f;
@@ -111,7 +111,7 @@ static void tg__game_3d_create(void)
     //scene.h_secondary_renderer = tg_renderer_create(&scene.camera);
 
     scene.h_ray_tracer = tg_ray_tracer_create(&scene.camera);
-    scene.h_obj = tg_obj_create(7, 7, 7);
+    scene.h_obj = tg_obj_create(3, 3, 3);
     //scene.p_terrain = tg_terrain_create(&scene.camera);
     //scene.h_terrain = tg_rtvx_terrain_create();
     //tg_ray_tracer_push_static(scene.h_ray_tracer, tg_ray_trace_command_create(TG_NULL, V3(0.0f), (tg_storage_image_3d_h)scene.h_terrain));
@@ -288,6 +288,23 @@ static void tg__game_3d_update_and_render(f32 dt)
     {
         scene.camera.yaw += TG_TO_RADIANS(0.064f * (f32)((i32)scene.last_mouse_x - (i32)mouse_x));
         scene.camera.pitch += TG_TO_RADIANS(0.064f * (f32)((i32)scene.last_mouse_y - (i32)mouse_y));
+    }
+    const f32 rotate_speed = 0.001f;
+    if (tg_input_is_key_down(TG_KEY_I))
+    {
+        scene.camera.pitch += rotate_speed * dt;
+    }
+    if (tg_input_is_key_down(TG_KEY_J))
+    {
+        scene.camera.yaw += rotate_speed * dt;
+    }
+    if (tg_input_is_key_down(TG_KEY_K))
+    {
+        scene.camera.pitch -= rotate_speed * dt;
+    }
+    if (tg_input_is_key_down(TG_KEY_L))
+    {
+        scene.camera.yaw -= rotate_speed * dt;
     }
     const m4 camera_rotation = tgm_m4_euler(scene.camera.pitch, scene.camera.yaw, scene.camera.roll);
 

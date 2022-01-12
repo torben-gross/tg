@@ -10,12 +10,12 @@ static void tg__register(tg_render_command_h h_render_command, tg_renderer_h h_r
     p_renderer_info->h_renderer = h_renderer;
 
     p_renderer_info->descriptor_set = tgvk_descriptor_set_create(&h_render_command->h_material->pipeline);
-    tgvk_descriptor_set_update_uniform_buffer(p_renderer_info->descriptor_set.descriptor_set, &h_render_command->model_ubo, 0);
-    tgvk_descriptor_set_update_uniform_buffer(p_renderer_info->descriptor_set.descriptor_set, &p_renderer_info->h_renderer->view_projection_ubo, 1);
+    tgvk_descriptor_set_update_uniform_buffer(p_renderer_info->descriptor_set.set, &h_render_command->model_ubo, 0);
+    tgvk_descriptor_set_update_uniform_buffer(p_renderer_info->descriptor_set.set, &p_renderer_info->h_renderer->view_projection_ubo, 1);
     for (u32 i = 0; i < global_resource_count; i++)
     {
         const u32 binding = i + TG_SHADER_RESERVED_BINDINGS;
-        tgvk_descriptor_set_update(p_renderer_info->descriptor_set.descriptor_set, p_global_resources[i], binding);
+        tgvk_descriptor_set_update(p_renderer_info->descriptor_set.set, p_global_resources[i], binding);
     }
 
     p_renderer_info->command_buffer = tgvk_command_buffer_create(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_SECONDARY);
@@ -79,7 +79,7 @@ static void tg__register(tg_render_command_h h_render_command, tg_renderer_h h_r
             );
         }
 
-        vkCmdBindDescriptorSets(p_renderer_info->command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, h_render_command->h_material->pipeline.layout.pipeline_layout, 0, 1, &p_renderer_info->descriptor_set.descriptor_set, 0, TG_NULL);
+        vkCmdBindDescriptorSets(p_renderer_info->command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, h_render_command->h_material->pipeline.layout.pipeline_layout, 0, 1, &p_renderer_info->descriptor_set.set, 0, TG_NULL);
 
         if (h_render_command->h_mesh->index_count != 0)
         {

@@ -11,7 +11,7 @@ void tg_compute_shader_bind_input(tg_compute_shader_h h_compute_shader, u32 firs
 {
 	for (u32 i = first_handle_index; i < first_handle_index + handle_count; i++)
 	{
-		tgvk_descriptor_set_update(h_compute_shader->descriptor_set.descriptor_set, p_handles[i], i);
+		tgvk_descriptor_set_update(h_compute_shader->descriptor_set.set, p_handles[i], i);
 	}
 }
 
@@ -37,7 +37,7 @@ void tg_compute_shader_dispatch(tg_compute_shader_h h_compute_shader, u32 group_
 
 	tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_and_begin_global(TGVK_COMMAND_POOL_TYPE_COMPUTE);
 	vkCmdBindPipeline(p_command_buffer->command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, h_compute_shader->compute_pipeline.pipeline);
-	vkCmdBindDescriptorSets(p_command_buffer->command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, h_compute_shader->compute_pipeline.layout.pipeline_layout, 0, 1, &h_compute_shader->descriptor_set.descriptor_set, 0, TG_NULL);
+	vkCmdBindDescriptorSets(p_command_buffer->command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, h_compute_shader->compute_pipeline.layout.pipeline_layout, 0, 1, &h_compute_shader->descriptor_set.set, 0, TG_NULL);
 	vkCmdDispatch(p_command_buffer->command_buffer, group_count_x, group_count_y, group_count_z);
 	tgvk_command_buffer_end_and_submit(p_command_buffer);
 }

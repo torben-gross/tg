@@ -558,7 +558,7 @@ static void tg__precompute(tgvk_atmosphere_model* p_model, VkFormat layered_imag
 		direct_irradiance_pipeline = tgvk_pipeline_create_graphics(&graphics_pipeline_create_info);
 
 		direct_irradiance_descriptor_set = tgvk_descriptor_set_create(&direct_irradiance_pipeline);
-		tgvk_descriptor_set_update_image(direct_irradiance_descriptor_set.descriptor_set, &p_model->rendering.transmittance_texture, 0);
+		tgvk_descriptor_set_update_image(direct_irradiance_descriptor_set.set, &p_model->rendering.transmittance_texture, 0);
 
 		tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 		{
@@ -638,9 +638,9 @@ static void tg__precompute(tgvk_atmosphere_model* p_model, VkFormat layered_imag
 		single_scattering_pipeline = tgvk_pipeline_create_graphics(&graphics_pipeline_create_info);
 		
 		single_scattering_descriptor_set = tgvk_descriptor_set_create(&single_scattering_pipeline);
-		tgvk_descriptor_set_update_uniform_buffer(single_scattering_descriptor_set.descriptor_set, &geometry_ubo, 0);
-		tgvk_descriptor_set_update_uniform_buffer(single_scattering_descriptor_set.descriptor_set, &ubo, 1);
-		tgvk_descriptor_set_update_image(single_scattering_descriptor_set.descriptor_set, &p_model->rendering.transmittance_texture, 2);
+		tgvk_descriptor_set_update_uniform_buffer(single_scattering_descriptor_set.set, &geometry_ubo, 0);
+		tgvk_descriptor_set_update_uniform_buffer(single_scattering_descriptor_set.set, &ubo, 1);
+		tgvk_descriptor_set_update_image(single_scattering_descriptor_set.set, &p_model->rendering.transmittance_texture, 2);
 
 		*(m4*)ubo.memory.p_mapped_device_memory = luminance_from_radiance;
 
@@ -706,13 +706,13 @@ static void tg__precompute(tgvk_atmosphere_model* p_model, VkFormat layered_imag
 		scattering_density_pipeline = tgvk_pipeline_create_graphics(&graphics_pipeline_create_info);
 
 		scattering_density_descriptor_set = tgvk_descriptor_set_create(&scattering_density_pipeline);
-		tgvk_descriptor_set_update_uniform_buffer(scattering_density_descriptor_set.descriptor_set, &geometry_ubo, 0);
-		tgvk_descriptor_set_update_uniform_buffer_range(scattering_density_descriptor_set.descriptor_set, 0, 2 * sizeof(i32), &ubo, 1);
-		tgvk_descriptor_set_update_image(scattering_density_descriptor_set.descriptor_set, &p_model->rendering.transmittance_texture, 2);
-		tgvk_descriptor_set_update_layered_image(scattering_density_descriptor_set.descriptor_set, &delta_rayleigh_scattering_texture, 3);
-		tgvk_descriptor_set_update_layered_image(scattering_density_descriptor_set.descriptor_set, &delta_mie_scattering_texture, 4);
-		tgvk_descriptor_set_update_layered_image(scattering_density_descriptor_set.descriptor_set, p_delta_multiple_scattering_texture, 5);
-		tgvk_descriptor_set_update_image(scattering_density_descriptor_set.descriptor_set, &delta_irradiance_texture, 6);
+		tgvk_descriptor_set_update_uniform_buffer(scattering_density_descriptor_set.set, &geometry_ubo, 0);
+		tgvk_descriptor_set_update_uniform_buffer_range(scattering_density_descriptor_set.set, 0, 2 * sizeof(i32), &ubo, 1);
+		tgvk_descriptor_set_update_image(scattering_density_descriptor_set.set, &p_model->rendering.transmittance_texture, 2);
+		tgvk_descriptor_set_update_layered_image(scattering_density_descriptor_set.set, &delta_rayleigh_scattering_texture, 3);
+		tgvk_descriptor_set_update_layered_image(scattering_density_descriptor_set.set, &delta_mie_scattering_texture, 4);
+		tgvk_descriptor_set_update_layered_image(scattering_density_descriptor_set.set, p_delta_multiple_scattering_texture, 5);
+		tgvk_descriptor_set_update_image(scattering_density_descriptor_set.set, &delta_irradiance_texture, 6);
 
 
 		VkRenderPass indirect_irradiance_render_pass;
@@ -742,10 +742,10 @@ static void tg__precompute(tgvk_atmosphere_model* p_model, VkFormat layered_imag
 		indirect_irradiance_pipeline = tgvk_pipeline_create_graphics(&graphics_pipeline_create_info);
 
 		indirect_irradiance_descriptor_set = tgvk_descriptor_set_create(&indirect_irradiance_pipeline);
-		tgvk_descriptor_set_update_uniform_buffer(indirect_irradiance_descriptor_set.descriptor_set, &ubo, 0);
-		tgvk_descriptor_set_update_layered_image(indirect_irradiance_descriptor_set.descriptor_set, &delta_rayleigh_scattering_texture, 1);
-		tgvk_descriptor_set_update_layered_image(indirect_irradiance_descriptor_set.descriptor_set, &delta_mie_scattering_texture, 2);
-		tgvk_descriptor_set_update_layered_image(indirect_irradiance_descriptor_set.descriptor_set, p_delta_multiple_scattering_texture, 3);
+		tgvk_descriptor_set_update_uniform_buffer(indirect_irradiance_descriptor_set.set, &ubo, 0);
+		tgvk_descriptor_set_update_layered_image(indirect_irradiance_descriptor_set.set, &delta_rayleigh_scattering_texture, 1);
+		tgvk_descriptor_set_update_layered_image(indirect_irradiance_descriptor_set.set, &delta_mie_scattering_texture, 2);
+		tgvk_descriptor_set_update_layered_image(indirect_irradiance_descriptor_set.set, p_delta_multiple_scattering_texture, 3);
 
 
 		VkRenderPass multiple_scattering_render_pass;
@@ -773,10 +773,10 @@ static void tg__precompute(tgvk_atmosphere_model* p_model, VkFormat layered_imag
 		multiple_scattering_pipeline = tgvk_pipeline_create_graphics(&graphics_pipeline_create_info);
 
 		multiple_scattering_descriptor_set = tgvk_descriptor_set_create(&multiple_scattering_pipeline);
-		tgvk_descriptor_set_update_uniform_buffer(multiple_scattering_descriptor_set.descriptor_set, &geometry_ubo, 0);
-		tgvk_descriptor_set_update_uniform_buffer(multiple_scattering_descriptor_set.descriptor_set, &ubo, 1);
-		tgvk_descriptor_set_update_image(multiple_scattering_descriptor_set.descriptor_set, &p_model->rendering.transmittance_texture, 2);
-		tgvk_descriptor_set_update_layered_image(multiple_scattering_descriptor_set.descriptor_set, &delta_scattering_density_texture, 3);
+		tgvk_descriptor_set_update_uniform_buffer(multiple_scattering_descriptor_set.set, &geometry_ubo, 0);
+		tgvk_descriptor_set_update_uniform_buffer(multiple_scattering_descriptor_set.set, &ubo, 1);
+		tgvk_descriptor_set_update_image(multiple_scattering_descriptor_set.set, &p_model->rendering.transmittance_texture, 2);
+		tgvk_descriptor_set_update_layered_image(multiple_scattering_descriptor_set.set, &delta_scattering_density_texture, 3);
 
 
 		for (u32 scattering_order = 2; scattering_order <= 4; scattering_order++)
@@ -1070,17 +1070,17 @@ void tgvk_atmosphere_model_destroy(tgvk_atmosphere_model* p_model)
 
 void tgvk_atmosphere_model_update_descriptor_set(tgvk_atmosphere_model* p_model, tgvk_descriptor_set* p_descriptor_set)
 {
-	tgvk_descriptor_set_update_image(p_descriptor_set->descriptor_set, &p_model->rendering.transmittance_texture, 0);
-	tgvk_descriptor_set_update_layered_image(p_descriptor_set->descriptor_set, &p_model->rendering.scattering_texture, 1);
+	tgvk_descriptor_set_update_image(p_descriptor_set->set, &p_model->rendering.transmittance_texture, 0);
+	tgvk_descriptor_set_update_layered_image(p_descriptor_set->set, &p_model->rendering.scattering_texture, 1);
 	if (p_model->settings.combine_scattering_textures)
 	{
-		tgvk_descriptor_set_update_layered_image(p_descriptor_set->descriptor_set, &p_model->rendering.no_single_mie_scattering_black_texture, 2);
+		tgvk_descriptor_set_update_layered_image(p_descriptor_set->set, &p_model->rendering.no_single_mie_scattering_black_texture, 2);
 	}
 	else
 	{
-		tgvk_descriptor_set_update_layered_image(p_descriptor_set->descriptor_set, &p_model->rendering.optional_single_mie_scattering_texture, 2);
+		tgvk_descriptor_set_update_layered_image(p_descriptor_set->set, &p_model->rendering.optional_single_mie_scattering_texture, 2);
 	}
-	tgvk_descriptor_set_update_image(p_descriptor_set->descriptor_set, &p_model->rendering.irradiance_texture, 3);
+	tgvk_descriptor_set_update_image(p_descriptor_set->set, &p_model->rendering.irradiance_texture, 3);
 }
 
 void tgvk_atmosphere_model_update(tgvk_atmosphere_model* p_model, m4 inv_view, m4 inv_proj)

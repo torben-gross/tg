@@ -103,12 +103,12 @@ static void tg__init_shading_pass(tg_renderer_h h_renderer)
     u32 binding_offset = atmosphere_binding_offset;
     for (u32 i = 0; i < TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT; i++)
     {
-        tgvk_descriptor_set_update_image(h_renderer->shading_pass.descriptor_set.descriptor_set, &h_renderer->geometry_pass.p_color_attachments[i], binding_offset++);
+        tgvk_descriptor_set_update_image(h_renderer->shading_pass.descriptor_set.set, &h_renderer->geometry_pass.p_color_attachments[i], binding_offset++);
     }
-    tgvk_descriptor_set_update_image(h_renderer->shading_pass.descriptor_set.descriptor_set, &h_renderer->render_target.depth_attachment, binding_offset++);
-    tgvk_descriptor_set_update_uniform_buffer(h_renderer->shading_pass.descriptor_set.descriptor_set, &h_renderer->shading_pass.ubo, binding_offset++);
-    tgvk_descriptor_set_update_uniform_buffer(h_renderer->shading_pass.descriptor_set.descriptor_set, &h_renderer->model.rendering.ubo, binding_offset++);
-    tgvk_descriptor_set_update_uniform_buffer(h_renderer->shading_pass.descriptor_set.descriptor_set, &h_renderer->model.rendering.vertex_shader_ubo, binding_offset++);
+    tgvk_descriptor_set_update_image(h_renderer->shading_pass.descriptor_set.set, &h_renderer->render_target.depth_attachment, binding_offset++);
+    tgvk_descriptor_set_update_uniform_buffer(h_renderer->shading_pass.descriptor_set.set, &h_renderer->shading_pass.ubo, binding_offset++);
+    tgvk_descriptor_set_update_uniform_buffer(h_renderer->shading_pass.descriptor_set.set, &h_renderer->model.rendering.ubo, binding_offset++);
+    tgvk_descriptor_set_update_uniform_buffer(h_renderer->shading_pass.descriptor_set.set, &h_renderer->model.rendering.vertex_shader_ubo, binding_offset++);
 
     tgvk_command_buffer_begin(&h_renderer->shading_pass.command_buffer, 0);
     {
@@ -124,7 +124,7 @@ static void tg__init_shading_pass(tg_renderer_h h_renderer)
         vkCmdBindIndexBuffer(h_renderer->shading_pass.command_buffer.command_buffer, shared_render_resources.screen_quad_indices.buffer, 0, VK_INDEX_TYPE_UINT16);
         vkCmdBindVertexBuffers(h_renderer->shading_pass.command_buffer.command_buffer, 0, 1, &shared_render_resources.screen_quad_positions_buffer.buffer, &vertex_buffer_offset);
         vkCmdBindVertexBuffers(h_renderer->shading_pass.command_buffer.command_buffer, 1, 1, &shared_render_resources.screen_quad_uvs_buffer.buffer, &vertex_buffer_offset);
-        vkCmdBindDescriptorSets(h_renderer->shading_pass.command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, h_renderer->shading_pass.graphics_pipeline.layout.pipeline_layout, 0, 1, &h_renderer->shading_pass.descriptor_set.descriptor_set, 0, TG_NULL);
+        vkCmdBindDescriptorSets(h_renderer->shading_pass.command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, h_renderer->shading_pass.graphics_pipeline.layout.pipeline_layout, 0, 1, &h_renderer->shading_pass.descriptor_set.set, 0, TG_NULL);
 
         tgvk_cmd_begin_render_pass(&h_renderer->shading_pass.command_buffer, shared_render_resources.shading_render_pass, &h_renderer->shading_pass.framebuffer, VK_SUBPASS_CONTENTS_INLINE);
         tgvk_cmd_draw_indexed(&h_renderer->shading_pass.command_buffer, 6);
@@ -192,22 +192,22 @@ static void tg__init_tone_mapping_pass(tg_renderer_h h_renderer)
 
 
 
-    tgvk_descriptor_set_update_image(h_renderer->tone_mapping_pass.acquire_exposure_descriptor_set.descriptor_set, &h_renderer->hdr_color_attachment, 0);
-    tgvk_descriptor_set_update_storage_buffer(h_renderer->tone_mapping_pass.acquire_exposure_descriptor_set.descriptor_set, &h_renderer->tone_mapping_pass.acquire_exposure_storage_buffer, 1);
+    tgvk_descriptor_set_update_image(h_renderer->tone_mapping_pass.acquire_exposure_descriptor_set.set, &h_renderer->hdr_color_attachment, 0);
+    tgvk_descriptor_set_update_storage_buffer(h_renderer->tone_mapping_pass.acquire_exposure_descriptor_set.set, &h_renderer->tone_mapping_pass.acquire_exposure_storage_buffer, 1);
 
-    tgvk_descriptor_set_update_storage_buffer(h_renderer->tone_mapping_pass.finalize_exposure_descriptor_set.descriptor_set, &h_renderer->tone_mapping_pass.acquire_exposure_storage_buffer, 0);
-    tgvk_descriptor_set_update_storage_buffer(h_renderer->tone_mapping_pass.finalize_exposure_descriptor_set.descriptor_set, &h_renderer->tone_mapping_pass.finalize_exposure_storage_buffer, 1);
-    tgvk_descriptor_set_update_uniform_buffer(h_renderer->tone_mapping_pass.finalize_exposure_descriptor_set.descriptor_set, &h_renderer->tone_mapping_pass.finalize_exposure_dt_ubo, 2);
+    tgvk_descriptor_set_update_storage_buffer(h_renderer->tone_mapping_pass.finalize_exposure_descriptor_set.set, &h_renderer->tone_mapping_pass.acquire_exposure_storage_buffer, 0);
+    tgvk_descriptor_set_update_storage_buffer(h_renderer->tone_mapping_pass.finalize_exposure_descriptor_set.set, &h_renderer->tone_mapping_pass.finalize_exposure_storage_buffer, 1);
+    tgvk_descriptor_set_update_uniform_buffer(h_renderer->tone_mapping_pass.finalize_exposure_descriptor_set.set, &h_renderer->tone_mapping_pass.finalize_exposure_dt_ubo, 2);
 
-    tgvk_descriptor_set_update_image(h_renderer->tone_mapping_pass.adapt_exposure_descriptor_set.descriptor_set, &h_renderer->hdr_color_attachment, 0);
-    tgvk_descriptor_set_update_storage_buffer(h_renderer->tone_mapping_pass.adapt_exposure_descriptor_set.descriptor_set, &h_renderer->tone_mapping_pass.finalize_exposure_storage_buffer, 1);
+    tgvk_descriptor_set_update_image(h_renderer->tone_mapping_pass.adapt_exposure_descriptor_set.set, &h_renderer->hdr_color_attachment, 0);
+    tgvk_descriptor_set_update_storage_buffer(h_renderer->tone_mapping_pass.adapt_exposure_descriptor_set.set, &h_renderer->tone_mapping_pass.finalize_exposure_storage_buffer, 1);
 
     tgvk_command_buffer_begin(&h_renderer->tone_mapping_pass.command_buffer, 0);
     {
         tgvk_cmd_copy_buffer(&h_renderer->tone_mapping_pass.command_buffer, exposure_sum_buffer_size, &h_renderer->tone_mapping_pass.acquire_exposure_clear_storage_buffer, &h_renderer->tone_mapping_pass.acquire_exposure_storage_buffer);
         tgvk_cmd_transition_image_layout(&h_renderer->tone_mapping_pass.command_buffer, &h_renderer->hdr_color_attachment, TGVK_LAYOUT_COLOR_ATTACHMENT_WRITE, TGVK_LAYOUT_SHADER_READ_C);
         vkCmdBindPipeline(h_renderer->tone_mapping_pass.command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, h_renderer->tone_mapping_pass.acquire_exposure_compute_pipeline.pipeline);
-        vkCmdBindDescriptorSets(h_renderer->tone_mapping_pass.command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, h_renderer->tone_mapping_pass.acquire_exposure_compute_pipeline.layout.pipeline_layout, 0, 1, &h_renderer->tone_mapping_pass.acquire_exposure_descriptor_set.descriptor_set, 0, TG_NULL);
+        vkCmdBindDescriptorSets(h_renderer->tone_mapping_pass.command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, h_renderer->tone_mapping_pass.acquire_exposure_compute_pipeline.layout.pipeline_layout, 0, 1, &h_renderer->tone_mapping_pass.acquire_exposure_descriptor_set.set, 0, TG_NULL);
         vkCmdDispatch(h_renderer->tone_mapping_pass.command_buffer.command_buffer, 64, 32, 1);
 
         VkMemoryBarrier memory_barrier = { 0 };
@@ -223,7 +223,7 @@ static void tg__init_tone_mapping_pass(tg_renderer_h h_renderer)
         );
 
         vkCmdBindPipeline(h_renderer->tone_mapping_pass.command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, h_renderer->tone_mapping_pass.finalize_exposure_compute_pipeline.pipeline);
-        vkCmdBindDescriptorSets(h_renderer->tone_mapping_pass.command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, h_renderer->tone_mapping_pass.finalize_exposure_compute_pipeline.layout.pipeline_layout, 0, 1, &h_renderer->tone_mapping_pass.finalize_exposure_descriptor_set.descriptor_set, 0, TG_NULL);
+        vkCmdBindDescriptorSets(h_renderer->tone_mapping_pass.command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, h_renderer->tone_mapping_pass.finalize_exposure_compute_pipeline.layout.pipeline_layout, 0, 1, &h_renderer->tone_mapping_pass.finalize_exposure_descriptor_set.set, 0, TG_NULL);
         vkCmdDispatch(h_renderer->tone_mapping_pass.command_buffer.command_buffer, 1, 1, 1);
 
         vkCmdPipelineBarrier(
@@ -239,7 +239,7 @@ static void tg__init_tone_mapping_pass(tg_renderer_h h_renderer)
         vkCmdBindIndexBuffer(h_renderer->tone_mapping_pass.command_buffer.command_buffer, shared_render_resources.screen_quad_indices.buffer, 0, VK_INDEX_TYPE_UINT16);
         vkCmdBindVertexBuffers(h_renderer->tone_mapping_pass.command_buffer.command_buffer, 0, 1, &shared_render_resources.screen_quad_positions_buffer.buffer, &vertex_buffer_offset);
         vkCmdBindVertexBuffers(h_renderer->tone_mapping_pass.command_buffer.command_buffer, 1, 1, &shared_render_resources.screen_quad_uvs_buffer.buffer, &vertex_buffer_offset);
-        vkCmdBindDescriptorSets(h_renderer->tone_mapping_pass.command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, h_renderer->tone_mapping_pass.adapt_exposure_graphics_pipeline.layout.pipeline_layout, 0, 1, &h_renderer->tone_mapping_pass.adapt_exposure_descriptor_set.descriptor_set, 0, TG_NULL);
+        vkCmdBindDescriptorSets(h_renderer->tone_mapping_pass.command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, h_renderer->tone_mapping_pass.adapt_exposure_graphics_pipeline.layout.pipeline_layout, 0, 1, &h_renderer->tone_mapping_pass.adapt_exposure_descriptor_set.set, 0, TG_NULL);
 
         tgvk_cmd_begin_render_pass(&h_renderer->tone_mapping_pass.command_buffer, shared_render_resources.tone_mapping_render_pass, &h_renderer->tone_mapping_pass.adapt_exposure_framebuffer, VK_SUBPASS_CONTENTS_INLINE);
         tgvk_cmd_draw_indexed(&h_renderer->tone_mapping_pass.command_buffer, 6);
@@ -275,7 +275,7 @@ static void tg__init_ui_pass(tg_renderer_h h_renderer)
     h_renderer->ui_pass.pipeline = tgvk_pipeline_create_graphics(&pipeline_create_info);
     h_renderer->ui_pass.descriptor_set = tgvk_descriptor_set_create(&h_renderer->ui_pass.pipeline);
 
-    tgvk_descriptor_set_update_image(h_renderer->ui_pass.descriptor_set.descriptor_set, &h_renderer->text.h_font->texture_atlas, 0);
+    tgvk_descriptor_set_update_image(h_renderer->ui_pass.descriptor_set.set, &h_renderer->text.h_font->texture_atlas, 0);
 }
 
 static void tg__init_blit_pass(tg_renderer_h h_renderer)
@@ -383,7 +383,7 @@ static void tg__init_present_pass(tg_renderer_h h_renderer)
     VkWriteDescriptorSet write_descriptor_set = { 0 };
     write_descriptor_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     write_descriptor_set.pNext = TG_NULL;
-    write_descriptor_set.dstSet = h_renderer->present_pass.descriptor_set.descriptor_set;
+    write_descriptor_set.dstSet = h_renderer->present_pass.descriptor_set.set;
     write_descriptor_set.dstBinding = 0;
     write_descriptor_set.dstArrayElement = 0;
     write_descriptor_set.descriptorCount = 1;
@@ -404,7 +404,7 @@ static void tg__init_present_pass(tg_renderer_h h_renderer)
             vkCmdBindIndexBuffer(h_renderer->present_pass.p_command_buffers[i].command_buffer, shared_render_resources.screen_quad_indices.buffer, 0, VK_INDEX_TYPE_UINT16);
             vkCmdBindVertexBuffers(h_renderer->present_pass.p_command_buffers[i].command_buffer, 0, 1, &shared_render_resources.screen_quad_positions_buffer.buffer, &vertex_buffer_offset);
             vkCmdBindVertexBuffers(h_renderer->present_pass.p_command_buffers[i].command_buffer, 1, 1, &shared_render_resources.screen_quad_uvs_buffer.buffer, &vertex_buffer_offset);
-            vkCmdBindDescriptorSets(h_renderer->present_pass.p_command_buffers[i].command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, h_renderer->present_pass.graphics_pipeline.layout.pipeline_layout, 0, 1, &h_renderer->present_pass.descriptor_set.descriptor_set, 0, TG_NULL);
+            vkCmdBindDescriptorSets(h_renderer->present_pass.p_command_buffers[i].command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, h_renderer->present_pass.graphics_pipeline.layout.pipeline_layout, 0, 1, &h_renderer->present_pass.descriptor_set.set, 0, TG_NULL);
 
             tgvk_cmd_begin_render_pass(&h_renderer->present_pass.p_command_buffers[i], shared_render_resources.present_render_pass, &h_renderer->present_pass.p_framebuffers[i], VK_SUBPASS_CONTENTS_INLINE);
             tgvk_cmd_draw_indexed(&h_renderer->present_pass.p_command_buffers[i], 6);
@@ -1187,9 +1187,9 @@ void tg_renderer_end(tg_renderer_h h_renderer, f32 dt, b32 present)
         p_ubo->ray01.xyz = tgm_v3_normalized(tgm_m4_mulv4(ivp_no_translation, (v4) {  1.0f,  1.0f,  1.0f,  1.0f }).xyz);
         p_ubo->ray11.xyz = tgm_v3_normalized(tgm_m4_mulv4(ivp_no_translation, (v4) {  1.0f, -1.0f,  1.0f,  1.0f }).xyz);
 
-        tgvk_descriptor_set_update_image_3d(h_renderer->ray_trace_pass.descriptor_set.descriptor_set, &h_renderer->h_terrain->voxels, 0);
-        tgvk_descriptor_set_update_uniform_buffer(h_renderer->ray_trace_pass.descriptor_set.descriptor_set, &h_renderer->ray_trace_pass.ubo, 1);
-        tgvk_descriptor_set_update_image2(h_renderer->ray_trace_pass.descriptor_set.descriptor_set, &h_renderer->hdr_color_attachment, 2, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+        tgvk_descriptor_set_update_image_3d(h_renderer->ray_trace_pass.descriptor_set.set, &h_renderer->h_terrain->voxels, 0);
+        tgvk_descriptor_set_update_uniform_buffer(h_renderer->ray_trace_pass.descriptor_set.set, &h_renderer->ray_trace_pass.ubo, 1);
+        tgvk_descriptor_set_update_image2(h_renderer->ray_trace_pass.descriptor_set.set, &h_renderer->hdr_color_attachment, 2, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
         //tgvk_descriptor_set_update_image2(h_renderer->ray_trace_pass.descriptor_set.descriptor_set, &h_renderer->render_target.depth_attachment, 3, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
 
         tgvk_command_buffer_begin(&h_renderer->ray_trace_pass.command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
@@ -1305,7 +1305,7 @@ void tg_renderer_end(tg_renderer_h h_renderer, f32 dt, b32 present)
         vkCmdBindPipeline(h_renderer->ui_pass.command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, h_renderer->ui_pass.pipeline.pipeline);
         vkCmdBindVertexBuffers(h_renderer->ui_pass.command_buffer.command_buffer, 0, 1, &ui_positions_buffer.buffer, &vertex_buffer_offset);
         vkCmdBindVertexBuffers(h_renderer->ui_pass.command_buffer.command_buffer, 1, 1, &ui_uvs_buffer.buffer, &vertex_buffer_offset);
-        vkCmdBindDescriptorSets(h_renderer->ui_pass.command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, h_renderer->ui_pass.pipeline.layout.pipeline_layout, 0, 1, &h_renderer->ui_pass.descriptor_set.descriptor_set, 0, TG_NULL);
+        vkCmdBindDescriptorSets(h_renderer->ui_pass.command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, h_renderer->ui_pass.pipeline.layout.pipeline_layout, 0, 1, &h_renderer->ui_pass.descriptor_set.set, 0, TG_NULL);
         tgvk_cmd_begin_render_pass(&h_renderer->ui_pass.command_buffer, shared_render_resources.ui_render_pass, &h_renderer->ui_pass.framebuffer, VK_SUBPASS_CONTENTS_INLINE);
         vkCmdDraw(h_renderer->ui_pass.command_buffer.command_buffer, 6 * render_letter_count, 1, 0, 0);
         vkCmdEndRenderPass(h_renderer->ui_pass.command_buffer.command_buffer);

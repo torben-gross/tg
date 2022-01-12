@@ -1,9 +1,7 @@
 #version 450
 
-#extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
-#extension GL_EXT_shader_atomic_int64                    : require
-
 #include "shaders/common.inc"
+#include "shaders/commoni64.inc"
 
 
 
@@ -28,9 +26,9 @@ layout(set = 0, binding = 2) uniform ubo
 
 layout(set = 0, binding = 3) buffer visibility_buffer
 {
-    u32         u_w;
-    u32         u_h;
-    uint64_t    u_vb[];
+    u32    u_w;
+    u32    u_h;
+    u64    u_vb[];
 };
 
 layout(set = 0, binding = 4) buffer data
@@ -57,27 +55,30 @@ struct tg_box
     v3    max;
 };
 
-struct tg_boxhit
+
+
+v3 tg_min_component_wise(v3 a, v3 b)
 {
-    f32    tmin;
-    f32    tmax;
-};
+    return v3(min(a.x, b.x), min(a.y, b.y), min(a.z, b.z));
+}
 
-
-
-bool tg_intersect_ray_box(tg_ray r, tg_box b, out tg_boxhit hit)
+v3 tg_max_component_wise(v3 a, v3 b)
 {
-    v3 tbot = r.invd * (b.min - r.o);
-    v3 ttop = r.invd * (b.max - r.o);
-    v3 tmin = min(ttop, tbot);
-    v3 tmax = max(ttop, tbot);
-    v2 t = max(tmin.xx, tmin.yz);
-    f32 t0 = max(t.x, t.y);
-    t = min(tmax.xx, tmax.yz);
-    f32 t1 = min(t.x, t.y);
-    hit.tmin = t0;
-    hit.tmax = t1;
-    return t1 > max(t0, 0.0);
+    return v3(max(a.x, b.x), max(a.y, b.y), max(a.z, b.z));
+}
+
+// Source: https://gamedev.net/forums/topic/682750-problem-with-raybox-intersection-in-glsl/5313495/
+bool tg_intersect_ray_box(tg_ray r, tg_box b, out f32 t)
+{
+    v3 vector1 = (b.min - r.o) * r.invd;
+    v3 vector2 = (b.max - r.o) * r.invd;
+    v3 n = tg_min_component_wise(vector1, vector2);
+    v3 f = tg_max_component_wise(vector1, vector2);
+    f32 enter = max(n.x, max(n.y, n.z));
+    f32 exit = min(f.x, min(f.y, f.z));
+    
+    t = enter;
+    return exit > 0.0 && enter < exit;
 }
 
 
@@ -90,31 +91,32 @@ void main()
     f32 fx = gl_FragCoord.x / f32(u_w);
     f32 fy = 1.0 - gl_FragCoord.y / f32(u_h);
     v3 ray_direction = normalize(mix(mix(u_ray00, u_ray10, fy), mix(u_ray01, u_ray11, fy), fx));
-    tg_ray r = tg_ray(u_camera, ray_direction, v3(1.0) / ray_direction);
+    // TODO: transform ray into model space of box properly with rotation and all
+    v3 off = v3(f32(u_data_w), f32(u_data_h), f32(u_data_d)) / 2.0; // TODO: offset of the obj. will be replaced by model mat
+    tg_ray r = tg_ray(u_camera + off, ray_direction, v3(1.0) / ray_direction);
 
-    v3 bmin = -v3(f32(u_data_w) / 2.0, f32(u_data_h) / 2.0, f32(u_data_d) / 2.0);
-    v3 bmax = v3(f32(u_data_w) / 2.0, f32(u_data_h) / 2.0, f32(u_data_d) / 2.0);
-    bmin *= 0.98;
-    bmax *= 0.98;
+    v3 bmin = v3(0.0);
+    v3 bmax = v3(f32(u_data_w), f32(u_data_h), f32(u_data_d));
     tg_box b = tg_box(bmin, bmax);
 
     f32 d = 1.0;
     u32 id = 1;
-    tg_boxhit bh;
-    if (tg_intersect_ray_box(r, b, bh))
+    f32 t_box;
+    if (tg_intersect_ray_box(r, b, t_box))
     {
         // supercover
         // https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.42.3443&rep=rep1&type=pdf
             
-        v3 hit = bh.tmin > 0.0 ? r.o + bh.tmin * r.d : r.o;
+        v3 hit = t_box > 0.0 ? r.o + t_box * r.d : r.o;
 
-        i32 x = min(i32(u_data_w), i32(ceil(hit.x)));
-        i32 y = min(i32(u_data_h), i32(ceil(hit.y)));
-        i32 z = min(i32(u_data_d), i32(ceil(hit.z)));
+        v3 xyz = clamp(floor(hit), bmin, bmax - v3(1.0));
+        i32 x = i32(xyz.x);
+        i32 y = i32(xyz.y);
+        i32 z = i32(xyz.z);
 
-        i32 step_x = 0;
-        i32 step_y = 0;
-        i32 step_z = 0;
+        i32 step_x;
+        i32 step_y;
+        i32 step_z;
 
         f32 t_max_x = TG_F32_MAX;
         f32 t_max_y = TG_F32_MAX;
@@ -127,86 +129,92 @@ void main()
         if (r.d.x > 0.0)
         {
             step_x = 1;
+            t_max_x = t_box + (f32(x + 1) - hit.x) / r.d.x;
             t_delta_x = 1.0 / r.d.x;
-            t_max_x = bh.tmin + (x - r.o.x) / r.d.x;
         }
         else if (r.d.x < 0.0)
         {
             step_x = -1;
+            t_max_x = t_box + (hit.x - f32(x)) / -r.d.x;
             t_delta_x = 1.0 / -r.d.x;
-            t_max_x = bh.tmin + ((x - 1) - r.o.x) / r.d.x;
         }
         if (r.d.y > 0.0)
         {
             step_y = 1;
+            t_max_y = t_box + (f32(y + 1) - hit.y) / r.d.y;
             t_delta_y = 1.0 / r.d.y;
-            t_max_y = bh.tmin + (y - r.o.y) / r.d.y;
         }
         else if (r.d.y < 0.0)
         {
             step_y = -1;
+            t_max_y = t_box + (hit.y - f32(y)) / -r.d.y;
             t_delta_y = 1.0 / -r.d.y;
-            t_max_y = bh.tmin + ((y - 1) - r.o.y) / r.d.y;
         }
         if (r.d.z > 0.0)
         {
             step_z = 1;
+            t_max_z = t_box + (f32(z + 1) - hit.z) / r.d.z;
             t_delta_z = 1.0 / r.d.z;
-            t_max_z = bh.tmin + (z - r.o.z) / r.d.z;
         }
         else if (r.d.z < 0.0)
         {
             step_z = -1;
+            t_max_z = t_box + (hit.z - f32(z)) / -r.d.z;
             t_delta_z = 1.0 / -r.d.z;
-            t_max_z = bh.tmin + ((z - 1) - r.o.z) / r.d.z;
         }
 
-        while (x > -1 && x < u_data_w + 1 && y > -1 && y < u_data_h + 1 && z > -1 && z < u_data_d + 1)
+        while (true)
         {
+            u32 voxel_idx = u_data_w * u_data_h * z + u_data_w * y + x;
+            u32 bits_idx = voxel_idx / 32;
+            u32 bit_idx = voxel_idx % 32;
+            u32 bits = u32(u_data[bits_idx]);
+            u32 bit = bits & (1 << bit_idx);
+            if (bit != 0)
+            {
+                d = abs(t_box) / 1000.0; // TODO: near and far plane! discard if too close!
+                id = u_data_w * u_data_h * z + u_data_w * y + x;
+                break;
+            }
             if (t_max_x < t_max_y)
             {
                 if (t_max_x < t_max_z)
                 {
-                    x += step_x;
                     t_max_x += t_delta_x;
+                    x += step_x;
+                    if (x < 0 || x >= u_data_w) break;
                 }
                 else
                 {
-                    z += step_z;
                     t_max_z += t_delta_z;
+                    z += step_z;
+                    if (z < 0 || z >= u_data_d) break;
                 }
             }
             else
             {
                 if (t_max_y < t_max_z)
                 {
-                    y += step_y;
                     t_max_y += t_delta_y;
+                    y += step_y;
+                    if (y < 0 || y >= u_data_h) break;
                 }
                 else
                 {
-                    z += step_z;
                     t_max_z += t_delta_z;
+                    z += step_z;
+                    if (z < 0 || z >= u_data_d) break;
                 }
-            }
-            u32 idx = u_data_w/32 * u_data_h * z + u_data_w/32 * y + x/32;
-            u32 bits = u32(u_data[idx]);
-            u32 bit = bits & (1 << (x % 8));
-            if (bit != 0)
-            {
-                d = abs(bh.tmin) / 1000.0;
-                id = u_data_w * u_data_h * z + u_data_w * y + x;
-                break;
             }
         }
     }
     
-    
-    
-    u32 x = u32(gl_FragCoord.x);
-    u32 y = u32(gl_FragCoord.y);
-    //f32 d = gl_FragCoord.z;
-    uint64_t data = uint64_t(id) | (uint64_t(d * 4294967295.0) << uint64_t(32));
-    u32 i = u_w * y + x;
-    atomicMin(u_vb[i], data);
+    //if (d != 1.0)
+    {
+        u32 x = u32(gl_FragCoord.x);
+        u32 y = u32(gl_FragCoord.y);
+        u64 data = u64(id) | (u64(d * 4294967295.0) << u64(32));
+        u32 i = u_w * y + x;
+        atomicMin(u_vb[i], data);
+    }
 }

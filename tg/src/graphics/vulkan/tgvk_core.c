@@ -573,7 +573,7 @@ void tgvk_cmd_bind_descriptor_set(tgvk_command_buffer* p_command_buffer, tgvk_pi
         p_pipeline->layout.pipeline_layout,
         0,
         1,
-        &p_descriptor_set->descriptor_set,
+        &p_descriptor_set->set,
         0,
         TG_NULL
     );
@@ -1367,23 +1367,23 @@ tgvk_descriptor_set tgvk_descriptor_set_create(const tgvk_pipeline* p_pipeline)
     descriptor_pool_create_info.poolSizeCount = p_pipeline->layout.global_resource_count;
     descriptor_pool_create_info.pPoolSizes = p_descriptor_pool_sizes;
 
-    TGVK_CALL(vkCreateDescriptorPool(device, &descriptor_pool_create_info, TG_NULL, &descriptor_set.descriptor_pool));
+    TGVK_CALL(vkCreateDescriptorPool(device, &descriptor_pool_create_info, TG_NULL, &descriptor_set.pool));
 
     VkDescriptorSetAllocateInfo descriptor_set_allocate_info = { 0 };
     descriptor_set_allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     descriptor_set_allocate_info.pNext = TG_NULL;
-    descriptor_set_allocate_info.descriptorPool = descriptor_set.descriptor_pool;
+    descriptor_set_allocate_info.descriptorPool = descriptor_set.pool;
     descriptor_set_allocate_info.descriptorSetCount = 1;
     descriptor_set_allocate_info.pSetLayouts = &p_pipeline->layout.descriptor_set_layout;
 
-    TGVK_CALL(vkAllocateDescriptorSets(device, &descriptor_set_allocate_info, &descriptor_set.descriptor_set));
+    TGVK_CALL(vkAllocateDescriptorSets(device, &descriptor_set_allocate_info, &descriptor_set.set));
 
     return descriptor_set;
 }
 
 void tgvk_descriptor_set_destroy(tgvk_descriptor_set* p_descriptor_set)
 {
-    vkDestroyDescriptorPool(device, p_descriptor_set->descriptor_pool, TG_NULL);
+    vkDestroyDescriptorPool(device, p_descriptor_set->pool, TG_NULL);
 }
 
 
