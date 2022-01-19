@@ -1,4 +1,4 @@
-#include "graphics/vulkan/tgvk_core.h"
+#include "graphics/vulkan/tgvk_mesh.h"
 
 #ifdef TG_VULKAN
 
@@ -41,10 +41,10 @@ static v3 tg__calculate_bitangent(v3 normal, v3 tangent)
     return bitangent;
 }
 
-void tg__copy(VkDeviceSize offset, VkDeviceSize size, tgvk_buffer* p_src, void* p_dst)
+static void tg__copy(VkDeviceSize offset, VkDeviceSize size, tgvk_buffer* p_src, void* p_dst)
 {
     tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take(size);
-    
+
     tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_and_begin_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
 
     VkBufferCopy buffer_copy = { 0 };
@@ -52,14 +52,14 @@ void tg__copy(VkDeviceSize offset, VkDeviceSize size, tgvk_buffer* p_src, void* 
     buffer_copy.dstOffset = 0;
     buffer_copy.size = size;
 
-    vkCmdCopyBuffer(p_command_buffer->command_buffer, p_src->buffer, p_staging_buffer->buffer, 1, &buffer_copy);
+    vkCmdCopyBuffer(p_command_buffer->buffer, p_src->buffer, p_staging_buffer->buffer, 1, &buffer_copy);
     tgvk_command_buffer_end_and_submit(p_command_buffer);
     tg_memcpy(size, p_staging_buffer->memory.p_mapped_device_memory, p_dst);
 
     tgvk_global_staging_buffer_release();
 }
 
-void tg__set_buffer_data(tgvk_buffer* p_buffer, tg_size size, const void* p_data, VkBufferUsageFlagBits buffer_type_flag)
+static void tg__set_buffer_data(tgvk_buffer* p_buffer, tg_size size, const void* p_data, VkBufferUsageFlagBits buffer_type_flag)
 {
     if (size && p_data)
     {
@@ -84,9 +84,9 @@ void tg__set_buffer_data(tgvk_buffer* p_buffer, tg_size size, const void* p_data
     }
 }
 
-void tg__set_buffer_data2(tgvk_buffer* p_buffer, tg_size size, tg_storage_buffer_h h_storage_buffer, VkBufferUsageFlagBits buffer_type_flag)
+static void tg__set_buffer_data2(tgvk_buffer* p_buffer, tg_size size, tgvk_buffer* p_storage_buffer, VkBufferUsageFlagBits buffer_type_flag)
 {
-    if (size && h_storage_buffer)
+    if (size && p_storage_buffer)
     {
         if (size > p_buffer->memory.size)
         {
@@ -96,7 +96,7 @@ void tg__set_buffer_data2(tgvk_buffer* p_buffer, tg_size size, tg_storage_buffer
             }
             *p_buffer = TGVK_BUFFER_CREATE(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | buffer_type_flag, TGVK_MEMORY_DEVICE);
         }
-        tgvk_buffer_copy(size, &h_storage_buffer->buffer, p_buffer);
+        tgvk_buffer_copy(size, p_storage_buffer, p_buffer);
     }
     else
     {
@@ -155,17 +155,10 @@ static const char* tg__skip_whitespace(const char* p_iterator, const char* const
 
 
 
-tg_mesh_h tg_mesh_create(void)
+void tgvk_mesh_create(const char* p_filename, v3 scale, TG_OUT tg_mesh* p_mesh) // TODO: scale is temporary
 {
-    tg_mesh_h h_mesh = tgvk_handle_take(TG_STRUCTURE_TYPE_MESH);
-    return h_mesh;
-}
-
-tg_mesh_h tg_mesh_create2(const char* p_filename, v3 scale) // TODO: scale is temporary
-{
-    TG_ASSERT(p_filename && tgm_v3_magsqr(scale) != 0.0f);
-
-    tg_mesh_h h_mesh = tgvk_handle_take(TG_STRUCTURE_TYPE_MESH);
+    TG_ASSERT(p_filename);
+    TG_ASSERT(tgm_v3_magsqr(scale) > 0.0f);
 
     tg_file_properties file_properties = { 0 };
     tgp_file_get_properties(p_filename, &file_properties);
@@ -334,11 +327,11 @@ tg_mesh_h tg_mesh_create2(const char* p_filename, v3 scale) // TODO: scale is te
             p_positions[i].z = p_positions[i].z * scale.z;
         }
 
-        tg_mesh_set_positions(h_mesh, 3 * total_triangle_count, p_positions);
-        tg_mesh_set_normals(h_mesh, 3 * total_triangle_count, p_normals);
-        tg_mesh_set_uvs(h_mesh, 3 * total_triangle_count, p_uvs);
+        tgvk_mesh_set_positions(p_mesh, 3 * total_triangle_count, p_positions);
+        tgvk_mesh_set_normals(p_mesh, 3 * total_triangle_count, p_normals);
+        tgvk_mesh_set_uvs(p_mesh, 3 * total_triangle_count, p_uvs);
         // TODO: i feel like the normals are wrong, if included here! e.g. sponza.obj
-        //tg_mesh_set_indices(&mesh, ..., ...);
+        //tgvk_mesh_set_indices(&mesh, ..., ...);
 
         TG_FREE_STACK(3LL * (tg_size)total_triangle_count * sizeof(v2));
         TG_FREE_STACK(3LL * (tg_size)total_triangle_count * sizeof(v3));
@@ -357,470 +350,150 @@ tg_mesh_h tg_mesh_create2(const char* p_filename, v3 scale) // TODO: scale is te
     }
 
     TG_FREE_STACK(file_properties.size);
-
-    return h_mesh;
 }
 
-tg_mesh_h tg_mesh_create_sphere(f32 radius, u32 sector_count, u32 stack_count, b32 normals, b32 uvs, b32 tangents_bitangents) // TODO: i should not have a copied flat version of this!
+void tgvk_mesh_copy_indices(tg_mesh* p_mesh, u32 first, u32 count, u16* p_buffer)
 {
-    const u32 vertex_count = (sector_count + 1) * (stack_count + 1) - 2;
-    const u32 index_count = 6 * sector_count * (stack_count - 1);
-
-    v3* p_positions = TG_MALLOC_STACK(vertex_count * sizeof(*p_positions));
-    v3* p_normals = normals ? TG_MALLOC_STACK(vertex_count * sizeof(*p_normals)) : TG_NULL;
-    v2* p_uvs = uvs ? TG_MALLOC_STACK(vertex_count * sizeof(*p_uvs)) : TG_NULL;
-    u16* p_indices = TG_MALLOC_STACK((tg_size)index_count * sizeof(*p_indices));
-
-    const f32 sector_step = 2.0f * TG_PI / sector_count;
-    const f32 stack_step = TG_PI / stack_count;
-
-    u32 it = 0;
-    for (u32 i = 0; i < stack_count + 1; i++)
-    {
-        TG_ASSERT(it < vertex_count);
-
-        const f32 stack_angle = TG_PI / 2.0f - (f32)i * stack_step;
-        const f32 y = radius * tgm_f32_sin(stack_angle);
-        const f32 xz = radius * tgm_f32_cos(stack_angle);
-
-        for (u32 j = 0; j < sector_count + 1; j++)
-        {
-            if ((i != 0 && i != stack_count) || j != sector_count) // we need once vertex less on the poles
-            {
-                const f32 sector_angle = (f32)j * sector_step;
-
-                p_positions[it].x = xz * tgm_f32_cos(sector_angle);
-                p_positions[it].y = y;
-                p_positions[it].z = -xz * tgm_f32_sin(sector_angle);
-
-                if (normals)
-                {
-                    p_normals[it] = tgm_v3_normalized(p_positions[it]);
-                }
-
-                if (uvs)
-                {
-                    if (i == 0 || i == stack_count)
-                    {
-                        p_uvs[it] = (v2){ ((f32)j + 0.5f) / sector_count, ((f32)i + 0.5f) / stack_count };
-                    }
-                    else
-                    {
-                        p_uvs[it] = (v2){ (f32)j / sector_count, (f32)i / stack_count };
-                    }
-                }
-
-                it++;
-            }
-        }
-    }
-
-    it = 0;
-    for (u32 i = 0; i < stack_count; i++)
-    {
-        for (u32 j = 0; j < sector_count; j++)
-        {
-            const u32 i0 = j + (sector_count + 1) * i;
-            const u32 i1 = j + (sector_count + 1) * (i + 1);
-
-            // v0 - v3
-            // |     |
-            // v1 - v2
-
-            const u32 iv0 = i0;
-            const u32 iv1 = i1;
-            const u32 iv2 = i1 + 1;
-            const u32 iv3 = i0 + 1;
-
-            if (i == 0)
-            {
-                p_indices[it++] = (u16)iv0;
-                p_indices[it++] = (u16)iv1 - 1;
-                p_indices[it++] = (u16)iv2 - 1;
-            }
-            else if (i == stack_count - 1)
-            {
-                p_indices[it++] = (u16)iv0 - 1;
-                p_indices[it++] = (u16)iv1 - 1;
-                p_indices[it++] = (u16)iv3 - 1;
-            }
-            else
-            {
-                p_indices[it++] = (u16)iv0 - 1;
-                p_indices[it++] = (u16)iv1 - 1;
-                p_indices[it++] = (u16)iv2 - 1;
-                p_indices[it++] = (u16)iv2 - 1;
-                p_indices[it++] = (u16)iv3 - 1;
-                p_indices[it++] = (u16)iv0 - 1;
-            }
-        }
-    }
-
-    tg_mesh_h h_mesh = tg_mesh_create();
-    tg_mesh_set_indices(h_mesh, index_count, p_indices);
-    tg_mesh_set_positions(h_mesh, vertex_count, p_positions);
-    if (normals)
-    {
-        tg_mesh_set_normals(h_mesh, vertex_count, p_normals);
-    }
-    if (uvs)
-    {
-        tg_mesh_set_uvs(h_mesh, vertex_count, p_uvs);
-    }
-    if (tangents_bitangents)
-    {
-        tg_mesh_regenerate_tangents_bitangents(h_mesh);
-    }
-
-    TG_FREE_STACK((tg_size)index_count * sizeof(*p_indices));
-    if (uvs)
-    {
-        TG_FREE_STACK(vertex_count * sizeof(*p_uvs));
-    }
-    if (normals)
-    {
-        TG_FREE_STACK(vertex_count * sizeof(*p_normals));
-    }
-    TG_FREE_STACK(vertex_count * sizeof(*p_positions));
-
-    return h_mesh;
-}
-
-tg_bounds tg_mesh_get_bounds(tg_mesh_h h_mesh)
-{
-    TG_ASSERT(h_mesh);
-
-    return h_mesh->bounds;
-}
-
-u32 tg_mesh_get_index_count(tg_mesh_h h_mesh)
-{
-    TG_ASSERT(h_mesh);
-
-    return h_mesh->index_count;
-}
-
-u32 tg_mesh_get_vertex_count(tg_mesh_h h_mesh)
-{
-    TG_ASSERT(h_mesh);
-
-    return h_mesh->vertex_count;
-}
-
-void tg_mesh_copy_indices(tg_mesh_h h_mesh, u32 first, u32 count, u16* p_buffer)
-{
-    TG_ASSERT(h_mesh && h_mesh->index_buffer.buffer);
+    TG_ASSERT(p_mesh && p_mesh->index_buffer.buffer);
 
     const VkDeviceSize offset = first * sizeof(u16);
-    const VkDeviceSize size = tgm_u32_min(count, h_mesh->index_count) * sizeof(u16);
-    tg__copy(offset, size, &h_mesh->index_buffer, p_buffer);
+    const VkDeviceSize size = tgm_u32_min(count, p_mesh->index_count) * sizeof(u16);
+    tg__copy(offset, size, &p_mesh->index_buffer, p_buffer);
 }
 
-void tg_mesh_copy_positions(tg_mesh_h h_mesh, u32 first, u32 count, v3* p_buffer)
+void tgvk_mesh_copy_positions(tg_mesh* p_mesh, u32 first, u32 count, v3* p_buffer)
 {
-    TG_ASSERT(h_mesh && h_mesh->position_buffer.buffer);
+    TG_ASSERT(p_mesh && p_mesh->position_buffer.buffer);
 
     const VkDeviceSize offset = first * sizeof(v3);
-    const VkDeviceSize size = tgm_u32_min(count, h_mesh->vertex_count) * sizeof(v3);
-    tg__copy(offset, size, &h_mesh->position_buffer, p_buffer);
+    const VkDeviceSize size = tgm_u32_min(count, p_mesh->vertex_count) * sizeof(v3);
+    tg__copy(offset, size, &p_mesh->position_buffer, p_buffer);
 }
 
-void tg_mesh_copy_normals(tg_mesh_h h_mesh, u32 first, u32 count, v3* p_buffer)
+void tgvk_mesh_copy_normals(tg_mesh* p_mesh, u32 first, u32 count, v3* p_buffer)
 {
-    TG_ASSERT(h_mesh && h_mesh->normal_buffer.buffer);
+    TG_ASSERT(p_mesh && p_mesh->normal_buffer.buffer);
 
     const VkDeviceSize offset = first * sizeof(v3);
-    const VkDeviceSize size = tgm_u32_min(count, h_mesh->vertex_count) * sizeof(v3);
-    tg__copy(offset, size, &h_mesh->normal_buffer, p_buffer);
+    const VkDeviceSize size = tgm_u32_min(count, p_mesh->vertex_count) * sizeof(v3);
+    tg__copy(offset, size, &p_mesh->normal_buffer, p_buffer);
 }
 
-void tg_mesh_copy_uvs(tg_mesh_h h_mesh, u32 first, u32 count, v2* p_buffer)
+void tgvk_mesh_copy_uvs(tg_mesh* p_mesh, u32 first, u32 count, v2* p_buffer)
 {
-    TG_ASSERT(h_mesh && h_mesh->uv_buffer.buffer);
+    TG_ASSERT(p_mesh && p_mesh->uv_buffer.buffer);
 
     const VkDeviceSize offset = first * sizeof(v2);
-    const VkDeviceSize size = tgm_u32_min(count, h_mesh->vertex_count) * sizeof(v2);
-    tg__copy(offset, size, &h_mesh->uv_buffer, p_buffer);
+    const VkDeviceSize size = tgm_u32_min(count, p_mesh->vertex_count) * sizeof(v2);
+    tg__copy(offset, size, &p_mesh->uv_buffer, p_buffer);
 }
 
-void tg_mesh_copy_tangents(tg_mesh_h h_mesh, u32 first, u32 count, v3* p_buffer)
+void tgvk_mesh_copy_tangents(tg_mesh* p_mesh, u32 first, u32 count, v3* p_buffer)
 {
-    TG_ASSERT(h_mesh && h_mesh->tangent_buffer.buffer);
+    TG_ASSERT(p_mesh && p_mesh->tangent_buffer.buffer);
 
     const VkDeviceSize offset = first * sizeof(v3);
-    const VkDeviceSize size = tgm_u32_min(count, h_mesh->vertex_count) * sizeof(v3);
-    tg__copy(offset, size, &h_mesh->tangent_buffer, p_buffer);
+    const VkDeviceSize size = tgm_u32_min(count, p_mesh->vertex_count) * sizeof(v3);
+    tg__copy(offset, size, &p_mesh->tangent_buffer, p_buffer);
 }
 
-void tg_mesh_copy_bitangents(tg_mesh_h h_mesh, u32 first, u32 count, v3* p_buffer)
+void tgvk_mesh_copy_bitangents(tg_mesh* p_mesh, u32 first, u32 count, v3* p_buffer)
 {
-    TG_ASSERT(h_mesh && h_mesh->bitangent_buffer.buffer);
+    TG_ASSERT(p_mesh && p_mesh->bitangent_buffer.buffer);
 
     const VkDeviceSize offset = first * sizeof(v3);
-    const VkDeviceSize size = tgm_u32_min(count, h_mesh->vertex_count) * sizeof(v3);
-    tg__copy(offset, size, &h_mesh->bitangent_buffer, p_buffer);
+    const VkDeviceSize size = tgm_u32_min(count, p_mesh->vertex_count) * sizeof(v3);
+    tg__copy(offset, size, &p_mesh->bitangent_buffer, p_buffer);
 }
 
-tg_mesh_h tg_mesh_create_sphere_flat(f32 radius, u32 sector_count, u32 stack_count, b32 normals, b32 uvs, b32 tangents_bitangents)
+void tgvk_mesh_set_indices(tg_mesh* p_mesh, u32 count, const u16* p_indices)
 {
-    const u32 unique_vertex_count = (sector_count + 1) * (stack_count + 1);
-    v3* p_unique_positions = TG_MALLOC_STACK(unique_vertex_count * sizeof(*p_unique_positions));
-    v2* p_unique_uvs = uvs ? TG_MALLOC_STACK(unique_vertex_count * sizeof(*p_unique_uvs)) : TG_NULL;
+    TG_ASSERT(p_mesh);
+    TG_ASSERT((!count && !p_indices) || (count && p_indices));
 
-    const f32 sector_step = 2.0f * TG_PI / sector_count;
-    const f32 stack_step = TG_PI / stack_count;
+    p_mesh->index_count = p_indices ? count : 0;
+    tg__set_buffer_data(&p_mesh->index_buffer, count * sizeof(*p_indices), (void*)p_indices, VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+}
 
-    u32 it = 0;
-    for (u32 i = 0; i < stack_count + 1; i++)
+void tgvk_mesh_set_positions(tg_mesh* p_mesh, u32 count, const v3* p_positions) // TODO: all of these setters must work AFTER a render command has been created!
+{
+    TG_ASSERT(p_mesh);
+    TG_ASSERT((!count && !p_positions) || (count && p_positions));
+
+    p_mesh->vertex_count = p_positions ? count : 0;
+    tg__set_buffer_data(&p_mesh->position_buffer, count * sizeof(*p_positions), (const void*)p_positions, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+}
+
+void tgvk_mesh_set_positions2(tg_mesh* p_mesh, u32 count, tgvk_buffer* p_storage_buffer)
+{
+    TG_ASSERT(p_mesh);
+    TG_ASSERT(count);
+    TG_ASSERT(p_storage_buffer);
+    TG_ASSERT(p_storage_buffer->memory.size >= count * sizeof(v3));
+
+    p_mesh->vertex_count = count;
+    tg__set_buffer_data2(&p_mesh->position_buffer, count * sizeof(v3), p_storage_buffer, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+}
+
+void tgvk_mesh_set_normals(tg_mesh* p_mesh, u32 count, const v3* p_normals)
+{
+    TG_ASSERT(p_mesh);
+    TG_ASSERT((!count && !p_normals) || (count && p_normals));
+
+    tg__set_buffer_data(&p_mesh->normal_buffer, count * sizeof(*p_normals), (void*)p_normals, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+}
+
+void tgvk_mesh_set_normals2(tg_mesh* p_mesh, u32 count, tgvk_buffer* p_storage_buffer)
+{
+    TG_ASSERT(p_mesh);
+    TG_ASSERT(count);
+    TG_ASSERT(p_storage_buffer);
+    TG_ASSERT(p_storage_buffer->memory.size >= count * sizeof(v3));
+
+    tg__set_buffer_data2(&p_mesh->normal_buffer, count * sizeof(v3), p_storage_buffer, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+}
+
+void tgvk_mesh_set_uvs(tg_mesh* p_mesh, u32 count, const v2* p_uvs)
+{
+    TG_ASSERT(p_mesh);
+    TG_ASSERT((!count && !p_uvs) || (count && p_uvs));
+
+    tg__set_buffer_data(&p_mesh->uv_buffer, count * sizeof(*p_uvs), (void*)p_uvs, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+}
+
+void tgvk_mesh_set_tangents(tg_mesh* p_mesh, u32 count, const v3* p_tangents)
+{
+    TG_ASSERT(p_mesh);
+    TG_ASSERT((!count && !p_tangents) || (count && p_tangents));
+
+    tg__set_buffer_data(&p_mesh->tangent_buffer, count * sizeof(*p_tangents), (void*)p_tangents, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+}
+
+void tgvk_mesh_set_bitangents(tg_mesh* p_mesh, u32 count, const v3* p_bitangents)
+{
+    TG_ASSERT(p_mesh);
+    TG_ASSERT((!count && !p_bitangents) || (count && p_bitangents));
+
+    tg__set_buffer_data(&p_mesh->bitangent_buffer, count * sizeof(*p_bitangents), (void*)p_bitangents, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+}
+
+void tgvk_mesh_regenerate_normals(tg_mesh* p_mesh)
+{
+    TG_ASSERT(p_mesh);
+
+    TG_INVALID_CODEPATH(); // TODO: create tgvk_mesh_generate_normals(u32 count, const v3* p_positions, v3* p_normals_buffer); instead!
+
+    v3* p_positions = TG_MALLOC_STACK(p_mesh->vertex_count * sizeof(*p_positions));
+    tgvk_mesh_copy_positions(p_mesh, 0, p_mesh->vertex_count, p_positions);
+
+    v3* p_normals = TG_MALLOC_STACK(p_mesh->vertex_count * sizeof(*p_normals));
+
+    if (p_mesh->index_count != 0)
     {
-        TG_ASSERT(it < unique_vertex_count);
+        u16* p_indices = TG_MALLOC_STACK(p_mesh->index_count * sizeof(*p_indices));
+        tgvk_mesh_copy_indices(p_mesh, 0, p_mesh->index_count, p_indices);
 
-        const f32 stack_angle = TG_PI / 2.0f - (f32)i * stack_step;
-        const f32 y = radius * tgm_f32_sin(stack_angle);
-        const f32 xz = radius * tgm_f32_cos(stack_angle);
-
-        for (u32 j = 0; j < sector_count + 1; j++)
-        {
-            const f32 sector_angle = (f32)j * sector_step;
-
-            p_unique_positions[it].x = xz * tgm_f32_cos(sector_angle);
-            p_unique_positions[it].y = y;
-            p_unique_positions[it].z = -xz * tgm_f32_sin(sector_angle);
-
-            if (uvs)
-            {
-                p_unique_uvs[it].x = (f32)j / sector_count;
-                p_unique_uvs[it].y = (f32)i / stack_count;
-            }
-
-            it++;
-        }
-    }
-
-    const u32 max_vertex_count = 4 * unique_vertex_count;
-    const u32 max_index_count = 6 * unique_vertex_count;
-    v3* p_positions = TG_MALLOC_STACK((tg_size)max_vertex_count * sizeof(*p_positions));
-    v2* p_uvs = uvs ? TG_MALLOC_STACK((tg_size)max_vertex_count * sizeof(*p_uvs)) : TG_NULL;
-    u16* p_indices = TG_MALLOC_STACK((tg_size)max_index_count * sizeof(*p_indices));
-
-    u32 vertex_count = 0;
-    u32 index_count = 0;
-    for (u32 i = 0; i < stack_count; i++)
-    {
-        for (u32 j = 0; j < sector_count; j++)
-        {
-            const u32 i0 = j + (sector_count + 1) * i;
-            const u32 i1 = j + (sector_count + 1) * (i + 1);
-
-            // v0 - v3
-            // |     |
-            // v1 - v2
-
-            const v3 vert0 = p_unique_positions[i0];
-            const v3 vert1 = p_unique_positions[i1];
-            const v3 vert2 = p_unique_positions[i1 + 1];
-            const v3 vert3 = p_unique_positions[i0 + 1];
-
-            v2 uv0 = { 0 };
-            v2 uv1 = { 0 };
-            v2 uv2 = { 0 };
-            v2 uv3 = { 0 };
-            if (uvs)
-            {
-                p_unique_uvs[i0];
-                p_unique_uvs[i1];
-                p_unique_uvs[i1 + 1];
-                p_unique_uvs[i0 + 1];
-            }
-
-            if (i == 0)
-            {
-                p_positions[vertex_count] = vert0;
-                p_positions[vertex_count + 1] = vert1;
-                p_positions[vertex_count + 2] = vert2;
-
-                if (uvs)
-                {
-                    p_uvs[vertex_count] = tgm_v2_divf(tgm_v2_add(uv0, uv3), 2.0f);
-                    p_uvs[vertex_count + 1] = uv1;
-                    p_uvs[vertex_count + 2] = uv2;
-                }
-
-                p_indices[index_count] = (u16)vertex_count;
-                p_indices[index_count + 1] = (u16)vertex_count + 1;
-                p_indices[index_count + 2] = (u16)vertex_count + 2;
-
-                vertex_count += 3;
-                index_count += 3;
-            }
-            else if (i == stack_count - 1)
-            {
-                p_positions[vertex_count] = vert0;
-                p_positions[vertex_count + 1] = vert1;
-                p_positions[vertex_count + 2] = vert3;
-
-                if (uvs)
-                {
-                    p_uvs[vertex_count] = uv0;
-                    p_uvs[vertex_count + 1] = uv1;
-                    p_uvs[vertex_count + 2] = tgm_v2_divf(tgm_v2_add(uv1, uv2), 2.0f);
-                }
-
-                p_indices[index_count] = (u16)vertex_count;
-                p_indices[index_count + 1] = (u16)vertex_count + 1;
-                p_indices[index_count + 2] = (u16)vertex_count + 2;
-
-                vertex_count += 3;
-                index_count += 3;
-            }
-            else
-            {
-                p_positions[vertex_count] = vert0;
-                p_positions[vertex_count + 1] = vert1;
-                p_positions[vertex_count + 2] = vert2;
-                p_positions[vertex_count + 3] = vert3;
-
-                if (uvs)
-                {
-                    p_uvs[vertex_count] = uv0;
-                    p_uvs[vertex_count + 1] = uv1;
-                    p_uvs[vertex_count + 2] = uv2;
-                    p_uvs[vertex_count + 3] = uv3;
-                }
-
-                p_indices[index_count] = (u16)vertex_count;
-                p_indices[index_count + 1] = (u16)vertex_count + 1;
-                p_indices[index_count + 2] = (u16)vertex_count + 2;
-                p_indices[index_count + 3] = (u16)vertex_count + 2;
-                p_indices[index_count + 4] = (u16)vertex_count + 3;
-                p_indices[index_count + 5] = (u16)vertex_count;
-
-                vertex_count += 4;
-                index_count += 6;
-            }
-        }
-    }
-
-    tg_mesh_h h_mesh = tg_mesh_create();
-    tg_mesh_set_indices(h_mesh, index_count, p_indices);
-    tg_mesh_set_positions(h_mesh, vertex_count, p_positions);
-    if (normals)
-    {
-        tg_mesh_regenerate_normals(h_mesh);
-    }
-    if (uvs)
-    {
-        tg_mesh_set_uvs(h_mesh, vertex_count, p_uvs);
-    }
-    if (tangents_bitangents)
-    {
-        tg_mesh_regenerate_tangents_bitangents(h_mesh);
-    }
-
-    TG_FREE_STACK((tg_size)max_index_count * sizeof(*p_indices));
-    if (uvs)
-    {
-        TG_FREE_STACK((tg_size)max_vertex_count * sizeof(*p_uvs));
-    }
-    TG_FREE_STACK((tg_size)max_vertex_count * sizeof(*p_positions));
-
-    if (uvs)
-    {
-        TG_FREE_STACK(unique_vertex_count * sizeof(*p_unique_uvs));
-    }
-    TG_FREE_STACK(unique_vertex_count * sizeof(*p_unique_positions));
-
-    return h_mesh;
-}
-
-void tg_mesh_set_indices(tg_mesh_h h_mesh, u32 count, const u16* p_indices)
-{
-    TG_ASSERT(h_mesh && ((!count && !p_indices) || (count && p_indices)));
-
-    h_mesh->index_count = p_indices ? count : 0;
-    tg__set_buffer_data(&h_mesh->index_buffer, count * sizeof(*p_indices), (void*)p_indices, VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
-}
-
-void tg_mesh_set_positions(tg_mesh_h h_mesh, u32 count, const v3* p_positions) // TODO: all of these setters must work AFTER a render command has been created!
-{
-    TG_ASSERT(h_mesh && ((!count && !p_positions) || (count && p_positions)));
-
-    h_mesh->vertex_count = p_positions ? count : 0;
-    tg__set_buffer_data(&h_mesh->position_buffer, count * sizeof(*p_positions), (const void*)p_positions, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
-
-    if (count && p_positions)
-    {
-        h_mesh->bounds.min = (v3){ p_positions[0].x, p_positions[0].y, p_positions[0].z };
-        h_mesh->bounds.max = (v3){ p_positions[0].x, p_positions[0].y, p_positions[0].z };
-        for (u32 i = 1; i < count; i++)
-        {
-            h_mesh->bounds.min = tgm_v3_min(h_mesh->bounds.min, p_positions[i]);
-            h_mesh->bounds.max = tgm_v3_max(h_mesh->bounds.max, p_positions[i]);
-        }
-    }
-}
-
-void tg_mesh_set_positions2(tg_mesh_h h_mesh, u32 count, tg_storage_buffer_h h_storage_buffer)
-{
-    TG_ASSERT(h_mesh && count && h_storage_buffer && h_storage_buffer->buffer.memory.size >= count * sizeof(v3));
-
-    h_mesh->vertex_count = count;
-    tg__set_buffer_data2(&h_mesh->position_buffer, count * sizeof(v3), h_storage_buffer, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
-    // TODO: calc bounds
-}
-
-void tg_mesh_set_normals(tg_mesh_h h_mesh, u32 count, const v3* p_normals)
-{
-    TG_ASSERT(h_mesh && ((!count && !p_normals) || (count && p_normals)));
-
-    tg__set_buffer_data(&h_mesh->normal_buffer, count * sizeof(*p_normals), (void*)p_normals, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
-}
-
-void tg_mesh_set_normals2(tg_mesh_h h_mesh, u32 count, tg_storage_buffer_h h_storage_buffer)
-{
-    TG_ASSERT(h_mesh && count && h_storage_buffer && h_storage_buffer->buffer.memory.size >= count * sizeof(v3));
-
-    tg__set_buffer_data2(&h_mesh->normal_buffer, count * sizeof(v3), h_storage_buffer, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
-}
-
-void tg_mesh_set_uvs(tg_mesh_h h_mesh, u32 count, const v2* p_uvs)
-{
-    TG_ASSERT(h_mesh && ((!count && !p_uvs) || (count && p_uvs)));
-
-    tg__set_buffer_data(&h_mesh->uv_buffer, count * sizeof(*p_uvs), (void*)p_uvs, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
-}
-
-void tg_mesh_set_tangents(tg_mesh_h h_mesh, u32 count, const v3* p_tangents)
-{
-    TG_ASSERT(h_mesh && ((!count && !p_tangents) || (count && p_tangents)));
-
-    tg__set_buffer_data(&h_mesh->tangent_buffer, count * sizeof(*p_tangents), (void*)p_tangents, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
-}
-
-void tg_mesh_set_bitangents(tg_mesh_h h_mesh, u32 count, const v3* p_bitangents)
-{
-    TG_ASSERT(h_mesh && ((!count && !p_bitangents) || (count && p_bitangents)));
-
-    tg__set_buffer_data(&h_mesh->bitangent_buffer, count * sizeof(*p_bitangents), (void*)p_bitangents, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
-}
-
-void tg_mesh_regenerate_normals(tg_mesh_h h_mesh)
-{
-    TG_ASSERT(h_mesh);
-
-    TG_INVALID_CODEPATH(); // TODO: create tg_mesh_generate_normals(u32 count, const v3* p_positions, v3* p_normals_buffer); instead!
-
-    v3* p_positions = TG_MALLOC_STACK(h_mesh->vertex_count * sizeof(*p_positions));
-    tg_mesh_copy_positions(h_mesh, 0, h_mesh->vertex_count, p_positions);
-
-    v3* p_normals = TG_MALLOC_STACK(h_mesh->vertex_count * sizeof(*p_normals));
-
-    if (h_mesh->index_count != 0)
-    {
-        u16* p_indices = TG_MALLOC_STACK(h_mesh->index_count * sizeof(*p_indices));
-        tg_mesh_copy_indices(h_mesh, 0, h_mesh->index_count, p_indices);
-
-        for (u32 i = 0; i < h_mesh->index_count; i += 3)
+        for (u32 i = 0; i < p_mesh->index_count; i += 3)
         {
             // TODO: these will override normals, that have been set before. this should be interpolated (only relevant if indices exits).
             const v3 normal = tg__calculate_normal(p_positions[p_indices[i]], p_positions[p_indices[i + 1]], p_positions[p_indices[i + 2]]);
@@ -829,7 +502,7 @@ void tg_mesh_regenerate_normals(tg_mesh_h h_mesh)
             p_normals[p_indices[i + 2]] = normal;
         }
 
-        TG_FREE_STACK(h_mesh->index_count * sizeof(*p_indices));
+        TG_FREE_STACK(p_mesh->index_count * sizeof(*p_indices));
     }
     else
     {
@@ -875,7 +548,7 @@ void tg_mesh_regenerate_normals(tg_mesh_h h_mesh)
         tgvk_buffer_destroy(&uniform_buffer);
         tgvk_pipeline_destroy(&compute_pipeline);
 #else
-        for (u32 i = 0; i < h_mesh->vertex_count; i += 3)
+        for (u32 i = 0; i < p_mesh->vertex_count; i += 3)
         {
             const v3 normal = tg__calculate_normal(p_positions[i], p_positions[i + 1], p_positions[i + 2]);
             p_normals[i] = normal;
@@ -885,56 +558,54 @@ void tg_mesh_regenerate_normals(tg_mesh_h h_mesh)
 #endif
     }
 
-    tg_mesh_set_normals(h_mesh, h_mesh->vertex_count, p_normals);
+    tgvk_mesh_set_normals(p_mesh, p_mesh->vertex_count, p_normals);
 
-    TG_FREE_STACK(h_mesh->vertex_count * sizeof(*p_normals));
-    TG_FREE_STACK(h_mesh->vertex_count * sizeof(*p_positions));
+    TG_FREE_STACK(p_mesh->vertex_count * sizeof(*p_normals));
+    TG_FREE_STACK(p_mesh->vertex_count * sizeof(*p_positions));
 }
 
-void tg_mesh_regenerate_tangents_bitangents(tg_mesh_h h_mesh)
+void tgvk_mesh_regenerate_tangents_bitangents(tg_mesh* p_mesh)
 {
     TG_INVALID_CODEPATH();
-    TG_ASSERT(h_mesh->index_count == 0);
+    TG_ASSERT(p_mesh->index_count == 0);
 
-    TG_ASSERT(h_mesh);
+    TG_ASSERT(p_mesh);
 
-    for (u32 i = 0; i < h_mesh->vertex_count; i += 3)
+    for (u32 i = 0; i < p_mesh->vertex_count; i += 3)
     {
         // TODO: this
         //tg__calculate_tangent_bitangent(&p_vertices[i + 0], &p_vertices[i + 1], &p_vertices[i + 2]);
     }
 }
 
-void tg_mesh_destroy(tg_mesh_h h_mesh)
+void tgvk_mesh_destroy(tg_mesh* p_mesh)
 {
-    TG_ASSERT(h_mesh);
+    TG_ASSERT(p_mesh);
 
-    if (h_mesh->index_buffer.buffer)
+    if (p_mesh->index_buffer.buffer)
     {
-        tgvk_buffer_destroy(&h_mesh->index_buffer);
+        tgvk_buffer_destroy(&p_mesh->index_buffer);
     }
-    if (h_mesh->position_buffer.buffer)
+    if (p_mesh->position_buffer.buffer)
     {
-        tgvk_buffer_destroy(&h_mesh->position_buffer);
+        tgvk_buffer_destroy(&p_mesh->position_buffer);
     }
-    if (h_mesh->normal_buffer.buffer)
+    if (p_mesh->normal_buffer.buffer)
     {
-        tgvk_buffer_destroy(&h_mesh->normal_buffer);
+        tgvk_buffer_destroy(&p_mesh->normal_buffer);
     }
-    if (h_mesh->uv_buffer.buffer)
+    if (p_mesh->uv_buffer.buffer)
     {
-        tgvk_buffer_destroy(&h_mesh->uv_buffer);
+        tgvk_buffer_destroy(&p_mesh->uv_buffer);
     }
-    if (h_mesh->tangent_buffer.buffer)
+    if (p_mesh->tangent_buffer.buffer)
     {
-        tgvk_buffer_destroy(&h_mesh->tangent_buffer);
+        tgvk_buffer_destroy(&p_mesh->tangent_buffer);
     }
-    if (h_mesh->bitangent_buffer.buffer)
+    if (p_mesh->bitangent_buffer.buffer)
     {
-        tgvk_buffer_destroy(&h_mesh->bitangent_buffer);
+        tgvk_buffer_destroy(&p_mesh->bitangent_buffer);
     }
-
-    tgvk_handle_release(h_mesh);
 }
 
 #endif

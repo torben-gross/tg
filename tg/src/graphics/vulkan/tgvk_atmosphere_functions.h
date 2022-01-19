@@ -55,8 +55,8 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef TG_VULKAN_ATMOSPHERE_FUNCTIONS_H
-#define TG_VULKAN_ATMOSPHERE_FUNCTIONS_H
+#ifndef TGVK_ATMOSPHERE_FUNCTIONS_H
+#define TGVK_ATMOSPHERE_FUNCTIONS_H
 
 static const char p_atmosphere_functions[] =
 "tg_number tg_clamp_cosine(tg_number mu)\r\n"

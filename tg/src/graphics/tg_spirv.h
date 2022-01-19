@@ -1,7 +1,7 @@
 #ifndef TG_SPIRV_H
 #define TG_SPIRV_H
 
-#include "graphics/tg_graphics.h"
+#include "graphics/tg_graphics_core.h"
 #include "tg_common.h"
 
 

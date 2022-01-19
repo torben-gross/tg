@@ -29,7 +29,7 @@
  * http://www-evasion.imag.fr/Membres/Eric.Bruneton/
  */
 
-#include "graphics/vulkan/tgvk_core.h"
+#include "graphics/vulkan/tgvk_atmosphere.h"
 
 #ifdef TG_VULKAN
 
@@ -88,6 +88,17 @@
 #define TG_IRRADIANCE_TEXTURE_HEIGHT       16
 
 #define TG_MAX_LUMINOUS_EFFICACY           683.0
+
+
+
+typedef struct tgvk_atmosphere_density_profile_layer
+{
+	f64    width;
+	f64    exp_term;
+	f64    exp_scale;
+	f64    linear_term;
+	f64    constant_term;
+} tgvk_atmosphere_density_profile_layer;
 
 
 
@@ -175,7 +186,7 @@ static void tg__compute_spectral_radiance_to_luminance_factors(const f64* p_wave
 	*p_k_b *= TG_MAX_LUMINOUS_EFFICACY * dlambda;
 }
 
-static u32 tg__glsl_header_factory(const tgvk_atmosphere_model* p_model, u32 size, char* p_buffer)
+static u32 tg__glsl_header_factory(const tg_atmosphere_model* p_model, u32 size, char* p_buffer)
 {
 #pragma warning(push)
 #pragma warning(disable:4296)
@@ -366,9 +377,9 @@ static u32 tg__glsl_header_factory(const tgvk_atmosphere_model* p_model, u32 siz
 
 
 
-static void tg__precompute(tgvk_atmosphere_model* p_model, VkFormat layered_image_format)
+static void tg__precompute(tg_atmosphere_model* p_model, VkFormat layered_image_format)
 {
-	tg_sampler_create_info sampler_create_info = { 0 };
+	tgvk_sampler_create_info sampler_create_info = { 0 };
 	sampler_create_info.min_filter = TG_IMAGE_FILTER_LINEAR;
 	sampler_create_info.mag_filter = TG_IMAGE_FILTER_LINEAR;
 	sampler_create_info.address_mode_u = TG_IMAGE_ADDRESS_MODE_CLAMP_TO_EDGE;
@@ -524,7 +535,7 @@ static void tg__precompute(tgvk_atmosphere_model* p_model, VkFormat layered_imag
 			tgvk_cmd_bind_pipeline(p_command_buffer, &transmittance_pipeline);
 			tgvk_cmd_begin_render_pass(p_command_buffer, transmittance_render_pass, &transmittance_framebuffer, VK_SUBPASS_CONTENTS_INLINE);
 			tgvk_cmd_bind_and_draw_screen_quad(p_command_buffer);
-			vkCmdEndRenderPass(p_command_buffer->command_buffer);
+			vkCmdEndRenderPass(p_command_buffer->buffer);
 		}
 		tgvk_command_buffer_end_and_submit(p_command_buffer);
 
@@ -572,7 +583,7 @@ static void tg__precompute(tgvk_atmosphere_model* p_model, VkFormat layered_imag
 			tgvk_cmd_bind_descriptor_set(p_command_buffer, &direct_irradiance_pipeline, &direct_irradiance_descriptor_set);
 			tgvk_cmd_bind_and_draw_screen_quad(p_command_buffer);
 
-			vkCmdEndRenderPass(p_command_buffer->command_buffer);
+			vkCmdEndRenderPass(p_command_buffer->buffer);
 		}
 		tgvk_command_buffer_end_and_submit(p_command_buffer);
 
@@ -668,7 +679,7 @@ static void tg__precompute(tgvk_atmosphere_model* p_model, VkFormat layered_imag
 				tgvk_cmd_bind_descriptor_set(p_command_buffer, &single_scattering_pipeline, &single_scattering_descriptor_set);
 				tgvk_cmd_bind_and_draw_screen_quad(p_command_buffer);
 
-				vkCmdEndRenderPass(p_command_buffer->command_buffer);
+				vkCmdEndRenderPass(p_command_buffer->buffer);
 			}
 			tgvk_command_buffer_end_and_submit(p_command_buffer);
 		}
@@ -807,7 +818,7 @@ static void tg__precompute(tgvk_atmosphere_model* p_model, VkFormat layered_imag
 					tgvk_cmd_bind_descriptor_set(p_command_buffer, &scattering_density_pipeline, &scattering_density_descriptor_set);
 					tgvk_cmd_bind_and_draw_screen_quad(p_command_buffer);
 
-					vkCmdEndRenderPass(p_command_buffer->command_buffer);
+					vkCmdEndRenderPass(p_command_buffer->buffer);
 
 					if (layer == TG_SCATTERING_TEXTURE_DEPTH - 1)
 					{
@@ -828,7 +839,7 @@ static void tg__precompute(tgvk_atmosphere_model* p_model, VkFormat layered_imag
 				tgvk_cmd_bind_descriptor_set(p_command_buffer, &indirect_irradiance_pipeline, &indirect_irradiance_descriptor_set);
 				tgvk_cmd_bind_and_draw_screen_quad(p_command_buffer);
 
-				vkCmdEndRenderPass(p_command_buffer->command_buffer);
+				vkCmdEndRenderPass(p_command_buffer->buffer);
 
 				tgvk_cmd_transition_layered_image_layout(p_command_buffer, &delta_rayleigh_scattering_texture, TGVK_LAYOUT_SHADER_READ_F, TGVK_LAYOUT_COLOR_ATTACHMENT_WRITE);
 			}
@@ -854,7 +865,7 @@ static void tg__precompute(tgvk_atmosphere_model* p_model, VkFormat layered_imag
 
 					tgvk_cmd_draw_indexed(p_command_buffer, 6);
 
-					vkCmdEndRenderPass(p_command_buffer->command_buffer);
+					vkCmdEndRenderPass(p_command_buffer->buffer);
 
 					if (layer == TG_SCATTERING_TEXTURE_DEPTH - 1)
 					{
@@ -898,7 +909,7 @@ static void tg__precompute(tgvk_atmosphere_model* p_model, VkFormat layered_imag
 			tgvk_cmd_begin_render_pass(p_command_buffer, transmittance_render_pass, &transmittance_framebuffer, VK_SUBPASS_CONTENTS_INLINE);
 			tgvk_cmd_bind_and_draw_screen_quad(p_command_buffer);
 
-			vkCmdEndRenderPass(p_command_buffer->command_buffer);
+			vkCmdEndRenderPass(p_command_buffer->buffer);
 		}
 		tgvk_command_buffer_end_and_submit(p_command_buffer);
 
@@ -934,7 +945,7 @@ static void tg__precompute(tgvk_atmosphere_model* p_model, VkFormat layered_imag
 
 
 
-void tgvk_atmosphere_model_create(TG_OUT tgvk_atmosphere_model* p_model)
+void tgvk_atmosphere_model_create(TG_OUT tg_atmosphere_model* p_model)
 {
 	p_model->settings.use_constant_solar_spectrum = TG_FALSE;
 	p_model->settings.use_ozone = TG_TRUE;
@@ -944,7 +955,7 @@ void tgvk_atmosphere_model_create(TG_OUT tgvk_atmosphere_model* p_model)
 	p_model->settings.precomputed_wavelength_count = p_model->settings.use_luminance == TG_LUMINANCE_PRECOMPUTED ? 15 : 3;
 	p_model->settings.combine_scattering_textures = TG_TRUE;
 
-	tg_sampler_create_info sampler_create_info = { 0 };
+	tgvk_sampler_create_info sampler_create_info = { 0 };
 	sampler_create_info.min_filter = TG_IMAGE_FILTER_LINEAR;
 	sampler_create_info.mag_filter = TG_IMAGE_FILTER_LINEAR;
 	sampler_create_info.address_mode_u = TG_IMAGE_ADDRESS_MODE_CLAMP_TO_EDGE;
@@ -1045,7 +1056,7 @@ void tgvk_atmosphere_model_create(TG_OUT tgvk_atmosphere_model* p_model)
 	tgvk_command_buffer_end_and_submit(p_command_buffer);
 }
 
-void tgvk_atmosphere_model_destroy(tgvk_atmosphere_model* p_model)
+void tgvk_atmosphere_model_destroy(tg_atmosphere_model* p_model)
 {
 	tgvk_buffer_destroy(&p_model->rendering.ubo);
 	tgvk_buffer_destroy(&p_model->rendering.vertex_shader_ubo);
@@ -1068,7 +1079,7 @@ void tgvk_atmosphere_model_destroy(tgvk_atmosphere_model* p_model)
 	tgvk_image_destroy(&p_model->rendering.transmittance_texture);
 }
 
-void tgvk_atmosphere_model_update_descriptor_set(tgvk_atmosphere_model* p_model, tgvk_descriptor_set* p_descriptor_set)
+void tgvk_atmosphere_model_update_descriptor_set(tg_atmosphere_model* p_model, tgvk_descriptor_set* p_descriptor_set)
 {
 	tgvk_descriptor_set_update_image(p_descriptor_set->set, &p_model->rendering.transmittance_texture, 0);
 	tgvk_descriptor_set_update_layered_image(p_descriptor_set->set, &p_model->rendering.scattering_texture, 1);
@@ -1083,7 +1094,7 @@ void tgvk_atmosphere_model_update_descriptor_set(tgvk_atmosphere_model* p_model,
 	tgvk_descriptor_set_update_image(p_descriptor_set->set, &p_model->rendering.irradiance_texture, 3);
 }
 
-void tgvk_atmosphere_model_update(tgvk_atmosphere_model* p_model, m4 inv_view, m4 inv_proj)
+void tgvk_atmosphere_model_update(tg_atmosphere_model* p_model, m4 inv_view, m4 inv_proj)
 {
 	((m4*)p_model->rendering.vertex_shader_ubo.memory.p_mapped_device_memory)[0] = inv_view;
 	((m4*)p_model->rendering.vertex_shader_ubo.memory.p_mapped_device_memory)[1] = inv_proj;

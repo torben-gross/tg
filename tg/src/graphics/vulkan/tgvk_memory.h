@@ -1,5 +1,5 @@
-#ifndef TG_GRAPHICS_VULKAN_MEMORY_ALLOCATOR_H
-#define TG_GRAPHICS_VULKAN_MEMORY_ALLOCATOR_H
+#ifndef TGVK_MEMORY_H
+#define TGVK_MEMORY_H
 
 #include "tg_common.h"
 

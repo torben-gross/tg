@@ -29,8 +29,6 @@
 #define VK_USE_PLATFORM_WIN32_KHR
 #endif
 
-#define TG_ENABLE_DEBUG_TOOLS 0
-
 #ifdef TG_DEBUG
 #define TG_ASSERT(x)                       if (!(x)) *(int*)0 = 0
 #define TG_ASSERT2(x, p_message)           if (!(x)) { TG_DEBUG_LOG(p_message); *(int*)0 = 0; }
@@ -47,9 +45,6 @@
 
 #define TG_INOUT
 #define TG_OUT
-
-#define TG_DECLARE_HANDLE(structure)       typedef struct structure* structure##_h
-#define TG_DECLARE_TYPE(structure)         typedef struct structure structure
 
 
 

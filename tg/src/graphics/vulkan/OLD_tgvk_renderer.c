@@ -1,3 +1,4 @@
+#if 0
 #include "graphics/vulkan/tgvk_core.h"
 
 #ifdef TG_VULKAN
@@ -31,14 +32,14 @@ typedef struct tg_shading_ubo
     v4     p_point_light_colors[TG_MAX_POINT_LIGHTS];
 } tg_shading_ubo;
 
-typedef struct tg_ray_tracer_ubo
+typedef struct tg_raytracer_ubo
 {
     v4    camera;
     v4    ray00;
     v4    ray10;
     v4    ray01;
     v4    ray11;
-} tg_ray_tracer_ubo;
+} tg_raytracer_ubo;
 
 
 
@@ -148,11 +149,11 @@ static void tg__init_forward_pass(tg_renderer_h h_renderer)
 
 static void tg__init_ray_tracing_pass(tg_renderer_h h_renderer)
 {
-    h_renderer->ray_trace_pass.command_buffer = tgvk_command_buffer_create(TGVK_COMMAND_POOL_TYPE_COMPUTE, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
-    h_renderer->ray_trace_pass.shader = tg_compute_shader_create("shaders/renderer/terrain_ray_tracer.comp")->shader;
-    h_renderer->ray_trace_pass.pipeline = tgvk_pipeline_create_compute(&h_renderer->ray_trace_pass.shader);
-    h_renderer->ray_trace_pass.descriptor_set = tgvk_descriptor_set_create(&h_renderer->ray_trace_pass.pipeline);
-    h_renderer->ray_trace_pass.ubo = TGVK_UNIFORM_BUFFER_CREATE(sizeof(tg_ray_tracer_ubo));
+    h_renderer->raytrace_pass.command_buffer = tgvk_command_buffer_create(TGVK_COMMAND_POOL_TYPE_COMPUTE, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+    h_renderer->raytrace_pass.shader = tg_compute_shader_create("shaders/renderer/terrain_raytracer.comp")->shader;
+    h_renderer->raytrace_pass.pipeline = tgvk_pipeline_create_compute(&h_renderer->raytrace_pass.shader);
+    h_renderer->raytrace_pass.descriptor_set = tgvk_descriptor_set_create(&h_renderer->raytrace_pass.pipeline);
+    h_renderer->raytrace_pass.ubo = TGVK_UNIFORM_BUFFER_CREATE(sizeof(tg_raytracer_ubo));
 }
 
 static void tg__init_tone_mapping_pass(tg_renderer_h h_renderer)
@@ -446,283 +447,7 @@ void tg__destroy_present_pass(tg_renderer_h h_renderer)
 
 
 
-void tg_renderer_init_shared_resources(void)
-{
-    const u16 p_indices[6] = { 0, 1, 2, 2, 3, 0 };
 
-    v2 p_positions[4] = { 0 };
-    p_positions[0] = (v2){ -1.0f,  1.0f };
-    p_positions[1] = (v2){  1.0f,  1.0f };
-    p_positions[2] = (v2){  1.0f, -1.0f };
-    p_positions[3] = (v2){ -1.0f, -1.0f };
-
-    v2 p_uvs[4] = { 0 };
-    p_uvs[0] = (v2){ 0.0f,  1.0f };
-    p_uvs[1] = (v2){ 1.0f,  1.0f };
-    p_uvs[2] = (v2){ 1.0f,  0.0f };
-    p_uvs[3] = (v2){ 0.0f,  0.0f };
-
-    const tg_size staging_buffer_size = TG_MAX3(sizeof(p_indices), sizeof(p_positions), sizeof(p_uvs));
-    tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take(staging_buffer_size);
-
-    tg_memcpy(sizeof(p_indices), p_indices, p_staging_buffer->memory.p_mapped_device_memory);
-    shared_render_resources.screen_quad_indices = TGVK_BUFFER_CREATE(sizeof(p_indices), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, TGVK_MEMORY_DEVICE);
-    tgvk_buffer_copy(sizeof(p_indices), p_staging_buffer, &shared_render_resources.screen_quad_indices);
-
-    tg_memcpy(sizeof(p_positions), p_positions, p_staging_buffer->memory.p_mapped_device_memory);
-    shared_render_resources.screen_quad_positions_buffer = TGVK_BUFFER_CREATE(sizeof(p_positions), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, TGVK_MEMORY_DEVICE);
-    tgvk_buffer_copy(sizeof(p_positions), p_staging_buffer, &shared_render_resources.screen_quad_positions_buffer);
-
-    tg_memcpy(sizeof(p_uvs), p_uvs, p_staging_buffer->memory.p_mapped_device_memory);
-    shared_render_resources.screen_quad_uvs_buffer = TGVK_BUFFER_CREATE(sizeof(p_uvs), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, TGVK_MEMORY_DEVICE);
-    tgvk_buffer_copy(sizeof(p_uvs), p_staging_buffer, &shared_render_resources.screen_quad_uvs_buffer);
-
-    tgvk_global_staging_buffer_release();
-
-    // geometry pass
-    {
-        TGVK_GEOMETRY_FORMATS(p_formats);
-
-        VkAttachmentDescription p_attachment_descriptions[TGVK_GEOMETRY_ATTACHMENT_COUNT] = { 0 };
-
-        for (u32 i = 0; i < TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT; i++)
-        {
-            p_attachment_descriptions[i].flags = 0;
-            p_attachment_descriptions[i].format = p_formats[i];
-            p_attachment_descriptions[i].samples = VK_SAMPLE_COUNT_1_BIT;
-            p_attachment_descriptions[i].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-            p_attachment_descriptions[i].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-            p_attachment_descriptions[i].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            p_attachment_descriptions[i].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            p_attachment_descriptions[i].initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-            p_attachment_descriptions[i].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        }
-
-        p_attachment_descriptions[TGVK_GEOMETRY_ATTACHMENT_DEPTH].flags = 0;
-        p_attachment_descriptions[TGVK_GEOMETRY_ATTACHMENT_DEPTH].format = VK_FORMAT_D32_SFLOAT;
-        p_attachment_descriptions[TGVK_GEOMETRY_ATTACHMENT_DEPTH].samples = VK_SAMPLE_COUNT_1_BIT;
-        p_attachment_descriptions[TGVK_GEOMETRY_ATTACHMENT_DEPTH].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-        p_attachment_descriptions[TGVK_GEOMETRY_ATTACHMENT_DEPTH].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        p_attachment_descriptions[TGVK_GEOMETRY_ATTACHMENT_DEPTH].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        p_attachment_descriptions[TGVK_GEOMETRY_ATTACHMENT_DEPTH].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        p_attachment_descriptions[TGVK_GEOMETRY_ATTACHMENT_DEPTH].initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-        p_attachment_descriptions[TGVK_GEOMETRY_ATTACHMENT_DEPTH].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-        VkAttachmentReference p_color_attachment_references[TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT] = { 0 };
-
-        for (u32 i = 0; i < TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT; i++)
-        {
-            p_color_attachment_references[i].attachment = i;
-            p_color_attachment_references[i].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        }
-
-        VkAttachmentReference depth_buffer_attachment_reference = { 0 };
-        depth_buffer_attachment_reference.attachment = TGVK_GEOMETRY_ATTACHMENT_DEPTH;
-        depth_buffer_attachment_reference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-        VkSubpassDescription subpass_description = { 0 };
-        subpass_description.flags = 0;
-        subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subpass_description.inputAttachmentCount = 0;
-        subpass_description.pInputAttachments = TG_NULL;
-        subpass_description.colorAttachmentCount = TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT;
-        subpass_description.pColorAttachments = p_color_attachment_references;
-        subpass_description.pResolveAttachments = TG_NULL;
-        subpass_description.pDepthStencilAttachment = &depth_buffer_attachment_reference;
-        subpass_description.preserveAttachmentCount = 0;
-        subpass_description.pPreserveAttachments = TG_NULL;
-
-        shared_render_resources.geometry_render_pass = tgvk_render_pass_create(p_attachment_descriptions, &subpass_description);
-    }
-
-    // shading pass
-    {
-        VkAttachmentDescription attachment_description = { 0 };
-        attachment_description.flags = 0;
-        attachment_description.format = TGVK_HDR_FORMAT;
-        attachment_description.samples = VK_SAMPLE_COUNT_1_BIT;
-        attachment_description.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        attachment_description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        attachment_description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        attachment_description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        attachment_description.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        attachment_description.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-        VkAttachmentReference attachment_reference = { 0 };
-        attachment_reference.attachment = 0;
-        attachment_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-        VkSubpassDescription subpass_description = { 0 };
-        subpass_description.flags = 0;
-        subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subpass_description.inputAttachmentCount = 0;
-        subpass_description.pInputAttachments = TG_NULL;
-        subpass_description.colorAttachmentCount = 1;
-        subpass_description.pColorAttachments = &attachment_reference;
-        subpass_description.pResolveAttachments = TG_NULL;
-        subpass_description.pDepthStencilAttachment = TG_NULL;
-        subpass_description.preserveAttachmentCount = 0;
-        subpass_description.pPreserveAttachments = TG_NULL;
-
-        shared_render_resources.shading_render_pass = tgvk_render_pass_create(&attachment_description, &subpass_description);
-    }
-
-    // forward pass
-    {
-        VkAttachmentDescription p_attachment_descriptions[2] = { 0 };
-
-        p_attachment_descriptions[0].flags = 0;
-        p_attachment_descriptions[0].format = TGVK_HDR_FORMAT;
-        p_attachment_descriptions[0].samples = VK_SAMPLE_COUNT_1_BIT;
-        p_attachment_descriptions[0].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-        p_attachment_descriptions[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        p_attachment_descriptions[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        p_attachment_descriptions[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        p_attachment_descriptions[0].initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        p_attachment_descriptions[0].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-        p_attachment_descriptions[1].flags = 0;
-        p_attachment_descriptions[1].format = VK_FORMAT_D32_SFLOAT;
-        p_attachment_descriptions[1].samples = VK_SAMPLE_COUNT_1_BIT;
-        p_attachment_descriptions[1].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-        p_attachment_descriptions[1].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        p_attachment_descriptions[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        p_attachment_descriptions[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        p_attachment_descriptions[1].initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-        p_attachment_descriptions[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-        VkAttachmentReference color_attachment_reference = { 0 };
-        color_attachment_reference.attachment = 0;
-        color_attachment_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-        VkAttachmentReference depth_buffer_attachment_reference = { 0 };
-        depth_buffer_attachment_reference.attachment = 1;
-        depth_buffer_attachment_reference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-        VkSubpassDescription subpass_description = { 0 };
-        subpass_description.flags = 0;
-        subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subpass_description.inputAttachmentCount = 0;
-        subpass_description.pInputAttachments = TG_NULL;
-        subpass_description.colorAttachmentCount = 1;
-        subpass_description.pColorAttachments = &color_attachment_reference;
-        subpass_description.pResolveAttachments = TG_NULL;
-        subpass_description.pDepthStencilAttachment = &depth_buffer_attachment_reference;
-        subpass_description.preserveAttachmentCount = 0;
-        subpass_description.pPreserveAttachments = TG_NULL;
-
-        shared_render_resources.forward_render_pass = tgvk_render_pass_create(p_attachment_descriptions, &subpass_description);
-    }
-
-    // tone mapping pass
-    {
-        VkAttachmentDescription attachment_description = { 0 };
-        attachment_description.flags = 0;
-        attachment_description.format = TGVK_HDR_FORMAT;
-        attachment_description.samples = VK_SAMPLE_COUNT_1_BIT;
-        attachment_description.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-        attachment_description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        attachment_description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        attachment_description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        attachment_description.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        attachment_description.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-        VkAttachmentReference attachment_reference = { 0 };
-        attachment_reference.attachment = 0;
-        attachment_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-        VkSubpassDescription subpass_description = { 0 };
-        subpass_description.flags = 0;
-        subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subpass_description.inputAttachmentCount = 0;
-        subpass_description.pInputAttachments = TG_NULL;
-        subpass_description.colorAttachmentCount = 1;
-        subpass_description.pColorAttachments = &attachment_reference;
-        subpass_description.pResolveAttachments = TG_NULL;
-        subpass_description.pDepthStencilAttachment = TG_NULL;
-        subpass_description.preserveAttachmentCount = 0;
-        subpass_description.pPreserveAttachments = TG_NULL;
-
-        shared_render_resources.tone_mapping_render_pass = tgvk_render_pass_create(&attachment_description, &subpass_description);
-    }
-
-    // ui pass
-    {
-        VkAttachmentDescription attachment_description = { 0 };
-        attachment_description.flags = 0;
-        attachment_description.format = TGVK_HDR_FORMAT;
-        attachment_description.samples = VK_SAMPLE_COUNT_1_BIT;
-        attachment_description.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-        attachment_description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        attachment_description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        attachment_description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        attachment_description.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        attachment_description.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-        VkAttachmentReference attachment_reference = { 0 };
-        attachment_reference.attachment = 0;
-        attachment_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-        VkSubpassDescription subpass_description = { 0 };
-        subpass_description.flags = 0;
-        subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subpass_description.inputAttachmentCount = 0;
-        subpass_description.pInputAttachments = TG_NULL;
-        subpass_description.colorAttachmentCount = 1;
-        subpass_description.pColorAttachments = &attachment_reference;
-        subpass_description.pResolveAttachments = TG_NULL;
-        subpass_description.pDepthStencilAttachment = TG_NULL;
-        subpass_description.preserveAttachmentCount = 0;
-        subpass_description.pPreserveAttachments = TG_NULL;
-
-        shared_render_resources.ui_render_pass = tgvk_render_pass_create(&attachment_description, &subpass_description);
-    }
-
-    // present pass
-    {
-        VkAttachmentReference color_attachment_reference = { 0 };
-        color_attachment_reference.attachment = 0;
-        color_attachment_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-        VkAttachmentDescription attachment_description = { 0 };
-        attachment_description.flags = 0;
-        attachment_description.format = surface.format.format;
-        attachment_description.samples = VK_SAMPLE_COUNT_1_BIT;
-        attachment_description.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        attachment_description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        attachment_description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        attachment_description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        attachment_description.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        attachment_description.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-        VkSubpassDescription subpass_description = { 0 };
-        subpass_description.flags = 0;
-        subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subpass_description.inputAttachmentCount = 0;
-        subpass_description.pInputAttachments = TG_NULL;
-        subpass_description.colorAttachmentCount = 1;
-        subpass_description.pColorAttachments = &color_attachment_reference;
-        subpass_description.pResolveAttachments = TG_NULL;
-        subpass_description.pDepthStencilAttachment = TG_NULL;
-        subpass_description.preserveAttachmentCount = 0;
-        subpass_description.pPreserveAttachments = TG_NULL;
-
-        shared_render_resources.present_render_pass = tgvk_render_pass_create(&attachment_description, &subpass_description);
-    }
-}
-
-void tg_renderer_shutdown_shared_resources(void)
-{
-    tgvk_render_pass_destroy(shared_render_resources.present_render_pass);
-    tgvk_render_pass_destroy(shared_render_resources.ui_render_pass);
-    tgvk_render_pass_destroy(shared_render_resources.tone_mapping_render_pass);
-    tgvk_render_pass_destroy(shared_render_resources.forward_render_pass);
-    tgvk_render_pass_destroy(shared_render_resources.shading_render_pass);
-    tgvk_render_pass_destroy(shared_render_resources.geometry_render_pass);
-    tgvk_buffer_destroy(&shared_render_resources.screen_quad_uvs_buffer);
-    tgvk_buffer_destroy(&shared_render_resources.screen_quad_positions_buffer);
-    tgvk_buffer_destroy(&shared_render_resources.screen_quad_indices);
-}
 
 tg_renderer_h tg_renderer_create(tg_camera* p_camera)
 {
@@ -745,7 +470,7 @@ tg_renderer_h tg_renderer_create(tg_camera* p_camera)
     h_renderer->deferred_command_buffer_count = 0;
     h_renderer->forward_render_command_count = 0;
 
-    h_renderer->text.h_font = tg_font_create("fonts/arial.ttf");
+    h_renderer->text.h_font = tgvk_font_create("fonts/arial.ttf");
     h_renderer->text.capacity = 32;
     h_renderer->text.count = 0;
     h_renderer->text.total_letter_count = 0;
@@ -865,10 +590,10 @@ void tg_renderer_destroy(tg_renderer_h h_renderer)
     tgvk_buffer_destroy(&h_renderer->tone_mapping_pass.acquire_exposure_clear_storage_buffer);
     tgvk_command_buffer_destroy(&h_renderer->tone_mapping_pass.command_buffer);
 
-    tgvk_buffer_destroy(&h_renderer->ray_trace_pass.ubo);
-    tgvk_descriptor_set_destroy(&h_renderer->ray_trace_pass.descriptor_set);
-    tgvk_pipeline_destroy(&h_renderer->ray_trace_pass.pipeline);
-    tgvk_command_buffer_destroy(&h_renderer->ray_trace_pass.command_buffer);
+    tgvk_buffer_destroy(&h_renderer->raytrace_pass.ubo);
+    tgvk_descriptor_set_destroy(&h_renderer->raytrace_pass.descriptor_set);
+    tgvk_pipeline_destroy(&h_renderer->raytrace_pass.pipeline);
+    tgvk_command_buffer_destroy(&h_renderer->raytrace_pass.command_buffer);
 
     tgvk_framebuffer_destroy(&h_renderer->forward_pass.framebuffer);
     tgvk_command_buffer_destroy(&h_renderer->forward_pass.command_buffer);
@@ -902,7 +627,7 @@ void tg_renderer_destroy(tg_renderer_h h_renderer)
         TG_FREE(h_renderer->text.pp_strings);
         TG_FREE(h_renderer->text.p_string_capacities);
     }
-    tg_font_destroy(h_renderer->text.h_font);
+    tgvk_font_destroy(h_renderer->text.h_font);
     tgvk_semaphore_destroy(h_renderer->semaphore);
     tgvk_render_target_destroy(&h_renderer->render_target);
     tgvk_image_destroy(&h_renderer->hdr_color_attachment);
@@ -984,7 +709,7 @@ void tg_renderer_push_render_command(tg_renderer_h h_renderer, tg_render_command
             if (h_render_command->p_renderer_infos[i].h_renderer == h_renderer)
             {
                 p_renderer_info = &h_render_command->p_renderer_infos[i];
-                h_renderer->p_deferred_command_buffers[h_renderer->deferred_command_buffer_count++] = p_renderer_info->command_buffer.command_buffer;
+                h_renderer->p_deferred_command_buffers[h_renderer->deferred_command_buffer_count++] = p_renderer_info->command_buffer.buffer;
                 break;
             }
         }
@@ -1180,40 +905,40 @@ void tg_renderer_end(tg_renderer_h h_renderer, f32 dt, b32 present)
     {
         const m4 ivp_no_translation = tgm_m4_inverse(tgm_m4_mul(p, r));
 
-        tg_ray_tracer_ubo* p_ubo = h_renderer->ray_trace_pass.ubo.memory.p_mapped_device_memory;
+        tg_raytracer_ubo* p_ubo = h_renderer->raytrace_pass.ubo.memory.p_mapped_device_memory;
         p_ubo->camera.xyz = c.position;
         p_ubo->ray00.xyz = tgm_v3_normalized(tgm_m4_mulv4(ivp_no_translation, (v4) { -1.0f,  1.0f,  1.0f,  1.0f }).xyz);
         p_ubo->ray10.xyz = tgm_v3_normalized(tgm_m4_mulv4(ivp_no_translation, (v4) { -1.0f, -1.0f,  1.0f,  1.0f }).xyz);
         p_ubo->ray01.xyz = tgm_v3_normalized(tgm_m4_mulv4(ivp_no_translation, (v4) {  1.0f,  1.0f,  1.0f,  1.0f }).xyz);
         p_ubo->ray11.xyz = tgm_v3_normalized(tgm_m4_mulv4(ivp_no_translation, (v4) {  1.0f, -1.0f,  1.0f,  1.0f }).xyz);
 
-        tgvk_descriptor_set_update_image_3d(h_renderer->ray_trace_pass.descriptor_set.set, &h_renderer->h_terrain->voxels, 0);
-        tgvk_descriptor_set_update_uniform_buffer(h_renderer->ray_trace_pass.descriptor_set.set, &h_renderer->ray_trace_pass.ubo, 1);
-        tgvk_descriptor_set_update_image2(h_renderer->ray_trace_pass.descriptor_set.set, &h_renderer->hdr_color_attachment, 2, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
-        //tgvk_descriptor_set_update_image2(h_renderer->ray_trace_pass.descriptor_set.descriptor_set, &h_renderer->render_target.depth_attachment, 3, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+        tgvk_descriptor_set_update_image_3d(h_renderer->raytrace_pass.descriptor_set.set, &h_renderer->h_terrain->voxels, 0);
+        tgvk_descriptor_set_update_uniform_buffer(h_renderer->raytrace_pass.descriptor_set.set, &h_renderer->raytrace_pass.ubo, 1);
+        tgvk_descriptor_set_update_image2(h_renderer->raytrace_pass.descriptor_set.set, &h_renderer->hdr_color_attachment, 2, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+        //tgvk_descriptor_set_update_image2(h_renderer->raytrace_pass.descriptor_set.descriptor_set, &h_renderer->render_target.depth_attachment, 3, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
 
-        tgvk_command_buffer_begin(&h_renderer->ray_trace_pass.command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+        tgvk_command_buffer_begin(&h_renderer->raytrace_pass.command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
         {
-            tgvk_cmd_transition_image_layout(&h_renderer->ray_trace_pass.command_buffer, &h_renderer->hdr_color_attachment, TGVK_LAYOUT_COLOR_ATTACHMENT_WRITE, TGVK_LAYOUT_SHADER_WRITE_C);
-            tgvk_cmd_bind_pipeline(&h_renderer->ray_trace_pass.command_buffer, &h_renderer->ray_trace_pass.pipeline);
-            tgvk_cmd_bind_descriptor_set(&h_renderer->ray_trace_pass.command_buffer, &h_renderer->ray_trace_pass.pipeline, &h_renderer->ray_trace_pass.descriptor_set);
-            vkCmdDispatch(h_renderer->ray_trace_pass.command_buffer.command_buffer, h_renderer->hdr_color_attachment.width / 8, h_renderer->hdr_color_attachment.height / 8, 1);
-            tgvk_cmd_transition_image_layout(&h_renderer->ray_trace_pass.command_buffer, &h_renderer->hdr_color_attachment, TGVK_LAYOUT_SHADER_WRITE_C, TGVK_LAYOUT_COLOR_ATTACHMENT_WRITE);
+            tgvk_cmd_transition_image_layout(&h_renderer->raytrace_pass.command_buffer, &h_renderer->hdr_color_attachment, TGVK_LAYOUT_COLOR_ATTACHMENT_WRITE, TGVK_LAYOUT_SHADER_WRITE_C);
+            tgvk_cmd_bind_pipeline(&h_renderer->raytrace_pass.command_buffer, &h_renderer->raytrace_pass.pipeline);
+            tgvk_cmd_bind_descriptor_set(&h_renderer->raytrace_pass.command_buffer, &h_renderer->raytrace_pass.pipeline, &h_renderer->raytrace_pass.descriptor_set);
+            vkCmdDispatch(h_renderer->raytrace_pass.command_buffer.command_buffer, h_renderer->hdr_color_attachment.width / 8, h_renderer->hdr_color_attachment.height / 8, 1);
+            tgvk_cmd_transition_image_layout(&h_renderer->raytrace_pass.command_buffer, &h_renderer->hdr_color_attachment, TGVK_LAYOUT_SHADER_WRITE_C, TGVK_LAYOUT_COLOR_ATTACHMENT_WRITE);
         }
-        vkEndCommandBuffer(h_renderer->ray_trace_pass.command_buffer.command_buffer);
+        vkEndCommandBuffer(h_renderer->raytrace_pass.command_buffer.command_buffer);
 
-        VkSubmitInfo ray_trace_submit_info = { 0 };
-        ray_trace_submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        ray_trace_submit_info.pNext = TG_NULL;
-        ray_trace_submit_info.waitSemaphoreCount = 1;
-        ray_trace_submit_info.pWaitSemaphores = &h_renderer->semaphore;
-        ray_trace_submit_info.pWaitDstStageMask = &color_attachment_pipeline_stage_flags;
-        ray_trace_submit_info.commandBufferCount = 1;
-        ray_trace_submit_info.pCommandBuffers = &h_renderer->ray_trace_pass.command_buffer.command_buffer;
-        ray_trace_submit_info.signalSemaphoreCount = 1;
-        ray_trace_submit_info.pSignalSemaphores = &h_renderer->semaphore;
+        VkSubmitInfo raytrace_submit_info = { 0 };
+        raytrace_submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        raytrace_submit_info.pNext = TG_NULL;
+        raytrace_submit_info.waitSemaphoreCount = 1;
+        raytrace_submit_info.pWaitSemaphores = &h_renderer->semaphore;
+        raytrace_submit_info.pWaitDstStageMask = &color_attachment_pipeline_stage_flags;
+        raytrace_submit_info.commandBufferCount = 1;
+        raytrace_submit_info.pCommandBuffers = &h_renderer->raytrace_pass.command_buffer.command_buffer;
+        raytrace_submit_info.signalSemaphoreCount = 1;
+        raytrace_submit_info.pSignalSemaphores = &h_renderer->semaphore;
 
-        tgvk_queue_submit(TGVK_QUEUE_TYPE_GRAPHICS, 1, &ray_trace_submit_info, VK_NULL_HANDLE);
+        tgvk_queue_submit(TGVK_QUEUE_TYPE_GRAPHICS, 1, &raytrace_submit_info, VK_NULL_HANDLE);
     }
 
     VkSubmitInfo tone_mapping_submit_info = { 0 };
@@ -1431,7 +1156,7 @@ v3 tg_renderer_screen_to_world_position(tg_renderer_h h_renderer, u32 x, u32 y)
     tgvk_cmd_transition_image_layout(p_command_buffer, &h_renderer->render_target.depth_attachment_copy, TGVK_LAYOUT_SHADER_READ_CFV, TGVK_LAYOUT_TRANSFER_READ);
     tgvk_cmd_copy_depth_image_pixel_to_buffer(p_command_buffer, &h_renderer->render_target.depth_attachment_copy, p_staging_buffer, x, y);
     tgvk_cmd_transition_image_layout(p_command_buffer, &h_renderer->render_target.depth_attachment_copy, TGVK_LAYOUT_TRANSFER_READ, TGVK_LAYOUT_SHADER_READ_CFV);
-    TGVK_CALL(vkEndCommandBuffer(p_command_buffer->command_buffer));
+    TGVK_CALL(vkEndCommandBuffer(p_command_buffer->buffer));
 
     tgvk_fence_wait(h_renderer->render_target.fence);
     tgvk_fence_reset(h_renderer->render_target.fence);
@@ -1443,7 +1168,7 @@ v3 tg_renderer_screen_to_world_position(tg_renderer_h h_renderer, u32 x, u32 y)
     submit_info.pWaitSemaphores = TG_NULL;
     submit_info.pWaitDstStageMask = TG_NULL;
     submit_info.commandBufferCount = 1;
-    submit_info.pCommandBuffers = &p_command_buffer->command_buffer;
+    submit_info.pCommandBuffers = &p_command_buffer->buffer;
     submit_info.signalSemaphoreCount = 0;
     submit_info.pSignalSemaphores = TG_NULL;
 
@@ -1534,4 +1259,5 @@ void tgvk_renderer_on_window_resize(tg_renderer_h h_renderer, u32 width, u32 hei
     tg__init_present_pass(h_renderer);
 }
 
+#endif
 #endif

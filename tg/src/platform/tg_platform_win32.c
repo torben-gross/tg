@@ -17,17 +17,6 @@
 
 
 
-typedef struct tg_timer
-{
-    b32              running;
-    LONGLONG         counter_elapsed;
-    LARGE_INTEGER    performance_frequency;
-    LARGE_INTEGER    start_performance_counter;
-    LARGE_INTEGER    end_performance_counter;
-} tg_timer;
-
-
-
 static HANDLE            h_process_heap = INVALID_HANDLE_VALUE;
 static HWND              h_window = INVALID_HANDLE_VALUE;
 static SYSTEMTIME        startup_system_time = { 0 };
@@ -510,63 +499,59 @@ i8 tgp_system_time_compare(tg_system_time* p_time0, tg_system_time* p_time1)
 
 
 
-tg_timer_h tgp_timer_create(void)
+void tgp_timer_init(tg_timer* p_timer)
 {
-    tg_timer_h h_timer = TG_MALLOC(sizeof(*h_timer));
+    TG_ASSERT(p_timer->running == TG_FALSE);
+    TG_ASSERT(p_timer->counter_elapsed == 0ll);
+    TG_ASSERT(p_timer->performance_frequency.QuadPart == 0ll);
+    TG_ASSERT(p_timer->start_performance_counter.QuadPart == 0ll);
+    TG_ASSERT(p_timer->end_performance_counter.QuadPart == 0ll);
 
-    h_timer->running = TG_FALSE;
-    QueryPerformanceFrequency(&h_timer->performance_frequency);
-    QueryPerformanceCounter(&h_timer->start_performance_counter);
-    QueryPerformanceCounter(&h_timer->end_performance_counter);
-
-    return h_timer;
+    p_timer->running = TG_FALSE;
+    QueryPerformanceFrequency(&p_timer->performance_frequency);
+    QueryPerformanceCounter(&p_timer->start_performance_counter);
+    QueryPerformanceCounter(&p_timer->end_performance_counter);
 }
 
-void tgp_timer_start(tg_timer_h h_timer)
+void tgp_timer_start(tg_timer* p_timer)
 {
-    TG_ASSERT(h_timer);
+    TG_ASSERT(p_timer);
 
-    if (!h_timer->running)
+    if (!p_timer->running)
     {
-        h_timer->running = TG_TRUE;
-        QueryPerformanceCounter(&h_timer->start_performance_counter);
+        p_timer->running = TG_TRUE;
+        QueryPerformanceCounter(&p_timer->start_performance_counter);
     }
 }
 
-void tgp_timer_stop(tg_timer_h h_timer)
+void tgp_timer_stop(tg_timer* p_timer)
 {
-    TG_ASSERT(h_timer);
+    TG_ASSERT(p_timer);
 
-    if (h_timer->running)
+    if (p_timer->running)
     {
-        h_timer->running = TG_FALSE;
-        QueryPerformanceCounter(&h_timer->end_performance_counter);
-        h_timer->counter_elapsed += h_timer->end_performance_counter.QuadPart - h_timer->start_performance_counter.QuadPart;
+        p_timer->running = TG_FALSE;
+        QueryPerformanceCounter(&p_timer->end_performance_counter);
+        p_timer->counter_elapsed += p_timer->end_performance_counter.QuadPart - p_timer->start_performance_counter.QuadPart;
     }
 }
 
-void tgp_timer_reset(tg_timer_h h_timer)
+void tgp_timer_reset(tg_timer* p_timer)
 {
-    TG_ASSERT(h_timer);
+    TG_ASSERT(p_timer);
 
-    h_timer->running = TG_FALSE;
-    h_timer->counter_elapsed = 0;
-    QueryPerformanceCounter(&h_timer->start_performance_counter);
-    QueryPerformanceCounter(&h_timer->end_performance_counter);
+    p_timer->running = TG_FALSE;
+    p_timer->counter_elapsed = 0;
+    QueryPerformanceCounter(&p_timer->start_performance_counter);
+    QueryPerformanceCounter(&p_timer->end_performance_counter);
 }
 
-f32  tgp_timer_elapsed_milliseconds(tg_timer_h h_timer)
+f32 tgp_timer_elapsed_ms(const tg_timer* p_timer)
 {
-    TG_ASSERT(h_timer);
+    TG_ASSERT(p_timer);
+    TG_ASSERT(!p_timer->running);
 
-    return (f32)((1000000000LL * h_timer->counter_elapsed) / h_timer->performance_frequency.QuadPart) / 1000000.0f;
-}
-
-void tgp_timer_destroy(tg_timer_h h_timer)
-{
-    TG_ASSERT(h_timer);
-
-    TG_FREE(h_timer);
+    return (f32)((1000000000ll * p_timer->counter_elapsed) / p_timer->performance_frequency.QuadPart) / 1000000.0f;
 }
 
 

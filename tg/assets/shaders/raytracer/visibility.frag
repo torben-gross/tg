@@ -132,7 +132,7 @@ void main()
             t_max_x = t_box + (f32(x + 1) - hit.x) / r.d.x;
             t_delta_x = 1.0 / r.d.x;
         }
-        else if (r.d.x < 0.0)
+        else
         {
             step_x = -1;
             t_max_x = t_box + (hit.x - f32(x)) / -r.d.x;
@@ -144,7 +144,7 @@ void main()
             t_max_y = t_box + (f32(y + 1) - hit.y) / r.d.y;
             t_delta_y = 1.0 / r.d.y;
         }
-        else if (r.d.y < 0.0)
+        else
         {
             step_y = -1;
             t_max_y = t_box + (hit.y - f32(y)) / -r.d.y;
@@ -156,7 +156,7 @@ void main()
             t_max_z = t_box + (f32(z + 1) - hit.z) / r.d.z;
             t_delta_z = 1.0 / r.d.z;
         }
-        else if (r.d.z < 0.0)
+        else
         {
             step_z = -1;
             t_max_z = t_box + (hit.z - f32(z)) / -r.d.z;
@@ -209,7 +209,7 @@ void main()
         }
     }
     
-    //if (d != 1.0)
+    if (d != 1.0)
     {
         u32 x = u32(gl_FragCoord.x);
         u32 y = u32(gl_FragCoord.y);

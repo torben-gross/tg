@@ -1,3 +1,4 @@
+#if 0
 #include "graphics/tg_sparse_voxel_octree.h"
 
 
@@ -115,22 +116,22 @@ void tg_voxelizer_exec(tg_voxelizer* p_voxelizer, tg_render_command_h h_render_c
         tgvk_descriptor_set_update_image_3d(p_descriptor_set->set, &p_voxelizer->p_image_3ds[i], 2 + i);
     }
 
-    vkCmdBindPipeline(p_voxelizer->command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_voxelizer->pipeline.pipeline);
+    vkCmdBindPipeline(p_voxelizer->command_buffer.buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_voxelizer->pipeline.pipeline);
     const VkDeviceSize offset = 0;
     if (h_render_command->h_mesh->index_count)
     {
-        vkCmdBindIndexBuffer(p_voxelizer->command_buffer.command_buffer, h_render_command->h_mesh->index_buffer.buffer, 0, VK_INDEX_TYPE_UINT16);
+        vkCmdBindIndexBuffer(p_voxelizer->command_buffer.buffer, h_render_command->h_mesh->index_buffer.buffer, 0, VK_INDEX_TYPE_UINT16);
     }
-    vkCmdBindVertexBuffers(p_voxelizer->command_buffer.command_buffer, 0, 1, &h_render_command->h_mesh->position_buffer.buffer, &offset);
-    vkCmdBindVertexBuffers(p_voxelizer->command_buffer.command_buffer, 1, 1, &h_render_command->h_mesh->normal_buffer.buffer, &offset);
-    vkCmdBindDescriptorSets(p_voxelizer->command_buffer.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_voxelizer->pipeline.layout.pipeline_layout, 0, 1, &p_descriptor_set->set, 0, TG_NULL);
+    vkCmdBindVertexBuffers(p_voxelizer->command_buffer.buffer, 0, 1, &h_render_command->h_mesh->position_buffer.buffer, &offset);
+    vkCmdBindVertexBuffers(p_voxelizer->command_buffer.buffer, 1, 1, &h_render_command->h_mesh->normal_buffer.buffer, &offset);
+    vkCmdBindDescriptorSets(p_voxelizer->command_buffer.buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_voxelizer->pipeline.layout.pipeline_layout, 0, 1, &p_descriptor_set->set, 0, TG_NULL);
     if (h_render_command->h_mesh->index_count)
     {
-        vkCmdDrawIndexed(p_voxelizer->command_buffer.command_buffer, h_render_command->h_mesh->index_count, 1, 0, 0, 0);
+        vkCmdDrawIndexed(p_voxelizer->command_buffer.buffer, h_render_command->h_mesh->index_count, 1, 0, 0, 0);
     }
     else
     {
-        vkCmdDraw(p_voxelizer->command_buffer.command_buffer, h_render_command->h_mesh->vertex_count, 1, 0, 0);
+        vkCmdDraw(p_voxelizer->command_buffer.buffer, h_render_command->h_mesh->vertex_count, 1, 0, 0);
     }
 }
 
@@ -145,8 +146,8 @@ void tg_voxelizer_end(tg_voxelizer* p_voxelizer, v3i min_corner_index_3d, tg_vox
         (f32)(min_corner_index_3d.z * TG_SVO_DIMS) + dh
     };
 
-    vkCmdEndRenderPass(p_voxelizer->command_buffer.command_buffer);
-    vkEndCommandBuffer(p_voxelizer->command_buffer.command_buffer);
+    vkCmdEndRenderPass(p_voxelizer->command_buffer.buffer);
+    vkEndCommandBuffer(p_voxelizer->command_buffer.buffer);
 
     ((m4*)p_voxelizer->view_projection_ubo.memory.p_mapped_device_memory)[0] = tgm_m4_translate(tgm_v3_neg(camera_position));
     ((m4*)p_voxelizer->view_projection_ubo.memory.p_mapped_device_memory)[2] = tgm_m4_orthographic(-dh, dh, -dh, dh, -dh, dh);
@@ -162,7 +163,7 @@ void tg_voxelizer_end(tg_voxelizer* p_voxelizer, v3i min_corner_index_3d, tg_vox
     submit_info.pWaitSemaphores = TG_NULL;
     submit_info.pWaitDstStageMask = TG_NULL;
     submit_info.commandBufferCount = 1;
-    submit_info.pCommandBuffers = &p_voxelizer->command_buffer.command_buffer;
+    submit_info.pCommandBuffers = &p_voxelizer->command_buffer.buffer;
     submit_info.signalSemaphoreCount = 0;
     submit_info.pSignalSemaphores = TG_NULL;
 
@@ -256,3 +257,4 @@ void tg_svo_init(const tg_voxel* p_voxels)
 {
 
 }
+#endif

@@ -3,111 +3,13 @@
 #include "graphics/tg_graphics.h"
 #include "memory/tg_memory.h"
 
-
-
-b32 tg__traverse(v3 ray_origin, v3 ray_direction, const tg_kd_tree* p_kd_tree, const tg_kd_node* p_node, tg_bounds bounds, tg_raycast_hit* p_hit)
-{
-    if (p_node->flags == 0)
-    {
-        const u32 position_count = tg_mesh_get_vertex_count(p_kd_tree->h_mesh);
-        const tg_size positions_size = (tg_size)position_count * sizeof(v3);
-        v3* p_positions = TG_MALLOC_STACK(positions_size);
-        tg_mesh_copy_positions(p_kd_tree->h_mesh, 0, position_count, p_positions); // TODO: this will be insanely slow now! keep copy of positions in tree!
-
-        f32 distance = TG_F32_MAX;
-        b32 result = TG_FALSE;
-        for (u32 i = p_node->leaf.first_index_offset; i < p_node->leaf.first_index_offset + p_node->leaf.index_count; i += 3)
-        {
-            u32 i0 = p_kd_tree->p_indices[i];
-            u32 i1 = p_kd_tree->p_indices[i + 1];
-            u32 i2 = p_kd_tree->p_indices[i + 2];
-            const v3 p0 = p_positions[i0];
-            const v3 p1 = p_positions[i1];
-            const v3 p2 = p_positions[i2];
-            tg_raycast_hit hit = { 0 };
-            const b32 res = tg_intersect_ray_triangle(ray_origin, ray_direction, p0, p1, p2, &hit);
-            if (res && hit.distance < distance)
-            {
-                distance = hit.distance;
-                if (p_hit)
-                {
-                    *p_hit = hit;
-                }
-                else
-                {
-                    result = TG_TRUE;
-                    break;
-                }
-            }
-        }
-        TG_FREE_STACK(positions_size);
-        result = distance < TG_F32_MAX;
-        return result;
-    }
-
-    if (!tg_intersect_ray_box(ray_origin, ray_direction, bounds.min, bounds.max, TG_NULL))
-    {
-        return TG_FALSE;
-    }
-
-    u32 split_axis = 0;
-    u32 i = p_node->flags;
-    while (i >>= 1) split_axis++;
-    
-    const tg_kd_node* p_near = &p_kd_tree->p_nodes[p_node->node.p_child_indices[0]];
-    const tg_kd_node* p_far = &p_kd_tree->p_nodes[p_node->node.p_child_indices[1]];
-
-    tg_bounds bounds_near = bounds;
-    tg_bounds bounds_far = bounds;
-    bounds_near.max.p_data[split_axis] = p_node->node.split_position;
-    bounds_far.min.p_data[split_axis] = p_node->node.split_position;
-
-    if (ray_origin.p_data[split_axis] > p_node->node.split_position)
-    {
-        const tg_kd_node* p_temp = p_near;
-        p_near = p_far;
-        p_far = p_temp;
-
-        const tg_bounds temp = bounds_near;
-        bounds_near = bounds_far;
-        bounds_far = temp;
-    }
-
-    tg_raycast_hit hit = { 0 };
-    b32 result = tg__traverse(ray_origin, ray_direction, p_kd_tree, p_near, bounds_near, &hit);
-    if (result)
-    {
-        if (p_hit)
-        {
-            *p_hit = hit;
-        }
-        else
-        {
-            return TG_TRUE;
-        }
-    }
-    if (!result || tgm_f32_abs(p_node->node.split_position - ray_origin.p_data[split_axis]) < tgm_f32_abs(hit.hit.p_data[split_axis] - ray_origin.p_data[split_axis]))
-    {
-        if (tg__traverse(ray_origin, ray_direction, p_kd_tree, p_far, bounds_far, &hit))
-        {
-            result |= TG_TRUE;
-            if (p_hit)
-            {
-                *p_hit = hit;
-            }
-        }
-    }
-    return result;
-}
-
-
-
 // source: https://github.com/erich666/GraphicsGems/blob/master/gems/RayBox.c
-#define TG_RIGHT	 0
-#define TG_LEFT	     1
-#define TG_MIDDLE	 2
 b32 tg_intersect_ray_box(v3 ray_origin, v3 ray_direction, v3 min, v3 max, tg_raycast_hit* p_hit)
 {
+    #define TG_RIGHT	 0
+    #define TG_LEFT	     1
+    #define TG_MIDDLE	 2
+
     TG_ASSERT(tgm_v3_magsqr(ray_direction) > TG_F32_EPSILON);
 
     b32 result = TG_TRUE;
@@ -231,10 +133,11 @@ b32 tg_intersect_ray_box(v3 ray_origin, v3 ray_direction, v3 min, v3 max, tg_ray
     }
 
     return TG_TRUE;
+
+    #undef TG_MIDDLE
+    #undef TG_LEFT
+    #undef TG_RIGHT
 }
-#undef TG_MIDDLE
-#undef TG_LEFT
-#undef TG_RIGHT
 
 b32 tg_intersect_ray_plane(v3 ray_origin, v3 ray_direction, v3 plane_point, v3 plane_normal, tg_raycast_hit* p_hit)
 {
@@ -309,13 +212,5 @@ b32 tg_intersect_ray_triangle(v3 ray_origin, v3 ray_direction, v3 tri_p0, v3 tri
             }
         }
     }
-    return result;
-}
-
-b32 tg_raycast_kd_tree(v3 ray_origin, v3 ray_direction, const tg_kd_tree* p_kd_tree, tg_raycast_hit* p_hit)
-{
-    TG_ASSERT(tgm_v3_magsqr(ray_direction) > TG_F32_EPSILON && p_kd_tree && p_kd_tree->node_count != 0);
-
-    const b32 result = tg__traverse(ray_origin, ray_direction, p_kd_tree, p_kd_tree->p_nodes, tg_mesh_get_bounds(p_kd_tree->h_mesh), p_hit);
     return result;
 }

@@ -1,9 +1,10 @@
 #ifndef TG_IMAGE_IO_H
 #define TG_IMAGE_IO_H
 
-#include "graphics/tg_graphics.h"
-#include "math/tg_math.h"
 #include "tg_common.h"
+
+#include "graphics/tg_graphics_core.h"
+#include "math/tg_math.h"
 
 void    tg_image_load(const char* p_filename, TG_OUT u32* p_width, TG_OUT u32* p_height, TG_OUT tg_color_image_format* p_format, TG_OUT u32** pp_data);
 void    tg_image_free(u32* p_data);

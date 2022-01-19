@@ -1,5 +1,5 @@
-#ifndef TG_VULKAN_COMMON_H
-#define TG_VULKAN_COMMON_H
+#ifndef TGVK_COMMON_H
+#define TGVK_COMMON_H
 
 #include "tg_common.h"
 

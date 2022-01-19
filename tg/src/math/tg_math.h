@@ -246,7 +246,7 @@ typedef struct tg_random
 | Miscellaneous                                               |
 +------------------------------------------------------------*/
 
-f32          tgm_noise(f32 x, f32 y, f32 z); // simplex noise
+f32          tgm_noise(f32 x, f32 y, f32 z); // simplex noise TODO: use either open simplex of perlin noise and rename function to be more precise
 tg_random    tgm_random_init(u32 seed); // TODO: Unity uses Marsaglia's Xorshift 128, this is the basic variation
 f32          tgm_random_next_f32(tg_random* p_random);
 f32          tgm_random_next_f32_between(tg_random* p_random, f32 low, f32 high);

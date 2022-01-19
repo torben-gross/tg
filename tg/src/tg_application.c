@@ -1,14 +1,8 @@
 #include "tg_application.h"
 
 #include "graphics/tg_graphics.h"
-#include "graphics/tg_sparse_voxel_octree.h"
-#include "memory/tg_memory.h"
-#include "physics/tg_physics.h"
 #include "platform/tg_platform.h"
 #include "tg_input.h"
-#include "tg_rtvx_terrain.h"
-#include "tg_transvoxel_terrain.h"
-#include "util/tg_list.h"
 #include "util/tg_string.h"
 
 
@@ -21,80 +15,24 @@ typedef struct tg_debug_info
 } tg_debug_info;
 #endif
 
-typedef struct tg_pbr_sphere
-{
-    tg_uniform_buffer_h    h_ubo;
-    tg_material_h          h_material;
-    tg_render_command_h    h_render_command;
-} tg_pbr_sphere;
-
-typedef struct tg_pbr_material
-{
-    v4     albedo;
-    f32    metallic;
-    f32    roughness;
-} tg_pbr_material;
-
 typedef struct tg_sample_scene
 {
-    tg_list                    render_commands;
-    tg_camera                  camera;
-    tg_renderer_h              h_main_renderer;
-    tg_renderer_h              h_secondary_renderer;
-    tg_ray_tracer_h            h_ray_tracer;
-    u32                        last_mouse_x;
-    u32                        last_mouse_y;
-
-    struct quad
-    {
-        tg_mesh_h              h_quad_mesh;
-        tg_uniform_buffer_h    h_quad_color_ubo;
-        tg_material_h          h_quad_material;
-        tg_render_command_h    h_quad_render_command;
-        f32                    quad_offset_z;
-        f32                    quad_delta_time_sum_looped;
-    };
-
-    tg_mesh_h                  h_tree_mesh;
-    tg_color_image_h           h_tree_color_lut;
-    tg_material_h              h_tree_material;
-    tg_render_command_h        h_tree_render_command;
-
-    tg_mesh_h                  h_sponza_mesh;
-    tg_render_command_h        h_sponza_render_command;
-    tg_voxel                   p_voxels[TG_SVO_DIMS3];
-    tg_uniform_buffer_h        h_sponza_ubo;
-    tg_material_h              h_sponza_material;
-
-    u8                         p_light_values[6];
-    tg_mesh_h                  h_pbr_sphere_mesh;
-    tg_mesh_h                  h_pbr_sphere_mesh2;
-    tg_pbr_sphere              p_pbr_spheres[49];
-
-    tg_mesh_h                  h_probe_mesh;
-    v3                         probe_translation;
-    tg_cube_map_h              h_probe_cube_map;
-    tg_material_h              h_probe_material;
-    tg_render_command_h        h_probe_render_command;
-
-    tg_obj_h                   h_obj;
-    tg_terrain*                p_terrain;
-    tg_rtvx_terrain_h          h_terrain;
-    
-    f32                        light_timer;
+    tg_camera       camera;
+    tg_raytracer    raytracer;
+    u32             last_mouse_x;
+    u32             last_mouse_y;
+    f32             light_timer;
 } tg_sample_scene;
 
 
 
-b32 running = TG_TRUE;
-tg_sample_scene scene = { 0 };
+static b32 running = TG_TRUE;
+static tg_sample_scene scene = { 0 };
 
 
 
-static void tg__game_3d_create(void)
+static void tg__scene_create(void)
 {
-    scene.render_commands = tg_list_create(sizeof(tg_render_command_h), TG_LIST_DEFAULT_CAPACITY, TG_NULL);
-
     scene.camera.type = TG_CAMERA_TYPE_PERSPECTIVE;
     //scene.camera.position = (v3) { 128.0f, 141.0f + 50.0f, 128.0f };
     scene.camera.position = (v3) { 0.0f, 0.0f, 10.0f };
@@ -107,117 +45,11 @@ static void tg__game_3d_create(void)
     scene.camera.persp.f = -1000.0f;
     tg_input_get_mouse_position(&scene.last_mouse_x, &scene.last_mouse_y);
 
-    //scene.h_main_renderer = tg_renderer_create(&scene.camera);
-    //scene.h_secondary_renderer = tg_renderer_create(&scene.camera);
+    tg_raytracer_create(&scene.camera, 8, &scene.raytracer);
+    tg_raytracer_create_obj(&scene.raytracer, 7, 7, 7);
 
-    scene.h_ray_tracer = tg_ray_tracer_create(&scene.camera);
-    scene.h_obj = tg_obj_create(3, 3, 3);
-    //scene.p_terrain = tg_terrain_create(&scene.camera);
-    //scene.h_terrain = tg_rtvx_terrain_create();
-    //tg_ray_tracer_push_static(scene.h_ray_tracer, tg_ray_trace_command_create(TG_NULL, V3(0.0f), (tg_storage_image_3d_h)scene.h_terrain));
-    tg_ray_tracer_push_obj(scene.h_ray_tracer, scene.h_obj);
-
-
-
-
-    const v3 p_quad_positions[4] = {
-        { -3.2f, -1.8f, 0.0f },
-        {  3.2f, -1.8f, 0.0f },
-        {  3.2f,  1.8f, 0.0f },
-        { -3.2f,  1.8f, 0.0f }
-    };
-    const v3 p_quad_normals[4] = {
-        { 0.0f, 0.0f, -1.0f },
-        { 0.0f, 0.0f, -1.0f },
-        { 0.0f, 0.0f, -1.0f },
-        { 0.0f, 0.0f, -1.0f }
-    };
-    const v2 p_quad_uvs[4] = {
-        { 0.0f, 1.0f },
-        { 1.0f, 1.0f },
-        { 1.0f, 0.0f },
-        { 0.0f, 0.0f }
-    };
-    const u16 p_quad_indices[6] = {
-        0, 1, 2, 2, 3, 0
-    };
-
-    //scene.h_quad_mesh = tg_mesh_create();
-    //tg_mesh_set_indices(scene.h_quad_mesh, 6, p_quad_indices);
-    //tg_mesh_set_positions(scene.h_quad_mesh, 4, p_quad_positions);
-    //tg_mesh_set_normals(scene.h_quad_mesh, 4, p_quad_normals);
-    //tg_mesh_set_uvs(scene.h_quad_mesh, 4, p_quad_uvs);
-    //scene.h_quad_color_ubo = tg_uniform_buffer_create(sizeof(v3));
-    //*((v3*)tg_uniform_buffer_data(scene.h_quad_color_ubo)) = (v3) { 1.0f, 0.0f, 0.0f };
-    //tg_handle p_custom_handles[2] = { scene.h_quad_color_ubo, tg_renderer_get_render_target(scene.h_secondary_renderer) };
-    //scene.h_quad_material = tg_material_create_forward(tg_vertex_shader_create("shaders/forward/forward.vert"), tg_fragment_shader_create("shaders/forward/texture.frag"));
-    //scene.h_quad_render_command = tg_render_command_create(scene.h_quad_mesh, scene.h_quad_material, (v3) { 0.0f, 133.0f, 0.0f }, 2, p_custom_handles);
-    //scene.quad_offset_z = -65.0f;
-    //tg_list_insert(&scene.render_commands, &scene.h_quad_render_command);
-
-
-
-    scene.h_probe_mesh = tg_mesh_create_sphere(0.5f, 64, 32, TG_TRUE, TG_TRUE, TG_FALSE);
-    scene.probe_translation = (v3){ 128.0f + 7.0f, 153.0f, 128.0f };
-    scene.h_probe_cube_map = tg_cube_map_create(1, TG_COLOR_IMAGE_FORMAT_R8_UNORM, TG_NULL);
-    scene.h_probe_material = tg_material_create_forward(tg_vertex_shader_create("shaders/forward/forward.vert"), tg_fragment_shader_create("shaders/forward/probe.frag"));
-    tg_handle p_probe_handles[1] = { scene.h_probe_cube_map };
-    scene.h_probe_render_command = tg_render_command_create(scene.h_probe_mesh, scene.h_probe_material, scene.probe_translation, 1, p_probe_handles);
-    tg_list_insert(&scene.render_commands, &scene.h_probe_render_command);
-
-
-    scene.h_tree_mesh = tg_mesh_create2("meshes/tree.obj", V3(1.0f));
-    tg_sampler_create_info tree_sampler_create_info = { 0 };
-    tree_sampler_create_info.min_filter = TG_IMAGE_FILTER_NEAREST;
-    tree_sampler_create_info.mag_filter = TG_IMAGE_FILTER_NEAREST;
-    tree_sampler_create_info.address_mode_u = TG_IMAGE_ADDRESS_MODE_CLAMP_TO_BORDER;
-    tree_sampler_create_info.address_mode_v = TG_IMAGE_ADDRESS_MODE_CLAMP_TO_BORDER;
-    tree_sampler_create_info.address_mode_w = TG_IMAGE_ADDRESS_MODE_CLAMP_TO_BORDER;
-    scene.h_tree_color_lut = tg_color_image_create2("textures/tree_color_palette.bmp", &tree_sampler_create_info);
-    scene.h_tree_material = tg_material_create_deferred(tg_vertex_shader_create("shaders/deferred/pbr.vert"), tg_fragment_shader_create("shaders/deferred/tree.frag"));
-    scene.h_tree_render_command = tg_render_command_create(scene.h_tree_mesh, scene.h_tree_material, (v3) { 100.0f, 141.0f, 100.0f }, 1, &scene.h_tree_color_lut);
-    tg_list_insert(&scene.render_commands, &scene.h_tree_render_command);
-
-
-    scene.h_pbr_sphere_mesh = tg_mesh_create_sphere(0.5f, 128, 64, TG_TRUE, TG_TRUE, TG_FALSE);
-    scene.h_pbr_sphere_mesh2 = tg_mesh_create_sphere(3.0f, 128, 64, TG_TRUE, TG_TRUE, TG_FALSE);
-    for (u32 y = 0; y < 7; y++)
-    {
-        for (u32 x = 0; x < 7; x++)
-        {
-
-            const u32 i = y * 7 + x;
-
-            const v3 sphere_translation = { 128.0f - 7.0f + (f32)x * 2.0f, 143.0f + (f32)y * 2.0f, 112.0f };
-            scene.p_pbr_spheres[i].h_ubo = tg_uniform_buffer_create(sizeof(tg_pbr_material));
-            ((tg_pbr_material*)tg_uniform_buffer_data(scene.p_pbr_spheres[i].h_ubo))->albedo = (v4){ 1.0f, 0.5f, 0.25f, 1.0f };
-            ((tg_pbr_material*)tg_uniform_buffer_data(scene.p_pbr_spheres[i].h_ubo))->metallic = (f32)x / 6.0f;
-            ((tg_pbr_material*)tg_uniform_buffer_data(scene.p_pbr_spheres[i].h_ubo))->roughness = ((f32)y + 0.1f) / 6.5f;
-            scene.p_pbr_spheres[i].h_material = tg_material_create_deferred(tg_vertex_shader_create("shaders/deferred/pbr.vert"), tg_fragment_shader_create("shaders/deferred/pbr.frag"));
-            tg_handle p_handles[1] = { scene.p_pbr_spheres[i].h_ubo };
-            if (x == 6 && y == 6)
-            {
-                scene.p_pbr_spheres[i].h_render_command = tg_render_command_create(
-                    scene.h_pbr_sphere_mesh2, scene.p_pbr_spheres[i].h_material,
-                    (v3) { 133.0f, 140.0f, 128.0f },
-                    1, p_handles
-                );
-            }
-            else
-            {
-                scene.p_pbr_spheres[i].h_render_command = tg_render_command_create(
-                    scene.h_pbr_sphere_mesh, scene.p_pbr_spheres[i].h_material,
-                    sphere_translation,
-                    1, p_handles
-                );
-            }
-            tg_list_insert(&scene.render_commands, &scene.p_pbr_spheres[i].h_render_command);
-        }
-    }
-
-
-
-    scene.h_sponza_mesh = tg_mesh_create2("meshes/sponza.obj", V3(0.01f));
+#if 0 // TODO: voxelize?
+    scene.h_sponza_mesh = tgvk_mesh_create2("meshes/sponza.obj", V3(0.01f));
     scene.h_sponza_ubo = tg_uniform_buffer_create(sizeof(tg_pbr_material));
     ((tg_pbr_material*)tg_uniform_buffer_data(scene.h_sponza_ubo))->albedo = (v4) { 1.0f, 1.0f, 1.0f, 1.0f };
     ((tg_pbr_material*)tg_uniform_buffer_data(scene.h_sponza_ubo))->metallic = 0.1f;
@@ -234,10 +66,13 @@ static void tg__game_3d_create(void)
     //tg_voxelizer_end(p_voxelizer, (v3i) { 1, 2, 1 }, scene.p_voxels);
     //tg_voxelizer_destroy(p_voxelizer);
     //TG_FREE_STACK(sizeof(*p_voxelizer));
+#endif
 }
 
-static void tg__game_3d_update_and_render(f32 dt)
+static void tg__scene_update_and_render(f32 dt)
 {
+
+
     if (tg_input_is_key_pressed(TG_KEY_F11, TG_TRUE))
     {
         tg_system_time system_time = tgp_get_system_time();
@@ -254,32 +89,10 @@ static void tg__game_3d_update_and_render(f32 dt)
             system_time.second,
             system_time.milliseconds
         );
-        tg_renderer_screenshot(scene.h_main_renderer, p_filename_buffer);
+        TG_DEBUG_LOG("Saving screenshot to: %s", p_filename_buffer);
+        // TODO:
+        //tg_raytracer_screenshot(&scene.raytracer, p_filename_buffer);
     }
-
-    if (tg_input_is_key_down(TG_KEY_K))
-    {
-        scene.quad_offset_z += 0.01f * dt;
-    }
-    if (tg_input_is_key_down(TG_KEY_L))
-    {
-        scene.quad_offset_z -= 0.01f * dt;
-    }
-    v3 quad_offset_translation_z = { 0.0f, 133.0f, scene.quad_offset_z };
-    //tg_render_command_set_position(scene.h_quad_render_command, quad_offset_translation_z);
-
-    scene.quad_delta_time_sum_looped += dt;
-    if (scene.quad_delta_time_sum_looped >= 10000.0f)
-    {
-        scene.quad_delta_time_sum_looped -= 10000.0f;
-    }
-    const f32 sint = tgm_f32_sin(0.001f * scene.quad_delta_time_sum_looped * 2.0f * TG_PI);
-    const f32 noise_x = tgm_noise(sint, 0.1f, 0.1f) + 0.5f;
-    const f32 noise_y = tgm_noise(0.1f, sint, 0.1f) + 0.5f;
-    const f32 noise_z = tgm_noise(0.1f, 0.1f, sint) + 0.5f;
-    //*((v3*)tg_uniform_buffer_data(scene.h_quad_color_ubo)) = (v3) { noise_x, noise_y, noise_z };
-
-
 
     u32 mouse_x;
     u32 mouse_y;
@@ -289,6 +102,9 @@ static void tg__game_3d_update_and_render(f32 dt)
         scene.camera.yaw += TG_TO_RADIANS(0.064f * (f32)((i32)scene.last_mouse_x - (i32)mouse_x));
         scene.camera.pitch += TG_TO_RADIANS(0.064f * (f32)((i32)scene.last_mouse_y - (i32)mouse_y));
     }
+    scene.last_mouse_x = mouse_x;
+    scene.last_mouse_y = mouse_y;
+
     const f32 rotate_speed = 0.001f;
     if (tg_input_is_key_down(TG_KEY_I))
     {
@@ -346,9 +162,6 @@ static void tg__game_3d_update_and_render(f32 dt)
         scene.camera.position = tgm_v3_add(scene.camera.position, velocity);
     }
 
-    scene.last_mouse_x = mouse_x;
-    scene.last_mouse_y = mouse_y;
-
     if (tg_input_get_mouse_wheel_detents(TG_FALSE))
     {
         scene.camera.persp.fov_y_in_radians -= 0.1f * tg_input_get_mouse_wheel_detents(TG_TRUE);
@@ -374,8 +187,8 @@ static void tg__game_3d_update_and_render(f32 dt)
     //const v3 c0 = tgm_v3_lerp(c0n, c0d, -d0.y);
     const v3 c0 = V3(3.0f);
 
-    tg_ray_tracer_render(scene.h_ray_tracer);
-    tg_ray_tracer_clear(scene.h_ray_tracer);
+    tg_raytracer_render(&scene.raytracer);
+    tg_raytracer_clear(&scene.raytracer);
 
 #if 0
     tg_renderer_begin(scene.h_secondary_renderer);
@@ -437,7 +250,6 @@ static void tg__game_3d_update_and_render(f32 dt)
 
     tg_renderer_clear(scene.h_secondary_renderer);
     tg_renderer_clear(scene.h_main_renderer);
-#endif
 
     i8 delta = 0;
     if (tg_input_is_mouse_button_down(TG_BUTTON_LEFT))
@@ -456,44 +268,19 @@ static void tg__game_3d_update_and_render(f32 dt)
             tg_terrain_shape(scene.p_terrain, world_position, 1.5f, delta); // TODO: why does this not work with a radius of less than 1.0f, e.g. TG_PI * 0.25f?
         }
     }
+#endif
 }
 
-static void tg__game_3d_destroy(void)
+static void tg__scene_destroy(void)
 {
-    tg_terrain_destroy(scene.p_terrain);
+    tg_raytracer_destroy(&scene.raytracer);
 
-    tg_render_command_destroy(scene.h_probe_render_command);
-    tg_material_destroy(scene.h_probe_material);
-    tg_cube_map_destroy(scene.h_probe_cube_map);
-    tg_mesh_destroy(scene.h_probe_mesh);
-
-    for (u32 i = 0; i < 49; i++)
-    {
-        tg_render_command_destroy(scene.p_pbr_spheres[i].h_render_command);
-        tg_material_destroy(scene.p_pbr_spheres[i].h_material);
-        tg_uniform_buffer_destroy(scene.p_pbr_spheres[i].h_ubo);
-    }
-    tg_mesh_destroy(scene.h_pbr_sphere_mesh2);
-    tg_mesh_destroy(scene.h_pbr_sphere_mesh);
-
-    tg_mesh_destroy(scene.h_tree_mesh);
-    tg_color_image_destroy(scene.h_tree_color_lut);
-    tg_material_destroy(scene.h_tree_material);
-    tg_render_command_destroy(scene.h_tree_render_command);
-
+#if 0 // TODO
     tg_material_destroy(scene.h_sponza_material);
     tg_uniform_buffer_destroy(scene.h_sponza_ubo);
     tg_render_command_destroy(scene.h_sponza_render_command);
-    tg_mesh_destroy(scene.h_sponza_mesh);
-
-    tg_render_command_destroy(scene.h_quad_render_command);
-    tg_material_destroy(scene.h_quad_material);
-    tg_uniform_buffer_destroy(scene.h_quad_color_ubo);
-    tg_mesh_destroy(scene.h_quad_mesh);
-
-    tg_renderer_destroy(scene.h_secondary_renderer);
-    tg_renderer_destroy(scene.h_main_renderer);
-    tg_list_destroy(&scene.render_commands);
+    tgvk_mesh_destroy(scene.h_sponza_mesh);
+#endif
 }
 
 
@@ -501,14 +288,15 @@ static void tg__game_3d_destroy(void)
 void tg_application_start(void)
 {
     tg_graphics_init();
-    tg__game_3d_create();
+    tg__scene_create();
 
 #ifdef TG_DEBUG
     tg_debug_info debug_info = { 0 };
 #endif
 
-    tg_timer_h h_timer = tgp_timer_create();
-    tgp_timer_start(h_timer);
+    tg_timer timer = { 0 };
+    tgp_timer_init(&timer);
+    tgp_timer_start(&timer);
 
     /*--------------------------------------------------------+
     | Start main loop                                         |
@@ -516,10 +304,10 @@ void tg_application_start(void)
 
     while (running)
     {
-        tgp_timer_stop(h_timer);
-        const f32 dt = tgp_timer_elapsed_milliseconds(h_timer);
-        tgp_timer_reset(h_timer);
-        tgp_timer_start(h_timer);
+        tgp_timer_stop(&timer);
+        const f32 dt = tgp_timer_elapsed_ms(&timer);
+        tgp_timer_reset(&timer);
+        tgp_timer_start(&timer);
 
 #ifdef TG_DEBUG
         debug_info.dt_sum += dt;
@@ -540,15 +328,14 @@ void tg_application_start(void)
 
         tg_input_clear();
         tgp_handle_events();
-        tg__game_3d_update_and_render(dt);
+        tg__scene_update_and_render(dt);
     }
 
     /*--------------------------------------------------------+
     | End main loop                                           |
     +--------------------------------------------------------*/
-    tgp_timer_destroy(h_timer);
     tg_graphics_wait_idle();
-    tg__game_3d_destroy();
+    tg__scene_destroy();
     tg_graphics_shutdown();
 }
 

@@ -27,8 +27,8 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef TG_VULKAN_ATMOSPHERE_SHADERS_H
-#define TG_VULKAN_ATMOSPHERE_SHADERS_H
+#ifndef TGVK_ATMOSPHERE_SHADERS_H
+#define TGVK_ATMOSPHERE_SHADERS_H
 
 const char p_atmosphere_vertex_shader[] =
     "#version 450\r\n"

@@ -23,9 +23,9 @@
 
 #ifdef TG_WIN32
 
-#define TG_MAX_PATH                                              MAX_PATH
-#define TG_FILE_SEPERATOR                                        '\\'
-#define TG_FILE_SEPERATOR_STR                                    "\\"
+#define TG_MAX_PATH              MAX_PATH
+#define TG_FILE_SEPERATOR        '\\'
+#define TG_FILE_SEPERATOR_STR    "\\"
 
 
 
@@ -174,7 +174,6 @@ typedef HANDLE                tg_semaphore_h;
 typedef HANDLE                tg_window_h;
 typedef void*                 tg_file_iterator_h;
 typedef void*                 tg_thread_h;
-TG_DECLARE_HANDLE(tg_timer);
 
 #endif
 
@@ -216,6 +215,15 @@ typedef struct tg_file_properties
     char*             p_extension;
 } tg_file_properties;
 
+typedef struct tg_timer
+{
+    b32              running;
+    LONGLONG         counter_elapsed;
+    LARGE_INTEGER    performance_frequency;
+    LARGE_INTEGER    start_performance_counter;
+    LARGE_INTEGER    end_performance_counter;
+} tg_timer;
+
 
 
 #ifdef TG_DEBUG
@@ -246,12 +254,11 @@ b32                   tgp_directory_continue_iteration(tg_file_iterator_h h_file
 tg_size               tgp_directory_get_size(const char* p_directory);
 i8                    tgp_system_time_compare(tg_system_time* p_time0, tg_system_time* p_time1);
 
-tg_timer_h            tgp_timer_create(void);
-void                  tgp_timer_start(tg_timer_h h_timer);
-void                  tgp_timer_stop(tg_timer_h h_timer);
-void                  tgp_timer_reset(tg_timer_h h_timer);
-f32                   tgp_timer_elapsed_milliseconds(tg_timer_h h_timer);
-void                  tgp_timer_destroy(tg_timer_h h_timer);
+void                  tgp_timer_init(tg_timer* p_timer);
+void                  tgp_timer_start(tg_timer* p_timer);
+void                  tgp_timer_stop(tg_timer* p_timer);
+void                  tgp_timer_reset(tg_timer* p_timer);
+f32                   tgp_timer_elapsed_ms(const tg_timer* p_timer);
 
 tg_thread_h           tgp_thread_create(tg_thread_fn* p_thread_fn, volatile void* p_user_data);
 void                  tgp_thread_destroy(tg_thread_h h_thread);
