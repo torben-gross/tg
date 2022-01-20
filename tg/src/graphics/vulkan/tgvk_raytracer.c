@@ -44,6 +44,11 @@ static void tg__init_visibility_pass(tg_raytracer* p_raytracer)
 
     p_raytracer->visibility_pass.command_buffer = tgvk_command_buffer_create(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
+    VkSubpassDescription subpass_description = { 0 };
+    subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+
+    p_raytracer->visibility_pass.render_pass = tgvk_render_pass_create(TG_NULL, &subpass_description);
+
     // TODO shared?
     tgvk_graphics_pipeline_create_info graphics_pipeline_create_info = { 0 };
     graphics_pipeline_create_info.p_vertex_shader = tgvk_shader_library_get("shaders/raytracer/visibility.vert");
@@ -52,7 +57,7 @@ static void tg__init_visibility_pass(tg_raytracer* p_raytracer)
     graphics_pipeline_create_info.depth_test_enable = VK_FALSE;
     graphics_pipeline_create_info.depth_write_enable = VK_FALSE;
     graphics_pipeline_create_info.p_blend_modes = TG_NULL;
-    graphics_pipeline_create_info.render_pass = shared_render_resources.raytracer.visibility_render_pass;
+    graphics_pipeline_create_info.render_pass = p_raytracer->visibility_pass.render_pass;
     graphics_pipeline_create_info.viewport_size.x = (f32)w;
     graphics_pipeline_create_info.viewport_size.y = (f32)h;
     graphics_pipeline_create_info.polygon_mode = VK_POLYGON_MODE_FILL;
@@ -73,7 +78,7 @@ static void tg__init_visibility_pass(tg_raytracer* p_raytracer)
     tgvk_command_buffer_end_and_submit(&p_raytracer->visibility_pass.command_buffer);
     tgvk_global_staging_buffer_release();
 
-    p_raytracer->visibility_pass.framebuffer = tgvk_framebuffer_create(shared_render_resources.raytracer.visibility_render_pass, 0, TG_NULL, w, h);
+    p_raytracer->visibility_pass.framebuffer = tgvk_framebuffer_create(p_raytracer->visibility_pass.render_pass, 0, TG_NULL, w, h);
 }
 
 static void tg__init_shading_pass(tg_raytracer* p_raytracer)
@@ -83,6 +88,35 @@ static void tg__init_shading_pass(tg_raytracer* p_raytracer)
 
     p_raytracer->shading_pass.command_buffer = tgvk_command_buffer_create(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
+    VkAttachmentDescription attachment_description = { 0 };
+    attachment_description.flags = 0;
+    attachment_description.format = TGVK_HDR_FORMAT;
+    attachment_description.samples = VK_SAMPLE_COUNT_1_BIT;
+    attachment_description.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachment_description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    attachment_description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachment_description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attachment_description.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    attachment_description.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    VkAttachmentReference attachment_reference = { 0 };
+    attachment_reference.attachment = 0;
+    attachment_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    VkSubpassDescription subpass_description = { 0 };
+    subpass_description.flags = 0;
+    subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass_description.inputAttachmentCount = 0;
+    subpass_description.pInputAttachments = TG_NULL;
+    subpass_description.colorAttachmentCount = 1;
+    subpass_description.pColorAttachments = &attachment_reference;
+    subpass_description.pResolveAttachments = TG_NULL;
+    subpass_description.pDepthStencilAttachment = TG_NULL;
+    subpass_description.preserveAttachmentCount = 0;
+    subpass_description.pPreserveAttachments = TG_NULL;
+
+    p_raytracer->shading_pass.render_pass = tgvk_render_pass_create(&attachment_description, &subpass_description);
+
     tgvk_graphics_pipeline_create_info graphics_pipeline_create_info = { 0 };
     graphics_pipeline_create_info.p_vertex_shader = tgvk_shader_library_get("shaders/raytracer/shading.vert");
     graphics_pipeline_create_info.p_fragment_shader = tgvk_shader_library_get("shaders/raytracer/shading.frag");
@@ -90,7 +124,7 @@ static void tg__init_shading_pass(tg_raytracer* p_raytracer)
     graphics_pipeline_create_info.depth_test_enable = VK_FALSE;
     graphics_pipeline_create_info.depth_write_enable = VK_FALSE;
     graphics_pipeline_create_info.p_blend_modes = TG_NULL;
-    graphics_pipeline_create_info.render_pass = shared_render_resources.shading_render_pass;
+    graphics_pipeline_create_info.render_pass = p_raytracer->shading_pass.render_pass;
     graphics_pipeline_create_info.viewport_size.x = (f32)w;
     graphics_pipeline_create_info.viewport_size.y = (f32)h;
     graphics_pipeline_create_info.polygon_mode = VK_POLYGON_MODE_FILL;
@@ -106,20 +140,20 @@ static void tg__init_shading_pass(tg_raytracer* p_raytracer)
     tgvk_descriptor_set_update_uniform_buffer(p_raytracer->shading_pass.descriptor_set.set, &p_raytracer->shading_pass.ubo, binding_offset++);
 
     // TODO: tone mapping and other passes...
-    //p_raytracer->shading_pass.framebuffer = tgvk_framebuffer_create(shared_render_resources.shading_render_pass, 1, &p_raytracer->hdr_color_attachment.image_view, w, h);
-    p_raytracer->shading_pass.framebuffer = tgvk_framebuffer_create(shared_render_resources.shading_render_pass, 1, &p_raytracer->render_target.color_attachment.image_view, w, h);
+    //p_raytracer->shading_pass.framebuffer = tgvk_framebuffer_create(p_raytracer->shading_pass.render_pass, 1, &p_raytracer->hdr_color_attachment.image_view, w, h);
+    p_raytracer->shading_pass.framebuffer = tgvk_framebuffer_create(p_raytracer->shading_pass.render_pass, 1, &p_raytracer->render_target.color_attachment.image_view, w, h);
 
     tgvk_command_buffer_begin(&p_raytracer->shading_pass.command_buffer, 0);
     {
         vkCmdBindPipeline(p_raytracer->shading_pass.command_buffer.buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_raytracer->shading_pass.graphics_pipeline.pipeline);
 
         const VkDeviceSize vertex_buffer_offset = 0;
-        vkCmdBindIndexBuffer(p_raytracer->shading_pass.command_buffer.buffer, shared_render_resources.screen_quad_indices.buffer, 0, VK_INDEX_TYPE_UINT16);
-        vkCmdBindVertexBuffers(p_raytracer->shading_pass.command_buffer.buffer, 0, 1, &shared_render_resources.screen_quad_positions_buffer.buffer, &vertex_buffer_offset);
-        vkCmdBindVertexBuffers(p_raytracer->shading_pass.command_buffer.buffer, 1, 1, &shared_render_resources.screen_quad_uvs_buffer.buffer, &vertex_buffer_offset);
+        vkCmdBindIndexBuffer(p_raytracer->shading_pass.command_buffer.buffer, screen_quad_ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
+        vkCmdBindVertexBuffers(p_raytracer->shading_pass.command_buffer.buffer, 0, 1, &screen_quad_positions_vbo.buffer, &vertex_buffer_offset);
+        vkCmdBindVertexBuffers(p_raytracer->shading_pass.command_buffer.buffer, 1, 1, &screen_quad_uvs_vbo.buffer, &vertex_buffer_offset);
         vkCmdBindDescriptorSets(p_raytracer->shading_pass.command_buffer.buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_raytracer->shading_pass.graphics_pipeline.layout.pipeline_layout, 0, 1, &p_raytracer->shading_pass.descriptor_set.set, 0, TG_NULL);
 
-        tgvk_cmd_begin_render_pass(&p_raytracer->shading_pass.command_buffer, shared_render_resources.shading_render_pass, &p_raytracer->shading_pass.framebuffer, VK_SUBPASS_CONTENTS_INLINE);
+        tgvk_cmd_begin_render_pass(&p_raytracer->shading_pass.command_buffer, p_raytracer->shading_pass.render_pass, &p_raytracer->shading_pass.framebuffer, VK_SUBPASS_CONTENTS_INLINE);
         tgvk_cmd_draw_indexed(&p_raytracer->shading_pass.command_buffer, 6);
         vkCmdEndRenderPass(p_raytracer->shading_pass.command_buffer.buffer);
     }
@@ -198,12 +232,41 @@ static void tg__init_present_pass(tg_raytracer* p_raytracer)
     tgvk_command_buffers_create(TGVK_COMMAND_POOL_TYPE_PRESENT, VK_COMMAND_BUFFER_LEVEL_PRIMARY, TG_MAX_SWAPCHAIN_IMAGES, p_raytracer->present_pass.p_command_buffers);
     p_raytracer->present_pass.image_acquired_semaphore = tgvk_semaphore_create();
 
+    VkAttachmentReference color_attachment_reference = { 0 };
+    color_attachment_reference.attachment = 0;
+    color_attachment_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    VkAttachmentDescription attachment_description = { 0 };
+    attachment_description.flags = 0;
+    attachment_description.format = surface.format.format;
+    attachment_description.samples = VK_SAMPLE_COUNT_1_BIT;
+    attachment_description.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachment_description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    attachment_description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachment_description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attachment_description.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    attachment_description.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+    VkSubpassDescription subpass_description = { 0 };
+    subpass_description.flags = 0;
+    subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass_description.inputAttachmentCount = 0;
+    subpass_description.pInputAttachments = TG_NULL;
+    subpass_description.colorAttachmentCount = 1;
+    subpass_description.pColorAttachments = &color_attachment_reference;
+    subpass_description.pResolveAttachments = TG_NULL;
+    subpass_description.pDepthStencilAttachment = TG_NULL;
+    subpass_description.preserveAttachmentCount = 0;
+    subpass_description.pPreserveAttachments = TG_NULL;
+
+    p_raytracer->present_pass.render_pass = tgvk_render_pass_create(&attachment_description, &subpass_description);
+
     const u32 w = swapchain_extent.width;
     const u32 h = swapchain_extent.height;
 
     for (u32 i = 0; i < TG_MAX_SWAPCHAIN_IMAGES; i++)
     {
-        p_raytracer->present_pass.p_framebuffers[i] = tgvk_framebuffer_create(shared_render_resources.present_render_pass, 1, &p_swapchain_image_views[i], w, h);
+        p_raytracer->present_pass.p_framebuffers[i] = tgvk_framebuffer_create(p_raytracer->present_pass.render_pass, 1, &p_swapchain_image_views[i], w, h);
     }
 
     tgvk_graphics_pipeline_create_info graphics_pipeline_create_info = { 0 };
@@ -213,7 +276,7 @@ static void tg__init_present_pass(tg_raytracer* p_raytracer)
     graphics_pipeline_create_info.depth_test_enable = VK_FALSE;
     graphics_pipeline_create_info.depth_write_enable = VK_FALSE;
     graphics_pipeline_create_info.p_blend_modes = TG_NULL;
-    graphics_pipeline_create_info.render_pass = shared_render_resources.present_render_pass;
+    graphics_pipeline_create_info.render_pass = p_raytracer->present_pass.render_pass;
     graphics_pipeline_create_info.viewport_size.x = (f32)w;
     graphics_pipeline_create_info.viewport_size.y = (f32)h;
     graphics_pipeline_create_info.polygon_mode = VK_POLYGON_MODE_FILL;
@@ -230,13 +293,13 @@ static void tg__init_present_pass(tg_raytracer* p_raytracer)
             tgvk_cmd_transition_image_layout(&p_raytracer->present_pass.p_command_buffers[i], &p_raytracer->render_target.color_attachment, TGVK_LAYOUT_COLOR_ATTACHMENT_WRITE, TGVK_LAYOUT_SHADER_READ_F);
 
             vkCmdBindPipeline(p_raytracer->present_pass.p_command_buffers[i].buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_raytracer->present_pass.graphics_pipeline.pipeline);
-            vkCmdBindIndexBuffer(p_raytracer->present_pass.p_command_buffers[i].buffer, shared_render_resources.screen_quad_indices.buffer, 0, VK_INDEX_TYPE_UINT16);
+            vkCmdBindIndexBuffer(p_raytracer->present_pass.p_command_buffers[i].buffer, screen_quad_ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
             const VkDeviceSize vertex_buffer_offset = 0;
-            vkCmdBindVertexBuffers(p_raytracer->present_pass.p_command_buffers[i].buffer, 0, 1, &shared_render_resources.screen_quad_positions_buffer.buffer, &vertex_buffer_offset);
-            vkCmdBindVertexBuffers(p_raytracer->present_pass.p_command_buffers[i].buffer, 1, 1, &shared_render_resources.screen_quad_uvs_buffer.buffer, &vertex_buffer_offset);
+            vkCmdBindVertexBuffers(p_raytracer->present_pass.p_command_buffers[i].buffer, 0, 1, &screen_quad_positions_vbo.buffer, &vertex_buffer_offset);
+            vkCmdBindVertexBuffers(p_raytracer->present_pass.p_command_buffers[i].buffer, 1, 1, &screen_quad_uvs_vbo.buffer, &vertex_buffer_offset);
             vkCmdBindDescriptorSets(p_raytracer->present_pass.p_command_buffers[i].buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_raytracer->present_pass.graphics_pipeline.layout.pipeline_layout, 0, 1, &p_raytracer->present_pass.descriptor_set.set, 0, TG_NULL);
 
-            tgvk_cmd_begin_render_pass(&p_raytracer->present_pass.p_command_buffers[i], shared_render_resources.present_render_pass, &p_raytracer->present_pass.p_framebuffers[i], VK_SUBPASS_CONTENTS_INLINE);
+            tgvk_cmd_begin_render_pass(&p_raytracer->present_pass.p_command_buffers[i], p_raytracer->present_pass.render_pass, &p_raytracer->present_pass.p_framebuffers[i], VK_SUBPASS_CONTENTS_INLINE);
             tgvk_cmd_draw_indexed(&p_raytracer->present_pass.p_command_buffers[i], 6);
             vkCmdEndRenderPass(p_raytracer->present_pass.p_command_buffers[i].buffer);
 
@@ -283,347 +346,6 @@ void tg_raytracer_create(const tg_camera* p_camera, u32 max_object_count, TG_OUT
     const u32 w = swapchain_extent.width;
     const u32 h = swapchain_extent.height;
 
-    if (!shared_render_resources.raytracer.initialized)
-    {
-
-
-
-        const u16 p_screen_quad_indices[6] = { 0, 1, 2, 2, 3, 0 };
-        
-        v2 p_screen_quad_positions[4] = { 0 };
-        p_screen_quad_positions[0] = (v2){ -1.0f,  1.0f };
-        p_screen_quad_positions[1] = (v2){  1.0f,  1.0f };
-        p_screen_quad_positions[2] = (v2){  1.0f, -1.0f };
-        p_screen_quad_positions[3] = (v2){ -1.0f, -1.0f };
-        
-        v2 p_screen_quad_uvs[4] = { 0 };
-        p_screen_quad_uvs[0] = (v2){ 0.0f,  1.0f };
-        p_screen_quad_uvs[1] = (v2){ 1.0f,  1.0f };
-        p_screen_quad_uvs[2] = (v2){ 1.0f,  0.0f };
-        p_screen_quad_uvs[3] = (v2){ 0.0f,  0.0f };
-        
-        const tg_size screen_quad_staging_buffer_size = TG_MAX3(sizeof(p_screen_quad_indices), sizeof(p_screen_quad_positions), sizeof(p_screen_quad_uvs));
-        tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take(screen_quad_staging_buffer_size);
-        
-        tg_memcpy(sizeof(p_screen_quad_indices), p_screen_quad_indices, p_staging_buffer->memory.p_mapped_device_memory);
-        shared_render_resources.screen_quad_indices = TGVK_BUFFER_CREATE(sizeof(p_screen_quad_indices), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, TGVK_MEMORY_DEVICE);
-        tgvk_buffer_copy(sizeof(p_screen_quad_indices), p_staging_buffer, &shared_render_resources.screen_quad_indices);
-        
-        tg_memcpy(sizeof(p_screen_quad_positions), p_screen_quad_positions, p_staging_buffer->memory.p_mapped_device_memory);
-        shared_render_resources.screen_quad_positions_buffer = TGVK_BUFFER_CREATE(sizeof(p_screen_quad_positions), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, TGVK_MEMORY_DEVICE);
-        tgvk_buffer_copy(sizeof(p_screen_quad_positions), p_staging_buffer, &shared_render_resources.screen_quad_positions_buffer);
-        
-        tg_memcpy(sizeof(p_screen_quad_uvs), p_screen_quad_uvs, p_staging_buffer->memory.p_mapped_device_memory);
-        shared_render_resources.screen_quad_uvs_buffer = TGVK_BUFFER_CREATE(sizeof(p_screen_quad_uvs), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, TGVK_MEMORY_DEVICE);
-        tgvk_buffer_copy(sizeof(p_screen_quad_uvs), p_staging_buffer, &shared_render_resources.screen_quad_uvs_buffer);
-        
-        tgvk_global_staging_buffer_release();
-        
-        // shading pass
-        {
-            VkAttachmentDescription attachment_description = { 0 };
-            attachment_description.flags = 0;
-            attachment_description.format = TGVK_HDR_FORMAT;
-            attachment_description.samples = VK_SAMPLE_COUNT_1_BIT;
-            attachment_description.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            attachment_description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-            attachment_description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            attachment_description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            attachment_description.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-            attachment_description.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        
-            VkAttachmentReference attachment_reference = { 0 };
-            attachment_reference.attachment = 0;
-            attachment_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        
-            VkSubpassDescription subpass_description = { 0 };
-            subpass_description.flags = 0;
-            subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-            subpass_description.inputAttachmentCount = 0;
-            subpass_description.pInputAttachments = TG_NULL;
-            subpass_description.colorAttachmentCount = 1;
-            subpass_description.pColorAttachments = &attachment_reference;
-            subpass_description.pResolveAttachments = TG_NULL;
-            subpass_description.pDepthStencilAttachment = TG_NULL;
-            subpass_description.preserveAttachmentCount = 0;
-            subpass_description.pPreserveAttachments = TG_NULL;
-        
-            shared_render_resources.shading_render_pass = tgvk_render_pass_create(&attachment_description, &subpass_description);
-        }
-        
-        // forward pass
-        {
-            VkAttachmentDescription p_attachment_descriptions[2] = { 0 };
-        
-            p_attachment_descriptions[0].flags = 0;
-            p_attachment_descriptions[0].format = TGVK_HDR_FORMAT;
-            p_attachment_descriptions[0].samples = VK_SAMPLE_COUNT_1_BIT;
-            p_attachment_descriptions[0].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-            p_attachment_descriptions[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-            p_attachment_descriptions[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            p_attachment_descriptions[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            p_attachment_descriptions[0].initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-            p_attachment_descriptions[0].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        
-            p_attachment_descriptions[1].flags = 0;
-            p_attachment_descriptions[1].format = VK_FORMAT_D32_SFLOAT;
-            p_attachment_descriptions[1].samples = VK_SAMPLE_COUNT_1_BIT;
-            p_attachment_descriptions[1].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-            p_attachment_descriptions[1].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-            p_attachment_descriptions[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            p_attachment_descriptions[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            p_attachment_descriptions[1].initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-            p_attachment_descriptions[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-        
-            VkAttachmentReference color_attachment_reference = { 0 };
-            color_attachment_reference.attachment = 0;
-            color_attachment_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        
-            VkAttachmentReference depth_buffer_attachment_reference = { 0 };
-            depth_buffer_attachment_reference.attachment = 1;
-            depth_buffer_attachment_reference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-        
-            VkSubpassDescription subpass_description = { 0 };
-            subpass_description.flags = 0;
-            subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-            subpass_description.inputAttachmentCount = 0;
-            subpass_description.pInputAttachments = TG_NULL;
-            subpass_description.colorAttachmentCount = 1;
-            subpass_description.pColorAttachments = &color_attachment_reference;
-            subpass_description.pResolveAttachments = TG_NULL;
-            subpass_description.pDepthStencilAttachment = &depth_buffer_attachment_reference;
-            subpass_description.preserveAttachmentCount = 0;
-            subpass_description.pPreserveAttachments = TG_NULL;
-        
-            shared_render_resources.forward_render_pass = tgvk_render_pass_create(p_attachment_descriptions, &subpass_description);
-        }
-        
-        // tone mapping pass
-        {
-            VkAttachmentDescription attachment_description = { 0 };
-            attachment_description.flags = 0;
-            attachment_description.format = TGVK_HDR_FORMAT;
-            attachment_description.samples = VK_SAMPLE_COUNT_1_BIT;
-            attachment_description.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-            attachment_description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-            attachment_description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            attachment_description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            attachment_description.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-            attachment_description.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        
-            VkAttachmentReference attachment_reference = { 0 };
-            attachment_reference.attachment = 0;
-            attachment_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        
-            VkSubpassDescription subpass_description = { 0 };
-            subpass_description.flags = 0;
-            subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-            subpass_description.inputAttachmentCount = 0;
-            subpass_description.pInputAttachments = TG_NULL;
-            subpass_description.colorAttachmentCount = 1;
-            subpass_description.pColorAttachments = &attachment_reference;
-            subpass_description.pResolveAttachments = TG_NULL;
-            subpass_description.pDepthStencilAttachment = TG_NULL;
-            subpass_description.preserveAttachmentCount = 0;
-            subpass_description.pPreserveAttachments = TG_NULL;
-        
-            shared_render_resources.tone_mapping_render_pass = tgvk_render_pass_create(&attachment_description, &subpass_description);
-        }
-        
-        // ui pass
-        {
-            VkAttachmentDescription attachment_description = { 0 };
-            attachment_description.flags = 0;
-            attachment_description.format = TGVK_HDR_FORMAT;
-            attachment_description.samples = VK_SAMPLE_COUNT_1_BIT;
-            attachment_description.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-            attachment_description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-            attachment_description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            attachment_description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            attachment_description.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-            attachment_description.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        
-            VkAttachmentReference attachment_reference = { 0 };
-            attachment_reference.attachment = 0;
-            attachment_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        
-            VkSubpassDescription subpass_description = { 0 };
-            subpass_description.flags = 0;
-            subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-            subpass_description.inputAttachmentCount = 0;
-            subpass_description.pInputAttachments = TG_NULL;
-            subpass_description.colorAttachmentCount = 1;
-            subpass_description.pColorAttachments = &attachment_reference;
-            subpass_description.pResolveAttachments = TG_NULL;
-            subpass_description.pDepthStencilAttachment = TG_NULL;
-            subpass_description.preserveAttachmentCount = 0;
-            subpass_description.pPreserveAttachments = TG_NULL;
-        
-            shared_render_resources.ui_render_pass = tgvk_render_pass_create(&attachment_description, &subpass_description);
-        }
-        
-        // present pass
-        {
-            VkAttachmentReference color_attachment_reference = { 0 };
-            color_attachment_reference.attachment = 0;
-            color_attachment_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        
-            VkAttachmentDescription attachment_description = { 0 };
-            attachment_description.flags = 0;
-            attachment_description.format = surface.format.format;
-            attachment_description.samples = VK_SAMPLE_COUNT_1_BIT;
-            attachment_description.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            attachment_description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-            attachment_description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            attachment_description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            attachment_description.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-            attachment_description.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-        
-            VkSubpassDescription subpass_description = { 0 };
-            subpass_description.flags = 0;
-            subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-            subpass_description.inputAttachmentCount = 0;
-            subpass_description.pInputAttachments = TG_NULL;
-            subpass_description.colorAttachmentCount = 1;
-            subpass_description.pColorAttachments = &color_attachment_reference;
-            subpass_description.pResolveAttachments = TG_NULL;
-            subpass_description.pDepthStencilAttachment = TG_NULL;
-            subpass_description.preserveAttachmentCount = 0;
-            subpass_description.pPreserveAttachments = TG_NULL;
-        
-            shared_render_resources.present_render_pass = tgvk_render_pass_create(&attachment_description, &subpass_description);
-        }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        const u16 p_cube_indices[6 * 6] = {
-             0,  1,  2,  2,  3,  0, // x-
-             4,  5,  6,  6,  7,  4, // x+
-             8,  9, 10, 10, 11,  8, // y-
-            12, 13, 14, 14, 15, 12, // y+
-            16, 17, 18, 18, 19, 16, // z-
-            20, 21, 22, 22, 23, 20  // z+
-        };
-
-        const v3 p_cube_positions[6 * 4] = {
-            (v3){ -0.5f, -0.5f, -0.5f }, // x-
-            (v3){ -0.5f, -0.5f,  0.5f },
-            (v3){ -0.5f,  0.5f,  0.5f },
-            (v3){ -0.5f,  0.5f, -0.5f },
-            (v3){  0.5f, -0.5f, -0.5f }, // x+
-            (v3){  0.5f,  0.5f, -0.5f },
-            (v3){  0.5f,  0.5f,  0.5f },
-            (v3){  0.5f, -0.5f,  0.5f },
-            (v3){ -0.5f, -0.5f, -0.5f }, // y-
-            (v3){  0.5f, -0.5f, -0.5f },
-            (v3){  0.5f, -0.5f,  0.5f },
-            (v3){ -0.5f, -0.5f,  0.5f },
-            (v3){ -0.5f,  0.5f, -0.5f }, // y+
-            (v3){ -0.5f,  0.5f,  0.5f },
-            (v3){  0.5f,  0.5f,  0.5f },
-            (v3){  0.5f,  0.5f, -0.5f },
-            (v3){ -0.5f, -0.5f, -0.5f }, // z-
-            (v3){ -0.5f,  0.5f, -0.5f },
-            (v3){  0.5f,  0.5f, -0.5f },
-            (v3){  0.5f, -0.5f, -0.5f },
-            (v3){ -0.5f, -0.5f,  0.5f }, // z+
-            (v3){  0.5f, -0.5f,  0.5f },
-            (v3){  0.5f,  0.5f,  0.5f },
-            (v3){ -0.5f,  0.5f,  0.5f }
-        };
-
-        const v3 p_cube_normals[6 * 4] = {
-            (v3){ -1.0f,  0.0f,  0.0f }, // x-
-            (v3){ -1.0f,  0.0f,  0.0f },
-            (v3){ -1.0f,  0.0f,  0.0f },
-            (v3){ -1.0f,  0.0f,  0.0f },
-            (v3){  1.0f,  0.0f,  0.0f }, // x+
-            (v3){  1.0f,  0.0f,  0.0f },
-            (v3){  1.0f,  0.0f,  0.0f },
-            (v3){  1.0f,  0.0f,  0.0f },
-            (v3){  0.0f, -1.0f,  0.0f }, // y-
-            (v3){  0.0f, -1.0f,  0.0f },
-            (v3){  0.0f, -1.0f,  0.0f },
-            (v3){  0.0f, -1.0f,  0.0f },
-            (v3){  0.0f,  1.0f,  0.0f }, // y+
-            (v3){  0.0f,  1.0f,  0.0f },
-            (v3){  0.0f,  1.0f,  0.0f },
-            (v3){  0.0f,  1.0f,  0.0f },
-            (v3){  0.0f,  0.0f, -1.0f }, // z-
-            (v3){  0.0f,  0.0f, -1.0f },
-            (v3){  0.0f,  0.0f, -1.0f },
-            (v3){  0.0f,  0.0f, -1.0f },
-            (v3){  0.0f,  0.0f,  1.0f }, // z+
-            (v3){  0.0f,  0.0f,  1.0f },
-            (v3){  0.0f,  0.0f,  1.0f },
-            (v3){  0.0f,  0.0f,  1.0f }
-        };
-
-        // TODO: do all of the copies at once!
-        const tg_size cube_staging_buffer_size = TG_MAX3(sizeof(p_cube_indices), sizeof(p_cube_positions), sizeof(p_cube_normals));
-        p_staging_buffer = tgvk_global_staging_buffer_take(cube_staging_buffer_size);
-
-        tg_memcpy(sizeof(p_cube_indices), p_cube_indices, p_staging_buffer->memory.p_mapped_device_memory);
-        shared_render_resources.raytracer.cube_ibo = TGVK_BUFFER_CREATE(sizeof(p_cube_indices), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, TGVK_MEMORY_DEVICE);
-        tgvk_buffer_copy(sizeof(p_cube_indices), p_staging_buffer, &shared_render_resources.raytracer.cube_ibo);
-
-        tg_memcpy(sizeof(p_cube_positions), p_cube_positions, p_staging_buffer->memory.p_mapped_device_memory);
-        shared_render_resources.raytracer.cube_vbo_p = TGVK_BUFFER_CREATE(sizeof(p_cube_positions), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, TGVK_MEMORY_DEVICE);
-        tgvk_buffer_copy(sizeof(p_cube_positions), p_staging_buffer, &shared_render_resources.raytracer.cube_vbo_p);
-
-        tg_memcpy(sizeof(p_cube_normals), p_cube_normals, p_staging_buffer->memory.p_mapped_device_memory);
-        shared_render_resources.raytracer.cube_vbo_n = TGVK_BUFFER_CREATE(sizeof(p_cube_normals), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, TGVK_MEMORY_DEVICE);
-        tgvk_buffer_copy(sizeof(p_cube_normals), p_staging_buffer, &shared_render_resources.raytracer.cube_vbo_n);
-
-        tgvk_global_staging_buffer_release();
-
-
-
-        VkSubpassDescription vis_subpass_description = { 0 };
-        vis_subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-
-        shared_render_resources.raytracer.visibility_render_pass = tgvk_render_pass_create(TG_NULL, &vis_subpass_description);
-
-
-
-        shared_render_resources.raytracer.initialized = TG_TRUE;
-    }
-
     p_raytracer->p_camera = p_camera;
     p_raytracer->hdr_color_attachment = TGVK_IMAGE_CREATE(TGVK_IMAGE_TYPE_COLOR | TGVK_IMAGE_TYPE_STORAGE, w, h, TGVK_HDR_FORMAT, TG_NULL);
     p_raytracer->render_target = TGVK_RENDER_TARGET_CREATE(
@@ -637,6 +359,87 @@ void tg_raytracer_create(const tg_camera* p_camera, u32 max_object_count, TG_OUT
     p_raytracer->objs.capacity = max_object_count;
     p_raytracer->objs.count = 0;
     p_raytracer->objs.p_objs = TG_MALLOC(p_raytracer->objs.capacity * sizeof(*p_raytracer->objs.p_objs));
+
+    const u16 p_cube_indices[6 * 6] = {
+         0,  1,  2,  2,  3,  0, // x-
+         4,  5,  6,  6,  7,  4, // x+
+         8,  9, 10, 10, 11,  8, // y-
+        12, 13, 14, 14, 15, 12, // y+
+        16, 17, 18, 18, 19, 16, // z-
+        20, 21, 22, 22, 23, 20  // z+
+    };
+
+    const v3 p_cube_positions[6 * 4] = {
+        (v3){ -0.5f, -0.5f, -0.5f }, // x-
+        (v3){ -0.5f, -0.5f,  0.5f },
+        (v3){ -0.5f,  0.5f,  0.5f },
+        (v3){ -0.5f,  0.5f, -0.5f },
+        (v3){  0.5f, -0.5f, -0.5f }, // x+
+        (v3){  0.5f,  0.5f, -0.5f },
+        (v3){  0.5f,  0.5f,  0.5f },
+        (v3){  0.5f, -0.5f,  0.5f },
+        (v3){ -0.5f, -0.5f, -0.5f }, // y-
+        (v3){  0.5f, -0.5f, -0.5f },
+        (v3){  0.5f, -0.5f,  0.5f },
+        (v3){ -0.5f, -0.5f,  0.5f },
+        (v3){ -0.5f,  0.5f, -0.5f }, // y+
+        (v3){ -0.5f,  0.5f,  0.5f },
+        (v3){  0.5f,  0.5f,  0.5f },
+        (v3){  0.5f,  0.5f, -0.5f },
+        (v3){ -0.5f, -0.5f, -0.5f }, // z-
+        (v3){ -0.5f,  0.5f, -0.5f },
+        (v3){  0.5f,  0.5f, -0.5f },
+        (v3){  0.5f, -0.5f, -0.5f },
+        (v3){ -0.5f, -0.5f,  0.5f }, // z+
+        (v3){  0.5f, -0.5f,  0.5f },
+        (v3){  0.5f,  0.5f,  0.5f },
+        (v3){ -0.5f,  0.5f,  0.5f }
+    };
+
+    const v3 p_cube_normals[6 * 4] = {
+        (v3){ -1.0f,  0.0f,  0.0f }, // x-
+        (v3){ -1.0f,  0.0f,  0.0f },
+        (v3){ -1.0f,  0.0f,  0.0f },
+        (v3){ -1.0f,  0.0f,  0.0f },
+        (v3){  1.0f,  0.0f,  0.0f }, // x+
+        (v3){  1.0f,  0.0f,  0.0f },
+        (v3){  1.0f,  0.0f,  0.0f },
+        (v3){  1.0f,  0.0f,  0.0f },
+        (v3){  0.0f, -1.0f,  0.0f }, // y-
+        (v3){  0.0f, -1.0f,  0.0f },
+        (v3){  0.0f, -1.0f,  0.0f },
+        (v3){  0.0f, -1.0f,  0.0f },
+        (v3){  0.0f,  1.0f,  0.0f }, // y+
+        (v3){  0.0f,  1.0f,  0.0f },
+        (v3){  0.0f,  1.0f,  0.0f },
+        (v3){  0.0f,  1.0f,  0.0f },
+        (v3){  0.0f,  0.0f, -1.0f }, // z-
+        (v3){  0.0f,  0.0f, -1.0f },
+        (v3){  0.0f,  0.0f, -1.0f },
+        (v3){  0.0f,  0.0f, -1.0f },
+        (v3){  0.0f,  0.0f,  1.0f }, // z+
+        (v3){  0.0f,  0.0f,  1.0f },
+        (v3){  0.0f,  0.0f,  1.0f },
+        (v3){  0.0f,  0.0f,  1.0f }
+    };
+
+    // TODO: do all of the copies at once!
+    const tg_size cube_staging_buffer_size = TG_MAX3(sizeof(p_cube_indices), sizeof(p_cube_positions), sizeof(p_cube_normals));
+    tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take(cube_staging_buffer_size);
+
+    tg_memcpy(sizeof(p_cube_indices), p_cube_indices, p_staging_buffer->memory.p_mapped_device_memory);
+    p_raytracer->visibility_pass.cube_ibo = TGVK_BUFFER_CREATE(sizeof(p_cube_indices), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, TGVK_MEMORY_DEVICE);
+    tgvk_buffer_copy(sizeof(p_cube_indices), p_staging_buffer, &p_raytracer->visibility_pass.cube_ibo);
+
+    tg_memcpy(sizeof(p_cube_positions), p_cube_positions, p_staging_buffer->memory.p_mapped_device_memory);
+    p_raytracer->visibility_pass.cube_vbo_p = TGVK_BUFFER_CREATE(sizeof(p_cube_positions), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, TGVK_MEMORY_DEVICE);
+    tgvk_buffer_copy(sizeof(p_cube_positions), p_staging_buffer, &p_raytracer->visibility_pass.cube_vbo_p);
+
+    tg_memcpy(sizeof(p_cube_normals), p_cube_normals, p_staging_buffer->memory.p_mapped_device_memory);
+    p_raytracer->visibility_pass.cube_vbo_n = TGVK_BUFFER_CREATE(sizeof(p_cube_normals), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, TGVK_MEMORY_DEVICE);
+    tgvk_buffer_copy(sizeof(p_cube_normals), p_staging_buffer, &p_raytracer->visibility_pass.cube_vbo_n);
+
+    tgvk_global_staging_buffer_release();
 
     tg__init_visibility_pass(p_raytracer);
     tg__init_shading_pass(p_raytracer);
@@ -658,20 +461,6 @@ void tg_raytracer_destroy(tg_raytracer* p_raytracer)
 	TG_ASSERT(p_raytracer);
 
 	TG_NOT_IMPLEMENTED();
-
-
-
-
-
-
-    tgvk_render_pass_destroy(shared_render_resources.present_render_pass);
-    tgvk_render_pass_destroy(shared_render_resources.ui_render_pass);
-    tgvk_render_pass_destroy(shared_render_resources.tone_mapping_render_pass);
-    tgvk_render_pass_destroy(shared_render_resources.forward_render_pass);
-    tgvk_render_pass_destroy(shared_render_resources.shading_render_pass);
-    tgvk_buffer_destroy(&shared_render_resources.screen_quad_uvs_buffer);
-    tgvk_buffer_destroy(&shared_render_resources.screen_quad_positions_buffer);
-    tgvk_buffer_destroy(&shared_render_resources.screen_quad_indices);
 }
 
 void tg_raytracer_create_obj(tg_raytracer* p_raytracer, u32 log2_w, u32 log2_h, u32 log2_d)
@@ -829,13 +618,13 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
     //tgvk_atmosphere_model_update(&p_raytracer->model, iv, ip);
 
     tgvk_command_buffer_begin(&p_raytracer->visibility_pass.command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT);
-    tgvk_cmd_begin_render_pass(&p_raytracer->visibility_pass.command_buffer, shared_render_resources.raytracer.visibility_render_pass, &p_raytracer->visibility_pass.framebuffer, VK_SUBPASS_CONTENTS_INLINE);
+    tgvk_cmd_begin_render_pass(&p_raytracer->visibility_pass.command_buffer, p_raytracer->visibility_pass.render_pass, &p_raytracer->visibility_pass.framebuffer, VK_SUBPASS_CONTENTS_INLINE);
     
     vkCmdBindPipeline(p_raytracer->visibility_pass.command_buffer.buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_raytracer->visibility_pass.pipeline.pipeline);
-    vkCmdBindIndexBuffer(p_raytracer->visibility_pass.command_buffer.buffer, shared_render_resources.raytracer.cube_ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
+    vkCmdBindIndexBuffer(p_raytracer->visibility_pass.command_buffer.buffer, p_raytracer->visibility_pass.cube_ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
     const VkDeviceSize vertex_buffer_offset = 0;
-    vkCmdBindVertexBuffers(p_raytracer->visibility_pass.command_buffer.buffer, 0, 1, &shared_render_resources.raytracer.cube_vbo_p.buffer, &vertex_buffer_offset);
-    vkCmdBindVertexBuffers(p_raytracer->visibility_pass.command_buffer.buffer, 1, 1, &shared_render_resources.raytracer.cube_vbo_n.buffer, &vertex_buffer_offset);
+    vkCmdBindVertexBuffers(p_raytracer->visibility_pass.command_buffer.buffer, 0, 1, &p_raytracer->visibility_pass.cube_vbo_p.buffer, &vertex_buffer_offset);
+    vkCmdBindVertexBuffers(p_raytracer->visibility_pass.command_buffer.buffer, 1, 1, &p_raytracer->visibility_pass.cube_vbo_n.buffer, &vertex_buffer_offset);
     for (u32 i = 0; i < p_raytracer->objs.count; i++)
     {
         vkCmdBindDescriptorSets(p_raytracer->visibility_pass.command_buffer.buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_raytracer->visibility_pass.pipeline.layout.pipeline_layout, 0, 1, &p_raytracer->objs.p_objs[i].descriptor_set.set, 0, TG_NULL);

@@ -269,31 +269,6 @@ typedef struct tgvk_sampler_create_info
     tg_image_address_mode    address_mode_w;
 } tgvk_sampler_create_info;
 
-typedef struct tgvk_shared_render_resources
-{
-    tgvk_buffer         screen_quad_indices;
-    tgvk_buffer         screen_quad_positions_buffer;
-    tgvk_buffer         screen_quad_uvs_buffer;
-
-    VkRenderPass        shading_render_pass;
-    VkRenderPass        forward_render_pass;
-    VkRenderPass        tone_mapping_render_pass;
-    VkRenderPass        ui_render_pass;
-    VkRenderPass        present_render_pass;
-
-    struct
-    {
-        b32             initialized; // TODO: don't waste 32 bit
-
-        tgvk_buffer     cube_ibo;
-        tgvk_buffer     cube_vbo_p;
-        tgvk_buffer     cube_vbo_n;
-
-        VkRenderPass    visibility_render_pass;
-        VkRenderPass    shading_render_pass;
-    } raytracer;
-} tgvk_shared_render_resources;
-
 typedef struct tgvk_surface
 {
     VkSurfaceKHR          surface;
@@ -333,7 +308,10 @@ VkSwapchainKHR                  swapchain;
 VkExtent2D                      swapchain_extent;
 VkImage                         p_swapchain_images[TG_MAX_SWAPCHAIN_IMAGES];
 VkImageView                     p_swapchain_image_views[TG_MAX_SWAPCHAIN_IMAGES];
-tgvk_shared_render_resources    shared_render_resources; // TODO: still required?
+
+tgvk_buffer                     screen_quad_ibo;
+tgvk_buffer                     screen_quad_positions_vbo;
+tgvk_buffer                     screen_quad_uvs_vbo;
 
 
 

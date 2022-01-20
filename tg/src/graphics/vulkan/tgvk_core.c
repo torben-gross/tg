@@ -574,10 +574,10 @@ void tgvk_cmd_begin_render_pass(tgvk_command_buffer* p_command_buffer, VkRenderP
 
 void tgvk_cmd_bind_and_draw_screen_quad(tgvk_command_buffer* p_command_buffer)
 {
-    vkCmdBindIndexBuffer(p_command_buffer->buffer, shared_render_resources.screen_quad_indices.buffer, 0, VK_INDEX_TYPE_UINT16);
+    vkCmdBindIndexBuffer(p_command_buffer->buffer, screen_quad_ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
     const VkDeviceSize vertex_buffer_offset = 0;
-    vkCmdBindVertexBuffers(p_command_buffer->buffer, 0, 1, &shared_render_resources.screen_quad_positions_buffer.buffer, &vertex_buffer_offset);
-    vkCmdBindVertexBuffers(p_command_buffer->buffer, 1, 1, &shared_render_resources.screen_quad_uvs_buffer.buffer, &vertex_buffer_offset);
+    vkCmdBindVertexBuffers(p_command_buffer->buffer, 0, 1, &screen_quad_positions_vbo.buffer, &vertex_buffer_offset);
+    vkCmdBindVertexBuffers(p_command_buffer->buffer, 1, 1, &screen_quad_uvs_vbo.buffer, &vertex_buffer_offset);
     vkCmdDrawIndexed(p_command_buffer->buffer, 6, 1, 0, 0, 0); 
 }
 
@@ -3893,6 +3893,48 @@ static void tg__swapchain_create(void)
     }
 }
 
+static void tg__screen_quad_create(void)
+{
+    const u16 p_indices[6] = { 0, 1, 2, 2, 3, 0 };
+
+    v2 p_positions[4] = { 0 };
+    p_positions[0] = (v2){ -1.0f,  1.0f };
+    p_positions[1] = (v2){ 1.0f,  1.0f };
+    p_positions[2] = (v2){ 1.0f, -1.0f };
+    p_positions[3] = (v2){ -1.0f, -1.0f };
+
+    v2 p_uvs[4] = { 0 };
+    p_uvs[0] = (v2){ 0.0f,  1.0f };
+    p_uvs[1] = (v2){ 1.0f,  1.0f };
+    p_uvs[2] = (v2){ 1.0f,  0.0f };
+    p_uvs[3] = (v2){ 0.0f,  0.0f };
+
+    screen_quad_ibo = TGVK_BUFFER_CREATE(sizeof(p_indices), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, TGVK_MEMORY_DEVICE);
+    screen_quad_positions_vbo = TGVK_BUFFER_CREATE(sizeof(p_positions), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, TGVK_MEMORY_DEVICE);
+    screen_quad_uvs_vbo = TGVK_BUFFER_CREATE(sizeof(p_uvs), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, TGVK_MEMORY_DEVICE);
+
+    const tg_size staging_buffer_size = TG_MAX3(sizeof(p_indices), sizeof(p_positions), sizeof(p_uvs));
+    tgvk_buffer* p_staging_buffer = tg__staging_buffer_take(staging_buffer_size);
+
+    tg_memcpy(sizeof(p_indices), p_indices, p_staging_buffer->memory.p_mapped_device_memory);
+    tgvk_buffer_copy(sizeof(p_indices), p_staging_buffer, &screen_quad_ibo);
+
+    tg_memcpy(sizeof(p_positions), p_positions, p_staging_buffer->memory.p_mapped_device_memory);
+    tgvk_buffer_copy(sizeof(p_positions), p_staging_buffer, &screen_quad_positions_vbo);
+
+    tg_memcpy(sizeof(p_uvs), p_uvs, p_staging_buffer->memory.p_mapped_device_memory);
+    tgvk_buffer_copy(sizeof(p_uvs), p_staging_buffer, &screen_quad_uvs_vbo);
+
+    tg__staging_buffer_release();
+}
+
+static void tg__screen_quad_destroy(void)
+{
+    tgvk_buffer_destroy(&screen_quad_uvs_vbo);
+    tgvk_buffer_destroy(&screen_quad_positions_vbo);
+    tgvk_buffer_destroy(&screen_quad_ibo);
+}
+
 
 
 
@@ -3941,6 +3983,7 @@ void tg_graphics_init(void)
 
     shaderc_compiler = shaderc_compiler_initialize();
     tgvk_shader_library_init();
+    tg__screen_quad_create();
 }
 
 void tg_graphics_wait_idle(void)
@@ -3950,6 +3993,7 @@ void tg_graphics_wait_idle(void)
 
 void tg_graphics_shutdown(void)
 {
+    tg__screen_quad_destroy();
     tgvk_shader_library_shutdown();
     shaderc_compiler_release(shaderc_compiler);
 

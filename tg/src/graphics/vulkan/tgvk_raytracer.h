@@ -16,17 +16,21 @@ typedef struct tg_raytracer_objs
 typedef struct tg_raytracer_visibility_pass
 {
     tgvk_command_buffer    command_buffer;
+    VkRenderPass           render_pass;
     tgvk_pipeline          pipeline;
     tgvk_buffer            view_projection_ubo;
     tgvk_buffer            ray_tracing_ubo;
     tgvk_buffer            visibility_buffer; // u32 w; u32 h; u64 data[w * h];
     tgvk_framebuffer       framebuffer;
+    tgvk_buffer            cube_ibo;
+    tgvk_buffer            cube_vbo_p;
+    tgvk_buffer            cube_vbo_n;
 } tg_raytracer_visibility_pass;
 
 typedef struct tg_raytracer_shading_pass
 {
     tgvk_command_buffer    command_buffer;
-    tgvk_shader            fragment_shader;
+    VkRenderPass           render_pass;
     tgvk_pipeline          graphics_pipeline;
     tgvk_buffer            ubo;
     tgvk_descriptor_set    descriptor_set;
@@ -43,6 +47,7 @@ typedef struct tg_raytracer_present_pass
     tgvk_command_buffer    p_command_buffers[TG_MAX_SWAPCHAIN_IMAGES];
     VkSemaphore            image_acquired_semaphore;
     tgvk_framebuffer       p_framebuffers[TG_MAX_SWAPCHAIN_IMAGES];
+    VkRenderPass           render_pass;
     tgvk_pipeline          graphics_pipeline;
     tgvk_descriptor_set    descriptor_set;
 } tg_raytracer_present_pass;
