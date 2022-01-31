@@ -46,7 +46,7 @@ static void tg__scene_create(void)
     tg_input_get_mouse_position(&scene.last_mouse_x, &scene.last_mouse_y);
 
     tg_raytracer_create(&scene.camera, 8, &scene.raytracer);
-    tg_raytracer_create_obj(&scene.raytracer, 7, 7, 7);
+    tg_raytracer_create_obj(&scene.raytracer, 256, 32, 256);
 
 #if 0 // TODO: voxelize?
     scene.h_sponza_mesh = tgvk_mesh_create2("meshes/sponza.obj", V3(0.01f));
@@ -316,7 +316,14 @@ void tg_application_start(void)
         {
             if (debug_info.fps < 60)
             {
-                TG_DEBUG_LOG("Low framerate!\n");
+                if (tgp_power_source_is_battery())
+                {
+                    TG_DEBUG_LOG("Low framerate! Power source is battery!\n");
+                }
+                else
+                {
+                    TG_DEBUG_LOG("Low framerate!\n");
+                }
             }
             TG_DEBUG_LOG("%d ms\n", debug_info.dt_sum / debug_info.fps);
             TG_DEBUG_LOG("%u fps\n", debug_info.fps);

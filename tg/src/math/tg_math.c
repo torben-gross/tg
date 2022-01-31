@@ -704,6 +704,37 @@ u32 tgm_u32_clamp(u32 v, u32 low, u32 high)
 	return result;
 }
 
+u32 tgm_u32_count_set_bits(u32 v)
+{
+	u32 result = 0;
+	for (u32 i = 0; i < 32; i++)
+	{
+		result += v & 1ui32;
+		v = v >> 1ui32;
+	}
+	return result;
+}
+
+u32 tgm_u32_count_zero_bits_from_left(u32 v)
+{
+	u32 result = 0;
+	while ((v & (0b10000000000000000000000000000000 >> result)) == 0)
+	{
+		result++;
+	}
+	return result;
+}
+
+u32 tgm_u32_count_zero_bits_from_right(u32 v)
+{
+	u32 result = 0;
+	while (((v >> result) & 1) == 0)
+	{
+		result++;
+	}
+	return result;
+}
+
 u32 tgm_u32_digits(u32 v)
 {
 	const u32 result = v == 0 ? 1 : (u32)tgm_f32_floor(tgm_u32_log10(v)) + 1;

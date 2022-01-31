@@ -13,7 +13,6 @@
 #define TG_MAX_SHADER_ATTACHMENTS         8
 #define TG_MAX_SHADER_GLOBAL_RESOURCES    16
 #define TG_MAX_SHADER_INPUTS              16
-#define TG_SHADER_RESERVED_BINDINGS       2
 
 #define TG_IMAGE_MAX_MIP_LEVELS(w, h)     ((u32)tgm_f32_log2((f32)tgm_u32_max((u32)w, (u32)h)) + 1)
 

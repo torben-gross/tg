@@ -499,6 +499,24 @@ i8 tgp_system_time_compare(tg_system_time* p_time0, tg_system_time* p_time1)
 
 
 
+b32 tgp_power_source_is_ac(void)
+{
+    SYSTEM_POWER_STATUS system_power_status = { 0 };
+    WIN32_CALL(GetSystemPowerStatus(&system_power_status));
+    const b32 result = system_power_status.ACLineStatus == 1;
+    return result;
+}
+
+b32 tgp_power_source_is_battery(void)
+{
+    SYSTEM_POWER_STATUS system_power_status = { 0 };
+    WIN32_CALL(GetSystemPowerStatus(&system_power_status));
+    const b32 result = system_power_status.ACLineStatus == 0;
+    return result;
+}
+
+
+
 void tgp_timer_init(tg_timer* p_timer)
 {
     TG_ASSERT(p_timer->running == TG_FALSE);

@@ -329,6 +329,9 @@ u8     tgm_u8_min(u8 v0, u8 v1);
 
 u32    tgm_u32_ceil_to_pow2(u32 v);
 u32    tgm_u32_clamp(u32 v, u32 low, u32 high);
+u32    tgm_u32_count_set_bits(u32 v);
+u32    tgm_u32_count_zero_bits_from_left(u32 v);
+u32    tgm_u32_count_zero_bits_from_right(u32 v);
 u32    tgm_u32_digits(u32 v);
 u32    tgm_u32_incmod(u32 v, u32 mod);
 b32    tgm_u32_is_power_of_two(u32 v);

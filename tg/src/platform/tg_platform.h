@@ -254,6 +254,9 @@ b32                   tgp_directory_continue_iteration(tg_file_iterator_h h_file
 tg_size               tgp_directory_get_size(const char* p_directory);
 i8                    tgp_system_time_compare(tg_system_time* p_time0, tg_system_time* p_time1);
 
+b32                   tgp_power_source_is_ac(void);
+b32                   tgp_power_source_is_battery(void);
+
 void                  tgp_timer_init(tg_timer* p_timer);
 void                  tgp_timer_start(tg_timer* p_timer);
 void                  tgp_timer_stop(tg_timer* p_timer);

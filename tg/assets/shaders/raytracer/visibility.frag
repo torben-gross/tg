@@ -9,13 +9,15 @@ layout(location = 0) in v3 v_position;
 
 
 
-layout(set = 0, binding = 0) uniform model
+layout(set = 0, binding = 0) uniform unique_ubo
 {
-    m4     u_model;
+    m4     u_translation;
+    m4     u_rotation;
+    m4     u_scale;
     u32    u_first_voxel_id;
 };
 
-layout(set = 0, binding = 2) uniform ubo
+layout(set = 0, binding = 2) uniform raytracing_ubo
 {
     v3    u_camera;
     v3    u_ray00;
@@ -90,14 +92,25 @@ void main()
 
     f32 fx = gl_FragCoord.x / f32(u_w);
     f32 fy = 1.0 - gl_FragCoord.y / f32(u_h);
-    v3 ray_direction = normalize(mix(mix(u_ray00, u_ray10, fy), mix(u_ray01, u_ray11, fy), fx));
-    // TODO: transform ray into model space of box properly with rotation and all
-    v3 off = v3(f32(u_data_w), f32(u_data_h), f32(u_data_d)) / 2.0; // TODO: offset of the obj. will be replaced by model mat
-    tg_ray r = tg_ray(u_camera + off, ray_direction, v3(1.0) / ray_direction);
 
-    v3 bmin = v3(0.0);
-    v3 bmax = v3(f32(u_data_w), f32(u_data_h), f32(u_data_d));
-    tg_box b = tg_box(bmin, bmax);
+
+
+    m4 ray_origin_mat = inverse(u_translation * u_rotation);
+    v3 ray_origin = (ray_origin_mat * vec4(u_camera, 1.0)).xyz;
+
+    m4 ray_direction_mat = inverse(u_rotation);
+    v3 ray_direction_v3 = normalize(mix(mix(u_ray00, u_ray10, fy), mix(u_ray01, u_ray11, fy), fx));
+    v3 ray_direction = (ray_direction_mat * v4(ray_direction_v3, 0.0)).xyz;
+    
+    v3 ray_inv_direction = vec3(1.0) / ray_direction;
+    
+    tg_ray r = tg_ray(ray_origin, ray_direction, ray_inv_direction);
+
+
+
+    v3 box_max = v3(f32(u_data_w) / 2.0, f32(u_data_h) / 2.0, f32(u_data_d) / 2.0);
+    v3 box_min = -box_max;
+    tg_box b = tg_box(box_min, box_max);
 
     f32 d = 1.0;
     u32 id = 1;
@@ -106,10 +119,13 @@ void main()
     {
         // supercover
         // https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.42.3443&rep=rep1&type=pdf
-            
+        
         v3 hit = t_box > 0.0 ? r.o + t_box * r.d : r.o;
+        v3 xyz = clamp(floor(hit), box_min, box_max - v3(1.0));
 
-        v3 xyz = clamp(floor(hit), bmin, bmax - v3(1.0));
+        hit += v3(box_max);
+        xyz += v3(box_max);
+
         i32 x = i32(xyz.x);
         i32 y = i32(xyz.y);
         i32 z = i32(xyz.z);
@@ -209,7 +225,7 @@ void main()
         }
     }
     
-    if (d != 1.0)
+    //if (d != 1.0)
     {
         u32 x = u32(gl_FragCoord.x);
         u32 y = u32(gl_FragCoord.y);

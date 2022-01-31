@@ -275,28 +275,6 @@ typedef struct tgvk_surface
     VkSurfaceFormatKHR    format;
 } tgvk_surface;
 
-typedef struct tgvk_obj_visibility_pass
-{
-    tgvk_command_buffer    command_buffer;
-    tgvk_descriptor_set    descriptor_set;
-} tgvk_obj_visibility_pass;
-
-// TODO:
-// 32 bits for depth (Karis et al. use 30 bits: http://advances.realtimerendering.com/s2021/Karis_Nanite_SIGGRAPH_Advances_2021_final.pdf p. 84)
-// 32 bits for voxel ids
-typedef struct tgvk_obj
-{
-    u32                       first_voxel_id;
-    u16                       packed_log2_whd;      // 5 bits each for log2_w, log2_h, log2_d. One bit unused. TODO: we only need to ensure division by 16 for 3 lods, so just not use lower 3 bits? this member would need to become bigger, though.. but for lod down to w,h,d = 2, we need 2^n?
-    tgvk_buffer               ubo;                  // 32 bits first_voxel_id
-    tgvk_descriptor_set       descriptor_set;
-    tgvk_buffer               voxels;               // (w/(L+1) * h/(L+1)) bits for lod L >= 0, L < TG_MAX_LODS. Data is packed contiguous
-    // TODO: implement below
-    //tgvk_buffer               color_ids;            // 8 bits per voxel
-    //u8                        p_color_lut[3 * 256]; // Three 8 bit components per color, 256 colors // TODO: optionally less colors, less memory. put LUT into one huge array and only reference pointer to location in here?
-    tgvk_obj_visibility_pass    visibility_pass;
-} tgvk_obj;
-
 
 
 VkInstance                      instance;

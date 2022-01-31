@@ -6,21 +6,32 @@
 
 
 
-#define TGVK_CAMERA_VIEW(view_projection_ubo)    (((m4*)(view_projection_ubo).memory.p_mapped_device_memory)[0])
-#define TGVK_CAMERA_PROJ(view_projection_ubo)    (((m4*)(view_projection_ubo).memory.p_mapped_device_memory)[1])
 #define TGVK_HDR_FORMAT                          VK_FORMAT_R32G32B32A32_SFLOAT
-#define TGVK_SHADING_UBO                         (*(tg_shading_ubo*)p_raytracer->shading_pass.ubo.memory.p_mapped_device_memory)
 
 
 
-typedef struct tg_ray_tracing_ubo
+typedef struct tg_obj_ubo
+{
+    m4     translation;
+    m4     rotation;
+    m4     scale;
+    u32    first_voxel_id;
+} tg_obj_ubo;
+
+typedef struct tg_view_projection_ubo
+{
+    m4    view;
+    m4    projection;
+} tg_view_projection_ubo;
+
+typedef struct tg_raytracing_ubo
 {
     v4    camera;
     v4    ray00;
     v4    ray10;
     v4    ray01;
     v4    ray11;
-} tg_ray_tracing_ubo;
+} tg_raytracing_ubo;
 
 typedef struct tg_shading_ubo
 {
@@ -64,7 +75,7 @@ static void tg__init_visibility_pass(tg_raytracer* p_raytracer)
 
     p_raytracer->visibility_pass.pipeline = tgvk_pipeline_create_graphics(&graphics_pipeline_create_info);
     p_raytracer->visibility_pass.view_projection_ubo = TGVK_UNIFORM_BUFFER_CREATE(2ui64 * sizeof(m4));
-    p_raytracer->visibility_pass.ray_tracing_ubo = TGVK_UNIFORM_BUFFER_CREATE(sizeof(tg_ray_tracing_ubo));
+    p_raytracer->visibility_pass.raytracing_ubo = TGVK_UNIFORM_BUFFER_CREATE(sizeof(tg_raytracing_ubo));
 
     const VkDeviceSize staging_buffer_size = 2ui64 * sizeof(u32);
     const VkDeviceSize visibility_buffer_size = staging_buffer_size + ((VkDeviceSize)w * (VkDeviceSize)h * sizeof(u64));
@@ -463,20 +474,16 @@ void tg_raytracer_destroy(tg_raytracer* p_raytracer)
 	TG_NOT_IMPLEMENTED();
 }
 
-void tg_raytracer_create_obj(tg_raytracer* p_raytracer, u32 log2_w, u32 log2_h, u32 log2_d)
+void tg_raytracer_create_obj(tg_raytracer* p_raytracer, u32 w, u32 h, u32 d)
 {
     TG_ASSERT(p_raytracer);
-    TG_ASSERT(log2_w <= 32);
-    TG_ASSERT(log2_h <= 32);
-    TG_ASSERT(log2_d <= 32);
+    TG_ASSERT(tgm_u32_count_set_bits(w) == 1);
+    TG_ASSERT(tgm_u32_count_set_bits(h) == 1);
+    TG_ASSERT(tgm_u32_count_set_bits(d) == 1);
     TG_ASSERT(p_raytracer->objs.count < p_raytracer->objs.capacity);
 
     const u32 obj_id = p_raytracer->objs.count++;
     tgvk_obj* p_obj = &p_raytracer->objs.p_objs[obj_id];
-
-    const u32 w = 1 << log2_w;
-    const u32 h = 1 << log2_h;
-    const u32 d = 1 << log2_d;
 
     if (obj_id == 0)
     {
@@ -497,19 +504,22 @@ void tg_raytracer_create_obj(tg_raytracer* p_raytracer, u32 log2_w, u32 log2_h, 
         p_obj->first_voxel_id += prev_num_voxels;
     }
 
-    p_obj->ubo = TGVK_UNIFORM_BUFFER_CREATE(sizeof(m4) + sizeof(u32));
-    m4* p_model = (m4*)p_obj->ubo.memory.p_mapped_device_memory;
-    u32* p_first_voxel_id = (u32*)(p_model + 1);
-    const v3 scale = { (f32)w, (f32)h, (f32)d };
-    *p_model = tgm_m4_scale(scale);
-    *p_first_voxel_id = p_obj->first_voxel_id;
+    p_obj->ubo = TGVK_UNIFORM_BUFFER_CREATE(sizeof(tg_obj_ubo));
+    tg_obj_ubo* p_ubo = p_obj->ubo.memory.p_mapped_device_memory;
+    const m4 translation = tgm_m4_translate((v3) { 0.0f, 0.0f, 0.0f });
+    const m4 rotation = tgm_m4_rotate_y(TG_TO_RADIANS(15.0f));
+    const m4 scale = tgm_m4_scale((v3) { (f32)w, (f32)h, (f32)d });
+    //const m4 model = tgm_m4_mul(tgm_m4_mul(translation, rotation), scale);
+    p_ubo->translation = translation;
+    p_ubo->rotation = rotation;
+    p_ubo->scale = scale;
+    p_ubo->first_voxel_id = p_obj->first_voxel_id;
 
     p_obj->descriptor_set = tgvk_descriptor_set_create(&p_raytracer->visibility_pass.pipeline);
-    tgvk_descriptor_set_update_uniform_buffer(p_obj->descriptor_set.set, &p_obj->ubo, 0);
 
-    u32 packed = log2_w;
-    packed = packed | (log2_h << 5);
-    packed = packed | (log2_d << 10);
+    u32 packed = tgm_u32_count_zero_bits_from_right(w);
+    packed = packed | (tgm_u32_count_zero_bits_from_right(h) << 5);
+    packed = packed | (tgm_u32_count_zero_bits_from_right(d) << 10);
     p_obj->packed_log2_whd = (u16)packed;
 
     // TODO: gen on GPU
@@ -552,7 +562,6 @@ void tg_raytracer_create_obj(tg_raytracer* p_raytracer, u32 log2_w, u32 log2_h, 
                 const f32 f1 = 254.0f * f0;
                 const i8 f2 = -(i8)(tgm_f32_round_to_i32(f1) - 127);
                 const b32 solid = f2 <= 0;
-                //const b32 solid = y == 0;
 
                 bits |= solid << bit_idx;
                 bit_idx++;
@@ -580,7 +589,7 @@ void tg_raytracer_create_obj(tg_raytracer* p_raytracer, u32 log2_w, u32 log2_h, 
 
     tgvk_descriptor_set_update_uniform_buffer(p_obj->descriptor_set.set, &p_obj->ubo, 0);
     tgvk_descriptor_set_update_uniform_buffer(p_obj->descriptor_set.set, &p_raytracer->visibility_pass.view_projection_ubo, 1);
-    tgvk_descriptor_set_update_uniform_buffer(p_obj->descriptor_set.set, &p_raytracer->visibility_pass.ray_tracing_ubo, 2);
+    tgvk_descriptor_set_update_uniform_buffer(p_obj->descriptor_set.set, &p_raytracer->visibility_pass.raytracing_ubo, 2);
     tgvk_descriptor_set_update_storage_buffer(p_obj->descriptor_set.set, &p_raytracer->visibility_pass.visibility_buffer, 3);
     tgvk_descriptor_set_update_storage_buffer(p_obj->descriptor_set.set, &p_obj->voxels, 4);
 }
@@ -600,18 +609,19 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
     const m4 vp = tgm_m4_mul(p, v);
     const m4 ivp = tgm_m4_inverse(vp);
 
-    TGVK_CAMERA_VIEW(p_raytracer->visibility_pass.view_projection_ubo) = v;
-    TGVK_CAMERA_PROJ(p_raytracer->visibility_pass.view_projection_ubo) = p;
+    tg_view_projection_ubo* p_view_projection_ubo = p_raytracer->visibility_pass.view_projection_ubo.memory.p_mapped_device_memory;
+    p_view_projection_ubo->view = v;
+    p_view_projection_ubo->projection = p;
 
-    tg_ray_tracing_ubo* p_ray_tracing_ubo = p_raytracer->visibility_pass.ray_tracing_ubo.memory.p_mapped_device_memory;
+    tg_raytracing_ubo* p_raytracing_ubo = p_raytracer->visibility_pass.raytracing_ubo.memory.p_mapped_device_memory;
     const m4 ivp_no_translation = tgm_m4_inverse(tgm_m4_mul(p, r));
-    p_ray_tracing_ubo->camera.xyz = c.position;
-    p_ray_tracing_ubo->ray00.xyz = tgm_v3_normalized(tgm_m4_mulv4(ivp_no_translation, (v4) { -1.0f,  1.0f, 1.0f, 1.0f }).xyz);
-    p_ray_tracing_ubo->ray10.xyz = tgm_v3_normalized(tgm_m4_mulv4(ivp_no_translation, (v4) { -1.0f, -1.0f, 1.0f, 1.0f }).xyz);
-    p_ray_tracing_ubo->ray01.xyz = tgm_v3_normalized(tgm_m4_mulv4(ivp_no_translation, (v4) {  1.0f,  1.0f, 1.0f, 1.0f }).xyz);
-    p_ray_tracing_ubo->ray11.xyz = tgm_v3_normalized(tgm_m4_mulv4(ivp_no_translation, (v4) {  1.0f, -1.0f, 1.0f, 1.0f }).xyz);
+    p_raytracing_ubo->camera.xyz = c.position;
+    p_raytracing_ubo->ray00.xyz = tgm_v3_normalized(tgm_m4_mulv4(ivp_no_translation, (v4) { -1.0f,  1.0f, 1.0f, 1.0f }).xyz);
+    p_raytracing_ubo->ray10.xyz = tgm_v3_normalized(tgm_m4_mulv4(ivp_no_translation, (v4) { -1.0f, -1.0f, 1.0f, 1.0f }).xyz);
+    p_raytracing_ubo->ray01.xyz = tgm_v3_normalized(tgm_m4_mulv4(ivp_no_translation, (v4) {  1.0f,  1.0f, 1.0f, 1.0f }).xyz);
+    p_raytracing_ubo->ray11.xyz = tgm_v3_normalized(tgm_m4_mulv4(ivp_no_translation, (v4) {  1.0f, -1.0f, 1.0f, 1.0f }).xyz);
 
-    tg_shading_ubo* p_shading_ubo = &TGVK_SHADING_UBO;
+    tg_shading_ubo* p_shading_ubo = p_raytracer->shading_pass.ubo.memory.p_mapped_device_memory;
     //p_shading_ubo->camera_position.xyz = c.position;
     p_shading_ubo->ivp = ivp;
 
@@ -720,7 +730,7 @@ void tg_raytracer_clear(tg_raytracer* p_raytracer)
     tgvk_queue_submit(TGVK_QUEUE_TYPE_GRAPHICS, 1, &submit_info, p_raytracer->render_target.fence);
 
     // TODO: forward renderer
-    tg_shading_ubo* p_shading_ubo = &TGVK_SHADING_UBO;
+    tg_shading_ubo* p_shading_ubo = p_raytracer->shading_pass.ubo.memory.p_mapped_device_memory;
 
     // TODO: lighting
     //p_shading_ubo->directional_light_count = 0;
