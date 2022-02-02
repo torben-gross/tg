@@ -36,6 +36,7 @@ typedef struct tg_raytracer_visibility_pass
     tgvk_command_buffer    command_buffer;
     VkRenderPass           render_pass;
     tgvk_pipeline          pipeline;
+    tgvk_buffer            instance_id_buffer;
     tgvk_buffer            view_projection_ubo;
     tgvk_buffer            raytracing_ubo;
     tgvk_buffer            visibility_buffer; // u32 w; u32 h; u64 data[w * h];

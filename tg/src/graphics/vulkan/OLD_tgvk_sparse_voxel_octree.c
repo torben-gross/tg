@@ -43,7 +43,7 @@ void tg_voxelizer_create(tg_voxelizer* p_voxelizer)
         p_voxelizer->p_descriptor_sets[i] = (tgvk_descriptor_set){ 0 };
     }
 
-    p_voxelizer->view_projection_ubo = TGVK_UNIFORM_BUFFER_CREATE(3 * sizeof(m4));
+    p_voxelizer->view_projection_ubo = TGVK_BUFFER_CREATE_UBO(3 * sizeof(m4));
 
     p_voxelizer->p_image_3ds[0] = TGVK_IMAGE_3D_CREATE(TGVK_IMAGE_TYPE_STORAGE, TG_SVO_DIMS, TG_SVO_DIMS, TG_SVO_DIMS, (VkFormat)TG_COLOR_IMAGE_FORMAT_R32_UINT, TG_NULL);
     p_voxelizer->p_image_3ds[1] = TGVK_IMAGE_3D_CREATE(TGVK_IMAGE_TYPE_STORAGE, TG_SVO_DIMS, TG_SVO_DIMS, TG_SVO_DIMS, (VkFormat)TG_COLOR_IMAGE_FORMAT_R32_UINT, TG_NULL);

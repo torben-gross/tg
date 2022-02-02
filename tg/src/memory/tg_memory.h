@@ -6,8 +6,8 @@
 
 #ifdef TG_DEBUGd
 #define TG_MALLOC(size)                              tg_memory_alloc_impl(size, __FILE__, __LINE__)
-#define TG_REALLOC(size, p_memory)                   tg_memory_realloc_impl(size, p_memory, __FILE__, __LINE__)
-#define TG_FREE(p_memory)                            tg_memory_free_impl(p_memory)
+#define TG_REALLOC(size, p_data)                   tg_memory_realloc_impl(size, p_data, __FILE__, __LINE__)
+#define TG_FREE(p_data)                            tg_memory_free_impl(p_data)
 #else
 #define TG_MALLOC(size)                              tgp_malloc(size)
 #define TG_REALLOC(size, p_memory)                   tgp_realloc(size, p_memory)

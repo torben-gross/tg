@@ -457,8 +457,8 @@ static void tg__precompute(tg_atmosphere_model* p_model, VkFormat layered_image_
 
 		// TODO: use
 		VkSemaphore semaphore = tgvk_semaphore_create();
-		tgvk_buffer ubo = TGVK_UNIFORM_BUFFER_CREATE(sizeof(m4) + sizeof(i32));
-		tgvk_buffer geometry_ubo = TGVK_UNIFORM_BUFFER_CREATE(sizeof(i32));
+		tgvk_buffer ubo = TGVK_BUFFER_CREATE_UBO(sizeof(m4) + sizeof(i32));
+		tgvk_buffer geometry_ubo = TGVK_BUFFER_CREATE_UBO(sizeof(i32));
 
 		tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
 
@@ -1026,8 +1026,8 @@ void tgvk_atmosphere_model_create(TG_OUT tg_atmosphere_model* p_model)
 
 
 
-	p_model->rendering.vertex_shader_ubo = TGVK_UNIFORM_BUFFER_CREATE(2 * sizeof(m4));
-	p_model->rendering.ubo = TGVK_UNIFORM_BUFFER_CREATE(6 * sizeof(v4));
+	p_model->rendering.vertex_shader_ubo = TGVK_BUFFER_CREATE_UBO(2 * sizeof(m4));
+	p_model->rendering.ubo = TGVK_BUFFER_CREATE_UBO(6 * sizeof(v4));
 
 	const f32 exposure = p_model->settings.use_luminance != TG_LUMINANCE_NONE ? 1e-5f : 1.0f;
 	const v3 earth_center = { 0.0f, (f32)(-TG_BOTTOM_RADIUS / TG_LENGTH_UNIT_IN_METERS) + 100.0f, 0.0f };

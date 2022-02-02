@@ -5,7 +5,8 @@
 
 
 
-layout(location = 0) in v3 v_position;
+layout(location = 0) flat in uint    v_instance_id;
+layout(location = 1)      in v3      v_position;
 
 
 

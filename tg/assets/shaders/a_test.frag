@@ -8,7 +8,7 @@ layout(location = 1) flat in uvec2    test_v1;
 //layout(location = 6) flat in int      test_v3[2];
 layout(location = 8) flat in ivec2    test_v4;
 
-layout(location = 9) in vec3          test_v5; #instance
+layout(location = 9) in vec3          test_v5;
 
 layout(set = 1, binding = 2) uniform test_uniform_block
 {

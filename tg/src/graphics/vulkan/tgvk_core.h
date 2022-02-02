@@ -10,6 +10,7 @@
 #include "graphics/tg_spirv.h"
 #include "graphics/vulkan/tgvk_memory.h"
 #include "memory/tg_memory.h"
+#include "util/tg_bitmap.h"
 
 
 
@@ -36,9 +37,6 @@
 #define TGVK_LAYERED_IMAGE_CREATE(type, width, height, layers, format, p_sampler_create_info) \
     tgvk_layered_image_create(type, width, height, layers, format, p_sampler_create_info, __LINE__, __FILE__)
 
-#define TGVK_UNIFORM_BUFFER_CREATE(size) \
-    tgvk_uniform_buffer_create(size, __LINE__, __FILE__)
-
 #else
 
 #define TGVK_BUFFER_CREATE(size, buffer_usage_flags, type) \
@@ -62,10 +60,19 @@
 #define TGVK_LAYERED_IMAGE_CREATE(type, width, height, layers, format, p_sampler_create_info) \
     tgvk_layered_image_create(type, width, height, layers, format, p_sampler_create_info)
 
-#define TGVK_UNIFORM_BUFFER_CREATE(size) \
-    tgvk_uniform_buffer_create(size)
-
 #endif
+
+#define TGVK_BUFFER_CREATE_IBO(size) \
+    TGVK_BUFFER_CREATE(size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, TGVK_MEMORY_DEVICE)
+
+#define TGVK_BUFFER_CREATE_STORAGE(size, visible) \
+    TGVK_BUFFER_CREATE(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, (visible) ? TGVK_MEMORY_HOST : TGVK_MEMORY_DEVICE)
+
+#define TGVK_BUFFER_CREATE_UBO(size) \
+    TGVK_BUFFER_CREATE(size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, TGVK_MEMORY_HOST)
+
+#define TGVK_BUFFER_CREATE_VBO(size) \
+    TGVK_BUFFER_CREATE(size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, TGVK_MEMORY_DEVICE)
 
 
 
@@ -177,6 +184,7 @@ typedef struct tgvk_framebuffer
 typedef struct tgvk_shader
 {
     tg_spirv_layout    spirv_layout;
+    TG_BITMAP32        instanced_input_location_bitmap;
     VkShaderModule     shader_module;
 } tgvk_shader;
 
@@ -408,10 +416,6 @@ tgvk_shader             tgvk_shader_create(const char* p_filename);
 tgvk_shader             tgvk_shader_create_from_glsl(tg_shader_type type, const char* p_source);
 tgvk_shader             tgvk_shader_create_from_spirv(u32 size, const char* p_source);
 void                    tgvk_shader_destroy(tgvk_shader* p_shader);
-
-tgvk_buffer             tgvk_storage_buffer_create(VkDeviceSize size, b32 visible TG_DEBUG_PARAM(u32 line) TG_DEBUG_PARAM(const char* p_filename));
-
-tgvk_buffer             tgvk_uniform_buffer_create(VkDeviceSize size TG_DEBUG_PARAM(u32 line) TG_DEBUG_PARAM(const char* p_filename));
 
 #endif
 

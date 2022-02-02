@@ -3,6 +3,7 @@
 #include "shaders/common.inc"
 
 layout(location = 0) in vec3    test_input0;
+layout(location = 1) in uint    test_input1; #instance
 //layout(location = 1) in mat4    test_input1;
 //layout(location = 5) in mat3    test_input2[9];
 

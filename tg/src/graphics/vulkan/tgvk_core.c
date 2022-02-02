@@ -39,7 +39,7 @@
 
 
 
-typedef struct tgvk_simage
+typedef struct tgvk_serialized_image
 {
     tgvk_image_type         type;
     u32                     width;
@@ -50,8 +50,18 @@ typedef struct tgvk_simage
     VkSamplerAddressMode    sampler_address_mode_u;
     VkSamplerAddressMode    sampler_address_mode_v;
     VkSamplerAddressMode    sampler_address_mode_w;
-    u8                      p_memory[0];
-} tgvk_simage;
+    u8                      p_data[0];
+} tgvk_serialized_image;
+
+typedef struct tgvk_serialized_spirv_shader
+{
+    tg_spirv_layout    layout;
+    TG_BITMAP32        instanced_input_location_bitmap;
+    tg_size            size_in_bytes;
+    u8                 p_data[0];
+} tgvk_serialized_spirv_shader;
+
+TG_STATIC_ASSERT(TG_BITMAP32_CAPACITY >= TG_MAX_SHADER_INPUTS);
 
 
 
@@ -2017,8 +2027,8 @@ void tgvk_image_destroy(tgvk_image* p_image)
 b32 tgvk_image_serialize(tgvk_image* p_image, const char* p_filename)
 {
     const tg_size staging_buffer_size = (tg_size)p_image->width * (tg_size)p_image->height * tg_color_image_format_size((tg_color_image_format)p_image->format);
-    const tg_size size = sizeof(tgvk_simage) + staging_buffer_size;
-    tgvk_simage* p_simage = (tgvk_simage*)TG_MALLOC_STACK(size);
+    const tg_size size = sizeof(tgvk_serialized_image) + staging_buffer_size;
+    tgvk_serialized_image* p_simage = (tgvk_serialized_image*)TG_MALLOC_STACK(size);
 
     p_simage->type = p_image->type;
     p_simage->width = p_image->width;
@@ -2034,7 +2044,7 @@ b32 tgvk_image_serialize(tgvk_image* p_image, const char* p_filename)
     tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_and_begin_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
     tgvk_cmd_copy_color_image_to_buffer(p_command_buffer, p_image, p_staging_buffer);
     tgvk_command_buffer_end_and_submit(p_command_buffer);
-    tg_memcpy(staging_buffer_size, p_staging_buffer->memory.p_mapped_device_memory, p_simage->p_memory);
+    tg_memcpy(staging_buffer_size, p_staging_buffer->memory.p_mapped_device_memory, p_simage->p_data);
     tg__staging_buffer_release();
 
     const b32 result = tgp_file_create(p_filename, size, p_simage, TG_TRUE);
@@ -2057,7 +2067,7 @@ b32 tgvk_image_deserialize(const char* p_filename, TG_OUT tgvk_image* p_image TG
         {
             result = TG_TRUE;
 
-            const tgvk_simage* p_simage = (tgvk_simage*)p_buffer;
+            const tgvk_serialized_image* p_simage = (tgvk_serialized_image*)p_buffer;
 
             tgvk_sampler_create_info sampler_create_info = { 0 };
             sampler_create_info.mag_filter = p_simage->sampler_mag_filter;
@@ -2072,9 +2082,9 @@ b32 tgvk_image_deserialize(const char* p_filename, TG_OUT tgvk_image* p_image TG
 #endif
             );
 
-            const VkDeviceSize staging_buffer_size = file_properties.size - sizeof(tgvk_simage);
+            const VkDeviceSize staging_buffer_size = file_properties.size - sizeof(tgvk_serialized_image);
             tgvk_buffer* p_staging_buffer = tg__staging_buffer_take(staging_buffer_size);
-            tg_memcpy(staging_buffer_size, p_simage->p_memory, p_staging_buffer->memory.p_mapped_device_memory);
+            tg_memcpy(staging_buffer_size, p_simage->p_data, p_staging_buffer->memory.p_mapped_device_memory);
             tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_and_begin_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
             tgvk_cmd_transition_image_layout(p_command_buffer, p_image, TGVK_LAYOUT_UNDEFINED, TGVK_LAYOUT_TRANSFER_WRITE);
             tgvk_cmd_copy_buffer_to_image(p_command_buffer, p_staging_buffer, p_image);
@@ -2611,12 +2621,18 @@ tgvk_pipeline tgvk_pipeline_create_graphics(const tgvk_graphics_pipeline_create_
     VkVertexInputAttributeDescription p_vertex_input_attribute_descriptions[TG_MAX_SHADER_INPUTS] = { 0 };
     for (u8 i = 0; i < p_create_info->p_vertex_shader->spirv_layout.vertex_shader_input.count; i++)
     {
+        const tgvk_shader* p_shader = p_create_info->p_vertex_shader;
+        const tg_spirv_layout* p_layout = &p_shader->spirv_layout;
+        const tg_vertex_input_attribute_format format = p_layout->vertex_shader_input.p_resources[i].format;
+        const u32 location = p_layout->vertex_shader_input.p_resources[i].location;
+        const b32 instanced = TG_BITMAP32_IS_SET(p_shader->instanced_input_location_bitmap, location);
+
         p_vertex_input_binding_descriptions[i].binding = i;
-        p_vertex_input_binding_descriptions[i].stride = tg_vertex_input_attribute_format_get_size(p_create_info->p_vertex_shader->spirv_layout.vertex_shader_input.p_resources[i].format);
-        p_vertex_input_binding_descriptions[i].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+        p_vertex_input_binding_descriptions[i].stride = tg_vertex_input_attribute_format_get_size(format);
+        p_vertex_input_binding_descriptions[i].inputRate = instanced ? VK_VERTEX_INPUT_RATE_INSTANCE : VK_VERTEX_INPUT_RATE_VERTEX;
         p_vertex_input_attribute_descriptions[i].binding = i;
-        p_vertex_input_attribute_descriptions[i].location = p_create_info->p_vertex_shader->spirv_layout.vertex_shader_input.p_resources[i].location;
-        p_vertex_input_attribute_descriptions[i].format = p_create_info->p_vertex_shader->spirv_layout.vertex_shader_input.p_resources[i].format;
+        p_vertex_input_attribute_descriptions[i].location = location;
+        p_vertex_input_attribute_descriptions[i].format = format;
         p_vertex_input_attribute_descriptions[i].offset = 0;
     }
 
@@ -2802,18 +2818,18 @@ void tgvk_semaphore_destroy(VkSemaphore semaphore)
 
 
 #ifndef TG_DISTRIBUTE
-void tg__shader_requires_recompilation(const char* p_glsl_filename, const char* p_spirv_filename, const char* p_glsl_source, TG_OUT b32* p_regenerate_and_recompile_glsl, TG_OUT tg_size* p_max_generated_glsl_size)
+void tg__shader_requires_recompilation(const char* p_glsl_filename, const char* p_serialized_spirv_filename, const char* p_glsl_source, TG_OUT b32* p_regenerate_and_recompile_glsl, TG_OUT tg_size* p_max_generated_glsl_size)
 {
     *p_regenerate_and_recompile_glsl = TG_FALSE;
     *p_max_generated_glsl_size = 0;
 
     tg_file_properties glsl_properties = { 0 };
     const b32 get_glsl_properties_result = tgp_file_get_properties(p_glsl_filename, &glsl_properties);
-    TG_ASSERT2(get_glsl_properties_result, "The shader with given filename does not exist");
+    TG_ASSERT(get_glsl_properties_result);
 
-    tg_file_properties properties_spirv = { 0 };
-    const b32 get_spirv_properties_result = tgp_file_get_properties(p_spirv_filename, &properties_spirv);
-    if (!get_spirv_properties_result || tgp_system_time_compare(&properties_spirv.last_write_time, &glsl_properties.last_write_time) == -1)
+    tg_file_properties properties_serialized_spirv = { 0 };
+    const b32 get_serialized_spirv_properties_result = tgp_file_get_properties(p_serialized_spirv_filename, &properties_serialized_spirv);
+    if (!get_serialized_spirv_properties_result || tgp_system_time_compare(&properties_serialized_spirv.last_write_time, &glsl_properties.last_write_time) == -1)
     {
         *p_regenerate_and_recompile_glsl = TG_TRUE;
     }
@@ -2828,7 +2844,7 @@ void tg__shader_requires_recompilation(const char* p_glsl_filename, const char* 
             char p_inc_filename[TG_MAX_PATH] = { 0 };
             p_it += sizeof("#include") - 1;
             p_it = tg_string_skip_whitespace(p_it);
-            TG_ASSERT2(*p_it == '\"', "The included filename must be surrounded by quotation marks");
+            TG_ASSERT(*p_it == '\"'); // The included filename must be surrounded by quotation marks
             p_it++;
 
             u32 inc_filename_char_idx = 0;
@@ -2839,9 +2855,9 @@ void tg__shader_requires_recompilation(const char* p_glsl_filename, const char* 
 
             tg_file_properties inc_properties = { 0 };
             const b32 get_inc_properties_result = tgp_file_get_properties(p_inc_filename, &inc_properties);
-            TG_ASSERT2(get_inc_properties_result, "The included file does not exist");
+            TG_ASSERT(get_inc_properties_result);
 
-            if (tgp_system_time_compare(&properties_spirv.last_write_time, &inc_properties.last_write_time) == -1)
+            if (tgp_system_time_compare(&properties_serialized_spirv.last_write_time, &inc_properties.last_write_time) == -1)
             {
                 *p_regenerate_and_recompile_glsl = TG_TRUE;
             }
@@ -2852,9 +2868,9 @@ void tg__shader_requires_recompilation(const char* p_glsl_filename, const char* 
     }
 }
 
-tg_size tg__shader_generate_glsl(const char* p_glsl_source, tg_size generated_glsl_buffer_size, TG_OUT char* p_glsl_generated_buffer, TG_OUT u32* p_instanced_location_count, TG_OUT b32* p_instanced_locations)
+tg_size tg__shader_generate_glsl(const char* p_glsl_source, tg_size generated_glsl_buffer_size, TG_OUT char* p_glsl_generated_buffer, TG_OUT TG_BITMAP32* p_instanced_location_bitmap)
 {
-    TG_ASSERT(*p_instanced_locations == 0);
+    TG_ASSERT(*p_instanced_location_bitmap == 0);
 
     char p_inc_filename_buffer[TG_MAX_PATH] = { 0 };
 
@@ -2866,7 +2882,7 @@ tg_size tg__shader_generate_glsl(const char* p_glsl_source, tg_size generated_gl
         if (tg_string_starts_with(p_it, "#include"))
         {
             p_it = tg_string_skip_whitespace(&p_it[sizeof("#include") - 1]);
-            TG_ASSERT2(*p_it == '\"', "The included filename must be surrounded by quotation marks");
+            TG_ASSERT(*p_it == '\"'); // The included filename must be surrounded by quotation marks
             p_it++;
 
             u32 idx = 0;
@@ -2878,10 +2894,10 @@ tg_size tg__shader_generate_glsl(const char* p_glsl_source, tg_size generated_gl
 
             tg_file_properties inc_properties = { 0 };
             const b32 get_inc_properties_result = tgp_file_get_properties(p_inc_filename_buffer, &inc_properties);
-            TG_ASSERT2(get_inc_properties_result, "The included file doest not exist");
+            TG_ASSERT(get_inc_properties_result);
 
             const b32 load_file_result = tgp_file_load(p_inc_filename_buffer, inc_properties.size, p_generated_it);
-            TG_ASSERT2(load_file_result, "The included file could not be loaded");
+            TG_ASSERT(load_file_result);
 
             p_generated_it += inc_properties.size;
             p_it = tg_string_next_line(p_it);
@@ -2910,9 +2926,7 @@ tg_size tg__shader_generate_glsl(const char* p_glsl_source, tg_size generated_gl
                 else if (tg_string_starts_with(p_it, "#instance"))
                 {
                     TG_ASSERT(location != TG_U32_MAX);
-                    TG_ASSERT(location < TG_MAX_SHADER_INPUTS);
-                    (*p_instanced_location_count)++;
-                    p_instanced_locations[location] = TG_TRUE;
+                    TG_BITMAP32_SET(*p_instanced_location_bitmap, location);
                     // Remove whitespace, simply for visual perfection!
                     while (*(p_generated_it - 1) == ' ')
                     {
@@ -2935,14 +2949,14 @@ tg_size tg__shader_generate_glsl(const char* p_glsl_source, tg_size generated_gl
 
 tgvk_shader tgvk_shader_create(const char* p_filename)
 {
-    char p_spirv_filename_buffer[TG_MAX_PATH] = { 0 };
-    tg_stringf(sizeof(p_spirv_filename_buffer), p_spirv_filename_buffer, "%s.spv", p_filename);
+    char p_serialized_spirv_shader_filename[TG_MAX_PATH] = { 0 };
+    tg_stringf(sizeof(p_serialized_spirv_shader_filename), p_serialized_spirv_shader_filename, "%s.tgs", p_filename);
 
 #ifndef TG_DISTRIBUTE
 
     tg_file_properties properties = { 0 };
     const b32 get_uncompiled_properties_result = tgp_file_get_properties(p_filename, &properties);
-    TG_ASSERT2(get_uncompiled_properties_result, "The shader with given filename does not exist");
+    TG_ASSERT(get_uncompiled_properties_result);
 
     char* p_glsl_source = TG_MALLOC_STACK(properties.size + 1);
     tgp_file_load(p_filename, properties.size + 1, p_glsl_source);
@@ -2950,14 +2964,13 @@ tgvk_shader tgvk_shader_create(const char* p_filename)
 
     b32 regenerate_and_recompile_glsl;
     tg_size generated_glsl_buffer_size;
-    tg__shader_requires_recompilation(p_filename, p_spirv_filename_buffer, p_glsl_source, &regenerate_and_recompile_glsl, &generated_glsl_buffer_size);
+    tg__shader_requires_recompilation(p_filename, p_serialized_spirv_shader_filename, p_glsl_source, &regenerate_and_recompile_glsl, &generated_glsl_buffer_size);
 
     if (regenerate_and_recompile_glsl)
     {
         char* p_glsl_generated_buffer = TG_MALLOC_STACK(generated_glsl_buffer_size);
-        u32 instanced_location_count = 0;
-        b32 p_instanced_locations[TG_MAX_SHADER_INPUTS] = { 0 };
-        const tg_size generated_glsl_size = tg__shader_generate_glsl(p_glsl_source, generated_glsl_buffer_size, p_glsl_generated_buffer, &instanced_location_count, p_instanced_locations);
+        TG_BITMAP32 instanced_input_location_bitmap = 0;
+        const tg_size generated_glsl_size = tg__shader_generate_glsl(p_glsl_source, generated_glsl_buffer_size, p_glsl_generated_buffer, &instanced_input_location_bitmap);
 
         TG_ASSERT(shaderc_compiler);
 
@@ -3005,31 +3018,48 @@ tgvk_shader tgvk_shader_create(const char* p_filename)
             TG_INVALID_CODEPATH();
         }
 #endif
+        TG_FREE_STACK(generated_glsl_buffer_size);
 
         const tg_size spirv_size = (tg_size)shaderc_result_get_length(result);
         const char* p_spirv_data = shaderc_result_get_bytes(result);
 
-        // TODO: Insert OpString and read that in tg_spirv.c
-        //const tg_size spirv_buffer_size = spirv_size + instanced_location_count * (3 + );
-        //char* p_spirv_buffer
+        const tg_size serialized_shader_size = sizeof(tgvk_serialized_spirv_shader) + spirv_size;
+        tgvk_serialized_spirv_shader* p_serialized_spirv_shader = TG_MALLOC_STACK(serialized_shader_size);
 
-        tgp_file_create(p_spirv_filename_buffer, spirv_size, p_spirv_data, TG_TRUE);
+        p_serialized_spirv_shader->layout = (tg_spirv_layout){ 0 };
+        tg_spirv_fill_layout((u32)(spirv_size / sizeof(u32)), (u32*)p_spirv_data, &p_serialized_spirv_shader->layout);
+        p_serialized_spirv_shader->size_in_bytes = spirv_size;
+        tg_memcpy(spirv_size, p_spirv_data, p_serialized_spirv_shader->p_data);
+        p_serialized_spirv_shader->instanced_input_location_bitmap = instanced_input_location_bitmap;
+        tgp_file_create(p_serialized_spirv_shader_filename, serialized_shader_size, p_serialized_spirv_shader, TG_TRUE);
+        
+        TG_FREE_STACK(serialized_shader_size);
 
         shaderc_result_release(result);
-        TG_FREE_STACK(generated_glsl_buffer_size);
     }
 
     TG_FREE_STACK(properties.size + 1);
 #endif
 
     tg_file_properties file_properties = { 0 };
-    const b32 get_properties_result = tgp_file_get_properties(p_spirv_filename_buffer, &file_properties);
+    const b32 get_properties_result = tgp_file_get_properties(p_serialized_spirv_shader_filename, &file_properties);
     TG_ASSERT(get_properties_result);
 
-    char* p_content = TG_MALLOC_STACK(file_properties.size);
-    tgp_file_load(p_spirv_filename_buffer, file_properties.size, p_content);
+    tgvk_serialized_spirv_shader* p_serialized_spirv_shader = TG_MALLOC_STACK(file_properties.size);
+    tgp_file_load(p_serialized_spirv_shader_filename, file_properties.size, (void*)p_serialized_spirv_shader);
 
-    const tgvk_shader shader = tgvk_shader_create_from_spirv((u32)file_properties.size, p_content);
+    tgvk_shader shader = { 0 };
+    shader.spirv_layout = p_serialized_spirv_shader->layout;
+    shader.instanced_input_location_bitmap = p_serialized_spirv_shader->instanced_input_location_bitmap;
+
+    VkShaderModuleCreateInfo shader_module_create_info = { 0 };
+    shader_module_create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    shader_module_create_info.pNext = TG_NULL;
+    shader_module_create_info.flags = 0;
+    shader_module_create_info.codeSize = (size_t)p_serialized_spirv_shader->size_in_bytes;
+    shader_module_create_info.pCode = (const uint32_t*)p_serialized_spirv_shader->p_data;
+
+    TGVK_CALL(vkCreateShaderModule(device, &shader_module_create_info, TG_NULL, &shader.shader_module));
 
     TG_FREE_STACK(file_properties.size);
 
@@ -3054,7 +3084,7 @@ tgvk_shader tgvk_shader_create_from_glsl(tg_shader_type type, const char* p_sour
             char p_inc_filename[TG_MAX_PATH] = { 0 };
             p_it += sizeof("#include") - 1;
             p_it = tg_string_skip_whitespace(p_it);
-            TG_ASSERT2(*p_it == '\"', "The included filename must be surrounded by quotation marks");
+            TG_ASSERT(*p_it == '\"'); // The included filename must be surrounded by quotation marks
             p_it++;
 
             u32 idx = 0;
@@ -3065,7 +3095,7 @@ tgvk_shader tgvk_shader_create_from_glsl(tg_shader_type type, const char* p_sour
 
             tg_file_properties inc_properties = { 0 };
             const b32 get_inc_properties_result = tgp_file_get_properties(p_inc_filename, &inc_properties);
-            TG_ASSERT2(get_inc_properties_result, "The included file does not exist");
+            TG_ASSERT(get_inc_properties_result);
 
             generated_size_upper_bound += inc_properties.size;
             p_it = tg_string_next_line(p_it);
@@ -3098,7 +3128,7 @@ tgvk_shader tgvk_shader_create_from_glsl(tg_shader_type type, const char* p_sour
                 char p_inc_filename[TG_MAX_PATH] = { 0 };
                 p_it += sizeof("#include") - 1;
                 p_it = tg_string_skip_whitespace(p_it);
-                TG_ASSERT2(*p_it == '\"', "The included filename must be surrounded by quotation marks");
+                TG_ASSERT(*p_it == '\"'); // The included filename must be surrounded by quotation marks
                 p_it++;
 
                 u32 idx = 0;
@@ -3109,10 +3139,10 @@ tgvk_shader tgvk_shader_create_from_glsl(tg_shader_type type, const char* p_sour
 
                 tg_file_properties inc_properties = { 0 };
                 const b32 get_inc_properties_result = tgp_file_get_properties(p_inc_filename, &inc_properties);
-                TG_ASSERT2(get_inc_properties_result, "The included file doest not exist");
+                TG_ASSERT(get_inc_properties_result);
 
                 const b32 load_file_result = tgp_file_load(p_inc_filename, inc_properties.size, p_generated_it);
-                TG_ASSERT2(load_file_result, "The included file could not be loaded");
+                TG_ASSERT(load_file_result);
                 p_generated_it += inc_properties.size;
 
                 p_it = tg_string_next_line(p_it);
@@ -3184,22 +3214,6 @@ tgvk_shader tgvk_shader_create_from_spirv(u32 size, const char* p_source)
 void tgvk_shader_destroy(tgvk_shader* p_shader)
 {
     vkDestroyShaderModule(device, p_shader->shader_module, TG_NULL);
-}
-
-
-
-tgvk_buffer tgvk_storage_buffer_create(VkDeviceSize size, b32 visible TG_DEBUG_PARAM(u32 line) TG_DEBUG_PARAM(const char* p_filename))
-{
-    tgvk_buffer buffer = tgvk_buffer_create(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, visible ? TGVK_MEMORY_HOST : TGVK_MEMORY_DEVICE TG_DEBUG_PARAM(line) TG_DEBUG_PARAM(p_filename));
-    return buffer;
-}
-
-
-
-tgvk_buffer tgvk_uniform_buffer_create(VkDeviceSize size TG_DEBUG_PARAM(u32 line) TG_DEBUG_PARAM(const char* p_filename))
-{
-    tgvk_buffer buffer = tgvk_buffer_create(size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, TGVK_MEMORY_HOST TG_DEBUG_PARAM(line) TG_DEBUG_PARAM(p_filename));
-    return buffer;
 }
 
 
@@ -3985,9 +3999,9 @@ static void tg__screen_quad_create(void)
     p_uvs[2] = (v2){ 1.0f,  0.0f };
     p_uvs[3] = (v2){ 0.0f,  0.0f };
 
-    screen_quad_ibo = TGVK_BUFFER_CREATE(sizeof(p_indices), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, TGVK_MEMORY_DEVICE);
-    screen_quad_positions_vbo = TGVK_BUFFER_CREATE(sizeof(p_positions), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, TGVK_MEMORY_DEVICE);
-    screen_quad_uvs_vbo = TGVK_BUFFER_CREATE(sizeof(p_uvs), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, TGVK_MEMORY_DEVICE);
+    screen_quad_ibo = TGVK_BUFFER_CREATE_IBO(sizeof(p_indices));
+    screen_quad_positions_vbo = TGVK_BUFFER_CREATE_VBO(sizeof(p_positions));
+    screen_quad_uvs_vbo = TGVK_BUFFER_CREATE_VBO(sizeof(p_uvs));
 
     const tg_size staging_buffer_size = TG_MAX3(sizeof(p_indices), sizeof(p_positions), sizeof(p_uvs));
     tgvk_buffer* p_staging_buffer = tg__staging_buffer_take(staging_buffer_size);

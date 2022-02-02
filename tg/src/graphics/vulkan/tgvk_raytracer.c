@@ -74,14 +74,26 @@ static void tg__init_visibility_pass(tg_raytracer* p_raytracer)
     graphics_pipeline_create_info.polygon_mode = VK_POLYGON_MODE_FILL;
 
     p_raytracer->visibility_pass.pipeline = tgvk_pipeline_create_graphics(&graphics_pipeline_create_info);
-    p_raytracer->visibility_pass.view_projection_ubo = TGVK_UNIFORM_BUFFER_CREATE(2ui64 * sizeof(m4));
-    p_raytracer->visibility_pass.raytracing_ubo = TGVK_UNIFORM_BUFFER_CREATE(sizeof(tg_raytracing_ubo));
+
+    const tg_size instance_id_buffer_size = p_raytracer->objs.capacity * sizeof(u32);
+    p_raytracer->visibility_pass.instance_id_buffer = TGVK_BUFFER_CREATE_VBO(instance_id_buffer_size);
+    tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take(instance_id_buffer_size);
+    u32* p_it = (u32*)p_staging_buffer->memory.p_mapped_device_memory;
+    for (u32 i = 0; i < p_raytracer->objs.capacity; i++)
+    {
+        *p_it++ = i;
+    }
+    tgvk_buffer_copy(instance_id_buffer_size, p_staging_buffer, &p_raytracer->visibility_pass.instance_id_buffer);
+    tgvk_global_staging_buffer_release();
+
+    p_raytracer->visibility_pass.view_projection_ubo = TGVK_BUFFER_CREATE_UBO(2ui64 * sizeof(m4));
+    p_raytracer->visibility_pass.raytracing_ubo = TGVK_BUFFER_CREATE_UBO(sizeof(tg_raytracing_ubo));
 
     const VkDeviceSize staging_buffer_size = 2ui64 * sizeof(u32);
     const VkDeviceSize visibility_buffer_size = staging_buffer_size + ((VkDeviceSize)w * (VkDeviceSize)h * sizeof(u64));
     p_raytracer->visibility_pass.visibility_buffer = TGVK_BUFFER_CREATE(visibility_buffer_size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, TGVK_MEMORY_DEVICE);
 
-    tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take(staging_buffer_size);
+    p_staging_buffer = tgvk_global_staging_buffer_take(staging_buffer_size);
     ((u32*)p_staging_buffer->memory.p_mapped_device_memory)[0] = w;
     ((u32*)p_staging_buffer->memory.p_mapped_device_memory)[1] = h;
     tgvk_command_buffer_begin(&p_raytracer->visibility_pass.command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
@@ -141,7 +153,7 @@ static void tg__init_shading_pass(tg_raytracer* p_raytracer)
     graphics_pipeline_create_info.polygon_mode = VK_POLYGON_MODE_FILL;
 
     p_raytracer->shading_pass.graphics_pipeline = tgvk_pipeline_create_graphics(&graphics_pipeline_create_info);
-    p_raytracer->shading_pass.ubo = TGVK_UNIFORM_BUFFER_CREATE(sizeof(tg_shading_ubo));
+    p_raytracer->shading_pass.ubo = TGVK_BUFFER_CREATE_UBO(sizeof(tg_shading_ubo));
 
     p_raytracer->shading_pass.descriptor_set = tgvk_descriptor_set_create(&p_raytracer->shading_pass.graphics_pipeline);
     //tgvk_atmosphere_model_update_descriptor_set(&p_raytracer->model, &p_raytracer->shading_pass.descriptor_set);
@@ -439,15 +451,15 @@ void tg_raytracer_create(const tg_camera* p_camera, u32 max_object_count, TG_OUT
     tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take(cube_staging_buffer_size);
 
     tg_memcpy(sizeof(p_cube_indices), p_cube_indices, p_staging_buffer->memory.p_mapped_device_memory);
-    p_raytracer->visibility_pass.cube_ibo = TGVK_BUFFER_CREATE(sizeof(p_cube_indices), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, TGVK_MEMORY_DEVICE);
+    p_raytracer->visibility_pass.cube_ibo = TGVK_BUFFER_CREATE_IBO(sizeof(p_cube_indices));
     tgvk_buffer_copy(sizeof(p_cube_indices), p_staging_buffer, &p_raytracer->visibility_pass.cube_ibo);
 
     tg_memcpy(sizeof(p_cube_positions), p_cube_positions, p_staging_buffer->memory.p_mapped_device_memory);
-    p_raytracer->visibility_pass.cube_vbo_p = TGVK_BUFFER_CREATE(sizeof(p_cube_positions), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, TGVK_MEMORY_DEVICE);
+    p_raytracer->visibility_pass.cube_vbo_p = TGVK_BUFFER_CREATE_VBO(sizeof(p_cube_positions));
     tgvk_buffer_copy(sizeof(p_cube_positions), p_staging_buffer, &p_raytracer->visibility_pass.cube_vbo_p);
 
     tg_memcpy(sizeof(p_cube_normals), p_cube_normals, p_staging_buffer->memory.p_mapped_device_memory);
-    p_raytracer->visibility_pass.cube_vbo_n = TGVK_BUFFER_CREATE(sizeof(p_cube_normals), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, TGVK_MEMORY_DEVICE);
+    p_raytracer->visibility_pass.cube_vbo_n = TGVK_BUFFER_CREATE_VBO(sizeof(p_cube_normals));
     tgvk_buffer_copy(sizeof(p_cube_normals), p_staging_buffer, &p_raytracer->visibility_pass.cube_vbo_n);
 
     tgvk_global_staging_buffer_release();
@@ -504,7 +516,7 @@ void tg_raytracer_create_obj(tg_raytracer* p_raytracer, u32 w, u32 h, u32 d)
         p_obj->first_voxel_id += prev_num_voxels;
     }
 
-    p_obj->ubo = TGVK_UNIFORM_BUFFER_CREATE(sizeof(tg_obj_ubo));
+    p_obj->ubo = TGVK_BUFFER_CREATE_UBO(sizeof(tg_obj_ubo));
     tg_obj_ubo* p_ubo = p_obj->ubo.memory.p_mapped_device_memory;
     const m4 translation = tgm_m4_translate((v3) { 0.0f, 0.0f, 0.0f });
     const m4 rotation = tgm_m4_rotate_y(TG_TO_RADIANS(15.0f));
@@ -633,8 +645,9 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
     vkCmdBindPipeline(p_raytracer->visibility_pass.command_buffer.buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_raytracer->visibility_pass.pipeline.pipeline);
     vkCmdBindIndexBuffer(p_raytracer->visibility_pass.command_buffer.buffer, p_raytracer->visibility_pass.cube_ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
     const VkDeviceSize vertex_buffer_offset = 0;
-    vkCmdBindVertexBuffers(p_raytracer->visibility_pass.command_buffer.buffer, 0, 1, &p_raytracer->visibility_pass.cube_vbo_p.buffer, &vertex_buffer_offset);
-    vkCmdBindVertexBuffers(p_raytracer->visibility_pass.command_buffer.buffer, 1, 1, &p_raytracer->visibility_pass.cube_vbo_n.buffer, &vertex_buffer_offset);
+    vkCmdBindVertexBuffers(p_raytracer->visibility_pass.command_buffer.buffer, 0, 1, &p_raytracer->visibility_pass.instance_id_buffer.buffer, &vertex_buffer_offset);
+    vkCmdBindVertexBuffers(p_raytracer->visibility_pass.command_buffer.buffer, 1, 1, &p_raytracer->visibility_pass.cube_vbo_p.buffer, &vertex_buffer_offset);
+    vkCmdBindVertexBuffers(p_raytracer->visibility_pass.command_buffer.buffer, 2, 1, &p_raytracer->visibility_pass.cube_vbo_n.buffer, &vertex_buffer_offset);
     for (u32 i = 0; i < p_raytracer->objs.count; i++)
     {
         vkCmdBindDescriptorSets(p_raytracer->visibility_pass.command_buffer.buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_raytracer->visibility_pass.pipeline.layout.pipeline_layout, 0, 1, &p_raytracer->objs.p_objs[i].descriptor_set.set, 0, TG_NULL);

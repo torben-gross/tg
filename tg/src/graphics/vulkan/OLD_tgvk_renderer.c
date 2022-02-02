@@ -66,7 +66,7 @@ static void tg__init_geometry_pass(tg_renderer_h h_renderer)
 static void tg__init_shading_pass(tg_renderer_h h_renderer)
 {
     h_renderer->shading_pass.command_buffer = tgvk_command_buffer_create(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
-    h_renderer->shading_pass.ubo = TGVK_UNIFORM_BUFFER_CREATE(sizeof(tg_shading_ubo));
+    h_renderer->shading_pass.ubo = TGVK_BUFFER_CREATE_UBO(sizeof(tg_shading_ubo));
     h_renderer->shading_pass.framebuffer = tgvk_framebuffer_create(shared_render_resources.shading_render_pass, 1, &h_renderer->hdr_color_attachment.image_view, swapchain_extent.width, swapchain_extent.height);
 
     tgvk_graphics_pipeline_create_info graphics_pipeline_create_info = { 0 };
@@ -153,7 +153,7 @@ static void tg__init_ray_tracing_pass(tg_renderer_h h_renderer)
     h_renderer->raytrace_pass.shader = tg_compute_shader_create("shaders/renderer/terrain_raytracer.comp")->shader;
     h_renderer->raytrace_pass.pipeline = tgvk_pipeline_create_compute(&h_renderer->raytrace_pass.shader);
     h_renderer->raytrace_pass.descriptor_set = tgvk_descriptor_set_create(&h_renderer->raytrace_pass.pipeline);
-    h_renderer->raytrace_pass.ubo = TGVK_UNIFORM_BUFFER_CREATE(sizeof(tg_raytracer_ubo));
+    h_renderer->raytrace_pass.ubo = TGVK_BUFFER_CREATE_UBO(sizeof(tg_raytracer_ubo));
 }
 
 static void tg__init_tone_mapping_pass(tg_renderer_h h_renderer)
@@ -172,7 +172,7 @@ static void tg__init_tone_mapping_pass(tg_renderer_h h_renderer)
     h_renderer->tone_mapping_pass.finalize_exposure_compute_pipeline = tgvk_pipeline_create_compute(&h_renderer->tone_mapping_pass.finalize_exposure_compute_shader);
     h_renderer->tone_mapping_pass.finalize_exposure_descriptor_set = tgvk_descriptor_set_create(&h_renderer->tone_mapping_pass.finalize_exposure_compute_pipeline);
     h_renderer->tone_mapping_pass.finalize_exposure_storage_buffer = TGVK_BUFFER_CREATE(sizeof(f32), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, TGVK_MEMORY_DEVICE);
-    h_renderer->tone_mapping_pass.finalize_exposure_dt_ubo = TGVK_UNIFORM_BUFFER_CREATE(sizeof(f32));
+    h_renderer->tone_mapping_pass.finalize_exposure_dt_ubo = TGVK_BUFFER_CREATE_UBO(sizeof(f32));
 
     h_renderer->tone_mapping_pass.adapt_exposure_framebuffer = tgvk_framebuffer_create(shared_render_resources.tone_mapping_render_pass, 1, &h_renderer->render_target.color_attachment.image_view, swapchain_extent.width, swapchain_extent.height);
 
@@ -455,7 +455,7 @@ tg_renderer_h tg_renderer_create(tg_camera* p_camera)
 
     tg_renderer_h h_renderer = tgvk_handle_take(TG_STRUCTURE_TYPE_RENDERER);
     h_renderer->p_camera = p_camera;
-    h_renderer->view_projection_ubo = TGVK_UNIFORM_BUFFER_CREATE(2 * sizeof(m4));
+    h_renderer->view_projection_ubo = TGVK_BUFFER_CREATE_UBO(2 * sizeof(m4));
 
     h_renderer->hdr_color_attachment = TGVK_IMAGE_CREATE(TGVK_IMAGE_TYPE_COLOR | TGVK_IMAGE_TYPE_STORAGE, swapchain_extent.width, swapchain_extent.height, TGVK_HDR_FORMAT, TG_NULL);
 
@@ -1215,7 +1215,7 @@ void tg_renderer_draw_cube_DEBUG(tg_renderer_h h_renderer, v3 position, v3 scale
 
     if (h_renderer->DEBUG.p_cubes[h_renderer->DEBUG.cube_count].ubo.buffer == VK_NULL_HANDLE)
     {
-        h_renderer->DEBUG.p_cubes[h_renderer->DEBUG.cube_count].ubo = TGVK_UNIFORM_BUFFER_CREATE(sizeof(m4) + sizeof(v4));
+        h_renderer->DEBUG.p_cubes[h_renderer->DEBUG.cube_count].ubo = TGVK_BUFFER_CREATE_UBO(sizeof(m4) + sizeof(v4));
     }
 
     *((m4*)h_renderer->DEBUG.p_cubes[h_renderer->DEBUG.cube_count].ubo.memory.p_mapped_device_memory) = tgm_m4_mul(tgm_m4_translate(position), tgm_m4_scale(scale));
