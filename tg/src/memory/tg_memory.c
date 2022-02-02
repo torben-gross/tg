@@ -195,7 +195,7 @@ void tg_memory_nullify(tg_size size, void* p_memory)
 	}
 }
 
-void tg_memory_set_all_bits(tg_size size, void* p_memory)
+void tg_memory_set_all_bits_to_one(tg_size size, void* p_memory)
 {
 	for (tg_size i = 0; i < size; i++)
 	{

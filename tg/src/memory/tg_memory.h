@@ -29,7 +29,7 @@ void     tg_memory_shutdown(void);
 
 void     tg_memcpy(tg_size size, const void* p_source, void* p_destination);
 void     tg_memory_nullify(tg_size size, void* p_memory);
-void     tg_memory_set_all_bits(tg_size size, void* p_memory);
+void     tg_memory_set_all_bits_to_one(tg_size size, void* p_memory);
 
 #ifdef TG_DEBUG
 

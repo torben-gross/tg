@@ -53,7 +53,7 @@ typedef struct tg_spirv_layout
         struct
         {
             u32                        count;
-            tg_spirv_inout_resource    p_resources[TG_MAX_SHADER_INPUTS];
+            tg_spirv_inout_resource    p_resources[TG_MAX_SHADER_OUTPUTS];
         } fragment_shader_output;
     };
     struct
@@ -65,6 +65,6 @@ typedef struct tg_spirv_layout
 
 
 
-void tg_spirv_fill_layout(u32 word_count, const u32* p_words, tg_spirv_layout* p_spirv_layout);
+void tg_spirv_fill_layout(u32 word_count, const u32* p_words, TG_OUT tg_spirv_layout* p_spirv_layout);
 
 #endif

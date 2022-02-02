@@ -43,6 +43,8 @@
 #define TG_NOT_IMPLEMENTED()
 #endif
 
+#define TG_UNUSED(x)                       ((void)(x))
+
 #define TG_INOUT
 #define TG_OUT
 

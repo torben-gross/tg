@@ -11,16 +11,16 @@
 
 // Source: https://www.khronos.org/registry/spir-v/specs/1.0/SPIRV.html
 
-typedef enum tg_spirv_execution_mode
+typedef enum tg_spirv_execution_model
 {
-    TG_SPIRV_EXECUTION_MODE_VERTEX                     = 0,
-    TG_SPIRV_EXECUTION_MODE_TESSELLATION_CONTROL       = 1,
-    TG_SPIRV_EXECUTION_MODE_TESSELLATION_EVALUATION    = 2,
-    TG_SPIRV_EXECUTION_MODE_GEOMETRY                   = 3,
-    TG_SPIRV_EXECUTION_MODE_FRAGMENT                   = 4,
-    TG_SPIRV_EXECUTION_MODE_GL_COMPUTE                 = 5,
-    TG_SPIRV_EXECUTION_MODE_KERNEL                     = 6
-} tg_spirv_execution_mode;
+    TG_SPIRV_EXECUTION_MODEL_VERTEX                     = 0,
+    TG_SPIRV_EXECUTION_MODEL_TESSELLATION_CONTROL       = 1,
+    TG_SPIRV_EXECUTION_MODEL_TESSELLATION_EVALUATION    = 2,
+    TG_SPIRV_EXECUTION_MODEL_GEOMETRY                   = 3,
+    TG_SPIRV_EXECUTION_MODEL_FRAGMENT                   = 4,
+    TG_SPIRV_EXECUTION_MODEL_GL_COMPUTE                 = 5,
+    TG_SPIRV_EXECUTION_MODEL_KERNEL                     = 6
+} tg_spirv_execution_model;
 
 typedef enum tg_spirv_storage_class
 {
@@ -185,7 +185,7 @@ typedef enum tg_spirv_op
     // 3.32.5. Mode-Setting Instructions
     TG_SPIRV_OP_MEMORY_MODEL                                     = 14,
     TG_SPIRV_OP_ENTRY_POINT                                      = 15,
-    TG_SPIRV_OP_EXECUTION_MODE                                   = 16,
+    TG_SPIRV_OP_EXECUTION_MODEL                                   = 16,
     TG_SPIRV_OP_CAPABILITY                                       = 17,
 
     // 3.32.6. Type-Declaration Instructions
@@ -510,364 +510,531 @@ typedef enum tg_spirv_op
 
 
 
-#pragma warning(push)
-#pragma warning(disable:4100)
+typedef struct tg_spirv_op_decorate
+{
+    u32    id_target;
+    tg_spirv_decoration decoration;
+    u32    value;
+} tg_spirv_op_decorate;
+
+typedef struct tg_spirv_op_referenceable
+{
+    tg_spirv_op    op;
+    union
+    {
+        struct
+        {
+            u32    width;
+            u32    signedness;
+        } type_int;
+        struct
+        {
+            u32    width;
+        } type_float;
+        struct
+        {
+            u32    id_component_type;
+            u32    component_count;
+        } type_vector;
+        struct
+        {
+            u32    id_column_type;
+            u32    column_count;
+        } type_matrix;
+        struct
+        {
+            u32    id_element_type;
+            u32    id_length;
+        } type_array;
+        struct
+        {
+            tg_spirv_storage_class storage_class;
+            u32    id_return_type;
+        } type_pointer;
+        struct
+        {
+            u32    id_result_type;
+            u32    value;
+        } constant;
+    };
+} tg_spirv_op_referenceable;
+
+typedef struct tg_spirv_op_variable
+{
+    u32    id_result_type;
+    u32    id;
+    tg_spirv_storage_class storage_class;
+} tg_spirv_op_variable;
+
+
+
 static i32 tg__compare_by_location(const tg_spirv_inout_resource* p_v0, const tg_spirv_inout_resource* p_v1, void* p_user_data)
 {
     const i32 result = p_v0->location - p_v1->location;
+    TG_UNUSED(p_user_data);
     return result;
 }
-#pragma warning(pop)
 
-static void tg__find_type(u32 word_count, const u32* p_words, u32 id, tg_spirv_op* p_type, u32* p_literal)
+static tg_vertex_input_attribute_format tg__resolve_inout_resource_format(u32 op_decorate_count, const tg_spirv_op_decorate* p_op_decorate_buffer, u32 op_referencable_count, const tg_spirv_op_referenceable* p_op_referenceable_buffer, const tg_spirv_op_referenceable* p)
 {
-    u32 processed_word_count = 0;
-    while (processed_word_count < word_count)
+#ifdef TG_DEBUG
+
+#define TG_SPIRV_OP_REFERENCEABLE_INIT(result_id_word_offset)                                   \
+    (p_words[processed_word_count + (result_id_word_offset)] <= op_referencable_count)          \
+        ? (&p_op_referenceable_buffer[p_words[processed_word_count + (result_id_word_offset)]]) \
+        : (*(tg_spirv_op_referenceable**)0);                                                    \
+    p->op = op
+
+#define TG_SPIRV_OP_REFERENCEABLE_GET(id)    \
+    (((id) < op_referencable_count)          \
+        ? (&p_op_referenceable_buffer[(id)]) \
+        : (*(tg_spirv_op_referenceable**)0))
+
+#else
+
+#define TG_SPIRV_OP_REFERENCEABLE_INIT(result_id_word_offset)                            \
+    &p_op_referenceable_buffer[p_words[processed_word_count + (result_id_word_offset)]]; \
+    p->op = op
+
+#define TG_SPIRV_OP_REFERENCEABLE_GET(id) \
+    (&p_op_referenceable_buffer[(id)])
+
+#endif
+
+    tg_vertex_input_attribute_format result = TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_INVALID;
+
+    switch (p->op)
     {
-        const u32 opcode = p_words[processed_word_count];
-        const tg_spirv_op op = opcode & 0xffff;
-        const u16 op_word_count = opcode >> 16;
-
-        if (op >= TG_SPIRV_OP_TYPE_VOID && op <= TG_SPIRV_OP_TYPE_FORWARD_POINTER && p_words[processed_word_count + 1] == id)
-        {
-            *p_type = op;
-            switch (op)
-            {
-            case TG_SPIRV_OP_TYPE_INT:
-            {
-                const u32 width = p_words[processed_word_count + 2];
-                const u32 signedness = p_words[processed_word_count + 3];
-                *p_literal = width | (signedness << 16);
-            } break;
-            case TG_SPIRV_OP_TYPE_FLOAT:
-            {
-                const u32 width = p_words[processed_word_count + 2];
-                *p_literal = width;
-            } break;
-            default: *p_literal = 0; break;
-            }
-            return;
-        }
-
-        processed_word_count += op_word_count;
-    }
-    TG_INVALID_CODEPATH();
-}
-
-static void tg__fill_array_length(u32 word_count, const u32* p_words, u32 id, tg_spirv_global_resource* p_resource)
-{
-    u32 processed_word_count = 0;
-    while (processed_word_count < word_count)
+    case TG_SPIRV_OP_TYPE_POINTER:
     {
-        const u32 opcode = p_words[processed_word_count];
-        const tg_spirv_op op = opcode & 0xffff;
-        const u16 op_word_count = opcode >> 16;
-
-        switch (op)
-        {
-        case TG_SPIRV_OP_CONSTANT:
-        {
-            const u32 target_id = p_words[processed_word_count + 2];
-            if (target_id == id)
-            {
-                p_resource->array_element_count = p_words[processed_word_count + 3];
-                return;
-            }
-        } break;
-        }
-
-        processed_word_count += op_word_count;
-    }
-
-    TG_INVALID_CODEPATH();
-}
-
-static void tg__fill_global_resource(u32 word_count, const u32* p_words, u32 id, tg_spirv_global_resource* p_resource)
-{
-    u32 processed_word_count = 0;
-    while (processed_word_count < word_count)
+        TG_ASSERT(TG_SPIRV_OP_REFERENCEABLE_GET(p->type_pointer.id_return_type)->op != TG_SPIRV_OP_NOP);
+        TG_ASSERT(TG_SPIRV_OP_REFERENCEABLE_GET(p->type_pointer.id_return_type)->op != TG_SPIRV_OP_TYPE_POINTER);
+        result = tg__resolve_inout_resource_format(op_decorate_count, p_op_decorate_buffer, op_referencable_count, p_op_referenceable_buffer, TG_SPIRV_OP_REFERENCEABLE_GET(p->type_pointer.id_return_type));
+    } break;
+    case TG_SPIRV_OP_TYPE_INT:
     {
-        const u32 opcode = p_words[processed_word_count];
-        const tg_spirv_op op = opcode & 0xffff;
-        const u16 op_word_count = opcode >> 16;
-
-        switch (op)
-        {
-        case TG_SPIRV_OP_DECORATE:
-        {
-            const u32 target_id = p_words[processed_word_count + 1];
-            if (target_id == id)
-            {
-                const tg_spirv_decoration decoration = p_words[processed_word_count + 2];
-                switch (decoration)
-                {
-                case TG_SPIRV_DECORATION_BLOCK: p_resource->type = TG_SPIRV_GLOBAL_RESOURCE_TYPE_UNIFORM_BUFFER; break;
-                case TG_SPIRV_DECORATION_BUFFER_BLOCK: p_resource->type = TG_SPIRV_GLOBAL_RESOURCE_TYPE_STORAGE_BUFFER; break;
-                case TG_SPIRV_DECORATION_BINDING: p_resource->binding = p_words[processed_word_count + 3]; break;
-                case TG_SPIRV_DECORATION_DESCRIPTOR_SET: p_resource->descriptor_set = p_words[processed_word_count + 3]; break;
-                }
-            }
-        } break;
-        case TG_SPIRV_OP_TYPE_IMAGE:
-        {
-            const u32 target_id = p_words[processed_word_count + 1];
-            if (target_id == id && p_resource->type == TG_SPIRV_GLOBAL_RESOURCE_TYPE_INVALID)
-            {
-                p_resource->type = TG_SPIRV_GLOBAL_RESOURCE_TYPE_STORAGE_IMAGE;
-            }
-        } break;
-        case TG_SPIRV_OP_TYPE_SAMPLED_IMAGE:
-        {
-            const u32 target_id = p_words[processed_word_count + 1];
-            if (target_id == id && p_resource->type == TG_SPIRV_GLOBAL_RESOURCE_TYPE_INVALID)
-            {
-                p_resource->type = TG_SPIRV_GLOBAL_RESOURCE_TYPE_COMBINED_IMAGE_SAMPLER;
-            }
-        } break;
-        case TG_SPIRV_OP_TYPE_ARRAY:
-        {
-            const u32 target_id = p_words[processed_word_count + 1];
-            if (target_id == id)
-            {
-                const u32 element_type_id = p_words[processed_word_count + 2];
-                const u32 length_id = p_words[processed_word_count + 3];
-                tg__fill_array_length(word_count, p_words, length_id, p_resource);
-                tg__fill_global_resource(word_count, p_words, element_type_id, p_resource);
-            }
-        } break;
-        case TG_SPIRV_OP_TYPE_POINTER:
-        {
-            const u32 target_id = p_words[processed_word_count + 1];
-            if (target_id == id)
-            {
-                const tg_spirv_storage_class storage_class = p_words[processed_word_count + 2];
-                if (storage_class == TG_SPIRV_STORAGE_CLASS_UNIFORM || storage_class == TG_SPIRV_STORAGE_CLASS_UNIFORM_CONSTANT)
-                {
-                    const u32 pointed_to_id = p_words[processed_word_count + 3];
-                    tg__fill_global_resource(word_count, p_words, pointed_to_id, p_resource);
-                }
-                else
-                {
-                    TG_INVALID_CODEPATH();
-                }
-            }
-        } break;
-        }
-
-        processed_word_count += op_word_count;
-    }
-}
-
-static void tg__fill_inout_resource(u32 word_count, const u32* p_words, u32 id, tg_spirv_inout_resource* p_resource)
-{
-    u32 processed_word_count = 0;
-    while (processed_word_count < word_count)
+        TG_ASSERT(p->type_int.width == 32);
+        result = p->type_int.signedness == 1 ? TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32_SINT : TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32_UINT;
+    } break;
+    case TG_SPIRV_OP_TYPE_FLOAT:
     {
-        const u32 opcode = p_words[processed_word_count];
-        const tg_spirv_op op = opcode & 0xffff;
-        const u16 op_word_count = opcode >> 16;
+        TG_ASSERT(p->type_float.width == 32);
+        result = TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32_SFLOAT;
+    } break;
+    case TG_SPIRV_OP_TYPE_VECTOR:
+    {
+        const tg_vertex_input_attribute_format element_format = tg__resolve_inout_resource_format(op_decorate_count, p_op_decorate_buffer, op_referencable_count, p_op_referenceable_buffer, TG_SPIRV_OP_REFERENCEABLE_GET(p->type_vector.id_component_type));
+        const u32 component_count = p->type_vector.component_count;
 
-        switch (op)
+        switch (element_format)
         {
-        case TG_SPIRV_OP_DECORATE:
+        case TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32_SFLOAT:
         {
-            const u32 target_id = p_words[processed_word_count + 1];
-            if (target_id == id)
+            switch (component_count)
             {
-                const tg_spirv_decoration decoration = p_words[processed_word_count + 2];
-                switch (decoration)
-                {
-                case TG_SPIRV_DECORATION_LOCATION:
-                {
-                    p_resource->location = p_words[processed_word_count + 3];
-                } break;
-                }
-            }
-        } break;
-        case TG_SPIRV_OP_TYPE_INT:
-        {
-            const u32 target_id = p_words[processed_word_count + 1];
-            if (target_id == id && p_resource->format == TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_INVALID)
-            {
-                TG_ASSERT(p_words[processed_word_count + 2] == 32);
-                const b32 is_signed = p_words[processed_word_count + 3];
-                if (is_signed)
-                {
-                    p_resource->format = TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32_SINT;
-                }
-                else
-                {
-                    p_resource->format = TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32_UINT;
-                }
-            }
-        } break;
-        case TG_SPIRV_OP_TYPE_FLOAT:
-        {
-            const u32 target_id = p_words[processed_word_count + 1];
-            if (target_id == id && p_resource->format == TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_INVALID)
-            {
-                TG_ASSERT(p_words[processed_word_count + 2] == 32);
-                p_resource->format = TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32_SFLOAT;
-            }
-        } break;
-        case TG_SPIRV_OP_TYPE_VECTOR:
-        {
-            const u32 target_id = p_words[processed_word_count + 1];
-            if (target_id == id && p_resource->format == TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_INVALID)
-            {
-                u32 literal;
-                tg_spirv_op component_type;
-                tg__find_type(word_count, p_words, p_words[processed_word_count + 2], &component_type, &literal);
-                const u32 component_number = p_words[processed_word_count + 3];
-                switch (component_type)
-                {
-                case TG_SPIRV_OP_TYPE_INT:
-                {
-                    TG_ASSERT((literal & 0xffff) == 32);
-                    const b32 is_signed = literal >> 16;
-                    switch (component_number)
-                    {
-                    case 2: p_resource->format = is_signed ? TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32_SINT       : TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32_UINT;       break;
-                    case 3: p_resource->format = is_signed ? TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32B32_SINT    : TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32B32_UINT;    break;
-                    case 4: p_resource->format = is_signed ? TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32B32A32_SINT : TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32B32A32_UINT; break;
+            case 2: result = TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32_SFLOAT;       break;
+            case 3: result = TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32B32_SFLOAT;    break;
+            case 4: result = TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32B32A32_SFLOAT; break;
 
-                    default: TG_INVALID_CODEPATH(); break;
-                    }
-                } break;
-                case TG_SPIRV_OP_TYPE_FLOAT:
-                {
-                    TG_ASSERT(literal == 32);
-                    switch (component_number)
-                    {
-                    case 2: p_resource->format = TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32_SFLOAT;       break;
-                    case 3: p_resource->format = TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32B32_SFLOAT;    break;
-                    case 4: p_resource->format = TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32B32A32_SFLOAT; break;
-
-                    default: TG_INVALID_CODEPATH(); break;
-                    }
-                } break;
-                default: TG_INVALID_CODEPATH(); break;
-                }
+            default: TG_INVALID_CODEPATH(); break;
             }
         } break;
-        case TG_SPIRV_OP_TYPE_POINTER:
+        case TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32_SINT:
         {
-            const u32 target_id = p_words[processed_word_count + 1];
-            if (target_id == id)
+            switch (component_count)
             {
-                const tg_spirv_storage_class storage_class = p_words[processed_word_count + 2];
-                if (storage_class == TG_SPIRV_STORAGE_CLASS_INPUT || storage_class == TG_SPIRV_STORAGE_CLASS_OUTPUT)
-                {
-                    const u32 pointed_to_id = p_words[processed_word_count + 3];
-                    tg__fill_inout_resource(word_count, p_words, pointed_to_id, p_resource);
-                }
-                else
-                {
-                    TG_INVALID_CODEPATH();
-                }
+            case 2: result = TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32_SINT;       break;
+            case 3: result = TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32B32_SINT;    break;
+            case 4: result = TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32B32A32_SINT; break;
+
+            default: TG_INVALID_CODEPATH(); break;
             }
         } break;
+        case TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32_UINT:
+        {
+            switch (component_count)
+            {
+            case 2: result = TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32_UINT;       break;
+            case 3: result = TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32B32_UINT;    break;
+            case 4: result = TG_VERTEX_INPUT_ATTRIBUTE_FORMAT_R32G32B32A32_UINT; break;
+
+            default: TG_INVALID_CODEPATH(); break;
+            }
+        } break;
+
+        default: TG_INVALID_CODEPATH(); break;
         }
-
-        processed_word_count += op_word_count;
+    } break;
+        // TODO: Each array element (E.G. element in array OR column in matrix) is a separate
+        // location. The first element of the array has the specified location (with the location
+        // value), and each subsequent element increases that location by 1.
+    case TG_SPIRV_OP_TYPE_MATRIX:
+    case TG_SPIRV_OP_TYPE_ARRAY:
+    default: TG_INVALID_CODEPATH(); break;
     }
+
+    return result;
 }
 
 
 
-void tg_spirv_fill_layout(u32 word_count, const u32* p_words, tg_spirv_layout* p_layout)
+void tg_spirv_fill_layout(u32 word_count, const u32* p_words, TG_OUT tg_spirv_layout* p_layout)
 {
     TG_ASSERT(word_count && p_words && p_layout);
-
-    u32 processed_word_count = 0;
     TG_ASSERT(p_words[0] == TG_SPIRV_MAGIC_NUMBER);
-    processed_word_count += 5;
 
-    const u32 mask =
-        (1 << TG_SPIRV_OP_CAPABILITY)       |
-        (1 << TG_SPIRV_OP_EXTENSION)        |
-        (1 << TG_SPIRV_OP_EXT_INST_IMPORT)  |
-        (1 << TG_SPIRV_OP_MEMORY_MODEL)     |
-        (1 << TG_SPIRV_OP_ENTRY_POINT)      |
-        (1 << TG_SPIRV_OP_EXECUTION_MODE)   |
-        (1 << TG_SPIRV_OP_STRING)           |
-        (1 << TG_SPIRV_OP_SOURCE_EXTENSION) |
-        (1 << TG_SPIRV_OP_SOURCE)           |
-        (1 << TG_SPIRV_OP_SOURCE_CONTINUED);
+    // ENTRY POINT
+
+    u32 processed_word_count = 5;
     while (processed_word_count < word_count)
     {
         const tg_spirv_op op = p_words[processed_word_count] & 0xffff;
-
-        if (((1 << op) & mask) == 0)
-        {
-            p_words = &p_words[processed_word_count];
-            word_count -= processed_word_count;
-            processed_word_count = 0;
-            break;
-        }
-        else
-        {
-            const u16 op_word_count = p_words[processed_word_count] >> 16;
-            if (op == TG_SPIRV_OP_ENTRY_POINT)
-            {
-                switch (p_words[processed_word_count + 1])
-                {
-                case TG_SPIRV_EXECUTION_MODE_VERTEX:     p_layout->shader_type = TG_SPIRV_SHADER_TYPE_VERTEX;   break;
-                case TG_SPIRV_EXECUTION_MODE_GEOMETRY:   p_layout->shader_type = TG_SPIRV_SHADER_TYPE_GEOMETRY; break;
-                case TG_SPIRV_EXECUTION_MODE_FRAGMENT:   p_layout->shader_type = TG_SPIRV_SHADER_TYPE_FRAGMENT; break;
-                case TG_SPIRV_EXECUTION_MODE_GL_COMPUTE: p_layout->shader_type = TG_SPIRV_SHADER_TYPE_COMPUTE;  break;
-
-                default: TG_INVALID_CODEPATH(); break;
-                }
-
-#ifdef TG_DEBUG
-                const char* p_entry_point_name = (char*)&p_words[processed_word_count + 3];
-                tg_string_equal(p_entry_point_name, "main");
-#endif
-            }
-            processed_word_count += op_word_count;
-        }
-    }
-
-    while (processed_word_count < word_count)
-    {
-        const tg_spirv_op opcode_enumerant = p_words[processed_word_count] & 0xffff;
         const u16 op_word_count = p_words[processed_word_count] >> 16;
 
-        if (opcode_enumerant == TG_SPIRV_OP_VARIABLE)
+        if (op == TG_SPIRV_OP_ENTRY_POINT)
         {
-            const u32 points_to_id = p_words[processed_word_count + 1];
-            const u32 variable_id = p_words[processed_word_count + 2];
-            const tg_spirv_storage_class storage_class = p_words[processed_word_count + 3];
+            const tg_spirv_execution_model execution_model = p_words[processed_word_count + 1];
+            switch (execution_model)
+            {
+            case TG_SPIRV_EXECUTION_MODEL_VERTEX:     p_layout->shader_type = TG_SPIRV_SHADER_TYPE_VERTEX;   break;
+            case TG_SPIRV_EXECUTION_MODEL_GEOMETRY:   p_layout->shader_type = TG_SPIRV_SHADER_TYPE_GEOMETRY; break;
+            case TG_SPIRV_EXECUTION_MODEL_FRAGMENT:   p_layout->shader_type = TG_SPIRV_SHADER_TYPE_FRAGMENT; break;
+            case TG_SPIRV_EXECUTION_MODEL_GL_COMPUTE: p_layout->shader_type = TG_SPIRV_SHADER_TYPE_COMPUTE;  break;
 
-            if (storage_class == TG_SPIRV_STORAGE_CLASS_UNIFORM_CONSTANT || storage_class == TG_SPIRV_STORAGE_CLASS_UNIFORM)
-            {
-                TG_ASSERT(p_layout->global_resources.count < TG_MAX_SHADER_GLOBAL_RESOURCES);
-                tg__fill_global_resource(word_count, p_words, variable_id, &p_layout->global_resources.p_resources[p_layout->global_resources.count]);
-                tg__fill_global_resource(word_count, p_words, points_to_id, &p_layout->global_resources.p_resources[p_layout->global_resources.count]);
-                p_layout->global_resources.count++;
+            default: TG_INVALID_CODEPATH(); break;
             }
-            else if (p_layout->shader_type == TG_SPIRV_SHADER_TYPE_VERTEX && storage_class == TG_SPIRV_STORAGE_CLASS_INPUT)
+
+            TG_ASSERT(tg_string_equal((char*)&p_words[processed_word_count + 3], "main"));
+
+            break;
+        }
+        processed_word_count += op_word_count;
+    }
+
+    // COUNT WORDS
+
+    processed_word_count = 5;
+    u32 op_decorate_count = 0;
+    u32 op_variable_count = 0;
+    u32 max_op_referenceable_id = 0;
+    while (processed_word_count < word_count)
+    {
+        const tg_spirv_op op = p_words[processed_word_count] & 0xffff;
+        const u16 op_word_count = p_words[processed_word_count] >> 16;
+
+        switch (op)
+        {
+        case TG_SPIRV_OP_TYPE_BOOL:
+        case TG_SPIRV_OP_TYPE_INT:
+        case TG_SPIRV_OP_TYPE_FLOAT:
+        case TG_SPIRV_OP_TYPE_VECTOR:
+        case TG_SPIRV_OP_TYPE_MATRIX:
+        case TG_SPIRV_OP_TYPE_IMAGE:
+        case TG_SPIRV_OP_TYPE_SAMPLER:
+        case TG_SPIRV_OP_TYPE_SAMPLED_IMAGE:
+        case TG_SPIRV_OP_TYPE_ARRAY:
+        case TG_SPIRV_OP_TYPE_RUNTIME_ARRAY:
+        case TG_SPIRV_OP_TYPE_STRUCT:
+        case TG_SPIRV_OP_TYPE_OPAQUE:
+        case TG_SPIRV_OP_TYPE_POINTER:
+        case TG_SPIRV_OP_TYPE_FUNCTION:
+        case TG_SPIRV_OP_TYPE_EVENT:
+        case TG_SPIRV_OP_TYPE_DEVICE_EVENT:
+        case TG_SPIRV_OP_TYPE_RESERVE_ID:
+        case TG_SPIRV_OP_TYPE_QUEUE:
+        case TG_SPIRV_OP_TYPE_PIPE:
+        {
+            const u32 id = p_words[processed_word_count + 1];
+            max_op_referenceable_id = TG_MAX(id, max_op_referenceable_id);
+        } break;
+        case TG_SPIRV_OP_CONSTANT_TRUE:
+        case TG_SPIRV_OP_CONSTANT_FALSE:
+        case TG_SPIRV_OP_CONSTANT:
+        case TG_SPIRV_OP_CONSTANT_COMPOSITE:
+        case TG_SPIRV_OP_CONSTANT_SAMPLER:
+        case TG_SPIRV_OP_SPEC_CONSTANT_TRUE:
+        case TG_SPIRV_OP_SPEC_CONSTANT_FALSE:
+        case TG_SPIRV_OP_SPEC_CONSTANT:
+        case TG_SPIRV_OP_SPEC_CONSTANT_COMPOSITE:
+        case TG_SPIRV_OP_SPEC_CONSTANT_OP:
+        {
+            const u32 id = p_words[processed_word_count + 2];
+            max_op_referenceable_id = TG_MAX(id, max_op_referenceable_id);
+        } break;
+        case TG_SPIRV_OP_VARIABLE:
+            op_variable_count++;
+            break;
+        case TG_SPIRV_OP_DECORATE:
+            op_decorate_count++;
+            break;
+
+        default: break;
+        }
+        
+        processed_word_count += op_word_count;
+    }
+    const u32 op_referencable_count = max_op_referenceable_id + 1;
+
+    // MALLOC BUFFERS
+
+    const tg_size op_decorate_buffer_size      = (tg_size)op_decorate_count     * sizeof(tg_spirv_op_decorate);
+    const tg_size op_referenceable_buffer_size = (tg_size)op_referencable_count * sizeof(tg_spirv_op_referenceable); // Indexing starts at one, zero stays empty
+    const tg_size op_variable_buffer_size      = (tg_size)op_variable_count     * sizeof(tg_spirv_op_variable);
+
+    tg_spirv_op_decorate*      p_op_decorate_buffer      = TG_MALLOC_STACK(op_decorate_buffer_size);
+    tg_spirv_op_referenceable* p_op_referenceable_buffer = TG_MALLOC_STACK(op_referenceable_buffer_size);
+    tg_spirv_op_variable*      p_op_variable_buffer      = TG_MALLOC_STACK(op_variable_buffer_size);
+
+    // Not every op is used, which is why 'op' of every unused slot should be 'TG_SPIRV_OP_NOP'
+    for (u32 i = 0; i < op_referencable_count; i++)
+    {
+        p_op_referenceable_buffer[i].op = TG_SPIRV_OP_NOP;
+    }
+
+    // FILL BUFFERS
+
+    processed_word_count = 5;
+    u32 op_decorate_idx = 0;
+    u32 op_variable_idx = 0;
+    while (processed_word_count < word_count)
+    {
+        const tg_spirv_op op = p_words[processed_word_count] & 0xffff;
+        const u16 op_word_count = p_words[processed_word_count] >> 16;
+
+        switch (op)
+        {
+        case TG_SPIRV_OP_TYPE_INT:
+        {
+            tg_spirv_op_referenceable* p = TG_SPIRV_OP_REFERENCEABLE_INIT(1);
+            p->type_int.width = p_words[processed_word_count + 2];
+            p->type_int.signedness = p_words[processed_word_count + 3];
+        } break;
+        case TG_SPIRV_OP_TYPE_FLOAT:
+        {
+            tg_spirv_op_referenceable* p = TG_SPIRV_OP_REFERENCEABLE_INIT(1);
+            p->type_float.width = p_words[processed_word_count + 2];
+        } break;
+        case TG_SPIRV_OP_TYPE_VECTOR:
+        {
+            tg_spirv_op_referenceable* p = TG_SPIRV_OP_REFERENCEABLE_INIT(1);
+            p->type_vector.id_component_type = p_words[processed_word_count + 2];
+            p->type_vector.component_count = p_words[processed_word_count + 3];
+        } break;
+        case TG_SPIRV_OP_TYPE_MATRIX:
+        {
+            tg_spirv_op_referenceable* p = TG_SPIRV_OP_REFERENCEABLE_INIT(1);
+            p->type_matrix.id_column_type = p_words[processed_word_count + 2];
+            p->type_matrix.column_count = p_words[processed_word_count + 3];
+        } break;
+        case TG_SPIRV_OP_TYPE_IMAGE:
+        {
+            tg_spirv_op_referenceable* p = TG_SPIRV_OP_REFERENCEABLE_INIT(1);
+        } break;
+        case TG_SPIRV_OP_TYPE_SAMPLED_IMAGE:
+        {
+            tg_spirv_op_referenceable* p = TG_SPIRV_OP_REFERENCEABLE_INIT(1);
+        } break;
+        case TG_SPIRV_OP_TYPE_ARRAY:
+        {
+            tg_spirv_op_referenceable* p = TG_SPIRV_OP_REFERENCEABLE_INIT(1);
+            p->type_array.id_element_type = p_words[processed_word_count + 2];
+            p->type_array.id_length = p_words[processed_word_count + 3];
+        } break;
+        case TG_SPIRV_OP_TYPE_POINTER:
+        {
+            tg_spirv_op_referenceable* p = TG_SPIRV_OP_REFERENCEABLE_INIT(1);
+            p->type_pointer.storage_class = p_words[processed_word_count + 2];
+            p->type_pointer.id_return_type = p_words[processed_word_count + 3];
+        } break;
+        case TG_SPIRV_OP_CONSTANT:
+        {
+            tg_spirv_op_referenceable* p = TG_SPIRV_OP_REFERENCEABLE_INIT(2);
+            p->constant.id_result_type = p_words[processed_word_count + 1];
+            p->constant.value = p_words[processed_word_count + 3];
+        } break;
+        case TG_SPIRV_OP_VARIABLE:
+        {
+            TG_ASSERT(op_variable_idx < op_variable_count);
+            tg_spirv_op_variable* p = &p_op_variable_buffer[op_variable_idx++];
+            
+            p->id_result_type = p_words[processed_word_count + 1];
+            p->id = p_words[processed_word_count + 2];
+            p->storage_class = p_words[processed_word_count + 3];
+        } break;
+        case TG_SPIRV_OP_DECORATE:
+        {
+            TG_ASSERT(op_decorate_idx < op_decorate_count);
+            tg_spirv_op_decorate* p = &p_op_decorate_buffer[op_decorate_idx++];
+            
+            p->id_target = p_words[processed_word_count + 1];
+            p->decoration = p_words[processed_word_count + 2];
+            switch (p->decoration)
             {
-                TG_ASSERT(p_layout->vertex_shader_input.count < TG_MAX_SHADER_INPUTS);
-                tg__fill_inout_resource(word_count, p_words, variable_id, &p_layout->vertex_shader_input.p_resources[p_layout->vertex_shader_input.count]);
-                tg__fill_inout_resource(word_count, p_words, points_to_id, &p_layout->vertex_shader_input.p_resources[p_layout->vertex_shader_input.count]);
-                p_layout->vertex_shader_input.count++;
+            case TG_SPIRV_DECORATION_BLOCK:
+            case TG_SPIRV_DECORATION_BUFFER_BLOCK:
+            case TG_SPIRV_DECORATION_LOCATION:
+            case TG_SPIRV_DECORATION_BINDING:
+            case TG_SPIRV_DECORATION_DESCRIPTOR_SET:
+                p->value = p_words[processed_word_count + 3];
+                break;
+
+            default: break;
             }
-            else if (p_layout->shader_type == TG_SPIRV_SHADER_TYPE_FRAGMENT && storage_class == TG_SPIRV_STORAGE_CLASS_OUTPUT)
-            {
-                TG_ASSERT(p_layout->fragment_shader_output.count < TG_MAX_SHADER_INPUTS);
-                tg__fill_inout_resource(word_count, p_words, variable_id, &p_layout->fragment_shader_output.p_resources[p_layout->fragment_shader_output.count]);
-                tg__fill_inout_resource(word_count, p_words, points_to_id, &p_layout->fragment_shader_output.p_resources[p_layout->fragment_shader_output.count]);
-                p_layout->fragment_shader_output.count++;
-            }
+        } break;
+        default: break;
         }
 
         processed_word_count += op_word_count;
     }
+
+    // FILL LAYOUT
+
+    for (u32 ivar = 0; ivar < op_variable_count; ivar++)
+    {
+        const tg_spirv_op_variable* p = &p_op_variable_buffer[ivar];
+        TG_ASSERT(p->id_result_type < op_referencable_count);
+        
+        const b32 fill_global_resource        = p->storage_class == TG_SPIRV_STORAGE_CLASS_UNIFORM || p->storage_class == TG_SPIRV_STORAGE_CLASS_UNIFORM_CONSTANT;
+        const b32 fill_vertex_shader_input    = p->storage_class == TG_SPIRV_STORAGE_CLASS_INPUT && p_layout->shader_type == TG_SPIRV_SHADER_TYPE_VERTEX;
+        const b32 fill_fragment_shader_output = p->storage_class == TG_SPIRV_STORAGE_CLASS_OUTPUT && p_layout->shader_type == TG_SPIRV_SHADER_TYPE_FRAGMENT;
+
+        if (fill_global_resource)
+        {
+            tg_spirv_global_resource res = { 0 };
+
+            // FILL TYPE AND PRN ARRAY LENGTH
+
+            // The type of a global resources is always contained by a pointer
+            const tg_spirv_op_referenceable* p_pointer = TG_SPIRV_OP_REFERENCEABLE_GET(p->id_result_type);
+            TG_ASSERT(p_pointer->op == TG_SPIRV_OP_TYPE_POINTER);
+
+            // The type can be found by browsing the decorations
+            if (p_pointer->type_pointer.storage_class == TG_SPIRV_STORAGE_CLASS_UNIFORM)
+            {
+                for (u32 idec = 0; idec < op_decorate_count; idec++)
+                {
+                    const tg_spirv_op_decorate* p_dec = &p_op_decorate_buffer[idec];
+                    if (p_dec->id_target == p_pointer->type_pointer.id_return_type)
+                    {
+                        if (p_op_decorate_buffer[idec].decoration == TG_SPIRV_DECORATION_BLOCK)
+                        {
+                            res.type = TG_SPIRV_GLOBAL_RESOURCE_TYPE_UNIFORM_BUFFER;
+                            break;
+                        }
+                        else
+                        {
+                            TG_ASSERT(p_op_decorate_buffer[idec].decoration == TG_SPIRV_DECORATION_BUFFER_BLOCK);
+
+                            res.type = TG_SPIRV_GLOBAL_RESOURCE_TYPE_STORAGE_BUFFER;
+                            break;
+                        }
+                    }
+                }
+            }
+            // The type can be found in the referenceable ops
+            else
+            {
+                TG_ASSERT(p_pointer->type_pointer.storage_class == TG_SPIRV_STORAGE_CLASS_UNIFORM_CONSTANT);
+                const tg_spirv_op_referenceable* p_op_type = TG_SPIRV_OP_REFERENCEABLE_GET(p_pointer->type_pointer.id_return_type);
+
+                switch (p_op_type->op)
+                {
+                case TG_SPIRV_OP_TYPE_IMAGE:
+                    res.type = TG_SPIRV_GLOBAL_RESOURCE_TYPE_STORAGE_IMAGE;
+                    break;
+                case TG_SPIRV_OP_TYPE_SAMPLED_IMAGE:
+                    res.type = TG_SPIRV_GLOBAL_RESOURCE_TYPE_COMBINED_IMAGE_SAMPLER;
+                    break;
+                case TG_SPIRV_OP_TYPE_ARRAY:
+                {
+                    const tg_spirv_op_referenceable* p_op_element_type = TG_SPIRV_OP_REFERENCEABLE_GET(p_op_type->type_array.id_element_type);
+                    if (p_op_element_type->op == TG_SPIRV_OP_TYPE_IMAGE)
+                    {
+                        res.type = TG_SPIRV_GLOBAL_RESOURCE_TYPE_STORAGE_IMAGE;
+                    }
+                    else
+                    {
+                        TG_ASSERT(p_op_element_type->op == TG_SPIRV_OP_TYPE_SAMPLED_IMAGE);
+                        res.type = TG_SPIRV_GLOBAL_RESOURCE_TYPE_COMBINED_IMAGE_SAMPLER;
+                    }
+
+                    const tg_spirv_op_referenceable* p_op_length = TG_SPIRV_OP_REFERENCEABLE_GET(p_op_type->type_array.id_length);
+                    TG_ASSERT(p_op_length->op == TG_SPIRV_OP_CONSTANT);                                                         // Length must come from a constant instruction ...
+                    TG_ASSERT(TG_SPIRV_OP_REFERENCEABLE_GET(p_op_length->constant.id_result_type)->op == TG_SPIRV_OP_TYPE_INT); // ... of an integer-type scalar ...
+                    TG_ASSERT(p_op_length->constant.value >= 1);                                                                // ... whose value is at least 1.
+                    res.array_element_count = p_op_length->constant.value;
+                } break;
+
+                default: TG_INVALID_CODEPATH(); break;
+                }
+            }
+            TG_ASSERT(res.type != TG_SPIRV_GLOBAL_RESOURCE_TYPE_INVALID);
+
+            // FILL DESCRIPTOR SET AND BINDING
+
+            for (u32 idec = 0; idec < op_decorate_count; idec++)
+            {
+                const tg_spirv_op_decorate* p_dec = &p_op_decorate_buffer[idec];
+                if (p_dec->id_target == p->id)
+                {
+                    if (p_dec->decoration == TG_SPIRV_DECORATION_BINDING)
+                    {
+                        res.binding = p_dec->value;
+                    }
+                    else if (p_dec->decoration == TG_SPIRV_DECORATION_DESCRIPTOR_SET)
+                    {
+                        res.descriptor_set = p_dec->value;
+                    }
+                }
+            }
+
+            TG_ASSERT(p_layout->global_resources.count < TG_MAX_SHADER_GLOBAL_RESOURCES);
+            p_layout->global_resources.p_resources[p_layout->global_resources.count++] = res;
+        }
+        else if (fill_vertex_shader_input || fill_fragment_shader_output)
+        {
+            tg_spirv_inout_resource res = { 0 };
+
+            // Location
+            for (u32 idec = 0; idec < op_decorate_count; idec++)
+            {
+                const tg_spirv_op_decorate* p_dec = &p_op_decorate_buffer[idec];
+                if (p_dec->id_target == p->id && p_dec->decoration == TG_SPIRV_DECORATION_LOCATION)
+                {
+                    res.location = p_dec->value;
+                    break;
+                }
+            }
+
+            // Format
+            res.format = tg__resolve_inout_resource_format(op_decorate_count, p_op_decorate_buffer, op_referencable_count, p_op_referenceable_buffer, TG_SPIRV_OP_REFERENCEABLE_GET(p->id_result_type));
+
+            if (fill_vertex_shader_input)
+            {
+                TG_ASSERT(p_layout->vertex_shader_input.count < TG_MAX_SHADER_INPUTS);
+                p_layout->vertex_shader_input.p_resources[p_layout->vertex_shader_input.count++] = res;
+            }
+            else
+            {
+                TG_ASSERT(fill_fragment_shader_output);
+
+                TG_ASSERT(p_layout->fragment_shader_output.count < TG_MAX_SHADER_OUTPUTS);
+                p_layout->fragment_shader_output.p_resources[p_layout->fragment_shader_output.count++] = res;
+            }
+        }
+    }
+
+    // CLEAN UP
+
+    TG_FREE_STACK(op_variable_buffer_size);
+    TG_FREE_STACK(op_referenceable_buffer_size);
+    TG_FREE_STACK(op_decorate_buffer_size);
 
     if (p_layout->shader_type == TG_SPIRV_SHADER_TYPE_VERTEX && p_layout->vertex_shader_input.count != 0)
     {
         TG_QSORT(p_layout->vertex_shader_input.count, p_layout->vertex_shader_input.p_resources, tg__compare_by_location, TG_NULL);
     }
+
+#undef TG_SPIRV_OP_REFERENCEABLE_GET
+#undef TG_SPIRV_OP_REFERENCEABLE_INIT
 }

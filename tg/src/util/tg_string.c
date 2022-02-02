@@ -135,13 +135,32 @@ b32 tg_string_equal(const char* p_s0, const char* p_s1)
 	return result;
 }
 
-b32 tg_string_starts_with(const char* p_string, const char* p_prefix)
+b32 tg_string_line_ends_with(const char* p_string, const char* p_postfix)
 {
-	b32 result = TG_TRUE;
-	while (*p_prefix)
+	b32 result = TG_FALSE;
+
+	u32 string_length = 0;
+	const char* p_it = p_string;
+	while (*p_it != '\r' && *p_it != '\n' && *p_it != '\0')
 	{
-		result &= *p_string++ == *p_prefix++;
+		string_length++;
+		p_it++;
 	}
+
+	const u32 postfix_length = tg_strlen_no_nul(p_postfix);
+	if (postfix_length <= string_length)
+	{
+		result = TG_TRUE;
+		for (u32 i = 0; i < postfix_length; i++)
+		{
+			if (p_postfix[postfix_length - 1 - i] != p_string[string_length - 1 - i])
+			{
+				result = TG_FALSE;
+				break;
+			}
+		}
+	}
+
 	return result;
 }
 
@@ -160,6 +179,16 @@ const char* tg_string_skip_whitespace(const char* p_string)
 		p_result++;
 	}
 	return p_result;
+}
+
+b32 tg_string_starts_with(const char* p_string, const char* p_prefix)
+{
+	b32 result = TG_TRUE;
+	while (*p_prefix)
+	{
+		result &= *p_string++ == *p_prefix++;
+	}
+	return result;
 }
 
 void tg_stringf(u32 size, char* p_buffer, const char* p_format, ...)

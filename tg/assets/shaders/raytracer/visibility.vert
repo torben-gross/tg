@@ -2,8 +2,11 @@
 
 #include "shaders/common.inc"
 
-layout(location = 0) in v3    in_position;
-layout(location = 1) in v3    in_normal;
+layout(location = 0) in v3     in_position;
+layout(location = 1) in v3     in_normal;
+
+//#instance
+//layout(location = 2) in u32    in_obj_id;
 
 layout(set = 0, binding = 0) uniform unique_ubo
 {

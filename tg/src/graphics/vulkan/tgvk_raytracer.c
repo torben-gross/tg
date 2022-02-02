@@ -483,7 +483,7 @@ void tg_raytracer_create_obj(tg_raytracer* p_raytracer, u32 w, u32 h, u32 d)
     TG_ASSERT(p_raytracer->objs.count < p_raytracer->objs.capacity);
 
     const u32 obj_id = p_raytracer->objs.count++;
-    tgvk_obj* p_obj = &p_raytracer->objs.p_objs[obj_id];
+    tg_obj* p_obj = &p_raytracer->objs.p_objs[obj_id];
 
     if (obj_id == 0)
     {
@@ -491,7 +491,7 @@ void tg_raytracer_create_obj(tg_raytracer* p_raytracer, u32 w, u32 h, u32 d)
     }
     else
     {
-        const tgvk_obj* p_prev_obj = p_obj - 1;
+        const tg_obj* p_prev_obj = p_obj - 1;
         p_obj->first_voxel_id = p_prev_obj->first_voxel_id;
         const u32 mask = (1 << 5) - 1;
         const u32 prev_log2_w = p_prev_obj->packed_log2_whd & mask;
