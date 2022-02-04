@@ -445,11 +445,13 @@ VkDeviceSize tgvk_memory_aligned_size(VkDeviceSize size)
     return result;
 }
 
-tgvk_memory_block tgvk_memory_allocator_alloc(VkDeviceSize alignment, VkDeviceSize size, u32 memory_type_bits, tgvk_memory_type type
-#ifdef TG_DEBUG
-    , u32 line, const char* p_filename
-#endif
-)
+VkDeviceSize tgvk_memory_page_size(void)
+{
+    const VkDeviceSize result = memory.page_size;
+    return result;
+}
+
+tgvk_memory_block tgvk_memory_allocator_alloc(VkDeviceSize alignment, VkDeviceSize size, u32 memory_type_bits, tgvk_memory_type type TG_DEBUG_PARAM(u32 line) TG_DEBUG_PARAM(const char* p_filename))
 {
     TG_ASSERT(memory_type_bits);
     TG_ASSERT(memory.page_size % alignment == 0 || alignment % memory.page_size == 0);

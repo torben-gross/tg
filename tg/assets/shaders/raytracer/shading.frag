@@ -1,17 +1,15 @@
 #version 450
 
-#extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
-#extension GL_EXT_shader_atomic_int64                    : require
-
 #include "shaders/common.inc"
+#include "shaders/commoni64.inc"
 
 layout(location = 0) in v2 v_uv;
 
-readonly layout(set = 0, binding = 4) buffer visibility_buffer
+layout(set = 0, binding = 4) buffer tg_visibility_buffer_ssbo
 {
-    u32         u_w;
-    u32         u_h;
-    uint64_t    u_vb[];
+    u32    visibility_buffer_w;
+    u32    visibility_buffer_h;
+    u64    visibility_buffer_data[];
 };
 
 layout(set = 0, binding = 5) uniform ubo
@@ -38,10 +36,10 @@ void main()
 {
     u32 x = u32(gl_FragCoord.x);
     u32 y = u32(gl_FragCoord.y);
-    u32 i = u_w * y + x;
-    uint64_t data = u_vb[i];
-    f32 d = f32(data >> uint64_t(32)) / 4294967295.0;
-    u32 id = u32(data & uint64_t(4294967295));
+    u32 i = visibility_buffer_w * y + x;
+    u64 data = visibility_buffer_data[i];
+    f32 d = uintBitsToFloat(u32(data >> u64(32)));
+    u32 id = u32(data & u64(TG_U32_MAX));
 
     u32 rui = tg_hash_u32(id);
     u32 gui = tg_hash_u32(rui);

@@ -45,8 +45,13 @@ static void tg__scene_create(void)
     scene.camera.persp.f = -1000.0f;
     tg_input_get_mouse_position(&scene.last_mouse_x, &scene.last_mouse_y);
 
-    tg_raytracer_create(&scene.camera, 8, &scene.raytracer);
-    tg_raytracer_create_obj(&scene.raytracer, 256, 32, 256);
+    tg_raytracer_create(&scene.camera, 32, &scene.raytracer);
+    tg_raytracer_create_obj(&scene.raytracer, 256, 32, 256, 0.0f, 0.0f, 0.0f);
+    tg_raytracer_create_obj(&scene.raytracer, 256, 32, 128, 300.0f, 0.0f, 0.0f);
+    for (u32 i = 0; i < 30; i++)
+    {
+        tg_raytracer_create_obj(&scene.raytracer, 32, 32, 32, (f32)i * 35.0f, 0.0f, -200.0f);
+    }
 
 #if 0 // TODO: voxelize?
     scene.h_sponza_mesh = tgvk_mesh_create2("meshes/sponza.obj", V3(0.01f));

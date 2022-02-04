@@ -15,10 +15,6 @@ typedef struct tg_obj
     v3                     center;
     u32                    first_voxel_id;
     u16                    packed_log2_whd; // 5 bits each for log2_w, log2_h, log2_d. One bit unused. TODO: we only need to ensure division by 16 for 3 lods, so just not use lower 3 bits? this member would need to become bigger, though.. but for lod down to w,h,d = 2, we need 2^n?
-    u16                    pad;             // TODO: padding
-    tgvk_buffer            ubo;             // tg_obj_ubo
-    tgvk_descriptor_set    descriptor_set;
-    tgvk_buffer            voxels;          // (w/(L+1) * h/(L+1)) bits for lod L >= 0, L < TG_MAX_LODS. Data is packed contiguous
     // TODO: implement below
     //tgvk_buffer            color_ids;            // 8 bits per voxel
     //u8                     p_color_lut[3 * 256]; // Three 8 bit components per color, 256 colors // TODO: optionally less colors, less memory. put LUT into one huge array and only reference pointer/index to location in here?
@@ -26,8 +22,8 @@ typedef struct tg_obj
 
 typedef struct tg_raytracer_objs
 {
-    u32          capacity;
-    u32          count;
+    u32        capacity;
+    u32        count;
     tg_obj*    p_objs;
 } tg_raytracer_objs;
 
@@ -36,14 +32,20 @@ typedef struct tg_raytracer_visibility_pass
     tgvk_command_buffer    command_buffer;
     VkRenderPass           render_pass;
     tgvk_pipeline          pipeline;
-    tgvk_buffer            instance_id_buffer;
-    tgvk_buffer            view_projection_ubo;
-    tgvk_buffer            raytracing_ubo;
-    tgvk_buffer            visibility_buffer; // u32 w; u32 h; u64 data[w * h];
+    tgvk_descriptor_set    descriptor_set;
+
+    tgvk_buffer            instance_data_ssbo;     // 0: Data of the instance required to fetch its voxels
+    tgvk_buffer            view_projection_ubo;    // 1: View and projection matrices for vertex shader, as defined by raytracer
+    tgvk_buffer            raytracer_data_ubo;     // 2: Data required for voxel raytracing in fragment shader
+    tgvk_buffer            voxel_data_ssbo;        // 3: Bitmap of voxels (either 1 or 0) in order x, y, z
+    tgvk_buffer            visibility_buffer_ssbo; // 4: Output
+    
     tgvk_framebuffer       framebuffer;
-    tgvk_buffer            cube_ibo;
-    tgvk_buffer            cube_vbo_p;
-    tgvk_buffer            cube_vbo_n;
+    
+    tgvk_buffer            instance_id_vbo;        // 0: Instance IDs in ascending order (0, 1, ..., MAX_INSTANCES - 1)
+    tgvk_buffer            cube_ibo;               // 1
+    tgvk_buffer            cube_vbo_p;             // 2
+    tgvk_buffer            cube_vbo_n;             // 3
 } tg_raytracer_visibility_pass;
 
 typedef struct tg_raytracer_shading_pass
@@ -97,7 +99,7 @@ typedef struct tg_raytracer
 
 void    tg_raytracer_create(const tg_camera* p_camera, u32 max_object_count, TG_OUT tg_raytracer* p_raytracer);
 void    tg_raytracer_destroy(tg_raytracer* p_raytracer);
-void    tg_raytracer_create_obj(tg_raytracer* p_raytracer, u32 w, u32 h, u32 d);
+void    tg_raytracer_create_obj(tg_raytracer* p_raytracer, u32 grid_width, u32 grid_height, u32 grid_depth, f32 center_x, f32 center_y, f32 center_z);
 void    tg_raytracer_render(tg_raytracer* p_raytracer);
 void    tg_raytracer_clear(tg_raytracer* p_raytracer);
 

@@ -78,9 +78,9 @@ static VkCommandPool               present_command_pool;
 static tgvk_command_buffer         p_global_compute_command_buffers[TG_MAX_THREADS];
 static tgvk_command_buffer         p_global_graphics_command_buffers[TG_MAX_THREADS];
 
+static VkDeviceSize                staging_buffer_size;
 static tg_read_write_lock          global_staging_buffer_lock;
 static tgvk_buffer                 global_staging_buffer;
-
 static tg_read_write_lock          internal_staging_buffer_lock;
 static tgvk_buffer                 internal_staging_buffer;
 
@@ -293,33 +293,9 @@ void tg__get_transition_info(tgvk_image_type image_type, tgvk_image_layout_type 
 
 tgvk_buffer* tg__staging_buffer_take(VkDeviceSize size)
 {
+    TG_ASSERT(size <= staging_buffer_size);
+
     TG_RWL_LOCK_FOR_WRITE(internal_staging_buffer_lock);
-
-    if (internal_staging_buffer.memory.size < size)
-    {
-        if (internal_staging_buffer.buffer)
-        {
-            tgvk_buffer_destroy(&internal_staging_buffer);
-        }
-
-        VkBufferCreateInfo buffer_create_info = { 0 };
-        buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        buffer_create_info.pNext = TG_NULL;
-        buffer_create_info.flags = 0;
-        buffer_create_info.size = tgvk_memory_aligned_size(size);
-        buffer_create_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-        buffer_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        buffer_create_info.queueFamilyIndexCount = 0;
-        buffer_create_info.pQueueFamilyIndices = TG_NULL;
-
-        TGVK_CALL(vkCreateBuffer(device, &buffer_create_info, TG_NULL, &internal_staging_buffer.buffer));
-
-        VkMemoryRequirements memory_requirements = { 0 };
-        vkGetBufferMemoryRequirements(device, internal_staging_buffer.buffer, &memory_requirements);
-        internal_staging_buffer.memory = TGVK_MALLOC(memory_requirements.alignment, memory_requirements.size, memory_requirements.memoryTypeBits, TGVK_MEMORY_HOST);
-        TGVK_CALL(vkBindBufferMemory(device, internal_staging_buffer.buffer, internal_staging_buffer.memory.device_memory, internal_staging_buffer.memory.offset));
-    }
-
     return &internal_staging_buffer;
 }
 
@@ -513,12 +489,12 @@ void tgvk_buffer_copy(VkDeviceSize size, tgvk_buffer* p_src, tgvk_buffer* p_dst)
     tgvk_command_buffer_end_and_submit(&p_global_graphics_command_buffers[thread_id]);
 }
 
-tgvk_buffer tgvk_buffer_create(VkDeviceSize size, VkBufferUsageFlags buffer_usage_flags, tgvk_memory_type type TG_DEBUG_PARAM(u32 line) TG_DEBUG_PARAM(const char* p_filename))
+tgvk_buffer tgvk_buffer_create(VkDeviceSize size, VkBufferUsageFlags buffer_usage_flags, tgvk_memory_type memory_type TG_DEBUG_PARAM(u32 line) TG_DEBUG_PARAM(const char* p_filename))
 {
     tgvk_buffer buffer = { 0 };
 
     VkBufferUsageFlags usage_flags = buffer_usage_flags;
-    if (type == TGVK_MEMORY_DEVICE)
+    if (memory_type == TGVK_MEMORY_DEVICE)
     {
         // Note: This is necessary so this buffer can be cleared with zeroes.
         usage_flags |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
@@ -538,20 +514,32 @@ tgvk_buffer tgvk_buffer_create(VkDeviceSize size, VkBufferUsageFlags buffer_usag
 
     VkMemoryRequirements memory_requirements = { 0 };
     vkGetBufferMemoryRequirements(device, buffer.buffer, &memory_requirements);
-    buffer.memory = TGVK_MALLOC_DEBUG_INFO(memory_requirements.alignment, memory_requirements.size, memory_requirements.memoryTypeBits, type, line, p_filename);
+    buffer.memory = TGVK_MALLOC_DEBUG_INFO(memory_requirements.alignment, memory_requirements.size, memory_requirements.memoryTypeBits, memory_type, line, p_filename);
     TGVK_CALL(vkBindBufferMemory(device, buffer.buffer, buffer.memory.device_memory, buffer.memory.offset));
 
-    if (type == TGVK_MEMORY_HOST)
+    if (memory_type == TGVK_MEMORY_HOST)
     {
-        tg_memory_nullify(buffer.memory.size, buffer.memory.p_mapped_device_memory);
+        tg_memory_nullify(size, buffer.memory.p_mapped_device_memory);
     }
     else
     {
-        TG_ASSERT(type == TGVK_MEMORY_DEVICE);
-        tgvk_buffer* p_staging_buffer = tg__staging_buffer_take(buffer.memory.size);
-        tg_memory_nullify(buffer.memory.size, p_staging_buffer->memory.p_mapped_device_memory);
+        // TODO: we may want to dispatch a compute shader for huge buffers to nullify
+        TG_ASSERT(memory_type == TGVK_MEMORY_DEVICE);
+        
+        tgvk_buffer* p_staging_buffer = tg__staging_buffer_take(staging_buffer_size);
+        tg_memory_nullify(TG_MIN(size, staging_buffer_size), p_staging_buffer->memory.p_mapped_device_memory);
+
         tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_and_begin_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
-        tgvk_cmd_copy_buffer(p_command_buffer, buffer.memory.size, p_staging_buffer, &buffer);
+        VkDeviceSize total_copied_size = 0;
+        const VkDeviceSize num_iterations = (size + staging_buffer_size - 1) / staging_buffer_size;
+        for (VkDeviceSize i = 0; i < num_iterations; i++)
+        {
+            const VkDeviceSize dst_offset = i * staging_buffer_size;
+            const VkDeviceSize remaining_size = size - total_copied_size;
+            const VkDeviceSize copy_size = TG_MIN(remaining_size, staging_buffer_size);
+            tgvk_cmd_copy_buffer2(p_command_buffer, 0, dst_offset, copy_size, p_staging_buffer, &buffer);
+            total_copied_size += copy_size;
+        }
         tgvk_command_buffer_end_and_submit(p_command_buffer);
         tg__staging_buffer_release();
     }
@@ -857,6 +845,16 @@ void tgvk_cmd_copy_buffer(tgvk_command_buffer* p_command_buffer, VkDeviceSize si
     vkCmdCopyBuffer(p_command_buffer->buffer, p_src->buffer, p_dst->buffer, 1, &buffer_copy);
 }
 
+void tgvk_cmd_copy_buffer2(tgvk_command_buffer* p_command_buffer, VkDeviceSize src_offset, VkDeviceSize dst_offset, VkDeviceSize size, tgvk_buffer* p_src, tgvk_buffer* p_dst)
+{
+    VkBufferCopy buffer_copy = { 0 };
+    buffer_copy.srcOffset = src_offset;
+    buffer_copy.dstOffset = dst_offset;
+    buffer_copy.size = size;
+
+    vkCmdCopyBuffer(p_command_buffer->buffer, p_src->buffer, p_dst->buffer, 1, &buffer_copy);
+}
+
 void tgvk_cmd_copy_buffer_to_cube_map(tgvk_command_buffer* p_command_buffer, tgvk_buffer* p_source, tgvk_cube_map* p_destination)
 {
     VkBufferImageCopy buffer_image_copy = { 0 };
@@ -1004,6 +1002,11 @@ void tgvk_cmd_copy_image_3d_to_buffer(tgvk_command_buffer* p_command_buffer, tgv
 void tgvk_cmd_draw_indexed(tgvk_command_buffer* p_command_buffer, u32 index_count)
 {
     vkCmdDrawIndexed(p_command_buffer->buffer, index_count, 1, 0, 0, 0);
+}
+
+void tgvk_cmd_draw_indexed_instanced(tgvk_command_buffer* p_command_buffer, u32 index_count, u32 instance_count)
+{
+    vkCmdDrawIndexed(p_command_buffer->buffer, index_count, instance_count, 0, 0, 0);
 }
 
 void tgvk_cmd_transition_cube_map_layout(tgvk_command_buffer* p_command_buffer, tgvk_cube_map* p_cube_map, tgvk_image_layout_type src_type, tgvk_image_layout_type dst_type)
@@ -1778,33 +1781,9 @@ b32 tgvk_get_physical_device_image_format_properties(VkFormat format, VkImageTyp
 
 tgvk_buffer* tgvk_global_staging_buffer_take(VkDeviceSize size)
 {
+    TG_ASSERT(size <= staging_buffer_size);
+
     TG_RWL_LOCK_FOR_WRITE(global_staging_buffer_lock);
-
-    if (global_staging_buffer.memory.size < size)
-    {
-        if (global_staging_buffer.buffer)
-        {
-            tgvk_buffer_destroy(&global_staging_buffer);
-        }
-
-        VkBufferCreateInfo buffer_create_info = { 0 };
-        buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        buffer_create_info.pNext = TG_NULL;
-        buffer_create_info.flags = 0;
-        buffer_create_info.size = tgvk_memory_aligned_size(size);
-        buffer_create_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-        buffer_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        buffer_create_info.queueFamilyIndexCount = 0;
-        buffer_create_info.pQueueFamilyIndices = TG_NULL;
-
-        TGVK_CALL(vkCreateBuffer(device, &buffer_create_info, TG_NULL, &global_staging_buffer.buffer));
-
-        VkMemoryRequirements memory_requirements = { 0 };
-        vkGetBufferMemoryRequirements(device, global_staging_buffer.buffer, &memory_requirements);
-        global_staging_buffer.memory = TGVK_MALLOC(memory_requirements.alignment, memory_requirements.size, memory_requirements.memoryTypeBits, TGVK_MEMORY_HOST);
-        TGVK_CALL(vkBindBufferMemory(device, global_staging_buffer.buffer, global_staging_buffer.memory.device_memory, global_staging_buffer.memory.offset));
-    }
-
     return &global_staging_buffer;
 }
 
@@ -1814,6 +1793,11 @@ void tgvk_global_staging_buffer_release(void)
 #pragma warning(disable:26110)
     TG_RWL_UNLOCK_FOR_WRITE(global_staging_buffer_lock);
 #pragma warning(pop)
+}
+
+tg_size tgvk_global_stating_buffer_size(void)
+{
+    return (VkDeviceSize)staging_buffer_size;
 }
 
 
@@ -2026,8 +2010,8 @@ void tgvk_image_destroy(tgvk_image* p_image)
 
 b32 tgvk_image_serialize(tgvk_image* p_image, const char* p_filename)
 {
-    const tg_size staging_buffer_size = (tg_size)p_image->width * (tg_size)p_image->height * tg_color_image_format_size((tg_color_image_format)p_image->format);
-    const tg_size size = sizeof(tgvk_serialized_image) + staging_buffer_size;
+    const tg_size required_staging_buffer_size = (tg_size)p_image->width * (tg_size)p_image->height * tg_color_image_format_size((tg_color_image_format)p_image->format);
+    const tg_size size = sizeof(tgvk_serialized_image) + required_staging_buffer_size;
     tgvk_serialized_image* p_simage = (tgvk_serialized_image*)TG_MALLOC_STACK(size);
 
     p_simage->type = p_image->type;
@@ -2040,11 +2024,11 @@ b32 tgvk_image_serialize(tgvk_image* p_image, const char* p_filename)
     p_simage->sampler_address_mode_v = p_image->sampler.address_mode_v;
     p_simage->sampler_address_mode_w = p_image->sampler.address_mode_w;
 
-    tgvk_buffer* p_staging_buffer = tg__staging_buffer_take(staging_buffer_size);
+    tgvk_buffer* p_staging_buffer = tg__staging_buffer_take(required_staging_buffer_size);
     tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_and_begin_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
     tgvk_cmd_copy_color_image_to_buffer(p_command_buffer, p_image, p_staging_buffer);
     tgvk_command_buffer_end_and_submit(p_command_buffer);
-    tg_memcpy(staging_buffer_size, p_staging_buffer->memory.p_mapped_device_memory, p_simage->p_data);
+    tg_memcpy(required_staging_buffer_size, p_staging_buffer->memory.p_mapped_device_memory, p_simage->p_data);
     tg__staging_buffer_release();
 
     const b32 result = tgp_file_create(p_filename, size, p_simage, TG_TRUE);
@@ -2082,9 +2066,9 @@ b32 tgvk_image_deserialize(const char* p_filename, TG_OUT tgvk_image* p_image TG
 #endif
             );
 
-            const VkDeviceSize staging_buffer_size = file_properties.size - sizeof(tgvk_serialized_image);
-            tgvk_buffer* p_staging_buffer = tg__staging_buffer_take(staging_buffer_size);
-            tg_memcpy(staging_buffer_size, p_simage->p_data, p_staging_buffer->memory.p_mapped_device_memory);
+            const VkDeviceSize required_staging_buffer_size = file_properties.size - sizeof(tgvk_serialized_image);
+            tgvk_buffer* p_staging_buffer = tg__staging_buffer_take(required_staging_buffer_size);
+            tg_memcpy(required_staging_buffer_size, p_simage->p_data, p_staging_buffer->memory.p_mapped_device_memory);
             tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_and_begin_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
             tgvk_cmd_transition_image_layout(p_command_buffer, p_image, TGVK_LAYOUT_UNDEFINED, TGVK_LAYOUT_TRANSFER_WRITE);
             tgvk_cmd_copy_buffer_to_image(p_command_buffer, p_staging_buffer, p_image);
@@ -2105,8 +2089,8 @@ b32 tgvk_image_store_to_disc(tgvk_image* p_image, const char* p_filename, b32 fo
 
     tgvk_image blit_image = TGVK_IMAGE_CREATE(TGVK_IMAGE_TYPE_COLOR, width, height, (VkFormat)TG_COLOR_IMAGE_FORMAT_B8G8R8A8_UNORM, TG_NULL);
 
-    const VkDeviceSize staging_buffer_size = (VkDeviceSize)width * (VkDeviceSize)height * tg_color_image_format_size((tg_color_image_format)blit_image.format);
-    tgvk_buffer* p_staging_buffer = tg__staging_buffer_take(staging_buffer_size);
+    const VkDeviceSize required_staging_buffer_size = (VkDeviceSize)width * (VkDeviceSize)height * tg_color_image_format_size((tg_color_image_format)blit_image.format);
+    tgvk_buffer* p_staging_buffer = tg__staging_buffer_take(required_staging_buffer_size);
 
     tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_and_begin_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
     tgvk_cmd_transition_image_layout(p_command_buffer, &blit_image, TGVK_LAYOUT_UNDEFINED, TGVK_LAYOUT_TRANSFER_WRITE);
@@ -2229,8 +2213,8 @@ b32 tgvk_image_3d_store_slice_to_disc(tgvk_image_3d* p_image_3d, u32 slice_depth
 
     tgvk_image blit_image = TGVK_IMAGE_CREATE(TGVK_IMAGE_TYPE_COLOR, width, height, (VkFormat)TG_COLOR_IMAGE_FORMAT_B8G8R8A8_UNORM, TG_NULL);
 
-    const VkDeviceSize staging_buffer_size = (VkDeviceSize)width * (VkDeviceSize)height * tg_color_image_format_size((tg_color_image_format)blit_image.format);
-    tgvk_buffer* p_staging_buffer = tg__staging_buffer_take(staging_buffer_size);
+    const VkDeviceSize required_staging_buffer_size = (VkDeviceSize)width * (VkDeviceSize)height * tg_color_image_format_size((tg_color_image_format)blit_image.format);
+    tgvk_buffer* p_staging_buffer = tg__staging_buffer_take(required_staging_buffer_size);
 
     tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_and_begin_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
     tgvk_cmd_transition_image_layout(p_command_buffer, &blit_image, TGVK_LAYOUT_UNDEFINED, TGVK_LAYOUT_TRANSFER_WRITE);
@@ -2385,8 +2369,8 @@ b32 tgvk_layered_image_store_layer_to_disc(tgvk_layered_image* p_image, u32 laye
 
     tgvk_image blit_image = TGVK_IMAGE_CREATE(TGVK_IMAGE_TYPE_COLOR, width, height, (VkFormat)TG_COLOR_IMAGE_FORMAT_B8G8R8A8_UNORM, TG_NULL);
 
-    const VkDeviceSize staging_buffer_size = (VkDeviceSize)width * (VkDeviceSize)height * tg_color_image_format_size((tg_color_image_format)blit_image.format);
-    tgvk_buffer* p_staging_buffer = tg__staging_buffer_take(staging_buffer_size);
+    const VkDeviceSize required_staging_buffer_size = (VkDeviceSize)width * (VkDeviceSize)height * tg_color_image_format_size((tg_color_image_format)blit_image.format);
+    tgvk_buffer* p_staging_buffer = tg__staging_buffer_take(required_staging_buffer_size);
 
     tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_and_begin_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
     tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
@@ -2995,6 +2979,7 @@ tgvk_shader tgvk_shader_create(const char* p_filename)
         {
             TG_INVALID_CODEPATH();
         }
+        TG_ASSERT(instanced_input_location_bitmap == 0 || shader_kind == shaderc_vertex_shader);
 
         const shaderc_compilation_result_t result = shaderc_compile_into_spv(shaderc_compiler, p_glsl_generated_buffer, generated_glsl_size, shader_kind, "", "main", TG_NULL);
         TG_ASSERT(result);
@@ -4003,8 +3988,8 @@ static void tg__screen_quad_create(void)
     screen_quad_positions_vbo = TGVK_BUFFER_CREATE_VBO(sizeof(p_positions));
     screen_quad_uvs_vbo = TGVK_BUFFER_CREATE_VBO(sizeof(p_uvs));
 
-    const tg_size staging_buffer_size = TG_MAX3(sizeof(p_indices), sizeof(p_positions), sizeof(p_uvs));
-    tgvk_buffer* p_staging_buffer = tg__staging_buffer_take(staging_buffer_size);
+    const tg_size required_staging_buffer_size = TG_MAX3(sizeof(p_indices), sizeof(p_positions), sizeof(p_uvs));
+    tgvk_buffer* p_staging_buffer = tg__staging_buffer_take(required_staging_buffer_size);
 
     tg_memcpy(sizeof(p_indices), p_indices, p_staging_buffer->memory.p_mapped_device_memory);
     tgvk_buffer_copy(sizeof(p_indices), p_staging_buffer, &screen_quad_ibo);
@@ -4068,8 +4053,12 @@ void tg_graphics_init(void)
     tg__swapchain_create();
 
     tgvk_memory_allocator_init(device, physical_device);
+
+    staging_buffer_size = TG_MAX(2048, tgvk_memory_page_size());
     global_staging_buffer_lock = TG_RWL_CREATE();
+    global_staging_buffer = TGVK_BUFFER_CREATE(staging_buffer_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, TGVK_MEMORY_HOST);
     internal_staging_buffer_lock = TG_RWL_CREATE();
+    internal_staging_buffer = TGVK_BUFFER_CREATE(staging_buffer_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, TGVK_MEMORY_HOST);
 
     shaderc_compiler = shaderc_compiler_initialize();
     tgvk_shader_library_init();

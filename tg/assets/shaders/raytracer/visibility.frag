@@ -5,45 +5,22 @@
 
 
 
-layout(location = 0) flat in uint    v_instance_id;
-layout(location = 1)      in v3      v_position;
-
-
-
-layout(set = 0, binding = 0) uniform unique_ubo
+struct tg_instance_data
 {
-    m4     u_translation;
-    m4     u_rotation;
-    m4     u_scale;
-    u32    u_first_voxel_id;
+    m4     t_mat;
+    m4     r_mat;
+    m4     s_mat;
+    u32    grid_w;
+    u32    grid_h;
+    u32    grid_d;
+    u32    first_voxel_id;
 };
 
-layout(set = 0, binding = 2) uniform raytracing_ubo
+struct tg_box
 {
-    v3    u_camera;
-    v3    u_ray00;
-    v3    u_ray10;
-    v3    u_ray01;
-    v3    u_ray11;
+    v3    min;
+    v3    max;
 };
-
-layout(set = 0, binding = 3) buffer visibility_buffer
-{
-    u32    u_w;
-    u32    u_h;
-    u64    u_vb[];
-};
-
-layout(set = 0, binding = 4) buffer data
-{
-    u32    u_data_w;
-    u32    u_data_h;
-    u32    u_data_d;
-    u32    pad;
-    u32    u_data[];
-};
-
-
 
 struct tg_ray
 {
@@ -52,10 +29,37 @@ struct tg_ray
     v3    invd;
 };
 
-struct tg_box
+
+
+layout(location = 0) flat in uint    v_instance_id;
+layout(location = 1)      in v3      v_position;
+
+layout(std430, set = 0, binding = 0) buffer tg_instance_data_ssbo
 {
-    v3    min;
-    v3    max;
+    tg_instance_data    instance_data[];
+};
+
+layout(set = 0, binding = 2) uniform tg_raytracer_data_ubo
+{
+    v3     camera;
+    v3     ray00;
+    v3     ray10;
+    v3     ray01;
+    v3     ray11;
+    f32    near;
+    f32    far;
+};
+
+layout(set = 0, binding = 3) buffer tg_voxel_data_ssbo
+{
+    u32    voxel_data[];
+};
+
+layout(set = 0, binding = 4) buffer tg_visibility_buffer_ssbo
+{
+    u32    visibility_buffer_w;
+    u32    visibility_buffer_h;
+    u64    visibility_buffer_data[];
 };
 
 
@@ -88,19 +92,22 @@ bool tg_intersect_ray_box(tg_ray r, tg_box b, out f32 t)
 
 void main()
 {
+    tg_instance_data i = instance_data[v_instance_id];
+    
     u32 giid_x = u32(gl_FragCoord.x);
     u32 giid_y = u32(gl_FragCoord.y);
 
-    f32 fx = gl_FragCoord.x / f32(u_w);
-    f32 fy = 1.0 - gl_FragCoord.y / f32(u_h);
+    f32 fx =       gl_FragCoord.x / f32(visibility_buffer_w);
+    f32 fy = 1.0 - gl_FragCoord.y / f32(visibility_buffer_h);
 
 
 
-    m4 ray_origin_mat = inverse(u_translation * u_rotation);
-    v3 ray_origin = (ray_origin_mat * vec4(u_camera, 1.0)).xyz;
+    m4 ray_origin_mat = inverse(i.t_mat * i.r_mat);
+    v3 ray_origin = (ray_origin_mat * vec4(camera, 1.0)).xyz;
 
-    m4 ray_direction_mat = inverse(u_rotation);
-    v3 ray_direction_v3 = normalize(mix(mix(u_ray00, u_ray10, fy), mix(u_ray01, u_ray11, fy), fx));
+    // Instead of transforming the box, the ray is transformed with its inverse
+    m4 ray_direction_mat = inverse(i.r_mat);
+    v3 ray_direction_v3 = normalize(mix(mix(ray00, ray10, fy), mix(ray01, ray11, fy), fx));
     v3 ray_direction = (ray_direction_mat * v4(ray_direction_v3, 0.0)).xyz;
     
     v3 ray_inv_direction = vec3(1.0) / ray_direction;
@@ -109,7 +116,7 @@ void main()
 
 
 
-    v3 box_max = v3(f32(u_data_w) / 2.0, f32(u_data_h) / 2.0, f32(u_data_d) / 2.0);
+    v3 box_max = v3(f32(i.grid_w) / 2.0, f32(i.grid_h) / 2.0, f32(i.grid_d) / 2.0);
     v3 box_min = -box_max;
     tg_box b = tg_box(box_min, box_max);
 
@@ -182,15 +189,20 @@ void main()
 
         while (true)
         {
-            u32 voxel_idx = u_data_w * u_data_h * z + u_data_w * y + x;
-            u32 bits_idx = voxel_idx / 32;
-            u32 bit_idx = voxel_idx % 32;
-            u32 bits = u32(u_data[bits_idx]);
-            u32 bit = bits & (1 << bit_idx);
+            u32 voxel_id  = i.first_voxel_id + i.grid_w * i.grid_h * z + i.grid_w * y + x;
+            u32 bits_idx  = voxel_id / 32;
+            u32 bit_idx   = voxel_id % 32;
+            u32 bits      = voxel_data[bits_idx];
+            u32 bit       = bits & (1 << bit_idx);
             if (bit != 0)
             {
-                d = abs(t_box) / 1000.0; // TODO: near and far plane! discard if too close!
-                id = u_data_w * u_data_h * z + u_data_w * y + x;
+                v3 voxel_min = box_min + v3(f32(x    ), f32(y    ), f32(z    ));
+                v3 voxel_max = box_min + v3(f32(x + 1), f32(y + 1), f32(z + 1));
+                tg_box voxel = tg_box(voxel_min, voxel_max);
+                f32 t_voxel;
+                tg_intersect_ray_box(r, voxel, t_voxel);
+                d = t_voxel / far;
+                id = voxel_id;
                 break;
             }
             if (t_max_x < t_max_y)
@@ -199,13 +211,13 @@ void main()
                 {
                     t_max_x += t_delta_x;
                     x += step_x;
-                    if (x < 0 || x >= u_data_w) break;
+                    if (x < 0 || x >= i.grid_w) break;
                 }
                 else
                 {
                     t_max_z += t_delta_z;
                     z += step_z;
-                    if (z < 0 || z >= u_data_d) break;
+                    if (z < 0 || z >= i.grid_d) break;
                 }
             }
             else
@@ -214,24 +226,24 @@ void main()
                 {
                     t_max_y += t_delta_y;
                     y += step_y;
-                    if (y < 0 || y >= u_data_h) break;
+                    if (y < 0 || y >= i.grid_h) break;
                 }
                 else
                 {
                     t_max_z += t_delta_z;
                     z += step_z;
-                    if (z < 0 || z >= u_data_d) break;
+                    if (z < 0 || z >= i.grid_d) break;
                 }
             }
         }
     }
     
-    //if (d != 1.0)
+    if (d != 1.0)
     {
         u32 x = u32(gl_FragCoord.x);
         u32 y = u32(gl_FragCoord.y);
-        u64 data = u64(id) | (u64(d * 4294967295.0) << u64(32));
-        u32 i = u_w * y + x;
-        atomicMin(u_vb[i], data);
+        u64 data = u64(id) | (u64(u64(floatBitsToUint(d))) << u64(32));
+        u32 pixel_idx = visibility_buffer_w * y + x;
+        atomicMin(visibility_buffer_data[pixel_idx], data);
     }
 }

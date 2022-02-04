@@ -44,13 +44,8 @@ typedef struct tgvk_memory_block
 void                 tgvk_memory_allocator_init(VkDevice device, VkPhysicalDevice physical_device);
 void                 tgvk_memory_allocator_shutdown(VkDevice device);
 VkDeviceSize         tgvk_memory_aligned_size(VkDeviceSize size);
-
-tgvk_memory_block    tgvk_memory_allocator_alloc(VkDeviceSize alignment, VkDeviceSize size, u32 memory_type_bits, tgvk_memory_type type
-#ifdef TG_DEBUG
-                         , u32 line, const char* p_filename
-#endif
-                     );
-
+VkDeviceSize         tgvk_memory_page_size(void);
+tgvk_memory_block    tgvk_memory_allocator_alloc(VkDeviceSize alignment, VkDeviceSize size, u32 memory_type_bits, tgvk_memory_type type TG_DEBUG_PARAM(u32 line) TG_DEBUG_PARAM(const char* p_filename));
 void                 tgvk_memory_allocator_free(tgvk_memory_block* p_memory_block);
 
 #endif

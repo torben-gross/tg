@@ -16,8 +16,8 @@
 
 #ifdef TG_DEBUG
 
-#define TGVK_BUFFER_CREATE(size, buffer_usage_flags, type) \
-    tgvk_buffer_create(size, buffer_usage_flags, type, __LINE__, __FILE__)
+#define TGVK_BUFFER_CREATE(size, buffer_usage_flags, memory_type) \
+    tgvk_buffer_create(size, buffer_usage_flags, memory_type, __LINE__, __FILE__)
 
 #define TGVK_CUBE_MAP_CREATE(dimension, format, p_sampler_create_info) \
     tgvk_cube_map_create(dimension, format, p_sampler_create_info, __LINE__, __FILE__)
@@ -39,8 +39,8 @@
 
 #else
 
-#define TGVK_BUFFER_CREATE(size, buffer_usage_flags, type) \
-    tgvk_buffer_create(size, buffer_usage_flags, type)
+#define TGVK_BUFFER_CREATE(size, buffer_usage_flags, memory_type) \
+    tgvk_buffer_create(size, buffer_usage_flags, memory_type)
 
 #define TGVK_CUBE_MAP_CREATE(dimension, format, p_sampler_create_info) \
     tgvk_cube_map_create(dimension, format, p_sampler_create_info)
@@ -302,7 +302,7 @@ tgvk_buffer                     screen_quad_uvs_vbo;
 
 
 void                    tgvk_buffer_copy(VkDeviceSize size, tgvk_buffer* p_src, tgvk_buffer* p_dst);
-tgvk_buffer             tgvk_buffer_create(VkDeviceSize size, VkBufferUsageFlags buffer_usage_flags, tgvk_memory_type type TG_DEBUG_PARAM(u32 line) TG_DEBUG_PARAM(const char* p_filename));
+tgvk_buffer             tgvk_buffer_create(VkDeviceSize size, VkBufferUsageFlags buffer_usage_flags, tgvk_memory_type memory_type TG_DEBUG_PARAM(u32 line) TG_DEBUG_PARAM(const char* p_filename));
 void                    tgvk_buffer_destroy(tgvk_buffer* p_buffer);
 
 void                    tgvk_cmd_begin_render_pass(tgvk_command_buffer* p_command_buffer, VkRenderPass render_pass, tgvk_framebuffer* p_framebuffer, VkSubpassContents subpass_contents);
@@ -318,6 +318,7 @@ void                    tgvk_cmd_clear_image(tgvk_command_buffer* p_command_buff
 void                    tgvk_cmd_clear_image_3d(tgvk_command_buffer* p_command_buffer, tgvk_image_3d* p_image_3d);
 void                    tgvk_cmd_clear_layered_image(tgvk_command_buffer* p_command_buffer, tgvk_layered_image* p_image);
 void                    tgvk_cmd_copy_buffer(tgvk_command_buffer* p_command_buffer, VkDeviceSize size, tgvk_buffer* p_src, tgvk_buffer* p_dst);
+void                    tgvk_cmd_copy_buffer2(tgvk_command_buffer* p_command_buffer, VkDeviceSize src_offset, VkDeviceSize dst_offset, VkDeviceSize size, tgvk_buffer* p_src, tgvk_buffer* p_dst);
 void                    tgvk_cmd_copy_buffer_to_cube_map(tgvk_command_buffer* p_command_buffer, tgvk_buffer* p_source, tgvk_cube_map* p_destination);
 void                    tgvk_cmd_copy_buffer_to_image(tgvk_command_buffer* p_command_buffer, tgvk_buffer* p_source, tgvk_image* p_destination);
 void                    tgvk_cmd_copy_buffer_to_image_3d(tgvk_command_buffer* p_command_buffer, tgvk_buffer* p_source, tgvk_image_3d* p_destination);
@@ -326,6 +327,7 @@ void                    tgvk_cmd_copy_color_image_to_buffer(tgvk_command_buffer*
 void                    tgvk_cmd_copy_depth_image_pixel_to_buffer(tgvk_command_buffer* p_command_buffer, tgvk_image* p_source, tgvk_buffer* p_destination, u32 x, u32 y);
 void                    tgvk_cmd_copy_image_3d_to_buffer(tgvk_command_buffer* p_command_buffer, tgvk_image_3d* p_source, tgvk_buffer* p_destination);
 void                    tgvk_cmd_draw_indexed(tgvk_command_buffer* p_command_buffer, u32 index_count);
+void                    tgvk_cmd_draw_indexed_instanced(tgvk_command_buffer* p_command_buffer, u32 index_count, u32 instance_count);
 void                    tgvk_cmd_transition_cube_map_layout(tgvk_command_buffer* p_command_buffer, tgvk_cube_map* p_cube_map, tgvk_image_layout_type src_type, tgvk_image_layout_type dst_type);
 void                    tgvk_cmd_transition_cube_map_layout2(tgvk_command_buffer* p_command_buffer, tgvk_cube_map* p_cube_map, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits);
 void                    tgvk_cmd_transition_image_layout(tgvk_command_buffer* p_command_buffer, tgvk_image* p_image, tgvk_image_layout_type src_type, tgvk_image_layout_type dst_type);
@@ -378,6 +380,7 @@ b32                     tgvk_get_physical_device_image_format_properties(VkForma
 
 tgvk_buffer*            tgvk_global_staging_buffer_take(VkDeviceSize size);
 void                    tgvk_global_staging_buffer_release(void);
+tg_size                 tgvk_global_stating_buffer_size(void);
 
 tgvk_image              tgvk_image_create(tgvk_image_type_flags type_flags, u32 width, u32 height, VkFormat format, const tgvk_sampler_create_info* p_sampler_create_info TG_DEBUG_PARAM(u32 line) TG_DEBUG_PARAM(const char* p_filename));
 tgvk_image              tgvk_image_create2(tgvk_image_type type, const char* p_filename, const tgvk_sampler_create_info* p_sampler_create_info TG_DEBUG_PARAM(u32 line) TG_DEBUG_PARAM(const char* p_filename2));

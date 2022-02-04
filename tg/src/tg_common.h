@@ -46,6 +46,7 @@
 #define TG_STATIC_ASSERT(x)
 #endif
 
+#define TG_SIZEOF_MEMBER(type, member)           sizeof(((type*)0)->member)
 #define TG_UNUSED(x)                             ((void)(x))
 #define TG_INOUT
 #define TG_OUT
