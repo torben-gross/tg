@@ -26,10 +26,16 @@ layout(set = 0, binding = 5) uniform ubo
 };
 
 layout(location = 0) out v4 out_color;
-
-u32 tg_hash_u32(u32 v) // Knuth's multiplicative method
+    
+u64 tg_hash_u64(u64 v) // MurmurHash3 algorithm by Austin Appleby
 {
-    return v * 2654435761;
+    u64 h = v;
+    h ^= h >> 33;
+    h *= 0xff51afd7ed558ccdL;
+    h ^= h >> 33;
+    h *= 0xc4ceb9fe1a85ec53L;
+    h ^= h >> 33;
+    return h;
 }
 
 void main()
@@ -38,16 +44,17 @@ void main()
     u32 y = u32(gl_FragCoord.y);
     u32 i = visibility_buffer_w * y + x;
     u64 data = visibility_buffer_data[i];
-    f32 d = uintBitsToFloat(u32(data >> u64(32)));
-    u32 id = u32(data & u64(TG_U32_MAX));
+    //f32 d32 = uintBitsToFloat(u32(data >> u64(32)));
+    f32 d24 = f32(data >> u64(40)) / 16777215.0;
+    u64 id40 = data & ((u64(1) << u64(40)) - u64(1));
 
-    u32 rui = tg_hash_u32(id);
-    u32 gui = tg_hash_u32(rui);
-    u32 bui = tg_hash_u32(gui);
-    f32 g = f32(gui) / 4294967295.0;
-    f32 r = f32(rui) / 4294967295.0;
-    f32 b = f32(bui) / 4294967295.0;
+    u64 rui = tg_hash_u64(id40);
+    u64 gui = tg_hash_u64(rui);
+    u64 bui = tg_hash_u64(gui);
+    f32 r = f32(rui) / f32(18446744073709551615.0);
+    f32 g = f32(gui) / f32(18446744073709551615.0);
+    f32 b = f32(bui) / f32(18446744073709551615.0);
 
     out_color = vec4(r, g, b, 1.0);
-    //out_color = vec4(d, d, d, 1.0);
+    //out_color = vec4(d24, d24, d24, 1.0);
 }

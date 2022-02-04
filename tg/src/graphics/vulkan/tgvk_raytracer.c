@@ -544,7 +544,7 @@ void tg_raytracer_create_obj(tg_raytracer* p_raytracer, u32 grid_width, u32 grid
 
     tg_instance_data_ubo* p_instance_data = p_staging_buffer->memory.p_mapped_device_memory;
     p_instance_data->t = tgm_m4_translate((v3) { center_x, center_y, center_z });
-    p_instance_data->r = tgm_m4_rotate_y(TG_TO_RADIANS(15.0f));
+    p_instance_data->r = tgm_m4_rotate_y(TG_TO_RADIANS(0.0f));
     p_instance_data->s = tgm_m4_scale((v3) { (f32)grid_width, (f32)grid_height, (f32)grid_depth });
     p_instance_data->w = grid_width;
     p_instance_data->h = grid_height;

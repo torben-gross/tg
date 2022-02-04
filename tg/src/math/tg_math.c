@@ -1866,12 +1866,12 @@ m4 tgm_m4_orthographic(f32 left, f32 right, f32 bottom, f32 top, f32 far, f32 ne
 
 	result.m02 = 0.0f;
 	result.m12 = 0.0f;
-	result.m22 = -1.0f / (near - far);
+	result.m22 = -1.0f / (far - near);
 	result.m32 = 0.0f;
 
 	result.m03 = -(right + left) / (right - left);
 	result.m13 = -(bottom + top) / (bottom - top);
-	result.m23 = near / (near - far);
+	result.m23 = -near / (far - near);
 	result.m33 = 1.0f;
 
 	return result;
@@ -1883,8 +1883,8 @@ m4 tgm_m4_perspective(f32 fov_y_in_radians, f32 aspect, f32 near, f32 far)
 
 	const f32 tan_half_fov_y = tgm_f32_tan(fov_y_in_radians / 2.0f);
 
-	const f32 a = -far / (far - near);
-	const f32 b = -(2.0f * far * near) / (near - far);
+	const f32 a = far / (near - far);
+	const f32 b = -(2.0f * far * near) / (far - near);
 
 	result.m00 = 1.0f / (aspect * tan_half_fov_y);
 	result.m10 = 0.0f;

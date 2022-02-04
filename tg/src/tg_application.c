@@ -41,13 +41,13 @@ static void tg__scene_create(void)
     scene.camera.roll = 0.0f;
     scene.camera.persp.fov_y_in_radians = TG_TO_RADIANS(70.0f);
     scene.camera.persp.aspect = tgp_get_window_aspect_ratio();
-    scene.camera.persp.n = -0.1f;
-    scene.camera.persp.f = -1000.0f;
+    scene.camera.persp.n = 0.1f;
+    scene.camera.persp.f = 1000.0f;
     tg_input_get_mouse_position(&scene.last_mouse_x, &scene.last_mouse_y);
 
     tg_raytracer_create(&scene.camera, 32, &scene.raytracer);
     tg_raytracer_create_obj(&scene.raytracer, 256, 32, 256, 0.0f, 0.0f, 0.0f);
-    tg_raytracer_create_obj(&scene.raytracer, 256, 32, 128, 300.0f, 0.0f, 0.0f);
+    tg_raytracer_create_obj(&scene.raytracer, 256, 32, 128, 256.0f, 0.0f, 0.0f);
     for (u32 i = 0; i < 30; i++)
     {
         tg_raytracer_create_obj(&scene.raytracer, 32, 32, 32, (f32)i * 35.0f, 0.0f, -200.0f);

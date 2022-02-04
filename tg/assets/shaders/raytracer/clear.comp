@@ -16,6 +16,6 @@ void main()
 {
     if (gl_GlobalInvocationID.x < visibility_buffer_w && gl_GlobalInvocationID.y < visibility_buffer_h)
     {
-	    visibility_buffer_data[visibility_buffer_w * gl_GlobalInvocationID.y + gl_GlobalInvocationID.x] = u64(TG_U32_MAX) << u64(32);
+	    visibility_buffer_data[visibility_buffer_w * gl_GlobalInvocationID.y + gl_GlobalInvocationID.x] = 0xffffffff << 32;
     }
 }

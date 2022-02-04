@@ -41,11 +41,11 @@ layout(std430, set = 0, binding = 0) buffer tg_instance_data_ssbo
 
 layout(set = 0, binding = 2) uniform tg_raytracer_data_ubo
 {
-    v3     camera;
-    v3     ray00;
-    v3     ray10;
-    v3     ray01;
-    v3     ray11;
+    v4     camera;
+    v4     ray00;
+    v4     ray10;
+    v4     ray01;
+    v4     ray11;
     f32    near;
     f32    far;
 };
@@ -103,11 +103,11 @@ void main()
 
 
     m4 ray_origin_mat = inverse(i.t_mat * i.r_mat);
-    v3 ray_origin = (ray_origin_mat * vec4(camera, 1.0)).xyz;
+    v3 ray_origin = (ray_origin_mat * vec4(camera.xyz, 1.0)).xyz;
 
     // Instead of transforming the box, the ray is transformed with its inverse
     m4 ray_direction_mat = inverse(i.r_mat);
-    v3 ray_direction_v3 = normalize(mix(mix(ray00, ray10, fy), mix(ray01, ray11, fy), fx));
+    v3 ray_direction_v3 = normalize(mix(mix(ray00.xyz, ray10.xyz, fy), mix(ray01.xyz, ray11.xyz, fy), fx));
     v3 ray_direction = (ray_direction_mat * v4(ray_direction_v3, 0.0)).xyz;
     
     v3 ray_inv_direction = vec3(1.0) / ray_direction;
@@ -201,7 +201,7 @@ void main()
                 tg_box voxel = tg_box(voxel_min, voxel_max);
                 f32 t_voxel;
                 tg_intersect_ray_box(r, voxel, t_voxel);
-                d = t_voxel / far;
+                d = min(1.0, t_voxel / far);
                 id = voxel_id;
                 break;
             }
@@ -242,7 +242,10 @@ void main()
     {
         u32 x = u32(gl_FragCoord.x);
         u32 y = u32(gl_FragCoord.y);
-        u64 data = u64(id) | (u64(u64(floatBitsToUint(d))) << u64(32));
+        // d32 = u64(floatBitsToUint(d));
+        u64 d24 = u64(d * 16777215.0) << u64(40);
+        u64 id40 = u64(id);
+        u64 data = d24 | id40;
         u32 pixel_idx = visibility_buffer_w * y + x;
         atomicMin(visibility_buffer_data[pixel_idx], data);
     }
