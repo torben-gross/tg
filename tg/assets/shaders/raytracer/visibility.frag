@@ -102,13 +102,13 @@ void main()
 
 
 
+    // Instead of transforming the box, the ray is transformed with its inverse
     m4 ray_origin_mat = inverse(i.t_mat * i.r_mat);
     v3 ray_origin = (ray_origin_mat * vec4(camera.xyz, 1.0)).xyz;
 
-    // Instead of transforming the box, the ray is transformed with its inverse
     m4 ray_direction_mat = inverse(i.r_mat);
-    v3 ray_direction_v3 = normalize(mix(mix(ray00.xyz, ray10.xyz, fy), mix(ray01.xyz, ray11.xyz, fy), fx));
-    v3 ray_direction = (ray_direction_mat * v4(ray_direction_v3, 0.0)).xyz;
+    v3 ray_direction_v3 = mix(mix(ray00.xyz, ray10.xyz, fy), mix(ray01.xyz, ray11.xyz, fy), fx);
+    v3 ray_direction = normalize((ray_direction_mat * v4(ray_direction_v3, 0.0)).xyz);
     
     v3 ray_inv_direction = vec3(1.0) / ray_direction;
     

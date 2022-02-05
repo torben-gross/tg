@@ -51,8 +51,14 @@ typedef struct tg_visibility_buffer_ssbo
 
 typedef struct tg_shading_data_ubo
 {
-    v4     camera_position;
+    v4     camera;
+    v4     ray00;
+    v4     ray10;
+    v4     ray01;
+    v4     ray11;
     v4     sun_direction;
+    f32    near;
+    f32    far;
     //u32    directional_light_count;
     //u32    point_light_count; u32 pad[2];
     //m4     ivp; // inverse view projection
@@ -740,7 +746,16 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
     p_raytracer_data_ubo->near = c.persp.n;
     p_raytracer_data_ubo->far = c.persp.f;
 
+    // TODO: calculated twice!
     tg_shading_data_ubo* p_shading_ubo = p_raytracer->shading_pass.shading_data_ubo.memory.p_mapped_device_memory;
+    p_shading_ubo->camera.xyz = c.position;
+    p_shading_ubo->ray00.xyz = tgm_v3_normalized(tgm_m4_mulv4(ivp_no_translation, (v4) { -1.0f, 1.0f, 1.0f, 1.0f }).xyz);
+    p_shading_ubo->ray10.xyz = tgm_v3_normalized(tgm_m4_mulv4(ivp_no_translation, (v4) { -1.0f, -1.0f, 1.0f, 1.0f }).xyz);
+    p_shading_ubo->ray01.xyz = tgm_v3_normalized(tgm_m4_mulv4(ivp_no_translation, (v4) { 1.0f, 1.0f, 1.0f, 1.0f }).xyz);
+    p_shading_ubo->ray11.xyz = tgm_v3_normalized(tgm_m4_mulv4(ivp_no_translation, (v4) { 1.0f, -1.0f, 1.0f, 1.0f }).xyz);
+    p_shading_ubo->sun_direction.xyz = (v3){ 0.0f, -1.0f, 0.0f };
+    p_shading_ubo->near = c.persp.n;
+    p_shading_ubo->far = c.persp.f;
     //p_shading_ubo->camera_position.xyz = c.position;
     //p_shading_ubo->ivp = ivp;
 

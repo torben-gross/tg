@@ -2988,7 +2988,6 @@ tgvk_shader tgvk_shader_create(const char* p_filename)
         if (shaderc_result_get_num_warnings(result) || shaderc_result_get_num_errors(result))
         {
             const char* p_error_message = shaderc_result_get_error_message(result);
-            char p_buffer[4096] = { 0 };
             const u32 line = tg_string_to_u32(p_error_message + 1);
             char p_line_buffer[1024] = { 0 };
             const char* p_line = p_glsl_generated_buffer;
@@ -2998,8 +2997,7 @@ tgvk_shader tgvk_shader_create(const char* p_filename)
             }
             p_line = tg_string_skip_whitespace(p_line);
             tg_strcpy_line(sizeof(p_line_buffer), p_line_buffer, p_line);
-            tg_stringf(sizeof(p_buffer), p_buffer, "Error compiling \"%s\":\n%sCode at %u: %s", p_filename, p_error_message, line, p_line_buffer);
-            TG_DEBUG_LOG(p_buffer);
+            TG_DEBUG_LOG("Error compiling \"%s\":\n%sCode at %u: %s", p_filename, p_error_message, line, p_line_buffer);
             TG_INVALID_CODEPATH();
         }
 #endif
