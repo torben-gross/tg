@@ -164,7 +164,7 @@ b32 tg_intersect_ray_triangle(v3 ray_origin, v3 ray_direction, v3 tri_p0, v3 tri
 {
     TG_ASSERT(tgm_v3_magsqr(ray_direction) > TG_F32_EPSILON);
 
-    v3 barycentric_coords = V3(TG_F32_MAX);
+    v3 barycentric_coords = { TG_F32_MAX,TG_F32_MAX,TG_F32_MAX };
 
     v3 v01 = tgm_v3_sub(tri_p1, tri_p0);
     v3 v02 = tgm_v3_sub(tri_p2, tri_p0);

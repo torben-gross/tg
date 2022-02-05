@@ -34,7 +34,7 @@ typedef struct tg_raytracer_visibility_pass
     tgvk_pipeline          pipeline;
     tgvk_descriptor_set    descriptor_set;
 
-    tgvk_buffer            instance_data_ssbo;     // 0: Data of the instance required to fetch its voxels
+                                                   // 0: tg_raytracer.instance_data_ssbo. Data of the instance required to fetch its voxels
     tgvk_buffer            view_projection_ubo;    // 1: View and projection matrices for vertex shader, as defined by raytracer
     tgvk_buffer            raytracer_data_ubo;     // 2: Data required for voxel raytracing in fragment shader
     tgvk_buffer            voxel_data_ssbo;        // 3: Bitmap of voxels (either 1 or 0) in order x, y, z
@@ -53,7 +53,9 @@ typedef struct tg_raytracer_shading_pass
     tgvk_command_buffer    command_buffer;
     VkRenderPass           render_pass;
     tgvk_pipeline          graphics_pipeline;
-    tgvk_buffer            ubo;
+    tgvk_buffer            shading_data_ubo;
+    tgvk_buffer            color_lut_id_ssbo;
+    tgvk_buffer            color_lut_ssbo;
     tgvk_descriptor_set    descriptor_set;
     tgvk_framebuffer       framebuffer;
 } tg_raytracer_shading_pass;
@@ -86,6 +88,7 @@ typedef struct tg_raytracer
     tgvk_image                      hdr_color_attachment;
     tg_render_target                render_target;
     VkSemaphore                     semaphore;
+    tgvk_buffer                     instance_data_ssbo;
 
     tg_raytracer_objs               objs;
     tg_raytracer_visibility_pass    visibility_pass;
@@ -100,6 +103,7 @@ typedef struct tg_raytracer
 void    tg_raytracer_create(const tg_camera* p_camera, u32 max_object_count, TG_OUT tg_raytracer* p_raytracer);
 void    tg_raytracer_destroy(tg_raytracer* p_raytracer);
 void    tg_raytracer_create_obj(tg_raytracer* p_raytracer, u32 grid_width, u32 grid_height, u32 grid_depth, f32 center_x, f32 center_y, f32 center_z);
+void    tg_raytracer_color_lut_set(tg_raytracer* p_raytracer, u8 index, f32 r, f32 g, f32 b);
 void    tg_raytracer_render(tg_raytracer* p_raytracer);
 void    tg_raytracer_clear(tg_raytracer* p_raytracer);
 

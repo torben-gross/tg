@@ -121,7 +121,7 @@ void main()
     tg_box b = tg_box(box_min, box_max);
 
     f32 d = 1.0;
-    u32 id = 1;
+    u32 voxel_id = 0;
     f32 t_box;
     if (tg_intersect_ray_box(r, b, t_box))
     {
@@ -189,9 +189,10 @@ void main()
 
         while (true)
         {
-            u32 voxel_id  = i.first_voxel_id + i.grid_w * i.grid_h * z + i.grid_w * y + x;
-            u32 bits_idx  = voxel_id / 32;
-            u32 bit_idx   = voxel_id % 32;
+            u32 vox_id    = i.grid_w * i.grid_h * z + i.grid_w * y + x;
+            u32 vox_idx   = i.first_voxel_id + vox_id;
+            u32 bits_idx  = vox_idx / 32;
+            u32 bit_idx   = vox_idx % 32;
             u32 bits      = voxel_data[bits_idx];
             u32 bit       = bits & (1 << bit_idx);
             if (bit != 0)
@@ -202,7 +203,7 @@ void main()
                 f32 t_voxel;
                 tg_intersect_ray_box(r, voxel, t_voxel);
                 d = min(1.0, t_voxel / far);
-                id = voxel_id;
+                voxel_id = vox_id;
                 break;
             }
             if (t_max_x < t_max_y)
@@ -240,13 +241,16 @@ void main()
     
     if (d != 1.0)
     {
+        // Layout : 24 bits depth | 10 bits instance id | 30 bits relative voxel_id
+
+        u64 depth_24b = u64(d * 16777215.0) << u64(40);
+        u64 instance_id_10b = u64(v_instance_id) << u64(30);
+        u64 voxel_id_30b = u64(voxel_id);
+        u64 packed_data = depth_24b | instance_id_10b | voxel_id_30b;
+
         u32 x = u32(gl_FragCoord.x);
         u32 y = u32(gl_FragCoord.y);
-        // d32 = u64(floatBitsToUint(d));
-        u64 d24 = u64(d * 16777215.0) << u64(40);
-        u64 id40 = u64(id);
-        u64 data = d24 | id40;
         u32 pixel_idx = visibility_buffer_w * y + x;
-        atomicMin(visibility_buffer_data[pixel_idx], data);
+        atomicMin(visibility_buffer_data[pixel_idx], packed_data);
     }
 }

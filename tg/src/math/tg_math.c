@@ -769,6 +769,17 @@ u32 tgm_u32_min(u32 v0, u32 v1)
 	return result;
 }
 
+u32 tgm_u32_murmur_hash_3(u32 v)
+{
+	u32 result = v;
+	result ^= result >> 16;
+	result *= 0x85ebca6b;
+	result ^= result >> 13;
+	result *= 0xc2b2ae35;
+	result ^= result >> 16;
+	return result;
+}
+
 #ifdef TG_CPU_x64
 
 u64 tgm_u64_ceil_to_pow2(u64 v)
@@ -800,6 +811,17 @@ u64 tgm_u64_max(u64 v0, u64 v1)
 u64 tgm_u64_min(u64 v0, u64 v1)
 {
 	const u64 result = v0 < v1 ? v0 : v1;
+	return result;
+}
+
+u64 tgm_u64_murmur_hash_3(u64 v)
+{
+	u64 result = v;
+	result ^= result >> 33;
+	result *= 0xff51afd7ed558ccdL;
+	result ^= result >> 33;
+	result *= 0xc4ceb9fe1a85ec53L;
+	result ^= result >> 33;
 	return result;
 }
 

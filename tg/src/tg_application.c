@@ -7,6 +7,14 @@
 
 
 
+#define TG_VOXEL_SIZE_IN_METER    0.1f
+#define TG_RUNNING_MPS            (10.44f / TG_VOXEL_SIZE_IN_METER)
+#define TG_RUNNING_KPH            TG_MPS2KPH(TG_RUNNING_MPS)
+#define TG_WALKING_KPH            (5.0f / TG_VOXEL_SIZE_IN_METER)
+#define TG_WALKING_MPS            TG_KPH2MPS(TG_WALKING_KPH)
+
+
+
 #ifdef TG_DEBUG
 typedef struct tg_debug_info
 {
@@ -39,18 +47,31 @@ static void tg__scene_create(void)
     scene.camera.pitch = 0.0f;
     scene.camera.yaw = 0.0f;
     scene.camera.roll = 0.0f;
-    scene.camera.persp.fov_y_in_radians = TG_TO_RADIANS(70.0f);
+    scene.camera.persp.fov_y_in_radians = TG_DEG2RAD(70.0f);
     scene.camera.persp.aspect = tgp_get_window_aspect_ratio();
     scene.camera.persp.n = 0.1f;
     scene.camera.persp.f = 1000.0f;
     tg_input_get_mouse_position(&scene.last_mouse_x, &scene.last_mouse_y);
 
     tg_raytracer_create(&scene.camera, 32, &scene.raytracer);
-    tg_raytracer_create_obj(&scene.raytracer, 256, 32, 256, 0.0f, 0.0f, 0.0f);
-    tg_raytracer_create_obj(&scene.raytracer, 256, 32, 128, 256.0f, 0.0f, 0.0f);
+    tg_raytracer_create_obj(&scene.raytracer, 128, 64, 128, 0.0f, 0.0f, 0.0f);
+    tg_raytracer_create_obj(&scene.raytracer, 128, 64, 32, 128.0f, 0.0f, 0.0f);
     for (u32 i = 0; i < 30; i++)
     {
-        tg_raytracer_create_obj(&scene.raytracer, 32, 32, 32, (f32)i * 35.0f, 0.0f, -200.0f);
+        tg_raytracer_create_obj(&scene.raytracer, 32, 32, 32, (f32)i * 35.0f, 50.0f, -200.0f);
+    }
+    tg_raytracer_color_lut_set(&scene.raytracer, 0, 1.0f, 0.0f, 0.0f);
+    tg_raytracer_color_lut_set(&scene.raytracer, 1, 0.0f, 1.0f, 0.0f);
+    tg_raytracer_color_lut_set(&scene.raytracer, 2, 0.0f, 0.0f, 1.0f);
+    for (u32 i = 3; i < 256; i++)
+    {
+        u32 r_u32 = tgm_u32_murmur_hash_3(i);
+        u32 g_u32 = tgm_u32_murmur_hash_3(r_u32);
+        u32 b_u32 = tgm_u32_murmur_hash_3(g_u32);
+        f32 r = r_u32 / (f32)TG_U32_MAX;
+        f32 g = g_u32 / (f32)TG_U32_MAX;
+        f32 b = b_u32 / (f32)TG_U32_MAX;
+        tg_raytracer_color_lut_set(&scene.raytracer, (u8)i, r, g, b);
     }
 
 #if 0 // TODO: voxelize?
@@ -74,7 +95,7 @@ static void tg__scene_create(void)
 #endif
 }
 
-static void tg__scene_update_and_render(f32 dt)
+static void tg__scene_update_and_render(f32 dt_ms)
 {
 
 
@@ -104,8 +125,8 @@ static void tg__scene_update_and_render(f32 dt)
     tg_input_get_mouse_position(&mouse_x, &mouse_y);
     if (tg_input_is_mouse_button_down(TG_BUTTON_MIDDLE))
     {
-        scene.camera.yaw += TG_TO_RADIANS(0.064f * (f32)((i32)scene.last_mouse_x - (i32)mouse_x));
-        scene.camera.pitch += TG_TO_RADIANS(0.064f * (f32)((i32)scene.last_mouse_y - (i32)mouse_y));
+        scene.camera.yaw += TG_DEG2RAD(0.064f * (f32)((i32)scene.last_mouse_x - (i32)mouse_x));
+        scene.camera.pitch += TG_DEG2RAD(0.064f * (f32)((i32)scene.last_mouse_y - (i32)mouse_y));
     }
     scene.last_mouse_x = mouse_x;
     scene.last_mouse_y = mouse_y;
@@ -113,19 +134,19 @@ static void tg__scene_update_and_render(f32 dt)
     const f32 rotate_speed = 0.001f;
     if (tg_input_is_key_down(TG_KEY_I))
     {
-        scene.camera.pitch += rotate_speed * dt;
+        scene.camera.pitch += rotate_speed * dt_ms;
     }
     if (tg_input_is_key_down(TG_KEY_J))
     {
-        scene.camera.yaw += rotate_speed * dt;
+        scene.camera.yaw += rotate_speed * dt_ms;
     }
     if (tg_input_is_key_down(TG_KEY_K))
     {
-        scene.camera.pitch -= rotate_speed * dt;
+        scene.camera.pitch -= rotate_speed * dt_ms;
     }
     if (tg_input_is_key_down(TG_KEY_L))
     {
-        scene.camera.yaw -= rotate_speed * dt;
+        scene.camera.yaw -= rotate_speed * dt_ms;
     }
     const m4 camera_rotation = tgm_m4_euler(scene.camera.pitch, scene.camera.yaw, scene.camera.roll);
 
@@ -161,9 +182,10 @@ static void tg__scene_update_and_render(f32 dt)
 
     if (tgm_v3_magsqr(velocity) != 0.0f)
     {
-        const f32 camera_base_speed = tg_input_is_key_down(TG_KEY_SHIFT) ? 0.1f : 0.01f;
-        const f32 camera_speed = camera_base_speed * dt;
-        velocity = tgm_v3_mulf(tgm_v3_normalized(velocity), camera_speed);
+        const f32 player_speed_mps = tg_input_is_key_down(TG_KEY_SHIFT) ? TG_RUNNING_MPS : TG_WALKING_MPS;
+        const f32 player_speed_mpms = player_speed_mps / 1000.0f;
+        const f32 player_speed = player_speed_mpms * dt_ms;
+        velocity = tgm_v3_mulf(tgm_v3_normalized(velocity), player_speed);
         scene.camera.position = tgm_v3_add(scene.camera.position, velocity);
     }
 
@@ -172,7 +194,7 @@ static void tg__scene_update_and_render(f32 dt)
         scene.camera.persp.fov_y_in_radians -= 0.1f * tg_input_get_mouse_wheel_detents(TG_TRUE);
     }
 
-    scene.light_timer += dt;
+    scene.light_timer += dt_ms;
     while (scene.light_timer > 32000.0f)
     {
         scene.light_timer -= 32000.0f;
@@ -190,7 +212,7 @@ static void tg__scene_update_and_render(f32 dt)
     //const v3 c0d = tgm_v3_mulf((v3) { 0.529f, 0.808f, 0.922f }, 2.0f);
     //const v3 c0n = tgm_v3_mulf((v3) { 0.992f, 0.369f, 0.325f }, 2.0f);
     //const v3 c0 = tgm_v3_lerp(c0n, c0d, -d0.y);
-    const v3 c0 = V3(3.0f);
+    const v3 c0 = { 3.0f, 3.0f, 3.0f };
 
     tg_raytracer_render(&scene.raytracer);
     tg_raytracer_clear(&scene.raytracer);
@@ -204,7 +226,7 @@ static void tg__scene_update_and_render(f32 dt)
     {
         tg_renderer_push_render_command(scene.h_secondary_renderer, ph_render_commands[i]);
     }
-    tg_renderer_end(scene.h_secondary_renderer, dt, TG_FALSE);
+    tg_renderer_end(scene.h_secondary_renderer, dt_ms, TG_FALSE);
 
     tg_renderer_begin(scene.h_main_renderer);
     tg_renderer_set_sun_direction(scene.h_main_renderer, d0);
@@ -220,7 +242,7 @@ static void tg__scene_update_and_render(f32 dt)
 
     {
         char p_ms_buffer[256] = { 0 };
-        tg_stringf(256, p_ms_buffer, "Time %dms", dt);
+        tg_stringf(256, p_ms_buffer, "Time %dms", dt_ms);
         tg_renderer_push_text(scene.h_main_renderer, p_ms_buffer);
     }
 
@@ -251,7 +273,7 @@ static void tg__scene_update_and_render(f32 dt)
     }
 #endif
 
-    tg_renderer_end(scene.h_main_renderer, dt, TG_TRUE);
+    tg_renderer_end(scene.h_main_renderer, dt_ms, TG_TRUE);
 
     tg_renderer_clear(scene.h_secondary_renderer);
     tg_renderer_clear(scene.h_main_renderer);
@@ -310,12 +332,12 @@ void tg_application_start(void)
     while (running)
     {
         tgp_timer_stop(&timer);
-        const f32 dt = tgp_timer_elapsed_ms(&timer);
+        const f32 dt_ms = tgp_timer_elapsed_ms(&timer);
         tgp_timer_reset(&timer);
         tgp_timer_start(&timer);
 
 #ifdef TG_DEBUG
-        debug_info.dt_sum += dt;
+        debug_info.dt_sum += dt_ms;
         debug_info.fps++;
         if (debug_info.dt_sum > 1000.0f)
         {
@@ -340,7 +362,7 @@ void tg_application_start(void)
 
         tg_input_clear();
         tgp_handle_events();
-        tg__scene_update_and_render(dt);
+        tg__scene_update_and_render(dt_ms);
     }
 
     /*--------------------------------------------------------+

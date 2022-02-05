@@ -15,11 +15,11 @@
 
 #define TGVK_GEOMETRY_FORMATS(var)                        const VkFormat var[TGVK_GEOMETRY_ATTACHMENT_COLOR_COUNT] = { VK_FORMAT_R8G8B8A8_SNORM, VK_FORMAT_R8G8B8A8_SNORM }
 
-#define TGVK_SHADING_UBO                                  (*(tg_shading_ubo*)h_renderer->shading_pass.ubo.memory.p_mapped_device_memory)
+#define TGVK_SHADING_UBO                                  (*(tg_shading_data_ubo*)h_renderer->shading_pass.ubo.memory.p_mapped_device_memory)
 
 
 
-typedef struct tg_shading_ubo
+typedef struct tg_shading_data_ubo
 {
     v4     camera_position;
     v4     sun_direction;
@@ -30,7 +30,7 @@ typedef struct tg_shading_ubo
     v4     p_directional_light_colors[TG_MAX_DIRECTIONAL_LIGHTS];
     v4     p_point_light_positions[TG_MAX_POINT_LIGHTS];
     v4     p_point_light_colors[TG_MAX_POINT_LIGHTS];
-} tg_shading_ubo;
+} tg_shading_data_ubo;
 
 typedef struct tg_raytracer_ubo
 {
@@ -66,7 +66,7 @@ static void tg__init_geometry_pass(tg_renderer_h h_renderer)
 static void tg__init_shading_pass(tg_renderer_h h_renderer)
 {
     h_renderer->shading_pass.command_buffer = tgvk_command_buffer_create(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
-    h_renderer->shading_pass.ubo = TGVK_BUFFER_CREATE_UBO(sizeof(tg_shading_ubo));
+    h_renderer->shading_pass.ubo = TGVK_BUFFER_CREATE_UBO(sizeof(tg_shading_data_ubo));
     h_renderer->shading_pass.framebuffer = tgvk_framebuffer_create(shared_render_resources.shading_render_pass, 1, &h_renderer->hdr_color_attachment.image_view, swapchain_extent.width, swapchain_extent.height);
 
     tgvk_graphics_pipeline_create_info graphics_pipeline_create_info = { 0 };
@@ -660,7 +660,7 @@ void tg_renderer_push_directional_light(tg_renderer_h h_renderer, v3 direction, 
     TG_ASSERT(h_renderer && tgm_v3_mag(direction) && tgm_v3_mag(color));
 
     // TODO: forward renderer
-    tg_shading_ubo* p_shading_ubo = &TGVK_SHADING_UBO;
+    tg_shading_data_ubo* p_shading_ubo = &TGVK_SHADING_UBO;
 
     p_shading_ubo->p_directional_light_directions[p_shading_ubo->directional_light_count].x = direction.x;
     p_shading_ubo->p_directional_light_directions[p_shading_ubo->directional_light_count].y = direction.y;
@@ -680,7 +680,7 @@ void tg_renderer_push_point_light(tg_renderer_h h_renderer, v3 position, v3 colo
     TG_ASSERT(h_renderer && tgm_v3_mag(color));
 
     // TODO: forward renderer
-    tg_shading_ubo* p_shading_ubo = &TGVK_SHADING_UBO;
+    tg_shading_data_ubo* p_shading_ubo = &TGVK_SHADING_UBO;
 
     p_shading_ubo->p_point_light_positions[p_shading_ubo->point_light_count].x = position.x;
     p_shading_ubo->p_point_light_positions[p_shading_ubo->point_light_count].y = position.y;
@@ -788,7 +788,7 @@ void tg_renderer_end(tg_renderer_h h_renderer, f32 dt, b32 present)
     TGVK_CAMERA_VIEW(h_renderer->view_projection_ubo) = v;
     TGVK_CAMERA_PROJ(h_renderer->view_projection_ubo) = p;
 
-    tg_shading_ubo* p_shading_ubo = &TGVK_SHADING_UBO;
+    tg_shading_data_ubo* p_shading_ubo = &TGVK_SHADING_UBO;
     p_shading_ubo->camera_position.xyz = c.position;
     p_shading_ubo->ivp = ivp;
 
@@ -1131,7 +1131,7 @@ void tg_renderer_clear(tg_renderer_h h_renderer)
     tgvk_queue_submit(TGVK_QUEUE_TYPE_GRAPHICS, 1, &submit_info, h_renderer->render_target.fence);
 
     // TODO: forward renderer
-    tg_shading_ubo* p_shading_ubo = &TGVK_SHADING_UBO;
+    tg_shading_data_ubo* p_shading_ubo = &TGVK_SHADING_UBO;
 
     p_shading_ubo->directional_light_count = 0;
     p_shading_ubo->point_light_count = 0;

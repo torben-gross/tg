@@ -10,7 +10,7 @@ static v3 tg__calculate_normal(v3 p0, v3 p1, v3 p2)
 {
     const v3 v01 = tgm_v3_sub(p1, p0);
     const v3 v02 = tgm_v3_sub(p2, p0);
-    const v3 normal = tgm_v3_normalized_not_null(tgm_v3_cross(v01, v02), V3(0.0f));
+    const v3 normal = tgm_v3_normalized_not_null(tgm_v3_cross(v01, v02), (v3) { 0.0f, 0.0f, 0.0f });
     return normal;
 }
 
