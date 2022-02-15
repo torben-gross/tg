@@ -7,9 +7,9 @@
 
 struct tg_instance_data
 {
-    m4     t_mat;
-    m4     r_mat;
     m4     s_mat;
+    m4     r_mat;
+    m4     t_mat;
     u32    grid_w;
     u32    grid_h;
     u32    grid_d;

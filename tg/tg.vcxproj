@@ -118,6 +118,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\graphics\font\tg_font.c" />
+    <ClCompile Include="src\graphics\tg_sparse_voxel_octree.c" />
     <ClCompile Include="src\graphics\vulkan\tgvk_common.c" />
     <ClCompile Include="src\graphics\vulkan\tgvk_atmosphere.c" />
     <ClCompile Include="src\graphics\tg_spirv.c" />
@@ -155,6 +156,7 @@
     <ClInclude Include="src\graphics\font\tg_open_type_types.h" />
     <ClInclude Include="src\graphics\tg_atmosphere_lookup_tables.h" />
     <ClInclude Include="src\graphics\tg_graphics.h" />
+    <ClInclude Include="src\graphics\tg_sparse_voxel_octree.h" />
     <ClInclude Include="src\graphics\vulkan\tgvk_atmosphere.h" />
     <ClInclude Include="src\graphics\vulkan\tgvk_atmosphere_definitions.h" />
     <ClInclude Include="src\graphics\vulkan\tgvk_atmosphere_functions.h" />

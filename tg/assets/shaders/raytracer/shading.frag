@@ -7,9 +7,9 @@
 
 struct tg_instance_data
 {
-    m4     t_mat;
-    m4     r_mat;
     m4     s_mat;
+    m4     r_mat;
+    m4     t_mat;
     u32    grid_w;
     u32    grid_h;
     u32    grid_d;
@@ -132,6 +132,14 @@ void main()
         u32 color_lut_id_slot = color_lut_ids[color_lut_id_slot_idx];
         u32 color_lut_id = (color_lut_id_slot >> color_lut_id_shift) & 255;
 
+        u32 color_u32 = color_lut[color_lut_id];
+        u32 r_u32 =  color_u32 >> 24;
+        u32 g_u32 = (color_u32 >> 16) & 0xff;
+        u32 b_u32 = (color_u32 >>  8) & 0xff;
+        f32 r_f32 = f32(r_u32) / 255.0;
+        f32 g_f32 = f32(g_u32) / 255.0;
+        f32 b_f32 = f32(b_u32) / 255.0;
+
 
 
         // Voxel hit position
@@ -153,7 +161,7 @@ void main()
         
 
 
-        // Voxel center
+        // Voxel center position
         
         u32 voxel_index_x =  voxel_id_30b                        % i.grid_w;
         u32 voxel_index_y = (voxel_id_30b / i.grid_w)            % i.grid_h;
@@ -199,14 +207,18 @@ void main()
                 normal_model_space.y = 0.0f;
             }
         }
-
         v3 normal_world_space = normalize(i.r_mat * v4(normal_model_space, 0.0)).xyz;
 
-        //v3 point_light = v3(0.0f, 100.0f, 0.0f);
-        //v3 hit_position_world_space = (inverse(i.t_mat * i.r_mat) * v4(hit_position_model_space, 1.0)).xyz;
-        //v3 to_point_light = hit_position_world_space - point_light;
-        //f32 radiance = max(0.0f, dot(normalize(to_point_light), normal_world_space));
-        //out_color = vec4(radiance, radiance, radiance, 1.0);
+
+
+
+
+        // TODO: hacked lighting
+        v3 point_light = v3(128.0f, 40.0f, 0.0f);
+        v3 hit_position_world_space = (i.t_mat * i.r_mat * v4(hit_position_model_space, 1.0)).xyz;
+        v3 to_point_light = point_light - hit_position_world_space;
+        f32 radiance = max(0.0f, dot(normalize(to_point_light), normal_world_space)) / (length(to_point_light) / 50.0);
+        out_color = vec4(v3(r_f32, g_f32, b_f32) * radiance, 1.0);
 
 
 
@@ -239,10 +251,6 @@ void main()
         //f32 color_lut_id_normalized = f32(color_lut_id) / 255.0;
         //out_color = v4(0.0, 0.0, color_lut_id_normalized, 1.0);
 
-        // Visualize how much of the voxel capacity is utilized
-        //f32 voxel_load_normalized = min(1.0, f32(instance_data[instance_id_10b].first_voxel_id + voxel_id_30b) / 1073741823.0);
-        //out_color = v4(voxel_load_normalized, 1.0 - voxel_load_normalized, 0.0, 1.0);
-
         // Visualize color LUT
         //u32 color_u32 = color_lut[color_lut_id];
         //u32 r_u32 =  color_u32 >> 24;
@@ -253,8 +261,12 @@ void main()
         //f32 b_f32 = f32(b_u32) / 255.0;
         //out_color = v4(r_f32, g_f32, b_f32, 1.0);
 
+        // Visualize how much of the voxel capacity is utilized
+        //f32 voxel_load_normalized = min(1.0, f32(instance_data[instance_id_10b].first_voxel_id + voxel_id_30b) / 1073741823.0);
+        //out_color = v4(voxel_load_normalized, 1.0 - voxel_load_normalized, 0.0, 1.0);
+
         // Visualize normals
-        out_color = vec4(normal_world_space * 0.5 + 0.5, 1.0);
+        //out_color = vec4(normal_world_space * 0.5 + 0.5, 1.0);
     }
     else
     {

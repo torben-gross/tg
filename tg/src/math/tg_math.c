@@ -661,6 +661,17 @@ u16 tgm_u16_clamp(u16 v, u16 low, u16 high)
 	return result;
 }
 
+u32 tgm_u16_count_set_bits(u16 v)
+{
+	u32 result = 0;
+	for (u32 i = 0; i < 16; i++)
+	{
+		result += v & 1ui32;
+		v = v >> 1ui32;
+	}
+	return result;
+}
+
 u16 tgm_u16_max(u16 v0, u16 v1)
 {
 	const u16 result = v0 > v1 ? v0 : v1;
@@ -981,6 +992,11 @@ v3 tgm_v3_floor(v3 v)
 	return result;
 }
 
+b32 tgm_v3_leq(v3 v0, v3 v1)
+{
+	const b32 result = v0.x <= v1.x && v0.y <= v1.y && v0.z <= v1.z;
+}
+
 v3 tgm_v3_lerp(v3 v0, v3 v1, f32 t)
 {
 	v3 result = { 0 };
@@ -988,6 +1004,11 @@ v3 tgm_v3_lerp(v3 v0, v3 v1, f32 t)
 	result.y = (1.0f - t) * v0.y + t * v1.y;
 	result.z = (1.0f - t) * v0.z + t * v1.z;
 	return result;
+}
+
+b32 tgm_v3_less(v3 v0, v3 v1)
+{
+	const b32 result = v0.x < v1.x&& v0.y < v1.y&& v0.z < v1.z;
 }
 
 f32 tgm_v3_mag(v3 v)
@@ -1300,6 +1321,15 @@ v3i tgm_v3i_muli(v3i v0, i32 i)
 	return result;
 }
 
+v3i tgm_v3i_neg(v3i v)
+{
+	v3i result = { 0 };
+	result.x = -v.x;
+	result.y = -v.y;
+	result.z = -v.z;
+	return result;
+}
+
 v3i tgm_v3i_sub(v3i v0, v3i v1)
 {
 	v3i result = { 0 };
@@ -1324,6 +1354,35 @@ v3 tgm_v3i_to_v3(v3i v)
 	result.x = (f32)v.x;
 	result.y = (f32)v.y;
 	result.z = (f32)v.z;
+	return result;
+}
+
+
+
+v3u tgm_v3u_mulu(v3u v, u32 u)
+{
+	v3u result = { 0 };
+	result.x = v.x * u;
+	result.y = v.y * u;
+	result.z = v.z * u;
+	return result;
+}
+
+v3 tgm_v3u_to_v3(v3u v)
+{
+	v3 result = { 0 };
+	result.x = (f32)v.x;
+	result.y = (f32)v.y;
+	result.z = (f32)v.z;
+	return result;
+}
+
+v3i tgm_v3u_to_v3i(v3u v)
+{
+	v3i result = { 0 };
+	result.x = (i32)v.x;
+	result.y = (i32)v.y;
+	result.z = (i32)v.z;
 	return result;
 }
 

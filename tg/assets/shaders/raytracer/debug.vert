@@ -27,15 +27,9 @@ layout(set = 0, binding = 1) uniform tg_view_projection_ubo
     m4    p_mat;
 };
 
-layout(location = 0) flat out u32    v_instance_id;
-layout(location = 1)      out v3     v_position;
-
 void main()
 {
-    v_instance_id    = in_instance_id;
-
     tg_instance_data i = instance_data[in_instance_id];
     m4 m_mat = i.t_mat * i.r_mat * i.s_mat;
     gl_Position = p_mat * v_mat * m_mat * v4(in_position, 1.0);
-	v_position = (m_mat * v4(in_position, 1.0)).xyz;
 }

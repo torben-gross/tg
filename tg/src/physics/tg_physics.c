@@ -3,6 +3,174 @@
 #include "graphics/tg_graphics.h"
 #include "memory/tg_memory.h"
 
+b32 tg_intersect_aabbs(v3 min0, v3 max0, v3 min1, v3 max1)
+{
+    const b32 bx0 = min0.x >= min1.x && min0.x <= max1.x;
+    const b32 bx1 = max0.x >= min1.x && max0.x <= max1.x;
+    const b32 by0 = min0.y >= min1.y && min0.y <= max1.y;
+    const b32 by1 = max0.y >= min1.y && max0.y <= max1.y;
+    const b32 bz0 = min0.z >= min1.z && min0.z <= max1.z;
+    const b32 bz1 = max0.z >= min1.z && max0.z <= max1.z;
+    const b32 bx = bx0 || bx1;
+    const b32 by = by0 || by1;
+    const b32 bz = bz0 || bz1;
+    const b32 result = bx && by && bz;
+    return result;
+}
+
+b32 tg_intersect_aabbsi(v3i min0, v3i max0, v3i min1, v3i max1)
+{
+    const b32 bx0 = min0.x >= min1.x && min0.x <= max1.x;
+    const b32 bx1 = max0.x >= min1.x && max0.x <= max1.x;
+    const b32 by0 = min0.y >= min1.y && min0.y <= max1.y;
+    const b32 by1 = max0.y >= min1.y && max0.y <= max1.y;
+    const b32 bz0 = min0.z >= min1.z && min0.z <= max1.z;
+    const b32 bz1 = max0.z >= min1.z && max0.z <= max1.z;
+    const b32 bx = bx0 || bx1;
+    const b32 by = by0 || by1;
+    const b32 bz = bz0 || bz1;
+    const b32 result = bx && by && bz;
+    return result;
+}
+
+b32 tg_intersect_aabb_obb(v3 min, v3 max, v3* p_obb_corners)
+{
+    TG_ASSERT(tgm_v3_less(min, max));
+    TG_ASSERT(p_obb_corners != TG_NULL);
+
+    // Order: x-, x+, y-, y+, z-, z+
+
+    b32 separated;
+
+    // AABB faces
+
+    separated = TG_TRUE;
+    for (u32 i = 0; i < 8; i++)
+    {
+        separated &= p_obb_corners[i].x < min.x;
+        if (!separated)
+        {
+            goto x_pos;
+        }
+    }
+    if (separated)
+    {
+        return TG_FALSE;
+    }
+
+x_pos:
+    separated = TG_TRUE;
+    for (u32 i = 0; i < 8; i++)
+    {
+        separated &= p_obb_corners[i].x > max.x;
+        if (!separated)
+        {
+            goto y_neg;
+        }
+    }
+    if (separated)
+    {
+        return TG_FALSE;
+    }
+
+y_neg:
+    separated = TG_TRUE;
+    for (u32 i = 0; i < 8; i++)
+    {
+        separated &= p_obb_corners[i].y < min.y;
+        if (!separated)
+        {
+            goto y_pos;
+        }
+    }
+    if (separated)
+    {
+        return TG_FALSE;
+    }
+
+y_pos:
+    separated = TG_TRUE;
+    for (u32 i = 0; i < 8; i++)
+    {
+        separated &= p_obb_corners[i].y > max.y;
+        if (!separated)
+        {
+            goto z_neg;
+        }
+    }
+    if (separated)
+    {
+        return TG_FALSE;
+    }
+
+z_neg:
+    separated = TG_TRUE;
+    for (u32 i = 0; i < 8; i++)
+    {
+        separated &= p_obb_corners[i].z < min.z;
+        if (!separated)
+        {
+            goto z_pos;
+        }
+    }
+    if (separated)
+    {
+        return TG_FALSE;
+    }
+
+z_pos:
+    separated = TG_TRUE;
+    for (u32 i = 0; i < 8; i++)
+    {
+        separated &= p_obb_corners[i].z > max.z;
+        if (!separated)
+        {
+            goto obb;
+        }
+    }
+    if (separated)
+    {
+        return TG_FALSE;
+    }
+
+    // OBB faces
+
+obb:
+    // TODO: remove this bs
+    (void)(3 + 3);
+
+
+    const v3 nxp = tgm_v3_normalized(tgm_v3_sub(p_obb_corners[1], p_obb_corners[0]));
+    const v3 nyp = tgm_v3_normalized(tgm_v3_sub(p_obb_corners[2], p_obb_corners[0]));
+    const v3 nzp = tgm_v3_normalized(tgm_v3_sub(p_obb_corners[4], p_obb_corners[0]));
+
+    v3 p_obb_normals[6] = { 0 };
+    p_obb_normals[0] = tgm_v3_neg(nxp);
+    p_obb_normals[1] = nxp;
+    p_obb_normals[2] = tgm_v3_neg(nyp);
+    p_obb_normals[3] = nyp;
+    p_obb_normals[4] = tgm_v3_neg(nzp);
+    p_obb_normals[5] = nzp;
+
+    // We have to find corners that lie on the respective plane. There are two corners, such that at least one lies on each plane.
+    f32 p_distances[6] = { 0 };
+    const f32 l0 = tgm_v3_mag(p_obb_corners[0]);
+    const f32 l1 = tgm_v3_mag(p_obb_corners[1]);
+    const v3 n0 = tgm_v3_divf(p_obb_corners[0], l0);
+    const v3 n1 = tgm_v3_divf(p_obb_corners[7], l1);
+    p_distances[0] = l0 * tgm_v3_dot(n0, p_obb_normals[0]);
+    p_distances[1] = l1 * tgm_v3_dot(n1, p_obb_normals[1]);
+    p_distances[2] = l0 * tgm_v3_dot(n0, p_obb_normals[2]);
+    p_distances[3] = l1 * tgm_v3_dot(n1, p_obb_normals[3]);
+    p_distances[4] = l0 * tgm_v3_dot(n0, p_obb_normals[4]);
+    p_distances[5] = l1 * tgm_v3_dot(n1, p_obb_normals[5]);
+
+    // TODO: check whether planes with normals/distances are separating planes for AABB (AABB points must lie on only positive side of one of the planes)
+    awd
+
+    int bh = 0;
+}
+
 // source: https://github.com/erich666/GraphicsGems/blob/master/gems/RayBox.c
 b32 tg_intersect_ray_box(v3 ray_origin, v3 ray_direction, v3 min, v3 max, tg_raycast_hit* p_hit)
 {

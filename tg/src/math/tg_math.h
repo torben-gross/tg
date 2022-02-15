@@ -55,6 +55,19 @@ typedef struct v2i
 	};
 } v2i;
 
+typedef struct v2u
+{
+	union
+	{
+		struct
+		{
+			u32    x;
+			u32    y;
+		};
+		u32        p_data[2];
+	};
+} v2u;
+
 typedef struct v3
 {
 	union
@@ -98,6 +111,28 @@ typedef struct v3i
 		i32                p_data[3];
 	};
 } v3i;
+
+typedef struct v3u
+{
+	union
+	{
+		struct
+		{
+			u32            x;
+			union
+			{
+				struct
+				{
+					u32    y;
+					u32    z;
+				};
+				v2u        yz;
+			};
+		};
+		v2u                xy;
+		u32                p_data[3];
+	};
+} v3u;
 
 typedef struct v4
 {
@@ -324,6 +359,7 @@ i32    tgm_i32_max(i32 v0, i32 v1);
 i32    tgm_i32_min(i32 v0, i32 v1);
 
 u16    tgm_u16_clamp(u16 v, u16 low, u16 high);
+u32    tgm_u16_count_set_bits(u16 v);
 u16    tgm_u16_max(u16 v0, u16 v1);
 u16    tgm_u16_min(u16 v0, u16 v1);
 
@@ -375,7 +411,9 @@ v3     tgm_v3_divf(v3 v, f32 f);
 f32    tgm_v3_dot(v3 v0, v3 v1);
 b32    tgm_v3_equal(v3 v0, v3 v1);
 v3     tgm_v3_floor(v3 v);
+b32    tgm_v3_leq(v3 v0, v3 v1);
 v3     tgm_v3_lerp(v3 v0, v3 v1, f32 t);
+b32    tgm_v3_less(v3 v0, v3 v1);
 f32    tgm_v3_mag(v3 v);
 f32    tgm_v3_magsqr(v3 v);
 v3     tgm_v3_max(v3 v0, v3 v1);
@@ -412,9 +450,14 @@ v3i    tgm_v3i_min(v3i v0, v3i v1);
 i32    tgm_v3i_min_elem(v3i v);
 v3i    tgm_v3i_mul(v3i v0, v3i v1);
 v3i    tgm_v3i_muli(v3i v0, i32 i);
+v3i    tgm_v3i_neg(v3i v);
 v3i    tgm_v3i_sub(v3i v0, v3i v1);
 v3i    tgm_v3i_subi(v3i v, i32 i);
 v3     tgm_v3i_to_v3(v3i v);
+
+v3u    tgm_v3u_mulu(v3u v, u32 u);
+v3     tgm_v3u_to_v3(v3u v);
+v3i    tgm_v3u_to_v3i(v3u v);
 
 v4     tgm_v4_add(v4 v0, v4 v1);
 v4     tgm_v4_addf(v4 v, f32 f);
