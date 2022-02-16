@@ -931,6 +931,15 @@ v3 tgm_v3_addf(v3 v, f32 f)
 	return result;
 }
 
+v3 tgm_v3_ceil(v3 v)
+{
+	v3 result = { 0 };
+	result.x = tgm_f32_ceil(v.x);
+	result.y = tgm_f32_ceil(v.y);
+	result.z = tgm_f32_ceil(v.z);
+	return result;
+}
+
 v3 tgm_v3_clamp(v3 v, v3 min, v3 max)
 {
 	v3 result = { 0 };
@@ -977,7 +986,7 @@ f32 tgm_v3_dot(v3 v0, v3 v1)
 	return result;
 }
 
-b32 tgm_v3_equal(v3 v0, v3 v1)
+b32 tgm_v3_eq(v3 v0, v3 v1)
 {
 	const b32 result = v0.x == v1.x && v0.y == v1.y && v0.z == v1.z;
 	return result;
@@ -1167,6 +1176,15 @@ v3 tgm_v3_subf(v3 v, f32 f)
 	return result;
 }
 
+v3i tgm_v3_to_v3i(v3 v)
+{
+	v3i result = { 0 };
+	result.x = (i32)v.x;
+	result.y = (i32)v.y;
+	result.z = (i32)v.z;
+	return result;
+}
+
 v3i tgm_v3_to_v3i_ceil(v3 v)
 {
 	v3i result = { 0 };
@@ -1255,7 +1273,7 @@ v3i tgm_v3i_divi(v3i v0, i32 i)
 	return result;
 }
 
-b32 tgm_v3i_equal(v3i v0, v3i v1)
+b32 tgm_v3i_eq(v3i v0, v3i v1)
 {
 	const b32 result = v0.x == v1.x && v0.y == v1.y && v0.z == v1.z;
 	return result;
@@ -1357,7 +1375,27 @@ v3 tgm_v3i_to_v3(v3i v)
 	return result;
 }
 
+v3u tgm_v3i_to_v3u(v3i v)
+{
+	v3u result = { 0 };
+	result.x = (u32)v.x;
+	result.y = (u32)v.y;
+	result.z = (u32)v.z;
+	return result;
+}
 
+
+
+v3u tgm_v3u_divu(v3u v, u32 u)
+{
+	TG_ASSERT(u > 0);
+
+	v3u result = { 0 };
+	result.x = v.x / u;
+	result.y = v.y / u;
+	result.z = v.z / u;
+	return result;
+}
 
 v3u tgm_v3u_mulu(v3u v, u32 u)
 {
@@ -1438,7 +1476,7 @@ f32 tgm_v4_dot(v4 v0, v4 v1)
 	return result;
 }
 
-b32 tgm_v4_equal(v4 v0, v4 v1)
+b32 tgm_v4_eq(v4 v0, v4 v1)
 {
 	const b32 result = v0.x == v1.x && v0.y == v1.y && v0.z == v1.z && v0.w == v1.w;
 	return result;
@@ -1857,7 +1895,7 @@ m4 tgm_m4_inverse(m4 m)
 
 m4 tgm_m4_look_at(v3 from, v3 to, v3 up)
 {
-	TG_ASSERT(!tgm_v3_equal(from, to) && !tgm_v3_equal(from, up) && !tgm_v3_equal(to, up));
+	TG_ASSERT(!tgm_v3_eq(from, to) && !tgm_v3_eq(from, up) && !tgm_v3_eq(to, up));
 
 	m4 result = { 0 };
 

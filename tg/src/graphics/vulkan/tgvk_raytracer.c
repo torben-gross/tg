@@ -107,6 +107,7 @@ static void tg__init_visibility_pass(tg_raytracer* p_raytracer)
     const VkDeviceSize visibility_buffer_ssbo_size = sizeof(tg_visibility_buffer_ssbo) + ((VkDeviceSize)w * (VkDeviceSize)h * TG_SIZEOF_MEMBER(tg_visibility_buffer_ssbo, p_data[0]));
 
     p_raytracer->visibility_pass.raytracer_data_ubo = TGVK_BUFFER_CREATE_UBO(sizeof(tg_raytracer_data_ubo));
+    p_raytracer->visibility_pass.p_voxel_data = TG_MALLOC(voxel_data_ssbo_size);
     p_raytracer->visibility_pass.voxel_data_ssbo = TGVK_BUFFER_CREATE(voxel_data_ssbo_size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, TGVK_MEMORY_DEVICE);
     p_raytracer->visibility_pass.visibility_buffer_ssbo = TGVK_BUFFER_CREATE(visibility_buffer_ssbo_size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, TGVK_MEMORY_DEVICE);
 
@@ -626,6 +627,7 @@ void tg_raytracer_create_instance(tg_raytracer* p_raytracer, u32 grid_width, u32
                     if (staged_size == staging_buffer_size)
                     {
                         const tg_size dst_offset = p_instance->first_voxel_id / 8 + staging_iteration_idx * staging_buffer_size;
+                        tg_memcpy(staged_size, p_staging_buffer->memory.p_mapped_device_memory, ((u8*)p_raytracer->visibility_pass.p_voxel_data) + dst_offset);
                         tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
                         tgvk_cmd_copy_buffer2(p_command_buffer, 0, dst_offset, staged_size, p_staging_buffer, &p_raytracer->visibility_pass.voxel_data_ssbo);
                         tgvk_command_buffer_end_and_submit(p_command_buffer);
@@ -773,10 +775,10 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
     // TODO: update BVH here, parallel to visibility buffer computation
     // https://www.nvidia.com/docs/IO/88972/nvr-2010-001.pdf
     // https://luebke.us/publications/eg09.pdf
-    const v3i extent_min = { -512, -512, -512 };
-    const v3i extent_max = {  512,  512,  512 };
+    const v3 extent_min = { -512.0f, -512.0f, -512.0f };
+    const v3 extent_max = {  512.0f,  512.0f,  512.0f };
     tg_svo_header header = { 0 };
-    tg_svo_create(extent_min, extent_max, p_raytracer->instance_buffer.count, p_raytracer->instance_buffer.p_instances, &header);
+    tg_svo_create(extent_min, extent_max, p_raytracer->instance_buffer.count, p_raytracer->instance_buffer.p_instances, p_raytracer->visibility_pass.p_voxel_data, &header);
     tg_svo_destroy(&header);
 
 

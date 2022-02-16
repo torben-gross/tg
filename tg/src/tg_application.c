@@ -55,29 +55,6 @@ static void tg__scene_create(void)
     scene.camera.persp.f = 1000.0f;
     tg_input_get_mouse_position(&scene.last_mouse_x, &scene.last_mouse_y);
 
-    const v3 min = { 0 };
-    const v3 max = { 2.0f, 2.0f, 2.0f };
-    v4 p_corners[8] = { 0 };
-    p_corners[0] = (v4){ -1.0f, -1.0f, -1.0f, 1.0f };
-    p_corners[1] = (v4){  1.0f, -1.0f, -1.0f, 1.0f };
-    p_corners[2] = (v4){ -1.0f,  1.0f, -1.0f, 1.0f };
-    p_corners[3] = (v4){  1.0f,  1.0f, -1.0f, 1.0f };
-    p_corners[4] = (v4){ -1.0f, -1.0f,  1.0f, 1.0f };
-    p_corners[5] = (v4){  1.0f, -1.0f,  1.0f, 1.0f };
-    p_corners[6] = (v4){ -1.0f,  1.0f,  1.0f, 1.0f };
-    p_corners[7] = (v4){  1.0f,  1.0f,  1.0f, 1.0f };
-    const m4 m = tgm_m4_mul(tgm_m4_translate((v3) { 1.5f, 0.0f, 0.0f }), tgm_m4_rotate_y(TG_DEG2RAD(5.0f)));
-    v3 p_obb_corners[8] = { 0 };
-    p_obb_corners[0] = tgm_m4_mulv4(m, p_corners[0]).xyz;
-    p_obb_corners[1] = tgm_m4_mulv4(m, p_corners[1]).xyz;
-    p_obb_corners[2] = tgm_m4_mulv4(m, p_corners[2]).xyz;
-    p_obb_corners[3] = tgm_m4_mulv4(m, p_corners[3]).xyz;
-    p_obb_corners[4] = tgm_m4_mulv4(m, p_corners[4]).xyz;
-    p_obb_corners[5] = tgm_m4_mulv4(m, p_corners[5]).xyz;
-    p_obb_corners[6] = tgm_m4_mulv4(m, p_corners[6]).xyz;
-    p_obb_corners[7] = tgm_m4_mulv4(m, p_corners[7]).xyz;
-    const b32 result = tg_intersect_aabb_obb(min, max, p_obb_corners);
-
     tg_raytracer_create(&scene.camera, 32, &scene.raytracer);
     tg_raytracer_create_instance(&scene.raytracer, 128, 64, 128, 0.0f, 0.0f, 0.0f);
     tg_raytracer_create_instance(&scene.raytracer, 128, 64, 32, 128.0f, 0.0f, 0.0f);

@@ -3,6 +3,28 @@
 #include "graphics/tg_graphics.h"
 #include "memory/tg_memory.h"
 
+f32 tg_distance_point_to_plane_d(v3 point, f32 plane_distance_to_origin, v3 plane_normal)
+{
+    TG_ASSERT(tgm_v3_magsqr(plane_normal) > 0.95f && tgm_v3_magsqr(plane_normal) < 1.05f); // We assume the normal to be normalized
+
+    const f32 result = tgm_v3_dot(plane_normal, point) - plane_distance_to_origin;
+    return result;
+}
+
+f32 tg_distance_point_to_plane_p(v3 point, v3 point_on_plane, v3 plane_normal)
+{
+    TG_ASSERT(tgm_v3_magsqr(plane_normal) > 0.95f && tgm_v3_magsqr(plane_normal) < 1.05f); // We assume the normal to be normalized
+
+    const f32 l = tgm_v3_mag(point_on_plane);
+    const v3  n = tgm_v3_divf(point_on_plane, l);
+    const f32 d = l * tgm_v3_dot(n, plane_normal);
+
+    const f32 result = tg_distance_point_to_plane_d(point, d, plane_normal);
+    return result;
+}
+
+
+
 b32 tg_intersect_aabbs(v3 min0, v3 max0, v3 min1, v3 max1)
 {
     const b32 bx0 = min0.x >= min1.x && min0.x <= max1.x;
@@ -139,7 +161,6 @@ obb:
     // TODO: remove this bs
     (void)(3 + 3);
 
-
     const v3 nxp = tgm_v3_normalized(tgm_v3_sub(p_obb_corners[1], p_obb_corners[0]));
     const v3 nyp = tgm_v3_normalized(tgm_v3_sub(p_obb_corners[2], p_obb_corners[0]));
     const v3 nzp = tgm_v3_normalized(tgm_v3_sub(p_obb_corners[4], p_obb_corners[0]));
@@ -152,28 +173,60 @@ obb:
     p_obb_normals[4] = tgm_v3_neg(nzp);
     p_obb_normals[5] = nzp;
 
-    // We have to find corners that lie on the respective plane. There are two corners, such that at least one lies on each plane.
-    f32 p_distances[6] = { 0 };
+    // We have to find corners that lie on the respective plane. There are two corners, such that at least one of them lies on each plane.
+    f32 p_obb_distances[6] = { 0 };
     const f32 l0 = tgm_v3_mag(p_obb_corners[0]);
-    const f32 l1 = tgm_v3_mag(p_obb_corners[1]);
-    const v3 n0 = tgm_v3_divf(p_obb_corners[0], l0);
-    const v3 n1 = tgm_v3_divf(p_obb_corners[7], l1);
-    p_distances[0] = l0 * tgm_v3_dot(n0, p_obb_normals[0]);
-    p_distances[1] = l1 * tgm_v3_dot(n1, p_obb_normals[1]);
-    p_distances[2] = l0 * tgm_v3_dot(n0, p_obb_normals[2]);
-    p_distances[3] = l1 * tgm_v3_dot(n1, p_obb_normals[3]);
-    p_distances[4] = l0 * tgm_v3_dot(n0, p_obb_normals[4]);
-    p_distances[5] = l1 * tgm_v3_dot(n1, p_obb_normals[5]);
+    const f32 l1 = tgm_v3_mag(p_obb_corners[7]);
+    const v3 n0 = l0 == 0.0f ? (v3) { 0 } : tgm_v3_divf(p_obb_corners[0], l0);
+    const v3 n1 = l1 == 0.0f ? (v3) { 0 } : tgm_v3_divf(p_obb_corners[7], l1);
+    p_obb_distances[0] = l0 * tgm_v3_dot(n0, p_obb_normals[0]);
+    p_obb_distances[1] = l1 * tgm_v3_dot(n1, p_obb_normals[1]);
+    p_obb_distances[2] = l0 * tgm_v3_dot(n0, p_obb_normals[2]);
+    p_obb_distances[3] = l1 * tgm_v3_dot(n1, p_obb_normals[3]);
+    p_obb_distances[4] = l0 * tgm_v3_dot(n0, p_obb_normals[4]);
+    p_obb_distances[5] = l1 * tgm_v3_dot(n1, p_obb_normals[5]);
 
-    // TODO: check whether planes with normals/distances are separating planes for AABB (AABB points must lie on only positive side of one of the planes)
-    awd
+    v3 p_aabb_points[8] = { 0 };
+    p_aabb_points[0] = (v3){ min.x, min.y, min.z };
+    p_aabb_points[1] = (v3){ max.x, min.y, min.z };
+    p_aabb_points[2] = (v3){ min.x, max.y, min.z };
+    p_aabb_points[3] = (v3){ max.x, max.y, min.z };
+    p_aabb_points[4] = (v3){ min.x, min.y, max.z };
+    p_aabb_points[5] = (v3){ max.x, min.y, max.z };
+    p_aabb_points[6] = (v3){ min.x, max.y, max.z };
+    p_aabb_points[7] = (v3){ max.x, max.y, max.z };
 
-    int bh = 0;
+    for (u32 plane_idx = 0; plane_idx < 6; plane_idx++)
+    {
+        const v3 normal = p_obb_normals[plane_idx];
+        const f32 distance = p_obb_distances[plane_idx];
+
+        separated = TG_TRUE;
+
+        for (u32 point_idx = 0; point_idx < 8; point_idx++)
+        {
+            const v3 point = p_aabb_points[point_idx];
+            const f32 dist = tgm_v3_dot(normal, point) - distance;
+            separated &= dist > 0.0f;
+
+            if (!separated)
+            {
+                break;
+            }
+        }
+
+        if (separated)
+        {
+            return TG_FALSE;
+        }
+    }
+    return TG_TRUE;
 }
 
-// source: https://github.com/erich666/GraphicsGems/blob/master/gems/RayBox.c
 b32 tg_intersect_ray_box(v3 ray_origin, v3 ray_direction, v3 min, v3 max, tg_raycast_hit* p_hit)
 {
+    // Source: https://github.com/erich666/GraphicsGems/blob/master/gems/RayBox.c
+
     #define TG_RIGHT	 0
     #define TG_LEFT	     1
     #define TG_MIDDLE	 2

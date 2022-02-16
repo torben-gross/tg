@@ -21,6 +21,7 @@ typedef struct tg_raytracer_visibility_pass
     tgvk_descriptor_set    descriptor_set;
 
     tgvk_buffer            raytracer_data_ubo;
+    u32*                   p_voxel_data;
     tgvk_buffer            voxel_data_ssbo;
     tgvk_buffer            visibility_buffer_ssbo;
     

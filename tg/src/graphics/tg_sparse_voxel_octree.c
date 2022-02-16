@@ -5,35 +5,53 @@
 
 
 
+#define TG_SVO_BLOCK_MAX_VOXELS      512
+
+
+
 static void tg__construct_leaf_node(
-    tg_svo_header*        p_header,
-    tg_svo_leaf_node*     p_parent,
-    v3i                   parent_offset,
-    v3i                   parent_extent,
-    u32                   instance_count,
-    const tg_instance*    p_instances)
+    tg_svo_header*         p_header,
+    tg_svo_leaf_node*      p_parent,
+    v3                     parent_offset,
+    v3                     parent_extent,
+    u32                    instance_count,
+    const tg_instance**    pp_instances,
+    const u32*             p_voxel_buffer)
 {
-    TG_ASSERT(parent_extent.x * parent_extent.y * parent_extent.z <= 512); // Otherwise, this should be an inner node!
-    TG_ASSERT(parent_extent.x >= 1);
-    TG_ASSERT(parent_extent.y >= 1);
-    TG_ASSERT(parent_extent.z >= 1);
+    TG_ASSERT((u32)parent_extent.x * (u32)parent_extent.y * (u32)parent_extent.z <= TG_SVO_BLOCK_MAX_VOXELS); // Otherwise, this should be an inner node!
+    TG_ASSERT(parent_extent.x >= 1.0f);
+    TG_ASSERT(parent_extent.y >= 1.0f);
+    TG_ASSERT(parent_extent.z >= 1.0f);
 
-    const u32 voxel_count = parent_extent.x * parent_extent.y * parent_extent.z;
-    const u32 voxels_size = ((voxel_count + 31) / 32);
-    TG_ASSERT(p_header->voxels_buffer_size + voxels_size <= p_header->voxels_buffer_capacity);
-    u32* p_voxels = &p_header->p_voxels_buffer[p_header->voxels_buffer_size];
-    p_header->voxels_buffer_size += voxels_size;
+    TG_ASSERT(p_header->leaf_node_data_buffer_count < p_header->leaf_node_data_buffer_capacity);
+    tg_svo_leaf_node_data* p_data = &p_header->p_leaf_node_data_buffer[p_header->leaf_node_data_buffer_count];
+    TG_ASSERT(p_data->instance_count == 0);
+    p_parent->data_pointer = p_header->leaf_node_data_buffer_count;
+    p_header->leaf_node_data_buffer_count++;
 
-    const v3i block_min = tgm_v3i_add(p_header->min, parent_offset);
-    const v3i block_max = tgm_v3i_add(block_min, parent_extent);
+    const u32 voxel_count = (u32)parent_extent.x * (u32)parent_extent.y * (u32)parent_extent.z;
+    const u32 voxels_in_u32 = ((voxel_count + 31) / 32);
+    TG_ASSERT(p_header->voxel_buffer_count_in_u32 + voxels_in_u32 <= p_header->voxel_buffer_capacity_in_u32);
+    u32* p_block_voxels = &p_header->p_voxels_buffer[p_header->voxel_buffer_count_in_u32];
+    p_header->voxel_buffer_count_in_u32 += voxels_in_u32;
 
-    u32 icnt = 0;
+    const v3 block_min = tgm_v3_add(p_header->min, parent_offset);
+    const v3 block_max = tgm_v3_add(block_min, parent_extent);
+
+    v4 p_block_corners_v4[8] = { 0 };
+    p_block_corners_v4[0] = (v4){ block_min.x, block_min.y, block_min.z, 1.0f };
+    p_block_corners_v4[1] = (v4){ block_max.x, block_min.y, block_min.z, 1.0f };
+    p_block_corners_v4[2] = (v4){ block_min.x, block_max.y, block_min.z, 1.0f };
+    p_block_corners_v4[3] = (v4){ block_max.x, block_max.y, block_min.z, 1.0f };
+    p_block_corners_v4[4] = (v4){ block_min.x, block_min.y, block_max.z, 1.0f };
+    p_block_corners_v4[5] = (v4){ block_max.x, block_min.y, block_max.z, 1.0f };
+    p_block_corners_v4[6] = (v4){ block_min.x, block_max.y, block_max.z, 1.0f };
+    p_block_corners_v4[7] = (v4){ block_max.x, block_max.y, block_max.z, 1.0f };
 
     for (u32 instance_idx = 0; instance_idx < instance_count; instance_idx++)
     {
-        const tg_instance* p_instance = &p_instances[instance_idx];
-        const v3i instance_max = tgm_v3u_to_v3i(p_instance->half_extent);
-        const v3i instance_min = tgm_v3i_neg(instance_max);
+        const tg_instance* p_instance = pp_instances[instance_idx];
+        const v3 instance_half_extent = tgm_v3u_to_v3(p_instance->half_extent);
 
         // Instead of transforming the instance, we transform the block with the inverse of the
         // instance's model matrix, such that we can simply determine in which instance cell a
@@ -41,163 +59,243 @@ static void tg__construct_leaf_node(
         const m4 m = tgm_m4_mul(p_instance->translation, p_instance->rotation);
         const m4 invm = tgm_m4_inverse(m);
 
-        v4 p_block_corners[8] = { 0 };
-        p_block_corners[0] = (v4){ (f32)block_min.x, (f32)block_min.y, (f32)block_min.z, 1.0f };
-        p_block_corners[1] = (v4){ (f32)block_max.x, (f32)block_min.y, (f32)block_min.z, 1.0f };
-        p_block_corners[2] = (v4){ (f32)block_min.x, (f32)block_max.y, (f32)block_min.z, 1.0f };
-        p_block_corners[3] = (v4){ (f32)block_max.x, (f32)block_max.y, (f32)block_min.z, 1.0f };
-        p_block_corners[4] = (v4){ (f32)block_min.x, (f32)block_min.y, (f32)block_max.z, 1.0f };
-        p_block_corners[5] = (v4){ (f32)block_max.x, (f32)block_min.y, (f32)block_max.z, 1.0f };
-        p_block_corners[6] = (v4){ (f32)block_min.x, (f32)block_max.y, (f32)block_max.z, 1.0f };
-        p_block_corners[7] = (v4){ (f32)block_max.x, (f32)block_max.y, (f32)block_max.z, 1.0f };
+        v3 p_block_corners_v3[8] = { 0 };
+        p_block_corners_v3[0] = tgm_m4_mulv4(invm, p_block_corners_v4[0]).xyz;
+        p_block_corners_v3[1] = tgm_m4_mulv4(invm, p_block_corners_v4[1]).xyz;
+        p_block_corners_v3[2] = tgm_m4_mulv4(invm, p_block_corners_v4[2]).xyz;
+        p_block_corners_v3[3] = tgm_m4_mulv4(invm, p_block_corners_v4[3]).xyz;
+        p_block_corners_v3[4] = tgm_m4_mulv4(invm, p_block_corners_v4[4]).xyz;
+        p_block_corners_v3[5] = tgm_m4_mulv4(invm, p_block_corners_v4[5]).xyz;
+        p_block_corners_v3[6] = tgm_m4_mulv4(invm, p_block_corners_v4[6]).xyz;
+        p_block_corners_v3[7] = tgm_m4_mulv4(invm, p_block_corners_v4[7]).xyz;
 
-        p_block_corners[0] = tgm_m4_mulv4(invm, p_block_corners[0]);
-        p_block_corners[1] = tgm_m4_mulv4(invm, p_block_corners[1]);
-        p_block_corners[2] = tgm_m4_mulv4(invm, p_block_corners[2]);
-        p_block_corners[3] = tgm_m4_mulv4(invm, p_block_corners[3]);
-        p_block_corners[4] = tgm_m4_mulv4(invm, p_block_corners[4]);
-        p_block_corners[5] = tgm_m4_mulv4(invm, p_block_corners[5]);
-        p_block_corners[6] = tgm_m4_mulv4(invm, p_block_corners[6]);
-        p_block_corners[7] = tgm_m4_mulv4(invm, p_block_corners[7]);
+        TG_ASSERT(tg_intersect_aabb_obb(tgm_v3_neg(instance_half_extent), instance_half_extent, p_block_corners_v3));
+
+        const v3 instance_extent = tgm_v3_mulf(instance_half_extent, 2.0f);
+        const u32 instance_first_voxel_id = p_instance->first_voxel_id;
 
         for (i32 block_z = 0; block_z < parent_extent.z; block_z++)
         {
             const f32 tz = ((f32)block_z + 0.5f) / (f32)parent_extent.z;
-            const v3 pz0 = tgm_v3_lerp(p_block_corners[0].xyz, p_block_corners[4].xyz, tz);
-            const v3 pz1 = tgm_v3_lerp(p_block_corners[1].xyz, p_block_corners[5].xyz, tz);
-            const v3 pz2 = tgm_v3_lerp(p_block_corners[2].xyz, p_block_corners[6].xyz, tz);
-            const v3 pz3 = tgm_v3_lerp(p_block_corners[3].xyz, p_block_corners[7].xyz, tz);
+            const f32 omtz = 1.0f - tz;
+
+            const f32 pz0_z = omtz * p_block_corners_v3[0].z + tz * p_block_corners_v3[4].z;
+            const f32 pz1_z = omtz * p_block_corners_v3[1].z + tz * p_block_corners_v3[5].z;
+
+            const f32 pz_max_z = tgm_f32_ceil(TG_MAX(pz0_z, pz1_z));
+            if (pz_max_z < -instance_half_extent.z)
+            {
+                continue;
+            }
+            const f32 pz_min_z = tgm_f32_floor(TG_MIN(pz0_z, pz1_z));
+            if (pz_min_z > instance_half_extent.z)
+            {
+                continue;
+            }
+
+            const f32 pz0_x = omtz * p_block_corners_v3[0].x + tz * p_block_corners_v3[4].x;
+            const f32 pz0_y = omtz * p_block_corners_v3[0].y + tz * p_block_corners_v3[4].y;
+
+            const f32 pz1_x = omtz * p_block_corners_v3[1].x + tz * p_block_corners_v3[5].x;
+            const f32 pz1_y = omtz * p_block_corners_v3[1].y + tz * p_block_corners_v3[5].y;
+
+            const f32 pz2_x = omtz * p_block_corners_v3[2].x + tz * p_block_corners_v3[6].x;
+            const f32 pz2_y = omtz * p_block_corners_v3[2].y + tz * p_block_corners_v3[6].y;
+            const f32 pz2_z = omtz * p_block_corners_v3[2].z + tz * p_block_corners_v3[6].z;
+
+            const f32 pz3_x = omtz * p_block_corners_v3[3].x + tz * p_block_corners_v3[7].x;
+            const f32 pz3_y = omtz * p_block_corners_v3[3].y + tz * p_block_corners_v3[7].y;
+            const f32 pz3_z = omtz * p_block_corners_v3[3].z + tz * p_block_corners_v3[7].z;
 
             for (i32 block_y = 0; block_y < parent_extent.y; block_y++)
             {
                 const f32 ty = ((f32)block_y + 0.5f) / (f32)parent_extent.y;
-                const v3 py0 = tgm_v3_lerp(pz0, pz2, ty);
-                const v3 py1 = tgm_v3_lerp(pz1, pz3, ty);
+                const f32 omty = 1.0f - ty;
+
+                const f32 py0_y = omty * pz0_y + ty * pz2_y;
+                const f32 py1_y = omty * pz1_y + ty * pz3_y;
+
+                const f32 py_max_y = tgm_f32_ceil(TG_MAX(py0_y, py1_y));
+                if (py_max_y < -instance_half_extent.y)
+                {
+                    continue;
+                }
+                const f32 py_min_y = tgm_f32_floor(TG_MIN(py0_y, py1_y));
+                if (py_min_y > instance_half_extent.y)
+                {
+                    continue;
+                }
+
+                const f32 py0_x = omty * pz0_x + ty * pz2_x;
+                const f32 py0_z = omty * pz0_z + ty * pz2_z;
+
+                const f32 py1_x = omty * pz1_x + ty * pz3_x;
+                const f32 py1_z = omty * pz1_z + ty * pz3_z;
 
                 for (i32 block_x = 0; block_x < parent_extent.x; block_x++)
                 {
                     const f32 tx = ((f32)block_x + 0.5f) / (f32)parent_extent.x;
-                    const v3 block_voxel_center = tgm_v3_lerp(py0, py1, tx);
-                    const v3 instance_cell_idx = tgm_v3_floor(block_voxel_center);
+                    const f32 omtx = 1.0f - tx;
+                    
+                    const f32 block_voxel_center_x = omtx * py0_x + tx * py1_x;
+                    const f32 block_voxel_center_y = omtx * py0_y + tx * py1_y;
+                    const f32 block_voxel_center_z = omtx * py0_z + tx * py1_z;
 
-                    for (f32 dz = -1.0f; dz < 1.5f; dz += 1.0f)
+                    const f32 sign_x = (f32)((*(u32*)&block_voxel_center_x) >> 31);
+                    const f32 sign_y = (f32)((*(u32*)&block_voxel_center_y) >> 31);
+                    const f32 sign_z = (f32)((*(u32*)&block_voxel_center_z) >> 31);
+
+                    const f32 block_voxel_center_floor_x = (f32)((i32)block_voxel_center_x) - sign_x;
+                    const f32 block_voxel_center_floor_y = (f32)((i32)block_voxel_center_y) - sign_y;
+                    const f32 block_voxel_center_floor_z = (f32)((i32)block_voxel_center_z) - sign_z;
+
+                    const f32 instance_voxel_id_x = instance_half_extent.x + block_voxel_center_floor_x;
+                    const f32 instance_voxel_id_y = instance_half_extent.y + block_voxel_center_floor_y;
+                    const f32 instance_voxel_id_z = instance_half_extent.z + block_voxel_center_floor_z;
+
+                    const b32 in_x = instance_voxel_id_x > 0.0f && instance_voxel_id_x < instance_extent.x;
+                    const b32 in_y = instance_voxel_id_y > 0.0f && instance_voxel_id_y < instance_extent.y;
+                    const b32 in_z = instance_voxel_id_z > 0.0f && instance_voxel_id_z < instance_extent.z;
+
+                    if (in_x && in_y && in_z)
                     {
-                        if ((i32)(instance_cell_idx.z + dz) < instance_min.z || (i32)(instance_cell_idx.z + dz) >= instance_max.z)
+                        const u32 instance_voxel_id = (u32)instance_voxel_id_z * (u32)instance_extent.x * (u32)instance_extent.y + (u32)instance_voxel_id_y * (u32)instance_extent.x + (u32)instance_voxel_id_x;
+                        const u32 instance_voxel_idx = instance_first_voxel_id + instance_voxel_id;
+                        const u32 instance_slot_idx = instance_voxel_idx / 32;
+                        const u32 instance_bit_idx = instance_voxel_idx % 32;
+                        const u32 instance_slot = p_voxel_buffer[instance_slot_idx];
+                        const u32 instance_bit = instance_slot & (1 << instance_bit_idx);
+                        if (instance_bit != 0)
                         {
-                            continue;
-                        }
-
-                        const f32 minz = instance_cell_idx.z + dz - 0.5f;
-                        const f32 maxz = instance_cell_idx.z + dz + 1.5f;
-
-                        for (f32 dy = -1.0f; dy < 1.5f; dy += 1.0f)
-                        {
-                            if ((i32)(instance_cell_idx.y + dy) < instance_min.y || (i32)(instance_cell_idx.y + dy) >= instance_max.y)
+                            const u32 block_voxel_idx = (u32)(block_z * parent_extent.x * parent_extent.y + block_y * parent_extent.x + block_x);
+                            const u32 block_slot_idx = block_voxel_idx / 32;
+                            const u32 block_bit_idx = block_voxel_idx % 32;
+                            const u32 block_bit = 1 << (block_bit_idx);
+                            p_block_voxels[block_slot_idx] |= block_bit;
+                            if (p_data->instance_count == 0 || p_data->p_instance_ids[p_data->instance_count - 1] != p_instance)
                             {
-                                continue;
-                            }
-
-                            const f32 miny = instance_cell_idx.y + dy - 0.5f;
-                            const f32 maxy = instance_cell_idx.y + dy + 1.5f;
-
-                            for (f32 dx = -1.0f; dx < 1.5f; dx += 1.0f)
-                            {
-                                if ((i32)(instance_cell_idx.x + dx) < instance_min.x || (i32)(instance_cell_idx.x + dx) >= instance_max.x)
-                                {
-                                    continue;
-                                }
-
-                                const f32 minx = instance_cell_idx.x + dx - 0.5f;
-                                const f32 maxx = instance_cell_idx.x + dx + 1.5f;
-
-                                int bh = 0;
-                                icnt++;
+                                // TODO: instead of passing the pp_instances, we pass the entire array and another array of valid IDs, such that we can add the ID here!
+                                //p_data->p_instance_ids[p_data->instance_count++] = instance_id;
                             }
                         }
                     }
+
+                    // TODO: The current method only checks, whether the voxel corresponding to the
+                    // blocks voxels position is set. This is incorrect. We need to check all
+                    // surrounding voxels and determine, whether the overlap/tough the current
+                    // voxel and only then set the voxel in the block. The current approximation
+                    // may be good enough, but if not, this needs to be added!
+
+                    //// TODO: Depending on the rotation, this value can be something between 0.5 (0°) or 0.707... (45°)
+                    //const f32 max_span = 0.70710678118f; // A voxel may span at most this half diagonal length if it 
+                    //const v3 span_v = { max_span, max_span, max_span };
+                    //
+                    //const v3 block_voxel_min = tgm_v3_sub(block_voxel_center, span_v);
+                    //const v3 block_voxel_max = tgm_v3_add(block_voxel_center, span_v);
+                    //const v3 instance_cell_first = tgm_v3_floor(block_voxel_min);
+                    //const v3 instance_cell_last = tgm_v3_floor(block_voxel_max);
+                    //
+                    //for (f32 instance_z = instance_cell_first.z; instance_z <= instance_cell_last.z; instance_z++)
+                    //{
+                    //    for (f32 instance_y = instance_cell_first.y; instance_y <= instance_cell_last.y; instance_y++)
+                    //    {
+                    //        for (f32 instance_z = instance_cell_first.z; instance_z <= instance_cell_last.z; instance_z++)
+                    //        {
+                    //
+                    //        }
+                    //    }
+                    //}
                 }
             }
         }
     }
-    TG_ASSERT(icnt > 0);
 }
 
 static void tg__construct_inner_node(
-    tg_svo_header*        p_header,
-    tg_svo_inner_node*    p_parent,
-    v3i                   parent_offset,
-    v3i                   parent_extent,
-    u32                   instance_count,
-    const tg_instance*    p_instances)
+    tg_svo_header*         p_header,
+    tg_svo_inner_node*     p_parent,
+    v3                     parent_offset,
+    v3                     parent_extent,
+    u32                    instance_count,
+    const tg_instance**    pp_instances,
+    const u32*             p_voxel_buffer)
 {
-    TG_ASSERT(parent_extent.x * parent_extent.y * parent_extent.z > 512); // Otherwise, this should be a leaf!
-    TG_ASSERT(parent_extent.x >= 2);
-    TG_ASSERT(parent_extent.y >= 2);
-    TG_ASSERT(parent_extent.z >= 2);
+    TG_ASSERT((u32)parent_extent.x * (u32)parent_extent.y * (u32)parent_extent.z > TG_SVO_BLOCK_MAX_VOXELS); // Otherwise, this should be a leaf!
+    TG_ASSERT(parent_extent.x >= 2.0f);
+    TG_ASSERT(parent_extent.y >= 2.0f);
+    TG_ASSERT(parent_extent.z >= 2.0f);
 
-    const v3i child_extent = tgm_v3i_divi(parent_extent, 2);
+    const v3 child_extent = tgm_v3_divf(parent_extent, 2.0f);
 
     u8 valid_mask = 0;
 
-    // May may already know that we need all children
-    if (valid_mask != 0xff)
+    u32*                p_instance_count_per_child = TG_NULL;
+    const tg_instance** pp_instances_per_child     = TG_NULL;
+
+    const tg_size instance_count_per_child_size = 8 * instance_count * sizeof(*p_instance_count_per_child);
+    const tg_size instances_per_child_size      = 8 * instance_count * sizeof(*pp_instances_per_child);
+    p_instance_count_per_child = TG_MALLOC_STACK(instance_count_per_child_size);
+    pp_instances_per_child     = TG_MALLOC_STACK(instances_per_child_size);
+    tg_memory_nullify(instance_count_per_child_size, p_instance_count_per_child);
+#ifdef TG_DEBUG
+    tg_memory_nullify(instances_per_child_size, (void*)pp_instances_per_child);
+#endif
+
+    for (u32 instance_idx = 0; instance_idx < instance_count; instance_idx++)
     {
-        for (u32 instance_idx = 0; instance_idx < instance_count; instance_idx++)
+        const tg_instance* p_instance = pp_instances[instance_idx];
+        const v3 instance_half_extent = tgm_v3u_to_v3(p_instance->half_extent);
+
+        // Instead of transforming the instance, we transform the block with the inverse of the
+        // instance's model matrix, such that we can simply determine in which instance cell a
+        // block's voxel center lies.
+        const m4 m = tgm_m4_mul(p_instance->translation, p_instance->rotation);
+        const m4 invm = tgm_m4_inverse(m);
+
+        for (u32 child_idx = 0; child_idx < 8; child_idx++)
         {
-            const tg_instance* p_instance = &p_instances[instance_idx];
-            const m4 m = tgm_m4_mul(p_instance->translation, p_instance->rotation);
+            // TODO: this may be optimized with & and >>
+            const f32 dx = (f32)( child_idx      % 2) * child_extent.x;
+            const f32 dy = (f32)((child_idx / 2) % 2) * child_extent.y;
+            const f32 dz = (f32)((child_idx / 4) % 2) * child_extent.z;
 
-            v4 p_instance_corners_v4[8] = { 0 };
-            p_instance_corners_v4[0] = (v4){ -(f32)p_instance->half_extent.x, -(f32)p_instance->half_extent.y, -(f32)p_instance->half_extent.z, 1.0f };
-            p_instance_corners_v4[1] = (v4){  (f32)p_instance->half_extent.x, -(f32)p_instance->half_extent.y, -(f32)p_instance->half_extent.z, 1.0f };
-            p_instance_corners_v4[2] = (v4){ -(f32)p_instance->half_extent.x,  (f32)p_instance->half_extent.y, -(f32)p_instance->half_extent.z, 1.0f };
-            p_instance_corners_v4[3] = (v4){  (f32)p_instance->half_extent.x,  (f32)p_instance->half_extent.y, -(f32)p_instance->half_extent.z, 1.0f };
-            p_instance_corners_v4[4] = (v4){ -(f32)p_instance->half_extent.x, -(f32)p_instance->half_extent.y,  (f32)p_instance->half_extent.z, 1.0f };
-            p_instance_corners_v4[5] = (v4){  (f32)p_instance->half_extent.x, -(f32)p_instance->half_extent.y,  (f32)p_instance->half_extent.z, 1.0f };
-            p_instance_corners_v4[6] = (v4){ -(f32)p_instance->half_extent.x,  (f32)p_instance->half_extent.y,  (f32)p_instance->half_extent.z, 1.0f };
-            p_instance_corners_v4[7] = (v4){  (f32)p_instance->half_extent.x,  (f32)p_instance->half_extent.y,  (f32)p_instance->half_extent.z, 1.0f };
+            v3 child_offset = { 0 };
+            child_offset.x = parent_offset.x + dx;
+            child_offset.y = parent_offset.y + dy;
+            child_offset.z = parent_offset.z + dz;
 
-            v3 p_instance_corners_v3[8] = { 0 };
-            p_instance_corners_v3[0] = tgm_m4_mulv4(m, p_instance_corners_v4[0]).xyz;
-            p_instance_corners_v3[1] = tgm_m4_mulv4(m, p_instance_corners_v4[1]).xyz;
-            p_instance_corners_v3[2] = tgm_m4_mulv4(m, p_instance_corners_v4[2]).xyz;
-            p_instance_corners_v3[3] = tgm_m4_mulv4(m, p_instance_corners_v4[3]).xyz;
-            p_instance_corners_v3[4] = tgm_m4_mulv4(m, p_instance_corners_v4[4]).xyz;
-            p_instance_corners_v3[5] = tgm_m4_mulv4(m, p_instance_corners_v4[5]).xyz;
-            p_instance_corners_v3[6] = tgm_m4_mulv4(m, p_instance_corners_v4[6]).xyz;
-            p_instance_corners_v3[7] = tgm_m4_mulv4(m, p_instance_corners_v4[7]).xyz;
+            const v3 child_min = tgm_v3_add(p_header->min, child_offset);
+            const v3 child_max = tgm_v3_add(child_min, child_extent);
 
-            for (u32 child_idx = 0; child_idx < 8; child_idx++)
+            v4 p_child_corners_v4[8] = { 0 };
+            p_child_corners_v4[0] = (v4){ child_min.x, child_min.y, child_min.z, 1.0f };
+            p_child_corners_v4[1] = (v4){ child_max.x, child_min.y, child_min.z, 1.0f };
+            p_child_corners_v4[2] = (v4){ child_min.x, child_max.y, child_min.z, 1.0f };
+            p_child_corners_v4[3] = (v4){ child_max.x, child_max.y, child_min.z, 1.0f };
+            p_child_corners_v4[4] = (v4){ child_min.x, child_min.y, child_max.z, 1.0f };
+            p_child_corners_v4[5] = (v4){ child_max.x, child_min.y, child_max.z, 1.0f };
+            p_child_corners_v4[6] = (v4){ child_min.x, child_max.y, child_max.z, 1.0f };
+            p_child_corners_v4[7] = (v4){ child_max.x, child_max.y, child_max.z, 1.0f };
+
+            v3 p_child_corners_v3[8] = { 0 };
+            p_child_corners_v3[0] = tgm_m4_mulv4(invm, p_child_corners_v4[0]).xyz;
+            p_child_corners_v3[1] = tgm_m4_mulv4(invm, p_child_corners_v4[1]).xyz;
+            p_child_corners_v3[2] = tgm_m4_mulv4(invm, p_child_corners_v4[2]).xyz;
+            p_child_corners_v3[3] = tgm_m4_mulv4(invm, p_child_corners_v4[3]).xyz;
+            p_child_corners_v3[4] = tgm_m4_mulv4(invm, p_child_corners_v4[4]).xyz;
+            p_child_corners_v3[5] = tgm_m4_mulv4(invm, p_child_corners_v4[5]).xyz;
+            p_child_corners_v3[6] = tgm_m4_mulv4(invm, p_child_corners_v4[6]).xyz;
+            p_child_corners_v3[7] = tgm_m4_mulv4(invm, p_child_corners_v4[7]).xyz;
+
+            if (tg_intersect_aabb_obb(tgm_v3_neg(instance_half_extent), instance_half_extent, p_child_corners_v3))
             {
-                // TODO: this may be optimized with & and >>
-                const i32 dx = (child_idx % 2) * child_extent.x;
-                const i32 dy = ((child_idx / 2) % 2) * child_extent.y;
-                const i32 dz = ((child_idx / 4) % 2) * child_extent.z;
-
-                v3i child_offset = { 0 };
-                child_offset.x = parent_offset.x + dx;
-                child_offset.y = parent_offset.y + dy;
-                child_offset.z = parent_offset.z + dz;
-
-                const v3i child_min = tgm_v3i_add(p_header->min, child_offset);
-                const v3i child_max = tgm_v3i_add(child_min, child_extent);
-
-                if (tg_intersect_aabb_obb(tgm_v3i_to_v3(child_min), tgm_v3i_to_v3(child_max), p_instance_corners_v3))
+                valid_mask |= 1 << child_idx;
+                if (p_instance_count_per_child[child_idx] == 0
+                    || pp_instances_per_child[child_idx * instance_count + p_instance_count_per_child[child_idx] - 1] != p_instance)
                 {
-                    valid_mask |= 1 << child_idx;
-
-                    // If we require all children to be present, we can stop constructing the valid mask here
-                    if (valid_mask == 0xff)
-                    {
-                        break;
-                    }
+                    pp_instances_per_child[child_idx * instance_count + p_instance_count_per_child[child_idx]] = p_instance;
+                    p_instance_count_per_child[child_idx]++;
                 }
-            }
-
-            // If we require all children to be present, we can stop constructing the valid mask here
-            if (valid_mask == 0xff)
-            {
-                break;
             }
         }
     }
@@ -219,61 +317,93 @@ static void tg__construct_inner_node(
         
         p_header->node_buffer_count += child_count;
 
-        const i32 child_voxel_count = child_extent.x * child_extent.y * child_extent.z;
-        u32 child_idx = 0;
-        for (u32 corner_idx = 0; corner_idx < 8; corner_idx++)
-        {
-            if ((valid_mask & (1 << corner_idx)) != 0)
-            {
-                const i32 dx = (corner_idx % 2) * child_extent.x;
-                const i32 dy = ((corner_idx / 2) % 2) * child_extent.y;
-                const i32 dz = ((corner_idx / 4) % 2) * child_extent.z;
+        const u32 child_voxel_count = (u32)child_extent.x * (u32)child_extent.y * (u32)child_extent.z;
+        const b32 construct_inner_nodes_as_children = child_voxel_count > TG_SVO_BLOCK_MAX_VOXELS;
 
-                v3i child_offset = { 0 };
+        u32 child_node_offset = 0;
+        for (u32 child_idx = 0; child_idx < 8; child_idx++)
+        {
+            if ((valid_mask & (1 << child_idx)) != 0)
+            {
+                const f32 dx = (f32)( child_idx      % 2) * child_extent.x;
+                const f32 dy = (f32)((child_idx / 2) % 2) * child_extent.y;
+                const f32 dz = (f32)((child_idx / 4) % 2) * child_extent.z;
+
+                v3 child_offset = { 0 };
                 child_offset.x = parent_offset.x + dx;
                 child_offset.y = parent_offset.y + dy;
                 child_offset.z = parent_offset.z + dz;
 
-                if (child_voxel_count > 512)
+                if (construct_inner_nodes_as_children)
                 {
-                    tg__construct_inner_node(p_header, (tg_svo_inner_node*)&p_child_nodes[child_idx], child_offset, child_extent, instance_count, p_instances);
+                    tg__construct_inner_node(
+                        p_header,
+                        (tg_svo_inner_node*)&p_child_nodes[child_node_offset],
+                        child_offset,
+                        child_extent,
+                        p_instance_count_per_child[child_idx],
+                        &pp_instances_per_child[child_idx * instance_count],
+                        p_voxel_buffer);
                 }
                 else
                 {
-                    p_parent->leaf_mask |= 1 << corner_idx;
-                    tg__construct_leaf_node(p_header, (tg_svo_leaf_node*)&p_child_nodes[child_idx], child_offset, child_extent, instance_count, p_instances);
+                    p_parent->leaf_mask |= 1 << child_idx;
+                    tg__construct_leaf_node(
+                        p_header,
+                        (tg_svo_leaf_node*)&p_child_nodes[child_node_offset],
+                        child_offset,
+                        child_extent,
+                        p_instance_count_per_child[child_idx],
+                        &pp_instances_per_child[child_idx * instance_count],
+                        p_voxel_buffer);
                 }
 
-                child_idx++;
+                child_node_offset++;
             }
         }
     }
+
+    TG_FREE_STACK(instances_per_child_size);
+    TG_FREE_STACK(instance_count_per_child_size);
 }
 
-void tg_svo_create(v3i extent_min, v3i extent_max, u32 instance_count, const tg_instance* p_instances, TG_OUT tg_svo_header* p_header)
+void tg_svo_create(v3 extent_min, v3 extent_max, u32 instance_count, const tg_instance* p_instances, const u32* p_voxel_buffer, TG_OUT tg_svo_header* p_header)
 {
+    // We expect the extent as floating-point vectors for faster SVO-construction
+    TG_ASSERT(tgm_v3_eq(tgm_v3i_to_v3(tgm_v3_to_v3i(extent_min)), extent_min));
+    TG_ASSERT(tgm_v3_eq(tgm_v3i_to_v3(tgm_v3_to_v3i(extent_max)), extent_max));
+
     // The total extent per axis must be 2^k for some natural k
-    TG_ASSERT(tgm_u32_count_set_bits(extent_max.x - extent_min.x) == 1);
-    TG_ASSERT(tgm_u32_count_set_bits(extent_max.y - extent_min.y) == 1);
-    TG_ASSERT(tgm_u32_count_set_bits(extent_max.z - extent_min.z) == 1);
+    TG_ASSERT(tgm_u32_count_set_bits((u32)(extent_max.x - extent_min.x)) == 1);
+    TG_ASSERT(tgm_u32_count_set_bits((u32)(extent_max.y - extent_min.y)) == 1);
+    TG_ASSERT(tgm_u32_count_set_bits((u32)(extent_max.z - extent_min.z)) == 1);
 
     // We need to be able to split at least once
-    TG_ASSERT(extent_max.x - extent_min.x >= 16);
-    TG_ASSERT(extent_max.y - extent_min.y >= 16);
-    TG_ASSERT(extent_max.z - extent_min.z >= 16);
+    TG_ASSERT(extent_max.x - extent_min.x >= 16.0f);
+    TG_ASSERT(extent_max.y - extent_min.y >= 16.0f);
+    TG_ASSERT(extent_max.z - extent_min.z >= 16.0f);
 
     // TODO: chunked svo construction for infinite worlds
     p_header->min = extent_min;
     p_header->max = extent_max;
+
+    const v3 parent_extent = tgm_v3_sub(p_header->max, p_header->min);
+
+    v3 block_extent = parent_extent;
+    while ((u32)block_extent.x * (u32)block_extent.y * (u32)block_extent.z > TG_SVO_BLOCK_MAX_VOXELS)
+    {
+        block_extent = tgm_v3_divf(block_extent, 2.0f);
+    }
+    p_header->block_extent = block_extent;
     
-    p_header->voxels_buffer_capacity         = (1 << 16);
-    p_header->voxels_buffer_size            = 0;
-    p_header->leaf_node_data_buffer_capacity = 16;
+    p_header->voxel_buffer_capacity_in_u32   = (1 << 17);
+    p_header->voxel_buffer_count_in_u32      = 0;
+    p_header->leaf_node_data_buffer_capacity = (1 << 13);
     p_header->leaf_node_data_buffer_count    = 0;
-    p_header->node_buffer_capacity           = 128;
+    p_header->node_buffer_capacity           = (1 << 14);
     p_header->node_buffer_count              = 0;
 
-    p_header->p_voxels_buffer         = TG_MALLOC(p_header->voxels_buffer_capacity         * sizeof(*p_header->p_voxels_buffer));
+    p_header->p_voxels_buffer         = TG_MALLOC(p_header->voxel_buffer_capacity_in_u32   * sizeof(*p_header->p_voxels_buffer));
     p_header->p_leaf_node_data_buffer = TG_MALLOC(p_header->leaf_node_data_buffer_capacity * sizeof(*p_header->p_leaf_node_data_buffer));
     p_header->p_node_buffer           = TG_MALLOC(p_header->node_buffer_capacity           * sizeof(*p_header->p_node_buffer));
     
@@ -283,9 +413,14 @@ void tg_svo_create(v3i extent_min, v3i extent_max, u32 instance_count, const tg_
     p_header->node_buffer_count++;
 
     tg_svo_inner_node* p_parent = (tg_svo_inner_node*)p_header->p_node_buffer;
-    const v3i parent_offset = { 0, 0, 0 };
-    const v3i parent_extent = tgm_v3i_sub(p_header->max, p_header->min);
-    tg__construct_inner_node(p_header, p_parent, parent_offset, parent_extent, instance_count, p_instances);
+    const v3 parent_offset = { 0 };
+    const tg_instance** pp_instances = TG_MALLOC_STACK(instance_count * sizeof(*pp_instances));
+    for (u32 i = 0; i < instance_count; i++)
+    {
+        pp_instances[i] = &p_instances[i];
+    }
+    tg__construct_inner_node(p_header, p_parent, parent_offset, parent_extent, instance_count, pp_instances, p_voxel_buffer);
+    TG_FREE_STACK(instance_count * sizeof(*pp_instances));
 }
 
 void tg_svo_destroy(tg_svo_header* p_header)
