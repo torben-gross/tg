@@ -27,7 +27,7 @@ typedef union tg_svo_node
     tg_svo_leaf_node     leaf;
 } tg_svo_node;
 
-typedef struct tg_svo_header
+typedef struct tg_svo
 {
     // Note: These are floating-point vectors, so we don't need as many conversions during SVO-construction
     v3                        min;
@@ -44,9 +44,9 @@ typedef struct tg_svo_header
     u32*                      p_voxels_buffer;         // Axis aligned
     tg_svo_leaf_node_data*    p_leaf_node_data_buffer;
     tg_svo_node*              p_node_buffer;           // First node is always an 'tg_svo_inner_node'
-} tg_svo_header;
+} tg_svo;
 
-void tg_svo_create(v3 extent_min, v3 extent_max, u32 instance_count, const tg_instance* p_instances, const u32* p_voxel_buffer, TG_OUT tg_svo_header* p_header);
-void tg_svo_destroy(tg_svo_header* p_header);
+void tg_svo_create(v3 extent_min, v3 extent_max, u32 instance_count, const tg_instance* p_instances, const u32* p_voxel_buffer, TG_OUT tg_svo* p_svo);
+void tg_svo_destroy(tg_svo* p_svo);
 
 #endif

@@ -229,6 +229,26 @@ static void tg__init_debug_pass(tg_raytracer* p_raytracer)
     tgvk_descriptor_set_update_uniform_buffer(p_raytracer->debug_pass.descriptor_set.set, &p_raytracer->view_projection_ubo, 1);
 
     p_raytracer->debug_pass.framebuffer = tgvk_framebuffer_create(p_raytracer->debug_pass.render_pass, 1, &p_raytracer->render_target.color_attachment.image_view, w, h);
+
+
+
+    // Debug cuboids
+
+    p_raytracer->debug_pass.cb_capacity = 32;
+    p_raytracer->debug_pass.cb_count = 0;
+
+    graphics_pipeline_create_info.p_vertex_shader = tgvk_shader_library_get("shaders/raytracer/debug_cuboid.vert");
+    graphics_pipeline_create_info.p_fragment_shader = tgvk_shader_library_get("shaders/raytracer/debug_cuboid.frag");
+
+    p_raytracer->debug_pass.cb_graphics_pipeline = tgvk_pipeline_create_graphics(&graphics_pipeline_create_info);
+    p_raytracer->debug_pass.cb_transformation_matrix_ssbo = TGVK_BUFFER_CREATE(p_raytracer->debug_pass.cb_capacity * sizeof(m4), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, TGVK_MEMORY_HOST);
+    p_raytracer->debug_pass.cb_descriptor_set = tgvk_descriptor_set_create(&p_raytracer->debug_pass.cb_graphics_pipeline);
+
+    tgvk_descriptor_set_update_storage_buffer(p_raytracer->debug_pass.cb_descriptor_set.set, &p_raytracer->debug_pass.cb_transformation_matrix_ssbo, 0);
+    tgvk_descriptor_set_update_uniform_buffer(p_raytracer->debug_pass.cb_descriptor_set.set, &p_raytracer->view_projection_ubo, 1);
+
+    p_raytracer->debug_pass.cb_framebuffer = tgvk_framebuffer_create(p_raytracer->debug_pass.render_pass, 1, &p_raytracer->render_target.color_attachment.image_view, w, h);
+    p_raytracer->debug_pass.cb_instance_id_vbo = TGVK_BUFFER_CREATE(p_raytracer->debug_pass.cb_capacity * sizeof(u32), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, TGVK_MEMORY_HOST);
 }
 
 static void tg__init_blit_pass(tg_raytracer* p_raytracer)
@@ -511,7 +531,7 @@ void tg_raytracer_destroy(tg_raytracer* p_raytracer)
 	TG_NOT_IMPLEMENTED();
 }
 
-void tg_raytracer_create_instance(tg_raytracer* p_raytracer, u32 grid_width, u32 grid_height, u32 grid_depth, f32 center_x, f32 center_y, f32 center_z)
+void tg_raytracer_create_instance(tg_raytracer* p_raytracer, f32 center_x, f32 center_y, f32 center_z, u32 grid_width, u32 grid_height, u32 grid_depth)
 {
     TG_ASSERT(p_raytracer);
     TG_ASSERT(tgm_u32_count_set_bits(grid_width) == 1);
@@ -705,6 +725,21 @@ void tg_raytracer_create_instance(tg_raytracer* p_raytracer, u32 grid_width, u32
     // TODO: lods
 }
 
+void tg_raytracer_push_debug_cuboid(tg_raytracer* p_raytracer, m4 transformation_matrix)
+{
+    // TODO: color
+    TG_ASSERT(p_raytracer);
+
+    m4* p_transformation_matrices = p_raytracer->debug_pass.cb_transformation_matrix_ssbo.memory.p_mapped_device_memory;
+    p_transformation_matrices[p_raytracer->debug_pass.cb_count] = transformation_matrix;
+
+    // TODO: this can be used from the other id buffer and if not possible later for destruction of objects reasons, this can be created only once and reused.
+    u32* p_instance_ids = p_raytracer->debug_pass.cb_instance_id_vbo.memory.p_mapped_device_memory;
+    p_instance_ids[p_raytracer->debug_pass.cb_count] = p_raytracer->debug_pass.cb_count;
+
+    p_raytracer->debug_pass.cb_count++;
+}
+
 void tg_raytracer_color_lut_set(tg_raytracer* p_raytracer, u8 index, f32 r, f32 g, f32 b)
 {
     tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take(sizeof(u32));
@@ -772,14 +807,16 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
 
     // BVH
 
-    // TODO: update BVH here, parallel to visibility buffer computation
-    // https://www.nvidia.com/docs/IO/88972/nvr-2010-001.pdf
-    // https://luebke.us/publications/eg09.pdf
-    const v3 extent_min = { -512.0f, -512.0f, -512.0f };
-    const v3 extent_max = {  512.0f,  512.0f,  512.0f };
-    tg_svo_header header = { 0 };
-    tg_svo_create(extent_min, extent_max, p_raytracer->instance_buffer.count, p_raytracer->instance_buffer.p_instances, p_raytracer->visibility_pass.p_voxel_data, &header);
-    tg_svo_destroy(&header);
+    if (p_raytracer->svo.p_node_buffer == TG_NULL)
+    {
+        // TODO: update BVH here, parallel to visibility buffer computation
+        // https://www.nvidia.com/docs/IO/88972/nvr-2010-001.pdf
+        // https://luebke.us/publications/eg09.pdf
+        const v3 extent_min = { -512.0f, -512.0f, -512.0f };
+        const v3 extent_max = {  512.0f,  512.0f,  512.0f };
+        tg_svo_create(extent_min, extent_max, p_raytracer->instance_buffer.count, p_raytracer->instance_buffer.p_instances, p_raytracer->visibility_pass.p_voxel_data, &p_raytracer->svo);
+        //tg_svo_destroy(&svo);
+    }
 
 
     // VISIBILITY
@@ -901,6 +938,39 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
         tgvk_queue_submit(TGVK_QUEUE_TYPE_GRAPHICS, 1, &debug_submit_info, VK_NULL_HANDLE);
     }
 
+    if (1)
+    {
+        tgvk_command_buffer_begin(&p_raytracer->debug_pass.command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT);
+        tgvk_cmd_begin_render_pass(&p_raytracer->debug_pass.command_buffer, p_raytracer->debug_pass.render_pass, &p_raytracer->debug_pass.cb_framebuffer, VK_SUBPASS_CONTENTS_INLINE);
+
+        vkCmdBindPipeline(p_raytracer->debug_pass.command_buffer.buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_raytracer->debug_pass.cb_graphics_pipeline.pipeline);
+        vkCmdBindIndexBuffer(p_raytracer->debug_pass.command_buffer.buffer, p_raytracer->cube_ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
+        vkCmdBindVertexBuffers(p_raytracer->debug_pass.command_buffer.buffer, 0, 1, &p_raytracer->debug_pass.cb_instance_id_vbo.buffer, &vertex_buffer_offset);
+        vkCmdBindVertexBuffers(p_raytracer->debug_pass.command_buffer.buffer, 1, 1, &p_raytracer->cube_vbo.buffer, &vertex_buffer_offset);
+
+        tgvk_descriptor_set_update_storage_buffer(p_raytracer->debug_pass.cb_descriptor_set.set, &p_raytracer->debug_pass.cb_transformation_matrix_ssbo, 0);
+        tgvk_descriptor_set_update_uniform_buffer(p_raytracer->debug_pass.cb_descriptor_set.set, &p_raytracer->view_projection_ubo, 1);
+
+        vkCmdBindDescriptorSets(p_raytracer->debug_pass.command_buffer.buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_raytracer->debug_pass.cb_graphics_pipeline.layout.pipeline_layout, 0, 1, &p_raytracer->debug_pass.cb_descriptor_set.set, 0, TG_NULL);
+        tgvk_cmd_draw_indexed_instanced(&p_raytracer->debug_pass.command_buffer, 6 * 6, p_raytracer->instance_buffer.count); // TODO: triangle fans for fewer indices? same above
+
+        vkCmdEndRenderPass(p_raytracer->debug_pass.command_buffer.buffer);
+        TGVK_CALL(vkEndCommandBuffer(p_raytracer->debug_pass.command_buffer.buffer));
+
+        VkSubmitInfo debug_submit_info = { 0 };
+        debug_submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        debug_submit_info.pNext = TG_NULL;
+        debug_submit_info.waitSemaphoreCount = 1;
+        debug_submit_info.pWaitSemaphores = &p_raytracer->semaphore;
+        debug_submit_info.pWaitDstStageMask = &color_attachment_pipeline_stage_flags;
+        debug_submit_info.commandBufferCount = 1;
+        debug_submit_info.pCommandBuffers = &p_raytracer->debug_pass.command_buffer.buffer;
+        debug_submit_info.signalSemaphoreCount = 1;
+        debug_submit_info.pSignalSemaphores = &p_raytracer->semaphore;
+
+        tgvk_queue_submit(TGVK_QUEUE_TYPE_GRAPHICS, 1, &debug_submit_info, VK_NULL_HANDLE);
+    }
+
 
 
     // PRESENT
@@ -957,8 +1027,10 @@ void tg_raytracer_clear(tg_raytracer* p_raytracer)
 
     tgvk_queue_submit(TGVK_QUEUE_TYPE_GRAPHICS, 1, &submit_info, p_raytracer->render_target.fence);
 
+    p_raytracer->debug_pass.cb_count = 0;
+
     // TODO: forward renderer
-    tg_shading_data_ubo* p_shading_ubo = p_raytracer->shading_pass.shading_data_ubo.memory.p_mapped_device_memory;
+    //tg_shading_data_ubo* p_shading_ubo = p_raytracer->shading_pass.shading_data_ubo.memory.p_mapped_device_memory;
 
     // TODO: lighting
     //p_shading_ubo->directional_light_count = 0;

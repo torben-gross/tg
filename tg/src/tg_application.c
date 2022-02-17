@@ -56,11 +56,11 @@ static void tg__scene_create(void)
     tg_input_get_mouse_position(&scene.last_mouse_x, &scene.last_mouse_y);
 
     tg_raytracer_create(&scene.camera, 32, &scene.raytracer);
-    tg_raytracer_create_instance(&scene.raytracer, 128, 64, 128, 0.0f, 0.0f, 0.0f);
-    tg_raytracer_create_instance(&scene.raytracer, 128, 64, 32, 128.0f, 0.0f, 0.0f);
+    tg_raytracer_create_instance(&scene.raytracer, 0.0f, 0.0f, 0.0f, 128, 64, 128);
+    tg_raytracer_create_instance(&scene.raytracer, 128.0f, 0.0f, 0.0f, 128, 64, 32);
     for (u32 i = 0; i < 30; i++)
     {
-        tg_raytracer_create_instance(&scene.raytracer, 32, 32, 32, (f32)i * 35.0f - 256.0f, 0.0f, -128.0f);
+        tg_raytracer_create_instance(&scene.raytracer, (f32)i * 35.0f - 256.0f, 0.0f, -128.0f, 32, 32, 32);
     }
     tg_raytracer_color_lut_set(&scene.raytracer, 0, 1.0f, 0.0f, 0.0f);
     tg_raytracer_color_lut_set(&scene.raytracer, 1, 0.0f, 1.0f, 0.0f);
@@ -216,6 +216,8 @@ static void tg__scene_update_and_render(f32 dt_ms)
     //const v3 c0 = tgm_v3_lerp(c0n, c0d, -d0.y);
     const v3 c0 = { 3.0f, 3.0f, 3.0f };
 
+    const m4 m = tgm_m4_scale((v3) { 128.0f, 64.0f, 128.0f });
+    tg_raytracer_push_debug_cuboid(&scene.raytracer, m);
     tg_raytracer_render(&scene.raytracer);
     tg_raytracer_clear(&scene.raytracer);
 

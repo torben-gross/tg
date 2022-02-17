@@ -8,7 +8,7 @@
 
 
 
-#define TG_SHADER_LIBRARY_CAPACITY    64
+#define TG_SHADER_LIBRARY_CAPACITY    128
 
 
 
