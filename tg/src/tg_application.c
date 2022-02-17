@@ -216,7 +216,7 @@ static void tg__scene_update_and_render(f32 dt_ms)
     //const v3 c0 = tgm_v3_lerp(c0n, c0d, -d0.y);
     const v3 c0 = { 3.0f, 3.0f, 3.0f };
 
-    const m4 m = tgm_m4_scale((v3) { 128.0f, 64.0f, 128.0f });
+    const m4 m = tgm_m4_scale((v3) { 1.0f, 1.0f, 1.0f });
     tg_raytracer_push_debug_cuboid(&scene.raytracer, m);
     tg_raytracer_render(&scene.raytracer);
     tg_raytracer_clear(&scene.raytracer);

@@ -75,6 +75,46 @@ typedef struct tg_shading_data_ubo
 
 
 
+static void tg__push_debug_svo_node(tg_raytracer* p_raytracer, const tg_svo_inner_node* p_inner, v3 min, v3 max, b32 push_children)
+{
+    const v3 extent = tgm_v3_sub(max, min);
+    const v3 half_extent = tgm_v3_divf(extent, 2.0f);
+    const v3 center = tgm_v3_add(min, half_extent);
+
+    const m4 scale = tgm_m4_scale(extent);
+    const m4 rotation = tgm_m4_identity();
+    const m4 translation = tgm_m4_translate(center);
+    const m4 transformation_matrix = tgm_m4_mul(tgm_m4_mul(translation, rotation), scale);
+
+    tg_raytracer_push_debug_cuboid(p_raytracer, transformation_matrix);
+
+    if (push_children)
+    {
+        const v3 child_extent = tgm_v3_divf(extent, 2.0f);
+        u32 child_offset = 0;
+
+        for (u32 child_idx = 0; child_idx < 8; child_idx++)
+        {
+            if (p_inner->valid_mask & (1 << child_idx))
+            {
+                const f32 dx = (f32)(child_idx % 2) * child_extent.x;
+                const f32 dy = (f32)((child_idx / 2) % 2) * child_extent.y;
+                const f32 dz = (f32)((child_idx / 4) % 2) * child_extent.z;
+
+                const tg_svo_node* p_child = (tg_svo_node*)p_inner + p_inner->child_pointer + child_offset;
+                const v3 child_min = { min.x + dx, min.y + dy, min.z + dz };
+                const v3 child_max = tgm_v3_add(child_min, half_extent);
+
+                tg__push_debug_svo_node(p_raytracer, &p_child->inner, child_min, child_max, (p_inner->leaf_mask & (1 << child_idx)) == 0);
+
+                child_offset++;
+            }
+        }
+    }
+}
+
+
+
 static void tg__init_visibility_pass(tg_raytracer* p_raytracer)
 {
     const u32 w = swapchain_extent.width;
@@ -234,7 +274,7 @@ static void tg__init_debug_pass(tg_raytracer* p_raytracer)
 
     // Debug cuboids
 
-    p_raytracer->debug_pass.cb_capacity = 32;
+    p_raytracer->debug_pass.cb_capacity = (1 << 14);
     p_raytracer->debug_pass.cb_count = 0;
 
     graphics_pipeline_create_info.p_vertex_shader = tgvk_shader_library_get("shaders/raytracer/debug_cuboid.vert");
@@ -729,6 +769,7 @@ void tg_raytracer_push_debug_cuboid(tg_raytracer* p_raytracer, m4 transformation
 {
     // TODO: color
     TG_ASSERT(p_raytracer);
+    TG_ASSERT(p_raytracer->debug_pass.cb_count < p_raytracer->debug_pass.cb_capacity);
 
     m4* p_transformation_matrices = p_raytracer->debug_pass.cb_transformation_matrix_ssbo.memory.p_mapped_device_memory;
     p_transformation_matrices[p_raytracer->debug_pass.cb_count] = transformation_matrix;
@@ -807,16 +848,18 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
 
     // BVH
 
-    if (p_raytracer->svo.p_node_buffer == TG_NULL)
+    tg_svo* p_svo = &p_raytracer->svo;
+    if (p_svo->p_node_buffer == TG_NULL)
     {
         // TODO: update BVH here, parallel to visibility buffer computation
         // https://www.nvidia.com/docs/IO/88972/nvr-2010-001.pdf
         // https://luebke.us/publications/eg09.pdf
         const v3 extent_min = { -512.0f, -512.0f, -512.0f };
         const v3 extent_max = {  512.0f,  512.0f,  512.0f };
-        tg_svo_create(extent_min, extent_max, p_raytracer->instance_buffer.count, p_raytracer->instance_buffer.p_instances, p_raytracer->visibility_pass.p_voxel_data, &p_raytracer->svo);
+        tg_svo_create(extent_min, extent_max, p_raytracer->instance_buffer.count, p_raytracer->instance_buffer.p_instances, p_raytracer->visibility_pass.p_voxel_data, p_svo);
         //tg_svo_destroy(&svo);
     }
+    tg__push_debug_svo_node(p_raytracer, &p_svo->p_node_buffer[0].inner, p_svo->min, p_svo->max, TG_TRUE);
 
 
     // VISIBILITY
@@ -952,7 +995,7 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
         tgvk_descriptor_set_update_uniform_buffer(p_raytracer->debug_pass.cb_descriptor_set.set, &p_raytracer->view_projection_ubo, 1);
 
         vkCmdBindDescriptorSets(p_raytracer->debug_pass.command_buffer.buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_raytracer->debug_pass.cb_graphics_pipeline.layout.pipeline_layout, 0, 1, &p_raytracer->debug_pass.cb_descriptor_set.set, 0, TG_NULL);
-        tgvk_cmd_draw_indexed_instanced(&p_raytracer->debug_pass.command_buffer, 6 * 6, p_raytracer->instance_buffer.count); // TODO: triangle fans for fewer indices? same above
+        tgvk_cmd_draw_indexed_instanced(&p_raytracer->debug_pass.command_buffer, 6 * 6, p_raytracer->debug_pass.cb_count); // TODO: triangle fans for fewer indices? same above
 
         vkCmdEndRenderPass(p_raytracer->debug_pass.command_buffer.buffer);
         TGVK_CALL(vkEndCommandBuffer(p_raytracer->debug_pass.command_buffer.buffer));
