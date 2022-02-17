@@ -23,13 +23,30 @@ typedef struct tg_raytracer_visibility_pass
 
     tgvk_buffer            raytracer_data_ubo;
     u32*                   p_voxel_data;
-    tgvk_buffer            voxel_data_ssbo;
+    tgvk_buffer            svo_voxel_data_ssbo;
     tgvk_buffer            visibility_buffer_ssbo;
     
     tgvk_framebuffer       framebuffer;
     
     tgvk_buffer            instance_id_vbo;
 } tg_raytracer_visibility_pass;
+
+typedef struct tg_raytracer_svo_pass
+{
+    tgvk_command_buffer    command_buffer;
+    VkRenderPass           render_pass;
+    tgvk_pipeline          graphics_pipeline;
+    tgvk_descriptor_set    descriptor_set;
+
+    tgvk_buffer            svo_ssbo;
+    tgvk_buffer            svo_nodes_ssbo;
+    tgvk_buffer            svo_leaf_node_data_ssbo;
+    tgvk_buffer            svo_voxel_data_ssbo;
+
+    tgvk_framebuffer       framebuffer;
+
+    tgvk_buffer            instance_id_vbo;
+} tg_raytracer_svo_pass;
 
 typedef struct tg_raytracer_shading_pass
 {
@@ -100,6 +117,7 @@ typedef struct tg_raytracer
     tg_svo                          svo;
 
     tg_raytracer_visibility_pass    visibility_pass;
+    tg_raytracer_svo_pass           svo_pass;
     tg_raytracer_shading_pass       shading_pass;
     tg_raytracer_debug_pass         debug_pass;
     tg_raytracer_blit_pass          blit_pass;

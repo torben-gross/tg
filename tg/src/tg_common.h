@@ -30,7 +30,7 @@
 #endif
 
 #ifdef TG_DEBUG
-#define TG_ASSERT(x)                             if (!(x)) *(int*)0 = 0
+#define TG_ASSERT(condition)                     if (!(condition)) *(int*)0 = 0
 #define TG_DEBUG_PARAM(param)                    , param
 #define TG_INVALID_CODEPATH()                    ((void)(*(int*)0 = 0))
 #define TG_NOT_IMPLEMENTED()                     ((void)(*(int*)0 = 0))
@@ -39,14 +39,15 @@
 #define TG_STATIC_ASSERT2(condition, line)       TG_STATIC_ASSERT3(condition, line)
 #define TG_STATIC_ASSERT(condition)              TG_STATIC_ASSERT2(condition, __LINE__)
 #else
-#define TG_ASSERT(x)
+#define TG_ASSERT(condition)
 #define TG_DEBUG_PARAM(param)
 #define TG_INVALID_CODEPATH()
 #define TG_NOT_IMPLEMENTED()
-#define TG_STATIC_ASSERT(x)
+#define TG_STATIC_ASSERT(condition)
 #endif
 
 #define TG_SIZEOF_MEMBER(type, member)           sizeof(((type*)0)->member)
+#define TG_OFFSET_OF(type, member)               ((tg_size)&(((type*)0)->member))
 #define TG_UNUSED(x)                             ((void)(x))
 #define TG_INOUT
 #define TG_OUT

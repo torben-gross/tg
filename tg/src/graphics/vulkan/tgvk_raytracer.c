@@ -5,6 +5,7 @@
 #include "graphics/tg_sparse_voxel_octree.h"
 #include "graphics/vulkan/tgvk_shader_library.h"
 #include "physics/tg_physics.h"
+#include "tg_input.h"
 #include "util/tg_qsort.h"
 
 
@@ -148,7 +149,7 @@ static void tg__init_visibility_pass(tg_raytracer* p_raytracer)
 
     p_raytracer->visibility_pass.raytracer_data_ubo = TGVK_BUFFER_CREATE_UBO(sizeof(tg_raytracer_data_ubo));
     p_raytracer->visibility_pass.p_voxel_data = TG_MALLOC(voxel_data_ssbo_size);
-    p_raytracer->visibility_pass.voxel_data_ssbo = TGVK_BUFFER_CREATE(voxel_data_ssbo_size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, TGVK_MEMORY_DEVICE);
+    p_raytracer->visibility_pass.svo_voxel_data_ssbo = TGVK_BUFFER_CREATE(voxel_data_ssbo_size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, TGVK_MEMORY_DEVICE);
     p_raytracer->visibility_pass.visibility_buffer_ssbo = TGVK_BUFFER_CREATE(visibility_buffer_ssbo_size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, TGVK_MEMORY_DEVICE);
 
     const VkDeviceSize staging_buffer_size = 2ui64 * sizeof(u32); // We only set the width and height of the visibility buffer
@@ -162,6 +163,43 @@ static void tg__init_visibility_pass(tg_raytracer* p_raytracer)
     tgvk_global_staging_buffer_release();
 
     p_raytracer->visibility_pass.framebuffer = tgvk_framebuffer_create(p_raytracer->visibility_pass.render_pass, 0, TG_NULL, w, h);
+}
+
+static void tg__init_svo_pass(tg_raytracer* p_raytracer)
+{
+    const u32 w = swapchain_extent.width;
+    const u32 h = swapchain_extent.height;
+
+    p_raytracer->svo_pass.command_buffer = tgvk_command_buffer_create(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+
+    VkSubpassDescription subpass_description = { 0 };
+    subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+
+    p_raytracer->svo_pass.render_pass = tgvk_render_pass_create(TG_NULL, &subpass_description);
+
+    tgvk_graphics_pipeline_create_info graphics_pipeline_create_info = { 0 };
+    graphics_pipeline_create_info.p_vertex_shader = tgvk_shader_library_get("shaders/raytracer/debug_visibility_svo.vert");
+    graphics_pipeline_create_info.p_fragment_shader = tgvk_shader_library_get("shaders/raytracer/debug_visibility_svo.frag");
+    graphics_pipeline_create_info.cull_mode = VK_CULL_MODE_FRONT_BIT;
+    graphics_pipeline_create_info.depth_test_enable = VK_FALSE;
+    graphics_pipeline_create_info.depth_write_enable = VK_FALSE;
+    graphics_pipeline_create_info.p_blend_modes = TG_NULL;
+    graphics_pipeline_create_info.render_pass = p_raytracer->svo_pass.render_pass;
+    graphics_pipeline_create_info.viewport_size.x = (f32)w;
+    graphics_pipeline_create_info.viewport_size.y = (f32)h;
+    graphics_pipeline_create_info.polygon_mode = VK_POLYGON_MODE_FILL;
+
+    p_raytracer->svo_pass.graphics_pipeline = tgvk_pipeline_create_graphics(&graphics_pipeline_create_info);
+    p_raytracer->svo_pass.descriptor_set = tgvk_descriptor_set_create(&p_raytracer->svo_pass.graphics_pipeline);
+
+    // They are generated on the fly as required
+    p_raytracer->svo_pass.svo_ssbo                = (tgvk_buffer){ 0 };
+    p_raytracer->svo_pass.svo_nodes_ssbo          = (tgvk_buffer){ 0 };
+    p_raytracer->svo_pass.svo_leaf_node_data_ssbo = (tgvk_buffer){ 0 };
+    p_raytracer->svo_pass.svo_voxel_data_ssbo     = (tgvk_buffer){ 0 };
+
+    p_raytracer->svo_pass.framebuffer = tgvk_framebuffer_create(p_raytracer->svo_pass.render_pass, 0, TG_NULL, w, h);
+    p_raytracer->svo_pass.instance_id_vbo = p_raytracer->visibility_pass.instance_id_vbo; // TODO: for now!
 }
 
 static void tg__init_shading_pass(tg_raytracer* p_raytracer)
@@ -557,6 +595,7 @@ void tg_raytracer_create(const tg_camera* p_camera, u32 max_instance_count, TG_O
     p_raytracer->instance_buffer.p_instances = TG_MALLOC(max_instance_count * sizeof(*p_raytracer->instance_buffer.p_instances));
 
     tg__init_visibility_pass(p_raytracer);
+    tg__init_svo_pass(p_raytracer);
     tg__init_shading_pass(p_raytracer);
     tg__init_debug_pass(p_raytracer);
     tg__init_blit_pass(p_raytracer);
@@ -689,7 +728,7 @@ void tg_raytracer_create_instance(tg_raytracer* p_raytracer, f32 center_x, f32 c
                         const tg_size dst_offset = p_instance->first_voxel_id / 8 + staging_iteration_idx * staging_buffer_size;
                         tg_memcpy(staged_size, p_staging_buffer->memory.p_mapped_device_memory, ((u8*)p_raytracer->visibility_pass.p_voxel_data) + dst_offset);
                         tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-                        tgvk_cmd_copy_buffer2(p_command_buffer, 0, dst_offset, staged_size, p_staging_buffer, &p_raytracer->visibility_pass.voxel_data_ssbo);
+                        tgvk_cmd_copy_buffer2(p_command_buffer, 0, dst_offset, staged_size, p_staging_buffer, &p_raytracer->visibility_pass.svo_voxel_data_ssbo);
                         tgvk_command_buffer_end_and_submit(p_command_buffer);
                         p_voxel_bitmap_it = p_staging_buffer->memory.p_mapped_device_memory;
                         staged_size = 0;
@@ -712,7 +751,7 @@ void tg_raytracer_create_instance(tg_raytracer* p_raytracer, f32 center_x, f32 c
     {
         const tg_size dst_offset = p_instance->first_voxel_id / 8 + staging_iteration_idx * staging_buffer_size;
         tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-        tgvk_cmd_copy_buffer2(p_command_buffer, 0, dst_offset, staged_size, p_staging_buffer, &p_raytracer->visibility_pass.voxel_data_ssbo);
+        tgvk_cmd_copy_buffer2(p_command_buffer, 0, dst_offset, staged_size, p_staging_buffer, &p_raytracer->visibility_pass.svo_voxel_data_ssbo);
         tgvk_command_buffer_end_and_submit(p_command_buffer);
         staged_size = 0;
         staging_iteration_idx++;
@@ -858,6 +897,26 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
         const v3 extent_max = {  512.0f,  512.0f,  512.0f };
         tg_svo_create(extent_min, extent_max, p_raytracer->instance_buffer.count, p_raytracer->instance_buffer.p_instances, p_raytracer->visibility_pass.p_voxel_data, p_svo);
         //tg_svo_destroy(&svo);
+
+        const tg_size svo_ssbo_size                = 2 * sizeof(v4);
+        const tg_size svo_nodes_ssbo_size          = p_raytracer->svo.node_buffer_capacity           * sizeof(*p_raytracer->svo.p_node_buffer);
+        const tg_size svo_leaf_node_data_ssbo_size = p_raytracer->svo.leaf_node_data_buffer_capacity * sizeof(*p_raytracer->svo.p_leaf_node_data_buffer);
+        const tg_size svo_voxel_data_ssbo_size     = p_raytracer->svo.voxel_buffer_capacity_in_u32   * sizeof(*p_raytracer->svo.p_voxels_buffer);
+        const VkBufferUsageFlags ssbo_usage_flags  = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+
+        p_raytracer->svo_pass.svo_ssbo                = TGVK_BUFFER_CREATE(svo_ssbo_size,                ssbo_usage_flags, TGVK_MEMORY_DEVICE);
+        p_raytracer->svo_pass.svo_nodes_ssbo          = TGVK_BUFFER_CREATE(svo_nodes_ssbo_size,          ssbo_usage_flags, TGVK_MEMORY_DEVICE);
+        p_raytracer->svo_pass.svo_leaf_node_data_ssbo = TGVK_BUFFER_CREATE(svo_leaf_node_data_ssbo_size, ssbo_usage_flags, TGVK_MEMORY_DEVICE);
+        p_raytracer->svo_pass.svo_voxel_data_ssbo     = TGVK_BUFFER_CREATE(svo_voxel_data_ssbo_size,     ssbo_usage_flags, TGVK_MEMORY_DEVICE);
+
+        v4 p_svo_min_max[2] = { 0 };
+        p_svo_min_max[0].xyz = p_svo->min;
+        p_svo_min_max[1].xyz = p_svo->max;
+
+        tgvk_copy_to_buffer(2 * sizeof(v4),               p_svo_min_max,                  &p_raytracer->svo_pass.svo_ssbo);
+        tgvk_copy_to_buffer(svo_nodes_ssbo_size,          p_svo->p_node_buffer,           &p_raytracer->svo_pass.svo_nodes_ssbo);
+        tgvk_copy_to_buffer(svo_leaf_node_data_ssbo_size, p_svo->p_leaf_node_data_buffer, &p_raytracer->svo_pass.svo_leaf_node_data_ssbo);
+        tgvk_copy_to_buffer(svo_voxel_data_ssbo_size,     p_svo->p_voxels_buffer,         &p_raytracer->svo_pass.svo_voxel_data_ssbo);
     }
     tg__push_debug_svo_node(p_raytracer, &p_svo->p_node_buffer[0].inner, p_svo->min, p_svo->max, TG_TRUE);
 
@@ -865,49 +924,98 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
     // VISIBILITY
 
     //tgvk_atmosphere_model_update(&p_raytracer->model, iv, ip);
-
-    tgvk_command_buffer_begin(&p_raytracer->visibility_pass.command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT);
-    tgvk_cmd_begin_render_pass(&p_raytracer->visibility_pass.command_buffer, p_raytracer->visibility_pass.render_pass, &p_raytracer->visibility_pass.framebuffer, VK_SUBPASS_CONTENTS_INLINE);
-    
-    vkCmdBindPipeline(p_raytracer->visibility_pass.command_buffer.buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_raytracer->visibility_pass.graphics_pipeline.pipeline);
-    vkCmdBindIndexBuffer(p_raytracer->visibility_pass.command_buffer.buffer, p_raytracer->cube_ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
     const VkDeviceSize vertex_buffer_offset = 0;
-    vkCmdBindVertexBuffers(p_raytracer->visibility_pass.command_buffer.buffer, 0, 1, &p_raytracer->visibility_pass.instance_id_vbo.buffer, &vertex_buffer_offset);
-    vkCmdBindVertexBuffers(p_raytracer->visibility_pass.command_buffer.buffer, 1, 1, &p_raytracer->cube_vbo.buffer, &vertex_buffer_offset);
 
-    // TODO: update required here? Otherwise mark as dirty. Also, draw indirect
-    tgvk_descriptor_set_update_storage_buffer(p_raytracer->visibility_pass.descriptor_set.set, &p_raytracer->instance_data_ssbo, 0);
-    tgvk_descriptor_set_update_uniform_buffer(p_raytracer->visibility_pass.descriptor_set.set, &p_raytracer->view_projection_ubo, 1);
-    tgvk_descriptor_set_update_uniform_buffer(p_raytracer->visibility_pass.descriptor_set.set, &p_raytracer->visibility_pass.raytracer_data_ubo, 2);
-    tgvk_descriptor_set_update_storage_buffer(p_raytracer->visibility_pass.descriptor_set.set, &p_raytracer->visibility_pass.voxel_data_ssbo, 3);
-    tgvk_descriptor_set_update_storage_buffer(p_raytracer->visibility_pass.descriptor_set.set, &p_raytracer->visibility_pass.visibility_buffer_ssbo, 4);
+    if (tg_input_is_key_down(TG_KEY_F))
+    {
+        tgvk_command_buffer_begin(&p_raytracer->svo_pass.command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT);
+        tgvk_cmd_begin_render_pass(&p_raytracer->svo_pass.command_buffer, p_raytracer->svo_pass.render_pass, &p_raytracer->svo_pass.framebuffer, VK_SUBPASS_CONTENTS_INLINE);
 
-    vkCmdBindDescriptorSets(p_raytracer->visibility_pass.command_buffer.buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_raytracer->visibility_pass.graphics_pipeline.layout.pipeline_layout, 0, 1, &p_raytracer->visibility_pass.descriptor_set.set, 0, TG_NULL);
-    tgvk_cmd_draw_indexed_instanced(&p_raytracer->visibility_pass.command_buffer, 6 * 6, p_raytracer->instance_buffer.count); // TODO: triangle fans for fewer indices?
+        vkCmdBindPipeline(p_raytracer->svo_pass.command_buffer.buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_raytracer->svo_pass.graphics_pipeline.pipeline);
+        vkCmdBindIndexBuffer(p_raytracer->svo_pass.command_buffer.buffer, p_raytracer->cube_ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
+        vkCmdBindVertexBuffers(p_raytracer->svo_pass.command_buffer.buffer, 0, 1, &p_raytracer->svo_pass.instance_id_vbo.buffer, &vertex_buffer_offset);
+        vkCmdBindVertexBuffers(p_raytracer->svo_pass.command_buffer.buffer, 1, 1, &p_raytracer->cube_vbo.buffer, &vertex_buffer_offset);
 
-    // TODO look at below
-    //vkCmdExecuteCommands(p_raytracer->geometry_pass.command_buffer.buffer, p_raytracer->deferred_command_buffer_count, p_raytracer->p_deferred_command_buffers);
-    vkCmdEndRenderPass(p_raytracer->visibility_pass.command_buffer.buffer);
-    TGVK_CALL(vkEndCommandBuffer(p_raytracer->visibility_pass.command_buffer.buffer));
+        // TODO: update required here? Otherwise mark as dirty. Also, draw indirect
+        tgvk_descriptor_set_update_uniform_buffer(p_raytracer->svo_pass.descriptor_set.set, &p_raytracer->view_projection_ubo, 0);
+        tgvk_descriptor_set_update_uniform_buffer(p_raytracer->svo_pass.descriptor_set.set, &p_raytracer->visibility_pass.raytracer_data_ubo, 1);
+        tgvk_descriptor_set_update_storage_buffer(p_raytracer->svo_pass.descriptor_set.set, &p_raytracer->visibility_pass.visibility_buffer_ssbo, 2);
+        tgvk_descriptor_set_update_storage_buffer(p_raytracer->svo_pass.descriptor_set.set, &p_raytracer->svo_pass.svo_ssbo, 3);
+        tgvk_descriptor_set_update_storage_buffer(p_raytracer->svo_pass.descriptor_set.set, &p_raytracer->svo_pass.svo_nodes_ssbo, 4);
+        tgvk_descriptor_set_update_storage_buffer(p_raytracer->svo_pass.descriptor_set.set, &p_raytracer->svo_pass.svo_leaf_node_data_ssbo, 5);
+        tgvk_descriptor_set_update_storage_buffer(p_raytracer->svo_pass.descriptor_set.set, &p_raytracer->svo_pass.svo_voxel_data_ssbo, 6);
 
-    // Note: This fence does not need to be at the top, because we only wait for the presentation
-    // to finish. The visibility pass has long finished. Therefore, all buffers, that are not
-    // required by the presentation pass, can be updated before waiting for this fence.
-    tgvk_fence_wait(p_raytracer->render_target.fence);
-    tgvk_fence_reset(p_raytracer->render_target.fence);
+        vkCmdBindDescriptorSets(p_raytracer->svo_pass.command_buffer.buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_raytracer->svo_pass.graphics_pipeline.layout.pipeline_layout, 0, 1, &p_raytracer->svo_pass.descriptor_set.set, 0, TG_NULL);
+        tgvk_cmd_draw_indexed_instanced(&p_raytracer->svo_pass.command_buffer, 6 * 6, p_raytracer->instance_buffer.count); // TODO: triangle fans for fewer indices?
 
-    VkSubmitInfo visibility_submit_info = { 0 };
-    visibility_submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    visibility_submit_info.pNext = TG_NULL;
-    visibility_submit_info.waitSemaphoreCount = 0;
-    visibility_submit_info.pWaitSemaphores = TG_NULL;
-    visibility_submit_info.pWaitDstStageMask = TG_NULL;
-    visibility_submit_info.commandBufferCount = 1;
-    visibility_submit_info.pCommandBuffers = &p_raytracer->visibility_pass.command_buffer.buffer;
-    visibility_submit_info.signalSemaphoreCount = 1;
-    visibility_submit_info.pSignalSemaphores = &p_raytracer->semaphore;
+        // TODO look at below
+        //vkCmdExecuteCommands(p_raytracer->geometry_pass.command_buffer.buffer, p_raytracer->deferred_command_buffer_count, p_raytracer->p_deferred_command_buffers);
+        vkCmdEndRenderPass(p_raytracer->svo_pass.command_buffer.buffer);
+        TGVK_CALL(vkEndCommandBuffer(p_raytracer->svo_pass.command_buffer.buffer));
 
-    tgvk_queue_submit(TGVK_QUEUE_TYPE_GRAPHICS, 1, &visibility_submit_info, VK_NULL_HANDLE);
+        VkSubmitInfo visibility_submit_info = { 0 };
+        visibility_submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        visibility_submit_info.pNext = TG_NULL;
+        visibility_submit_info.waitSemaphoreCount = 0;
+        visibility_submit_info.pWaitSemaphores = TG_NULL;
+        visibility_submit_info.pWaitDstStageMask = TG_NULL;
+        visibility_submit_info.commandBufferCount = 1;
+        visibility_submit_info.pCommandBuffers = &p_raytracer->svo_pass.command_buffer.buffer;
+        visibility_submit_info.signalSemaphoreCount = 1;
+        visibility_submit_info.pSignalSemaphores = &p_raytracer->semaphore;
+
+        // Note: This fence does not need to be at the top, because we only wait for the presentation
+        // to finish. The visibility pass has long finished. Therefore, all buffers, that are not
+        // required by the presentation pass, can be updated before waiting for this fence.
+        tgvk_fence_wait(p_raytracer->render_target.fence);
+        tgvk_fence_reset(p_raytracer->render_target.fence);
+
+        tgvk_queue_submit(TGVK_QUEUE_TYPE_GRAPHICS, 1, &visibility_submit_info, VK_NULL_HANDLE);
+    }
+    else
+    {
+        tgvk_command_buffer_begin(&p_raytracer->visibility_pass.command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT);
+        tgvk_cmd_begin_render_pass(&p_raytracer->visibility_pass.command_buffer, p_raytracer->visibility_pass.render_pass, &p_raytracer->visibility_pass.framebuffer, VK_SUBPASS_CONTENTS_INLINE);
+    
+        vkCmdBindPipeline(p_raytracer->visibility_pass.command_buffer.buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_raytracer->visibility_pass.graphics_pipeline.pipeline);
+        vkCmdBindIndexBuffer(p_raytracer->visibility_pass.command_buffer.buffer, p_raytracer->cube_ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
+        vkCmdBindVertexBuffers(p_raytracer->visibility_pass.command_buffer.buffer, 0, 1, &p_raytracer->visibility_pass.instance_id_vbo.buffer, &vertex_buffer_offset);
+        vkCmdBindVertexBuffers(p_raytracer->visibility_pass.command_buffer.buffer, 1, 1, &p_raytracer->cube_vbo.buffer, &vertex_buffer_offset);
+
+        // TODO: update required here? Otherwise mark as dirty. Also, draw indirect
+        tgvk_descriptor_set_update_storage_buffer(p_raytracer->visibility_pass.descriptor_set.set, &p_raytracer->instance_data_ssbo, 0);
+        tgvk_descriptor_set_update_uniform_buffer(p_raytracer->visibility_pass.descriptor_set.set, &p_raytracer->view_projection_ubo, 1);
+        tgvk_descriptor_set_update_uniform_buffer(p_raytracer->visibility_pass.descriptor_set.set, &p_raytracer->visibility_pass.raytracer_data_ubo, 2);
+        tgvk_descriptor_set_update_storage_buffer(p_raytracer->visibility_pass.descriptor_set.set, &p_raytracer->visibility_pass.svo_voxel_data_ssbo, 3);
+        tgvk_descriptor_set_update_storage_buffer(p_raytracer->visibility_pass.descriptor_set.set, &p_raytracer->visibility_pass.visibility_buffer_ssbo, 4);
+
+        vkCmdBindDescriptorSets(p_raytracer->visibility_pass.command_buffer.buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_raytracer->visibility_pass.graphics_pipeline.layout.pipeline_layout, 0, 1, &p_raytracer->visibility_pass.descriptor_set.set, 0, TG_NULL);
+        tgvk_cmd_draw_indexed_instanced(&p_raytracer->visibility_pass.command_buffer, 6 * 6, p_raytracer->instance_buffer.count); // TODO: triangle fans for fewer indices?
+
+        // TODO look at below
+        //vkCmdExecuteCommands(p_raytracer->geometry_pass.command_buffer.buffer, p_raytracer->deferred_command_buffer_count, p_raytracer->p_deferred_command_buffers);
+        vkCmdEndRenderPass(p_raytracer->visibility_pass.command_buffer.buffer);
+        TGVK_CALL(vkEndCommandBuffer(p_raytracer->visibility_pass.command_buffer.buffer));
+
+        VkSubmitInfo visibility_submit_info = { 0 };
+        visibility_submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        visibility_submit_info.pNext = TG_NULL;
+        visibility_submit_info.waitSemaphoreCount = 0;
+        visibility_submit_info.pWaitSemaphores = TG_NULL;
+        visibility_submit_info.pWaitDstStageMask = TG_NULL;
+        visibility_submit_info.commandBufferCount = 1;
+        visibility_submit_info.pCommandBuffers = &p_raytracer->visibility_pass.command_buffer.buffer;
+        visibility_submit_info.signalSemaphoreCount = 1;
+        visibility_submit_info.pSignalSemaphores = &p_raytracer->semaphore;
+
+        // Note: This fence does not need to be at the top, because we only wait for the presentation
+        // to finish. The visibility pass has long finished. Therefore, all buffers, that are not
+        // required by the presentation pass, can be updated before waiting for this fence.
+        tgvk_fence_wait(p_raytracer->render_target.fence);
+        tgvk_fence_reset(p_raytracer->render_target.fence);
+
+        tgvk_queue_submit(TGVK_QUEUE_TYPE_GRAPHICS, 1, &visibility_submit_info, VK_NULL_HANDLE);
+    }
 
 
 
@@ -948,21 +1056,21 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
 
     // DEBUG
 
-    if (0)
+    if (1)
     {
         tgvk_command_buffer_begin(&p_raytracer->debug_pass.command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT);
-        tgvk_cmd_begin_render_pass(&p_raytracer->debug_pass.command_buffer, p_raytracer->debug_pass.render_pass, &p_raytracer->debug_pass.framebuffer, VK_SUBPASS_CONTENTS_INLINE);
+        tgvk_cmd_begin_render_pass(&p_raytracer->debug_pass.command_buffer, p_raytracer->debug_pass.render_pass, &p_raytracer->debug_pass.cb_framebuffer, VK_SUBPASS_CONTENTS_INLINE);
 
-        vkCmdBindPipeline(p_raytracer->debug_pass.command_buffer.buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_raytracer->debug_pass.graphics_pipeline.pipeline);
+        vkCmdBindPipeline(p_raytracer->debug_pass.command_buffer.buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_raytracer->debug_pass.cb_graphics_pipeline.pipeline);
         vkCmdBindIndexBuffer(p_raytracer->debug_pass.command_buffer.buffer, p_raytracer->cube_ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
-        vkCmdBindVertexBuffers(p_raytracer->debug_pass.command_buffer.buffer, 0, 1, &p_raytracer->visibility_pass.instance_id_vbo.buffer, &vertex_buffer_offset);
+        vkCmdBindVertexBuffers(p_raytracer->debug_pass.command_buffer.buffer, 0, 1, &p_raytracer->debug_pass.cb_instance_id_vbo.buffer, &vertex_buffer_offset);
         vkCmdBindVertexBuffers(p_raytracer->debug_pass.command_buffer.buffer, 1, 1, &p_raytracer->cube_vbo.buffer, &vertex_buffer_offset);
 
-        tgvk_descriptor_set_update_storage_buffer(p_raytracer->debug_pass.descriptor_set.set, &p_raytracer->instance_data_ssbo, 0);
-        tgvk_descriptor_set_update_uniform_buffer(p_raytracer->debug_pass.descriptor_set.set, &p_raytracer->view_projection_ubo, 1);
+        tgvk_descriptor_set_update_storage_buffer(p_raytracer->debug_pass.cb_descriptor_set.set, &p_raytracer->debug_pass.cb_transformation_matrix_ssbo, 0);
+        tgvk_descriptor_set_update_uniform_buffer(p_raytracer->debug_pass.cb_descriptor_set.set, &p_raytracer->view_projection_ubo, 1);
 
-        vkCmdBindDescriptorSets(p_raytracer->debug_pass.command_buffer.buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_raytracer->debug_pass.graphics_pipeline.layout.pipeline_layout, 0, 1, &p_raytracer->debug_pass.descriptor_set.set, 0, TG_NULL);
-        tgvk_cmd_draw_indexed_instanced(&p_raytracer->debug_pass.command_buffer, 6 * 6, p_raytracer->instance_buffer.count); // TODO: triangle fans for fewer indices? same above
+        vkCmdBindDescriptorSets(p_raytracer->debug_pass.command_buffer.buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_raytracer->debug_pass.cb_graphics_pipeline.layout.pipeline_layout, 0, 1, &p_raytracer->debug_pass.cb_descriptor_set.set, 0, TG_NULL);
+        tgvk_cmd_draw_indexed_instanced(&p_raytracer->debug_pass.command_buffer, 6 * 6, p_raytracer->debug_pass.cb_count); // TODO: triangle fans for fewer indices? same above
 
         vkCmdEndRenderPass(p_raytracer->debug_pass.command_buffer.buffer);
         TGVK_CALL(vkEndCommandBuffer(p_raytracer->debug_pass.command_buffer.buffer));
@@ -983,19 +1091,21 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
 
     if (1)
     {
-        tgvk_command_buffer_begin(&p_raytracer->debug_pass.command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT);
-        tgvk_cmd_begin_render_pass(&p_raytracer->debug_pass.command_buffer, p_raytracer->debug_pass.render_pass, &p_raytracer->debug_pass.cb_framebuffer, VK_SUBPASS_CONTENTS_INLINE);
+        vkDeviceWaitIdle(device);
 
-        vkCmdBindPipeline(p_raytracer->debug_pass.command_buffer.buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_raytracer->debug_pass.cb_graphics_pipeline.pipeline);
+        tgvk_command_buffer_begin(&p_raytracer->debug_pass.command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT);
+        tgvk_cmd_begin_render_pass(&p_raytracer->debug_pass.command_buffer, p_raytracer->debug_pass.render_pass, &p_raytracer->debug_pass.framebuffer, VK_SUBPASS_CONTENTS_INLINE);
+
+        vkCmdBindPipeline(p_raytracer->debug_pass.command_buffer.buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_raytracer->debug_pass.graphics_pipeline.pipeline);
         vkCmdBindIndexBuffer(p_raytracer->debug_pass.command_buffer.buffer, p_raytracer->cube_ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
-        vkCmdBindVertexBuffers(p_raytracer->debug_pass.command_buffer.buffer, 0, 1, &p_raytracer->debug_pass.cb_instance_id_vbo.buffer, &vertex_buffer_offset);
+        vkCmdBindVertexBuffers(p_raytracer->debug_pass.command_buffer.buffer, 0, 1, &p_raytracer->visibility_pass.instance_id_vbo.buffer, &vertex_buffer_offset);
         vkCmdBindVertexBuffers(p_raytracer->debug_pass.command_buffer.buffer, 1, 1, &p_raytracer->cube_vbo.buffer, &vertex_buffer_offset);
 
-        tgvk_descriptor_set_update_storage_buffer(p_raytracer->debug_pass.cb_descriptor_set.set, &p_raytracer->debug_pass.cb_transformation_matrix_ssbo, 0);
-        tgvk_descriptor_set_update_uniform_buffer(p_raytracer->debug_pass.cb_descriptor_set.set, &p_raytracer->view_projection_ubo, 1);
+        tgvk_descriptor_set_update_storage_buffer(p_raytracer->debug_pass.descriptor_set.set, &p_raytracer->instance_data_ssbo, 0);
+        tgvk_descriptor_set_update_uniform_buffer(p_raytracer->debug_pass.descriptor_set.set, &p_raytracer->view_projection_ubo, 1);
 
-        vkCmdBindDescriptorSets(p_raytracer->debug_pass.command_buffer.buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_raytracer->debug_pass.cb_graphics_pipeline.layout.pipeline_layout, 0, 1, &p_raytracer->debug_pass.cb_descriptor_set.set, 0, TG_NULL);
-        tgvk_cmd_draw_indexed_instanced(&p_raytracer->debug_pass.command_buffer, 6 * 6, p_raytracer->debug_pass.cb_count); // TODO: triangle fans for fewer indices? same above
+        vkCmdBindDescriptorSets(p_raytracer->debug_pass.command_buffer.buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_raytracer->debug_pass.graphics_pipeline.layout.pipeline_layout, 0, 1, &p_raytracer->debug_pass.descriptor_set.set, 0, TG_NULL);
+        tgvk_cmd_draw_indexed_instanced(&p_raytracer->debug_pass.command_buffer, 6 * 6, p_raytracer->instance_buffer.count); // TODO: triangle fans for fewer indices? same above
 
         vkCmdEndRenderPass(p_raytracer->debug_pass.command_buffer.buffer);
         TGVK_CALL(vkEndCommandBuffer(p_raytracer->debug_pass.command_buffer.buffer));

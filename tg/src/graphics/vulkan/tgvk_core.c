@@ -483,6 +483,8 @@ u32 tg_vertex_input_attribute_format_get_size(tg_vertex_input_attribute_format f
 
 void tgvk_buffer_copy(VkDeviceSize size, tgvk_buffer* p_src, tgvk_buffer* p_dst)
 {
+    TG_ASSERT(size > 0);
+
     const u32 thread_id = tgp_get_thread_id();
     tgvk_command_buffer_begin(&p_global_graphics_command_buffers[thread_id], VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
     tgvk_cmd_copy_buffer(&p_global_graphics_command_buffers[thread_id], size, p_src, p_dst);
@@ -491,6 +493,8 @@ void tgvk_buffer_copy(VkDeviceSize size, tgvk_buffer* p_src, tgvk_buffer* p_dst)
 
 tgvk_buffer tgvk_buffer_create(VkDeviceSize size, VkBufferUsageFlags buffer_usage_flags, tgvk_memory_type memory_type TG_DEBUG_PARAM(u32 line) TG_DEBUG_PARAM(const char* p_filename))
 {
+    TG_ASSERT(size > 0);
+
     tgvk_buffer buffer = { 0 };
 
     VkBufferUsageFlags usage_flags = buffer_usage_flags;
@@ -549,6 +553,8 @@ tgvk_buffer tgvk_buffer_create(VkDeviceSize size, VkBufferUsageFlags buffer_usag
 
 void tgvk_buffer_destroy(tgvk_buffer* p_buffer)
 {
+    TG_ASSERT(p_buffer != TG_NULL);
+
     tgvk_memory_allocator_free(&p_buffer->memory);
     vkDestroyBuffer(device, p_buffer->buffer, TG_NULL);
 }
@@ -1302,6 +1308,30 @@ void tgvk_command_buffer_end_and_submit(tgvk_command_buffer* p_command_buffer)
 
 
 
+void tgvk_copy_to_buffer(tg_size size, const void* p_data, tgvk_buffer* p_buffer)
+{
+    TG_ASSERT(size > 0);
+    TG_ASSERT(p_data != TG_NULL);
+    TG_ASSERT(p_buffer != TG_NULL);
+
+    VkDeviceSize copied_size = 0;
+    tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
+    tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take(staging_buffer_size);
+    while (copied_size < size)
+    {
+        const VkDeviceSize remaining_size = size - copied_size;
+        const VkDeviceSize copy_size = TG_MIN(staging_buffer_size, remaining_size);
+        tg_memcpy(copy_size, ((u8*)p_data) + copied_size, p_staging_buffer->memory.p_mapped_device_memory);
+        tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+        tgvk_cmd_copy_buffer2(p_command_buffer, 0, copied_size, copy_size, p_staging_buffer, p_buffer);
+        tgvk_command_buffer_end_and_submit(p_command_buffer);
+        copied_size += copy_size;
+    }
+    tgvk_global_staging_buffer_release();
+}
+
+
+
 tgvk_cube_map tgvk_cube_map_create(u32 dimension, VkFormat format, const tgvk_sampler_create_info* p_sampler_create_info TG_DEBUG_PARAM(u32 line) TG_DEBUG_PARAM(const char* p_filename))
 {
     tgvk_cube_map cube_map = { 0 };
@@ -1797,7 +1827,7 @@ void tgvk_global_staging_buffer_release(void)
 
 tg_size tgvk_global_stating_buffer_size(void)
 {
-    return (VkDeviceSize)staging_buffer_size;
+    return (tg_size)staging_buffer_size;
 }
 
 
@@ -2906,6 +2936,16 @@ tg_size tg__shader_generate_glsl(const char* p_glsl_source, tg_size generated_gl
                     p_location_it = tg_string_skip_whitespace(p_location_it);
                     location = tg_string_to_u32(p_location_it);
                 }
+                else if (tg_string_starts_with(p_it, "TG_")) // TODO: Support macro expansion instead of this madness?
+                {
+                    const char* p_location_it = p_it + sizeof("TG_") - 1;
+                    if (tg_string_starts_with(p_location_it, "IN") || tg_string_starts_with(p_location_it, "OUT"))
+                    {
+                        while (*p_location_it++ != '(');
+                        p_location_it = tg_string_skip_whitespace(p_location_it);
+                        location = tg_string_to_u32(p_location_it);
+                    }
+                }
                 // Cut instance annotation from source
                 else if (tg_string_starts_with(p_it, "#instance"))
                 {
@@ -3481,6 +3521,7 @@ static u32 tg__physical_device_rate(VkPhysicalDevice pd)
     VkPhysicalDeviceFeatures2 physical_device_features_2 = { 0 };
     physical_device_features_2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
     vkGetPhysicalDeviceFeatures2(pd, &physical_device_features_2);
+    const b32 supports_int16 = physical_device_features_2.features.shaderInt16 == VK_TRUE;
     b32 supports_shader_buffer_int64_atomics = physical_device_features_2.features.shaderInt64 == VK_TRUE;
     const VkPhysicalDeviceFeatures2* p_features_it = &physical_device_features_2;
     while (p_features_it)
@@ -3500,6 +3541,7 @@ static u32 tg__physical_device_rate(VkPhysicalDevice pd)
         !tg__physical_device_supports_required_queue_families(pd) ||
         !physical_device_surface_format_count ||
         !physical_device_present_mode_count ||
+        !supports_int16 ||
         !supports_shader_buffer_int64_atomics ||
         !supports_1024_compute_work_groups)
     {
@@ -3786,7 +3828,7 @@ static VkDevice tg__device_create(void)
     physical_device_features.shaderCullDistance = VK_FALSE;
     physical_device_features.shaderFloat64 = VK_FALSE;
     physical_device_features.shaderInt64 = VK_TRUE;
-    physical_device_features.shaderInt16 = VK_FALSE;
+    physical_device_features.shaderInt16 = VK_TRUE;
     physical_device_features.shaderResourceResidency = VK_FALSE;
     physical_device_features.shaderResourceMinLod = VK_FALSE;
     physical_device_features.sparseBinding = VK_FALSE;
@@ -3811,9 +3853,17 @@ static VkDevice tg__device_create(void)
     const char** pp_enabled_extension_names = TG_NULL;
 #endif
 
+    VkPhysicalDevice16BitStorageFeatures physical_device_16_bit_storage_features = { 0 };
+    physical_device_16_bit_storage_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES;
+    physical_device_16_bit_storage_features.pNext = TG_NULL;
+    physical_device_16_bit_storage_features.storageBuffer16BitAccess = VK_TRUE;
+    physical_device_16_bit_storage_features.uniformAndStorageBuffer16BitAccess = VK_FALSE;
+    physical_device_16_bit_storage_features.storagePushConstant16 = VK_FALSE;
+    physical_device_16_bit_storage_features.storageInputOutput16 = VK_FALSE;
+
     VkPhysicalDeviceShaderAtomicInt64Features physical_device_shader_atomic_int64_features = { 0 };
     physical_device_shader_atomic_int64_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_INT64_FEATURES;
-    physical_device_shader_atomic_int64_features.pNext = TG_NULL;
+    physical_device_shader_atomic_int64_features.pNext = &physical_device_16_bit_storage_features;
     physical_device_shader_atomic_int64_features.shaderBufferInt64Atomics = VK_TRUE;
     physical_device_shader_atomic_int64_features.shaderSharedInt64Atomics = VK_FALSE;
 

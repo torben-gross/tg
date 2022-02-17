@@ -347,6 +347,8 @@ void                    tgvk_command_buffer_begin(tgvk_command_buffer* p_command
 void                    tgvk_command_buffer_begin_secondary(tgvk_command_buffer* p_command_buffer, VkCommandBufferUsageFlags flags, VkRenderPass render_pass, tgvk_framebuffer* p_framebuffer);
 void                    tgvk_command_buffer_end_and_submit(tgvk_command_buffer* p_command_buffer);
 
+void                    tgvk_copy_to_buffer(tg_size size, const void* p_data, tgvk_buffer* p_buffer);
+
 tgvk_cube_map           tgvk_cube_map_create(u32 dimension, VkFormat format, const tgvk_sampler_create_info* p_sampler_create_info TG_DEBUG_PARAM(u32 line) TG_DEBUG_PARAM(const char* p_filename));
 void                    tgvk_cube_map_destroy(tgvk_cube_map* p_cube_map);
 

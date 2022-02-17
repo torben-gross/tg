@@ -73,7 +73,7 @@ static void tg__construct_leaf_node(
         p_block_corners_v3[6] = tgm_m4_mulv4(invm, p_block_corners_v4[6]).xyz;
         p_block_corners_v3[7] = tgm_m4_mulv4(invm, p_block_corners_v4[7]).xyz;
 
-        TG_ASSERT(tg_intersect_aabb_obb(tgm_v3_neg(instance_half_extent), instance_half_extent, p_block_corners_v3));
+        TG_ASSERT(tg_intersect_aabb_obb_ignore_contact(tgm_v3_neg(instance_half_extent), instance_half_extent, p_block_corners_v3));
 
         const v3 instance_extent = tgm_v3_mulf(instance_half_extent, 2.0f);
         const u32 instance_first_voxel_id = p_instance->first_voxel_id;
@@ -295,7 +295,7 @@ static void tg__construct_inner_node(
             p_child_corners_v3[6] = tgm_m4_mulv4(invm, p_child_corners_v4[6]).xyz;
             p_child_corners_v3[7] = tgm_m4_mulv4(invm, p_child_corners_v4[7]).xyz;
 
-            if (tg_intersect_aabb_obb(tgm_v3_neg(instance_half_extent), instance_half_extent, p_child_corners_v3))
+            if (tg_intersect_aabb_obb_ignore_contact(tgm_v3_neg(instance_half_extent), instance_half_extent, p_child_corners_v3))
             {
                 valid_mask |= 1 << child_idx;
                 if (p_instance_id_count_per_child[child_idx] == 0
@@ -398,15 +398,6 @@ void tg_svo_create(v3 extent_min, v3 extent_max, u32 instance_count, const tg_in
     // TODO: chunked svo construction for infinite worlds
     p_svo->min = extent_min;
     p_svo->max = extent_max;
-
-    const v3 parent_extent = tgm_v3_sub(p_svo->max, p_svo->min);
-
-    v3 block_extent = parent_extent;
-    while ((u32)block_extent.x * (u32)block_extent.y * (u32)block_extent.z > TG_SVO_BLOCK_MAX_VOXELS)
-    {
-        block_extent = tgm_v3_divf(block_extent, 2.0f);
-    }
-    p_svo->block_extent = block_extent;
     
     p_svo->voxel_buffer_capacity_in_u32   = (1 << 17);
     p_svo->voxel_buffer_count_in_u32      = 0;
@@ -426,6 +417,7 @@ void tg_svo_create(v3 extent_min, v3 extent_max, u32 instance_count, const tg_in
 
     tg_svo_inner_node* p_parent = (tg_svo_inner_node*)p_svo->p_node_buffer;
     const v3 parent_offset = { 0 };
+    const v3 parent_extent = tgm_v3_sub(p_svo->max, p_svo->min);
     u16* p_instance_ids = TG_MALLOC_STACK(instance_count * sizeof(*p_instance_ids));
     for (u16 i = 0; i < instance_count; i++)
     {

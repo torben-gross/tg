@@ -32,7 +32,6 @@ typedef struct tg_svo
     // Note: These are floating-point vectors, so we don't need as many conversions during SVO-construction
     v3                        min;
     v3                        max;
-    v3                        block_extent;
     
     u32                       voxel_buffer_capacity_in_u32;
     u32                       voxel_buffer_count_in_u32;
