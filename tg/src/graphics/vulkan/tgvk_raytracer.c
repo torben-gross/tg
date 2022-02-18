@@ -180,7 +180,7 @@ static void tg__init_svo_pass(tg_raytracer* p_raytracer)
     tgvk_graphics_pipeline_create_info graphics_pipeline_create_info = { 0 };
     graphics_pipeline_create_info.p_vertex_shader = tgvk_shader_library_get("shaders/raytracer/debug_visibility_svo.vert");
     graphics_pipeline_create_info.p_fragment_shader = tgvk_shader_library_get("shaders/raytracer/debug_visibility_svo.frag");
-    graphics_pipeline_create_info.cull_mode = VK_CULL_MODE_FRONT_BIT;
+    graphics_pipeline_create_info.cull_mode = VK_CULL_MODE_NONE;
     graphics_pipeline_create_info.depth_test_enable = VK_FALSE;
     graphics_pipeline_create_info.depth_write_enable = VK_FALSE;
     graphics_pipeline_create_info.p_blend_modes = TG_NULL;
@@ -926,15 +926,20 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
     //tgvk_atmosphere_model_update(&p_raytracer->model, iv, ip);
     const VkDeviceSize vertex_buffer_offset = 0;
 
-    if (tg_input_is_key_down(TG_KEY_F))
+    static b32 show_svo = TG_FALSE;
+    if (tg_input_is_key_pressed(TG_KEY_F, TG_TRUE))
+    {
+        show_svo = !show_svo;
+    }
+    if (show_svo)
     {
         tgvk_command_buffer_begin(&p_raytracer->svo_pass.command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT);
         tgvk_cmd_begin_render_pass(&p_raytracer->svo_pass.command_buffer, p_raytracer->svo_pass.render_pass, &p_raytracer->svo_pass.framebuffer, VK_SUBPASS_CONTENTS_INLINE);
 
         vkCmdBindPipeline(p_raytracer->svo_pass.command_buffer.buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_raytracer->svo_pass.graphics_pipeline.pipeline);
-        vkCmdBindIndexBuffer(p_raytracer->svo_pass.command_buffer.buffer, p_raytracer->cube_ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
+        vkCmdBindIndexBuffer(p_raytracer->svo_pass.command_buffer.buffer, screen_quad_ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
         vkCmdBindVertexBuffers(p_raytracer->svo_pass.command_buffer.buffer, 0, 1, &p_raytracer->svo_pass.instance_id_vbo.buffer, &vertex_buffer_offset);
-        vkCmdBindVertexBuffers(p_raytracer->svo_pass.command_buffer.buffer, 1, 1, &p_raytracer->cube_vbo.buffer, &vertex_buffer_offset);
+        vkCmdBindVertexBuffers(p_raytracer->svo_pass.command_buffer.buffer, 1, 1, &screen_quad_positions_vbo.buffer, &vertex_buffer_offset);
 
         // TODO: update required here? Otherwise mark as dirty. Also, draw indirect
         tgvk_descriptor_set_update_uniform_buffer(p_raytracer->svo_pass.descriptor_set.set, &p_raytracer->view_projection_ubo, 0);
@@ -946,7 +951,8 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
         tgvk_descriptor_set_update_storage_buffer(p_raytracer->svo_pass.descriptor_set.set, &p_raytracer->svo_pass.svo_voxel_data_ssbo, 6);
 
         vkCmdBindDescriptorSets(p_raytracer->svo_pass.command_buffer.buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_raytracer->svo_pass.graphics_pipeline.layout.pipeline_layout, 0, 1, &p_raytracer->svo_pass.descriptor_set.set, 0, TG_NULL);
-        tgvk_cmd_draw_indexed_instanced(&p_raytracer->svo_pass.command_buffer, 6 * 6, p_raytracer->instance_buffer.count); // TODO: triangle fans for fewer indices?
+
+        tgvk_cmd_draw_indexed_instanced(&p_raytracer->svo_pass.command_buffer, 6, 1); // TODO: triangle fans for fewer indices?
 
         // TODO look at below
         //vkCmdExecuteCommands(p_raytracer->geometry_pass.command_buffer.buffer, p_raytracer->deferred_command_buffer_count, p_raytracer->p_deferred_command_buffers);
@@ -1056,7 +1062,7 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
 
     // DEBUG
 
-    if (1)
+    if (0)
     {
         tgvk_command_buffer_begin(&p_raytracer->debug_pass.command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT);
         tgvk_cmd_begin_render_pass(&p_raytracer->debug_pass.command_buffer, p_raytracer->debug_pass.render_pass, &p_raytracer->debug_pass.cb_framebuffer, VK_SUBPASS_CONTENTS_INLINE);

@@ -227,7 +227,7 @@ void main()
 
 
         // Visualize depth
-        //out_color = vec4(depth_24b, depth_24b, depth_24b, 1.0);
+        //out_color = v4(v3(min(1.0, 8.0 * depth_24b)), 1.0);
 
         // Visualize instance ID
         //u32 instance_id_hash0 = tg_hash_u32(instance_id_10b);

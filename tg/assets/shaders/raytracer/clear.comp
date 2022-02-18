@@ -3,7 +3,7 @@
 #include "shaders/common.inc"
 #include "shaders/commoni64.inc"
 
-layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in; // TODO: this should be dividable by the screen resolution, such that we dont have to do the compare below
+layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in; // TODO: this should ideally be dividable by the screen resolution, so we don't have to do the compare below
 
 layout(set = 0, binding = 0) buffer tg_visibility_buffer_ssbo
 {
@@ -16,6 +16,6 @@ void main()
 {
     if (gl_GlobalInvocationID.x < visibility_buffer_w && gl_GlobalInvocationID.y < visibility_buffer_h)
     {
-	    visibility_buffer_data[visibility_buffer_w * gl_GlobalInvocationID.y + gl_GlobalInvocationID.x] = 0xffffffff << 32;
+	    visibility_buffer_data[visibility_buffer_w * gl_GlobalInvocationID.y + gl_GlobalInvocationID.x] = (0xffffffff << 32) | 0xffffffff;
     }
 }

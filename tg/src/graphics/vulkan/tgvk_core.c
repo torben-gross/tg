@@ -4022,8 +4022,8 @@ static void tg__screen_quad_create(void)
 
     v2 p_positions[4] = { 0 };
     p_positions[0] = (v2){ -1.0f,  1.0f };
-    p_positions[1] = (v2){ 1.0f,  1.0f };
-    p_positions[2] = (v2){ 1.0f, -1.0f };
+    p_positions[1] = (v2){  1.0f,  1.0f };
+    p_positions[2] = (v2){  1.0f, -1.0f };
     p_positions[3] = (v2){ -1.0f, -1.0f };
 
     v2 p_uvs[4] = { 0 };

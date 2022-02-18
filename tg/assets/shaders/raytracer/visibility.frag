@@ -75,14 +75,15 @@ v3 tg_max_component_wise(v3 a, v3 b)
 }
 
 // Source: https://gamedev.net/forums/topic/682750-problem-with-raybox-intersection-in-glsl/5313495/
+// https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-box-intersection
 bool tg_intersect_ray_box(tg_ray r, tg_box b, out f32 t)
 {
     v3 vector1 = (b.min - r.o) * r.invd;
     v3 vector2 = (b.max - r.o) * r.invd;
     v3 n = tg_min_component_wise(vector1, vector2);
     v3 f = tg_max_component_wise(vector1, vector2);
-    f32 enter = max(n.x, max(n.y, n.z));
-    f32 exit = min(f.x, min(f.y, f.z));
+    f32 enter = max(max(n.x, n.y), n.z);
+    f32 exit = min(min(f.x, f.y), f.z);
     
     t = enter;
     return exit > 0.0 && enter < exit;
@@ -201,7 +202,7 @@ void main()
                 v3 voxel_max = box_min + v3(f32(x + 1), f32(y + 1), f32(z + 1));
                 tg_box voxel = tg_box(voxel_min, voxel_max);
                 f32 t_voxel;
-                tg_intersect_ray_box(r, voxel, t_voxel);
+                tg_intersect_ray_box(r, voxel, t_voxel); // Note: We should in this case adjust the function to potentially return enter AND exit, because if we are inside of the voxel, we receive a negative 't_voxel', which results in wrong depth. Might be irrelevant...
                 d = min(1.0, t_voxel / far);
                 voxel_id = vox_id;
                 break;

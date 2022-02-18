@@ -80,16 +80,15 @@ v3 tg_max_component_wise(v3 a, v3 b)
 }
 
 // Source: https://gamedev.net/forums/topic/682750-problem-with-raybox-intersection-in-glsl/5313495/
-bool tg_intersect_ray_box(tg_ray r, tg_box b, out f32 t)
+// https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-box-intersection
+bool tg_intersect_ray_box(tg_ray r, tg_box b, out f32 enter, out f32 exit)
 {
     v3 vector1 = (b.min - r.o) * r.invd;
     v3 vector2 = (b.max - r.o) * r.invd;
     v3 n = tg_min_component_wise(vector1, vector2);
     v3 f = tg_max_component_wise(vector1, vector2);
-    f32 enter = max(n.x, max(n.y, n.z));
-    f32 exit = min(f.x, min(f.y, f.z));
-    
-    t = enter;
+    enter = max(max(n.x, n.y), n.z);
+    exit = min(min(f.x, f.y), f.z);
     return exit > 0.0 && enter < exit;
 }
 
@@ -128,6 +127,10 @@ void main()
     max_stack[3 * stack_size + 1] = s.max.y;
     max_stack[3 * stack_size + 2] = s.max.z;
     stack_size++;
+    
+    f32 d = 1.0;
+    u32 voxel_id = 0;
+    bool result = false;
 
     while (stack_size > 0)
     {
@@ -135,13 +138,21 @@ void main()
         u32 node_idx = idx_stack[stack_size];
         v3  node_min = v3(min_stack[3 * stack_size], min_stack[3 * stack_size + 1], min_stack[3 * stack_size + 2]);
         v3  node_max = v3(max_stack[3 * stack_size], max_stack[3 * stack_size + 1], max_stack[3 * stack_size + 2]);
-
+        
         tg_svo_node node = nodes[node_idx];
 
         tg_box b = tg_box(node_min, node_max);
-        f32 t;
-        if (tg_intersect_ray_box(r, b, t))
+        f32 enter, exit, t;
+        if (tg_intersect_ray_box(r, b, enter, exit))
         {
+            result = true;
+            t = enter < 0.0 ? exit : enter;
+            f32 depth = min(1.0 - TG_F32_EPSILON, t / far); // TODO: Why do I need the epsilon here?
+            if (depth > d) // TODO: We may need an epsilon for SVOs very far away
+            {
+                continue;
+            }
+
             v3 child_extent = (node_max - node_min) * 0.5;
 
             u32 child_pointer =  node.data        & ((1 << 16) - 1);
@@ -163,14 +174,22 @@ void main()
 
                     if ((leaf_mask & (1 << child_idx)) != 0)
                     {
-                        if (tg_intersect_ray_box(r, tg_box(child_node_min, child_node_max), t))
-                            if (child_extent.x == 8 && child_extent.y == 8 && child_extent.z == 8) return;
-                        //return; // TODO: raytrace voxels instead!
+                        if (tg_intersect_ray_box(r, tg_box(child_node_min, child_node_max), enter, exit))
+                        {
+                            t = enter < 0.0 ? exit : enter;
+                            if (t / far < d)
+                            {
+                                d = t / far;
+                                voxel_id = child_node_idx;
+                            }
+                        }
+                        // TODO: raytrace voxels instead!
                     }
                     else
                     {
                         if (stack_size == stack_capacity)
                         {
+                            d = 0.5;
                             return; // TODO: Maybe we need a global stack or something...
                         }
 
@@ -190,10 +209,7 @@ void main()
         }
     }
 
-    const f32 d = 0.4;
-    const u32 voxel_id = 1;
-    
-    if (d != 1.0)
+    if (result)
     {
         // Layout : 24 bits depth | 10 bits instance id | 30 bits relative voxel_id
 
