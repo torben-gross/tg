@@ -5,7 +5,8 @@
 
 
 
-#define TG_SVO_BLOCK_MAX_VOXELS      512
+#define TG_SVO_BLOCK_VOXEL_COUNT    512
+#define TG_SVO_BLOCK_EXTENT         8
 
 
 
@@ -19,7 +20,7 @@ static void tg__construct_leaf_node(
     u16*                  p_instance_ids,
     const u32*            p_voxel_buffer)
 {
-    TG_ASSERT((u32)parent_extent.x * (u32)parent_extent.y * (u32)parent_extent.z <= TG_SVO_BLOCK_MAX_VOXELS); // Otherwise, this should be an inner node!
+    TG_ASSERT((u32)parent_extent.x * (u32)parent_extent.y * (u32)parent_extent.z == TG_SVO_BLOCK_VOXEL_COUNT); // Otherwise, this should be an inner node!
     TG_ASSERT(parent_extent.x >= 1.0f);
     TG_ASSERT(parent_extent.y >= 1.0f);
     TG_ASSERT(parent_extent.z >= 1.0f);
@@ -225,7 +226,7 @@ static void tg__construct_inner_node(
     u16*                  p_instance_ids,
     const u32*            p_voxel_buffer)
 {
-    TG_ASSERT((u32)parent_extent.x * (u32)parent_extent.y * (u32)parent_extent.z > TG_SVO_BLOCK_MAX_VOXELS); // Otherwise, this should be a leaf!
+    TG_ASSERT((u32)parent_extent.x * (u32)parent_extent.y * (u32)parent_extent.z > TG_SVO_BLOCK_VOXEL_COUNT); // Otherwise, this should be a leaf!
     TG_ASSERT(parent_extent.x >= 2.0f);
     TG_ASSERT(parent_extent.y >= 2.0f);
     TG_ASSERT(parent_extent.z >= 2.0f);
@@ -326,7 +327,8 @@ static void tg__construct_inner_node(
         p_svo->node_buffer_count += child_count;
 
         const u32 child_voxel_count = (u32)child_extent.x * (u32)child_extent.y * (u32)child_extent.z;
-        const b32 construct_inner_nodes_as_children = child_voxel_count > TG_SVO_BLOCK_MAX_VOXELS;
+        TG_ASSERT(child_voxel_count >= TG_SVO_BLOCK_VOXEL_COUNT); // A child has exactly this amount of voxels, so the result should never be smaller
+        const b32 construct_children_as_leaf_nodes = child_voxel_count == TG_SVO_BLOCK_VOXEL_COUNT;
 
         u32 child_node_offset = 0;
         for (u32 child_idx = 0; child_idx < 8; child_idx++)
@@ -342,7 +344,7 @@ static void tg__construct_inner_node(
                 child_offset.y = parent_offset.y + dy;
                 child_offset.z = parent_offset.z + dz;
 
-                if (construct_inner_nodes_as_children)
+                if (!construct_children_as_leaf_nodes)
                 {
                     tg__construct_inner_node(
                         p_svo,
@@ -442,12 +444,18 @@ void tg_svo_destroy(tg_svo* p_svo)
     *p_svo = (tg_svo){ 0 };
 }
 
-void tg_svo_traverse(const tg_svo* p_svo, v3 ray_origin, v3 ray_direction)
+b32 tg_svo_traverse(const tg_svo* p_svo, v3 ray_origin, v3 ray_direction, TG_OUT f32* p_distance, TG_OUT u32* p_node_idx, TG_OUT u32* p_voxel_idx)
 {
 #define TG_SVO_TRAVERSE_STACK_CAPACITY 7 // Assuming a SVO extent of 1024^3, we have a max of 7 levels of inner nodes, whilst the 8th level contains the 8^3 blocks of voxels
     TG_ASSERT(p_svo->max.x - p_svo->min.x == 1024.0f);
     TG_ASSERT(p_svo->max.y - p_svo->min.y == 1024.0f);
     TG_ASSERT(p_svo->max.z - p_svo->min.z == 1024.0f);
+
+    b32 result = TG_FALSE;
+
+    *p_distance = TG_F32_MAX;
+    *p_node_idx = TG_U32_MAX;
+    *p_voxel_idx = TG_U32_MAX;
 
     const v3 extent = tgm_v3_sub(p_svo->max, p_svo->min);
     const v3 center = tgm_v3_add(p_svo->min, tgm_v3_mulf(extent, 0.5f));
@@ -456,32 +464,28 @@ void tg_svo_traverse(const tg_svo* p_svo, v3 ray_origin, v3 ray_direction)
     ray_origin = tgm_v3_sub(ray_origin, center);
 
     u32 stack_size;
-    u32 parent_idx_stack[TG_SVO_TRAVERSE_STACK_CAPACITY] = { 0 };
-    v3  parent_min_stack[TG_SVO_TRAVERSE_STACK_CAPACITY] = { 0 };
-    v3  parent_max_stack[TG_SVO_TRAVERSE_STACK_CAPACITY] = { 0 };
-
-    b32 result = TG_FALSE;
-    f32 d = 1.0;
-    u32 voxel_id = 0;
+    u32 p_parent_idx_stack[TG_SVO_TRAVERSE_STACK_CAPACITY] = { 0 };
+    v3  p_parent_min_stack[TG_SVO_TRAVERSE_STACK_CAPACITY] = { 0 };
+    v3  p_parent_max_stack[TG_SVO_TRAVERSE_STACK_CAPACITY] = { 0 };
 
     f32 enter, exit;
-    if (tg_intersect_ray_box(ray_origin, ray_direction, p_svo->min, p_svo->max, &enter, &exit))
+    if (tg_intersect_ray_aabb(ray_origin, ray_direction, p_svo->min, p_svo->max, &enter, &exit))
     {
         const v3 v3_max = { TG_F32_MAX, TG_F32_MAX, TG_F32_MAX };
 
-        v3 position = enter > 0.0 ? tgm_v3_add(ray_origin, tgm_v3_mulf(ray_direction, enter)) : ray_origin;
+        v3 position = enter > 0.0f ? tgm_v3_add(ray_origin, tgm_v3_mulf(ray_direction, enter)) : ray_origin;
 
         stack_size = 1;
-        parent_idx_stack[0] = 0;
-        parent_min_stack[0] = p_svo->min;
-        parent_max_stack[0] = p_svo->max;
+        p_parent_idx_stack[0] = 0;
+        p_parent_min_stack[0] = p_svo->min;
+        p_parent_max_stack[0] = p_svo->max;
 
         while (stack_size > 0)
         {
-            const u32 parent_idx = parent_idx_stack[stack_size - 1];
+            const u32 parent_idx = p_parent_idx_stack[stack_size - 1];
             TG_ASSERT(parent_idx < p_svo->node_buffer_count);
-            const v3 parent_min = parent_min_stack[stack_size - 1];
-            const v3 parent_max = parent_max_stack[stack_size - 1];
+            const v3 parent_min = p_parent_min_stack[stack_size - 1];
+            const v3 parent_max = p_parent_max_stack[stack_size - 1];
 
             // TODO: this is for testing. use the actual structure instead!!
             const tg_svo_inner_node* p_parent_node = (const tg_svo_inner_node*)&p_svo->p_node_buffer[parent_idx];
@@ -489,31 +493,32 @@ void tg_svo_traverse(const tg_svo* p_svo, v3 ray_origin, v3 ray_direction)
             const u32 valid_mask    = (u32)p_parent_node->valid_mask;
             const u32 leaf_mask     = (u32)p_parent_node->leaf_mask;
 
-            const v3 child_extent = tgm_v3_mulf(tgm_v3_sub(parent_max, parent_min), 0.5);
+            const v3 child_extent = tgm_v3_mulf(tgm_v3_sub(parent_max, parent_min), 0.5f);
 
             u32 relative_child_idx = 0;
             v3 child_min = parent_min;
             v3 child_max = tgm_v3_add(child_min, child_extent);
 
-            if (child_max.x < position.x || position.x == child_max.x && ray_direction.x > 0.0)
+            if (child_max.x < position.x || position.x == child_max.x && ray_direction.x > 0.0f)
             {
                 relative_child_idx += 1;
                 child_min.x += child_extent.x;
                 child_max.x += child_extent.x;
             }
-            if (child_max.y < position.y || position.y == child_max.y && ray_direction.y > 0.0)
+            if (child_max.y < position.y || position.y == child_max.y && ray_direction.y > 0.0f)
             {
                 relative_child_idx += 2;
                 child_min.y += child_extent.y;
                 child_max.y += child_extent.y;
             }
-            if (child_max.z < position.z || position.z == child_max.z && ray_direction.z > 0.0)
+            if (child_max.z < position.z || position.z == child_max.z && ray_direction.z > 0.0f)
             {
                 relative_child_idx += 4;
                 child_min.z += child_extent.z;
                 child_max.z += child_extent.z;
             }
 
+            b32 advance_to_border = TG_TRUE;
             if ((valid_mask & (1 << relative_child_idx)) != 0)
             {
                 // Note: The SVO may not have all children set, so the child may be stored at a smaller offset
@@ -523,39 +528,152 @@ void tg_svo_traverse(const tg_svo* p_svo, v3 ray_origin, v3 ray_direction)
                     relative_child_offset += (valid_mask >> i) & 1;
                 }
                 const u32 child_idx = parent_idx + child_pointer + relative_child_offset;
-                const tg_svo_node child_node = p_svo->p_node_buffer[child_idx];
+                const tg_svo_node* p_child_node = &p_svo->p_node_buffer[child_idx];
 
                 // IF LEAF: TRAVERSE VOXELS
                 // ELSE: PUSH INNER CHILD NODE ONTO STACK
 
                 if ((leaf_mask & (1 << relative_child_idx)) != 0)
                 {
-                    TG_ASSERT(child_extent.x * child_extent.y * child_extent.z == TG_SVO_BLOCK_MAX_VOXELS);
+                    TG_ASSERT(child_extent.x * child_extent.y * child_extent.z == TG_SVO_BLOCK_VOXEL_COUNT);
 
-                    // TODO: raytrace nodes
-                    //result = TG_TRUE;
-                    //d = 0.0;
-                    //voxel_id = child_idx;
-                    const b32 does_not_collide_with_any_voxel = TG_TRUE;
-                    if (does_not_collide_with_any_voxel)
+                    const tg_svo_leaf_node_data* p_data = &p_svo->p_leaf_node_data_buffer[p_child_node->leaf.data_pointer];
+                    if (p_data->instance_count != 0)
                     {
-                        return;
+                        // TRAVERESE BLOCK
+
+                        const u32 first_voxel_id = p_child_node->leaf.data_pointer * TG_SVO_BLOCK_VOXEL_COUNT;
+                        TG_ASSERT(first_voxel_id % 32 == 0);
+                        
+                        v3 hit = position;
+                        v3 xyz = tgm_v3_clamp(tgm_v3_floor(hit), child_min, tgm_v3_sub(child_max, (v3) { 1.0f, 1.0f, 1.0f }));
+
+                        hit = tgm_v3_sub(hit, child_min);
+                        xyz = tgm_v3_sub(xyz, child_min);
+
+                        i32 x = (i32) xyz.x;
+                        i32 y = (i32) xyz.y;
+                        i32 z = (i32) xyz.z;
+
+                        i32 step_x;
+                        i32 step_y;
+                        i32 step_z;
+
+                        f32 t_max_x = TG_F32_MAX;
+                        f32 t_max_y = TG_F32_MAX;
+                        f32 t_max_z = TG_F32_MAX;
+
+                        f32 t_delta_x = TG_F32_MAX;
+                        f32 t_delta_y = TG_F32_MAX;
+                        f32 t_delta_z = TG_F32_MAX;
+
+                        if (ray_direction.x > 0.0f)
+                        {
+                            step_x = 1;
+                            t_max_x = ((f32)(x + 1) - hit.x) / ray_direction.x;
+                            t_delta_x = 1.0f / ray_direction.x;
+                        }
+                        else
+                        {
+                            step_x = -1;
+                            t_max_x = (hit.x - (f32)x) / -ray_direction.x;
+                            t_delta_x = 1.0f / -ray_direction.x;
+                        }
+                        if (ray_direction.y > 0.0f)
+                        {
+                            step_y = 1;
+                            t_max_y = ((f32)(y + 1) - hit.y) / ray_direction.y;
+                            t_delta_y = 1.0f / ray_direction.y;
+                        }
+                        else
+                        {
+                            step_y = -1;
+                            t_max_y = (hit.y - (f32)y) / -ray_direction.y;
+                            t_delta_y = 1.0f / -ray_direction.y;
+                        }
+                        if (ray_direction.z > 0.0f)
+                        {
+                            step_z = 1;
+                            t_max_z = ((f32)(z + 1) - hit.z) / ray_direction.z;
+                            t_delta_z = 1.0f / ray_direction.z;
+                        }
+                        else
+                        {
+                            step_z = -1;
+                            t_max_z = (hit.z - (f32)z) / -ray_direction.z;
+                            t_delta_z = 1.0f / -ray_direction.z;
+                        }
+
+                        while (TG_TRUE)
+                        {
+                            const u32 vox_id = 64 * z + 8 * y + x;
+                            const u32 vox_idx = first_voxel_id + vox_id;
+                            const u32 bits_idx = vox_idx / 32;
+                            const u32 bit_idx = vox_idx % 32;
+                            const u32 bits = p_svo->p_voxels_buffer[bits_idx];
+                            const u32 bit = bits & (1 << bit_idx);
+                            if (bit != 0)
+                            {
+                                const v3 voxel_min = tgm_v3_add(child_min, (v3) { (f32) x,      (f32) y,      (f32) z      });
+                                const v3 voxel_max = tgm_v3_add(child_min, (v3) { (f32)(x + 1), (f32)(y + 1), (f32)(z + 1) });
+                                const b32 intersect_ray_aabb_result = tg_intersect_ray_aabb(ray_origin, ray_direction, voxel_min, voxel_max, &enter, &exit); // TODO: We should in this case adjust the function to potentially return enter AND exit, because if we are inside of the voxel, we receive a negative 't_voxel', which results in wrong depth. Might be irrelevant...
+                                TG_ASSERT(intersect_ray_aabb_result);
+                                result = TG_TRUE;
+                                *p_distance  = enter;
+                                *p_node_idx  = child_idx;
+                                *p_voxel_idx = vox_idx;
+                                return result;
+                            }
+                            if (t_max_x < t_max_y)
+                            {
+                                if (t_max_x < t_max_z)
+                                {
+                                    t_max_x += t_delta_x;
+                                    x += step_x;
+                                    if (x < 0 || x >= child_extent.x) break;
+                                }
+                                else
+                                {
+                                    t_max_z += t_delta_z;
+                                    z += step_z;
+                                    if (z < 0 || z >= child_extent.z) break;
+                                }
+                            }
+                            else
+                            {
+                                if (t_max_y < t_max_z)
+                                {
+                                    t_max_y += t_delta_y;
+                                    y += step_y;
+                                    if (y < 0 || y >= child_extent.y) break;
+                                }
+                                else
+                                {
+                                    t_max_z += t_delta_z;
+                                    z += step_z;
+                                    if (z < 0 || z >= child_extent.z) break;
+                                }
+                            }
+                        }
                     }
                 }
                 else
                 {
-                    TG_ASSERT(child_extent.x * child_extent.y * child_extent.z > TG_SVO_BLOCK_MAX_VOXELS);
+                    TG_ASSERT(child_extent.x * child_extent.y * child_extent.z > TG_SVO_BLOCK_VOXEL_COUNT);
                     TG_ASSERT(stack_size < TG_SVO_TRAVERSE_STACK_CAPACITY);
 
-                    parent_idx_stack[stack_size] = child_idx;
-                    parent_min_stack[stack_size] = child_min;
-                    parent_max_stack[stack_size] = child_max;
+                    advance_to_border = TG_FALSE;
+
+                    p_parent_idx_stack[stack_size] = child_idx;
+                    p_parent_min_stack[stack_size] = child_min;
+                    p_parent_max_stack[stack_size] = child_max;
                     stack_size++;
                 }
             }
-            else
+
+            if (advance_to_border)
             {
-                // MOVE POSITION TO BORDER
+                // ADVANCE POSITION TO BORDER
 
                 v3 a = tgm_v3_div_zero_check(tgm_v3_sub(child_min, position), ray_direction, v3_max);
                 v3 b = tgm_v3_div_zero_check(tgm_v3_sub(child_max, position), ray_direction, v3_max);
@@ -569,8 +687,8 @@ void tg_svo_traverse(const tg_svo* p_svo, v3 ray_origin, v3 ray_direction)
 
                 while (stack_size > 0)
                 {
-                    const v3 node_min = parent_min_stack[stack_size - 1];
-                    const v3 node_max = parent_max_stack[stack_size - 1];
+                    const v3 node_min = p_parent_min_stack[stack_size - 1];
+                    const v3 node_max = p_parent_max_stack[stack_size - 1];
                     a = tgm_v3_div_zero_check(tgm_v3_sub(node_min, position), ray_direction, v3_max);
                     b = tgm_v3_div_zero_check(tgm_v3_sub(node_max, position), ray_direction, v3_max);
                     f = tgm_v3_max(a, b);
@@ -581,14 +699,16 @@ void tg_svo_traverse(const tg_svo* p_svo, v3 ray_origin, v3 ray_direction)
                     }
                     stack_size--;
 #ifdef TG_DEBUG
-                    parent_idx_stack[stack_size] = 0;
-                    parent_min_stack[stack_size] = (v3){ 0 };
-                    parent_max_stack[stack_size] = (v3){ 0 };
+                    p_parent_idx_stack[stack_size] = 0;
+                    p_parent_min_stack[stack_size] = (v3){ 0 };
+                    p_parent_max_stack[stack_size] = (v3){ 0 };
 #endif
                 }
             }
         }
     }
+
+    return result;
 
 #undef TG_SVO_TRAVERSE_STACK_CAPACITY
 }

@@ -132,8 +132,8 @@ void main()
         v3 hit = t_box > 0.0 ? r.o + t_box * r.d : r.o;
         v3 xyz = clamp(floor(hit), box_min, box_max - v3(1.0));
 
-        hit += v3(box_max);
-        xyz += v3(box_max);
+        hit += box_max;
+        xyz += box_max;
 
         i32 x = i32(xyz.x);
         i32 y = i32(xyz.y);
@@ -202,7 +202,7 @@ void main()
                 v3 voxel_max = box_min + v3(f32(x + 1), f32(y + 1), f32(z + 1));
                 tg_box voxel = tg_box(voxel_min, voxel_max);
                 f32 t_voxel;
-                tg_intersect_ray_box(r, voxel, t_voxel); // Note: We should in this case adjust the function to potentially return enter AND exit, because if we are inside of the voxel, we receive a negative 't_voxel', which results in wrong depth. Might be irrelevant...
+                tg_intersect_ray_box(r, voxel, t_voxel); // TODO: We should in this case adjust the function to potentially return enter AND exit, because if we are inside of the voxel, we receive a negative 't_voxel', which results in wrong depth. Might be irrelevant...
                 d = min(1.0, t_voxel / far);
                 voxel_id = vox_id;
                 break;

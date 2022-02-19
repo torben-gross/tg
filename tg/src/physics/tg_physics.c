@@ -391,7 +391,7 @@ obb:
     return TG_TRUE;
 }
 
-b32 tg_intersect_ray_box(v3 ray_origin, v3 ray_direction, v3 min, v3 max, TG_OUT f32* p_enter, TG_OUT f32* p_exit)
+b32 tg_intersect_ray_aabb(v3 ray_origin, v3 ray_direction, v3 min, v3 max, TG_OUT f32* p_enter, TG_OUT f32* p_exit)
 {
     const v3 v3_max = { TG_F32_MAX, TG_F32_MAX, TG_F32_MAX };
     const v3 vec0 = tgm_v3_div_zero_check(tgm_v3_sub(min, ray_origin), ray_direction, v3_max);

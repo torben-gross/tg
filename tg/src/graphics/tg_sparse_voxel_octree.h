@@ -18,7 +18,7 @@ typedef struct tg_svo_leaf_node_data
 
 typedef struct tg_svo_leaf_node
 {
-    u32    data_pointer; // Offset into the 'tg_svo_leaf_node_data' array inside of the header. '(data_pointer * header.leaf_block_size + 31) / 32' is index into voxel array of svo
+    u32    data_pointer; // Offset into the 'tg_svo_leaf_node_data' array inside of the header. '(data_pointer * TG_SVO_BLOCK_VOXEL_COUNT + 31) / 32' is index into voxel array of svo
 } tg_svo_leaf_node;
 
 typedef union tg_svo_node
@@ -45,8 +45,8 @@ typedef struct tg_svo
     tg_svo_node*              p_node_buffer;           // First node is always an 'tg_svo_inner_node'
 } tg_svo;
 
-void tg_svo_create(v3 extent_min, v3 extent_max, u32 instance_count, const tg_instance* p_instances, const u32* p_voxel_buffer, TG_OUT tg_svo* p_svo);
-void tg_svo_destroy(tg_svo* p_svo);
-void tg_svo_traverse(const tg_svo* p_svo, v3 ray_origin, v3 ray_direction);
+void    tg_svo_create(v3 extent_min, v3 extent_max, u32 instance_count, const tg_instance* p_instances, const u32* p_voxel_buffer, TG_OUT tg_svo* p_svo);
+void    tg_svo_destroy(tg_svo* p_svo);
+b32     tg_svo_traverse(const tg_svo* p_svo, v3 ray_origin, v3 ray_direction, TG_OUT f32* p_distance, TG_OUT u32* p_node_idx, TG_OUT u32* p_voxel_idx);
 
 #endif

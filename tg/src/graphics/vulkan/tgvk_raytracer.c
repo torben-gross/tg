@@ -921,10 +921,13 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
     tg__push_debug_svo_node(p_raytracer, &p_svo->p_node_buffer[0].inner, p_svo->min, p_svo->max, TG_TRUE);
 
     // TODO: keep for a while to catch potential errors of implementation
-    tg_svo_traverse(p_svo, c.position, ray00);
-    tg_svo_traverse(p_svo, c.position, ray10);
-    tg_svo_traverse(p_svo, c.position, ray01);
-    tg_svo_traverse(p_svo, c.position, ray11);
+    f32  distance0, distance1, distance2, distance3;
+    u32  node_idx0, node_idx1, node_idx2, node_idx3;
+    u32 voxel_idx0, voxel_idx1, voxel_idx2, voxel_idx3;
+    const b32 result0 = tg_svo_traverse(p_svo, c.position, ray00, &distance0, &node_idx0, &voxel_idx0);
+    const b32 result1 = tg_svo_traverse(p_svo, c.position, ray10, &distance1, &node_idx1, &voxel_idx1);
+    const b32 result2 = tg_svo_traverse(p_svo, c.position, ray01, &distance2, &node_idx2, &voxel_idx2);
+    const b32 result3 = tg_svo_traverse(p_svo, c.position, ray11, &distance3, &node_idx3, &voxel_idx3);
 
 
     // VISIBILITY
