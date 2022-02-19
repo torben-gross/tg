@@ -130,7 +130,13 @@ void main()
     f32 enter, exit;
     if (tg_intersect_ray_aabb(r, tg_box(s.min.xyz, s.max.xyz), enter, exit))
     {
-        v3 position = enter > 0.0 ? r.o + enter * r.d : r.o;
+        f32 total_advance_from_ray_origin = 0.0f;
+        v3 position = r.o;
+        if (enter > 0.0)
+        {
+            total_advance_from_ray_origin += enter;
+            position += enter * r.d;
+        }
         
         stack_size = 1;
         parent_idx_stack[0] = 0;
@@ -275,7 +281,7 @@ void main()
 
                         while (true)
                         {
-                            u32 vox_id = 64 * z + 8 * y + x;
+                            u32 vox_id = u32(child_extent.x) * u32(child_extent.y) * z + u32(child_extent.x) * y + x;
                             u32 vox_idx = first_voxel_id + vox_id;
                             u32 bits_idx = vox_idx / 32;
                             u32 bit_idx = vox_idx % 32;
@@ -287,7 +293,7 @@ void main()
                                 v3 voxel_max = child_min + v3(f32(x + 1), f32(y + 1), f32(z + 1));
                                 tg_intersect_ray_aabb(tg_ray(position, ray_direction, ray_inv_direction), tg_box(voxel_min, voxel_max), enter, exit);
                                 result = true;
-                                d = (enter < 0.0) ? 0.0 : min(1.0, enter / far);
+                                d = total_advance_from_ray_origin / far + ((enter < 0.0) ? 0.0 : min(1.0, enter / far));
                                 node_idx = child_idx;
                                 voxel_idx = vox_idx;
                                 break;
@@ -352,6 +358,7 @@ void main()
                 v3 b = (child_max - position) * r.invd;
                 v3 f = v3(max(a.x, b.x), max(a.y, b.y), max(a.z, b.z));
                 exit = min(min(f.x, f.y), f.z);
+                total_advance_from_ray_origin += exit;
                 position += (exit + TG_F32_EPSILON) * r.d; // TODO: epsilon required?
 
                 // POP ALL NODES WITH EXIT <= 0

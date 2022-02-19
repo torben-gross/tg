@@ -157,9 +157,9 @@ static void tg__construct_leaf_node(
                     const f32 instance_voxel_id_y = instance_half_extent.y + block_voxel_center_floor_y;
                     const f32 instance_voxel_id_z = instance_half_extent.z + block_voxel_center_floor_z;
 
-                    const b32 in_x = instance_voxel_id_x > 0.0f && instance_voxel_id_x < instance_extent.x;
-                    const b32 in_y = instance_voxel_id_y > 0.0f && instance_voxel_id_y < instance_extent.y;
-                    const b32 in_z = instance_voxel_id_z > 0.0f && instance_voxel_id_z < instance_extent.z;
+                    const b32 in_x = instance_voxel_id_x >= 0.0f && instance_voxel_id_x < instance_extent.x;
+                    const b32 in_y = instance_voxel_id_y >= 0.0f && instance_voxel_id_y < instance_extent.y;
+                    const b32 in_z = instance_voxel_id_z >= 0.0f && instance_voxel_id_z < instance_extent.z;
 
                     if (in_x && in_y && in_z)
                     {
@@ -604,7 +604,7 @@ b32 tg_svo_traverse(const tg_svo* p_svo, v3 ray_origin, v3 ray_direction, TG_OUT
 
                         while (TG_TRUE)
                         {
-                            const u32 vox_id = 64 * z + 8 * y + x;
+                            const u32 vox_id = (u32)child_extent.x * (u32)child_extent.y * z + (u32)child_extent.x * y + x;
                             const u32 vox_idx = first_voxel_id + vox_id;
                             const u32 bits_idx = vox_idx / 32;
                             const u32 bit_idx = vox_idx % 32;
