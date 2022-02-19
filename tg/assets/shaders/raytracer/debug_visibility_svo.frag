@@ -6,7 +6,10 @@
 
 
 
-#define TG_SVO_BLOCK_VOXEL_COUNT    512
+#define TG_SVO_SIDE_LENGTH                1024
+#define TG_SVO_BLOCK_SIDE_LENGTH          32
+#define TG_SVO_BLOCK_VOXEL_COUNT          (TG_SVO_BLOCK_SIDE_LENGTH * TG_SVO_BLOCK_SIDE_LENGTH * TG_SVO_BLOCK_SIDE_LENGTH)
+#define TG_SVO_TRAVERSE_STACK_CAPACITY    5
 
 
 
@@ -116,11 +119,12 @@ void main()
     v3 ray_inv_direction = v3(1.0) / ray_direction;
     tg_ray r = tg_ray(ray_origin, ray_direction, ray_inv_direction);
 
-    const u32 stack_capacity = 7; // Assuming a SVO extent of 1024^3, we have a max of 7 levels of inner nodes, whilst the 8th level contains the 8^3 blocks of voxels
+#if TG_SVO_TRAVERSE_STACK_CAPACITY == 5 // Otherwise, we need to adjust the constructors
     u32 stack_size;
-    u32 parent_idx_stack[ 7] = u32[ 7](0, 0, 0, 0, 0, 0, 0);
-    f32 parent_min_stack[21] = f32[21](0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-    f32 parent_max_stack[21] = f32[21](0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+    u32 parent_idx_stack[ 5] = u32[ 5](0, 0, 0, 0, 0);
+    f32 parent_min_stack[15] = f32[15](0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+    f32 parent_max_stack[15] = f32[15](0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+#endif
 
     bool result = false;
     f32 d = TG_F32_MAX;
