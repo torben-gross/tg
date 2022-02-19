@@ -2,6 +2,7 @@
 
 #include "memory/tg_memory.h"
 #include "physics/tg_physics.h"
+#include "util/tg_amanatides_woo.h"
 
 
 
@@ -529,121 +530,29 @@ b32 tg_svo_traverse(const tg_svo* p_svo, v3 ray_origin, v3 ray_direction, TG_OUT
                         const u32 first_voxel_id = p_child_node->leaf.data_pointer * TG_SVO_BLOCK_VOXEL_COUNT;
                         TG_ASSERT(first_voxel_id % 32 == 0);
                         
-                        v3 hit = position;
-                        v3 xyz = tgm_v3_clamp(tgm_v3_floor(hit), child_min, tgm_v3_sub(child_max, (v3) { 1.0f, 1.0f, 1.0f }));
-
-                        hit = tgm_v3_sub(hit, child_min);
-                        xyz = tgm_v3_sub(xyz, child_min);
-
-                        i32 x = (i32)xyz.x;
-                        i32 y = (i32)xyz.y;
-                        i32 z = (i32)xyz.z;
-
-                        i32 step_x;
-                        i32 step_y;
-                        i32 step_z;
-
-                        f32 t_max_x = TG_F32_MAX;
-                        f32 t_max_y = TG_F32_MAX;
-                        f32 t_max_z = TG_F32_MAX;
-
-                        f32 t_delta_x = TG_F32_MAX;
-                        f32 t_delta_y = TG_F32_MAX;
-                        f32 t_delta_z = TG_F32_MAX;
-
-                        if (ray_direction.x > 0.0f)
+                        const v3 ray_hit_on_grid = tgm_v3_sub(position, child_min);
+                        const u32* p_voxel_grid = p_svo->p_voxels_buffer + first_voxel_id / 32;
+                        v3i voxel_id;
+                        if (tg_amanatides_woo(ray_hit_on_grid, ray_direction, child_extent, p_voxel_grid, &voxel_id))
                         {
-                            step_x = 1;
-                            t_max_x = ((f32)(x + 1) - hit.x) / ray_direction.x;
-                            t_delta_x = 1.0f / ray_direction.x;
-                        }
-                        else
-                        {
-                            step_x = -1;
-                            t_max_x = (hit.x - (f32)x) / -ray_direction.x;
-                            t_delta_x = 1.0f / -ray_direction.x;
-                        }
-                        if (ray_direction.y > 0.0f)
-                        {
-                            step_y = 1;
-                            t_max_y = ((f32)(y + 1) - hit.y) / ray_direction.y;
-                            t_delta_y = 1.0f / ray_direction.y;
-                        }
-                        else
-                        {
-                            step_y = -1;
-                            t_max_y = (hit.y - (f32)y) / -ray_direction.y;
-                            t_delta_y = 1.0f / -ray_direction.y;
-                        }
-                        if (ray_direction.z > 0.0f)
-                        {
-                            step_z = 1;
-                            t_max_z = ((f32)(z + 1) - hit.z) / ray_direction.z;
-                            t_delta_z = 1.0f / ray_direction.z;
-                        }
-                        else
-                        {
-                            step_z = -1;
-                            t_max_z = (hit.z - (f32)z) / -ray_direction.z;
-                            t_delta_z = 1.0f / -ray_direction.z;
-                        }
-
-                        while (TG_TRUE)
-                        {
-                            const u32 vox_id = (u32)child_extent.x * (u32)child_extent.y * z + (u32)child_extent.x * y + x;
-                            const u32 vox_idx = first_voxel_id + vox_id;
-                            const u32 bits_idx = vox_idx / 32;
-                            const u32 bit_idx = vox_idx % 32;
-                            const u32 bits = p_svo->p_voxels_buffer[bits_idx];
-                            const u32 bit = bits & (1 << bit_idx);
-                            if (bit != 0)
-                            {
-                                const v3 voxel_min = tgm_v3_add(child_min, (v3) { (f32) x,      (f32) y,      (f32) z      });
-                                const v3 voxel_max = tgm_v3_add(child_min, (v3) { (f32)(x + 1), (f32)(y + 1), (f32)(z + 1) });
-                                const b32 intersect_ray_aabb_result = tg_intersect_ray_aabb(position, ray_direction, voxel_min, voxel_max, &enter, &exit); // TODO: We should in this case adjust the function to potentially return enter AND exit, because if we are inside of the voxel, we receive a negative 't_voxel', which results in wrong depth. Might be irrelevant...
+                            const v3 voxel_min = tgm_v3_add(child_min, (v3) { (f32)voxel_id.x, (f32)voxel_id.y, (f32)voxel_id.z });
+                            const v3 voxel_max = tgm_v3_add(voxel_min, (v3) { 1.0f, 1.0f, 1.0f });
+                            const b32 intersect_ray_aabb_result = tg_intersect_ray_aabb(position, ray_direction, voxel_min, voxel_max, &enter, &exit); // TODO: We should in this case adjust the function to potentially return enter AND exit, because if we are inside of the voxel, we receive a negative 't_voxel', which results in wrong depth. Might be irrelevant...
 #ifdef TG_DEBUG
-                                if (!intersect_ray_aabb_result)
-                                {
-                                    const f32 diff = enter - exit;
-                                    TG_ASSERT(diff < 0.001f);
-                                }
+                            if (!intersect_ray_aabb_result)
+                            {
+                                const f32 diff = enter - exit;
+                                TG_ASSERT(diff < 0.001f);
+                            }
 #endif
-                                result = TG_TRUE;
-                                *p_distance  = enter;
-                                *p_node_idx  = child_idx;
-                                *p_voxel_idx = vox_idx;
-                                return result;
-                            }
-                            if (t_max_x < t_max_y)
-                            {
-                                if (t_max_x < t_max_z)
-                                {
-                                    t_max_x += t_delta_x;
-                                    x += step_x;
-                                    if (x < 0 || x >= child_extent.x) break;
-                                }
-                                else
-                                {
-                                    t_max_z += t_delta_z;
-                                    z += step_z;
-                                    if (z < 0 || z >= child_extent.z) break;
-                                }
-                            }
-                            else
-                            {
-                                if (t_max_y < t_max_z)
-                                {
-                                    t_max_y += t_delta_y;
-                                    y += step_y;
-                                    if (y < 0 || y >= child_extent.y) break;
-                                }
-                                else
-                                {
-                                    t_max_z += t_delta_z;
-                                    z += step_z;
-                                    if (z < 0 || z >= child_extent.z) break;
-                                }
-                            }
+                            const u32 relative_voxel_idx = (u32)child_extent.x * (u32)child_extent.y * voxel_id.z + (u32)child_extent.x * voxel_id.y + voxel_id.x;
+                            const u32 voxel_idx = first_voxel_id + relative_voxel_idx;
+
+                            result = TG_TRUE;
+                            *p_distance = enter;
+                            *p_node_idx = child_idx;
+                            *p_voxel_idx = voxel_idx;
+                            return result;
                         }
                     }
                 }

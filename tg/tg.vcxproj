@@ -138,6 +138,7 @@
     <ClCompile Include="src\math\tg_math.c" />
     <ClCompile Include="src\memory\tg_memory.c" />
     <ClCompile Include="src\platform\tg_platform_win32.c" />
+    <ClCompile Include="src\util\tg_amanatides_woo.c" />
     <ClCompile Include="src\util\tg_color.c" />
     <ClCompile Include="src\util\tg_hashmap.c" />
     <ClCompile Include="src\util\tg_list.c" />
@@ -188,6 +189,7 @@
     <ClInclude Include="src\util\tg_qsort.h" />
     <ClInclude Include="src\util\tg_string.h" />
     <ClInclude Include="src\TODO.h" />
+    <ClInclude Include="src\util\tg_amanatides_woo.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="assets\shaders\frag.spv" />
