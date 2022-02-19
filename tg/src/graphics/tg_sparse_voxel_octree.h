@@ -47,5 +47,6 @@ typedef struct tg_svo
 
 void tg_svo_create(v3 extent_min, v3 extent_max, u32 instance_count, const tg_instance* p_instances, const u32* p_voxel_buffer, TG_OUT tg_svo* p_svo);
 void tg_svo_destroy(tg_svo* p_svo);
+void tg_svo_traverse(const tg_svo* p_svo, v3 ray_origin, v3 ray_direction);
 
 #endif

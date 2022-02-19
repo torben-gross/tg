@@ -109,101 +109,146 @@ void main()
     // Instead of transforming the box, the ray is transformed with its inverse
     v3 ray_origin = camera.xyz - center;
     v3 ray_direction = normalize(mix(mix(ray00.xyz, ray10.xyz, fy), mix(ray01.xyz, ray11.xyz, fy), fx));
-    v3 ray_inv_direction = vec3(1.0) / ray_direction;
+    v3 ray_inv_direction = v3(1.0) / ray_direction;
     tg_ray r = tg_ray(ray_origin, ray_direction, ray_inv_direction);
 
-    const u32 stack_capacity = (1 << 10); // Total number of nodes is (8^0 + 8^1 + ... + 8^(log2(1024)-1)), but the stack size is limited
-    u32 stack_size = 0;
-    
-    u32 idx_stack[stack_capacity]; // Contains indices of inner nodes only. Children are processed differently
-    f32 min_stack[3 * stack_capacity];
-    f32 max_stack[3 * stack_capacity];
+    const u32 stack_capacity = 7; // Assuming a SVO extent of 1024^3, we have a max of 7 levels of inner nodes, whilst the 8th level contains the 8^3 blocks of voxels
+    u32 stack_size;
+    u32 parent_idx_stack[ 7] = u32[ 7](0, 0, 0, 0, 0, 0, 0);
+    f32 parent_min_stack[21] = f32[21](0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+    f32 parent_max_stack[21] = f32[21](0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
 
-    idx_stack[stack_size] = 0;
-    min_stack[3 * stack_size    ] = s.min.x;
-    min_stack[3 * stack_size + 1] = s.min.y;
-    min_stack[3 * stack_size + 2] = s.min.z;
-    max_stack[3 * stack_size    ] = s.max.x;
-    max_stack[3 * stack_size + 1] = s.max.y;
-    max_stack[3 * stack_size + 2] = s.max.z;
-    stack_size++;
-    
+    bool result = false;
     f32 d = 1.0;
     u32 voxel_id = 0;
-    bool result = false;
 
-    while (stack_size > 0)
+    f32 enter, exit;
+    if (tg_intersect_ray_box(r, tg_box(s.min.xyz, s.max.xyz), enter, exit))
     {
-        stack_size--;
-        u32 node_idx = idx_stack[stack_size];
-        v3  node_min = v3(min_stack[3 * stack_size], min_stack[3 * stack_size + 1], min_stack[3 * stack_size + 2]);
-        v3  node_max = v3(max_stack[3 * stack_size], max_stack[3 * stack_size + 1], max_stack[3 * stack_size + 2]);
+        v3 position = enter > 0.0 ? r.o + enter * r.d : r.o;
         
-        tg_svo_node node = nodes[node_idx];
+        stack_size = 1;
+        parent_idx_stack[0] = 0;
+        parent_min_stack[0] = s.min.x;
+        parent_min_stack[1] = s.min.y;
+        parent_min_stack[2] = s.min.z;
+        parent_max_stack[0] = s.max.x;
+        parent_max_stack[1] = s.max.y;
+        parent_max_stack[2] = s.max.z;
 
-        tg_box b = tg_box(node_min, node_max);
-        f32 enter, exit, t;
-        if (tg_intersect_ray_box(r, b, enter, exit))
+        while (stack_size > 0)
         {
-            result = true;
-            t = enter < 0.0 ? exit : enter;
-            f32 depth = min(1.0 - TG_F32_EPSILON, t / far); // TODO: Why do I need the epsilon here?
-            if (depth > d) // TODO: We may need an epsilon for SVOs very far away
+            u32 parent_idx = parent_idx_stack[stack_size - 1];
+            v3 parent_min = v3(
+                parent_min_stack[3 * stack_size - 3],
+                parent_min_stack[3 * stack_size - 2],
+                parent_min_stack[3 * stack_size - 1]);
+            v3 parent_max = v3(
+                parent_max_stack[3 * stack_size - 3],
+                parent_max_stack[3 * stack_size - 2],
+                parent_max_stack[3 * stack_size - 1]);
+            tg_svo_node parent_node = nodes[parent_idx];
+            u32 child_pointer =  parent_node.data        & ((1 << 16) - 1);
+            u32 valid_mask    = (parent_node.data >> 16) & ((1 <<  8) - 1);
+            u32 leaf_mask     = (parent_node.data >> 24) & ((1 <<  8) - 1);
+        
+            v3 child_extent = 0.5 * (parent_max - parent_min);
+
+            u32 relative_child_idx = 0;
+            v3 child_min = parent_min;
+            v3 child_max = child_min + child_extent;
+            
+            if (child_max.x < position.x || position.x == child_max.x && r.d.x > 0.0)
             {
-                continue;
+                relative_child_idx += 1;
+                child_min.x += child_extent.x;
+                child_max.x += child_extent.x;
+            }
+            if (child_max.y < position.y || position.y == child_max.y && r.d.y > 0.0)
+            {
+                relative_child_idx += 2;
+                child_min.y += child_extent.y;
+                child_max.y += child_extent.y;
+            }
+            if (child_max.z < position.z || position.z == child_max.z && r.d.z > 0.0)
+            {
+                relative_child_idx += 4;
+                child_min.z += child_extent.z;
+                child_max.z += child_extent.z;
             }
 
-            v3 child_extent = (node_max - node_min) * 0.5;
-
-            u32 child_pointer =  node.data        & ((1 << 16) - 1);
-            u32 valid_mask    = (node.data >> 16) & ((1 <<  8) - 1);
-            u32 leaf_mask     = (node.data >> 24) & ((1 <<  8) - 1);
-
-            u32 child_offset = 0;
-            for (u32 child_idx = 0; child_idx < 8; child_idx++)
+            if ((valid_mask & (1 << relative_child_idx)) != 0)
             {
-                if ((valid_mask & (1 << child_idx)) != 0)
+                // Note: The SVO may not have all children set, so the child may be stored at a smaller offset
+                u32 relative_child_offset = 0;
+                for (u32 i = 0; i < relative_child_idx; i++)
                 {
-                    f32 dx = f32( child_idx      % 2) * child_extent.x;
-                    f32 dy = f32((child_idx / 2) % 2) * child_extent.y;
-                    f32 dz = f32((child_idx / 4) % 2) * child_extent.z;
+                    relative_child_offset += (valid_mask >> i) & 1;
+                }
+                u32 child_idx = parent_idx + child_pointer + relative_child_offset;
+                tg_svo_node child_node = nodes[child_idx];
 
-                    u32 child_node_idx = node_idx + child_pointer + child_offset;
-                    v3  child_node_min = node_min + v3(dx, dy, dz);
-                    v3  child_node_max = child_node_min + child_extent;
+                // IF LEAF: TRAVERSE VOXELS
+                // ELSE: PUSH INNER CHILD NODE ONTO STACK
 
-                    if ((leaf_mask & (1 << child_idx)) != 0)
+                if ((leaf_mask & (1 << relative_child_idx)) != 0)
+                {
+                    result = true;
+                    d = 0.0;
+                    voxel_id = child_idx;
+                    break; // TODO: TRAVERSE VOXELS. At this point, i just assume a hit and break, so we can see the result
+                }
+                else
+                {
+                    parent_idx_stack[stack_size] = child_idx;
+                    parent_min_stack[3 * stack_size    ] = child_min.x;
+                    parent_min_stack[3 * stack_size + 1] = child_min.y;
+                    parent_min_stack[3 * stack_size + 2] = child_min.z;
+                    parent_max_stack[3 * stack_size    ] = child_max.x;
+                    parent_max_stack[3 * stack_size + 1] = child_max.y;
+                    parent_max_stack[3 * stack_size + 2] = child_max.z;
+                    stack_size++;
+                }
+            }
+            else
+            {
+                // MOVE POSITION TO BORDER
+                
+                v3 a = (child_min - position) * r.invd;
+                v3 b = (child_max - position) * r.invd;
+                v3 c = v3(max(a.x, b.x), max(a.y, b.y), max(a.z, b.z));
+                exit = min(min(c.x, c.y), c.z);
+                if (exit < 0.0) // TODO: This if-statement id debug, so remove it
+                {
+                    result = true;
+                    d = 1.0 - TG_F32_EPSILON;
+                    voxel_id = 0;
+                    break;
+                }
+                position += (exit + TG_F32_EPSILON) * r.d; // TODO: epsilon required?
+
+                // POP ALL NODES WITH EXIT <= 0
+
+                while (stack_size > 0)
+                {
+                    v3 node_min = v3(
+                        parent_min_stack[3 * stack_size - 3],
+                        parent_min_stack[3 * stack_size - 2],
+                        parent_min_stack[3 * stack_size - 1]);
+                    v3 node_max = v3(
+                        parent_max_stack[3 * stack_size - 3],
+                        parent_max_stack[3 * stack_size - 2],
+                        parent_max_stack[3 * stack_size - 1]);
+
+                    a = (node_min - position) * r.invd;
+                    b = (node_max - position) * r.invd;
+                    c = v3(max(a.x, b.x), max(a.y, b.y), max(a.z, b.z));
+                    exit = min(min(c.x, c.y), c.z);
+                    if (exit > TG_F32_EPSILON)
                     {
-                        if (tg_intersect_ray_box(r, tg_box(child_node_min, child_node_max), enter, exit))
-                        {
-                            t = enter < 0.0 ? exit : enter;
-                            if (t / far < d)
-                            {
-                                d = t / far;
-                                voxel_id = child_node_idx;
-                            }
-                        }
-                        // TODO: raytrace voxels instead!
+                        break;
                     }
-                    else
-                    {
-                        if (stack_size == stack_capacity)
-                        {
-                            d = 0.5;
-                            return; // TODO: Maybe we need a global stack or something...
-                        }
-
-                        idx_stack[stack_size] = child_node_idx;
-                        min_stack[3 * stack_size    ] = child_node_min.x;
-                        min_stack[3 * stack_size + 1] = child_node_min.y;
-                        min_stack[3 * stack_size + 2] = child_node_min.z;
-                        max_stack[3 * stack_size    ] = child_node_max.x;
-                        max_stack[3 * stack_size + 1] = child_node_max.y;
-                        max_stack[3 * stack_size + 2] = child_node_max.z;
-                        
-                        stack_size++;
-                    }
-                    child_offset++;
+                    stack_size--;
                 }
             }
         }

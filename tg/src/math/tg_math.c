@@ -969,6 +969,15 @@ v3 tgm_v3_div(v3 v0, v3 v1)
 	return result;
 }
 
+v3 tgm_v3_div_zero_check(v3 v0, v3 v1, v3 zero_alt)
+{
+	v3 result = { 0 };
+	result.x = (v1.x == 0.0f) ? zero_alt.x : (v0.x / v1.x);
+	result.y = (v1.y == 0.0f) ? zero_alt.y : (v0.y / v1.y);
+	result.z = (v1.z == 0.0f) ? zero_alt.z : (v0.z / v1.z);
+	return result;
+}
+
 v3 tgm_v3_divf(v3 v, f32 f)
 {
 	TG_ASSERT(f);
@@ -1004,6 +1013,7 @@ v3 tgm_v3_floor(v3 v)
 b32 tgm_v3_leq(v3 v0, v3 v1)
 {
 	const b32 result = v0.x <= v1.x && v0.y <= v1.y && v0.z <= v1.z;
+	return result;
 }
 
 v3 tgm_v3_lerp(v3 v0, v3 v1, f32 t)
@@ -1018,6 +1028,7 @@ v3 tgm_v3_lerp(v3 v0, v3 v1, f32 t)
 b32 tgm_v3_less(v3 v0, v3 v1)
 {
 	const b32 result = v0.x < v1.x&& v0.y < v1.y&& v0.z < v1.z;
+	return result;
 }
 
 f32 tgm_v3_mag(v3 v)

@@ -408,6 +408,7 @@ v3     tgm_v3_ceil(v3 v);
 v3     tgm_v3_clamp(v3 v, v3 min, v3 max);
 v3     tgm_v3_cross(v3 v0, v3 v1);
 v3     tgm_v3_div(v3 v0, v3 v1);
+v3     tgm_v3_div_zero_check(v3 v0, v3 v1, v3 zero_alt);
 v3     tgm_v3_divf(v3 v, f32 f);
 f32    tgm_v3_dot(v3 v0, v3 v1);
 b32    tgm_v3_eq(v3 v0, v3 v1);

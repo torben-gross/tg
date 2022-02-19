@@ -111,7 +111,7 @@ void main()
     v3 ray_direction_v3 = mix(mix(ray00.xyz, ray10.xyz, fy), mix(ray01.xyz, ray11.xyz, fy), fx);
     v3 ray_direction = normalize((ray_direction_mat * v4(ray_direction_v3, 0.0)).xyz);
     
-    v3 ray_inv_direction = vec3(1.0) / ray_direction;
+    v3 ray_inv_direction = v3(1.0) / ray_direction;
     
     tg_ray r = tg_ray(ray_origin, ray_direction, ray_inv_direction);
 

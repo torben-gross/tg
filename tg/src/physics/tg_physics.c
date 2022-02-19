@@ -391,144 +391,20 @@ obb:
     return TG_TRUE;
 }
 
-b32 tg_intersect_ray_box(v3 ray_origin, v3 ray_direction, v3 min, v3 max, tg_raycast_hit* p_hit)
+b32 tg_intersect_ray_box(v3 ray_origin, v3 ray_direction, v3 min, v3 max, TG_OUT f32* p_enter, TG_OUT f32* p_exit)
 {
-    // Source: https://github.com/erich666/GraphicsGems/blob/master/gems/RayBox.c
-
-    #define TG_RIGHT	 0
-    #define TG_LEFT	     1
-    #define TG_MIDDLE	 2
-
-    TG_ASSERT(tgm_v3_magsqr(ray_direction) > TG_F32_EPSILON);
-
-    b32 result = TG_TRUE;
-    u8 quadrant[3];
-    f32 candidate_plane[3];
-
-    for (u8 i = 0; i < 3; i++)
-    {
-        if (ray_origin.p_data[i] < min.p_data[i])
-        {
-            quadrant[i] = TG_LEFT;
-            candidate_plane[i] = min.p_data[i];
-            result = TG_FALSE;
-        }
-        else if (ray_origin.p_data[i] > max.p_data[i])
-        {
-            quadrant[i] = TG_RIGHT;
-            candidate_plane[i] = max.p_data[i];
-            result = TG_FALSE;
-        }
-        else
-        {
-            quadrant[i] = TG_MIDDLE;
-        }
-    }
-
-    if (result)
-    {
-        if (p_hit)
-        {
-            p_hit->distance = 0.0f;
-            p_hit->hit = ray_origin;
-            const v3 center = tgm_v3_divf(tgm_v3_add(min, max), 2.0f);
-            const v3 delta = tgm_v3_sub(ray_origin, center);
-            v3 normal = { 0 };
-            if (tgm_f32_abs(delta.x) >= tgm_f32_abs(delta.y) && tgm_f32_abs(delta.x) >= tgm_f32_abs(delta.z))
-            {
-                normal.x = 1.0f;
-            }
-            else if (tgm_f32_abs(delta.y) >= tgm_f32_abs(delta.x) && tgm_f32_abs(delta.y) >= tgm_f32_abs(delta.z))
-            {
-                normal.y = 1.0f;
-            }
-            else
-            {
-                normal.z = 1.0f;
-            }
-            p_hit->normal = tgm_v3_normalized(normal);
-        }
-        return TG_TRUE;
-    }
-
-    f32 max_t[3];
-    for (u8 i = 0; i < 3; i++)
-    {
-        if (quadrant[i] != TG_MIDDLE && ray_direction.p_data[i] != 0.0f)
-        {
-            max_t[i] = (candidate_plane[i] - ray_origin.p_data[i]) / ray_direction.p_data[i];
-        }
-        else
-        {
-            max_t[i] = -1.0f;
-        }
-    }
-
-    u8 which_plane = 0;
-    for (u8 i = 1; i < 3; i++)
-    {
-        if (max_t[which_plane] < max_t[i])
-        {
-            which_plane = i;
-        }
-    }
-
-    if (max_t[which_plane] < 0.0f)
-    {
-        return TG_FALSE;
-    }
-
-    v3 hit = { 0 };
-    for (u8 i = 0; i < 3; i++)
-    {
-        if (which_plane != i)
-        {
-            const f32 f = ray_origin.p_data[i] + max_t[which_plane] * ray_direction.p_data[i];
-            if (f < min.p_data[i] || f > max.p_data[i])
-            {
-                return TG_FALSE;
-            }
-            else
-            {
-                hit.p_data[i] = f;
-            }
-        }
-        else
-        {
-            hit.p_data[i] = candidate_plane[i];
-        }
-    }
-
-    if (p_hit)
-    {
-        p_hit->distance = tgm_v3_mag(tgm_v3_sub(hit, ray_origin));
-        p_hit->hit = hit;
-        const v3 center = tgm_v3_divf(tgm_v3_add(min, max), 2.0f);
-        const v3 delta = tgm_v3_sub(hit, center);
-        v3 normal = { 0 };
-        if (tgm_f32_abs(delta.x) >= tgm_f32_abs(delta.y) && tgm_f32_abs(delta.x) >= tgm_f32_abs(delta.z))
-        {
-            normal.x = 1.0f;
-        }
-        else if (tgm_f32_abs(delta.y) >= tgm_f32_abs(delta.x) && tgm_f32_abs(delta.y) >= tgm_f32_abs(delta.z))
-        {
-            normal.y = 1.0f;
-        }
-        else
-        {
-            normal.z = 1.0f;
-        }
-        p_hit->normal = tgm_v3_normalized(normal);
-    }
-
-    return TG_TRUE;
-
-    #undef TG_MIDDLE
-    #undef TG_LEFT
-    #undef TG_RIGHT
+    const v3 v3_max = { TG_F32_MAX, TG_F32_MAX, TG_F32_MAX };
+    const v3 vec0 = tgm_v3_div_zero_check(tgm_v3_sub(min, ray_origin), ray_direction, v3_max);
+    const v3 vec1 = tgm_v3_div_zero_check(tgm_v3_sub(max, ray_origin), ray_direction, v3_max);
+    const v3 n = tgm_v3_min(vec0, vec1);
+    const v3 f = tgm_v3_max(vec0, vec1);
+    *p_enter = TG_MAX(TG_MAX(n.x, n.y), n.z);
+    *p_exit = TG_MIN(TG_MIN(f.x, f.y), f.z);
+    const b32 result = *p_exit > 0.0f && *p_enter < *p_exit;
+    return result;
 }
 
-b32 tg_intersect_ray_plane(v3 ray_origin, v3 ray_direction, v3 plane_point, v3 plane_normal, tg_raycast_hit* p_hit)
+b32 tg_intersect_ray_plane(v3 ray_origin, v3 ray_direction, v3 plane_point, v3 plane_normal, TG_OUT tg_raycast_hit* p_hit)
 {
     TG_ASSERT(tgm_v3_magsqr(ray_direction) > TG_F32_EPSILON && tgm_v3_magsqr(plane_normal) > TG_F32_EPSILON);
 
@@ -549,7 +425,7 @@ b32 tg_intersect_ray_plane(v3 ray_origin, v3 ray_direction, v3 plane_point, v3 p
     return result;
 }
 
-b32 tg_intersect_ray_triangle(v3 ray_origin, v3 ray_direction, v3 tri_p0, v3 tri_p1, v3 tri_p2, tg_raycast_hit* p_hit)
+b32 tg_intersect_ray_triangle(v3 ray_origin, v3 ray_direction, v3 tri_p0, v3 tri_p1, v3 tri_p2, TG_OUT tg_raycast_hit* p_hit)
 {
     TG_ASSERT(tgm_v3_magsqr(ray_direction) > TG_F32_EPSILON);
 
