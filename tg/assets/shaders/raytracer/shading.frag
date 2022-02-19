@@ -149,7 +149,7 @@ void main()
 
         // We transform ray to model space:
         m4 ray_origin_mat = inverse(i.t_mat * i.r_mat);
-        v3 ray_origin = (ray_origin_mat * vec4(camera.xyz, 1.0)).xyz;
+        v3 ray_origin = (ray_origin_mat * v4(camera.xyz, 1.0)).xyz;
 
         m4 ray_direction_mat = inverse(i.r_mat); // Instead of transforming the box, the ray is transformed with its inverse
         v3 ray_direction_v3 = mix(mix(ray00.xyz, ray10.xyz, fy), mix(ray01.xyz, ray11.xyz, fy), fx);
@@ -218,7 +218,7 @@ void main()
         v3 hit_position_world_space = (i.t_mat * i.r_mat * v4(hit_position_model_space, 1.0)).xyz;
         v3 to_point_light = point_light - hit_position_world_space;
         f32 radiance = max(0.0f, dot(normalize(to_point_light), normal_world_space)) / (length(to_point_light) / 50.0);
-        out_color = vec4(v3(r_f32, g_f32, b_f32) * radiance, 1.0);
+        out_color = v4(v3(r_f32, g_f32, b_f32) * radiance, 1.0);
 
 
 
@@ -227,7 +227,7 @@ void main()
 
 
         // Visualize depth
-        out_color = v4(v3(min(1.0, 8.0 * depth_24b)), 1.0);
+        //out_color = v4(v3(min(1.0, 8.0 * depth_24b)), 1.0);
 
         // Visualize instance ID
         //u32 instance_id_hash0 = tg_hash_u32(instance_id_10b);
@@ -236,7 +236,7 @@ void main()
         //f32 instance_id_r = f32(instance_id_hash0) / 4294967295.0;
         //f32 instance_id_g = f32(instance_id_hash1) / 4294967295.0;
         //f32 instance_id_b = f32(instance_id_hash2) / 4294967295.0;
-        //out_color = vec4(instance_id_r, instance_id_g, instance_id_b, 1.0);
+        //out_color = v4(instance_id_r, instance_id_g, instance_id_b, 1.0);
 
         // Visualize voxel ID
         //u32 voxel_id_hash0 = tg_hash_u32(voxel_id_30b);
@@ -245,7 +245,7 @@ void main()
         //f32 voxel_id_r = f32(voxel_id_hash0) / 4294967295.0;
         //f32 voxel_id_g = f32(voxel_id_hash1) / 4294967295.0;
         //f32 voxel_id_b = f32(voxel_id_hash2) / 4294967295.0;
-        //out_color = vec4(voxel_id_r, voxel_id_g, voxel_id_b, 1.0);
+        //out_color = v4(voxel_id_r, voxel_id_g, voxel_id_b, 1.0);
         
         // Visualize color LUT ID
         //f32 color_lut_id_normalized = f32(color_lut_id) / 255.0;
@@ -266,7 +266,14 @@ void main()
         //out_color = v4(voxel_load_normalized, 1.0 - voxel_load_normalized, 0.0, 1.0);
 
         // Visualize normals
-        //out_color = vec4(normal_world_space * 0.5 + 0.5, 1.0);
+        //out_color = v4(normal_world_space * 0.5 + 0.5, 1.0);
+
+        // Visualize perfectly reflected ray
+        v3 reflect = ray_direction - 2.0 * dot(ray_direction, normal_world_space) * normal_world_space;
+        v3 dark = v3(0.0, 0.0, 0.2);
+        v3 bright = v3(0.9, 0.8, 0.4);
+        f32 brightness = dot(reflect, v3(0.0, 1.0, 0.0));
+        out_color = v4(mix(dark, bright, brightness), 1.0);
     }
     else
     {
