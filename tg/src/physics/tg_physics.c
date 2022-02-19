@@ -400,7 +400,7 @@ b32 tg_intersect_ray_aabb(v3 ray_origin, v3 ray_direction, v3 min, v3 max, TG_OU
     const v3 f = tgm_v3_max(vec0, vec1);
     *p_enter = TG_MAX(TG_MAX(n.x, n.y), n.z);
     *p_exit = TG_MIN(TG_MIN(f.x, f.y), f.z);
-    const b32 result = *p_exit > 0.0f && *p_enter < *p_exit;
+    const b32 result = *p_exit > 0.0f && *p_enter <= *p_exit;
     return result;
 }
 

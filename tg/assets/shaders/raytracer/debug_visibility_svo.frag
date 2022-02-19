@@ -6,6 +6,10 @@
 
 
 
+#define TG_SVO_BLOCK_VOXEL_COUNT    512
+
+
+
 struct tg_box
 {
     v3    min;
@@ -81,7 +85,7 @@ v3 tg_max_component_wise(v3 a, v3 b)
 
 // Source: https://gamedev.net/forums/topic/682750-problem-with-raybox-intersection-in-glsl/5313495/
 // https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-box-intersection
-bool tg_intersect_ray_box(tg_ray r, tg_box b, out f32 enter, out f32 exit)
+bool tg_intersect_ray_aabb(tg_ray r, tg_box b, out f32 enter, out f32 exit)
 {
     v3 vector1 = (b.min - r.o) * r.invd;
     v3 vector2 = (b.max - r.o) * r.invd;
@@ -89,7 +93,7 @@ bool tg_intersect_ray_box(tg_ray r, tg_box b, out f32 enter, out f32 exit)
     v3 f = tg_max_component_wise(vector1, vector2);
     enter = max(max(n.x, n.y), n.z);
     exit = min(min(f.x, f.y), f.z);
-    return exit > 0.0 && enter < exit;
+    return exit > 0.0 && enter <= exit;
 }
 
 
@@ -119,11 +123,12 @@ void main()
     f32 parent_max_stack[21] = f32[21](0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
 
     bool result = false;
-    f32 d = 1.0;
-    u32 voxel_id = 0;
+    f32 d = TG_F32_MAX;
+    u32 node_idx = TG_U32_MAX;
+    u32 voxel_idx = TG_U32_MAX;
 
     f32 enter, exit;
-    if (tg_intersect_ray_box(r, tg_box(s.min.xyz, s.max.xyz), enter, exit))
+    if (tg_intersect_ray_aabb(r, tg_box(s.min.xyz, s.max.xyz), enter, exit))
     {
         v3 position = enter > 0.0 ? r.o + enter * r.d : r.o;
         
@@ -177,6 +182,7 @@ void main()
                 child_max.z += child_extent.z;
             }
 
+            bool advance_to_border = true;
             if ((valid_mask & (1 << relative_child_idx)) != 0)
             {
                 // Note: The SVO may not have all children set, so the child may be stored at a smaller offset
@@ -186,20 +192,147 @@ void main()
                     relative_child_offset += (valid_mask >> i) & 1;
                 }
                 u32 child_idx = parent_idx + child_pointer + relative_child_offset;
-                tg_svo_node child_node = nodes[child_idx];
 
                 // IF LEAF: TRAVERSE VOXELS
                 // ELSE: PUSH INNER CHILD NODE ONTO STACK
 
                 if ((leaf_mask & (1 << relative_child_idx)) != 0)
                 {
-                    result = true;
-                    d = 0.0;
-                    voxel_id = child_idx;
-                    break; // TODO: TRAVERSE VOXELS. At this point, i just assume a hit and break, so we can see the result
+                    tg_svo_node child_node = nodes[child_idx];
+                    u32 data_pointer = child_node.data;
+                    tg_svo_leaf_node_data data = leaf_node_data[data_pointer];
+                    if (data.instance_count != 0)
+                    {
+                        // UNCOMMENT TO SHOW BLOCKS
+                        //result = true;
+                        //d = length(position - r.o) / far;
+                        //node_idx = child_idx;
+                        //voxel_idx = child_idx;
+                        //break;
+
+                        // TRAVERSE BLOCK
+                        
+                        u32 first_voxel_id = data_pointer * TG_SVO_BLOCK_VOXEL_COUNT;
+
+                        v3 hit = position;
+                        v3 xyz = clamp(floor(hit), child_min, child_max - v3(1.0));
+
+                        hit -= child_min;
+                        xyz -= child_min;
+
+                        i32 x = i32(xyz.x);
+                        i32 y = i32(xyz.y);
+                        i32 z = i32(xyz.z);
+
+                        i32 step_x;
+                        i32 step_y;
+                        i32 step_z;
+
+                        f32 t_max_x = TG_F32_MAX;
+                        f32 t_max_y = TG_F32_MAX;
+                        f32 t_max_z = TG_F32_MAX;
+
+                        f32 t_delta_x = TG_F32_MAX;
+                        f32 t_delta_y = TG_F32_MAX;
+                        f32 t_delta_z = TG_F32_MAX;
+
+                        if (r.d.x > 0.0)
+                        {
+                            step_x = 1;
+                            t_max_x = (f32(x + 1) - hit.x) / r.d.x;
+                            t_delta_x = 1.0 / r.d.x;
+                        }
+                        else
+                        {
+                            step_x = -1;
+                            t_max_x = (hit.x - f32(x)) / -r.d.x;
+                            t_delta_x = 1.0 / -r.d.x;
+                        }
+                        if (r.d.y > 0.0)
+                        {
+                            step_y = 1;
+                            t_max_y = (f32(y + 1) - hit.y) / r.d.y;
+                            t_delta_y = 1.0 / r.d.y;
+                        }
+                        else
+                        {
+                            step_y = -1;
+                            t_max_y = (hit.y - f32(y)) / -r.d.y;
+                            t_delta_y = 1.0 / -r.d.y;
+                        }
+                        if (r.d.z > 0.0)
+                        {
+                            step_z = 1;
+                            t_max_z = (f32(z + 1) - hit.z) / r.d.z;
+                            t_delta_z = 1.0 / r.d.z;
+                        }
+                        else
+                        {
+                            step_z = -1;
+                            t_max_z = (hit.z - f32(z)) / -r.d.z;
+                            t_delta_z = 1.0 / -r.d.z;
+                        }
+
+                        while (true)
+                        {
+                            u32 vox_id = 64 * z + 8 * y + x;
+                            u32 vox_idx = first_voxel_id + vox_id;
+                            u32 bits_idx = vox_idx / 32;
+                            u32 bit_idx = vox_idx % 32;
+                            u32 bits = voxel_data[bits_idx];
+                            u32 bit = bits & (1 << bit_idx);
+                            if (bit != 0)
+                            {
+                                v3 voxel_min = child_min + v3(f32(x    ), f32(y    ), f32(z    ));
+                                v3 voxel_max = child_min + v3(f32(x + 1), f32(y + 1), f32(z + 1));
+                                tg_intersect_ray_aabb(tg_ray(position, ray_direction, ray_inv_direction), tg_box(voxel_min, voxel_max), enter, exit);
+                                result = true;
+                                d = (enter < 0.0) ? 0.0 : min(1.0, enter / far);
+                                node_idx = child_idx;
+                                voxel_idx = vox_idx;
+                                break;
+                            }
+                            if (t_max_x < t_max_y)
+                            {
+                                if (t_max_x < t_max_z)
+                                {
+                                    t_max_x += t_delta_x;
+                                    x += step_x;
+                                    if (x < 0 || x >= child_extent.x) break;
+                                }
+                                else
+                                {
+                                    t_max_z += t_delta_z;
+                                    z += step_z;
+                                    if (z < 0 || z >= child_extent.z) break;
+                                }
+                            }
+                            else
+                            {
+                                if (t_max_y < t_max_z)
+                                {
+                                    t_max_y += t_delta_y;
+                                    y += step_y;
+                                    if (y < 0 || y >= child_extent.y) break;
+                                }
+                                else
+                                {
+                                    t_max_z += t_delta_z;
+                                    z += step_z;
+                                    if (z < 0 || z >= child_extent.z) break;
+                                }
+                            }
+                        }
+                        if (result)
+                        {
+                            break;
+                        }
+                    }
                 }
                 else
                 {
+                    advance_to_border = false;
+
                     parent_idx_stack[stack_size] = child_idx;
                     parent_min_stack[3 * stack_size    ] = child_min.x;
                     parent_min_stack[3 * stack_size + 1] = child_min.y;
@@ -210,21 +343,15 @@ void main()
                     stack_size++;
                 }
             }
-            else
+
+            if (advance_to_border)
             {
-                // MOVE POSITION TO BORDER
+                // ADVANCE POSITION TO BORDER
                 
                 v3 a = (child_min - position) * r.invd;
                 v3 b = (child_max - position) * r.invd;
-                v3 c = v3(max(a.x, b.x), max(a.y, b.y), max(a.z, b.z));
-                exit = min(min(c.x, c.y), c.z);
-                if (exit < 0.0) // TODO: This if-statement id debug, so remove it
-                {
-                    result = true;
-                    d = 1.0 - TG_F32_EPSILON;
-                    voxel_id = 0;
-                    break;
-                }
+                v3 f = v3(max(a.x, b.x), max(a.y, b.y), max(a.z, b.z));
+                exit = min(min(f.x, f.y), f.z);
                 position += (exit + TG_F32_EPSILON) * r.d; // TODO: epsilon required?
 
                 // POP ALL NODES WITH EXIT <= 0
@@ -242,8 +369,8 @@ void main()
 
                     a = (node_min - position) * r.invd;
                     b = (node_max - position) * r.invd;
-                    c = v3(max(a.x, b.x), max(a.y, b.y), max(a.z, b.z));
-                    exit = min(min(c.x, c.y), c.z);
+                    f = v3(max(a.x, b.x), max(a.y, b.y), max(a.z, b.z));
+                    exit = min(min(f.x, f.y), f.z);
                     if (exit > TG_F32_EPSILON)
                     {
                         break;
@@ -253,6 +380,7 @@ void main()
             }
         }
     }
+    u32 voxel_id = voxel_idx;
 
     if (result)
     {

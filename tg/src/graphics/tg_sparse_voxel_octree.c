@@ -6,7 +6,6 @@
 
 
 #define TG_SVO_BLOCK_VOXEL_COUNT    512
-#define TG_SVO_BLOCK_EXTENT         8
 
 
 
@@ -487,7 +486,6 @@ b32 tg_svo_traverse(const tg_svo* p_svo, v3 ray_origin, v3 ray_direction, TG_OUT
             const v3 parent_min = p_parent_min_stack[stack_size - 1];
             const v3 parent_max = p_parent_max_stack[stack_size - 1];
 
-            // TODO: this is for testing. use the actual structure instead!!
             const tg_svo_inner_node* p_parent_node = (const tg_svo_inner_node*)&p_svo->p_node_buffer[parent_idx];
             const u32 child_pointer = (u32)p_parent_node->child_pointer;
             const u32 valid_mask    = (u32)p_parent_node->valid_mask;
@@ -528,7 +526,6 @@ b32 tg_svo_traverse(const tg_svo* p_svo, v3 ray_origin, v3 ray_direction, TG_OUT
                     relative_child_offset += (valid_mask >> i) & 1;
                 }
                 const u32 child_idx = parent_idx + child_pointer + relative_child_offset;
-                const tg_svo_node* p_child_node = &p_svo->p_node_buffer[child_idx];
 
                 // IF LEAF: TRAVERSE VOXELS
                 // ELSE: PUSH INNER CHILD NODE ONTO STACK
@@ -537,6 +534,7 @@ b32 tg_svo_traverse(const tg_svo* p_svo, v3 ray_origin, v3 ray_direction, TG_OUT
                 {
                     TG_ASSERT(child_extent.x * child_extent.y * child_extent.z == TG_SVO_BLOCK_VOXEL_COUNT);
 
+                    const tg_svo_node* p_child_node = &p_svo->p_node_buffer[child_idx];
                     const tg_svo_leaf_node_data* p_data = &p_svo->p_leaf_node_data_buffer[p_child_node->leaf.data_pointer];
                     if (p_data->instance_count != 0)
                     {
@@ -551,9 +549,9 @@ b32 tg_svo_traverse(const tg_svo* p_svo, v3 ray_origin, v3 ray_direction, TG_OUT
                         hit = tgm_v3_sub(hit, child_min);
                         xyz = tgm_v3_sub(xyz, child_min);
 
-                        i32 x = (i32) xyz.x;
-                        i32 y = (i32) xyz.y;
-                        i32 z = (i32) xyz.z;
+                        i32 x = (i32)xyz.x;
+                        i32 y = (i32)xyz.y;
+                        i32 z = (i32)xyz.z;
 
                         i32 step_x;
                         i32 step_y;
@@ -616,7 +614,7 @@ b32 tg_svo_traverse(const tg_svo* p_svo, v3 ray_origin, v3 ray_direction, TG_OUT
                             {
                                 const v3 voxel_min = tgm_v3_add(child_min, (v3) { (f32) x,      (f32) y,      (f32) z      });
                                 const v3 voxel_max = tgm_v3_add(child_min, (v3) { (f32)(x + 1), (f32)(y + 1), (f32)(z + 1) });
-                                const b32 intersect_ray_aabb_result = tg_intersect_ray_aabb(ray_origin, ray_direction, voxel_min, voxel_max, &enter, &exit); // TODO: We should in this case adjust the function to potentially return enter AND exit, because if we are inside of the voxel, we receive a negative 't_voxel', which results in wrong depth. Might be irrelevant...
+                                const b32 intersect_ray_aabb_result = tg_intersect_ray_aabb(position, ray_direction, voxel_min, voxel_max, &enter, &exit); // TODO: We should in this case adjust the function to potentially return enter AND exit, because if we are inside of the voxel, we receive a negative 't_voxel', which results in wrong depth. Might be irrelevant...
                                 TG_ASSERT(intersect_ray_aabb_result);
                                 result = TG_TRUE;
                                 *p_distance  = enter;

@@ -86,7 +86,7 @@ bool tg_intersect_ray_box(tg_ray r, tg_box b, out f32 t)
     f32 exit = min(min(f.x, f.y), f.z);
     
     t = enter;
-    return exit > 0.0 && enter < exit;
+    return exit > 0.0 && enter <= exit;
 }
 
 
