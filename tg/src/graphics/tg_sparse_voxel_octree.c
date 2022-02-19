@@ -30,7 +30,7 @@ static void tg__construct_leaf_node(
     TG_ASSERT(parent_max.y - parent_min.y == (f32)TG_SVO_BLOCK_SIDE_LENGTH);
     TG_ASSERT(parent_max.z - parent_min.z == (f32)TG_SVO_BLOCK_SIDE_LENGTH);
     
-    TG_ASSERT(instance_id_count <= sizeof(((tg_svo_leaf_node_data*)0)->p_instance_ids) / sizeof(*((tg_svo_leaf_node_data*)0)->p_instance_ids));
+    TG_ASSERT(instance_id_count < sizeof(((tg_svo_leaf_node_data*)0)->p_instance_ids) / sizeof(*((tg_svo_leaf_node_data*)0)->p_instance_ids));
 
     TG_ASSERT(p_svo->leaf_node_data_buffer_count < p_svo->leaf_node_data_buffer_capacity);
     tg_svo_leaf_node_data* p_data = &p_svo->p_leaf_node_data_buffer[p_svo->leaf_node_data_buffer_count];
@@ -391,7 +391,7 @@ void tg_svo_create(v3 svo_min, v3 svo_max, u32 instance_count, const tg_instance
     p_svo->min = svo_min;
     p_svo->max = svo_max;
     
-    p_svo->voxel_buffer_capacity_in_u32   = (1 << 18);
+    p_svo->voxel_buffer_capacity_in_u32   = (1 << 21);
     p_svo->voxel_buffer_count_in_u32      = 0;
     p_svo->leaf_node_data_buffer_capacity = (1 << 13);
     p_svo->leaf_node_data_buffer_count    = 0;

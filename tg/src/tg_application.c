@@ -59,9 +59,15 @@ static void tg__scene_create(void)
     tg_raytracer_create(&scene.camera, 32, &scene.raytracer);
     tg_raytracer_create_instance(&scene.raytracer, 0.0f, 0.0f, 0.0f, 128, 64, 128);
     tg_raytracer_create_instance(&scene.raytracer, 128.0f, 0.0f, 0.0f, 128, 64, 32);
-    for (u32 i = 0; i < 30; i++)
+    for (u32 i = 0; i < 13; i++)
     {
-        tg_raytracer_create_instance(&scene.raytracer, (f32)i * 35.0f - 256.0f, 0.0f, -128.0f, 32, 32, 32);
+        const f32 x = (f32)i * 35.0f - 256.0f;
+        tg_raytracer_create_instance(&scene.raytracer, x, -16.0f, -64.0f, 32, 32, 32);
+    }
+    for (u32 i = 0; i < 13; i++)
+    {
+        const f32 x = (f32)i * 35.0f - 256.0f;
+        tg_raytracer_create_instance(&scene.raytracer, x, 9.0f, -96.0f, 32, 32, 32);
     }
     tg_raytracer_color_lut_set(&scene.raytracer, 0, 1.0f, 0.0f, 0.0f);
     tg_raytracer_color_lut_set(&scene.raytracer, 1, 0.0f, 1.0f, 0.0f);

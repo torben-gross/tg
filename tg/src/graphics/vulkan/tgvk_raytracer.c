@@ -1104,7 +1104,7 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
         tgvk_queue_submit(TGVK_QUEUE_TYPE_GRAPHICS, 1, &debug_submit_info, VK_NULL_HANDLE);
     }
 
-    if (1)
+    if (0)
     {
         vkDeviceWaitIdle(device);
 

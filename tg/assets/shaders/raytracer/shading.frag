@@ -239,13 +239,13 @@ void main()
         //out_color = v4(instance_id_r, instance_id_g, instance_id_b, 1.0);
 
         // Visualize voxel ID
-        //u32 voxel_id_hash0 = tg_hash_u32(voxel_id_30b);
-        //u32 voxel_id_hash1 = tg_hash_u32(voxel_id_hash0);
-        //u32 voxel_id_hash2 = tg_hash_u32(voxel_id_hash1);
-        //f32 voxel_id_r = f32(voxel_id_hash0) / 4294967295.0;
-        //f32 voxel_id_g = f32(voxel_id_hash1) / 4294967295.0;
-        //f32 voxel_id_b = f32(voxel_id_hash2) / 4294967295.0;
-        //out_color = v4(voxel_id_r, voxel_id_g, voxel_id_b, 1.0);
+        u32 voxel_id_hash0 = tg_hash_u32(voxel_id_30b);
+        u32 voxel_id_hash1 = tg_hash_u32(voxel_id_hash0);
+        u32 voxel_id_hash2 = tg_hash_u32(voxel_id_hash1);
+        f32 voxel_id_r = f32(voxel_id_hash0) / 4294967295.0;
+        f32 voxel_id_g = f32(voxel_id_hash1) / 4294967295.0;
+        f32 voxel_id_b = f32(voxel_id_hash2) / 4294967295.0;
+        out_color = v4(voxel_id_r, voxel_id_g, voxel_id_b, 1.0);
         
         // Visualize color LUT ID
         //f32 color_lut_id_normalized = f32(color_lut_id) / 255.0;
@@ -269,11 +269,11 @@ void main()
         //out_color = v4(normal_world_space * 0.5 + 0.5, 1.0);
 
         // Visualize perfectly reflected ray
-        v3 reflect = ray_direction - 2.0 * dot(ray_direction, normal_world_space) * normal_world_space;
-        v3 dark = v3(0.0, 0.0, 0.2);
-        v3 bright = v3(0.9, 0.8, 0.4);
-        f32 brightness = dot(reflect, v3(0.0, 1.0, 0.0));
-        out_color = v4(mix(dark, bright, brightness), 1.0);
+        //v3 reflect = ray_direction - 2.0 * dot(ray_direction, normal_world_space) * normal_world_space;
+        //v3 dark = v3(0.0, 0.0, 0.2);
+        //v3 bright = v3(0.9, 0.8, 0.4);
+        //f32 brightness = dot(reflect, v3(0.0, 1.0, 0.0));
+        //out_color = v4(mix(dark, bright, brightness), 1.0);
     }
     else
     {
