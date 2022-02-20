@@ -5,12 +5,12 @@
 #include "tg_input.h"
 #include "util/tg_string.h"
 // TODO: remove
-#include "physics/tg_physics.h"
+#include "util/tg_noise.h"
 
 
 
 #define TG_VOXEL_SIZE_IN_METER    0.1f
-#define TG_RUNNING_MPS            (10.44f / TG_VOXEL_SIZE_IN_METER)
+#define TG_RUNNING_MPS            (50.0f / TG_VOXEL_SIZE_IN_METER)//(10.44f / TG_VOXEL_SIZE_IN_METER) // TODO: This is the actual reasonable speed
 #define TG_RUNNING_KPH            TG_MPS2KPH(TG_RUNNING_MPS)
 #define TG_WALKING_KPH            (5.0f / TG_VOXEL_SIZE_IN_METER)
 #define TG_WALKING_MPS            TG_KPH2MPS(TG_WALKING_KPH)
@@ -41,8 +41,20 @@ static tg_sample_scene scene = { 0 };
 
 
 
+static const v2 pds_extent = { 640.0f, 640.0f };
+static const f32 pds_r = 16.0f;
+static u32 pds_buffer_count;
+static v2* p_pds_point_buffer;
+
 static void tg__scene_create(void)
 {
+    // TODO: This is for testing only
+    u32 pds_buffer_capacity = 0;
+    tg_poisson_disk_sampling_2d(pds_extent, pds_r, 32, &pds_buffer_capacity, TG_NULL);
+    pds_buffer_count = pds_buffer_capacity;
+    p_pds_point_buffer = TG_MALLOC(pds_buffer_capacity * sizeof(v2));
+    tg_poisson_disk_sampling_2d(pds_extent, pds_r, 32, &pds_buffer_count, p_pds_point_buffer);
+
     scene.camera.type = TG_CAMERA_TYPE_PERSPECTIVE;
     //scene.camera.position = (v3) { 128.0f, 141.0f + 50.0f, 128.0f };
     scene.camera.position = (v3) { 0.0f, 0.0f, 10.0f };
@@ -223,8 +235,27 @@ static void tg__scene_update_and_render(f32 dt_ms)
     //const v3 c0 = tgm_v3_lerp(c0n, c0d, -d0.y);
     const v3 c0 = { 3.0f, 3.0f, 3.0f };
 
+    TG_UNUSED(lx0);
+    TG_UNUSED(ly0);
+    TG_UNUSED(lz0);
+    TG_UNUSED(lx1);
+    TG_UNUSED(ly1);
+    TG_UNUSED(lz1);
+    TG_UNUSED(d0);
+    TG_UNUSED(c0);
+
     const m4 m = tgm_m4_scale((v3) { 1.0f, 1.0f, 1.0f });
     tg_raytracer_push_debug_cuboid(&scene.raytracer, m);
+    tg_raytracer_push_debug_cuboid(&scene.raytracer, tgm_m4_mul(tgm_m4_translate((v3) { 0.0f, pds_extent.y / 2.0f, -128.0f }), tgm_m4_scale((v3) { pds_extent.x, pds_extent.y, 0.001f })));
+    for (u32 i = 0; i < pds_buffer_count; i++)
+    {
+        const m4 pds_s = tgm_m4_scale((v3) { pds_r, pds_r, 0.001f });
+        const m4 pds_t = tgm_m4_translate((v3) { p_pds_point_buffer[i].x - pds_extent.x / 2.0f, p_pds_point_buffer[i].y, -128.0f });
+        const m4 pds_m0 = tgm_m4_mul(pds_t, pds_s);
+        const m4 pds_m1 = pds_t;
+        tg_raytracer_push_debug_cuboid(&scene.raytracer, pds_m0);
+        tg_raytracer_push_debug_cuboid(&scene.raytracer, pds_m1);
+    }
     tg_raytracer_render(&scene.raytracer);
     tg_raytracer_clear(&scene.raytracer);
 

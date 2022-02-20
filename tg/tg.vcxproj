@@ -142,6 +142,7 @@
     <ClCompile Include="src\util\tg_color.c" />
     <ClCompile Include="src\util\tg_hashmap.c" />
     <ClCompile Include="src\util\tg_list.c" />
+    <ClCompile Include="src\util\tg_noise.c" />
     <ClCompile Include="src\util\tg_qsort.c" />
     <ClCompile Include="src\util\tg_rectangle_packer.c" />
     <ClCompile Include="src\util\tg_string.c" />
@@ -185,6 +186,7 @@
     <ClInclude Include="src\util\tg_color.h" />
     <ClInclude Include="src\util\tg_hashmap.h" />
     <ClInclude Include="src\util\tg_list.h" />
+    <ClInclude Include="src\util\tg_noise.h" />
     <ClInclude Include="src\util\tg_rectangle_packer.h" />
     <ClInclude Include="src\util\tg_qsort.h" />
     <ClInclude Include="src\util\tg_string.h" />

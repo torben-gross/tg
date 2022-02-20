@@ -4160,6 +4160,8 @@ void tg_graphics_shutdown(void)
 
 void tg_graphics_on_window_resize(u32 width, u32 height)
 {
+    TG_UNUSED(width);
+    TG_UNUSED(height);
     TG_ASSERT(false);
     vkDeviceWaitIdle(device);
 

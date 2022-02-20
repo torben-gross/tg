@@ -18,6 +18,7 @@ typedef struct tg_svo_leaf_node_data
 
 typedef struct tg_svo_leaf_node
 {
+    // TODO: Compress using RLE or indicate using for instance MSB that all bits in block are set
     u32    data_pointer; // Offset into the 'tg_svo_leaf_node_data' array inside of the header. '(data_pointer * TG_SVO_BLOCK_VOXEL_COUNT + 31) / 32' is index into voxel array of svo
 } tg_svo_leaf_node;
 

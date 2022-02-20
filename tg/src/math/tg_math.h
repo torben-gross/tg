@@ -7,6 +7,7 @@
 
 // Values
 #define TG_PI                                       3.14159274f
+#define TG_TAU                                      6.28318548f
 #define TG_GOLDEN_RATIO                             1.61803401f
 
 // Rounding, clamping
@@ -273,10 +274,10 @@ typedef struct m4
 	};
 } m4;
 
-typedef struct tg_random
+typedef struct tg_rand_xorshift32
 {
 	u32    state;
-} tg_random;
+} tg_rand_xorshift32;
 
 
 
@@ -284,12 +285,12 @@ typedef struct tg_random
 | Miscellaneous                                               |
 +------------------------------------------------------------*/
 
-f32          tgm_noise(f32 x, f32 y, f32 z); // simplex noise TODO: use either open simplex of perlin noise and rename function to be more precise
-tg_random    tgm_random_init(u32 seed); // TODO: Unity uses Marsaglia's Xorshift 128, this is the basic variation
-f32          tgm_random_next_f32(tg_random* p_random);
-f32          tgm_random_next_f32_between(tg_random* p_random, f32 low, f32 high);
-u32          tgm_random_next_u32(tg_random* p_random);
-void         tgm_enclosing_sphere(u32 contained_point_count, const v3* p_contained_points, v3* p_center, f32* p_radius);
+void    tgm_enclosing_sphere(u32 contained_point_count, const v3* p_contained_points, v3* p_center, f32* p_radius);
+f32     tgm_simplex_noise(f32 x, f32 y, f32 z); // TODO: use either open simplex of perlin noise and rename function accordingly
+void    tgm_rand_xorshift32_init(u32 seed, TG_OUT tg_rand_xorshift32* p_state); // Marsaglia, George. Xorshift RNGs. 2003. p. 4 // TODO: Unity uses Marsaglia's Xorshift 128
+f32     tgm_rand_xorshift32_next_f32(tg_rand_xorshift32* p_state);
+f32     tgm_rand_xorshift32_next_f32_inclusive_range(tg_rand_xorshift32* p_state, f32 low, f32 high);
+u32     tgm_rand_xorshift32_next_u32(tg_rand_xorshift32* p_state);
 
 
 
@@ -396,6 +397,8 @@ tg_size (*tgm_size_ceil_to_pow2)(tg_size);
 
 v2     tgm_v2_add(v2 v0, v2 v1);
 v2     tgm_v2_divf(v2 v, f32 f);
+f32    tgm_v2_mag(v2 v);
+f32    tgm_v2_magsqr(v2 v);
 v2     tgm_v2_max(v2 v0, v2 v1);
 v2     tgm_v2_mulf(v2 v, f32 f);
 v2     tgm_v2_min(v2 v0, v2 v1);

@@ -157,7 +157,7 @@ static void tg__construct_leaf_node(
                     const f32 block_voxel_center_floor_x = (f32)((i32)block_voxel_center_x) - sign_x;
                     const f32 block_voxel_center_floor_y = (f32)((i32)block_voxel_center_y) - sign_y;
                     const f32 block_voxel_center_floor_z = (f32)((i32)block_voxel_center_z) - sign_z;
-
+                    
                     const f32 instance_voxel_id_x = instance_half_extent.x + block_voxel_center_floor_x;
                     const f32 instance_voxel_id_y = instance_half_extent.y + block_voxel_center_floor_y;
                     const f32 instance_voxel_id_z = instance_half_extent.z + block_voxel_center_floor_z;
@@ -395,7 +395,7 @@ void tg_svo_create(v3 svo_min, v3 svo_max, u32 instance_count, const tg_instance
     p_svo->voxel_buffer_count_in_u32      = 0;
     p_svo->leaf_node_data_buffer_capacity = (1 << 13);
     p_svo->leaf_node_data_buffer_count    = 0;
-    p_svo->node_buffer_capacity           = (1 << 14);
+    p_svo->node_buffer_capacity           = (1 << 14); // Note: We store it in 15 bits, so never more than 2^15-1
     p_svo->node_buffer_count              = 0;
 
     p_svo->p_voxels_buffer         = TG_MALLOC(p_svo->voxel_buffer_capacity_in_u32   * sizeof(*p_svo->p_voxels_buffer));

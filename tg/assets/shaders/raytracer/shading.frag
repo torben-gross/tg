@@ -269,7 +269,8 @@ void main()
         //out_color = v4(normal_world_space * 0.5 + 0.5, 1.0);
 
         // Visualize perfectly reflected ray
-        //v3 reflect = ray_direction - 2.0 * dot(ray_direction, normal_world_space) * normal_world_space;
+        //v3 n = normal_world_space;
+        //v3 reflect = ray_direction - 2.0 * dot(ray_direction, n) * n;
         //v3 dark = v3(0.0, 0.0, 0.2);
         //v3 bright = v3(0.9, 0.8, 0.4);
         //f32 brightness = dot(reflect, v3(0.0, 1.0, 0.0));

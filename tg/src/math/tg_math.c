@@ -3,16 +3,18 @@
 
 
 /*------------------------------------------------------------+
-| Miscellaneous                                               |
+| Data Tables                                                 |
 +------------------------------------------------------------*/
 
-const i8 p_gradient_table[12][3] = {
+
+
+const i8 p_simplex_noise_gradient_table[12][3] = {
 	{  1,  1,  0 }, { -1,  1,  0 }, {  1, -1,  0 }, { -1, -1,  0 },
 	{  1,  0,  1 }, { -1,  0,  1 }, {  1,  0, -1 }, { -1,  0, -1 },
 	{  0,  1,  1 }, {  0, -1,  1 }, {  0,  1, -1 }, {  0, -1, -1 }
 };
 
-const u8 p_double_permutation_table[512] = {
+const u8 p_simplex_noise_double_permutation_table[512] = {
 	151, 160, 137,  91,  90,  15, 131,  13,
 	201,  95,  96,  53, 194, 233,   7, 225,
 	140,  36, 103,  30,  69, 142,   8,  99,
@@ -80,163 +82,13 @@ const u8 p_double_permutation_table[512] = {
 	128, 195,  78,  66, 215,  61, 156, 180
 };
 
-#define TGM_SIMPLEX_NOISE_FASTFLOOR(x)    ((x) > 0.0f ? (i32)(x) : (i32)(x) - 1)
 
-f32 tgm_noise(f32 x, f32 y, f32 z) // see: http://staffwww.itn.liu.se/~stegu/simplexnoise/simplexnoise.pdf
-{
-	const f32 s = (x + y + z) * 0.333333343f;
-	const i32 i = TGM_SIMPLEX_NOISE_FASTFLOOR(x + s);
-	const i32 j = TGM_SIMPLEX_NOISE_FASTFLOOR(y + s);
-	const i32 k = TGM_SIMPLEX_NOISE_FASTFLOOR(z + s);
 
-	const f32 g3 = 0.166666672f;
-	const f32 t = (i + j + k) * g3;
-	const f32 x0 = x - ((f32)i - t);
-	const f32 y0 = y - ((f32)j - t);
-	const f32 z0 = z - ((f32)k - t);
+/*------------------------------------------------------------+
+| Miscellaneous                                               |
++------------------------------------------------------------*/
 
-	i32 i1, j1, k1;
-	i32 i2, j2, k2;
-	if (x0 >= y0)
-	{
-		if (y0 >= z0)
-		{
-			i1 = 1; j1 = 0; k1 = 0; i2 = 1; j2 = 1; k2 = 0;
-		}
-		else if (x0 >= z0)
-		{
-			i1 = 1; j1 = 0; k1 = 0; i2 = 1; j2 = 0; k2 = 1;
-		}
-		else
-		{
-			i1 = 0; j1 = 0; k1 = 1; i2 = 1; j2 = 0; k2 = 1;
-		}
-	}
-	else
-	{
-		if (y0 < z0)
-		{
-			i1 = 0; j1 = 0; k1 = 1; i2 = 0; j2 = 1; k2 = 1;
-		}
-		else if (x0 < z0)
-		{
-			i1 = 0; j1 = 1; k1 = 0; i2 = 0; j2 = 1; k2 = 1;
-		}
-		else
-		{
-			i1 = 0; j1 = 1; k1 = 0; i2 = 1; j2 = 1; k2 = 0;
-		}
-	}
 
-	const f32 x1 = x0 - i1 + g3;
-	const f32 y1 = y0 - j1 + g3;
-	const f32 z1 = z0 - k1 + g3;
-	const f32 x2 = x0 - i2 + 2.0f * g3;
-	const f32 y2 = y0 - j2 + 2.0f * g3;
-	const f32 z2 = z0 - k2 + 2.0f * g3;
-	const f32 x3 = x0 - 1.0f + 3.0f * g3;
-	const f32 y3 = y0 - 1.0f + 3.0f * g3;
-	const f32 z3 = z0 - 1.0f + 3.0f * g3;
-
-	const i32 ii = i & 255;
-	const i32 jj = j & 255;
-	const i32 kk = k & 255;
-	const i32 gi0 = (i32)p_double_permutation_table[ii      + (i32)p_double_permutation_table[jj      + (i32)p_double_permutation_table[kk     ]]] % 12;
-	const i32 gi1 = (i32)p_double_permutation_table[ii + i1 + (i32)p_double_permutation_table[jj + j1 + (i32)p_double_permutation_table[kk + k1]]] % 12;
-	const i32 gi2 = (i32)p_double_permutation_table[ii + i2 + (i32)p_double_permutation_table[jj + j2 + (i32)p_double_permutation_table[kk + k2]]] % 12;
-	const i32 gi3 = (i32)p_double_permutation_table[ii +  1 + (i32)p_double_permutation_table[jj +  1 + (i32)p_double_permutation_table[kk +  1]]] % 12;
-
-	f32 n0, n1, n2, n3;
-
-	f32 t0 = 0.5f - x0 * x0 - y0 * y0 - z0 * z0;
-	if (t0 < 0.0f)
-	{
-		n0 = 0.0f;
-	}
-	else
-	{
-		t0 *= t0;
-		const f32 dot = (f32)p_gradient_table[gi0][0] * x0 + (f32)p_gradient_table[gi0][1] * y0 + (f32)p_gradient_table[gi0][2] * z0;
-		n0 = t0 * t0 * dot;
-	}
-
-	f32 t1 = 0.5f - x1 * x1 - y1 * y1 - z1 * z1;
-	if (t1 < 0.0f)
-	{
-		n1 = 0.0f;
-	}
-	else
-	{
-		t1 *= t1;
-		const f32 dot = (f32)p_gradient_table[gi1][0] * x1 + (f32)p_gradient_table[gi1][1] * y1 + (f32)p_gradient_table[gi1][2] * z1;
-		n1 = t1 * t1 * dot;
-	}
-
-	f32 t2 = 0.5f - x2 * x2 - y2 * y2 - z2 * z2;
-	if (t2 < 0.0f)
-	{
-		n2 = 0.0f;
-	}
-	else
-	{
-		t2 *= t2;
-		const f32 dot = (f32)p_gradient_table[gi2][0] * x2 + (f32)p_gradient_table[gi2][1] * y2 + (f32)p_gradient_table[gi2][2] * z2;
-		n2 = t2 * t2 * dot;
-	}
-
-	f32 t3 = 0.5f - x3 * x3 - y3 * y3 - z3 * z3;
-	if (t3 < 0.0f)
-	{
-		n3 = 0.0f;
-	}
-	else
-	{
-		t3 *= t3;
-		const f32 dot = (f32)p_gradient_table[gi3][0] * x3 + (f32)p_gradient_table[gi3][1] * y3 + (f32)p_gradient_table[gi3][2] * z3;
-		n3 = t3 * t3 * dot;
-	}
-
-	const f32 result = 32.0f * (n0 + n1 + n2 + n3);
-	return result;
-}
-
-#undef TGM_SIMPLEX_NOISE_FASTFLOOR
-
-tg_random tgm_random_init(u32 seed)
-{
-	TG_ASSERT(seed != 0);
-
-	tg_random result = { seed };
-	return result;
-}
-
-f32 tgm_random_next_f32(tg_random* p_random)
-{
-	TG_ASSERT(p_random);
-
-	const f32 result = (f32)tgm_random_next_u32(p_random) / (f32)TG_U32_MAX;
-	return result;
-}
-
-f32 tgm_random_next_f32_between(tg_random* p_random, f32 low, f32 high)
-{
-	TG_ASSERT(p_random && low <= high);
-
-	const f32 result = tgm_random_next_f32(p_random) * (high - low) + low;
-	return result;
-}
-
-u32 tgm_random_next_u32(tg_random* p_random)
-{
-	TG_ASSERT(p_random);
-
-	u32 result = p_random->state;
-	result ^= result << 13;
-	result ^= result >> 17;
-	result ^= result << 5;
-	p_random->state = result;
-	return result;
-}
 
 void tg__enclosing_sphere(u32 contained_point_count, const v3* p_contained_points, u32 boundary_point_count, v3* p_boundary_points, v3* p_center, f32* p_radius)
 {
@@ -325,6 +177,164 @@ void tgm_enclosing_sphere(u32 contained_point_count, const v3* p_contained_point
 
 	v3 p_boundary_points[4] = { 0 };
 	tg__enclosing_sphere(contained_point_count, p_contained_points, 0, p_boundary_points, p_center, p_radius);
+}
+
+f32 tgm_simplex_noise(f32 x, f32 y, f32 z) // see: http://staffwww.itn.liu.se/~stegu/simplexnoise/simplexnoise.pdf
+{
+#define TGM_SIMPLEX_NOISE_FASTFLOOR(x)    ((x) > 0.0f ? (i32)(x) : (i32)(x) - 1)
+
+	const f32 s = (x + y + z) * 0.333333343f;
+	const i32 i = TGM_SIMPLEX_NOISE_FASTFLOOR(x + s);
+	const i32 j = TGM_SIMPLEX_NOISE_FASTFLOOR(y + s);
+	const i32 k = TGM_SIMPLEX_NOISE_FASTFLOOR(z + s);
+
+	const f32 g3 = 0.166666672f;
+	const f32 t = (i + j + k) * g3;
+	const f32 x0 = x - ((f32)i - t);
+	const f32 y0 = y - ((f32)j - t);
+	const f32 z0 = z - ((f32)k - t);
+
+	i32 i1, j1, k1;
+	i32 i2, j2, k2;
+	if (x0 >= y0)
+	{
+		if (y0 >= z0)
+		{
+			i1 = 1; j1 = 0; k1 = 0; i2 = 1; j2 = 1; k2 = 0;
+		}
+		else if (x0 >= z0)
+		{
+			i1 = 1; j1 = 0; k1 = 0; i2 = 1; j2 = 0; k2 = 1;
+		}
+		else
+		{
+			i1 = 0; j1 = 0; k1 = 1; i2 = 1; j2 = 0; k2 = 1;
+		}
+	}
+	else
+	{
+		if (y0 < z0)
+		{
+			i1 = 0; j1 = 0; k1 = 1; i2 = 0; j2 = 1; k2 = 1;
+		}
+		else if (x0 < z0)
+		{
+			i1 = 0; j1 = 1; k1 = 0; i2 = 0; j2 = 1; k2 = 1;
+		}
+		else
+		{
+			i1 = 0; j1 = 1; k1 = 0; i2 = 1; j2 = 1; k2 = 0;
+		}
+	}
+
+	const f32 x1 = x0 - i1 + g3;
+	const f32 y1 = y0 - j1 + g3;
+	const f32 z1 = z0 - k1 + g3;
+	const f32 x2 = x0 - i2 + 2.0f * g3;
+	const f32 y2 = y0 - j2 + 2.0f * g3;
+	const f32 z2 = z0 - k2 + 2.0f * g3;
+	const f32 x3 = x0 - 1.0f + 3.0f * g3;
+	const f32 y3 = y0 - 1.0f + 3.0f * g3;
+	const f32 z3 = z0 - 1.0f + 3.0f * g3;
+
+	const i32 ii = i & 255;
+	const i32 jj = j & 255;
+	const i32 kk = k & 255;
+	const i32 gi0 = (i32)p_simplex_noise_double_permutation_table[ii      + (i32)p_simplex_noise_double_permutation_table[jj      + (i32)p_simplex_noise_double_permutation_table[kk     ]]] % 12;
+	const i32 gi1 = (i32)p_simplex_noise_double_permutation_table[ii + i1 + (i32)p_simplex_noise_double_permutation_table[jj + j1 + (i32)p_simplex_noise_double_permutation_table[kk + k1]]] % 12;
+	const i32 gi2 = (i32)p_simplex_noise_double_permutation_table[ii + i2 + (i32)p_simplex_noise_double_permutation_table[jj + j2 + (i32)p_simplex_noise_double_permutation_table[kk + k2]]] % 12;
+	const i32 gi3 = (i32)p_simplex_noise_double_permutation_table[ii +  1 + (i32)p_simplex_noise_double_permutation_table[jj +  1 + (i32)p_simplex_noise_double_permutation_table[kk +  1]]] % 12;
+
+	f32 n0, n1, n2, n3;
+
+	f32 t0 = 0.5f - x0 * x0 - y0 * y0 - z0 * z0;
+	if (t0 < 0.0f)
+	{
+		n0 = 0.0f;
+	}
+	else
+	{
+		t0 *= t0;
+		const f32 dot = (f32)p_simplex_noise_gradient_table[gi0][0] * x0 + (f32)p_simplex_noise_gradient_table[gi0][1] * y0 + (f32)p_simplex_noise_gradient_table[gi0][2] * z0;
+		n0 = t0 * t0 * dot;
+	}
+
+	f32 t1 = 0.5f - x1 * x1 - y1 * y1 - z1 * z1;
+	if (t1 < 0.0f)
+	{
+		n1 = 0.0f;
+	}
+	else
+	{
+		t1 *= t1;
+		const f32 dot = (f32)p_simplex_noise_gradient_table[gi1][0] * x1 + (f32)p_simplex_noise_gradient_table[gi1][1] * y1 + (f32)p_simplex_noise_gradient_table[gi1][2] * z1;
+		n1 = t1 * t1 * dot;
+	}
+
+	f32 t2 = 0.5f - x2 * x2 - y2 * y2 - z2 * z2;
+	if (t2 < 0.0f)
+	{
+		n2 = 0.0f;
+	}
+	else
+	{
+		t2 *= t2;
+		const f32 dot = (f32)p_simplex_noise_gradient_table[gi2][0] * x2 + (f32)p_simplex_noise_gradient_table[gi2][1] * y2 + (f32)p_simplex_noise_gradient_table[gi2][2] * z2;
+		n2 = t2 * t2 * dot;
+	}
+
+	f32 t3 = 0.5f - x3 * x3 - y3 * y3 - z3 * z3;
+	if (t3 < 0.0f)
+	{
+		n3 = 0.0f;
+	}
+	else
+	{
+		t3 *= t3;
+		const f32 dot = (f32)p_simplex_noise_gradient_table[gi3][0] * x3 + (f32)p_simplex_noise_gradient_table[gi3][1] * y3 + (f32)p_simplex_noise_gradient_table[gi3][2] * z3;
+		n3 = t3 * t3 * dot;
+	}
+
+	const f32 result = 32.0f * (n0 + n1 + n2 + n3);
+	return result;
+
+#undef TGM_SIMPLEX_NOISE_FASTFLOOR
+}
+
+void tgm_rand_xorshift32_init(u32 seed, TG_OUT tg_rand_xorshift32* p_state)
+{
+	TG_ASSERT(seed != 0);
+	TG_ASSERT(p_state != TG_NULL);
+
+	p_state->state = seed;
+}
+
+f32 tgm_rand_xorshift32_next_f32(tg_rand_xorshift32* p_state)
+{
+	TG_ASSERT(p_state);
+
+	const f32 result = (f32)tgm_rand_xorshift32_next_u32(p_state) / (f32)TG_U32_MAX;
+	return result;
+}
+
+f32 tgm_rand_xorshift32_next_f32_inclusive_range(tg_rand_xorshift32* p_state, f32 low, f32 high)
+{
+	TG_ASSERT(p_state && low <= high);
+
+	const f32 result = tgm_rand_xorshift32_next_f32(p_state) * (high - low) + low;
+	return result;
+}
+
+u32 tgm_rand_xorshift32_next_u32(tg_rand_xorshift32* p_state)
+{
+	TG_ASSERT(p_state);
+
+	u32 result = p_state->state;
+	result ^= result << 13;
+	result ^= result >> 17;
+	result ^= result << 5;
+	p_state->state = result;
+	return result;
 }
 
 
@@ -867,6 +877,18 @@ v2 tgm_v2_divf(v2 v, f32 f)
 	v2 result = { 0 };
 	result.x = v.x / f;
 	result.y = v.y / f;
+	return result;
+}
+
+f32 tgm_v2_mag(v2 v)
+{
+	const f32 result = tgm_f32_sqrt(v.x * v.x + v.y * v.y);
+	return result;
+}
+
+f32 tgm_v2_magsqr(v2 v)
+{
+	const f32 result = v.x * v.x + v.y * v.y;
 	return result;
 }
 

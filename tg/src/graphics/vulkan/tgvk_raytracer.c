@@ -692,15 +692,15 @@ void tg_raytracer_create_instance(tg_raytracer* p_raytracer, f32 center_x, f32 c
                 const f32 yf = (f32)y;
                 const f32 zf = (f32)z;
 
-                const f32 n_hills0 = tgm_noise(xf * 0.008f, 0.0f, zf * 0.008f);
-                const f32 n_hills1 = tgm_noise(xf * 0.2f, 0.0f, zf * 0.2f);
+                const f32 n_hills0 = tgm_simplex_noise(xf * 0.008f, 0.0f, zf * 0.008f);
+                const f32 n_hills1 = tgm_simplex_noise(xf * 0.2f, 0.0f, zf * 0.2f);
                 const f32 n_hills = n_hills0 + 0.005f * n_hills1;
                 
                 const f32 s_caves = 0.06f;
                 const f32 c_caves_x = s_caves * xf;
                 const f32 c_caves_y = s_caves * yf;
                 const f32 c_caves_z = s_caves * zf;
-                const f32 unclamped_noise_caves = tgm_noise(c_caves_x, c_caves_y, c_caves_z);
+                const f32 unclamped_noise_caves = tgm_simplex_noise(c_caves_x, c_caves_y, c_caves_z);
                 const f32 n_caves = tgm_f32_clamp(unclamped_noise_caves, -1.0f, 0.0f);
                 
                 const f32 n = n_hills;
@@ -853,6 +853,10 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
     const m4 vp = tgm_m4_mul(p, v);
     const m4 ivp = tgm_m4_inverse(vp);
 
+    TG_UNUSED(iv);
+    TG_UNUSED(ip);
+    TG_UNUSED(ivp);
+
     tg_view_projection_ubo* p_view_projection_ubo = p_raytracer->view_projection_ubo.memory.p_mapped_device_memory;
     p_view_projection_ubo->v = v;
     p_view_projection_ubo->p = p;
@@ -918,16 +922,14 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
         tgvk_copy_to_buffer(svo_leaf_node_data_ssbo_size, p_svo->p_leaf_node_data_buffer, &p_raytracer->svo_pass.svo_leaf_node_data_ssbo);
         tgvk_copy_to_buffer(svo_voxel_data_ssbo_size,     p_svo->p_voxels_buffer,         &p_raytracer->svo_pass.svo_voxel_data_ssbo);
     }
-    tg__push_debug_svo_node(p_raytracer, &p_svo->p_node_buffer[0].inner, p_svo->min, p_svo->max, TG_TRUE);
 
     // TODO: keep for a while to catch potential errors of implementation
-    f32  distance0, distance1, distance2, distance3;
-    u32  node_idx0, node_idx1, node_idx2, node_idx3;
-    u32 voxel_idx0, voxel_idx1, voxel_idx2, voxel_idx3;
-    const b32 result0 = tg_svo_traverse(p_svo, c.position, ray00, &distance0, &node_idx0, &voxel_idx0);
-    const b32 result1 = tg_svo_traverse(p_svo, c.position, ray10, &distance1, &node_idx1, &voxel_idx1);
-    const b32 result2 = tg_svo_traverse(p_svo, c.position, ray01, &distance2, &node_idx2, &voxel_idx2);
-    const b32 result3 = tg_svo_traverse(p_svo, c.position, ray11, &distance3, &node_idx3, &voxel_idx3);
+    f32 distance;
+    u32 node_idx, voxel_idx;
+    tg_svo_traverse(p_svo, c.position, ray00, &distance, &node_idx, &voxel_idx);
+    tg_svo_traverse(p_svo, c.position, ray10, &distance, &node_idx, &voxel_idx);
+    tg_svo_traverse(p_svo, c.position, ray01, &distance, &node_idx, &voxel_idx);
+    tg_svo_traverse(p_svo, c.position, ray11, &distance, &node_idx, &voxel_idx);
 
 
     // VISIBILITY
@@ -1071,8 +1073,12 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
 
     // DEBUG
 
-    if (0)
+    if (1)
     {
+        if (0)
+        {
+            tg__push_debug_svo_node(p_raytracer, &p_svo->p_node_buffer[0].inner, p_svo->min, p_svo->max, TG_TRUE);
+        }
         tgvk_command_buffer_begin(&p_raytracer->debug_pass.command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT);
         tgvk_cmd_begin_render_pass(&p_raytracer->debug_pass.command_buffer, p_raytracer->debug_pass.render_pass, &p_raytracer->debug_pass.cb_framebuffer, VK_SUBPASS_CONTENTS_INLINE);
 
@@ -1104,7 +1110,7 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
         tgvk_queue_submit(TGVK_QUEUE_TYPE_GRAPHICS, 1, &debug_submit_info, VK_NULL_HANDLE);
     }
 
-    if (0)
+    if (1)
     {
         vkDeviceWaitIdle(device);
 
