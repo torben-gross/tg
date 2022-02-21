@@ -930,6 +930,7 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
     tg_svo_traverse(p_svo, c.position, ray10, &distance, &node_idx, &voxel_idx);
     tg_svo_traverse(p_svo, c.position, ray01, &distance, &node_idx, &voxel_idx);
     tg_svo_traverse(p_svo, c.position, ray11, &distance, &node_idx, &voxel_idx);
+    tg_svo_traverse(p_svo, (v3) { 0.0f, -128.0f, 0.0f }, (v3) { 0.0f, 1.0f, 0.0f }, & distance, & node_idx, & voxel_idx);
 
 
     // VISIBILITY
@@ -1046,6 +1047,12 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
         vkCmdBindIndexBuffer(p_raytracer->shading_pass.command_buffer.buffer, screen_quad_ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
         vkCmdBindVertexBuffers(p_raytracer->shading_pass.command_buffer.buffer, 0, 1, &screen_quad_positions_vbo.buffer, &vertex_buffer_offset);
         vkCmdBindVertexBuffers(p_raytracer->shading_pass.command_buffer.buffer, 1, 1, &screen_quad_uvs_vbo.buffer, &vertex_buffer_offset);
+
+        tgvk_descriptor_set_update_storage_buffer(p_raytracer->shading_pass.descriptor_set.set, &p_raytracer->svo_pass.svo_ssbo, 9);
+        tgvk_descriptor_set_update_storage_buffer(p_raytracer->shading_pass.descriptor_set.set, &p_raytracer->svo_pass.svo_nodes_ssbo, 10);
+        tgvk_descriptor_set_update_storage_buffer(p_raytracer->shading_pass.descriptor_set.set, &p_raytracer->svo_pass.svo_leaf_node_data_ssbo, 11);
+        tgvk_descriptor_set_update_storage_buffer(p_raytracer->shading_pass.descriptor_set.set, &p_raytracer->svo_pass.svo_voxel_data_ssbo, 12);
+
         vkCmdBindDescriptorSets(p_raytracer->shading_pass.command_buffer.buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_raytracer->shading_pass.graphics_pipeline.layout.pipeline_layout, 0, 1, &p_raytracer->shading_pass.descriptor_set.set, 0, TG_NULL);
 
         tgvk_cmd_begin_render_pass(&p_raytracer->shading_pass.command_buffer, p_raytracer->shading_pass.render_pass, &p_raytracer->shading_pass.framebuffer, VK_SUBPASS_CONTENTS_INLINE);
@@ -1073,7 +1080,7 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
 
     // DEBUG
 
-    if (1)
+    if (0)
     {
         if (0)
         {
@@ -1110,7 +1117,7 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
         tgvk_queue_submit(TGVK_QUEUE_TYPE_GRAPHICS, 1, &debug_submit_info, VK_NULL_HANDLE);
     }
 
-    if (1)
+    if (0)
     {
         vkDeviceWaitIdle(device);
 

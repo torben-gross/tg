@@ -457,6 +457,7 @@ b32 tg_svo_traverse(const tg_svo* p_svo, v3 ray_origin, v3 ray_direction, TG_OUT
     f32 enter, exit;
     if (tg_intersect_ray_aabb(ray_origin, ray_direction, p_svo->min, p_svo->max, &enter, &exit))
     {
+        const v3 v3_min = { TG_F32_MIN, TG_F32_MIN, TG_F32_MIN };
         const v3 v3_max = { TG_F32_MAX, TG_F32_MAX, TG_F32_MAX };
 
         v3 position = enter > 0.0f ? tgm_v3_add(ray_origin, tgm_v3_mulf(ray_direction, enter)) : ray_origin;
@@ -574,7 +575,7 @@ b32 tg_svo_traverse(const tg_svo* p_svo, v3 ray_origin, v3 ray_direction, TG_OUT
             {
                 // ADVANCE POSITION TO BORDER
 
-                v3 a = tgm_v3_div_zero_check(tgm_v3_sub(child_min, position), ray_direction, v3_max);
+                v3 a = tgm_v3_div_zero_check(tgm_v3_sub(child_min, position), ray_direction, v3_min);
                 v3 b = tgm_v3_div_zero_check(tgm_v3_sub(child_max, position), ray_direction, v3_max);
                 v3 f = tgm_v3_max(a, b);
                 exit = tgm_v3_min_elem(f);
@@ -588,7 +589,7 @@ b32 tg_svo_traverse(const tg_svo* p_svo, v3 ray_origin, v3 ray_direction, TG_OUT
                 {
                     const v3 node_min = p_parent_min_stack[stack_size - 1];
                     const v3 node_max = p_parent_max_stack[stack_size - 1];
-                    a = tgm_v3_div_zero_check(tgm_v3_sub(node_min, position), ray_direction, v3_max);
+                    a = tgm_v3_div_zero_check(tgm_v3_sub(node_min, position), ray_direction, v3_min);
                     b = tgm_v3_div_zero_check(tgm_v3_sub(node_max, position), ray_direction, v3_max);
                     f = tgm_v3_max(a, b);
                     exit = tgm_v3_min_elem(f);

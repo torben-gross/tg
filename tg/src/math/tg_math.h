@@ -287,10 +287,11 @@ typedef struct tg_rand_xorshift32
 
 void    tgm_enclosing_sphere(u32 contained_point_count, const v3* p_contained_points, v3* p_center, f32* p_radius);
 f32     tgm_simplex_noise(f32 x, f32 y, f32 z); // TODO: use either open simplex of perlin noise and rename function accordingly
-void    tgm_rand_xorshift32_init(u32 seed, TG_OUT tg_rand_xorshift32* p_state); // Marsaglia, George. Xorshift RNGs. 2003. p. 4 // TODO: Unity uses Marsaglia's Xorshift 128
+void    tgm_rand_xorshift32_init(u32 seed, TG_OUT tg_rand_xorshift32* p_state);                                 // Marsaglia, George. Xorshift RNGs. 2003. p. 4 // TODO: Unity uses Marsaglia's Xorshift 128
 f32     tgm_rand_xorshift32_next_f32(tg_rand_xorshift32* p_state);
 f32     tgm_rand_xorshift32_next_f32_inclusive_range(tg_rand_xorshift32* p_state, f32 low, f32 high);
 u32     tgm_rand_xorshift32_next_u32(tg_rand_xorshift32* p_state);
+f32     tgm_rand_xorshift32_normal_distribution(tg_rand_xorshift32* p_state, f32 mean, f32 standard_deviation); // Counts set bits of generated random u32 // TODO: This can't produce zero bit numbers, which offsets results!
 
 
 
@@ -319,6 +320,7 @@ f32    tgm_f32_tanh(f32 v);
 
 f64    tgm_f64_cos(f64 v);
 f64    tgm_f64_pow(f64 base, f64 exponent);
+f64    tgm_f64_sqrt(f64 v);
 
 f32    tgm_i32_log10(i32 v);
 f32    tgm_i32_log2(i32 v);

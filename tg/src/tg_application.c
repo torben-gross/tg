@@ -68,8 +68,8 @@ static void tg__scene_create(void)
     scene.camera.persp.f = 1000.0f;
     tg_input_get_mouse_position(&scene.last_mouse_x, &scene.last_mouse_y);
 
-    tg_raytracer_create(&scene.camera, 32, &scene.raytracer);
-    tg_raytracer_create_instance(&scene.raytracer, 0.0f, 0.0f, 0.0f, 128, 64, 128);
+    tg_raytracer_create(&scene.camera, 64, &scene.raytracer);
+    tg_raytracer_create_instance(&scene.raytracer, 0.0f, -64.0f, -500.0f, 512, 32, 1024);
     tg_raytracer_create_instance(&scene.raytracer, 128.0f, 0.0f, 0.0f, 128, 64, 32);
     for (u32 i = 0; i < 13; i++)
     {
@@ -81,6 +81,12 @@ static void tg__scene_create(void)
         const f32 x = (f32)i * 35.0f - 256.0f;
         tg_raytracer_create_instance(&scene.raytracer, x, 9.0f, -96.0f, 32, 32, 32);
     }
+    for (u32 i = 0; i < 13; i++)
+    {
+        const f32 x = (f32)i * 35.0f - 256.0f;
+        tg_raytracer_create_instance(&scene.raytracer, x - 6.0f, 100.0f, -70.0f, 32, 32, 32);
+    }
+    tg_raytracer_create_instance(&scene.raytracer, -32.0f, 64.0f, 16.0f, 32, 32, 32);
     tg_raytracer_color_lut_set(&scene.raytracer, 0, 1.0f, 0.0f, 0.0f);
     tg_raytracer_color_lut_set(&scene.raytracer, 1, 0.0f, 1.0f, 0.0f);
     tg_raytracer_color_lut_set(&scene.raytracer, 2, 0.0f, 0.0f, 1.0f);
@@ -246,11 +252,11 @@ static void tg__scene_update_and_render(f32 dt_ms)
 
     const m4 m = tgm_m4_scale((v3) { 1.0f, 1.0f, 1.0f });
     tg_raytracer_push_debug_cuboid(&scene.raytracer, m);
-    tg_raytracer_push_debug_cuboid(&scene.raytracer, tgm_m4_mul(tgm_m4_translate((v3) { 0.0f, pds_extent.y / 2.0f, -128.0f }), tgm_m4_scale((v3) { pds_extent.x, pds_extent.y, 0.001f })));
+    tg_raytracer_push_debug_cuboid(&scene.raytracer, tgm_m4_mul(tgm_m4_translate((v3) { 0.0f, pds_extent.y / 2.0f + 128.0f, -256.0f }), tgm_m4_scale((v3) { pds_extent.x, pds_extent.y, 0.001f })));
     for (u32 i = 0; i < pds_buffer_count; i++)
     {
         const m4 pds_s = tgm_m4_scale((v3) { pds_r, pds_r, 0.001f });
-        const m4 pds_t = tgm_m4_translate((v3) { p_pds_point_buffer[i].x - pds_extent.x / 2.0f, p_pds_point_buffer[i].y, -128.0f });
+        const m4 pds_t = tgm_m4_translate((v3) { p_pds_point_buffer[i].x - pds_extent.x / 2.0f, p_pds_point_buffer[i].y + 128.0f, -256.0f });
         const m4 pds_m0 = tgm_m4_mul(pds_t, pds_s);
         const m4 pds_m1 = pds_t;
         tg_raytracer_push_debug_cuboid(&scene.raytracer, pds_m0);

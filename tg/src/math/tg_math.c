@@ -337,6 +337,15 @@ u32 tgm_rand_xorshift32_next_u32(tg_rand_xorshift32* p_state)
 	return result;
 }
 
+f32 tgm_rand_xorshift32_normal_distribution(tg_rand_xorshift32* p_state, f32 mean, f32 standard_deviation)
+{
+	const u32 v = tgm_rand_xorshift32_next_u32(p_state);
+	const u32 number_of_bits = tgm_u32_count_set_bits(v);
+	const f32 standard_normal_distribution = ((f32)number_of_bits - 16.0f) / 2.82842712475f; // tgm_f32_sqrt(8) = 2.82842712475f; // TODO: Is this correct and why?
+	const f32 normal_distribution = (standard_normal_distribution * standard_deviation) + mean;
+	return normal_distribution;
+}
+
 
 
 /*------------------------------------------------------------+
@@ -363,6 +372,7 @@ f32 powf(f32 base, f32 exponent);
 f32 roundf(f32 v);
 f32 sinf(f32 v);
 f32 sinhf(f32 v);
+f64 sqrt(f64 v);
 f32 sqrtf(f32 v);
 f32 tanf(f32 v);
 f32 tanhf(f32 v);
@@ -486,6 +496,12 @@ f64 tgm_f64_cos(f64 v)
 f64 tgm_f64_pow(f64 base, f64 exponent)
 {
 	const f64 result = pow(base, exponent);
+	return result;
+}
+
+f64 tgm_f64_sqrt(f64 v)
+{
+	const f64 result = sqrt(v);
 	return result;
 }
 
@@ -674,7 +690,7 @@ u16 tgm_u16_clamp(u16 v, u16 low, u16 high)
 u32 tgm_u16_count_set_bits(u16 v)
 {
 	u32 result = 0;
-	for (u32 i = 0; i < 16; i++)
+	while (v)
 	{
 		result += v & 1ui32;
 		v = v >> 1ui32;
@@ -728,7 +744,7 @@ u32 tgm_u32_clamp(u32 v, u32 low, u32 high)
 u32 tgm_u32_count_set_bits(u32 v)
 {
 	u32 result = 0;
-	for (u32 i = 0; i < 32; i++)
+	while (v)
 	{
 		result += v & 1ui32;
 		v = v >> 1ui32;

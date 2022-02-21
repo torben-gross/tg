@@ -347,7 +347,7 @@ static tgvk_pipeline_layout tg__pipeline_layout_create(u32 shader_count, const t
     {
         pipeline_layout.p_descriptor_set_layout_bindings[i].binding = pipeline_layout.p_global_resources[i].binding;
         pipeline_layout.p_descriptor_set_layout_bindings[i].descriptorType = (VkDescriptorType)pipeline_layout.p_global_resources[i].type;
-        pipeline_layout.p_descriptor_set_layout_bindings[i].descriptorCount = tgm_u32_max(1, pipeline_layout.p_global_resources[i].array_element_count);
+        pipeline_layout.p_descriptor_set_layout_bindings[i].descriptorCount = TG_MAX(1, pipeline_layout.p_global_resources[i].array_element_count);
         pipeline_layout.p_descriptor_set_layout_bindings[i].stageFlags = pipeline_layout.p_shader_stages[i];
         pipeline_layout.p_descriptor_set_layout_bindings[i].pImmutableSamplers = TG_NULL;
     }
