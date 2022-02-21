@@ -138,8 +138,8 @@ void main()
         v3 position = r.o;
         if (enter > 0.0)
         {
-            total_advance_from_ray_origin += enter;
-            position += enter * r.d;
+            total_advance_from_ray_origin = enter;
+            position = r.o + enter * r.d;
         }
         
         stack_size = 1;

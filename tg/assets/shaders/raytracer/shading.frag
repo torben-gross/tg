@@ -601,7 +601,7 @@ void main()
         v3 to_light_dir_ws = normalize(v3(-0.4, 1.0, 0.1));
         
         f32 radiance = max(0.0f, dot(to_light_dir_ws, normal_ws));
-        f32 min_advance = 1.41421356237; // TODO: We may want to compute the min/max of the rotated voxel, and determine, how far we have to go, such that it does not touch that resulting cell of the SVO grid
+        f32 min_advance = 1.73205080757; // TODO: We may want to compute the min/max of the rotated voxel, and determine, how far we have to go, such that it does not touch that resulting cell of the SVO grid
         
         tg_rand_xorshift32 rand;
         tgm_rand_xorshift32_init(v_buf_idx + 1, rand);
@@ -676,13 +676,13 @@ void main()
         //out_color = v4(instance_id_r, instance_id_g, instance_id_b, 1.0);
 
         // Visualize voxel ID
-        //u32 voxel_id_hash0 = tg_hash_u32(voxel_id_30b);
-        //u32 voxel_id_hash1 = tg_hash_u32(voxel_id_hash0);
-        //u32 voxel_id_hash2 = tg_hash_u32(voxel_id_hash1);
-        //f32 voxel_id_r = f32(voxel_id_hash0) / 4294967295.0;
-        //f32 voxel_id_g = f32(voxel_id_hash1) / 4294967295.0;
-        //f32 voxel_id_b = f32(voxel_id_hash2) / 4294967295.0;
-        //out_color = v4(voxel_id_r, voxel_id_g, voxel_id_b, 1.0);
+        u32 voxel_id_hash0 = tg_hash_u32(voxel_id_30b);
+        u32 voxel_id_hash1 = tg_hash_u32(voxel_id_hash0);
+        u32 voxel_id_hash2 = tg_hash_u32(voxel_id_hash1);
+        f32 voxel_id_r = f32(voxel_id_hash0) / 4294967295.0;
+        f32 voxel_id_g = f32(voxel_id_hash1) / 4294967295.0;
+        f32 voxel_id_b = f32(voxel_id_hash2) / 4294967295.0;
+        out_color = v4(voxel_id_r, voxel_id_g, voxel_id_b, 1.0);
         
         // Visualize color LUT ID
         //f32 color_lut_id_normalized = f32(color_lut_id) / 255.0;

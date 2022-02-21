@@ -127,6 +127,7 @@ void    tg_raytracer_create(const tg_camera* p_camera, u32 max_instance_count, T
 void    tg_raytracer_destroy(tg_raytracer* p_raytracer);
 void    tg_raytracer_create_instance(tg_raytracer* p_raytracer, f32 center_x, f32 center_y, f32 center_z, u32 grid_width, u32 grid_height, u32 grid_depth);
 void    tg_raytracer_push_debug_cuboid(tg_raytracer* p_raytracer, m4 transformation_matrix, v3 color); // Original cube's extent is 1^3 and position is centered at origin
+void    tg_raytracer_push_debug_line(tg_raytracer* p_raytracer, v3 src, v3 dst, v3 color);
 void    tg_raytracer_color_lut_set(tg_raytracer* p_raytracer, u8 index, f32 r, f32 g, f32 b);
 void    tg_raytracer_render(tg_raytracer* p_raytracer);
 void    tg_raytracer_clear(tg_raytracer* p_raytracer);

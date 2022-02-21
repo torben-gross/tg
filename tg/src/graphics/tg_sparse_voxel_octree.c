@@ -455,12 +455,14 @@ b32 tg_svo_traverse(const tg_svo* p_svo, v3 ray_origin, v3 ray_direction, TG_OUT
     v3  p_parent_max_stack[TG_SVO_TRAVERSE_STACK_CAPACITY] = { 0 };
 
     f32 enter, exit;
+    f32 distance_ray_origin_2_position = 0.0f;
     if (tg_intersect_ray_aabb(ray_origin, ray_direction, p_svo->min, p_svo->max, &enter, &exit))
     {
         const v3 v3_min = { TG_F32_MIN, TG_F32_MIN, TG_F32_MIN };
         const v3 v3_max = { TG_F32_MAX, TG_F32_MAX, TG_F32_MAX };
 
         v3 position = enter > 0.0f ? tgm_v3_add(ray_origin, tgm_v3_mulf(ray_direction, enter)) : ray_origin;
+        distance_ray_origin_2_position = enter > 0.0f ? enter : 0.0f;
 
         stack_size = 1;
         p_parent_idx_stack[0] = 0;
@@ -550,7 +552,7 @@ b32 tg_svo_traverse(const tg_svo* p_svo, v3 ray_origin, v3 ray_direction, TG_OUT
                             const u32 voxel_idx = first_voxel_id + relative_voxel_idx;
 
                             result = TG_TRUE;
-                            *p_distance = enter;
+                            *p_distance = distance_ray_origin_2_position + enter;
                             *p_node_idx = child_idx;
                             *p_voxel_idx = voxel_idx;
                             return result;
@@ -580,8 +582,10 @@ b32 tg_svo_traverse(const tg_svo* p_svo, v3 ray_origin, v3 ray_direction, TG_OUT
                 v3 f = tgm_v3_max(a, b);
                 exit = tgm_v3_min_elem(f);
                 TG_ASSERT(exit >= 0.0f);
-                const v3 advance = tgm_v3_mulf(ray_direction, exit + TG_F32_EPSILON); // TODO: epsilon required?
+                const f32 t_advance = exit + TG_F32_EPSILON; // TODO: epsilon required?
+                const v3 advance = tgm_v3_mulf(ray_direction, t_advance);
                 position = tgm_v3_add(position, advance);
+                distance_ray_origin_2_position += t_advance;
 
                 // POP NODES WITH EXIT <= 0
 
