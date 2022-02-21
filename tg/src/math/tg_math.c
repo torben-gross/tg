@@ -2185,6 +2185,30 @@ m4 tgm_m4_scale(v3 v)
 	return result;
 }
 
+m4 tgm_m4_transform_rt(m4 rotation, m4 translation)
+{
+	const m4 result = tgm_m4_mul(translation, rotation);
+	return result;
+}
+
+m4 tgm_m4_transform_sr(m4 scale, m4 rotation)
+{
+	const m4 result = tgm_m4_mul(rotation, scale);
+	return result;
+}
+
+m4 tgm_m4_transform_srt(m4 scale, m4 rotation, m4 translation)
+{
+	const m4 result = tgm_m4_mul(tgm_m4_mul(translation, rotation), scale);
+	return result;
+}
+
+m4 tgm_m4_transform_st(m4 scale, m4 translation)
+{
+	const m4 result = tgm_m4_mul(translation, scale);
+	return result;
+}
+
 m4 tgm_m4_translate(v3 v)
 {
 	m4 result = { 0 };

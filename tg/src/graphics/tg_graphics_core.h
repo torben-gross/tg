@@ -125,7 +125,7 @@ typedef struct tg_camera
 
 typedef struct tg_instance
 {
-	v3u    half_extent;
+	v3     half_extent;
 	m4     translation;
 	m4     rotation;
 

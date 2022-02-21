@@ -606,8 +606,8 @@ void main()
         tg_rand_xorshift32 rand;
         tgm_rand_xorshift32_init(v_buf_idx + 1, rand);
         
-        const u32 n_rays = 2;
-        const u32 n_bounces = 2;
+        const u32 n_rays = 0;
+        const u32 n_bounces = 0;
         const u32 max_n_bounces = n_rays * n_bounces;
         
         f32 shadow_sum = 0.0;
@@ -649,8 +649,10 @@ void main()
                 new_normal = hit_normal;
             }
         }
-        
-        radiance *= shadow_sum * 0.4;
+        if (n_rays > 0.0 && n_bounces > 0.0)
+        {
+            radiance *= shadow_sum * 0.8;
+        }
         radiance = radiance * 0.9 + 0.1;
         out_color = v4(v3(radiance), 1.0);
         //out_color = v4(v3(r_f32, g_f32, b_f32) * radiance, 1.0);

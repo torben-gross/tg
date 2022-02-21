@@ -60,7 +60,7 @@ static void tg__construct_leaf_node(
     {
         const u16 instance_id = p_instance_ids[instance_id_idx];
         const tg_instance* p_instance = &p_instances[instance_id];
-        const v3 instance_half_extent = tgm_v3u_to_v3(p_instance->half_extent);
+        const v3 instance_half_extent = p_instance->half_extent;
 
         // Instead of transforming the instance, we transform the block with the inverse of the
         // instance's model matrix, such that we can simply determine in which instance cell a
@@ -257,7 +257,7 @@ static void tg__construct_inner_node(
     {
         const u16 instance_id = p_instance_ids[instance_id_idx];
         const tg_instance* p_instance = &p_instances[instance_id];
-        const v3 instance_half_extent = tgm_v3u_to_v3(p_instance->half_extent);
+        const v3 instance_half_extent = p_instance->half_extent;
 
         // Instead of transforming the instance, we transform the block with the inverse of the
         // instance's model matrix, such that we can simply determine in which instance cell a

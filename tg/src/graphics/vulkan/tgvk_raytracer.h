@@ -62,21 +62,17 @@ typedef struct tg_raytracer_shading_pass
 
 typedef struct tg_raytracer_debug_pass
 {
-    // Outline
+    u32                    capacity;
+    u32                    count;
     tgvk_command_buffer    command_buffer;
     VkRenderPass           render_pass;
     tgvk_pipeline          graphics_pipeline;
     tgvk_descriptor_set    descriptor_set;
     tgvk_framebuffer       framebuffer;
 
-    // Debug cuboids
-    u32                    cb_capacity;
-    u32                    cb_count;
-    tgvk_pipeline          cb_graphics_pipeline;
-    tgvk_descriptor_set    cb_descriptor_set;
-    tgvk_buffer            cb_transformation_matrix_ssbo;
-    tgvk_framebuffer       cb_framebuffer;
-    tgvk_buffer            cb_instance_id_vbo;
+    tgvk_buffer            transformation_matrix_ssbo;
+    tgvk_buffer            colors_ssbo;
+    tgvk_buffer            instance_id_vbo;
 } tg_raytracer_debug_pass;
 
 typedef struct tg_raytracer_blit_pass
@@ -130,7 +126,7 @@ typedef struct tg_raytracer
 void    tg_raytracer_create(const tg_camera* p_camera, u32 max_instance_count, TG_OUT tg_raytracer* p_raytracer);
 void    tg_raytracer_destroy(tg_raytracer* p_raytracer);
 void    tg_raytracer_create_instance(tg_raytracer* p_raytracer, f32 center_x, f32 center_y, f32 center_z, u32 grid_width, u32 grid_height, u32 grid_depth);
-void    tg_raytracer_push_debug_cuboid(tg_raytracer* p_raytracer, m4 transformation_matrix); // Original cube's extent is 1^3 and position is centered at origin
+void    tg_raytracer_push_debug_cuboid(tg_raytracer* p_raytracer, m4 transformation_matrix, v3 color); // Original cube's extent is 1^3 and position is centered at origin
 void    tg_raytracer_color_lut_set(tg_raytracer* p_raytracer, u8 index, f32 r, f32 g, f32 b);
 void    tg_raytracer_render(tg_raytracer* p_raytracer);
 void    tg_raytracer_clear(tg_raytracer* p_raytracer);

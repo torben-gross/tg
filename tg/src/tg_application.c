@@ -250,18 +250,18 @@ static void tg__scene_update_and_render(f32 dt_ms)
     TG_UNUSED(d0);
     TG_UNUSED(c0);
 
-    const m4 m = tgm_m4_scale((v3) { 1.0f, 1.0f, 1.0f });
-    tg_raytracer_push_debug_cuboid(&scene.raytracer, m);
-    tg_raytracer_push_debug_cuboid(&scene.raytracer, tgm_m4_mul(tgm_m4_translate((v3) { 0.0f, pds_extent.y / 2.0f + 128.0f, -256.0f }), tgm_m4_scale((v3) { pds_extent.x, pds_extent.y, 0.001f })));
-    for (u32 i = 0; i < pds_buffer_count; i++)
-    {
-        const m4 pds_s = tgm_m4_scale((v3) { pds_r, pds_r, 0.001f });
-        const m4 pds_t = tgm_m4_translate((v3) { p_pds_point_buffer[i].x - pds_extent.x / 2.0f, p_pds_point_buffer[i].y + 128.0f, -256.0f });
-        const m4 pds_m0 = tgm_m4_mul(pds_t, pds_s);
-        const m4 pds_m1 = pds_t;
-        tg_raytracer_push_debug_cuboid(&scene.raytracer, pds_m0);
-        tg_raytracer_push_debug_cuboid(&scene.raytracer, pds_m1);
-    }
+    //const m4 m = tgm_m4_scale((v3) { 1.0f, 1.0f, 1.0f });
+    //tg_raytracer_push_debug_cuboid(&scene.raytracer, m);
+    //tg_raytracer_push_debug_cuboid(&scene.raytracer, tgm_m4_mul(tgm_m4_translate((v3) { 0.0f, pds_extent.y / 2.0f + 128.0f, -256.0f }), tgm_m4_scale((v3) { pds_extent.x, pds_extent.y, 0.001f })));
+    //for (u32 i = 0; i < pds_buffer_count; i++)
+    //{
+    //    const m4 pds_s = tgm_m4_scale((v3) { pds_r, pds_r, 0.001f });
+    //    const m4 pds_t = tgm_m4_translate((v3) { p_pds_point_buffer[i].x - pds_extent.x / 2.0f, p_pds_point_buffer[i].y + 128.0f, -256.0f });
+    //    const m4 pds_m0 = tgm_m4_mul(pds_t, pds_s);
+    //    const m4 pds_m1 = pds_t;
+    //    tg_raytracer_push_debug_cuboid(&scene.raytracer, pds_m0);
+    //    tg_raytracer_push_debug_cuboid(&scene.raytracer, pds_m1);
+    //}
     tg_raytracer_render(&scene.raytracer);
     tg_raytracer_clear(&scene.raytracer);
 

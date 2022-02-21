@@ -520,6 +520,10 @@ m4     tgm_m4_rotate_x(f32 angle_in_radians);
 m4     tgm_m4_rotate_y(f32 angle_in_radians);
 m4     tgm_m4_rotate_z(f32 angle_in_radians);
 m4     tgm_m4_scale(v3 v);
+m4     tgm_m4_transform_rt(m4 rotation, m4 translation);
+m4     tgm_m4_transform_sr(m4 scale, m4 rotation);
+m4     tgm_m4_transform_srt(m4 scale, m4 rotation, m4 translation);
+m4     tgm_m4_transform_st(m4 scale, m4 translation);
 m4     tgm_m4_translate(v3 v);
 m4     tgm_m4_transposed(m4 m);
 

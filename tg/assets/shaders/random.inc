@@ -20,7 +20,7 @@ u32 tgm_rand_xorshift32_next_u32(inout tg_rand_xorshift32 state)
 
 f32 tgm_rand_xorshift32_next_f32(inout tg_rand_xorshift32 state)
 {
-	f32 result = f32(tgm_rand_xorshift32_next_u32(state)) / 4294967295.0;
+	f32 result = f32(tgm_rand_xorshift32_next_u32(state)) / f32(TG_U32_MAX);
 	return result;
 }
 
