@@ -69,7 +69,7 @@ static void tg__scene_create(void)
     tg_input_get_mouse_position(&scene.last_mouse_x, &scene.last_mouse_y);
 
     tg_raytracer_create(&scene.camera, 64, &scene.raytracer);
-    tg_raytracer_create_instance(&scene.raytracer, 0.0f, -64.0f, -500.0f, 512, 32, 1024);
+    tg_raytracer_create_instance(&scene.raytracer, 0.0f, -64.0f, 0.0f, 128, 32, 128);
     tg_raytracer_create_instance(&scene.raytracer, 128.0f, 0.0f, 0.0f, 128, 64, 32);
     for (u32 i = 0; i < 13; i++)
     {

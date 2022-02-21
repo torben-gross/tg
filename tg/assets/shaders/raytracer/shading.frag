@@ -3,6 +3,7 @@
 #include "shaders/common.inc"
 #include "shaders/commoni16.inc"
 #include "shaders/commoni64.inc"
+#include "shaders/random.inc"
 
 
 
@@ -158,7 +159,7 @@ u32 tg_hash_u32(u32 v) // MurmurHash3 algorithm by Austin Appleby
 	return result;
 }
 
-f32 tg_raytrace_ssvo(v3 ray_origin_ws, v3 ray_direction_ws)
+f32 tg_raytrace_ssvo(v3 ray_origin_ws, v3 ray_direction_ws, out v3 out_hit_position, out v3 out_hit_normal)
 {
     const u32 v_instance_id = 0; // TODO: figure this one out
 
@@ -347,14 +348,46 @@ f32 tg_raytrace_ssvo(v3 ray_origin_ws, v3 ray_direction_ws)
                             u32 bit = bits & (1 << bit_idx);
                             if (bit != 0)
                             {
+                                v3 voxel_min = child_min + v3(f32(x    ), f32(y    ), f32(z    ));
+                                v3 voxel_max = child_min + v3(f32(x + 1), f32(y + 1), f32(z + 1));
+                                tg_intersect_ray_aabb(tg_ray(position, r.d, r.invd), tg_box(voxel_min, voxel_max), enter, exit);
+
+                                v3 hit_position = position + enter * r.d;
+                                v3 voxel_center = voxel_min + v3(0.5, 0.5, 0.5);
+                                v3 hit_normal = hit_position - voxel_center;
+                                if (abs(hit_normal.x) > abs(hit_normal.y))
+                                {
+                                    hit_normal.y = 0.0f;
+                                    if (abs(hit_normal.x) > abs(hit_normal.z))
+                                    {
+                                        hit_normal.x = sign(hit_normal.x);
+                                        hit_normal.z = 0.0f;
+                                    }
+                                    else
+                                    {
+                                        hit_normal.z = sign(hit_normal.z);
+                                        hit_normal.x = 0.0f;
+                                    }
+                                }
+                                else
+                                {
+                                    hit_normal.x = 0.0f;
+                                    if (abs(hit_normal.y) > abs(hit_normal.z))
+                                    {
+                                        hit_normal.y = sign(hit_normal.y);
+                                        hit_normal.z = 0.0f;
+                                    }
+                                    else
+                                    {
+                                        hit_normal.z = sign(hit_normal.z);
+                                        hit_normal.y = 0.0f;
+                                    }
+                                }
+
                                 result = 0.0;
-                                //v3 voxel_min = child_min + v3(f32(x    ), f32(y    ), f32(z    ));
-                                //v3 voxel_max = child_min + v3(f32(x + 1), f32(y + 1), f32(z + 1));
-                                //tg_intersect_ray_aabb(tg_ray(position, r.d, r.invd), tg_box(voxel_min, voxel_max), enter, exit);
-                                //result = true;
-                                //d = total_advance_from_ray_origin_ms / far + ((enter < 0.0) ? 0.0 : min(1.0, enter / far));
-                                //node_idx = child_idx;
-                                //voxel_idx = vox_idx;
+                                out_hit_position = hit_position;
+                                out_hit_normal = hit_normal;
+
                                 break;
                             }
                             if (t_max_x < t_max_y)
@@ -464,8 +497,8 @@ f32 tg_raytrace_ssvo(v3 ray_origin_ws, v3 ray_direction_ws)
 
 void main()
 {
-    u32 i = visibility_buffer_w * u32(gl_FragCoord.y) + u32(gl_FragCoord.x);
-    u64 packed_data = visibility_buffer_data[i];
+    u32 v_buf_idx = visibility_buffer_w * u32(gl_FragCoord.y) + u32(gl_FragCoord.x);
+    u64 packed_data = visibility_buffer_data[v_buf_idx];
     f32 depth_24b = f32(packed_data >> u64(40)) / 16777215.0;
     u32 instance_id_10b = u32(packed_data >> u64(30)) & 1023;
     u32 voxel_id_30b = u32(packed_data & 1073741823);
@@ -530,6 +563,7 @@ void main()
         // Hit normal
 
         v3 normal_ms = hit_position_ms - voxel_center_ms;
+        
         if (abs(normal_ms.x) > abs(normal_ms.y))
         {
             normal_ms.y = 0.0f;
@@ -559,18 +593,67 @@ void main()
             }
         }
         v3 normal_ws = normalize(i.r_mat * v4(normal_ms, 0.0)).xyz;
-
-
-
-
-
+        
+        
+        
+        
         // TODO: hacked lighting
         v3 to_light_dir_ws = normalize(v3(-0.4, 1.0, 0.1));
-        f32 radiance = max(0.0f, dot(normalize(to_light_dir_ws), normal_ws));
+        
+        f32 radiance = max(0.0f, dot(to_light_dir_ws, normal_ws));
         f32 min_advance = 1.41421356237; // TODO: We may want to compute the min/max of the rotated voxel, and determine, how far we have to go, such that it does not touch that resulting cell of the SVO grid
-        radiance *= tg_raytrace_ssvo(hit_position_ws + min_advance * to_light_dir_ws, to_light_dir_ws);
+        
+        tg_rand_xorshift32 rand;
+        tgm_rand_xorshift32_init(v_buf_idx + 1, rand);
+        
+        const u32 n_rays = 2;
+        const u32 n_bounces = 2;
+        const u32 max_n_bounces = n_rays * n_bounces;
+        
+        f32 shadow_sum = 0.0;
+        for (u32 ray_idx = 0; ray_idx < n_rays; ray_idx++)
+        {
+            v3 new_position = hit_position_ws;
+            v3 new_normal = normal_ws;
+            v3 new_dir = v3(0.0, 0.0, 0.0);
+        
+            for (u32 bounce_idx = 0; bounce_idx < n_bounces; bounce_idx++)
+            {
+                for (u32 compute_new_ray_dir_idx = 0; compute_new_ray_dir_idx < 32; compute_new_ray_dir_idx++)
+                {
+                    new_dir.x = tgm_rand_xorshift32_next_f32_inclusive_range(rand, -1.0, 1.0);
+                    new_dir.y = tgm_rand_xorshift32_next_f32_inclusive_range(rand, -1.0, 1.0);
+                    new_dir.z = tgm_rand_xorshift32_next_f32_inclusive_range(rand, -1.0, 1.0);
+                    
+                    new_dir = normalize(new_dir);
+                    if (dot(new_dir, new_normal) > 0.0)
+                    {
+                        break;
+                    }
+                }
+                if (dot(new_dir, new_normal) <= 0.0)
+                {
+                    new_dir = new_normal;
+                }
+        
+                v3 hit_position;
+                v3 hit_normal;
+                if (tg_raytrace_ssvo(new_position + min_advance * new_dir, new_dir, hit_position, hit_normal) == 1.0)
+                {
+                    f32 contrib = 1.0f - (f32(bounce_idx) / f32(n_bounces));
+                    shadow_sum += contrib * dot(new_dir, v3(0.0, 1.0, 0.0)) * 0.25 + 0.75;
+                    break;
+                }
+        
+                new_position = hit_position;
+                new_normal = hit_normal;
+            }
+        }
+        
+        radiance *= shadow_sum * 0.4;
         radiance = radiance * 0.9 + 0.1;
-        out_color = v4(v3(r_f32, g_f32, b_f32) * radiance, 1.0);
+        out_color = v4(v3(radiance), 1.0);
+        //out_color = v4(v3(r_f32, g_f32, b_f32) * radiance, 1.0);
 
 
 
