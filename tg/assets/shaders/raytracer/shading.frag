@@ -607,7 +607,7 @@ void main()
         tgm_rand_xorshift32_init(v_buf_idx + 1, rand);
         
         const u32 n_rays = 0;
-        const u32 n_bounces = 0;
+        const u32 n_bounces = 1;
         const u32 max_n_bounces = n_rays * n_bounces;
         
         f32 shadow_sum = 0.0;
@@ -654,8 +654,8 @@ void main()
             radiance *= shadow_sum * 0.8;
         }
         radiance = radiance * 0.9 + 0.1;
-        out_color = v4(v3(radiance), 1.0);
-        //out_color = v4(v3(r_f32, g_f32, b_f32) * radiance, 1.0);
+        //out_color = v4(v3(radiance), 1.0);
+        out_color = v4(v3(r_f32, g_f32, b_f32) * radiance, 1.0);
 
 
 
@@ -676,13 +676,13 @@ void main()
         //out_color = v4(instance_id_r, instance_id_g, instance_id_b, 1.0);
 
         // Visualize voxel ID
-        u32 voxel_id_hash0 = tg_hash_u32(voxel_id_30b);
-        u32 voxel_id_hash1 = tg_hash_u32(voxel_id_hash0);
-        u32 voxel_id_hash2 = tg_hash_u32(voxel_id_hash1);
-        f32 voxel_id_r = f32(voxel_id_hash0) / 4294967295.0;
-        f32 voxel_id_g = f32(voxel_id_hash1) / 4294967295.0;
-        f32 voxel_id_b = f32(voxel_id_hash2) / 4294967295.0;
-        out_color = v4(voxel_id_r, voxel_id_g, voxel_id_b, 1.0);
+        //u32 voxel_id_hash0 = tg_hash_u32(voxel_id_30b);
+        //u32 voxel_id_hash1 = tg_hash_u32(voxel_id_hash0);
+        //u32 voxel_id_hash2 = tg_hash_u32(voxel_id_hash1);
+        //f32 voxel_id_r = f32(voxel_id_hash0) / 4294967295.0;
+        //f32 voxel_id_g = f32(voxel_id_hash1) / 4294967295.0;
+        //f32 voxel_id_b = f32(voxel_id_hash2) / 4294967295.0;
+        //out_color = v4(voxel_id_r, voxel_id_g, voxel_id_b, 1.0);
         
         // Visualize color LUT ID
         //f32 color_lut_id_normalized = f32(color_lut_id) / 255.0;

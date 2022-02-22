@@ -65,7 +65,9 @@ static void tg__construct_leaf_node(
         // Instead of transforming the instance, we transform the block with the inverse of the
         // instance's model matrix, such that we can simply determine in which instance cell a
         // block's voxel center lies.
-        const m4 m = tgm_m4_mul(p_instance->translation, p_instance->rotation);
+        const m4 t = tgm_m4_translate(p_instance->translation);
+        const m4 r = tgm_m4_angle_axis(p_instance->angle_in_radians, p_instance->axis);
+        const m4 m = tgm_m4_transform_rt(r, t);
         const m4 invm = tgm_m4_inverse(m);
 
         v3 p_block_corners_v3[8] = { 0 };
@@ -262,7 +264,9 @@ static void tg__construct_inner_node(
         // Instead of transforming the instance, we transform the block with the inverse of the
         // instance's model matrix, such that we can simply determine in which instance cell a
         // block's voxel center lies.
-        const m4 m = tgm_m4_mul(p_instance->translation, p_instance->rotation);
+        const m4 t = tgm_m4_translate(p_instance->translation);
+        const m4 r = tgm_m4_angle_axis(p_instance->angle_in_radians, p_instance->axis);
+        const m4 m = tgm_m4_transform_rt(r, t);
         const m4 invm = tgm_m4_inverse(m);
 
         for (u32 child_idx = 0; child_idx < 8; child_idx++)

@@ -126,11 +126,10 @@ typedef struct tg_camera
 typedef struct tg_instance
 {
 	v3     half_extent;
-	m4     translation;
-	m4     rotation;
-
 	u32    first_voxel_id;
-	u16    packed_log2_whd; // 5 bits each for log2_w, log2_h, log2_d. One bit unused. TODO: we only need to ensure division by 16 for 3 lods, so just not use lower 3 bits? this member would need to become bigger, though.. but for lod down to w,h,d = 2, we need 2^n?
+	v3     translation;
+	f32    angle_in_radians;
+	v3     axis;
 } tg_instance;
 
 

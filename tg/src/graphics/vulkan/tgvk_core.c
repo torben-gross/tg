@@ -4102,7 +4102,7 @@ void tg_graphics_init(void)
 
     tgvk_memory_allocator_init(device, physical_device);
 
-    staging_buffer_size = TG_MAX(2048, tgvk_memory_page_size());
+    staging_buffer_size = TG_MAX(4096, tgvk_memory_page_size());
     global_staging_buffer_lock = TG_RWL_CREATE();
     global_staging_buffer = TGVK_BUFFER_CREATE(staging_buffer_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, TGVK_MEMORY_HOST);
     internal_staging_buffer_lock = TG_RWL_CREATE();
