@@ -104,7 +104,7 @@ void tg__prepend_asset_directory(const char* p_filename, u32 size, char* p_buffe
 #ifdef TG_DEBUG
 void tgp_debug_log(const char* p_format, ...)
 {
-    char p_buffer[4096] = { 0 };
+    char p_buffer[8192] = { 0 };
     va_list va = TG_NULL;
     tg_variadic_start(va, p_format);
     tg_stringf_va(sizeof(p_buffer), p_buffer, p_format, va);

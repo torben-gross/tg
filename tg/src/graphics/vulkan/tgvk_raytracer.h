@@ -39,8 +39,8 @@ typedef struct tg_raytracer_buffers
 
     tgvk_buffer            visibility_buffer_ssbo;
     tgvk_buffer            view_projection_ubo;
-    tgvk_buffer            raytracer_data_ubo;
-    tgvk_buffer            shading_data_ubo;
+    tgvk_buffer            camera_ubo;
+    tgvk_buffer            environment_ubo;
 
     tgvk_buffer            debug_matrices_ssbo;
     tgvk_buffer            debug_colors_ssbo;

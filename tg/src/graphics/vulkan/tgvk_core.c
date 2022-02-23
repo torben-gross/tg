@@ -1020,9 +1020,9 @@ void tgvk_cmd_draw_indexed(tgvk_command_buffer* p_command_buffer, u32 index_coun
     vkCmdDrawIndexed(p_command_buffer->buffer, index_count, 1, 0, 0, 0);
 }
 
-void tgvk_cmd_draw_indexed_instanced(tgvk_command_buffer* p_command_buffer, u32 index_count, u32 cluster_count)
+void tgvk_cmd_draw_indexed_instanced(tgvk_command_buffer* p_command_buffer, u32 index_count, u32 instance_count)
 {
-    vkCmdDrawIndexed(p_command_buffer->buffer, index_count, cluster_count, 0, 0, 0);
+    vkCmdDrawIndexed(p_command_buffer->buffer, index_count, instance_count, 0, 0, 0);
 }
 
 void tgvk_cmd_transition_cube_map_layout(tgvk_command_buffer* p_command_buffer, tgvk_cube_map* p_cube_map, tgvk_image_layout_type src_type, tgvk_image_layout_type dst_type)
@@ -2921,7 +2921,16 @@ tg_size tg__shader_generate_glsl(const char* p_glsl_source, tg_size generated_gl
             TG_ASSERT(get_inc_properties_result);
 
             const b32 load_file_result = tgp_file_load(p_inc_filename_buffer, inc_properties.size, p_generated_it);
+#ifdef TG_DEBUG
             TG_ASSERT(load_file_result);
+            // TODO: Recursive includes are not yet supported
+            const char* p_debug_it = p_generated_it;
+            for (tg_size i = 0; i < inc_properties.size; i++)
+            {
+                TG_ASSERT(!tg_string_starts_with(p_debug_it, "#include"));
+                p_debug_it++;
+            }
+#endif
 
             p_generated_it += inc_properties.size;
             p_it = tg_string_next_line(p_it);

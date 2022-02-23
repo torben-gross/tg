@@ -203,6 +203,8 @@ void tg_stringf(u32 size, char* p_buffer, const char* p_format, ...)
 
 void tg_stringf_va(u32 size, char* p_buffer, const char* p_format, char* p_variadic_arguments)
 {
+#define WRITE_CHAR(c) TG_ASSERT((tg_size)p_buffer_position - (tg_size)p_buffer < size); *p_buffer_position++ = (c);
+
 	TG_ASSERT(size && p_buffer && p_format);
 
 	const char* p_format_position = p_format;
@@ -219,7 +221,7 @@ void tg_stringf_va(u32 size, char* p_buffer, const char* p_format, char* p_varia
 			case 'c':
 			{
 				const char c = tg_variadic_arg(p_variadic_arguments, char);
-				*p_buffer_position++ = c;
+				WRITE_CHAR(c);
 			} break;
 
 			case 'd': // TODO: this does not generate a proper string! Exponent is missing entirely...
@@ -228,7 +230,7 @@ void tg_stringf_va(u32 size, char* p_buffer, const char* p_format, char* p_varia
 
 				if (f < 0)
 				{
-					*p_buffer_position++ = '-';
+					WRITE_CHAR('-');
 					f *= -1.0f;
 				}
 
@@ -238,12 +240,12 @@ void tg_stringf_va(u32 size, char* p_buffer, const char* p_format, char* p_varia
 				for (u32 i = 0; i < integral_digit_count; i++)
 				{
 					const i32 digit = integral_part / integral_pow;
-					*p_buffer_position++ = (char)tgm_i32_abs(digit) + '0';
+					WRITE_CHAR((char)tgm_i32_abs(digit) + '0');
 					integral_part -= digit * integral_pow;
 					integral_pow /= 10;
 				}
 
-				*p_buffer_position++ = '.';
+				WRITE_CHAR('.');
 
 				u32 decimal_part = (u32)((f - (f64)((u32)f)) * tgm_f64_pow(10.0f, 9.0f));
 				const u32 decimal_digit_count = tgm_i32_digits(decimal_part);
@@ -251,7 +253,7 @@ void tg_stringf_va(u32 size, char* p_buffer, const char* p_format, char* p_varia
 				for (u32 i = 0; i < decimal_digit_count; i++)
 				{
 					const i32 digit = decimal_part / decimal_pow;
-					*p_buffer_position++ = (char)tgm_i32_abs(digit) + '0';
+					WRITE_CHAR((char)tgm_i32_abs(digit) + '0');
 					decimal_part -= digit * decimal_pow;
 					decimal_pow /= 10;
 				}
@@ -263,7 +265,7 @@ void tg_stringf_va(u32 size, char* p_buffer, const char* p_format, char* p_varia
 
 				if (integer < 0)
 				{
-					*p_buffer_position++ = '-';
+					WRITE_CHAR('-');
 				}
 
 				const u32 digit_count = tgm_i32_digits(integer);
@@ -271,7 +273,7 @@ void tg_stringf_va(u32 size, char* p_buffer, const char* p_format, char* p_varia
 				for (u32 i = 0; i < digit_count; i++)
 				{
 					const i32 digit = integer / pow;
-					*p_buffer_position++ = (char)tgm_i32_abs(digit) + '0';
+					WRITE_CHAR((char)tgm_i32_abs(digit) + '0');
 					integer -= digit * pow;
 					pow /= 10;
 				}
@@ -282,7 +284,7 @@ void tg_stringf_va(u32 size, char* p_buffer, const char* p_format, char* p_varia
 				const char* s = tg_variadic_arg(p_variadic_arguments, const char*);
 				while (*s)
 				{
-					*p_buffer_position++ = *s++;
+					WRITE_CHAR(*s++);
 				}
 			} break;
 
@@ -295,7 +297,7 @@ void tg_stringf_va(u32 size, char* p_buffer, const char* p_format, char* p_varia
 				for (u32 i = 0; i < digit_count; i++)
 				{
 					const u32 digit = integer / pow;
-					*p_buffer_position++ = (char)tgm_i32_abs(digit) + '0';
+					WRITE_CHAR((char)tgm_i32_abs(digit) + '0');
 					integer -= digit * pow;
 					pow /= 10;
 				}
@@ -306,12 +308,12 @@ void tg_stringf_va(u32 size, char* p_buffer, const char* p_format, char* p_varia
 		}
 		else
 		{
-			*p_buffer_position++ = *p_format_position++;
+			WRITE_CHAR(*p_format_position++);
 		}
 	}
-	*p_buffer_position = '\0';
+	WRITE_CHAR('\0');
 
-	TG_ASSERT(p_buffer_position - p_buffer + 1 <= size);
+#undef WRITE_CHAR
 }
 
 u32 tg_strlen_no_nul(const char* p_string)

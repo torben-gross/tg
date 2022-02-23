@@ -11,7 +11,7 @@
 #define TG_SVO_BLOCK_VOXEL_COUNT          (TG_SVO_BLOCK_SIDE_LENGTH * TG_SVO_BLOCK_SIDE_LENGTH * TG_SVO_BLOCK_SIDE_LENGTH)
 
 TG_STATIC_ASSERT(TG_SVO_SIDE_LENGTH / TG_SVO_BLOCK_SIDE_LENGTH == 32); // Otherwise, the stack capacity below is too small
-#define TG_SVO_TRAVERSE_STACK_CAPACITY    5                           // tg_u32_log2(TG_SVO_SIDE_LENGTH / TG_SVO_BLOCK_SIDE_LENGTH)
+#define TG_SVO_TRAVERSE_STACK_CAPACITY    5                            // tg_u32_log2(TG_SVO_SIDE_LENGTH / TG_SVO_BLOCK_SIDE_LENGTH)
 
 
 

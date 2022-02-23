@@ -338,7 +338,7 @@ void                    tgvk_cmd_copy_color_image_to_buffer(tgvk_command_buffer*
 void                    tgvk_cmd_copy_depth_image_pixel_to_buffer(tgvk_command_buffer* p_command_buffer, tgvk_image* p_source, tgvk_buffer* p_destination, u32 x, u32 y);
 void                    tgvk_cmd_copy_image_3d_to_buffer(tgvk_command_buffer* p_command_buffer, tgvk_image_3d* p_source, tgvk_buffer* p_destination);
 void                    tgvk_cmd_draw_indexed(tgvk_command_buffer* p_command_buffer, u32 index_count);
-void                    tgvk_cmd_draw_indexed_instanced(tgvk_command_buffer* p_command_buffer, u32 index_count, u32 cluster_count);
+void                    tgvk_cmd_draw_indexed_instanced(tgvk_command_buffer* p_command_buffer, u32 index_count, u32 instance_count);
 void                    tgvk_cmd_transition_cube_map_layout(tgvk_command_buffer* p_command_buffer, tgvk_cube_map* p_cube_map, tgvk_image_layout_type src_type, tgvk_image_layout_type dst_type);
 void                    tgvk_cmd_transition_cube_map_layout2(tgvk_command_buffer* p_command_buffer, tgvk_cube_map* p_cube_map, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits);
 void                    tgvk_cmd_transition_image_layout(tgvk_command_buffer* p_command_buffer, tgvk_image* p_image, tgvk_image_layout_type src_type, tgvk_image_layout_type dst_type);

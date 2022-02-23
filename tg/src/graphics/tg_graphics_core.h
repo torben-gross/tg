@@ -133,6 +133,7 @@ typedef struct tg_camera
 // VOXEL:    9 (          512) - We want a cluster to contain 8^3 = 512 voxels, so we need 9 bits to represent 2^9 = 512 voxels.
 // DEPTH:   24 (          ...) - We want 24 bits for depth
 // CLUSTER: 31 (2,147,483,648) - We retain 64 - 9 - 24 = 31 bits for 2^31 = 2147483648 possible clusters
+// DEPTH | CLUSTER | VOXEL     - Depth at most significant bits, such that we can use an atomic min operator in the shader
 // TODO: We may want to extract some bits for flags, for instance voxel/triangle flag
 typedef struct tg_voxel_cluster
 {

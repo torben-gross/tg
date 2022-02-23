@@ -1,41 +1,39 @@
 #version 450
 
 #include "shaders/common.inc"
+#include "shaders/raytracer/buffers.inc"
+#include "shaders/raytracer/cluster.inc"
 
-struct tg_instance_data
-{
-    m4     s_mat;
-    m4     r_mat;
-    m4     t_mat;
-    u32    grid_w;
-    u32    grid_h;
-    u32    grid_d;
-    u32    first_voxel_id;
-};
+TG_IN(0, u32    in_cluster_idx); #instance
+TG_IN(1, v3     in_position);
 
-layout(location = 0) in u32    in_instance_id; #instance
-layout(location = 1) in v3     in_position;
+TG_SSBO(0, tg_cluster_idx_to_object_idx_ssbo_entry    cluster_idx_to_object_idx_ssbo[];);
+TG_SSBO(1, tg_object_data_ssbo_entry                  object_data_ssbo[];              );
+TG_UBO( 4, tg_view_projection_ubo                     view_projection_ssbo;            );
 
-layout(set = 0, binding = 0) buffer tg_instance_data_ssbo
-{
-    tg_instance_data    instance_data[];
-};
-
-layout(set = 0, binding = 1) uniform tg_view_projection_ubo
-{
-    m4    v_mat;
-    m4    p_mat;
-};
-
-layout(location = 0) flat out u32    v_instance_id;
-layout(location = 1)      out v3     v_position;
+TG_OUT_FLAT(0, u32    v_cluster_idx);
 
 void main()
 {
-    v_instance_id    = in_instance_id;
+    v_cluster_idx = in_cluster_idx;
+	
+	u32 object_idx = cluster_idx_to_object_idx_ssbo[in_cluster_idx].object_idx;
+	tg_object_data_ssbo_entry object_data = object_data_ssbo[object_idx];
 
-    tg_instance_data i = instance_data[in_instance_id];
-    m4 m_mat = i.t_mat * i.r_mat * i.s_mat;
-    gl_Position = p_mat * v_mat * m_mat * v4(in_position, 1.0);
-	v_position = (m_mat * v4(in_position, 1.0)).xyz;
+    m4 s_mat = m4(
+        v4(f32(object_data.n_clusters_per_dim.x * TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT), 0.0, 0.0, 0.0), // col0
+        v4(0.0, f32(object_data.n_clusters_per_dim.y * TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT), 0.0, 0.0), // col1
+        v4(0.0, 0.0, f32(object_data.n_clusters_per_dim.z * TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT), 0.0), // col2
+        v4(0.0, 0.0, 0.0, 1.0)                                                                            // col3
+    );
+    m4 r_mat = object_data.rotation;
+    m4 t_mat = m4(
+        v4(1.0, 0.0, 0.0, 0.0),                               // col0
+        v4(0.0, 1.0, 0.0, 0.0),                               // col1
+        v4(0.0, 0.0, 1.0, 0.0),                               // col2
+        v4(object_data.translation, 1.0)); // col3
+    // TODO: can we just set the translation col in the end? saves some multiplications
+    m4 m_mat = t_mat * r_mat * s_mat;
+
+    gl_Position = view_projection_ssbo.p * view_projection_ssbo.v * m_mat * v4(in_position, 1.0);
 }
