@@ -16,25 +16,23 @@ TG_STATIC_ASSERT(TG_SVO_SIDE_LENGTH / TG_SVO_BLOCK_SIDE_LENGTH == 32); // Otherw
 
 
 static void tg__construct_leaf_node(
-    tg_svo*               p_svo,
-    tg_svo_leaf_node*     p_parent,
-    v3                    parent_min,
-    v3                    parent_max,
-    const tg_instance*    p_instances,
-    u16                   instance_id_count,
-    u16*                  p_instance_ids,
-    const u32*            p_voxel_buffer)
+    tg_svo*                   p_svo,
+    tg_svo_leaf_node*         p_parent,
+    v3                        parent_min,
+    v3                        parent_max,
+    const tg_voxel_object*    p_objects,
+    u16                       object_id_count,
+    u16*                      p_object_idcs,
+    const u32*                p_voxel_cluster_buffer)
 {
     TG_ASSERT((u32)(parent_max.x - parent_min.x) * (u32)(parent_max.y - parent_min.y) * (u32)(parent_max.z - parent_min.z) == TG_SVO_BLOCK_VOXEL_COUNT); // Otherwise, this should be an inner node!
     TG_ASSERT(parent_max.x - parent_min.x == (f32)TG_SVO_BLOCK_SIDE_LENGTH);
     TG_ASSERT(parent_max.y - parent_min.y == (f32)TG_SVO_BLOCK_SIDE_LENGTH);
     TG_ASSERT(parent_max.z - parent_min.z == (f32)TG_SVO_BLOCK_SIDE_LENGTH);
-    
-    TG_ASSERT(instance_id_count < sizeof(((tg_svo_leaf_node_data*)0)->p_instance_ids) / sizeof(*((tg_svo_leaf_node_data*)0)->p_instance_ids));
 
     TG_ASSERT(p_svo->leaf_node_data_buffer_count < p_svo->leaf_node_data_buffer_capacity);
     tg_svo_leaf_node_data* p_data = &p_svo->p_leaf_node_data_buffer[p_svo->leaf_node_data_buffer_count];
-    TG_ASSERT(p_data->instance_count == 0);
+    TG_ASSERT(p_data->count == 0); // Uninitialized
     p_parent->data_pointer = p_svo->leaf_node_data_buffer_count;
     p_svo->leaf_node_data_buffer_count++;
 
@@ -56,17 +54,20 @@ static void tg__construct_leaf_node(
     p_block_corners_v4[6] = (v4){ parent_min.x, parent_max.y, parent_max.z, 1.0f };
     p_block_corners_v4[7] = (v4){ parent_max.x, parent_max.y, parent_max.z, 1.0f };
 
-    for (u32 instance_id_idx = 0; instance_id_idx < instance_id_count; instance_id_idx++)
-    {
-        const u16 instance_id = p_instance_ids[instance_id_idx];
-        const tg_instance* p_instance = &p_instances[instance_id];
-        const v3 instance_half_extent = p_instance->half_extent;
+    const tg_size cluster_size = (tg_size)TG_CLUSTER_SIZE(1);
 
-        // Instead of transforming the instance, we transform the block with the inverse of the
-        // instance's model matrix, such that we can simply determine in which instance cell a
-        // block's voxel center lies.
-        const m4 t = tgm_m4_translate(p_instance->translation);
-        const m4 r = tgm_m4_angle_axis(p_instance->angle_in_radians, p_instance->axis);
+    for (u32 object_id_idx = 0; object_id_idx < object_id_count; object_id_idx++)
+    {
+        const u16 object_idx = p_object_idcs[object_id_idx];
+        const tg_voxel_object* p_object = &p_objects[object_idx];
+        const v3 object_extent = tgm_v3u_to_v3(tgm_v3u_mulu(p_object->n_clusters_per_dim, TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT));
+        const v3 object_half_extent = tgm_v3_divf(object_extent, 2.0f);
+
+        // Instead of transforming the object, we transform the block with the inverse of the
+        // object's model matrix, such that we can simply determine in which object cell a block's
+        // voxel center lies.
+        const m4 t = tgm_m4_translate(p_object->translation);
+        const m4 r = tgm_m4_angle_axis(p_object->angle_in_radians, p_object->axis);
         const m4 m = tgm_m4_transform_rt(r, t);
         const m4 invm = tgm_m4_inverse(m);
 
@@ -80,10 +81,9 @@ static void tg__construct_leaf_node(
         p_block_corners_v3[6] = tgm_m4_mulv4(invm, p_block_corners_v4[6]).xyz;
         p_block_corners_v3[7] = tgm_m4_mulv4(invm, p_block_corners_v4[7]).xyz;
 
-        TG_ASSERT(tg_intersect_aabb_obb_ignore_contact(tgm_v3_neg(instance_half_extent), instance_half_extent, p_block_corners_v3));
+        TG_ASSERT(tg_intersect_aabb_obb_ignore_contact(tgm_v3_neg(object_half_extent), object_half_extent, p_block_corners_v3));
 
-        const v3 instance_extent = tgm_v3_mulf(instance_half_extent, 2.0f);
-        const u32 instance_first_voxel_id = p_instance->first_voxel_id;
+        const u32 object_first_cluster_idx = p_object->first_cluster_idx;
 
         for (i32 block_z = 0; block_z < parent_extent.z; block_z++)
         {
@@ -94,12 +94,12 @@ static void tg__construct_leaf_node(
             const f32 pz1_z = omtz * p_block_corners_v3[1].z + tz * p_block_corners_v3[5].z;
 
             const f32 pz_max_z = tgm_f32_ceil(TG_MAX(pz0_z, pz1_z));
-            if (pz_max_z < -instance_half_extent.z)
+            if (pz_max_z < -object_half_extent.z)
             {
                 continue;
             }
             const f32 pz_min_z = tgm_f32_floor(TG_MIN(pz0_z, pz1_z));
-            if (pz_min_z > instance_half_extent.z)
+            if (pz_min_z > object_half_extent.z)
             {
                 continue;
             }
@@ -127,12 +127,12 @@ static void tg__construct_leaf_node(
                 const f32 py1_y = omty * pz1_y + ty * pz3_y;
 
                 const f32 py_max_y = tgm_f32_ceil(TG_MAX(py0_y, py1_y));
-                if (py_max_y < -instance_half_extent.y)
+                if (py_max_y < -object_half_extent.y)
                 {
                     continue;
                 }
                 const f32 py_min_y = tgm_f32_floor(TG_MIN(py0_y, py1_y));
-                if (py_min_y > instance_half_extent.y)
+                if (py_min_y > object_half_extent.y)
                 {
                     continue;
                 }
@@ -160,33 +160,55 @@ static void tg__construct_leaf_node(
                     const f32 block_voxel_center_floor_y = (f32)((i32)block_voxel_center_y) - sign_y;
                     const f32 block_voxel_center_floor_z = (f32)((i32)block_voxel_center_z) - sign_z;
                     
-                    const f32 instance_voxel_id_x = instance_half_extent.x + block_voxel_center_floor_x;
-                    const f32 instance_voxel_id_y = instance_half_extent.y + block_voxel_center_floor_y;
-                    const f32 instance_voxel_id_z = instance_half_extent.z + block_voxel_center_floor_z;
+                    const f32 object_relative_voxel_idx_x = object_half_extent.x + block_voxel_center_floor_x;
+                    const f32 object_relative_voxel_idx_y = object_half_extent.y + block_voxel_center_floor_y;
+                    const f32 object_relative_voxel_idx_z = object_half_extent.z + block_voxel_center_floor_z;
 
-                    const b32 in_x = instance_voxel_id_x >= 0.0f && instance_voxel_id_x < instance_extent.x;
-                    const b32 in_y = instance_voxel_id_y >= 0.0f && instance_voxel_id_y < instance_extent.y;
-                    const b32 in_z = instance_voxel_id_z >= 0.0f && instance_voxel_id_z < instance_extent.z;
+                    const b32 in_x = object_relative_voxel_idx_x >= 0.0f && object_relative_voxel_idx_x < object_extent.x;
+                    const b32 in_y = object_relative_voxel_idx_y >= 0.0f && object_relative_voxel_idx_y < object_extent.y;
+                    const b32 in_z = object_relative_voxel_idx_z >= 0.0f && object_relative_voxel_idx_z < object_extent.z;
 
                     if (in_x && in_y && in_z)
                     {
-                        const u32 instance_voxel_id = (u32)instance_voxel_id_z * (u32)instance_extent.x * (u32)instance_extent.y + (u32)instance_voxel_id_y * (u32)instance_extent.x + (u32)instance_voxel_id_x;
-                        const u32 instance_voxel_idx = instance_first_voxel_id + instance_voxel_id;
-                        const u32 instance_slot_idx = instance_voxel_idx / 32;
-                        const u32 instance_bit_idx = instance_voxel_idx % 32;
-                        const u32 instance_slot = p_voxel_buffer[instance_slot_idx];
-                        const u32 instance_bit = instance_slot & (1 << instance_bit_idx);
-                        if (instance_bit != 0)
+                        const u32 relative_cluster_idx_x = (u32)object_relative_voxel_idx_x / TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT;
+                        const u32 relative_cluster_idx_y = (u32)object_relative_voxel_idx_y / TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT;
+                        const u32 relative_cluster_idx_z = (u32)object_relative_voxel_idx_z / TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT;
+                        const u32 relative_cluster_idx
+                            = p_object->n_clusters_per_dim.x * p_object->n_clusters_per_dim.y * relative_cluster_idx_z
+                            + p_object->n_clusters_per_dim.x * relative_cluster_idx_y
+                            + relative_cluster_idx_x;
+
+                        const u32 cluster_idx = object_first_cluster_idx + relative_cluster_idx;
+                        const tg_size cluster_offset = (tg_size)cluster_idx * cluster_size;
+                        const tg_size cluster_offset_u32 = cluster_offset / sizeof(u32);
+                        const u32* p_voxel_cluster = &p_voxel_cluster_buffer[cluster_offset_u32];
+
+                        const u32 relative_voxel_idx_x = (u32)object_relative_voxel_idx_x & (TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT - 1); // modulo
+                        const u32 relative_voxel_idx_y = (u32)object_relative_voxel_idx_y & (TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT - 1);
+                        const u32 relative_voxel_idx_z = (u32)object_relative_voxel_idx_z & (TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT - 1);
+                        const u32 relative_voxel_idx
+                            = TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT * TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT * relative_voxel_idx_z
+                            + TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT * relative_voxel_idx_y
+                            + relative_voxel_idx_x;
+
+                        const u32 object_slot_idx = relative_voxel_idx / 32;
+                        const u32 object_bit_idx = relative_voxel_idx % 32;
+                        const u32 object_slot = p_voxel_cluster[object_slot_idx];
+                        const u32 object_bit = object_slot & (1 << object_bit_idx);
+                        if (object_bit != 0)
                         {
                             const u32 block_voxel_idx = (u32)(block_z * parent_extent.x * parent_extent.y + block_y * parent_extent.x + block_x);
                             const u32 block_slot_idx = block_voxel_idx / 32;
                             const u32 block_bit_idx = block_voxel_idx % 32;
                             const u32 block_bit = 1 << (block_bit_idx);
                             p_block_voxels[block_slot_idx] |= block_bit;
-                            if (p_data->instance_count == 0 || p_data->p_instance_ids[p_data->instance_count - 1] != instance_id)
+                            if (p_data->count == 0 || p_data->p_object_idcs[p_data->count - 1] != object_idx)
                             {
-                                TG_ASSERT(p_data->instance_count < sizeof(p_data->p_instance_ids) / sizeof(*p_data->p_instance_ids));
-                                p_data->p_instance_ids[p_data->instance_count++] = instance_id;
+                                TG_ASSERT(p_data->count < sizeof(p_data->p_object_idcs) / sizeof(*p_data->p_object_idcs));
+                                p_data->p_object_idcs[p_data->count] = object_idx;
+                                TG_ASSERT(cluster_idx <= TG_U16_MAX);
+                                p_data->p_clusters_idcs[p_data->count] = (u16)cluster_idx;
+                                p_data->count++;
                             }
                         }
                     }
@@ -203,14 +225,14 @@ static void tg__construct_leaf_node(
                     //
                     //const v3 block_voxel_min = tgm_v3_sub(block_voxel_center, span_v);
                     //const v3 block_voxel_max = tgm_v3_add(block_voxel_center, span_v);
-                    //const v3 instance_cell_first = tgm_v3_floor(block_voxel_min);
-                    //const v3 instance_cell_last = tgm_v3_floor(block_voxel_max);
+                    //const v3 object_cell_first = tgm_v3_floor(block_voxel_min);
+                    //const v3 object_cell_last = tgm_v3_floor(block_voxel_max);
                     //
-                    //for (f32 instance_z = instance_cell_first.z; instance_z <= instance_cell_last.z; instance_z++)
+                    //for (f32 object_z = object_cell_first.z; object_z <= object_cell_last.z; object_z++)
                     //{
-                    //    for (f32 instance_y = instance_cell_first.y; instance_y <= instance_cell_last.y; instance_y++)
+                    //    for (f32 object_y = object_cell_first.y; object_y <= object_cell_last.y; object_y++)
                     //    {
-                    //        for (f32 instance_z = instance_cell_first.z; instance_z <= instance_cell_last.z; instance_z++)
+                    //        for (f32 object_z = object_cell_first.z; object_z <= object_cell_last.z; object_z++)
                     //        {
                     //
                     //        }
@@ -223,14 +245,14 @@ static void tg__construct_leaf_node(
 }
 
 static void tg__construct_inner_node(
-    tg_svo*               p_svo,
-    tg_svo_inner_node*    p_parent,
-    v3                    parent_min,
-    v3                    parent_max,
-    const tg_instance*    p_instances,
-    u16                   instance_id_count,
-    u16*                  p_instance_ids,
-    const u32*            p_voxel_buffer)
+    tg_svo*                   p_svo,
+    tg_svo_inner_node*        p_parent,
+    v3                        parent_min,
+    v3                        parent_max,
+    const tg_voxel_object*    p_objects,
+    u16                       object_id_count,
+    u16*                      p_object_idcs,
+    const u32*                p_voxel_cluster_buffer)
 {
     TG_ASSERT((u32)(parent_max.x - parent_min.x) * (u32)(parent_max.y - parent_min.y) * (u32)(parent_max.z - parent_min.z) > TG_SVO_BLOCK_VOXEL_COUNT); // Otherwise, this should be a leaf!
     TG_ASSERT(parent_max.x - parent_min.x > 8.0f);
@@ -241,31 +263,31 @@ static void tg__construct_inner_node(
 
     u8 valid_mask = 0;
 
-    u16* p_instance_id_count_per_child = TG_NULL;
-    u16* p_instance_ids_per_child      = TG_NULL;
+    u16* p_object_id_count_per_child = TG_NULL;
+    u16* p_object_ids_per_child      = TG_NULL;
 
-    const tg_size instance_id_count_per_child_size = 8 * (tg_size)instance_id_count * sizeof(*p_instance_id_count_per_child);
-    const tg_size instance_ids_per_child_size      = 8 * (tg_size)instance_id_count * sizeof(*p_instance_ids_per_child);
+    const tg_size object_id_count_per_child_size = 8 * (tg_size)object_id_count * sizeof(*p_object_id_count_per_child);
+    const tg_size object_ids_per_child_size      = 8 * (tg_size)object_id_count * sizeof(*p_object_ids_per_child);
 
-    p_instance_id_count_per_child = TG_MALLOC_STACK(instance_id_count_per_child_size);
-    p_instance_ids_per_child      = TG_MALLOC_STACK(instance_ids_per_child_size);
+    p_object_id_count_per_child = TG_MALLOC_STACK(object_id_count_per_child_size);
+    p_object_ids_per_child      = TG_MALLOC_STACK(object_ids_per_child_size);
     
-    tg_memory_nullify(instance_id_count_per_child_size, p_instance_id_count_per_child);
+    tg_memory_nullify(object_id_count_per_child_size, p_object_id_count_per_child);
 #ifdef TG_DEBUG
-    tg_memory_nullify(instance_ids_per_child_size, p_instance_ids_per_child);
+    tg_memory_nullify(object_ids_per_child_size, p_object_ids_per_child);
 #endif
 
-    for (u32 instance_id_idx = 0; instance_id_idx < instance_id_count; instance_id_idx++)
+    for (u32 object_id_idx = 0; object_id_idx < object_id_count; object_id_idx++)
     {
-        const u16 instance_id = p_instance_ids[instance_id_idx];
-        const tg_instance* p_instance = &p_instances[instance_id];
-        const v3 instance_half_extent = p_instance->half_extent;
+        const u16 object_id = p_object_idcs[object_id_idx];
+        const tg_voxel_object* p_object = &p_objects[object_id];
+        const v3 object_half_extent = tgm_v3u_to_v3(tgm_v3u_mulu(p_object->n_clusters_per_dim, TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT / 2));
 
         // Instead of transforming the instance, we transform the block with the inverse of the
         // instance's model matrix, such that we can simply determine in which instance cell a
         // block's voxel center lies.
-        const m4 t = tgm_m4_translate(p_instance->translation);
-        const m4 r = tgm_m4_angle_axis(p_instance->angle_in_radians, p_instance->axis);
+        const m4 t = tgm_m4_translate(p_object->translation);
+        const m4 r = tgm_m4_angle_axis(p_object->angle_in_radians, p_object->axis);
         const m4 m = tgm_m4_transform_rt(r, t);
         const m4 invm = tgm_m4_inverse(m);
 
@@ -300,13 +322,13 @@ static void tg__construct_inner_node(
             p_child_corners_v3[6] = tgm_m4_mulv4(invm, p_child_corners_v4[6]).xyz;
             p_child_corners_v3[7] = tgm_m4_mulv4(invm, p_child_corners_v4[7]).xyz;
 
-            if (tg_intersect_aabb_obb_ignore_contact(tgm_v3_neg(instance_half_extent), instance_half_extent, p_child_corners_v3))
+            if (tg_intersect_aabb_obb_ignore_contact(tgm_v3_neg(object_half_extent), object_half_extent, p_child_corners_v3))
             {
                 valid_mask |= 1 << child_idx;
-                if (p_instance_id_count_per_child[child_idx] == 0
-                    || p_instance_ids_per_child[child_idx * instance_id_count + p_instance_id_count_per_child[child_idx] - 1] != instance_id)
+                if (p_object_id_count_per_child[child_idx] == 0
+                    || p_object_ids_per_child[child_idx * object_id_count + p_object_id_count_per_child[child_idx] - 1] != object_id)
                 {
-                    p_instance_ids_per_child[child_idx * instance_id_count + p_instance_id_count_per_child[child_idx]++] = instance_id;
+                    p_object_ids_per_child[child_idx * object_id_count + p_object_id_count_per_child[child_idx]++] = object_id;
                 }
             }
         }
@@ -354,10 +376,10 @@ static void tg__construct_inner_node(
                         (tg_svo_inner_node*)&p_child_nodes[child_node_offset],
                         child_min,
                         child_max,
-                        p_instances,
-                        p_instance_id_count_per_child[child_idx],
-                        &p_instance_ids_per_child[child_idx * instance_id_count],
-                        p_voxel_buffer);
+                        p_objects,
+                        p_object_id_count_per_child[child_idx],
+                        &p_object_ids_per_child[child_idx * object_id_count],
+                        p_voxel_cluster_buffer);
                 }
                 else
                 {
@@ -367,10 +389,10 @@ static void tg__construct_inner_node(
                         (tg_svo_leaf_node*)&p_child_nodes[child_node_offset],
                         child_min,
                         child_max,
-                        p_instances,
-                        p_instance_id_count_per_child[child_idx],
-                        &p_instance_ids_per_child[child_idx * instance_id_count],
-                        p_voxel_buffer);
+                        p_objects,
+                        p_object_id_count_per_child[child_idx],
+                        &p_object_ids_per_child[child_idx * object_id_count],
+                        p_voxel_cluster_buffer);
                 }
 
                 child_node_offset++;
@@ -378,18 +400,18 @@ static void tg__construct_inner_node(
         }
     }
 
-    TG_FREE_STACK(instance_ids_per_child_size);
-    TG_FREE_STACK(instance_id_count_per_child_size);
+    TG_FREE_STACK(object_ids_per_child_size);
+    TG_FREE_STACK(object_id_count_per_child_size);
 }
 
-void tg_svo_create(v3 svo_min, v3 svo_max, u32 instance_count, const tg_instance* p_instances, const u32* p_voxel_buffer, TG_OUT tg_svo* p_svo)
+void tg_svo_create(v3 svo_min, v3 svo_max, u32 object_count, const tg_voxel_object* p_objects, const u32* p_voxel_cluster_buffer, TG_OUT tg_svo* p_svo)
 {
     TG_ASSERT(svo_max.x - svo_min.x == (f32)TG_SVO_SIDE_LENGTH);
     TG_ASSERT(svo_max.y - svo_min.y == (f32)TG_SVO_SIDE_LENGTH);
     TG_ASSERT(svo_max.z - svo_min.z == (f32)TG_SVO_SIDE_LENGTH);
 
     // We store the instance count as an 16-bit unsigned integer and we use a for-loop below, which is why we have to subtract one
-    TG_ASSERT(instance_count <= TG_U16_MAX - 1);
+    TG_ASSERT(object_count <= TG_U16_MAX - 1);
 
     // TODO: chunked svo construction for infinite worlds
     p_svo->min = svo_min;
@@ -412,13 +434,13 @@ void tg_svo_create(v3 svo_min, v3 svo_max, u32 instance_count, const tg_instance
     p_svo->node_buffer_count++;
 
     tg_svo_inner_node* p_parent = (tg_svo_inner_node*)p_svo->p_node_buffer;
-    u16* p_instance_ids = TG_MALLOC_STACK(instance_count * sizeof(*p_instance_ids));
-    for (u16 i = 0; i < instance_count; i++)
+    u16* p_object_idcs = TG_MALLOC_STACK(object_count * sizeof(*p_object_idcs));
+    for (u16 i = 0; i < object_count; i++)
     {
-        p_instance_ids[i] = i;
+        p_object_idcs[i] = i;
     }
-    tg__construct_inner_node(p_svo, p_parent, svo_min, svo_max, p_instances, (u16)instance_count, p_instance_ids, p_voxel_buffer);
-    TG_FREE_STACK(instance_count * sizeof(*p_instance_ids));
+    tg__construct_inner_node(p_svo, p_parent, svo_min, svo_max, p_objects, (u16)object_count, p_object_idcs, p_voxel_cluster_buffer);
+    TG_FREE_STACK(object_count * sizeof(*p_object_idcs));
 }
 
 void tg_svo_destroy(tg_svo* p_svo)
@@ -530,7 +552,7 @@ b32 tg_svo_traverse(const tg_svo* p_svo, v3 ray_origin, v3 ray_direction, TG_OUT
 
                     const tg_svo_node* p_child_node = &p_svo->p_node_buffer[child_idx];
                     const tg_svo_leaf_node_data* p_data = &p_svo->p_leaf_node_data_buffer[p_child_node->leaf.data_pointer];
-                    if (p_data->instance_count != 0)
+                    if (p_data->count != 0)
                     {
                         // TRAVERESE BLOCK
 

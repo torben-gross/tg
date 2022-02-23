@@ -491,6 +491,16 @@ void tgvk_buffer_copy(VkDeviceSize size, tgvk_buffer* p_src, tgvk_buffer* p_dst)
     tgvk_command_buffer_end_and_submit(&p_global_graphics_command_buffers[thread_id]);
 }
 
+void tgvk_buffer_copy2(VkDeviceSize src_offset, VkDeviceSize dst_offset, VkDeviceSize size, tgvk_buffer* p_src, tgvk_buffer* p_dst)
+{
+    TG_ASSERT(size > 0);
+
+    const u32 thread_id = tgp_get_thread_id();
+    tgvk_command_buffer_begin(&p_global_graphics_command_buffers[thread_id], VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+    tgvk_cmd_copy_buffer2(&p_global_graphics_command_buffers[thread_id], src_offset, dst_offset, size, p_src, p_dst);
+    tgvk_command_buffer_end_and_submit(&p_global_graphics_command_buffers[thread_id]);
+}
+
 tgvk_buffer tgvk_buffer_create(VkDeviceSize size, VkBufferUsageFlags buffer_usage_flags, tgvk_memory_type memory_type TG_DEBUG_PARAM(u32 line) TG_DEBUG_PARAM(const char* p_filename))
 {
     TG_ASSERT(size > 0);
@@ -1010,9 +1020,9 @@ void tgvk_cmd_draw_indexed(tgvk_command_buffer* p_command_buffer, u32 index_coun
     vkCmdDrawIndexed(p_command_buffer->buffer, index_count, 1, 0, 0, 0);
 }
 
-void tgvk_cmd_draw_indexed_instanced(tgvk_command_buffer* p_command_buffer, u32 index_count, u32 instance_count)
+void tgvk_cmd_draw_indexed_instanced(tgvk_command_buffer* p_command_buffer, u32 index_count, u32 cluster_count)
 {
-    vkCmdDrawIndexed(p_command_buffer->buffer, index_count, instance_count, 0, 0, 0);
+    vkCmdDrawIndexed(p_command_buffer->buffer, index_count, cluster_count, 0, 0, 0);
 }
 
 void tgvk_cmd_transition_cube_map_layout(tgvk_command_buffer* p_command_buffer, tgvk_cube_map* p_cube_map, tgvk_image_layout_type src_type, tgvk_image_layout_type dst_type)
@@ -1825,7 +1835,7 @@ void tgvk_global_staging_buffer_release(void)
 #pragma warning(pop)
 }
 
-tg_size tgvk_global_stating_buffer_size(void)
+tg_size tgvk_global_staging_buffer_size(void)
 {
     return (tg_size)staging_buffer_size;
 }
@@ -3237,6 +3247,140 @@ tgvk_shader tgvk_shader_create_from_spirv(u32 size, const char* p_source)
 void tgvk_shader_destroy(tgvk_shader* p_shader)
 {
     vkDestroyShaderModule(device, p_shader->shader_module, TG_NULL);
+}
+
+
+
+void tgvk_staging_buffer_take(tg_size size, tgvk_buffer* p_dst, TG_OUT tgvk_staging_buffer* p_staging_buffer)
+{
+    TG_ASSERT(size > 0);
+    TG_ASSERT(p_dst != TG_NULL);
+    TG_ASSERT(p_staging_buffer != TG_NULL);
+    TG_ASSERT(p_staging_buffer->p_staging_buffer == TG_NULL); // Uninitialized
+
+    p_staging_buffer->p_staging_buffer = tgvk_global_staging_buffer_take(staging_buffer_size);
+    p_staging_buffer->size_to_copy = size;
+    p_staging_buffer->dst_offset = 0;
+    p_staging_buffer->p_dst = p_dst;
+    p_staging_buffer->copied_size = 0;
+    p_staging_buffer->filled_size = 0;
+}
+
+void tgvk_staging_buffer_take2(tg_size size, tg_size dst_offset, tgvk_buffer* p_dst, TG_OUT tgvk_staging_buffer* p_staging_buffer)
+{
+    TG_ASSERT(size > 0);
+    TG_ASSERT(p_dst != TG_NULL);
+    TG_ASSERT(p_staging_buffer != TG_NULL);
+    TG_ASSERT(p_staging_buffer->p_staging_buffer == TG_NULL); // Uninitialized
+
+    p_staging_buffer->p_staging_buffer = tgvk_global_staging_buffer_take(staging_buffer_size);
+    p_staging_buffer->size_to_copy = size;
+    p_staging_buffer->dst_offset = dst_offset;
+    p_staging_buffer->p_dst = p_dst;
+    p_staging_buffer->copied_size = 0;
+    p_staging_buffer->filled_size = 0;
+}
+
+void tgvk_staging_buffer_reinit(tgvk_staging_buffer* p_staging_buffer, tg_size size, tgvk_buffer* p_dst)
+{
+    TG_ASSERT(p_staging_buffer != TG_NULL);
+    TG_ASSERT(p_staging_buffer->p_staging_buffer != TG_NULL);
+    TG_ASSERT(p_staging_buffer->filled_size == 0);
+    TG_ASSERT(p_staging_buffer->copied_size == p_staging_buffer->size_to_copy);
+
+    p_staging_buffer->size_to_copy = size;
+    p_staging_buffer->p_dst = p_dst;
+    p_staging_buffer->copied_size = 0;
+    p_staging_buffer->filled_size = 0;
+}
+
+void tgvk_staging_buffer_reinit2(tgvk_staging_buffer* p_staging_buffer, tg_size size, tg_size dst_offset, tgvk_buffer* p_dst)
+{
+    TG_ASSERT(p_staging_buffer != TG_NULL);
+    TG_ASSERT(p_staging_buffer->p_staging_buffer != TG_NULL);
+    TG_ASSERT(p_staging_buffer->filled_size == 0);
+    TG_ASSERT(p_staging_buffer->copied_size == p_staging_buffer->size_to_copy);
+
+    p_staging_buffer->size_to_copy = size;
+    p_staging_buffer->dst_offset = dst_offset;
+    p_staging_buffer->p_dst = p_dst;
+    p_staging_buffer->copied_size = 0;
+    p_staging_buffer->filled_size = 0;
+}
+
+void tgvk_staging_buffer_push(tgvk_staging_buffer* p_staging_buffer, tg_size size, const void* p_data)
+{
+    TG_ASSERT(p_staging_buffer != TG_NULL);
+    TG_ASSERT(p_staging_buffer->p_staging_buffer != TG_NULL);
+
+    tg_size processed_size = 0;
+    while (processed_size < size)
+    {
+        const tg_size fill_size_0 = staging_buffer_size - p_staging_buffer->filled_size;
+        const tg_size fill_size_1 = size - processed_size;
+        const tg_size fill_size = TG_MIN(fill_size_0, fill_size_1);
+
+        TG_ASSERT(fill_size > 0 && p_staging_buffer->copied_size + p_staging_buffer->filled_size + fill_size <= p_staging_buffer->size_to_copy);
+
+        tg_memcpy(fill_size, (u8*)p_data + processed_size, p_staging_buffer->p_staging_buffer->memory.p_mapped_device_memory);
+        processed_size += fill_size;
+
+        p_staging_buffer->filled_size += fill_size;
+        if (p_staging_buffer->filled_size == staging_buffer_size || p_staging_buffer->copied_size + p_staging_buffer->filled_size == p_staging_buffer->size_to_copy)
+        {
+            tgvk_buffer_copy2(0, p_staging_buffer->dst_offset + p_staging_buffer->copied_size, p_staging_buffer->filled_size, p_staging_buffer->p_staging_buffer, p_staging_buffer->p_dst);
+            p_staging_buffer->copied_size += p_staging_buffer->filled_size;
+            p_staging_buffer->filled_size = 0;
+        }
+    }
+    TG_ASSERT(processed_size == size);
+}
+
+void tgvk_staging_buffer_push_u8(tgvk_staging_buffer* p_staging_buffer, u8 v)
+{
+    TG_ASSERT(p_staging_buffer != TG_NULL);
+    TG_ASSERT(p_staging_buffer->p_staging_buffer != TG_NULL);
+    TG_ASSERT(p_staging_buffer->filled_size + sizeof(u8) <= staging_buffer_size); // Something is not aligned properly
+    TG_ASSERT(p_staging_buffer->copied_size + p_staging_buffer->filled_size + sizeof(u8) <= p_staging_buffer->size_to_copy); // The total size is already copied
+
+    *(u8*)((u8*)p_staging_buffer->p_staging_buffer->memory.p_mapped_device_memory + p_staging_buffer->filled_size) = v;
+    p_staging_buffer->filled_size += sizeof(u8);
+    if (p_staging_buffer->filled_size == staging_buffer_size || p_staging_buffer->copied_size + p_staging_buffer->filled_size == p_staging_buffer->size_to_copy)
+    {
+        tgvk_buffer_copy2(0, p_staging_buffer->dst_offset + p_staging_buffer->copied_size, p_staging_buffer->filled_size, p_staging_buffer->p_staging_buffer, p_staging_buffer->p_dst);
+        p_staging_buffer->copied_size += p_staging_buffer->filled_size;
+        p_staging_buffer->filled_size = 0;
+    }
+}
+
+void tgvk_staging_buffer_push_u32(tgvk_staging_buffer* p_staging_buffer, u32 v)
+{
+    TG_ASSERT(p_staging_buffer != TG_NULL);
+    TG_ASSERT(p_staging_buffer->p_staging_buffer != TG_NULL);
+    TG_ASSERT(p_staging_buffer->filled_size + sizeof(u32) <= staging_buffer_size); // Something is not aligned properly
+    TG_ASSERT(p_staging_buffer->copied_size + p_staging_buffer->filled_size + sizeof(u32) <= p_staging_buffer->size_to_copy); // The total size is already copied
+
+    *(u32*)((u8*)p_staging_buffer->p_staging_buffer->memory.p_mapped_device_memory + p_staging_buffer->filled_size) = v;
+    p_staging_buffer->filled_size += sizeof(u32);
+    if (p_staging_buffer->filled_size == staging_buffer_size || p_staging_buffer->copied_size + p_staging_buffer->filled_size == p_staging_buffer->size_to_copy)
+    {
+        tgvk_buffer_copy2(0, p_staging_buffer->dst_offset + p_staging_buffer->copied_size, p_staging_buffer->filled_size, p_staging_buffer->p_staging_buffer, p_staging_buffer->p_dst);
+        p_staging_buffer->copied_size += p_staging_buffer->filled_size;
+        p_staging_buffer->filled_size = 0;
+    }
+}
+
+void tgvk_staging_buffer_release(tgvk_staging_buffer* p_staging_buffer)
+{
+    TG_ASSERT(p_staging_buffer != TG_NULL);
+    TG_ASSERT(p_staging_buffer->p_staging_buffer != TG_NULL);
+    TG_ASSERT(p_staging_buffer->filled_size == 0);
+    TG_ASSERT(p_staging_buffer->copied_size == p_staging_buffer->size_to_copy);
+
+    tgvk_global_staging_buffer_release();
+#ifdef TG_DEBUG
+    *p_staging_buffer = (tgvk_staging_buffer){ 0 };
+#endif
 }
 
 

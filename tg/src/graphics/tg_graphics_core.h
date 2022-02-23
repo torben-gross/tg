@@ -15,6 +15,13 @@
 #define TG_MAX_SHADER_INPUTS              16
 #define TG_MAX_SHADER_OUTPUTS             16
 
+#define TG_PRIMITIVE_IDX_N_BITS                  9
+#define TG_N_PRIMITIVES_PER_CLUSTER              (1 << TG_PRIMITIVE_IDX_N_BITS) // 512
+#define TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT    8
+#define TG_CLUSTERS_IDX_N_BITS                   31
+#define TG_N_CLUSTERS                            (1 << TG_CLUSTERS_IDX_N_BITS) // 2,147,483,648
+#define TG_CLUSTER_SIZE(n_bits_per_element)      (TG_N_PRIMITIVES_PER_CLUSTER / 8 * (n_bits_per_element))
+
 #define TG_IMAGE_MAX_MIP_LEVELS(w, h)     ((u32)tgm_f32_log2((f32)tgm_u32_max((u32)w, (u32)h)) + 1)
 
 #define TG_CAMERA_LEFT(camera)            (tgm_m4_mulv4(tgm_m4_inverse(tgm_m4_euler((camera).pitch, (camera).yaw, (camera).roll)), (v4){ -1.0f,  0.0f,  0.0f,  0.0f }).xyz)
@@ -123,14 +130,23 @@ typedef struct tg_camera
 	};
 } tg_camera;
 
-typedef struct tg_instance
+// VOXEL:    9 (          512) - We want a cluster to contain 8^3 = 512 voxels, so we need 9 bits to represent 2^9 = 512 voxels.
+// DEPTH:   24 (          ...) - We want 24 bits for depth
+// CLUSTER: 31 (2,147,483,648) - We retain 64 - 9 - 24 = 31 bits for 2^31 = 2147483648 possible clusters
+// TODO: We may want to extract some bits for flags, for instance voxel/triangle flag
+typedef struct tg_voxel_cluster
 {
-	v3     half_extent;
-	u32    first_voxel_id;
+	u32    p_data[TG_N_PRIMITIVES_PER_CLUSTER / 32];
+} tg_voxel_cluster;
+
+typedef struct tg_voxel_object
+{
+	v3u    n_clusters_per_dim;
+	u32    first_cluster_idx; // Note: We have 5 unused bits in here to flag something
 	v3     translation;
 	f32    angle_in_radians;
 	v3     axis;
-} tg_instance;
+} tg_voxel_object;
 
 
 

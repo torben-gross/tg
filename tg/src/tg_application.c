@@ -68,36 +68,36 @@ static void tg__scene_create(void)
     scene.camera.persp.f = 1000.0f;
     tg_input_get_mouse_position(&scene.last_mouse_x, &scene.last_mouse_y);
 
-    tg_raytracer_create(&scene.camera, 64, &scene.raytracer);
-    tg_raytracer_create_instance(&scene.raytracer, 0.0f, -64.0f, 0.0f, 128, 32, 128);
-    tg_raytracer_create_instance(&scene.raytracer, 128.0f, 0.0f, 0.0f, 128, 64, 32);
+    tg_raytracer_create(&scene.camera, 64, 8192, &scene.raytracer);
+    tg_raytracer_create_object(&scene.raytracer, (v3) { 0.0f, -64.0f, 0.0f }, (v3u) { 128, 32, 128 });
+    tg_raytracer_create_object(&scene.raytracer, (v3) { 128.0f, 0.0f, 0.0f }, (v3u) { 128, 64, 32 });
     for (u32 i = 0; i < 13; i++)
     {
         const f32 x = (f32)i * 35.0f - 256.0f;
-        tg_raytracer_create_instance(&scene.raytracer, x, -16.0f, -64.0f, 32, 32, 32);
+        tg_raytracer_create_object(&scene.raytracer, (v3) { x, -16.0f, -64.0f }, (v3u) { 32, 32, 32 });
     }
     for (u32 i = 0; i < 13; i++)
     {
         const f32 x = (f32)i * 35.0f - 256.0f;
-        tg_raytracer_create_instance(&scene.raytracer, x, 9.0f, -96.0f, 32, 32, 32);
+        tg_raytracer_create_object(&scene.raytracer, (v3) { x, 9.0f, -96.0f }, (v3u) { 32, 32, 32 });
     }
     for (u32 i = 0; i < 13; i++)
     {
         const f32 x = (f32)i * 35.0f - 256.0f;
-        tg_raytracer_create_instance(&scene.raytracer, x - 6.0f, 100.0f, -70.0f, 32, 32, 32);
+        tg_raytracer_create_object(&scene.raytracer, (v3) { x - 6.0f, 100.0f, -70.0f }, (v3u) { 32, 32, 32 });
     }
-    tg_raytracer_create_instance(&scene.raytracer, -32.0f, 64.0f, 16.0f, 32, 32, 32);
+    tg_raytracer_create_object(&scene.raytracer, (v3) { -32.0f, 64.0f, 16.0f }, (v3u) { 32, 32, 32 });
     tg_raytracer_color_lut_set(&scene.raytracer, 0, 1.0f, 0.0f, 0.0f);
     tg_raytracer_color_lut_set(&scene.raytracer, 1, 0.0f, 1.0f, 0.0f);
     tg_raytracer_color_lut_set(&scene.raytracer, 2, 0.0f, 0.0f, 1.0f);
     for (u32 i = 3; i < 256; i++)
     {
-        u32 r_u32 = tgm_u32_murmur_hash_3(i);
-        u32 g_u32 = tgm_u32_murmur_hash_3(r_u32);
-        u32 b_u32 = tgm_u32_murmur_hash_3(g_u32);
-        f32 r = r_u32 / (f32)TG_U32_MAX;
-        f32 g = g_u32 / (f32)TG_U32_MAX;
-        f32 b = b_u32 / (f32)TG_U32_MAX;
+        const u32 r_u32 = tgm_u32_murmur_hash_3(i);
+        const u32 g_u32 = tgm_u32_murmur_hash_3(r_u32);
+        const u32 b_u32 = tgm_u32_murmur_hash_3(g_u32);
+        const f32 r = r_u32 / (f32)TG_U32_MAX;
+        const f32 g = g_u32 / (f32)TG_U32_MAX;
+        const f32 b = b_u32 / (f32)TG_U32_MAX;
         tg_raytracer_color_lut_set(&scene.raytracer, (u8)i, r, g, b);
     }
 

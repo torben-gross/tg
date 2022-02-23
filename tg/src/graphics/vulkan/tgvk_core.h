@@ -277,6 +277,16 @@ typedef struct tgvk_sampler_create_info
     tg_image_address_mode    address_mode_w;
 } tgvk_sampler_create_info;
 
+typedef struct tgvk_staging_buffer
+{
+    tgvk_buffer*    p_staging_buffer;
+    tg_size         size_to_copy;     // The number of bytes to copy in total
+    tg_size         dst_offset;       // The offset in bytes into the destination buffer
+    tgvk_buffer*    p_dst;
+    tg_size         copied_size;      // The total number of bytes copied into the destination buffer
+    tg_size         filled_size;      // The number of bytes currently filled into the staging buffer
+} tgvk_staging_buffer;
+
 typedef struct tgvk_surface
 {
     VkSurfaceKHR          surface;
@@ -302,6 +312,7 @@ tgvk_buffer                     screen_quad_uvs_vbo;
 
 
 void                    tgvk_buffer_copy(VkDeviceSize size, tgvk_buffer* p_src, tgvk_buffer* p_dst);
+void                    tgvk_buffer_copy2(VkDeviceSize src_offset, VkDeviceSize dst_offset, VkDeviceSize size, tgvk_buffer* p_src, tgvk_buffer* p_dst);
 tgvk_buffer             tgvk_buffer_create(VkDeviceSize size, VkBufferUsageFlags buffer_usage_flags, tgvk_memory_type memory_type TG_DEBUG_PARAM(u32 line) TG_DEBUG_PARAM(const char* p_filename));
 void                    tgvk_buffer_destroy(tgvk_buffer* p_buffer);
 
@@ -327,7 +338,7 @@ void                    tgvk_cmd_copy_color_image_to_buffer(tgvk_command_buffer*
 void                    tgvk_cmd_copy_depth_image_pixel_to_buffer(tgvk_command_buffer* p_command_buffer, tgvk_image* p_source, tgvk_buffer* p_destination, u32 x, u32 y);
 void                    tgvk_cmd_copy_image_3d_to_buffer(tgvk_command_buffer* p_command_buffer, tgvk_image_3d* p_source, tgvk_buffer* p_destination);
 void                    tgvk_cmd_draw_indexed(tgvk_command_buffer* p_command_buffer, u32 index_count);
-void                    tgvk_cmd_draw_indexed_instanced(tgvk_command_buffer* p_command_buffer, u32 index_count, u32 instance_count);
+void                    tgvk_cmd_draw_indexed_instanced(tgvk_command_buffer* p_command_buffer, u32 index_count, u32 cluster_count);
 void                    tgvk_cmd_transition_cube_map_layout(tgvk_command_buffer* p_command_buffer, tgvk_cube_map* p_cube_map, tgvk_image_layout_type src_type, tgvk_image_layout_type dst_type);
 void                    tgvk_cmd_transition_cube_map_layout2(tgvk_command_buffer* p_command_buffer, tgvk_cube_map* p_cube_map, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask, VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags src_stage_bits, VkPipelineStageFlags dst_stage_bits);
 void                    tgvk_cmd_transition_image_layout(tgvk_command_buffer* p_command_buffer, tgvk_image* p_image, tgvk_image_layout_type src_type, tgvk_image_layout_type dst_type);
@@ -382,7 +393,7 @@ b32                     tgvk_get_physical_device_image_format_properties(VkForma
 
 tgvk_buffer*            tgvk_global_staging_buffer_take(VkDeviceSize size);
 void                    tgvk_global_staging_buffer_release(void);
-tg_size                 tgvk_global_stating_buffer_size(void);
+tg_size                 tgvk_global_staging_buffer_size(void);
 
 tgvk_image              tgvk_image_create(tgvk_image_type_flags type_flags, u32 width, u32 height, VkFormat format, const tgvk_sampler_create_info* p_sampler_create_info TG_DEBUG_PARAM(u32 line) TG_DEBUG_PARAM(const char* p_filename));
 tgvk_image              tgvk_image_create2(tgvk_image_type type, const char* p_filename, const tgvk_sampler_create_info* p_sampler_create_info TG_DEBUG_PARAM(u32 line) TG_DEBUG_PARAM(const char* p_filename2));
@@ -421,6 +432,15 @@ tgvk_shader             tgvk_shader_create(const char* p_filename);
 tgvk_shader             tgvk_shader_create_from_glsl(tg_shader_type type, const char* p_source);
 tgvk_shader             tgvk_shader_create_from_spirv(u32 size, const char* p_source);
 void                    tgvk_shader_destroy(tgvk_shader* p_shader);
+
+void                    tgvk_staging_buffer_take(tg_size size, tgvk_buffer* p_dst, TG_OUT tgvk_staging_buffer* p_staging_buffer);
+void                    tgvk_staging_buffer_take2(tg_size size, tg_size dst_offset, tgvk_buffer* p_dst, TG_OUT tgvk_staging_buffer* p_staging_buffer);
+void                    tgvk_staging_buffer_reinit(tgvk_staging_buffer* p_staging_buffer, tg_size size, tgvk_buffer* p_dst);
+void                    tgvk_staging_buffer_reinit2(tgvk_staging_buffer* p_staging_buffer, tg_size size, tg_size dst_offset, tgvk_buffer* p_dst);
+void                    tgvk_staging_buffer_push(tgvk_staging_buffer* p_staging_buffer, tg_size size, const void* p_data);
+void                    tgvk_staging_buffer_push_u8(tgvk_staging_buffer* p_staging_buffer, u8 v);
+void                    tgvk_staging_buffer_push_u32(tgvk_staging_buffer* p_staging_buffer, u32 v);
+void                    tgvk_staging_buffer_release(tgvk_staging_buffer* p_staging_buffer);
 
 #endif
 

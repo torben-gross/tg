@@ -7,16 +7,30 @@
 
 
 
+typedef struct tg_raytracer_scene
+{
+    u32                 object_capacity;
+    u32                 object_count;
+    tg_voxel_object*    p_objects;
+
+    u32                 cluster_capacity;
+    u32                 cluster_count;
+    u32*                p_voxel_cluster_data;
+    
+    tg_svo              svo;
+} tg_raytracer_scene;
+
 typedef struct tg_raytracer_buffers
 {
-    tgvk_buffer            instance_id_vbo;
+    tgvk_buffer            idx_vbo;                         // Mainly used for the indices of the clusters during instanced rendering for look-up. Also used for debug instanced rendering
     tgvk_buffer            cube_ibo;
     tgvk_buffer            cube_vbo;
 
-    tgvk_buffer            instance_data_ssbo;
-    tgvk_buffer            voxel_data_ssbo;
-    tgvk_buffer            color_lut_id_ssbo;
-    tgvk_buffer            color_lut_ssbo;
+    tgvk_buffer            cluster_idx_to_object_idx_ssbo;  // [cluster idx]             Maps cluster idx to its object idx
+    tgvk_buffer            object_data_ssbo;                // [object idx]              Metrics and first cluster idx
+    tgvk_buffer            object_color_lut_ssbo;           // [object idx]              Color LUT
+    tgvk_buffer            voxel_cluster_ssbo;              // [cluster idx + voxel idx] Cluster of voxels            (1 bit per voxel)
+    tgvk_buffer            color_lut_idx_cluster_ssbo;      // [cluster idx + voxel idx] Cluster of color LUT indices (8 bit per voxel)
 
     tgvk_buffer            svo_ssbo;
     tgvk_buffer            svo_nodes_ssbo;
@@ -31,15 +45,6 @@ typedef struct tg_raytracer_buffers
     tgvk_buffer            debug_matrices_ssbo;
     tgvk_buffer            debug_colors_ssbo;
 } tg_raytracer_buffers;
-
-typedef struct tg_raytracer_scene
-{
-    u32             capacity;
-    u32             count;
-    tg_instance*    p_instances;
-    u32*            p_voxel_data; // TGVK_MAX_VOXEL_BUFFER_SIZE bytes
-    tg_svo          svo;
-} tg_raytracer_scene;
 
 typedef struct tg_raytracer_visibility_pass
 {
@@ -121,9 +126,9 @@ typedef struct tg_raytracer
 
 
 
-void    tg_raytracer_create(const tg_camera* p_camera, u32 max_instance_count, TG_OUT tg_raytracer* p_raytracer);
+void    tg_raytracer_create(const tg_camera* p_camera, u32 max_n_instances, u32 max_n_clusters, TG_OUT tg_raytracer* p_raytracer);
 void    tg_raytracer_destroy(tg_raytracer* p_raytracer);
-void    tg_raytracer_create_instance(tg_raytracer* p_raytracer, f32 center_x, f32 center_y, f32 center_z, u32 grid_width, u32 grid_height, u32 grid_depth);
+void    tg_raytracer_create_object(tg_raytracer* p_raytracer, v3 center, v3u extent);
 void    tg_raytracer_push_debug_cuboid(tg_raytracer* p_raytracer, m4 transformation_matrix, v3 color); // Original cube's extent is 1^3 and position is centered at origin
 void    tg_raytracer_push_debug_line(tg_raytracer* p_raytracer, v3 src, v3 dst, v3 color);
 void    tg_raytracer_color_lut_set(tg_raytracer* p_raytracer, u8 index, f32 r, f32 g, f32 b);
