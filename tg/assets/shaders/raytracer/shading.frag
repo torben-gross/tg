@@ -203,25 +203,25 @@ void main()
 
 
         // Visualize depth
-        //out_color = v4(v3(min(1.0, 8.0 * depth_24b)), 1.0);
+        out_color = v4(v3(min(1.0, 8.0 * depth_24b)), 1.0);
 
-        // Visualize instance ID
-        //u32 instance_id_hash0 = tg_hash_u32(instance_id_10b);
-        //u32 instance_id_hash1 = tg_hash_u32(instance_id_hash0);
-        //u32 instance_id_hash2 = tg_hash_u32(instance_id_hash1);
-        //f32 instance_id_r = f32(instance_id_hash0) / 4294967295.0;
-        //f32 instance_id_g = f32(instance_id_hash1) / 4294967295.0;
-        //f32 instance_id_b = f32(instance_id_hash2) / 4294967295.0;
-        //out_color = v4(instance_id_r, instance_id_g, instance_id_b, 1.0);
+        // Visualize cluster idx
+        //u32 cluster_idx_hash0 = tg_hash_u32(cluster_idx_31b);
+        //u32 cluster_idx_hash1 = tg_hash_u32(cluster_idx_hash0);
+        //u32 cluster_idx_hash2 = tg_hash_u32(cluster_idx_hash1);
+        //f32 cluster_idx_r = f32(cluster_idx_hash0) / 4294967295.0;
+        //f32 cluster_idx_g = f32(cluster_idx_hash1) / 4294967295.0;
+        //f32 cluster_idx_b = f32(cluster_idx_hash2) / 4294967295.0;
+        //out_color = v4(cluster_idx_r, cluster_idx_g, cluster_idx_b, 1.0);
 
-        // Visualize voxel ID
-        u32 voxel_idx_hash0 = tg_hash_u32(voxel_idx_9b);
-        u32 voxel_idx_hash1 = tg_hash_u32(voxel_idx_hash0);
-        u32 voxel_idx_hash2 = tg_hash_u32(voxel_idx_hash1);
-        f32 voxel_idx_r = f32(voxel_idx_hash0) / 4294967295.0;
-        f32 voxel_idx_g = f32(voxel_idx_hash1) / 4294967295.0;
-        f32 voxel_idx_b = f32(voxel_idx_hash2) / 4294967295.0;
-        out_color = v4(voxel_idx_r, voxel_idx_g, voxel_idx_b, 1.0);
+        // Visualize voxel idx
+        //u32 voxel_idx_hash0 = tg_hash_u32(voxel_idx_9b);
+        //u32 voxel_idx_hash1 = tg_hash_u32(voxel_idx_hash0);
+        //u32 voxel_idx_hash2 = tg_hash_u32(voxel_idx_hash1);
+        //f32 voxel_idx_r = f32(voxel_idx_hash0) / 4294967295.0;
+        //f32 voxel_idx_g = f32(voxel_idx_hash1) / 4294967295.0;
+        //f32 voxel_idx_b = f32(voxel_idx_hash2) / 4294967295.0;
+        //out_color = v4(voxel_idx_r, voxel_idx_g, voxel_idx_b, 1.0);
         
         // Visualize color LUT ID
         //f32 color_lut_id_normalized = f32(color_lut_id) / 255.0;

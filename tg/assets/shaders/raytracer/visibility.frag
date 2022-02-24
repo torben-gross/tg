@@ -57,27 +57,39 @@ void main()
         fx);
     v3 ray_direction_ms = normalize((ray_direction_ws2ms_mat * v4(ray_direction_ws, 0.0)).xyz);
 	
-	f32 half_extent_x = f32(object_data.n_clusters_per_dim.x * TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT / 2);
-	f32 half_extent_y = f32(object_data.n_clusters_per_dim.y * TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT / 2);
-	f32 half_extent_z = f32(object_data.n_clusters_per_dim.z * TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT / 2);
+	
+	
+	u32 relative_cluster_idx = v_cluster_idx - object_data.first_cluster_idx;
+	u32 relative_cluster_idx_x = relative_cluster_idx % object_data.n_clusters_per_dim.x;
+	u32 relative_cluster_idx_y = (relative_cluster_idx / object_data.n_clusters_per_dim.x) % object_data.n_clusters_per_dim.y;
+	u32 relative_cluster_idx_z = relative_cluster_idx / (object_data.n_clusters_per_dim.x * object_data.n_clusters_per_dim.y); // Note: We don't need modulo here, because z doesn't loop
+	
+	f32 relative_cluster_offset_x = f32(relative_cluster_idx_x * TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT);
+	f32 relative_cluster_offset_y = f32(relative_cluster_idx_y * TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT);
+	f32 relative_cluster_offset_z = f32(relative_cluster_idx_z * TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT);
+	v3 relative_cluster_offset = v3(relative_cluster_offset_x, relative_cluster_offset_y, relative_cluster_offset_z);
+	
+	v3 cluster_extent = v3(f32(TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT));
+	v3 cluster_half_extent = cluster_extent * v3(0.5);
+	v3 n_clusters_per_dim = v3(f32(object_data.n_clusters_per_dim.x), f32(object_data.n_clusters_per_dim.y), f32(object_data.n_clusters_per_dim.z));
+	v3 object_half_extent = cluster_half_extent * n_clusters_per_dim;
+	
+	v3 relative_cluster_min = -object_half_extent + relative_cluster_offset + 0.5;
+	v3 relative_cluster_max = relative_cluster_min + cluster_extent - 1.0;
 
-    v3 aabb_max = v3(half_extent_x, half_extent_y, half_extent_z);
-    v3 aabb_min = -aabb_max;
+
 
     f32 d = 1.0;
     u32 voxel_idx = 0;
     f32 enter, exit;
-    if (tg_intersect_ray_aabb(ray_origin_ms, ray_direction_ms, aabb_min, aabb_max, enter, exit))
+    if (tg_intersect_ray_aabb(ray_origin_ms, ray_direction_ms, relative_cluster_min, relative_cluster_max, enter, exit))
     {
-		// TODO: remove
-		d = d / camera_ubo.far;
-		voxel_idx = 111;
+		d = enter / camera_ubo.far;
 		
-		
-        //// supercover
-        //// https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.42.3443&rep=rep1&type=pdf
-        //
-        //v3 hit = t_aabb > 0.0 ? r.o + t_aabb * r.d : r.o;
+        // supercover
+        // https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.42.3443&rep=rep1&type=pdf
+        
+        //v3 hit = t_aabb > 0.0 ? ray_origin + t_aabb * ray_direction : ray_origin;
         //v3 xyz = clamp(floor(hit), aabb_min, aabb_max - v3(1.0));
 		//
         //hit += aabb_max;

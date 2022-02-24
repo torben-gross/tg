@@ -590,10 +590,10 @@ void tg_raytracer_create(const tg_camera* p_camera, u32 max_n_instances, u32 max
 
 
     p_raytracer->scene.object_capacity      = max_n_instances;
-    p_raytracer->scene.object_count         = 0;
+    p_raytracer->scene.n_objects         = 0;
     p_raytracer->scene.p_objects            = TG_MALLOC((tg_size)max_n_instances * sizeof(*p_raytracer->scene.p_objects));
     p_raytracer->scene.cluster_capacity     = max_n_clusters;
-    p_raytracer->scene.cluster_count        = 0;
+    p_raytracer->scene.n_clusters        = 0;
     p_raytracer->scene.p_voxel_cluster_data = TG_MALLOC((tg_size)max_n_clusters * (tg_size)TGVK_VOXEL_CLUSTER_SIZE);
 
     p_raytracer->debug_pass.capacity = (1 << 14);
@@ -622,12 +622,14 @@ void tg_raytracer_create_object(tg_raytracer* p_raytracer, v3 center, v3u extent
     TG_ASSERT(extent.x % TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT == 0);
     TG_ASSERT(extent.y % TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT == 0);
     TG_ASSERT(extent.z % TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT == 0);
+    TG_ASSERT(p_raytracer->scene.n_objects < p_raytracer->scene.object_capacity);
 
-    const u32 object_idx = p_raytracer->scene.object_count++;
+    const u32 object_idx = p_raytracer->scene.n_objects++;
     tg_voxel_object* p_object = &p_raytracer->scene.p_objects[object_idx];
     p_object->n_clusters_per_dim = (v3u){ extent.x / 8, extent.y / 8, extent.z / 8 };
     const u32 n_clusters = p_object->n_clusters_per_dim.x * p_object->n_clusters_per_dim.y * p_object->n_clusters_per_dim.z;
-    p_raytracer->scene.cluster_count += n_clusters;
+    TG_ASSERT(p_raytracer->scene.n_clusters + n_clusters <= p_raytracer->scene.cluster_capacity);
+    p_raytracer->scene.n_clusters += n_clusters;
 
     if (object_idx == 0)
     {
@@ -842,7 +844,7 @@ void tg_raytracer_color_lut_set(tg_raytracer* p_raytracer, u8 index, f32 r, f32 
 void tg_raytracer_render(tg_raytracer* p_raytracer)
 {
     TG_ASSERT(p_raytracer);
-    TG_ASSERT(p_raytracer->scene.object_count > 0);
+    TG_ASSERT(p_raytracer->scene.n_objects > 0);
 
     tg_view_projection_ubo* p_view_projection_ubo = p_raytracer->buffers.view_projection_ubo.memory.p_mapped_device_memory;
     tg_camera_ubo*          p_camera_ubo          = p_raytracer->buffers.camera_ubo.memory.p_mapped_device_memory;
@@ -893,7 +895,7 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
         // https://luebke.us/publications/eg09.pdf
         const v3 extent_min = { -512.0f, -512.0f, -512.0f };
         const v3 extent_max = {  512.0f,  512.0f,  512.0f };
-        tg_svo_create(extent_min, extent_max, p_raytracer->scene.object_count, p_raytracer->scene.p_objects, p_raytracer->scene.p_voxel_cluster_data, p_svo);
+        tg_svo_create(extent_min, extent_max, p_raytracer->scene.n_objects, p_raytracer->scene.p_objects, p_raytracer->scene.p_voxel_cluster_data, p_svo);
         //tg_svo_destroy(&svo);
 
         const tg_size svo_ssbo_size                = 2 * sizeof(v4);
@@ -994,7 +996,7 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
         tgvk_descriptor_set_update_uniform_buffer(p_raytracer->visibility_pass.descriptor_set.set, &p_raytracer->buffers.camera_ubo,                     5);
 
         vkCmdBindDescriptorSets(p_raytracer->visibility_pass.command_buffer.buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_raytracer->visibility_pass.graphics_pipeline.layout.pipeline_layout, 0, 1, &p_raytracer->visibility_pass.descriptor_set.set, 0, TG_NULL);
-        tgvk_cmd_draw_indexed_instanced(&p_raytracer->visibility_pass.command_buffer, 6 * 6, p_raytracer->scene.cluster_count); // TODO: triangle fans for fewer indices?
+        tgvk_cmd_draw_indexed_instanced(&p_raytracer->visibility_pass.command_buffer, 6 * 6, p_raytracer->scene.n_clusters); // TODO: triangle fans for fewer indices?
 
         // TODO look at below
         //vkCmdExecuteCommands(p_raytracer->geometry_pass.command_buffer.buffer, p_raytracer->deferred_command_buffer_count, p_raytracer->p_deferred_command_buffers);
@@ -1071,7 +1073,7 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
     {
         if (1)
         {
-            for (u32 object_idx = 0; object_idx < p_raytracer->scene.object_count; object_idx++)
+            for (u32 object_idx = 0; object_idx < p_raytracer->scene.n_objects; object_idx++)
             {
                 const tg_voxel_object* p_object = &p_raytracer->scene.p_objects[object_idx];
                 const v3 scale = tgm_v3u_to_v3(tgm_v3u_mulu(p_object->n_clusters_per_dim, TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT));
@@ -1082,7 +1084,7 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
                 tg_raytracer_push_debug_cuboid(p_raytracer, model_matrix, (v3) { 1.0f, 1.0f, 0.0f });
             }
         }
-        if (1)
+        if (0)
         {
             tg__push_debug_svo_node(p_raytracer, &p_svo->p_node_buffer[0].inner, p_svo->min, p_svo->max, TG_TRUE, TG_TRUE);
         }

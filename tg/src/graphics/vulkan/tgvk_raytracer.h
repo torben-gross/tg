@@ -10,11 +10,11 @@
 typedef struct tg_raytracer_scene
 {
     u32                 object_capacity;
-    u32                 object_count;
+    u32                 n_objects;
     tg_voxel_object*    p_objects;
 
     u32                 cluster_capacity;
-    u32                 cluster_count;
+    u32                 n_clusters;
     u32*                p_voxel_cluster_data;
     
     tg_svo              svo;
