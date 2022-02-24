@@ -2935,16 +2935,16 @@ tg_size tg__shader_generate_glsl(const char* p_glsl_source, tg_size generated_gl
             p_generated_it += inc_properties.size;
             p_it = tg_string_next_line(p_it);
         }
-        else if (tg_string_starts_with(p_it, "//"))
-        {
-            p_it = tg_string_next_line(p_it);
-        }
         else
         {
             u32 location = TG_U32_MAX;
             do
             {
-                if (tg_string_starts_with(p_it, "location"))
+                if (tg_string_starts_with(p_it, "//"))
+                {
+                    p_it = tg_string_next_line(p_it);
+                }
+                else if (tg_string_starts_with(p_it, "location"))
                 {
                     // Determine location
                     const char* p_location_it = p_it;

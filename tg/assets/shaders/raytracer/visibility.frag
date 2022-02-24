@@ -206,4 +206,9 @@ void main()
         u32 pixel_idx = visibility_buffer_w * y + x;
         atomicMin(visibility_buffer_data[pixel_idx], packed_data);
     }
+	
+	u32 x = u32(gl_FragCoord.x);
+	u32 y = u32(gl_FragCoord.y);
+	u32 pixel_idx = visibility_buffer_w * y + x;
+	atomicMin(visibility_buffer_data[pixel_idx], 0xffffffff);
 }
