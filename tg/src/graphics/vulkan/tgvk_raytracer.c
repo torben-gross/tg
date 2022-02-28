@@ -677,8 +677,8 @@ void tg_raytracer_create_object(tg_raytracer* p_raytracer, v3 center, v3u extent
             for (u32 relative_cluster_idx_x = 0; relative_cluster_idx_x < p_object->n_clusters_per_dim.x; relative_cluster_idx_x++)
             {
                 const u32 relative_cluster_idx
-                    = TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT * TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT * relative_cluster_idx_z
-                    + TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT * relative_cluster_idx_y
+                    = p_object->n_clusters_per_dim.x * p_object->n_clusters_per_dim.y * relative_cluster_idx_z
+                    + p_object->n_clusters_per_dim.x * relative_cluster_idx_y
                     + relative_cluster_idx_x;
 
                 const u32 cluster_idx = p_object->first_cluster_idx + relative_cluster_idx;
@@ -703,7 +703,7 @@ void tg_raytracer_create_object(tg_raytracer* p_raytracer, v3 center, v3u extent
                         {
                             const u32 voxel_x = voxel_offset_x + relative_voxel_x;
 
-                            const f32 xf = (f32)voxel_x + (f32)cluster_offset; // This is just "some" offset and definitely incorrect!
+                            const f32 xf = (f32)voxel_x + object_idx * 1024.0f;
                             const f32 yf = (f32)voxel_y;
                             const f32 zf = (f32)voxel_z;
 
@@ -731,6 +731,7 @@ void tg_raytracer_create_object(tg_raytracer* p_raytracer, v3 center, v3u extent
                             {
                                 tgvk_staging_buffer_push_u32(&staging_buffer, voxel_slot);
                                 voxel_slot_bits = 0;
+                                voxel_slot = 0;
                             }
                         }
                     }
@@ -867,6 +868,14 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
 
     p_view_projection_ubo->v = cam_v;
     p_view_projection_ubo->p = cam_p;
+
+    //p v m
+    const v4 p0 = tgm_m4_mulv4(cam_vp, (v4) { 0.0f, 0.0f, 0.0f, 1.0f });
+    const v4 p1 = tgm_m4_mulv4(cam_vp, (v4) { 0.0f, 0.0f, -1000.0f, 1.0f });
+    const v4 p2 = tgm_m4_mulv4(cam_vp, (v4) { 0.0f, 0.0f, -2000.0f, 1.0f });
+    const v3 p00 = tgm_v3_divf(p0.xyz, p0.w);
+    const v3 p10 = tgm_v3_divf(p1.xyz, p1.w);
+    const v3 p20 = tgm_v3_divf(p2.xyz, p2.w);
 
     const m4 ivp_no_translation = tgm_m4_inverse(tgm_m4_mul(cam_p, cam_r));
     const v3 ray00 = tgm_v3_normalized(tgm_m4_mulv4(ivp_no_translation, (v4) { -1.0f,  1.0f, 1.0f, 1.0f }).xyz);

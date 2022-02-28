@@ -3759,7 +3759,7 @@ static VkInstance tg__instance_create(void)
     application_info.applicationVersion = VK_MAKE_VERSION(0, 0, 0);
     application_info.pEngineName = TG_NULL;
     application_info.engineVersion = VK_MAKE_VERSION(0, 0, 0);
-    application_info.apiVersion = VK_API_VERSION_1_2;
+    application_info.apiVersion = VK_API_VERSION_1_3;
 
 #if TGVK_VALIDATION_LAYER_COUNT
     const char* pp_enabled_layer_names[TGVK_VALIDATION_LAYER_COUNT] = TGVK_VALIDATION_LAYER_NAMES;

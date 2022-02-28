@@ -18,9 +18,49 @@ TG_SSBO(3,
 	u64    visibility_buffer_data[];                                                   );
 TG_UBO( 5, tg_camera_ubo                              camera_ubo;                      );
 
+m4 tg_cluster_model_matrix(u32 object_idx, u32 cluster_idx)
+{
+	tg_object_data_ssbo_entry object_data = object_data_ssbo[object_idx];
+	
+	u32 relative_cluster_idx = cluster_idx - object_data.first_cluster_idx;
+	u32 relative_cluster_idx_x = relative_cluster_idx % object_data.n_clusters_per_dim.x;
+	u32 relative_cluster_idx_y = (relative_cluster_idx / object_data.n_clusters_per_dim.x) % object_data.n_clusters_per_dim.y;
+	u32 relative_cluster_idx_z = relative_cluster_idx / (object_data.n_clusters_per_dim.x * object_data.n_clusters_per_dim.y); // Note: We don't need modulo here, because z doesn't loop
+	
+	f32 relative_cluster_offset_x = f32(relative_cluster_idx_x * TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT);
+	f32 relative_cluster_offset_y = f32(relative_cluster_idx_y * TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT);
+	f32 relative_cluster_offset_z = f32(relative_cluster_idx_z * TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT);
+	v3 relative_cluster_offset = v3(relative_cluster_offset_x, relative_cluster_offset_y, relative_cluster_offset_z);
+	
+	v3 cluster_half_extent = v3(f32(TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT / 2));
+	v3 n_clusters_per_dim = v3(f32(object_data.n_clusters_per_dim.x), f32(object_data.n_clusters_per_dim.y), f32(object_data.n_clusters_per_dim.z));
+	v3 object_half_extent = n_clusters_per_dim * cluster_half_extent;
+	
+	v3 relative_cluster_translation = -object_half_extent + cluster_half_extent + relative_cluster_offset;
+	
+	// Transformation order:
+	//   1. Scale the cluster to its final size
+	//   2. Translate the cluster relative inside of the object
+	//   3. Rotate the cluster
+	//   4. Translate the object, such that the relatively moved cluster is in the world location of the object
+	// (1) and (2) are composed in m0. (3) and (4) are composed in m1.
+	
+	m4 m0 = m4(
+        v4(f32(TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT), 0.0, 0.0, 0.0), // col0
+        v4(0.0, f32(TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT), 0.0, 0.0), // col1
+        v4(0.0, 0.0, f32(TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT), 0.0), // col2
+        v4(relative_cluster_translation, 1.0)                          // col3
+	);
+	m4 m1 = m4(object_data.rotation[0], object_data.rotation[1], object_data.rotation[2], v4(object_data.translation, 1.0));
+	m4 m_mat = m1 * m0;
+	
+	return m_mat;
+}
+
 void main()
 {
 	u32 object_idx = cluster_idx_to_object_idx_ssbo[v_cluster_idx].object_idx;
+
     tg_object_data_ssbo_entry object_data = object_data_ssbo[object_idx];
     
     u32 giid_x = u32(gl_FragCoord.x);
@@ -28,36 +68,6 @@ void main()
 
     f32 fx =       gl_FragCoord.x / f32(visibility_buffer_w);
     f32 fy = 1.0 - gl_FragCoord.y / f32(visibility_buffer_h);
-
-
-
-    m4 r_mat = object_data.rotation;
-    m4 t_mat = m4(
-        v4(1.0, 0.0, 0.0, 0.0),                               // col0
-        v4(0.0, 1.0, 0.0, 0.0),                               // col1
-        v4(0.0, 0.0, 1.0, 0.0),                               // col2
-        v4(object_data.translation, 1.0)); // col3
-    // TODO: can we just set the translation col in the end? saves some multiplications
-
-
-
-    // Instead of transforming the aabb, the ray is transformed with its inverse
-    m4 ray_origin_ws2ms_mat = inverse(t_mat * r_mat);
-    v3 ray_origin_ws = camera_ubo.camera.xyz;
-    v3 ray_origin_ms = (ray_origin_ws2ms_mat * vec4(ray_origin_ws, 1.0)).xyz;
-
-    m4 ray_direction_ws2ms_mat = inverse(r_mat);
-    v3 ray_direction_ws = mix(
-        mix(camera_ubo.ray00.xyz,
-            camera_ubo.ray10.xyz,
-            fy),
-        mix(camera_ubo.ray01.xyz,
-            camera_ubo.ray11.xyz,
-            fy),
-        fx);
-    v3 ray_direction_ms = normalize((ray_direction_ws2ms_mat * v4(ray_direction_ws, 0.0)).xyz);
-	
-	
 	
 	u32 relative_cluster_idx = v_cluster_idx - object_data.first_cluster_idx;
 	u32 relative_cluster_idx_x = relative_cluster_idx % object_data.n_clusters_per_dim.x;
@@ -73,135 +83,154 @@ void main()
 	v3 cluster_half_extent = cluster_extent * v3(0.5);
 	v3 n_clusters_per_dim = v3(f32(object_data.n_clusters_per_dim.x), f32(object_data.n_clusters_per_dim.y), f32(object_data.n_clusters_per_dim.z));
 	v3 object_half_extent = cluster_half_extent * n_clusters_per_dim;
-	
-	v3 relative_cluster_min = -object_half_extent + relative_cluster_offset + 0.5;
-	v3 relative_cluster_max = relative_cluster_min + cluster_extent - 1.0;
+    
+    // We transform the ray from world space in such a way, that the cluster is assumed to have its
+    // min at the origin and an extent of TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT. This way, we can
+    // traverse the grid right away.
+    // 1. Translate by objects inverse translation
+    // 2. Rotate by objects inverse rotation
+    // 3. Translate by objects half extent (add)
+    // 3. Translate by clusters offset (sub)
+#define TG_TRANSLATE(translation) m4(v4(1.0, 0.0, 0.0, 0.0), v4(0.0, 1.0, 0.0, 0.0), v4(0.0, 0.0, 1.0, 0.0), v4((translation), 1.0))
+    m4 ws2ms0 = TG_TRANSLATE(-object_data.translation);
+    m4 ws2ms1 = inverse(object_data.rotation);
+    m4 ws2ms2 = TG_TRANSLATE(object_half_extent);
+    m4 ws2ms3 = TG_TRANSLATE(-relative_cluster_offset);
+    m4 ws2ms = ws2ms3 * ws2ms2 * ws2ms1 * ws2ms0;
+#undef TG_TRANSLATE
 
+    v3 ray_origin_ws = camera_ubo.camera.xyz;
+    v3 ray_origin_ms = (ws2ms * v4(ray_origin_ws, 1.0)).xyz;
 
+    v3 ray_direction_ws = mix(
+        mix(camera_ubo.ray00.xyz, camera_ubo.ray10.xyz, fy),
+        mix(camera_ubo.ray01.xyz, camera_ubo.ray11.xyz, fy),
+        fx);
+    v3 ray_direction_ms = normalize((ws2ms * v4(ray_direction_ws, 0.0)).xyz);
 
+    v3 cluster_min = v3(0.0);
+    v3 cluster_max = v3(f32(TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT));
+
+    // TODO: Why does frustum culling not work anymore?!
     f32 d = 1.0;
     u32 voxel_idx = 0;
     f32 enter, exit;
-    if (tg_intersect_ray_aabb(ray_origin_ms, ray_direction_ms, relative_cluster_min, relative_cluster_max, enter, exit))
+    if (tg_intersect_ray_aabb(ray_origin_ms, ray_direction_ms, cluster_min, cluster_max, enter, exit))
     {
-		d = enter / camera_ubo.far;
-		
-        // supercover
+        // Supercover
         // https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.42.3443&rep=rep1&type=pdf
         
-        //v3 hit = t_aabb > 0.0 ? ray_origin + t_aabb * ray_direction : ray_origin;
-        //v3 xyz = clamp(floor(hit), aabb_min, aabb_max - v3(1.0));
-		//
-        //hit += aabb_max;
-        //xyz += aabb_max;
-		//
-        //i32 x = i32(xyz.x);
-        //i32 y = i32(xyz.y);
-        //i32 z = i32(xyz.z);
-		//
-        //i32 step_x;
-        //i32 step_y;
-        //i32 step_z;
-		//
-        //f32 t_max_x = TG_F32_MAX;
-        //f32 t_max_y = TG_F32_MAX;
-        //f32 t_max_z = TG_F32_MAX;
-		//
-        //f32 t_delta_x = TG_F32_MAX;
-        //f32 t_delta_y = TG_F32_MAX;
-        //f32 t_delta_z = TG_F32_MAX;
-		//
-        //if (r.d.x > 0.0)
-        //{
-        //    step_x = 1;
-        //    t_max_x = t_aabb + (f32(x + 1) - hit.x) / r.d.x;
-        //    t_delta_x = 1.0 / r.d.x;
-        //}
-        //else
-        //{
-        //    step_x = -1;
-        //    t_max_x = t_aabb + (hit.x - f32(x)) / -r.d.x;
-        //    t_delta_x = 1.0 / -r.d.x;
-        //}
-        //if (r.d.y > 0.0)
-        //{
-        //    step_y = 1;
-        //    t_max_y = t_aabb + (f32(y + 1) - hit.y) / r.d.y;
-        //    t_delta_y = 1.0 / r.d.y;
-        //}
-        //else
-        //{
-        //    step_y = -1;
-        //    t_max_y = t_aabb + (hit.y - f32(y)) / -r.d.y;
-        //    t_delta_y = 1.0 / -r.d.y;
-        //}
-        //if (r.d.z > 0.0)
-        //{
-        //    step_z = 1;
-        //    t_max_z = t_aabb + (f32(z + 1) - hit.z) / r.d.z;
-        //    t_delta_z = 1.0 / r.d.z;
-        //}
-        //else
-        //{
-        //    step_z = -1;
-        //    t_max_z = t_aabb + (hit.z - f32(z)) / -r.d.z;
-        //    t_delta_z = 1.0 / -r.d.z;
-        //}
-		//
-        //while (true)
-        //{
-        //    d = 0.5;
-        //    voxel_id = 53;
-        //    break;
-		//
-        //    //u32 vox_id    = object_data_entry_REPLACE_ME.grid_w * object_data_entry_REPLACE_ME.grid_h * z + object_data_entry_REPLACE_ME.grid_w * y + x;
-        //    //u32 vox_idx   = object_data_entry_REPLACE_ME.first_voxel_id + vox_id;
-        //    //u32 bits_idx  = vox_idx / 32;
-        //    //u32 bit_idx   = vox_idx % 32;
-        //    //u32 bits      = voxel_data[bits_idx];
-        //    //u32 bit       = bits & (1 << bit_idx);
-        //    //if (bit != 0)
-        //    //{
-        //    //    v3 voxel_min = aabb_min + v3(f32(x    ), f32(y    ), f32(z    ));
-        //    //    v3 voxel_max = aabb_min + v3(f32(x + 1), f32(y + 1), f32(z + 1));
-        //    //    tg_aabb voxel = tg_aabb(voxel_min, voxel_max);
-        //    //    f32 t_voxel;
-        //    //    tg_intersect_ray_aabb(r, voxel, t_voxel); // TODO: We should in this case adjust the function to potentially return enter AND exit, because if we are inside of the voxel, we receive a negative 't_voxel', which results in wrong depth. Might be irrelevant...
-        //    //    d = min(1.0, t_voxel / far);
-        //    //    voxel_id = vox_id;
-        //    //    break;
-        //    //}
-        //    //if (t_max_x < t_max_y)
-        //    //{
-        //    //    if (t_max_x < t_max_z)
-        //    //    {
-        //    //        t_max_x += t_delta_x;
-        //    //        x += step_x;
-        //    //        if (x < 0 || x >= object_data_entry_REPLACE_ME.grid_w) break;
-        //    //    }
-        //    //    else
-        //    //    {
-        //    //        t_max_z += t_delta_z;
-        //    //        z += step_z;
-        //    //        if (z < 0 || z >= object_data_entry_REPLACE_ME.grid_d) break;
-        //    //    }
-        //    //}
-        //    //else
-        //    //{
-        //    //    if (t_max_y < t_max_z)
-        //    //    {
-        //    //        t_max_y += t_delta_y;
-        //    //        y += step_y;
-        //    //        if (y < 0 || y >= object_data_entry_REPLACE_ME.grid_h) break;
-        //    //    }
-        //    //    else
-        //    //    {
-        //    //        t_max_z += t_delta_z;
-        //    //        z += step_z;
-        //    //        if (z < 0 || z >= object_data_entry_REPLACE_ME.grid_d) break;
-        //    //    }
-        //    //}
-        //}
+        v3 hit = enter > 0.0 ? ray_origin_ms + enter * ray_direction_ms : ray_origin_ms;
+        v3 xyz = clamp(floor(hit), cluster_min, cluster_max - v3(1.0));
+		
+        i32 x = i32(xyz.x);
+        i32 y = i32(xyz.y);
+        i32 z = i32(xyz.z);
+		
+        i32 step_x = 0;
+        i32 step_y = 0;
+        i32 step_z = 0;
+		
+        f32 t_max_x = TG_F32_MAX;
+        f32 t_max_y = TG_F32_MAX;
+        f32 t_max_z = TG_F32_MAX;
+		
+        f32 t_delta_x = TG_F32_MAX;
+        f32 t_delta_y = TG_F32_MAX;
+        f32 t_delta_z = TG_F32_MAX;
+		
+        if (ray_direction_ms.x > 0.0)
+        {
+            step_x = 1;
+            t_max_x = enter + (f32(x + 1) - hit.x) / ray_direction_ms.x;
+            t_delta_x = 1.0 / ray_direction_ms.x;
+        }
+        else if (ray_direction_ms.x < 0.0)
+        {
+            step_x = -1;
+            t_max_x = enter + (hit.x - f32(x)) / -ray_direction_ms.x;
+            t_delta_x = 1.0 / -ray_direction_ms.x;
+        }
+        if (ray_direction_ms.y > 0.0)
+        {
+            step_y = 1;
+            t_max_y = enter + (f32(y + 1) - hit.y) / ray_direction_ms.y;
+            t_delta_y = 1.0 / ray_direction_ms.y;
+        }
+        else if (ray_direction_ms.y < 0.0)
+        {
+            step_y = -1;
+            t_max_y = enter + (hit.y - f32(y)) / -ray_direction_ms.y;
+            t_delta_y = 1.0 / -ray_direction_ms.y;
+        }
+        if (ray_direction_ms.z > 0.0)
+        {
+            step_z = 1;
+            t_max_z = enter + (f32(z + 1) - hit.z) / ray_direction_ms.z;
+            t_delta_z = 1.0 / ray_direction_ms.z;
+        }
+        else if (ray_direction_ms.z < 0.0)
+        {
+            step_z = -1;
+            t_max_z = enter + (hit.z - f32(z)) / -ray_direction_ms.z;
+            t_delta_z = 1.0 / -ray_direction_ms.z;
+        }
+		
+        u64 first_cluster_offset_in_voxels = u64(object_data.first_cluster_idx) * u64(TG_N_PRIMITIVES_PER_CLUSTER);
+        u64 relative_cluster_offset_in_voxels = u64(relative_cluster_idx) * u64(TG_N_PRIMITIVES_PER_CLUSTER);
+		u64 cluster_offset_in_voxels = first_cluster_offset_in_voxels + relative_cluster_offset_in_voxels;
+
+        while (true)
+        {
+            u32 relative_voxel_idx = TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT * TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT * z + TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT * y + x;
+			u64 vox_idx            = cluster_offset_in_voxels + u64(relative_voxel_idx); // TODO: do we need 64 bit here? also above
+			u32 slot_idx           = u32(vox_idx / 32);
+			u32 bit_idx            = u32(vox_idx % 32);
+			u32 slot               = voxel_cluster_ssbo[slot_idx].voxel_cluster_data_entry;
+			u32 bit                = slot & (1 << bit_idx);
+			if (bit != 0)
+			{
+                v3 voxel_min = cluster_min + v3(f32(x    ), f32(y    ), f32(z    ));
+                v3 voxel_max = cluster_min + v3(f32(x + 1), f32(y + 1), f32(z + 1));
+                f32 voxel_enter;
+                f32 voxel_exit;
+                tg_intersect_ray_aabb(ray_origin_ms, ray_direction_ms, voxel_min, voxel_max, voxel_enter, voxel_exit);
+                d = max(0.0, voxel_enter / camera_ubo.far);
+                voxel_idx = relative_voxel_idx;
+                break;
+			}
+
+            if (t_max_x < t_max_y)
+            {
+                if (t_max_x < t_max_z)
+                {
+                    t_max_x += t_delta_x;
+                    x += step_x;
+                    if (x < 0 || x >= TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT) break;
+                }
+                else
+                {
+                    t_max_z += t_delta_z;
+                    z += step_z;
+                    if (z < 0 || z >= TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT) break;
+                }
+            }
+            else
+            {
+                if (t_max_y < t_max_z)
+                {
+                    t_max_y += t_delta_y;
+                    y += step_y;
+                    if (y < 0 || y >= TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT) break;
+                }
+                else
+                {
+                    t_max_z += t_delta_z;
+                    z += step_z;
+                    if (z < 0 || z >= TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT) break;
+                }
+            }
+        }
     }
     
     if (d != 1.0)

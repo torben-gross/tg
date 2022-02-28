@@ -10,7 +10,7 @@
 
 
 #define TG_VOXEL_SIZE_IN_METER    0.1f
-#define TG_RUNNING_MPS            (50.0f / TG_VOXEL_SIZE_IN_METER)//(10.44f / TG_VOXEL_SIZE_IN_METER) // TODO: This is the actual reasonable speed
+#define TG_RUNNING_MPS            (10.44f / TG_VOXEL_SIZE_IN_METER)
 #define TG_RUNNING_KPH            TG_MPS2KPH(TG_RUNNING_MPS)
 #define TG_WALKING_KPH            (5.0f / TG_VOXEL_SIZE_IN_METER)
 #define TG_WALKING_MPS            TG_KPH2MPS(TG_WALKING_KPH)
@@ -65,7 +65,7 @@ static void tg__scene_create(void)
     scene.camera.persp.fov_y_in_radians = TG_DEG2RAD(70.0f);
     scene.camera.persp.aspect = tgp_get_window_aspect_ratio();
     scene.camera.persp.n = 0.1f;
-    scene.camera.persp.f = 100.0f;
+    scene.camera.persp.f = 1000.0f;
     tg_input_get_mouse_position(&scene.last_mouse_x, &scene.last_mouse_y);
 
     tg_raytracer_create(&scene.camera, (1 << 12), (1 << 21), &scene.raytracer);
