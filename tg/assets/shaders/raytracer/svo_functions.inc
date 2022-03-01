@@ -1,4 +1,4 @@
-f32 tg_svo_traverse(v3 ray_origin_ws, v3 ray_direction_ws, out v3 out_hit_position, out v3 out_hit_normal)
+f32 tg_svo_traverse(tg_svo svo, v3 ray_origin_ws, v3 ray_direction_ws, out v3 out_hit_position, out v3 out_hit_normal)
 {
     v3 extent = svo.max.xyz - svo.min.xyz;
     v3 center = 0.5 * extent + svo.min.xyz;
@@ -15,7 +15,6 @@ f32 tg_svo_traverse(v3 ray_origin_ws, v3 ray_direction_ws, out v3 out_hit_positi
 #endif
 
     f32 result = 1.0;
-    f32 d = TG_F32_MAX;
     u32 node_idx = TG_U32_MAX;
     u32 voxel_idx = TG_U32_MAX;
 
@@ -99,18 +98,17 @@ f32 tg_svo_traverse(v3 ray_origin_ws, v3 ray_direction_ws, out v3 out_hit_positi
                     tg_svo_node child_node = nodes[child_idx];
                     u32 data_pointer = child_node.data;
                     tg_svo_leaf_node_data data = leaf_node_data[data_pointer];
-                    if (data.count != 0)
+                    if (data.n != 0)
                     {
                         // UNCOMMENT TO SHOW BLOCKS
-                        //result = true;
-                        //d = length(position - ray_origin_ms) / far;
+                        //result = length(position - ray_origin_ms) / camera_ubo.far;
                         //node_idx = child_idx;
                         //voxel_idx = child_idx;
                         //break;
 
                         // TRAVERSE BLOCK
                         
-                        u32 first_voxel_id = data_pointer * TG_SVO_BLOCK_VOXEL_COUNT;
+                        u32 first_voxel_idx = data_pointer * TG_SVO_BLOCK_VOXEL_COUNT;
 
                         v3 hit = position;
                         v3 xyz = clamp(floor(hit), child_min, child_max - v3(1.0));
@@ -174,17 +172,17 @@ f32 tg_svo_traverse(v3 ray_origin_ws, v3 ray_direction_ws, out v3 out_hit_positi
                         u32 steps = 0;
                         while (true)
                         {
-                            u32 vox_id = u32(child_extent.x) * u32(child_extent.y) * z + u32(child_extent.x) * y + x;
-                            u32 vox_idx = first_voxel_id + vox_id;
-                            u32 bits_idx = vox_idx / 32;
-                            u32 bit_idx = vox_idx % 32;
-                            u32 bits = voxel_data[bits_idx];
+                            u32 relative_voxel_idx = u32(child_extent.x) * u32(child_extent.y) * z + u32(child_extent.x) * y + x;
+                            u32 voxel_idx = first_voxel_idx + relative_voxel_idx;
+                            u32 slot_idx = voxel_idx / 32;
+                            u32 bit_idx = voxel_idx % 32;
+                            u32 bits = voxel_data[slot_idx];
                             u32 bit = bits & (1 << bit_idx);
                             if (bit != 0)
                             {
                                 v3 voxel_min = child_min + v3(f32(x    ), f32(y    ), f32(z    ));
                                 v3 voxel_max = child_min + v3(f32(x + 1), f32(y + 1), f32(z + 1));
-                                tg_intersect_ray_aabb(position, ray_direction_ms, voxel_min, voxel_max, enter, exit);
+                                tg_intersect_ray_aabb(ray_origin_ms, ray_direction_ms, voxel_min, voxel_max, enter, exit);
 
                                 v3 hit_position = position + enter * ray_direction_ms;
                                 v3 voxel_center = voxel_min + v3(0.5, 0.5, 0.5);
@@ -218,12 +216,12 @@ f32 tg_svo_traverse(v3 ray_origin_ws, v3 ray_direction_ws, out v3 out_hit_positi
                                     }
                                 }
 
-                                result = 0.0;
+                                result = enter / camera_ubo.far;
                                 out_hit_position = hit_position;
                                 out_hit_normal = hit_normal;
-
                                 break;
                             }
+
                             if (t_max_x < t_max_y)
                             {
                                 if (t_max_x < t_max_z)

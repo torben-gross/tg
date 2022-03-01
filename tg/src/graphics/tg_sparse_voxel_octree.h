@@ -12,9 +12,8 @@ typedef struct tg_svo_inner_node
 
 typedef struct tg_svo_leaf_node_data
 {
-    u32    count;
-    u32    p_object_idcs[8];   // TG_CLUSTERS_IDX_N_BITS bits per entry
-    u16    p_clusters_idcs[8]; // TG_PRIMITIVE_IDX_N_BITS bits per entry
+    u32    n;
+    u32    p_cluster_idcs[64]; // TODO: Let this contain only a few like 8 and if full: Point to another data object. We could also double the capacity of every next pointed list
 } tg_svo_leaf_node_data;
 
 typedef struct tg_svo_leaf_node
@@ -47,7 +46,9 @@ typedef struct tg_svo
     tg_svo_node*              p_node_buffer;           // First node is always an 'tg_svo_inner_node'
 } tg_svo;
 
-void    tg_svo_create(v3 extent_min, v3 extent_max, u32 cluster_count, const tg_voxel_object* p_instances, const u32* p_voxel_buffer, TG_OUT tg_svo* p_svo);
+typedef struct tg_scene tg_scene;
+
+void    tg_svo_create(v3 extent_min, v3 extent_max, const tg_scene* p_scene, TG_OUT tg_svo* p_svo);
 void    tg_svo_destroy(tg_svo* p_svo);
 b32     tg_svo_traverse(const tg_svo* p_svo, v3 ray_origin, v3 ray_direction, TG_OUT f32* p_distance, TG_OUT u32* p_node_idx, TG_OUT u32* p_voxel_idx);
 

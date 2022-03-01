@@ -2185,6 +2185,33 @@ m4 tgm_m4_scale(v3 v)
 	return result;
 }
 
+m4 tgm_m4_scale1(f32 v)
+{
+	m4 result = { 0 };
+
+	result.m00 = v;
+	result.m10 = 0.0f;
+	result.m20 = 0.0f;
+	result.m30 = 0.0f;
+
+	result.m01 = 0.0f;
+	result.m11 = v;
+	result.m21 = 0.0f;
+	result.m31 = 0.0f;
+
+	result.m02 = 0.0f;
+	result.m12 = 0.0f;
+	result.m22 = v;
+	result.m32 = 0.0f;
+
+	result.m03 = 0.0f;
+	result.m13 = 0.0f;
+	result.m23 = 0.0f;
+	result.m33 = 1.0f;
+
+	return result;
+}
+
 m4 tgm_m4_transform_rt(m4 rotation, m4 translation)
 {
 	const m4 result = tgm_m4_mul(translation, rotation);

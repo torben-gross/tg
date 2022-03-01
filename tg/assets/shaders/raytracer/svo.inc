@@ -18,7 +18,6 @@ struct tg_svo_node
 
 struct tg_svo_leaf_node_data
 {
-    u32    count;
-    u32    p_object_idcs[8];   // TG_CLUSTERS_IDX_N_BITS bits per entry
-    u16    p_clusters_idcs[8]; // TG_PRIMITIVE_IDX_N_BITS bits per entry
+    u32    n;
+    u32    p_clusters_idcs[64];
 };

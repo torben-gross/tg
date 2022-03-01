@@ -112,7 +112,7 @@ void main()
     v3 cluster_max = v3(f32(TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT));
 
     // TODO: Why does frustum culling not work anymore?!
-    f32 d = 1.0;
+    f32 d = TG_F32_MAX;
     u32 voxel_idx = 0;
     f32 enter, exit;
     if (tg_intersect_ray_aabb(ray_origin_ms, ray_direction_ms, cluster_min, cluster_max, enter, exit))
@@ -233,7 +233,7 @@ void main()
         }
     }
     
-    if (d != 1.0)
+    if (d <= 1.0)
     {
         // Layout : 24 bits depth | 10 bits object id | 30 bits relative voxel_id
 
@@ -247,9 +247,4 @@ void main()
         u32 pixel_idx = visibility_buffer_w * y + x;
         atomicMin(visibility_buffer_data[pixel_idx], packed_data);
     }
-	
-	u32 x = u32(gl_FragCoord.x);
-	u32 y = u32(gl_FragCoord.y);
-	u32 pixel_idx = visibility_buffer_w * y + x;
-	atomicMin(visibility_buffer_data[pixel_idx], 0xffffffff);
 }

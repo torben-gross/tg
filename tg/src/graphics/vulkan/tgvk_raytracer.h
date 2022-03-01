@@ -7,7 +7,7 @@
 
 
 
-typedef struct tg_raytracer_scene
+typedef struct tg_scene
 {
     u32                 object_capacity;
     u32                 n_objects;
@@ -16,9 +16,10 @@ typedef struct tg_raytracer_scene
     u32                 cluster_capacity;
     u32                 n_clusters;
     u32*                p_voxel_cluster_data;
+    u32*                p_cluster_idx_to_object_idx;
     
     tg_svo              svo;
-} tg_raytracer_scene;
+} tg_scene;
 
 typedef struct tg_raytracer_buffers
 {
@@ -112,7 +113,7 @@ typedef struct tg_raytracer
     tg_render_target                render_target;
     VkSemaphore                     semaphore;
 
-    tg_raytracer_scene              scene;
+    tg_scene                        scene;
 
     tg_raytracer_buffers            buffers;
     tg_raytracer_visibility_pass    visibility_pass;

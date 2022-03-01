@@ -589,12 +589,13 @@ void tg_raytracer_create(const tg_camera* p_camera, u32 max_n_instances, u32 max
 
 
 
-    p_raytracer->scene.object_capacity      = max_n_instances;
-    p_raytracer->scene.n_objects         = 0;
-    p_raytracer->scene.p_objects            = TG_MALLOC((tg_size)max_n_instances * sizeof(*p_raytracer->scene.p_objects));
-    p_raytracer->scene.cluster_capacity     = max_n_clusters;
-    p_raytracer->scene.n_clusters        = 0;
-    p_raytracer->scene.p_voxel_cluster_data = TG_MALLOC((tg_size)max_n_clusters * (tg_size)TGVK_VOXEL_CLUSTER_SIZE);
+    p_raytracer->scene.object_capacity             = max_n_instances;
+    p_raytracer->scene.n_objects                   = 0;
+    p_raytracer->scene.p_objects                   = TG_MALLOC((tg_size)max_n_instances * sizeof(*p_raytracer->scene.p_objects));
+    p_raytracer->scene.cluster_capacity            = max_n_clusters;
+    p_raytracer->scene.n_clusters                  = 0;
+    p_raytracer->scene.p_voxel_cluster_data        = TG_MALLOC((tg_size)max_n_clusters * (tg_size)TGVK_VOXEL_CLUSTER_SIZE);
+    p_raytracer->scene.p_cluster_idx_to_object_idx = TG_MALLOC((tg_size)max_n_clusters * sizeof(*p_raytracer->scene.p_cluster_idx_to_object_idx));
 
     p_raytracer->debug_pass.capacity = (1 << 14);
     p_raytracer->debug_pass.count = 0;
@@ -683,6 +684,7 @@ void tg_raytracer_create_object(tg_raytracer* p_raytracer, v3 center, v3u extent
 
                 const u32 cluster_idx = p_object->first_cluster_idx + relative_cluster_idx;
                 TG_ASSERT(cluster_idx < p_raytracer->scene.cluster_capacity);
+                p_raytracer->scene.p_cluster_idx_to_object_idx[cluster_idx] = object_idx;
 
                 const tg_size cluster_offset = (tg_size)cluster_idx * TGVK_VOXEL_CLUSTER_SIZE;
                 tgvk_staging_buffer_reinit2(&staging_buffer, TGVK_VOXEL_CLUSTER_SIZE, cluster_offset, &p_raytracer->buffers.voxel_cluster_ssbo);
@@ -729,6 +731,8 @@ void tg_raytracer_create_object(tg_raytracer* p_raytracer, v3 center, v3u extent
                             voxel_slot |= (solid << voxel_slot_bits++);
                             if (voxel_slot_bits == 32)
                             {
+                                const tg_size idx = (cluster_offset + staging_buffer.copied_size + staging_buffer.filled_size) / sizeof(u32);
+                                p_raytracer->scene.p_voxel_cluster_data[idx] = voxel_slot;
                                 tgvk_staging_buffer_push_u32(&staging_buffer, voxel_slot);
                                 voxel_slot_bits = 0;
                                 voxel_slot = 0;
@@ -869,14 +873,6 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
     p_view_projection_ubo->v = cam_v;
     p_view_projection_ubo->p = cam_p;
 
-    //p v m
-    const v4 p0 = tgm_m4_mulv4(cam_vp, (v4) { 0.0f, 0.0f, 0.0f, 1.0f });
-    const v4 p1 = tgm_m4_mulv4(cam_vp, (v4) { 0.0f, 0.0f, -1000.0f, 1.0f });
-    const v4 p2 = tgm_m4_mulv4(cam_vp, (v4) { 0.0f, 0.0f, -2000.0f, 1.0f });
-    const v3 p00 = tgm_v3_divf(p0.xyz, p0.w);
-    const v3 p10 = tgm_v3_divf(p1.xyz, p1.w);
-    const v3 p20 = tgm_v3_divf(p2.xyz, p2.w);
-
     const m4 ivp_no_translation = tgm_m4_inverse(tgm_m4_mul(cam_p, cam_r));
     const v3 ray00 = tgm_v3_normalized(tgm_m4_mulv4(ivp_no_translation, (v4) { -1.0f,  1.0f, 1.0f, 1.0f }).xyz);
     const v3 ray10 = tgm_v3_normalized(tgm_m4_mulv4(ivp_no_translation, (v4) { -1.0f, -1.0f, 1.0f, 1.0f }).xyz);
@@ -904,7 +900,7 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
         // https://luebke.us/publications/eg09.pdf
         const v3 extent_min = { -512.0f, -512.0f, -512.0f };
         const v3 extent_max = {  512.0f,  512.0f,  512.0f };
-        tg_svo_create(extent_min, extent_max, p_raytracer->scene.n_objects, p_raytracer->scene.p_objects, p_raytracer->scene.p_voxel_cluster_data, p_svo);
+        tg_svo_create(extent_min, extent_max, &p_raytracer->scene, p_svo);
         //tg_svo_destroy(&svo);
 
         const tg_size svo_ssbo_size                = 2 * sizeof(v4);
@@ -1093,7 +1089,7 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
                 tg_raytracer_push_debug_cuboid(p_raytracer, model_matrix, (v3) { 1.0f, 1.0f, 0.0f });
             }
         }
-        if (0)
+        if (1)
         {
             tg__push_debug_svo_node(p_raytracer, &p_svo->p_node_buffer[0].inner, p_svo->min, p_svo->max, TG_TRUE, TG_TRUE);
         }
