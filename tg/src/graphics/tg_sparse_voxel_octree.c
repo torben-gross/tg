@@ -15,23 +15,15 @@
 TG_STATIC_ASSERT(TG_SVO_SIDE_LENGTH / TG_SVO_BLOCK_SIDE_LENGTH == 32); // Otherwise, the stack capacity below is too small
 #define TG_SVO_TRAVERSE_STACK_CAPACITY    5                            // tg_u32_log2(TG_SVO_SIDE_LENGTH / TG_SVO_BLOCK_SIDE_LENGTH)
 
-
-
-static v4 p_cube_corners[8] = {
-    { -0.5f, -0.5f, -0.5f,  1.0f },
-    {  0.5f, -0.5f, -0.5f,  1.0f },
-    { -0.5f,  0.5f, -0.5f,  1.0f },
-    {  0.5f,  0.5f, -0.5f,  1.0f },
-    { -0.5f, -0.5f,  0.5f,  1.0f },
-    {  0.5f, -0.5f,  0.5f,  1.0f },
-    { -0.5f,  0.5f,  0.5f,  1.0f },
-    {  0.5f,  0.5f,  0.5f,  1.0f }
-};
+#define TG_CLUSTER_MIN                    (v3){ 0.0f, 0.0f, 0.0f }
+#define TG_CLUSTER_MAX                    (v3){ (f32)TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT, (f32)TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT, (f32)TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT }
 
 
 
-static m4 tg__cluster_model_matrix(const tg_voxel_object* p_object, u32 relative_cluster_idx)
+static m4 tg__world_space_to_model_space(const tg_voxel_object* p_object, u32 relative_cluster_idx)
 {
+    const m4 rotation = tgm_m4_angle_axis(p_object->angle_in_radians, p_object->axis);
+
     const u32 relative_cluster_idx_x = relative_cluster_idx % p_object->n_clusters_per_dim.x;
     const u32 relative_cluster_idx_y = (relative_cluster_idx / p_object->n_clusters_per_dim.x) % p_object->n_clusters_per_dim.y;
     const u32 relative_cluster_idx_z = relative_cluster_idx / (p_object->n_clusters_per_dim.x * p_object->n_clusters_per_dim.y); // Note: We don't need modulo here, because z doesn't loop
@@ -41,28 +33,24 @@ static m4 tg__cluster_model_matrix(const tg_voxel_object* p_object, u32 relative
     const f32 relative_cluster_offset_z = (f32)(relative_cluster_idx_z * TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT);
     const v3 relative_cluster_offset = { relative_cluster_offset_x, relative_cluster_offset_y, relative_cluster_offset_z };
 
-    const f32 n_prims_per_cluster_cube_root_half_f = (f32)(TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT / 2);
-    const v3 cluster_half_extent = { n_prims_per_cluster_cube_root_half_f, n_prims_per_cluster_cube_root_half_f, n_prims_per_cluster_cube_root_half_f };
+    const f32 h = (f32)(TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT / 2);
+    const v3 cluster_half_extent = { h, h, h };
     const v3 n_clusters_per_dim = { (f32)p_object->n_clusters_per_dim.x, (f32)p_object->n_clusters_per_dim.y, (f32)p_object->n_clusters_per_dim.z };
     const v3 object_half_extent = tgm_v3_mul(n_clusters_per_dim, cluster_half_extent);
 
-    const v3 relative_cluster_translation = tgm_v3_add(tgm_v3_add(tgm_v3_neg(object_half_extent), cluster_half_extent), relative_cluster_offset);
+    // We transform from world space in such a way, that the cluster is assumed to have its min at
+    // the origin and an extent of TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT:
+    // 1. Translate by objects inverse translation
+    // 2. Rotate by objects inverse rotation
+    // 3. Translate by objects half extent (add)
+    // 3. Translate by clusters offset (sub)
+    const m4 ws2ms0 = tgm_m4_translate(tgm_v3_neg(p_object->translation));
+    const m4 ws2ms1 = tgm_m4_inverse(rotation);
+    const m4 ws2ms2 = tgm_m4_translate(object_half_extent);
+    const m4 ws2ms3 = tgm_m4_translate(tgm_v3_neg(relative_cluster_offset));
+    const m4 ws2ms = tgm_m4_mul(tgm_m4_mul(tgm_m4_mul(ws2ms3, ws2ms2), ws2ms1), ws2ms0);
 
-    // Transformation order:
-    //   1. Scale the cluster to its final size
-    //   2. Translate the cluster relative inside of the object
-    //   3. Rotate the cluster
-    //   4. Translate the object, such that the relatively moved cluster is in the world location of the object
-    // (1) and (2) are composed in m0. (3) and (4) are composed in m1.
-
-    m4 m_mat0 = tgm_m4_scale1((f32)TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT);
-    m_mat0.col3.xyz = relative_cluster_translation;
-    
-    m4 m_mat1 = tgm_m4_angle_axis(p_object->angle_in_radians, p_object->axis);
-    m_mat1.col3.xyz = p_object->translation;
-    
-    const m4 m_mat = tgm_m4_mul(m_mat1, m_mat0);
-    return m_mat;
+    return ws2ms;
 }
 
 static void tg__construct_leaf_node(
@@ -89,140 +77,117 @@ static void tg__construct_leaf_node(
     tg_svo_leaf_node_data* p_data = &p_svo->p_leaf_node_data_buffer[p_svo->leaf_node_data_buffer_count];
     TG_ASSERT(p_data->n == 0); // Uninitialized
     p_parent->data_pointer = p_svo->leaf_node_data_buffer_count++;
-
+    
     const v3 parent_extent = tgm_v3_sub(parent_max, parent_min);
     const u32 voxel_count = (u32)parent_extent.x * (u32)parent_extent.y * (u32)parent_extent.z;
     const u32 voxels_in_u32 = ((voxel_count + 31) / 32);
     TG_ASSERT(p_svo->voxel_buffer_count_in_u32 + voxels_in_u32 <= p_svo->voxel_buffer_capacity_in_u32);
     u32* p_block_voxels = &p_svo->p_voxels_buffer[p_svo->voxel_buffer_count_in_u32];
     p_svo->voxel_buffer_count_in_u32 += voxels_in_u32;
-
+    
+    const v4 p_block_corners_ws[8] = {
+        { parent_min.x, parent_min.y, parent_min.z, 1.0f },
+        { parent_max.x, parent_min.y, parent_min.z, 1.0f },
+        { parent_min.x, parent_max.y, parent_min.z, 1.0f },
+        { parent_max.x, parent_max.y, parent_min.z, 1.0f },
+        { parent_min.x, parent_min.y, parent_max.z, 1.0f },
+        { parent_max.x, parent_min.y, parent_max.z, 1.0f },
+        { parent_min.x, parent_max.y, parent_max.z, 1.0f },
+        { parent_max.x, parent_max.y, parent_max.z, 1.0f }
+    };
+    
     for (u32 cluster_idcs_idx = 0; cluster_idcs_idx < n_clusters; cluster_idcs_idx++)
     {
         const u32 cluster_idx = p_cluster_idcs[cluster_idcs_idx];
-        
-#ifdef TG_DEBUG
-        // TODO: If we ever remove empty clusters, this will not be required anymore!
-        const tg_size cluster_offset = (tg_size)cluster_idx * TG_CLUSTER_SIZE(1);
-        const u32* p_cluster = (u32*)&((u8*)p_scene->p_voxel_cluster_data)[cluster_offset];
-        b32 contains_voxels = TG_FALSE;
-        for (u32 relative_voxel_idx = 0; relative_voxel_idx < TG_N_PRIMITIVES_PER_CLUSTER; relative_voxel_idx++)
-        {
-            if (p_cluster[relative_voxel_idx / 32] & (1 << (relative_voxel_idx % 32)))
-            {
-                contains_voxels = TG_TRUE;
-                break;
-            }
-        }
-        if (!contains_voxels)
-        {
-            continue;
-        }
-#endif
-
         const u32 object_idx = p_scene->p_cluster_idx_to_object_idx[cluster_idx];
         const tg_voxel_object* p_object = &p_scene->p_objects[object_idx];
         const u32 relative_cluster_idx = cluster_idx - p_object->first_cluster_idx;
-
-        const m4 m_mat = tg__cluster_model_matrix(p_object, relative_cluster_idx);
-
-        v3 p_cluster_corners[8] = { 0 };
-        p_cluster_corners[0] = tgm_m4_mulv4(m_mat, p_cube_corners[0]).xyz;
-        p_cluster_corners[1] = tgm_m4_mulv4(m_mat, p_cube_corners[1]).xyz;
-        p_cluster_corners[2] = tgm_m4_mulv4(m_mat, p_cube_corners[2]).xyz;
-        p_cluster_corners[3] = tgm_m4_mulv4(m_mat, p_cube_corners[3]).xyz;
-        p_cluster_corners[4] = tgm_m4_mulv4(m_mat, p_cube_corners[4]).xyz;
-        p_cluster_corners[5] = tgm_m4_mulv4(m_mat, p_cube_corners[5]).xyz;
-        p_cluster_corners[6] = tgm_m4_mulv4(m_mat, p_cube_corners[6]).xyz;
-        p_cluster_corners[7] = tgm_m4_mulv4(m_mat, p_cube_corners[7]).xyz;
-
-        TG_ASSERT(tg_intersect_aabb_obb_ignore_contact(parent_min, parent_max, p_cluster_corners));
-
+    
+        const m4 ws2ms = tg__world_space_to_model_space(p_object, relative_cluster_idx);
+    
+        v3 p_block_corners[8] = { 0 };
+        p_block_corners[0] = tgm_m4_mulv4(ws2ms, p_block_corners_ws[0]).xyz;
+        p_block_corners[1] = tgm_m4_mulv4(ws2ms, p_block_corners_ws[1]).xyz;
+        p_block_corners[2] = tgm_m4_mulv4(ws2ms, p_block_corners_ws[2]).xyz;
+        p_block_corners[3] = tgm_m4_mulv4(ws2ms, p_block_corners_ws[3]).xyz;
+        p_block_corners[4] = tgm_m4_mulv4(ws2ms, p_block_corners_ws[4]).xyz;
+        p_block_corners[5] = tgm_m4_mulv4(ws2ms, p_block_corners_ws[5]).xyz;
+        p_block_corners[6] = tgm_m4_mulv4(ws2ms, p_block_corners_ws[6]).xyz;
+        p_block_corners[7] = tgm_m4_mulv4(ws2ms, p_block_corners_ws[7]).xyz;
+    
+        TG_ASSERT(tg_intersect_aabb_obb_ignore_contact(TG_CLUSTER_MIN, TG_CLUSTER_MAX, p_block_corners));
+    
         TG_ASSERT((u64)cluster_idx * (u64)TG_N_PRIMITIVES_PER_CLUSTER <= TG_U32_MAX);
         const u32 cluster_offset_in_voxels = cluster_idx * TG_N_PRIMITIVES_PER_CLUSTER;
-
-        for (u32 cluster_voxel_z = 0; cluster_voxel_z < TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT; cluster_voxel_z++)
+    
+        for (u32 block_voxel_z = 0; block_voxel_z < (u32)parent_extent.z; block_voxel_z++)
         {
-            const f32 tz = ((f32)cluster_voxel_z + 0.5f) / (f32)TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT;
+            const f32 tz = ((f32)block_voxel_z + 0.5f) / parent_extent.z;
             const f32 omtz = 1.0f - tz;
-
-            const f32 pz0_x = omtz * p_cluster_corners[0].x + tz * p_cluster_corners[4].x;
-            const f32 pz0_y = omtz * p_cluster_corners[0].y + tz * p_cluster_corners[4].y;
-            const f32 pz0_z = omtz * p_cluster_corners[0].z + tz * p_cluster_corners[4].z;
-
-            const f32 pz1_x = omtz * p_cluster_corners[1].x + tz * p_cluster_corners[5].x;
-            const f32 pz1_y = omtz * p_cluster_corners[1].y + tz * p_cluster_corners[5].y;
-            const f32 pz1_z = omtz * p_cluster_corners[1].z + tz * p_cluster_corners[5].z;
-
-            const f32 pz2_x = omtz * p_cluster_corners[2].x + tz * p_cluster_corners[6].x;
-            const f32 pz2_y = omtz * p_cluster_corners[2].y + tz * p_cluster_corners[6].y;
-            const f32 pz2_z = omtz * p_cluster_corners[2].z + tz * p_cluster_corners[6].z;
-
-            const f32 pz3_x = omtz * p_cluster_corners[3].x + tz * p_cluster_corners[7].x;
-            const f32 pz3_y = omtz * p_cluster_corners[3].y + tz * p_cluster_corners[7].y;
-            const f32 pz3_z = omtz * p_cluster_corners[3].z + tz * p_cluster_corners[7].z;
-
-            for (u32 cluster_voxel_y = 0; cluster_voxel_y < TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT; cluster_voxel_y++)
+    
+            const f32 pz0_x = omtz * p_block_corners[0].x + tz * p_block_corners[4].x;
+            const f32 pz0_y = omtz * p_block_corners[0].y + tz * p_block_corners[4].y;
+            const f32 pz0_z = omtz * p_block_corners[0].z + tz * p_block_corners[4].z;
+    
+            const f32 pz1_x = omtz * p_block_corners[1].x + tz * p_block_corners[5].x;
+            const f32 pz1_y = omtz * p_block_corners[1].y + tz * p_block_corners[5].y;
+            const f32 pz1_z = omtz * p_block_corners[1].z + tz * p_block_corners[5].z;
+    
+            const f32 pz2_x = omtz * p_block_corners[2].x + tz * p_block_corners[6].x;
+            const f32 pz2_y = omtz * p_block_corners[2].y + tz * p_block_corners[6].y;
+            const f32 pz2_z = omtz * p_block_corners[2].z + tz * p_block_corners[6].z;
+    
+            const f32 pz3_x = omtz * p_block_corners[3].x + tz * p_block_corners[7].x;
+            const f32 pz3_y = omtz * p_block_corners[3].y + tz * p_block_corners[7].y;
+            const f32 pz3_z = omtz * p_block_corners[3].z + tz * p_block_corners[7].z;
+    
+            for (u32 block_voxel_y = 0; block_voxel_y < (u32)parent_extent.y; block_voxel_y++)
             {
-                const f32 ty = ((f32)cluster_voxel_y + 0.5f) / (f32)TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT;
+                const f32 ty = ((f32)block_voxel_y + 0.5f) / parent_extent.y;
                 const f32 omty = 1.0f - ty;
-
+    
                 const f32 py0_x = omty * pz0_x + ty * pz2_x;
                 const f32 py0_y = omty * pz0_y + ty * pz2_y;
                 const f32 py0_z = omty * pz0_z + ty * pz2_z;
-
+    
                 const f32 py1_x = omty * pz1_x + ty * pz3_x;
                 const f32 py1_y = omty * pz1_y + ty * pz3_y;
                 const f32 py1_z = omty * pz1_z + ty * pz3_z;
-
-                for (u32 cluster_voxel_x = 0; cluster_voxel_x < TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT; cluster_voxel_x++)
+    
+                for (u32 block_voxel_x = 0; block_voxel_x < (u32)parent_extent.x; block_voxel_x++)
                 {
-                    const u32 relative_voxel_idx
-                        = TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT * TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT * cluster_voxel_z
-                        + TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT * cluster_voxel_y
-                        + cluster_voxel_x;
-                    TG_ASSERT((u64)cluster_offset_in_voxels + (u64)relative_voxel_idx <= TG_U32_MAX);
-                    const u32 voxel_idx = cluster_offset_in_voxels + relative_voxel_idx;
-                    const u32 voxel = p_scene->p_voxel_cluster_data[voxel_idx / 32] & (1 << (voxel_idx % 32));
-                    if (voxel == 0)
-                    {
-                        continue;
-                    }
-
-                    const f32 tx = ((f32)cluster_voxel_x + 0.5f) / (f32)TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT;
+                    const f32 tx = ((f32)block_voxel_x + 0.5f) / parent_extent.x;
                     const f32 omtx = 1.0f - tx;
-
-                    const f32 cluster_voxel_center_x = omtx * py0_x + tx * py1_x;
-                    const f32 cluster_voxel_center_y = omtx * py0_y + tx * py1_y;
-                    const f32 cluster_voxel_center_z = omtx * py0_z + tx * py1_z;
-
-                    const f32 cvc2bv_x = tgm_f32_floor(cluster_voxel_center_x);
-                    const f32 cvc2bv_y = tgm_f32_floor(cluster_voxel_center_y);
-                    const f32 cvc2bv_z = tgm_f32_floor(cluster_voxel_center_z);
-
-                    const b32 in_x = cvc2bv_x >= parent_min.x && cvc2bv_x < parent_max.x;
-                    const b32 in_y = cvc2bv_y >= parent_min.y && cvc2bv_y < parent_max.y;
-                    const b32 in_z = cvc2bv_z >= parent_min.z && cvc2bv_z < parent_max.z;
-
+    
+                    const f32 block_voxel_center_x = omtx * py0_x + tx * py1_x;
+                    const f32 block_voxel_center_y = omtx * py0_y + tx * py1_y;
+                    const f32 block_voxel_center_z = omtx * py0_z + tx * py1_z;
+    
+                    const i32 relative_cluster_voxel_x = (i32)tgm_f32_floor(block_voxel_center_x);
+                    const i32 relative_cluster_voxel_y = (i32)tgm_f32_floor(block_voxel_center_y);
+                    const i32 relative_cluster_voxel_z = (i32)tgm_f32_floor(block_voxel_center_z);
+    
+                    const b32 in_x = relative_cluster_voxel_x >= 0 && relative_cluster_voxel_x < TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT;
+                    const b32 in_y = relative_cluster_voxel_y >= 0 && relative_cluster_voxel_y < TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT;
+                    const b32 in_z = relative_cluster_voxel_z >= 0 && relative_cluster_voxel_z < TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT;
+    
                     if (in_x && in_y && in_z)
                     {
-                        TG_ASSERT(cvc2bv_x - parent_min.x >= 0.0f);
-                        TG_ASSERT(cvc2bv_y - parent_min.y >= 0.0f);
-                        TG_ASSERT(cvc2bv_z - parent_min.z >= 0.0f);
-                        TG_ASSERT(cvc2bv_x - parent_min.x < parent_extent.x);
-                        TG_ASSERT(cvc2bv_y - parent_min.y < parent_extent.y);
-                        TG_ASSERT(cvc2bv_z - parent_min.z < parent_extent.z);
-
-                        const u32 block_voxel_x = (u32)(cvc2bv_x - parent_min.x);
-                        const u32 block_voxel_y = (u32)(cvc2bv_y - parent_min.y);
-                        const u32 block_voxel_z = (u32)(cvc2bv_z - parent_min.z);
-
-                        const u32 block_voxel_idx = (u32)(parent_extent.x * parent_extent.y * block_voxel_z + parent_extent.x * block_voxel_y + block_voxel_x);
-                        p_block_voxels[block_voxel_idx / 32] |= 1 << (block_voxel_idx % 32);
-                        if (p_data->n == 0 || p_data->p_cluster_idcs[p_data->n - 1] != cluster_idx)
+                        const u32 relative_cluster_voxel_idx
+                            = TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT * TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT * relative_cluster_voxel_z
+                            + TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT * relative_cluster_voxel_y
+                            + relative_cluster_voxel_x;
+                        TG_ASSERT((u64)cluster_offset_in_voxels + (u64)relative_cluster_voxel_idx <= TG_U32_MAX);
+                        const u32 cluster_voxel_idx = cluster_offset_in_voxels + relative_cluster_voxel_idx;
+                        if ((p_scene->p_voxel_cluster_data[cluster_voxel_idx / 32] & (1 << (cluster_voxel_idx % 32))) != 0)
                         {
-                            TG_ASSERT(p_data->n < sizeof(p_data->p_cluster_idcs) / sizeof(*p_data->p_cluster_idcs));
-                            p_data->p_cluster_idcs[p_data->n++] = cluster_idx;
+                            const u32 block_voxel_idx = (u32)(parent_extent.x * parent_extent.y * block_voxel_z + parent_extent.x * block_voxel_y + block_voxel_x);
+                            p_block_voxels[block_voxel_idx / 32] |= 1 << (block_voxel_idx % 32);
+                            if (p_data->n == 0 || p_data->p_cluster_idcs[p_data->n - 1] != cluster_idx)
+                            {
+                                TG_ASSERT(p_data->n < sizeof(p_data->p_cluster_idcs) / sizeof(*p_data->p_cluster_idcs));
+                                p_data->p_cluster_idcs[p_data->n++] = cluster_idx;
+                            }
                         }
                     }
                 }
@@ -232,13 +197,13 @@ static void tg__construct_leaf_node(
 }
 
 static void tg__construct_inner_node(
-    tg_svo* p_svo,
-    tg_svo_inner_node* p_parent,
+    tg_svo*                   p_svo,
+    tg_svo_inner_node*        p_parent,
     v3                        parent_min,
     v3                        parent_max,
     u32                       n_clusters,
-    const u32* p_cluster_idcs,
-    const tg_scene* p_scene)
+    const u32*                p_cluster_idcs,
+    const tg_scene*           p_scene)
 {
     TG_ASSERT((u32)(parent_max.x - parent_min.x) * (u32)(parent_max.y - parent_min.y) * (u32)(parent_max.z - parent_min.z) > TG_SVO_BLOCK_VOXEL_COUNT); // Otherwise, this should be a leaf!
     TG_ASSERT(parent_max.x - parent_min.x > 8.0f);
@@ -257,6 +222,7 @@ static void tg__construct_inner_node(
 #endif
 
     const v3 child_extent = tgm_v3_mulf(tgm_v3_sub(parent_max, parent_min), 0.5f);
+
     for (u32 cluster_idcs_idx = 0; cluster_idcs_idx < n_clusters; cluster_idcs_idx++)
     {
         const u32 cluster_idx = p_cluster_idcs[cluster_idcs_idx];
@@ -264,17 +230,7 @@ static void tg__construct_inner_node(
         const tg_voxel_object* p_object = &p_scene->p_objects[object_idx];
         const u32 relative_cluster_idx = cluster_idx - p_object->first_cluster_idx;
 
-        const m4 m_mat = tg__cluster_model_matrix(p_object, relative_cluster_idx);
-
-        v3 p_cluster_corners[8] = { 0 };
-        p_cluster_corners[0] = tgm_m4_mulv4(m_mat, p_cube_corners[0]).xyz;
-        p_cluster_corners[1] = tgm_m4_mulv4(m_mat, p_cube_corners[1]).xyz;
-        p_cluster_corners[2] = tgm_m4_mulv4(m_mat, p_cube_corners[2]).xyz;
-        p_cluster_corners[3] = tgm_m4_mulv4(m_mat, p_cube_corners[3]).xyz;
-        p_cluster_corners[4] = tgm_m4_mulv4(m_mat, p_cube_corners[4]).xyz;
-        p_cluster_corners[5] = tgm_m4_mulv4(m_mat, p_cube_corners[5]).xyz;
-        p_cluster_corners[6] = tgm_m4_mulv4(m_mat, p_cube_corners[6]).xyz;
-        p_cluster_corners[7] = tgm_m4_mulv4(m_mat, p_cube_corners[7]).xyz;
+        const m4 ws2ms = tg__world_space_to_model_space(p_object, relative_cluster_idx);
 
         for (u32 child_idx = 0; child_idx < 8; child_idx++)
         {
@@ -287,7 +243,27 @@ static void tg__construct_inner_node(
             const v3 child_min = tgm_v3_add(parent_min, d_v3);
             const v3 child_max = tgm_v3_add(child_min, child_extent);
 
-            if (tg_intersect_aabb_obb_ignore_contact(child_min, child_max, p_cluster_corners))
+            v4 p_block_corners_ws[8] = { 0 };
+            p_block_corners_ws[0] = (v4){ child_min.x, child_min.y, child_min.z, 1.0f };
+            p_block_corners_ws[1] = (v4){ child_max.x, child_min.y, child_min.z, 1.0f };
+            p_block_corners_ws[2] = (v4){ child_min.x, child_max.y, child_min.z, 1.0f };
+            p_block_corners_ws[3] = (v4){ child_max.x, child_max.y, child_min.z, 1.0f };
+            p_block_corners_ws[4] = (v4){ child_min.x, child_min.y, child_max.z, 1.0f };
+            p_block_corners_ws[5] = (v4){ child_max.x, child_min.y, child_max.z, 1.0f };
+            p_block_corners_ws[6] = (v4){ child_min.x, child_max.y, child_max.z, 1.0f };
+            p_block_corners_ws[7] = (v4){ child_max.x, child_max.y, child_max.z, 1.0f };
+
+            v3 p_block_corners[8] = { 0 };
+            p_block_corners[0] = tgm_m4_mulv4(ws2ms, p_block_corners_ws[0]).xyz;
+            p_block_corners[1] = tgm_m4_mulv4(ws2ms, p_block_corners_ws[1]).xyz;
+            p_block_corners[2] = tgm_m4_mulv4(ws2ms, p_block_corners_ws[2]).xyz;
+            p_block_corners[3] = tgm_m4_mulv4(ws2ms, p_block_corners_ws[3]).xyz;
+            p_block_corners[4] = tgm_m4_mulv4(ws2ms, p_block_corners_ws[4]).xyz;
+            p_block_corners[5] = tgm_m4_mulv4(ws2ms, p_block_corners_ws[5]).xyz;
+            p_block_corners[6] = tgm_m4_mulv4(ws2ms, p_block_corners_ws[6]).xyz;
+            p_block_corners[7] = tgm_m4_mulv4(ws2ms, p_block_corners_ws[7]).xyz;
+
+            if (tg_intersect_aabb_obb_ignore_contact(TG_CLUSTER_MIN, TG_CLUSTER_MAX, p_block_corners))
             {
                 valid_mask |= 1 << child_idx;
                 if (p_n_clusters_per_child[child_idx] == 0
