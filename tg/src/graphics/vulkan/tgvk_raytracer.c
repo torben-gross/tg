@@ -901,7 +901,7 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
         const v3 extent_min = { -512.0f, -512.0f, -512.0f };
         const v3 extent_max = {  512.0f,  512.0f,  512.0f };
         tg_svo_create(extent_min, extent_max, &p_raytracer->scene, p_svo);
-        //tg_svo_destroy(&svo);
+        //tg_svo_destroy(p_svo);
 
         const tg_size svo_ssbo_size                = 2 * sizeof(v4);
         const tg_size svo_nodes_ssbo_size          = p_raytracer->scene.svo.node_buffer_capacity           * sizeof(*p_raytracer->scene.svo.p_node_buffer);
