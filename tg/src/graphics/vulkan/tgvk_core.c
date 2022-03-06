@@ -911,6 +911,26 @@ void tgvk_cmd_copy_buffer_to_image(tgvk_command_buffer* p_command_buffer, tgvk_b
     vkCmdCopyBufferToImage(p_command_buffer->buffer, p_source->buffer, p_destination->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &buffer_image_copy);
 }
 
+void tgvk_cmd_copy_buffer_to_image2(tgvk_command_buffer* p_command_buffer, u32 image_offset_x, u32 image_offset_y, u32 image_extent_x, u32 image_extent_y, tgvk_buffer* p_source, tgvk_image* p_destination)
+{
+    VkBufferImageCopy buffer_image_copy = { 0 };
+    buffer_image_copy.bufferOffset = 0;
+    buffer_image_copy.bufferRowLength = 0;
+    buffer_image_copy.bufferImageHeight = 0;
+    buffer_image_copy.imageSubresource.aspectMask = p_destination->type == TGVK_IMAGE_TYPE_COLOR ? VK_IMAGE_ASPECT_COLOR_BIT : VK_IMAGE_ASPECT_DEPTH_BIT;
+    buffer_image_copy.imageSubresource.mipLevel = 0;
+    buffer_image_copy.imageSubresource.baseArrayLayer = 0;
+    buffer_image_copy.imageSubresource.layerCount = 1;
+    buffer_image_copy.imageOffset.x = image_offset_x;
+    buffer_image_copy.imageOffset.y = image_offset_y;
+    buffer_image_copy.imageOffset.z = 0;
+    buffer_image_copy.imageExtent.width = image_extent_x;
+    buffer_image_copy.imageExtent.height = image_extent_y;
+    buffer_image_copy.imageExtent.depth = 1;
+
+    vkCmdCopyBufferToImage(p_command_buffer->buffer, p_source->buffer, p_destination->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &buffer_image_copy);
+}
+
 void tgvk_cmd_copy_buffer_to_image_3d(tgvk_command_buffer* p_command_buffer, tgvk_buffer* p_source, tgvk_image_3d* p_destination)
 {
     VkBufferImageCopy buffer_image_copy = { 0 };
@@ -1023,6 +1043,11 @@ void tgvk_cmd_draw_indexed(tgvk_command_buffer* p_command_buffer, u32 index_coun
 void tgvk_cmd_draw_indexed_instanced(tgvk_command_buffer* p_command_buffer, u32 index_count, u32 instance_count)
 {
     vkCmdDrawIndexed(p_command_buffer->buffer, index_count, instance_count, 0, 0, 0);
+}
+
+void tgvk_cmd_draw_instanced(tgvk_command_buffer* p_command_buffer, u32 vertex_count, u32 instance_count)
+{
+    vkCmdDraw(p_command_buffer->buffer, vertex_count, instance_count, 0, 0);
 }
 
 void tgvk_cmd_transition_cube_map_layout(tgvk_command_buffer* p_command_buffer, tgvk_cube_map* p_cube_map, tgvk_image_layout_type src_type, tgvk_image_layout_type dst_type)
@@ -1314,30 +1339,6 @@ void tgvk_command_buffer_end_and_submit(tgvk_command_buffer* p_command_buffer)
     TGVK_CALL(vkResetFences(device, 1, &p_queue->fence));
 
     TGVK_QUEUE_RELEASE(p_queue);
-}
-
-
-
-void tgvk_copy_to_buffer(tg_size size, const void* p_data, tgvk_buffer* p_buffer)
-{
-    TG_ASSERT(size > 0);
-    TG_ASSERT(p_data != TG_NULL);
-    TG_ASSERT(p_buffer != TG_NULL);
-
-    VkDeviceSize copied_size = 0;
-    tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
-    tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take(staging_buffer_size);
-    while (copied_size < size)
-    {
-        const VkDeviceSize remaining_size = size - copied_size;
-        const VkDeviceSize copy_size = TG_MIN(staging_buffer_size, remaining_size);
-        tg_memcpy(copy_size, ((u8*)p_data) + copied_size, p_staging_buffer->memory.p_mapped_device_memory);
-        tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-        tgvk_cmd_copy_buffer2(p_command_buffer, 0, copied_size, copy_size, p_staging_buffer, p_buffer);
-        tgvk_command_buffer_end_and_submit(p_command_buffer);
-        copied_size += copy_size;
-    }
-    tgvk_global_staging_buffer_release();
 }
 
 
@@ -2016,11 +2017,7 @@ tgvk_image tgvk_image_create2(tgvk_image_type type, const char* p_filename, cons
     tgvk_buffer* p_staging_buffer = tg__staging_buffer_take((VkDeviceSize)size);
     tg_memcpy(size, p_data, p_staging_buffer->memory.p_mapped_device_memory);
 
-    tgvk_image image = tgvk_image_create(type, w, h, (VkFormat)f, p_sampler_create_info
-#ifdef TG_DEBUG
-        , line, p_filename2
-#endif
-    );
+    tgvk_image image = tgvk_image_create(type, w, h, (VkFormat)f, p_sampler_create_info TG_DEBUG_PARAM(line) TG_DEBUG_PARAM(p_filename2));
 
     tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_and_begin_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
     tgvk_cmd_transition_image_layout(p_command_buffer, &image, TGVK_LAYOUT_UNDEFINED, TGVK_LAYOUT_TRANSFER_WRITE);
@@ -2100,21 +2097,9 @@ b32 tgvk_image_deserialize(const char* p_filename, TG_OUT tgvk_image* p_image TG
             sampler_create_info.address_mode_v = p_simage->sampler_address_mode_v;
             sampler_create_info.address_mode_w = p_simage->sampler_address_mode_w;
 
-            *p_image = tgvk_image_create(p_simage->type, p_simage->width, p_simage->height, p_simage->format, &sampler_create_info
-#ifdef TG_DEBUG
-                , line, p_filename2
-#endif
-            );
-
-            const VkDeviceSize required_staging_buffer_size = file_properties.size - sizeof(tgvk_serialized_image);
-            tgvk_buffer* p_staging_buffer = tg__staging_buffer_take(required_staging_buffer_size);
-            tg_memcpy(required_staging_buffer_size, p_simage->p_data, p_staging_buffer->memory.p_mapped_device_memory);
-            tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_and_begin_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
-            tgvk_cmd_transition_image_layout(p_command_buffer, p_image, TGVK_LAYOUT_UNDEFINED, TGVK_LAYOUT_TRANSFER_WRITE);
-            tgvk_cmd_copy_buffer_to_image(p_command_buffer, p_staging_buffer, p_image);
-            tgvk_cmd_transition_image_layout(p_command_buffer, p_image, TGVK_LAYOUT_TRANSFER_WRITE, TGVK_LAYOUT_SHADER_READ_CFV);
-            tgvk_command_buffer_end_and_submit(p_command_buffer);
-            tg__staging_buffer_release();
+            *p_image = tgvk_image_create(p_simage->type, p_simage->width, p_simage->height, p_simage->format, &sampler_create_info TG_DEBUG_PARAM(line) TG_DEBUG_PARAM(p_filename2));
+            const tg_size copy_size = file_properties.size - sizeof(tgvk_serialized_image);
+            tgvk_util_copy_to_image(TGVK_LAYOUT_UNDEFINED, TGVK_LAYOUT_SHADER_READ_CFV, copy_size, p_simage->p_data, p_image);
         }
         TG_FREE_STACK(file_properties.size);
     }
@@ -3392,6 +3377,81 @@ void tgvk_staging_buffer_release(tgvk_staging_buffer* p_staging_buffer)
 #ifdef TG_DEBUG
     *p_staging_buffer = (tgvk_staging_buffer){ 0 };
 #endif
+}
+
+
+
+void tgvk_util_copy_to_buffer(tg_size size, const void* p_data, tgvk_buffer* p_buffer)
+{
+    TG_ASSERT(size > 0);
+    TG_ASSERT(p_data != TG_NULL);
+    TG_ASSERT(p_buffer != TG_NULL);
+
+    VkDeviceSize copied_size = 0;
+    tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
+    tgvk_buffer* p_staging_buffer = tgvk_global_staging_buffer_take(staging_buffer_size);
+    while (copied_size < size)
+    {
+        const VkDeviceSize remaining_size = size - copied_size;
+        const VkDeviceSize copy_size = TG_MIN(staging_buffer_size, remaining_size);
+        tg_memcpy(copy_size, ((u8*)p_data) + copied_size, p_staging_buffer->memory.p_mapped_device_memory);
+        tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+        tgvk_cmd_copy_buffer2(p_command_buffer, 0, copied_size, copy_size, p_staging_buffer, p_buffer);
+        tgvk_command_buffer_end_and_submit(p_command_buffer);
+        copied_size += copy_size;
+    }
+    tgvk_global_staging_buffer_release();
+}
+
+
+
+void tgvk_util_copy_to_image(tgvk_image_layout_type old_layout, tgvk_image_layout_type new_layout, tg_size size, const void* p_data, tgvk_image* p_image)
+{
+    TG_ASSERT(size > 0);
+    TG_ASSERT(p_data != TG_NULL);
+    TG_ASSERT(p_image != TG_NULL);
+
+    // As the image may be too big to be copied in one step, we copy quads of the image.
+
+    const tg_size pixel_size = tg_color_image_format_size(p_image->format);
+    const tg_size size_per_iter = (tg_size)staging_buffer_size;
+    const u32 n_pixels_per_iter = (u32)(size_per_iter / pixel_size);
+    const u32 quad_side_length_per_iter = (u32)tgm_f32_sqrt((f32)n_pixels_per_iter);
+    const u32 n_iters_x = (p_image->width + quad_side_length_per_iter) / quad_side_length_per_iter;
+    const u32 n_iters_y = (p_image->height + quad_side_length_per_iter) / quad_side_length_per_iter;
+
+    tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_and_begin_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
+    tgvk_cmd_transition_image_layout(p_command_buffer, p_image, old_layout, TGVK_LAYOUT_TRANSFER_WRITE);
+    tgvk_buffer* p_staging_buffer = tg__staging_buffer_take(staging_buffer_size);
+    for (u32 iter_y = 0; iter_y < n_iters_y; iter_y++)
+    {
+        const u32 offset_y = iter_y * quad_side_length_per_iter;
+        const u32 extent_y = tgm_u32_min(quad_side_length_per_iter, p_image->height - offset_y);
+
+        for (u32 iter_x = 0; iter_x < n_iters_x; iter_x++)
+        {
+            const u32 offset_x = iter_x * quad_side_length_per_iter;
+            const u32 extent_x = tgm_u32_min(quad_side_length_per_iter, p_image->width - offset_x);
+
+            tg_size copy_size = 0;
+            for (u32 sb_y = offset_y; sb_y < offset_y + extent_y; sb_y++)
+            {
+                for (u32 sb_x = offset_x; sb_x < offset_x + extent_x; sb_x++)
+                {
+                    const tg_size src_offset = p_image->width * pixel_size * sb_y + pixel_size * sb_x;
+                    tg_memcpy(pixel_size, (u8*)p_data + src_offset, (u8*)p_staging_buffer->memory.p_mapped_device_memory + copy_size);
+                    copy_size += pixel_size;
+                }
+            }
+
+            tgvk_cmd_copy_buffer_to_image2(p_command_buffer, offset_x, offset_y, extent_x, extent_y, p_staging_buffer, p_image);
+            tgvk_command_buffer_end_and_submit(p_command_buffer);
+            tgvk_command_buffer_begin(p_command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+        }
+    }
+    tgvk_cmd_transition_image_layout(p_command_buffer, p_image, TGVK_LAYOUT_TRANSFER_WRITE, new_layout);
+    tgvk_command_buffer_end_and_submit(p_command_buffer);
+    tg__staging_buffer_release();
 }
 
 

@@ -136,6 +136,7 @@ tgvk_shader* tgvk_shader_library_get(const char* p_filename)
 		index = tgm_u32_incmod(index, TG_SHADER_LIBRARY_CAPACITY);
 	}
 	tgvk_shader* p_shader = &shader_library_hashmap.p_shaders[index];
+	TG_ASSERT(p_shader->shader_module != TG_NULL);
 	return p_shader;
 }
 

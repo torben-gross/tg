@@ -256,6 +256,7 @@ static void tg__scene_update_and_render(f32 dt_ms)
     TG_UNUSED(d0);
     TG_UNUSED(c0);
 
+    tg_raytracer_push_text(&scene.raytracer, "tg - Voxel Game Engine", 500.0f, 900.0f);
     //const m4 m = tgm_m4_scale((v3) { 1.0f, 1.0f, 1.0f });
     //tg_raytracer_push_debug_cuboid(&scene.raytracer, m);
     //tg_raytracer_push_debug_cuboid(&scene.raytracer, tgm_m4_mul(tgm_m4_translate((v3) { 0.0f, pds_extent.y / 2.0f + 128.0f, -256.0f }), tgm_m4_scale((v3) { pds_extent.x, pds_extent.y, 0.001f })));
