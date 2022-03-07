@@ -6,7 +6,10 @@
 #include "graphics/vulkan/tgvk_shader_library.h"
 #include "physics/tg_physics.h"
 #include "tg_input.h"
+#include "tg_variadic.h"
+#include "util/tg_color.h"
 #include "util/tg_qsort.h"
+#include "util/tg_string.h"
 
 
 
@@ -84,7 +87,7 @@ typedef struct tg_environment_ubo
     //v4     p_point_light_colors[TG_MAX_POINT_LIGHTS];
 } tg_environment_ubo;
 
-typedef struct tg_char_ssbo
+typedef struct tggui_transform_ssbo
 {
     f32    translation_x;
     f32    translation_y;
@@ -94,9 +97,18 @@ typedef struct tg_char_ssbo
     f32    uv_center_y;
     f32    uv_half_scale_x;
     f32    uv_half_scale_y;
-} tg_char_ssbo;
+    u32    type;
+} tggui_transform_ssbo;
 
 
+
+static v2 tg__screen_space_to_clip_space(v2 v, v2 target_size)
+{
+    v2 result = { 0 };
+    result.x = (v.x / target_size.x) * 2.0f - 1.0f;
+    result.y = (v.y / target_size.y) * 2.0f - 1.0f;
+    return result;
+}
 
 static void tg__push_debug_svo_node(tg_raytracer* p_raytracer, const tg_svo_inner_node* p_inner, v3 min, v3 max, b32 blocks_only, b32 push_children)
 {
@@ -204,54 +216,53 @@ static void tg__init_buffers(tg_raytracer* p_raytracer)
 
     const VkBufferUsageFlags ssbo_usage_flags         = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 
-    p_raytracer->buffers.idx_vbo                        = TGVK_BUFFER_CREATE_VBO(idx_vbo_size);
-    p_raytracer->buffers.cube_ibo                       = TGVK_BUFFER_CREATE_IBO(sizeof(p_cube_indices));
-    p_raytracer->buffers.cube_vbo                       = TGVK_BUFFER_CREATE_VBO(sizeof(p_cube_positions));
-    p_raytracer->buffers.quad_vbo                       = TGVK_BUFFER_CREATE_VBO(sizeof(p_quad_positions));
+    p_raytracer->data.idx_vbo                        = TGVK_BUFFER_CREATE_VBO(idx_vbo_size);
+    p_raytracer->data.cube_ibo                       = TGVK_BUFFER_CREATE_IBO(sizeof(p_cube_indices));
+    p_raytracer->data.cube_vbo                       = TGVK_BUFFER_CREATE_VBO(sizeof(p_cube_positions));
+    p_raytracer->data.quad_vbo                       = TGVK_BUFFER_CREATE_VBO(sizeof(p_quad_positions));
     
-    p_raytracer->buffers.cluster_idx_to_object_idx_ssbo = TGVK_BUFFER_CREATE(cluster_idx_to_object_idx_ssbo_size, ssbo_usage_flags, TGVK_MEMORY_DEVICE);
-    p_raytracer->buffers.object_data_ssbo               = TGVK_BUFFER_CREATE(object_data_ssbo_size,               ssbo_usage_flags, TGVK_MEMORY_DEVICE);
-    p_raytracer->buffers.object_color_lut_ssbo          = TGVK_BUFFER_CREATE(object_color_lut_ssbo_size,          ssbo_usage_flags, TGVK_MEMORY_DEVICE);
-    p_raytracer->buffers.voxel_cluster_ssbo             = TGVK_BUFFER_CREATE(voxel_cluster_ssbo_size,             ssbo_usage_flags, TGVK_MEMORY_DEVICE);
-    p_raytracer->buffers.color_lut_idx_cluster_ssbo     = TGVK_BUFFER_CREATE(color_lut_idx_cluster_ssbo_size,     ssbo_usage_flags, TGVK_MEMORY_DEVICE); // [cluster idx + voxel idx] Cluster of color LUT indices (8 bit per voxel)
+    p_raytracer->data.cluster_idx_to_object_idx_ssbo = TGVK_BUFFER_CREATE(cluster_idx_to_object_idx_ssbo_size, ssbo_usage_flags, TGVK_MEMORY_DEVICE);
+    p_raytracer->data.object_data_ssbo               = TGVK_BUFFER_CREATE(object_data_ssbo_size,               ssbo_usage_flags, TGVK_MEMORY_DEVICE);
+    p_raytracer->data.object_color_lut_ssbo          = TGVK_BUFFER_CREATE(object_color_lut_ssbo_size,          ssbo_usage_flags, TGVK_MEMORY_DEVICE);
+    p_raytracer->data.voxel_cluster_ssbo             = TGVK_BUFFER_CREATE(voxel_cluster_ssbo_size,             ssbo_usage_flags, TGVK_MEMORY_DEVICE);
+    p_raytracer->data.color_lut_idx_cluster_ssbo     = TGVK_BUFFER_CREATE(color_lut_idx_cluster_ssbo_size,     ssbo_usage_flags, TGVK_MEMORY_DEVICE); // [cluster idx + voxel idx] Cluster of color LUT indices (8 bit per voxel)
 
     // They are generated on the fly as required
-    p_raytracer->buffers.svo_ssbo                = (tgvk_buffer){ 0 };
-    p_raytracer->buffers.svo_nodes_ssbo          = (tgvk_buffer){ 0 };
-    p_raytracer->buffers.svo_leaf_node_data_ssbo = (tgvk_buffer){ 0 };
-    p_raytracer->buffers.svo_voxel_data_ssbo     = (tgvk_buffer){ 0 };
+    p_raytracer->data.svo_ssbo                = (tgvk_buffer){ 0 };
+    p_raytracer->data.svo_nodes_ssbo          = (tgvk_buffer){ 0 };
+    p_raytracer->data.svo_leaf_node_data_ssbo = (tgvk_buffer){ 0 };
+    p_raytracer->data.svo_voxel_data_ssbo     = (tgvk_buffer){ 0 };
 
-    p_raytracer->buffers.visibility_buffer_ssbo  = TGVK_BUFFER_CREATE(visibility_buffer_ssbo_size, ssbo_usage_flags, TGVK_MEMORY_DEVICE);
-    p_raytracer->buffers.view_projection_ubo     = TGVK_BUFFER_CREATE_UBO(sizeof(tg_view_projection_ubo));
-    p_raytracer->buffers.camera_ubo              = TGVK_BUFFER_CREATE_UBO(sizeof(tg_camera_ubo));
-    p_raytracer->buffers.environment_ubo         = TGVK_BUFFER_CREATE_UBO(sizeof(tg_environment_ubo));
+    p_raytracer->data.visibility_buffer_ssbo  = TGVK_BUFFER_CREATE(visibility_buffer_ssbo_size, ssbo_usage_flags, TGVK_MEMORY_DEVICE);
+    p_raytracer->data.view_projection_ubo     = TGVK_BUFFER_CREATE_UBO(sizeof(tg_view_projection_ubo));
+    p_raytracer->data.camera_ubo              = TGVK_BUFFER_CREATE_UBO(sizeof(tg_camera_ubo));
+    p_raytracer->data.environment_ubo         = TGVK_BUFFER_CREATE_UBO(sizeof(tg_environment_ubo));
 
-    p_raytracer->buffers.char_ssbo               = TGVK_BUFFER_CREATE(p_raytracer->scene.char_capacity * sizeof(tg_char_ssbo), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, TGVK_MEMORY_HOST);
-
-    p_raytracer->buffers.debug_matrices_ssbo     = TGVK_BUFFER_CREATE(p_raytracer->debug_pass.capacity * sizeof(m4), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, TGVK_MEMORY_HOST);
-    p_raytracer->buffers.debug_colors_ssbo       = TGVK_BUFFER_CREATE(p_raytracer->debug_pass.capacity * sizeof(v4), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, TGVK_MEMORY_HOST);
+    p_raytracer->data.debug_matrices_ssbo     = TGVK_BUFFER_CREATE(p_raytracer->debug_pass.capacity * sizeof(m4), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, TGVK_MEMORY_HOST);
+    p_raytracer->data.debug_colors_ssbo       = TGVK_BUFFER_CREATE(p_raytracer->debug_pass.capacity * sizeof(v4), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, TGVK_MEMORY_HOST);
 
     // INITIALIZE
 
     tgvk_staging_buffer staging_buffer = { 0 };
-    tgvk_staging_buffer_take(idx_vbo_size, &p_raytracer->buffers.idx_vbo, &staging_buffer);
+    tgvk_staging_buffer_take(idx_vbo_size, &p_raytracer->data.idx_vbo, &staging_buffer);
     for (u32 i = 0; i < p_raytracer->scene.cluster_capacity; i++)
     {
         tgvk_staging_buffer_push_u32(&staging_buffer, i);
     }
     
-    tgvk_staging_buffer_reinit(&staging_buffer, sizeof(p_cube_indices), &p_raytracer->buffers.cube_ibo);
+    tgvk_staging_buffer_reinit(&staging_buffer, sizeof(p_cube_indices), &p_raytracer->data.cube_ibo);
     tgvk_staging_buffer_push(&staging_buffer, sizeof(p_cube_indices), p_cube_indices);
     
-    tgvk_staging_buffer_reinit(&staging_buffer, sizeof(p_cube_positions), &p_raytracer->buffers.cube_vbo);
+    tgvk_staging_buffer_reinit(&staging_buffer, sizeof(p_cube_positions), &p_raytracer->data.cube_vbo);
     tgvk_staging_buffer_push(&staging_buffer, sizeof(p_cube_positions), p_cube_positions);
     
-    tgvk_staging_buffer_reinit(&staging_buffer, sizeof(p_quad_positions), &p_raytracer->buffers.quad_vbo);
+    tgvk_staging_buffer_reinit(&staging_buffer, sizeof(p_quad_positions), &p_raytracer->data.quad_vbo);
     tgvk_staging_buffer_push(&staging_buffer, sizeof(p_quad_positions), p_quad_positions);
     
-    tgvk_staging_buffer_reinit(&staging_buffer, 2ui64 * sizeof(u32), &p_raytracer->buffers.visibility_buffer_ssbo);
+    tgvk_staging_buffer_reinit(&staging_buffer, 2ui64 * sizeof(u32), &p_raytracer->data.visibility_buffer_ssbo);
     tgvk_staging_buffer_push_u32(&staging_buffer, w);
     tgvk_staging_buffer_push_u32(&staging_buffer, h);
+
     tgvk_staging_buffer_release(&staging_buffer);
 }
 
@@ -359,7 +370,7 @@ static void tg__init_shading_pass(tg_raytracer* p_raytracer)
     p_raytracer->shading_pass.descriptor_set = tgvk_descriptor_set_create(&p_raytracer->shading_pass.graphics_pipeline);
     
     VkDescriptorSet set = p_raytracer->shading_pass.descriptor_set.set;
-    tg_raytracer_buffers* p_buffers = &p_raytracer->buffers;
+    tg_raytracer_data* p_buffers = &p_raytracer->data;
     const u32 atmosphere_binding_offset = 4;
     u32 binding_offset = atmosphere_binding_offset;
 
@@ -419,58 +430,57 @@ static void tg__init_debug_pass(tg_raytracer* p_raytracer)
     p_raytracer->debug_pass.descriptor_set = tgvk_descriptor_set_create(&p_raytracer->debug_pass.graphics_pipeline);
     p_raytracer->debug_pass.framebuffer = tgvk_framebuffer_create(p_raytracer->debug_pass.render_pass, 1, &p_raytracer->render_target.color_attachment.image_view, w, h);
 
-    tgvk_descriptor_set_update_storage_buffer(p_raytracer->debug_pass.descriptor_set.set, &p_raytracer->buffers.debug_matrices_ssbo, 0);
-    tgvk_descriptor_set_update_uniform_buffer(p_raytracer->debug_pass.descriptor_set.set, &p_raytracer->buffers.view_projection_ubo, 1);
-    tgvk_descriptor_set_update_storage_buffer(p_raytracer->debug_pass.descriptor_set.set, &p_raytracer->buffers.debug_colors_ssbo, 2);
+    tgvk_descriptor_set_update_storage_buffer(p_raytracer->debug_pass.descriptor_set.set, &p_raytracer->data.debug_matrices_ssbo, 0);
+    tgvk_descriptor_set_update_uniform_buffer(p_raytracer->debug_pass.descriptor_set.set, &p_raytracer->data.view_projection_ubo, 1);
+    tgvk_descriptor_set_update_storage_buffer(p_raytracer->debug_pass.descriptor_set.set, &p_raytracer->data.debug_colors_ssbo, 2);
 }
 
-static void tg__init_ui_pass(tg_raytracer* p_raytracer)
+static void tg__init_gui_pass(tg_raytracer* p_raytracer)
 {
     const u32 w = swapchain_extent.width;
     const u32 h = swapchain_extent.height;
 
-    p_raytracer->ui_pass.command_buffer = tgvk_command_buffer_create(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+    p_raytracer->gui_pass.command_buffer = tgvk_command_buffer_create(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+    p_raytracer->gui_pass.fence          = tgvk_fence_create(VK_FENCE_CREATE_SIGNALED_BIT);
 
     VkAttachmentDescription attachment_description = { 0 };
-    attachment_description.format = TGVK_HDR_FORMAT;
-    attachment_description.samples = VK_SAMPLE_COUNT_1_BIT;
-    attachment_description.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-    attachment_description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    attachment_description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachment_description.format         = TGVK_HDR_FORMAT;
+    attachment_description.samples        = VK_SAMPLE_COUNT_1_BIT;
+    attachment_description.loadOp         = VK_ATTACHMENT_LOAD_OP_LOAD;
+    attachment_description.storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
+    attachment_description.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     attachment_description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    attachment_description.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    attachment_description.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    attachment_description.initialLayout  = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    attachment_description.finalLayout    = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
     VkAttachmentReference attachment_reference = { 0 };
     attachment_reference.attachment = 0;
-    attachment_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    attachment_reference.layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
     VkSubpassDescription subpass_description = { 0 };
-    subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass_description.pipelineBindPoint    = VK_PIPELINE_BIND_POINT_GRAPHICS;
     subpass_description.colorAttachmentCount = 1;
-    subpass_description.pColorAttachments = &attachment_reference;
+    subpass_description.pColorAttachments    = &attachment_reference;
 
     // TODO: simplify
-    p_raytracer->ui_pass.render_pass = tgvk_render_pass_create(&attachment_description, &subpass_description);
+    p_raytracer->gui_pass.render_pass = tgvk_render_pass_create(&attachment_description, &subpass_description);
 
     tg_blend_mode blend_mode = TG_BLEND_MODE_BLEND;
     tgvk_graphics_pipeline_create_info pipeline_create_info = { 0 };
-    pipeline_create_info.p_vertex_shader = tgvk_shader_library_get("shaders/raytracer/ui/text.vert");
-    pipeline_create_info.p_fragment_shader = tgvk_shader_library_get("shaders/raytracer/ui/text.frag");
-    pipeline_create_info.cull_mode = VK_CULL_MODE_NONE;
-    pipeline_create_info.depth_test_enable = TG_FALSE;
+    pipeline_create_info.p_vertex_shader    = tgvk_shader_library_get("shaders/gui.vert");
+    pipeline_create_info.p_fragment_shader  = tgvk_shader_library_get("shaders/gui.frag");
+    pipeline_create_info.cull_mode          = VK_CULL_MODE_NONE;
+    pipeline_create_info.depth_test_enable  = TG_FALSE;
     pipeline_create_info.depth_write_enable = TG_FALSE;
-    pipeline_create_info.p_blend_modes = &blend_mode;
-    pipeline_create_info.render_pass = p_raytracer->ui_pass.render_pass;
-    pipeline_create_info.viewport_size.x = (f32)w;
-    pipeline_create_info.viewport_size.y = (f32)h;
-    pipeline_create_info.polygon_mode = VK_POLYGON_MODE_FILL;
+    pipeline_create_info.p_blend_modes      = &blend_mode;
+    pipeline_create_info.render_pass        = p_raytracer->gui_pass.render_pass;
+    pipeline_create_info.viewport_size.x    = (f32)w;
+    pipeline_create_info.viewport_size.y    = (f32)h;
+    pipeline_create_info.polygon_mode       = VK_POLYGON_MODE_FILL;
 
-    p_raytracer->ui_pass.graphics_pipeline = tgvk_pipeline_create_graphics(&pipeline_create_info);
-    p_raytracer->ui_pass.descriptor_set = tgvk_descriptor_set_create(&p_raytracer->ui_pass.graphics_pipeline);
-    p_raytracer->ui_pass.framebuffer = tgvk_framebuffer_create(p_raytracer->ui_pass.render_pass, 1, &p_raytracer->render_target.color_attachment.image_view, w, h);
-
-    tgvk_descriptor_set_update_image(p_raytracer->ui_pass.descriptor_set.set, &p_raytracer->scene.font.texture_atlas, 1);
+    p_raytracer->gui_pass.graphics_pipeline = tgvk_pipeline_create_graphics(&pipeline_create_info);
+    p_raytracer->gui_pass.descriptor_set = tgvk_descriptor_set_create(&p_raytracer->gui_pass.graphics_pipeline);
+    p_raytracer->gui_pass.framebuffer = tgvk_framebuffer_create(p_raytracer->gui_pass.render_pass, 1, &p_raytracer->render_target.color_attachment.image_view, w, h);
 }
 
 static void tg__init_blit_pass(tg_raytracer* p_raytracer)
@@ -629,7 +639,7 @@ static void tg__init_clear_pass(tg_raytracer* p_raytracer)
     p_raytracer->clear_pass.command_buffer = tgvk_command_buffer_create(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     p_raytracer->clear_pass.compute_pipeline = tgvk_pipeline_create_compute(tgvk_shader_library_get("shaders/raytracer/clear.comp"));
     p_raytracer->clear_pass.descriptor_set = tgvk_descriptor_set_create(&p_raytracer->clear_pass.compute_pipeline);
-    tgvk_descriptor_set_update_storage_buffer(p_raytracer->clear_pass.descriptor_set.set, &p_raytracer->buffers.visibility_buffer_ssbo, 0);
+    tgvk_descriptor_set_update_storage_buffer(p_raytracer->clear_pass.descriptor_set.set, &p_raytracer->data.visibility_buffer_ssbo, 0);
 
     tgvk_command_buffer_begin(&p_raytracer->clear_pass.command_buffer, 0);
     {
@@ -672,10 +682,50 @@ void tg_raytracer_create(const tg_camera* p_camera, u32 max_n_instances, u32 max
     p_raytracer->scene.n_clusters                  = 0;
     p_raytracer->scene.p_voxel_cluster_data        = TG_MALLOC((tg_size)max_n_clusters * (tg_size)TGVK_VOXEL_CLUSTER_SIZE);
     p_raytracer->scene.p_cluster_idx_to_object_idx = TG_MALLOC((tg_size)max_n_clusters * sizeof(*p_raytracer->scene.p_cluster_idx_to_object_idx));
+    
 
-    tgvk_font_create("fonts/arial.ttf", &p_raytracer->scene.font);
-    p_raytracer->scene.char_capacity               = 512;
-    p_raytracer->scene.n_chars                     = 0;
+
+    p_raytracer->gui_context = (tggui_context){ 0 };
+
+    tggui_style* p_style = &p_raytracer->gui_context.style;
+    tgvk_font_create("fonts/arial.ttf", &p_style->font);
+    p_style->p_colors[TGGUI_COLOR_TEXT]           = (v4){ 1.0f,  1.0f,  1.0f,  1.0f  };
+    p_style->p_colors[TGGUI_COLOR_WINDOW_BG]      = (v4){ 0.06f, 0.06f, 0.06f, 0.94f };
+    p_style->p_colors[TGGUI_COLOR_BUTTON]         = (v4){ 0.26f, 0.59f, 0.98f, 0.04f };
+    p_style->p_colors[TGGUI_COLOR_BUTTON_HOVERED] = (v4){ 0.26f, 0.59f, 0.98f, 1.0f  };
+    p_style->p_colors[TGGUI_COLOR_BUTTON_ACTIVE]  = (v4){ 0.06f, 0.53f, 0.98f, 1.0f  };
+    p_style->p_colors[TGGUI_COLOR_FRAME]          = (v4){ 0.16f, 0.29f, 0.48f, 0.54f };
+    p_style->p_colors[TGGUI_COLOR_FRAME_HOVERED]  = (v4){ 0.26f, 0.59f, 0.98f, 0.4f  };
+    p_style->p_colors[TGGUI_COLOR_FRAME_ACTIVE]   = (v4){ 0.26f, 0.59f, 0.98f, 0.67f };
+    p_style->p_colors[TGGUI_COLOR_CHECKMARK]      = (v4){ 0.26f, 0.59f, 0.98f, 1.0f  };
+
+    p_raytracer->gui_context.quad_capacity = 512;
+    p_raytracer->gui_context.n_quads = 0;
+
+    p_raytracer->gui_context.transform_ssbo = TGVK_BUFFER_CREATE(p_raytracer->gui_context.quad_capacity * sizeof(tggui_transform_ssbo), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, TGVK_MEMORY_HOST);
+    p_raytracer->gui_context.colors_ssbo = TGVK_BUFFER_CREATE(p_raytracer->gui_context.quad_capacity * sizeof(tggui_transform_ssbo), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, TGVK_MEMORY_DEVICE);
+
+    tgvk_sampler_create_info white_texture_sampler_create_info = { 0 };
+    white_texture_sampler_create_info.min_filter = TG_IMAGE_FILTER_NEAREST;
+    white_texture_sampler_create_info.mag_filter = TG_IMAGE_FILTER_NEAREST;
+    white_texture_sampler_create_info.address_mode_u = TG_IMAGE_ADDRESS_MODE_REPEAT;
+    white_texture_sampler_create_info.address_mode_v = TG_IMAGE_ADDRESS_MODE_REPEAT;
+    white_texture_sampler_create_info.address_mode_w = TG_IMAGE_ADDRESS_MODE_REPEAT;
+
+    p_raytracer->gui_context.white_texture = TGVK_IMAGE_CREATE(TGVK_IMAGE_TYPE_COLOR, 1, 1, TG_COLOR_IMAGE_FORMAT_R8_UNORM, &white_texture_sampler_create_info);
+    const u8 white = 0xff;
+    tgvk_util_copy_to_image(VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, &white, &p_raytracer->gui_context.white_texture);
+
+    tgvk_staging_buffer staging_buffer = { 0 };
+    tgvk_staging_buffer_take(TGGUI_COLOR_TYPE_COUNT * sizeof(u32), &p_raytracer->gui_context.colors_ssbo, &staging_buffer);
+    for (u32 color_type_idx = 0; color_type_idx < TGGUI_COLOR_TYPE_COUNT; color_type_idx++)
+    {
+        const u32 color = tg_color_pack(p_raytracer->gui_context.style.p_colors[color_type_idx]);
+        tgvk_staging_buffer_push_u32(&staging_buffer, color);
+    }
+    tgvk_staging_buffer_release(&staging_buffer);
+
+
 
     p_raytracer->debug_pass.capacity = (1 << 14);
     p_raytracer->debug_pass.count = 0;
@@ -685,7 +735,7 @@ void tg_raytracer_create(const tg_camera* p_camera, u32 max_n_instances, u32 max
     tg__init_svo_pass(p_raytracer);
     tg__init_shading_pass(p_raytracer);
     tg__init_debug_pass(p_raytracer);
-    tg__init_ui_pass(p_raytracer);
+    tg__init_gui_pass(p_raytracer);
     tg__init_blit_pass(p_raytracer);
     tg__init_present_pass(p_raytracer);
     tg__init_clear_pass(p_raytracer);
@@ -738,12 +788,12 @@ void tg_raytracer_create_object(tg_raytracer* p_raytracer, v3 center, v3u extent
     const tg_size object_data_ubo_staging_buffer_size = sizeof(tg_object_data_ssbo);
     const tg_size object_data_ubo_offset = (tg_size)object_idx * sizeof(tg_object_data_ssbo);
     tgvk_staging_buffer staging_buffer = { 0 };
-    tgvk_staging_buffer_take2(object_data_ubo_staging_buffer_size, object_data_ubo_offset, &p_raytracer->buffers.object_data_ssbo, &staging_buffer);
+    tgvk_staging_buffer_take2(object_data_ubo_staging_buffer_size, object_data_ubo_offset, &p_raytracer->data.object_data_ssbo, &staging_buffer);
     tgvk_staging_buffer_push(&staging_buffer, sizeof(object_data), &object_data);
 
     // CLUSTER IDX TO OBJECT IDX
 
-    tgvk_staging_buffer_reinit2(&staging_buffer, (tg_size)n_clusters * sizeof(u32), p_object->first_cluster_idx * sizeof(u32), &p_raytracer->buffers.cluster_idx_to_object_idx_ssbo);
+    tgvk_staging_buffer_reinit2(&staging_buffer, (tg_size)n_clusters * sizeof(u32), p_object->first_cluster_idx * sizeof(u32), &p_raytracer->data.cluster_idx_to_object_idx_ssbo);
     for (u32 relative_cluster_idx = 0; relative_cluster_idx < n_clusters; relative_cluster_idx++)
     {
         tgvk_staging_buffer_push_u32(&staging_buffer, object_idx);
@@ -768,7 +818,7 @@ void tg_raytracer_create_object(tg_raytracer* p_raytracer, v3 center, v3u extent
                 p_raytracer->scene.p_cluster_idx_to_object_idx[cluster_idx] = object_idx;
 
                 const tg_size cluster_offset = (tg_size)cluster_idx * TGVK_VOXEL_CLUSTER_SIZE;
-                tgvk_staging_buffer_reinit2(&staging_buffer, TGVK_VOXEL_CLUSTER_SIZE, cluster_offset, &p_raytracer->buffers.voxel_cluster_ssbo);
+                tgvk_staging_buffer_reinit2(&staging_buffer, TGVK_VOXEL_CLUSTER_SIZE, cluster_offset, &p_raytracer->data.voxel_cluster_ssbo);
 
                 const u32 voxel_offset_x = TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT * relative_cluster_idx_x;
                 const u32 voxel_offset_y = TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT * relative_cluster_idx_y;
@@ -840,7 +890,7 @@ void tg_raytracer_create_object(tg_raytracer* p_raytracer, v3 center, v3u extent
                 const u32 cluster_idx = p_object->first_cluster_idx + relative_cluster_idx;
 
                 const tg_size cluster_offset = (tg_size)cluster_idx * TGVK_COLOR_LUT_IDX_CLUSTER_SIZE;
-                tgvk_staging_buffer_reinit2(&staging_buffer, TGVK_COLOR_LUT_IDX_CLUSTER_SIZE, cluster_offset, &p_raytracer->buffers.color_lut_idx_cluster_ssbo);
+                tgvk_staging_buffer_reinit2(&staging_buffer, TGVK_COLOR_LUT_IDX_CLUSTER_SIZE, cluster_offset, &p_raytracer->data.color_lut_idx_cluster_ssbo);
 
                 for (u32 relative_voxel_z = 0; relative_voxel_z < TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT; relative_voxel_z++)
                 {
@@ -862,64 +912,6 @@ void tg_raytracer_create_object(tg_raytracer* p_raytracer, v3 center, v3u extent
     // TODO: lods
 }
 
-void tg_raytracer_push_text(tg_raytracer* p_raytracer, const char* p_text, f32 left, f32 baseline)
-{
-    TG_ASSERT(p_raytracer != TG_NULL);
-    TG_ASSERT(p_text != TG_NULL);
-
-    const tgvk_font* p_font = &p_raytracer->scene.font;
-    const f32 w = (f32)p_raytracer->render_target.color_attachment.width;
-    const f32 h = (f32)p_raytracer->render_target.color_attachment.height;
-
-    f32 x_offset = left;
-    f32 y_offset = baseline;
-    const char* p_it = p_text;
-
-    while (*p_it != '\0')
-    {
-        TG_ASSERT(p_raytracer->scene.n_chars < p_raytracer->scene.char_capacity);
-
-        const char c = *p_it++;
-        const u8 glyph_idx = p_font->p_char_to_glyph[c];
-        const tgvk_glyph* p_glyph = &p_font->p_glyphs[glyph_idx];
-
-        const f32 x0 = x_offset + p_glyph->left_side_bearing;
-        const f32 x1 = x0 + p_glyph->size.x;
-        const f32 y0 = y_offset + p_glyph->bottom_side_bearing;
-        const f32 y1 = y0 + p_glyph->size.y;
-
-        if (x0 != x1 && y0 != y1)
-        {
-            const f32 rel_x0 = (x0 / w) * 2.0f - 1.0f;
-            const f32 rel_x1 = (x1 / w) * 2.0f - 1.0f;
-            const f32 rel_y0 = -((y0 / h) * 2.0f - 1.0f);
-            const f32 rel_y1 = -((y1 / h) * 2.0f - 1.0f);
-
-            const f32 translation_x = (rel_x0 + rel_x1) / 2.0f;
-            const f32 translation_y = (rel_y0 + rel_y1) / 2.0f;
-
-            const f32 scale_x = rel_x1 - rel_x0;
-            const f32 scale_y = -(rel_y1 - rel_y0);
-
-            TG_ASSERT(scale_x > 0.0f); // TODO: We may want to later remove this, once we can scale fonts and a negative font size would flip the text, which may be desired
-            TG_ASSERT(scale_y > 0.0f);
-
-            tg_char_ssbo* p_char_ssbo = &((tg_char_ssbo*)p_raytracer->buffers.char_ssbo.memory.p_mapped_device_memory)[p_raytracer->scene.n_chars++];
-
-            p_char_ssbo->translation_x   = translation_x;
-            p_char_ssbo->translation_y   = translation_y;
-            p_char_ssbo->half_scale_x    = scale_x / 2.0f;
-            p_char_ssbo->half_scale_y    = scale_y / 2.0f;
-            p_char_ssbo->uv_center_x     =  (        p_glyph->uv_min.x  +         p_glyph->uv_max.x ) / 2.0f;
-            p_char_ssbo->uv_center_y     =  ((1.0f - p_glyph->uv_min.y) + (1.0f - p_glyph->uv_max.y)) / 2.0f;
-            p_char_ssbo->uv_half_scale_x =  (        p_glyph->uv_max.x  -         p_glyph->uv_min.x ) / 2.0f;
-            p_char_ssbo->uv_half_scale_y = -((1.0f - p_glyph->uv_max.y) - (1.0f - p_glyph->uv_min.y)) / 2.0f;
-
-            x_offset += p_glyph->advance_width;
-        }
-    }
-}
-
 void tg_raytracer_push_debug_cuboid(tg_raytracer* p_raytracer, m4 transformation_matrix, v3 color)
 {
     // TODO: color
@@ -927,10 +919,10 @@ void tg_raytracer_push_debug_cuboid(tg_raytracer* p_raytracer, m4 transformation
     TG_ASSERT(p_raytracer->debug_pass.count < p_raytracer->debug_pass.capacity);
     TG_ASSERT(p_raytracer->debug_pass.count < p_raytracer->scene.cluster_capacity); // Note: We reuse cluster indices for instancing
 
-    m4* p_transformation_matrices = p_raytracer->buffers.debug_matrices_ssbo.memory.p_mapped_device_memory;
+    m4* p_transformation_matrices = p_raytracer->data.debug_matrices_ssbo.memory.p_mapped_device_memory;
     p_transformation_matrices[p_raytracer->debug_pass.count] = transformation_matrix;
 
-    v4* p_colors = p_raytracer->buffers.debug_colors_ssbo.memory.p_mapped_device_memory;
+    v4* p_colors = p_raytracer->data.debug_colors_ssbo.memory.p_mapped_device_memory;
     p_colors[p_raytracer->debug_pass.count].xyz = color;
 
     p_raytracer->debug_pass.count++;
@@ -980,7 +972,7 @@ void tg_raytracer_color_lut_set(tg_raytracer* p_raytracer, u8 index, f32 r, f32 
 
     tgvk_staging_buffer staging_buffer = { 0 };
     const tg_size dst_offset = (tg_size)color_lut_idx * 256 * sizeof(u32) + (tg_size)index * sizeof(u32);
-    tgvk_staging_buffer_take2(sizeof(u32), dst_offset, &p_raytracer->buffers.object_color_lut_ssbo, &staging_buffer);
+    tgvk_staging_buffer_take2(sizeof(u32), dst_offset, &p_raytracer->data.object_color_lut_ssbo, &staging_buffer);
     tgvk_staging_buffer_push_u32(&staging_buffer, packed_color);
     tgvk_staging_buffer_release(&staging_buffer);
 }
@@ -990,9 +982,9 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
     TG_ASSERT(p_raytracer);
     TG_ASSERT(p_raytracer->scene.n_objects > 0);
 
-    tg_view_projection_ubo* p_view_projection_ubo = p_raytracer->buffers.view_projection_ubo.memory.p_mapped_device_memory;
-    tg_camera_ubo*          p_camera_ubo          = p_raytracer->buffers.camera_ubo.memory.p_mapped_device_memory;
-    tg_environment_ubo*     p_environment_ubo     = p_raytracer->buffers.environment_ubo.memory.p_mapped_device_memory;
+    tg_view_projection_ubo* p_view_projection_ubo = p_raytracer->data.view_projection_ubo.memory.p_mapped_device_memory;
+    tg_camera_ubo*          p_camera_ubo          = p_raytracer->data.camera_ubo.memory.p_mapped_device_memory;
+    tg_environment_ubo*     p_environment_ubo     = p_raytracer->data.environment_ubo.memory.p_mapped_device_memory;
 
     const tg_camera c = *p_raytracer->p_camera;
 
@@ -1048,19 +1040,19 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
         const tg_size svo_voxel_data_ssbo_size     = p_raytracer->scene.svo.voxel_buffer_capacity_in_u32   * sizeof(*p_raytracer->scene.svo.p_voxels_buffer);
         const VkBufferUsageFlags ssbo_usage_flags  = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 
-        p_raytracer->buffers.svo_ssbo                = TGVK_BUFFER_CREATE(svo_ssbo_size,                ssbo_usage_flags, TGVK_MEMORY_DEVICE);
-        p_raytracer->buffers.svo_nodes_ssbo          = TGVK_BUFFER_CREATE(svo_nodes_ssbo_size,          ssbo_usage_flags, TGVK_MEMORY_DEVICE);
-        p_raytracer->buffers.svo_leaf_node_data_ssbo = TGVK_BUFFER_CREATE(svo_leaf_node_data_ssbo_size, ssbo_usage_flags, TGVK_MEMORY_DEVICE);
-        p_raytracer->buffers.svo_voxel_data_ssbo     = TGVK_BUFFER_CREATE(svo_voxel_data_ssbo_size,     ssbo_usage_flags, TGVK_MEMORY_DEVICE);
+        p_raytracer->data.svo_ssbo                = TGVK_BUFFER_CREATE(svo_ssbo_size,                ssbo_usage_flags, TGVK_MEMORY_DEVICE);
+        p_raytracer->data.svo_nodes_ssbo          = TGVK_BUFFER_CREATE(svo_nodes_ssbo_size,          ssbo_usage_flags, TGVK_MEMORY_DEVICE);
+        p_raytracer->data.svo_leaf_node_data_ssbo = TGVK_BUFFER_CREATE(svo_leaf_node_data_ssbo_size, ssbo_usage_flags, TGVK_MEMORY_DEVICE);
+        p_raytracer->data.svo_voxel_data_ssbo     = TGVK_BUFFER_CREATE(svo_voxel_data_ssbo_size,     ssbo_usage_flags, TGVK_MEMORY_DEVICE);
 
         v4 p_svo_min_max[2] = { 0 };
         p_svo_min_max[0].xyz = p_svo->min;
         p_svo_min_max[1].xyz = p_svo->max;
 
-        tgvk_util_copy_to_buffer(2 * sizeof(v4),               p_svo_min_max,                  &p_raytracer->buffers.svo_ssbo);
-        tgvk_util_copy_to_buffer(svo_nodes_ssbo_size,          p_svo->p_node_buffer,           &p_raytracer->buffers.svo_nodes_ssbo);
-        tgvk_util_copy_to_buffer(svo_leaf_node_data_ssbo_size, p_svo->p_leaf_node_data_buffer, &p_raytracer->buffers.svo_leaf_node_data_ssbo);
-        tgvk_util_copy_to_buffer(svo_voxel_data_ssbo_size,     p_svo->p_voxels_buffer,         &p_raytracer->buffers.svo_voxel_data_ssbo);
+        tgvk_util_copy_to_buffer(2 * sizeof(v4),               p_svo_min_max,                  &p_raytracer->data.svo_ssbo);
+        tgvk_util_copy_to_buffer(svo_nodes_ssbo_size,          p_svo->p_node_buffer,           &p_raytracer->data.svo_nodes_ssbo);
+        tgvk_util_copy_to_buffer(svo_leaf_node_data_ssbo_size, p_svo->p_leaf_node_data_buffer, &p_raytracer->data.svo_leaf_node_data_ssbo);
+        tgvk_util_copy_to_buffer(svo_voxel_data_ssbo_size,     p_svo->p_voxels_buffer,         &p_raytracer->data.svo_voxel_data_ssbo);
     }
 
 
@@ -1082,16 +1074,16 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
 
         vkCmdBindPipeline(p_raytracer->svo_pass.command_buffer.buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_raytracer->svo_pass.graphics_pipeline.pipeline);
         vkCmdBindIndexBuffer(p_raytracer->svo_pass.command_buffer.buffer, screen_quad_ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
-        vkCmdBindVertexBuffers(p_raytracer->svo_pass.command_buffer.buffer, 0, 1, &p_raytracer->buffers.idx_vbo.buffer, &vertex_buffer_offset);
+        vkCmdBindVertexBuffers(p_raytracer->svo_pass.command_buffer.buffer, 0, 1, &p_raytracer->data.idx_vbo.buffer, &vertex_buffer_offset);
         vkCmdBindVertexBuffers(p_raytracer->svo_pass.command_buffer.buffer, 1, 1, &screen_quad_positions_vbo.buffer, &vertex_buffer_offset);
 
         // TODO: update required here? Otherwise mark as dirty. Also, draw indirect
-        tgvk_descriptor_set_update_uniform_buffer(p_raytracer->svo_pass.descriptor_set.set, &p_raytracer->buffers.camera_ubo,              0);
-        tgvk_descriptor_set_update_storage_buffer(p_raytracer->svo_pass.descriptor_set.set, &p_raytracer->buffers.visibility_buffer_ssbo,  1);
-        tgvk_descriptor_set_update_storage_buffer(p_raytracer->svo_pass.descriptor_set.set, &p_raytracer->buffers.svo_ssbo,                2);
-        tgvk_descriptor_set_update_storage_buffer(p_raytracer->svo_pass.descriptor_set.set, &p_raytracer->buffers.svo_nodes_ssbo,          3);
-        tgvk_descriptor_set_update_storage_buffer(p_raytracer->svo_pass.descriptor_set.set, &p_raytracer->buffers.svo_leaf_node_data_ssbo, 4);
-        tgvk_descriptor_set_update_storage_buffer(p_raytracer->svo_pass.descriptor_set.set, &p_raytracer->buffers.svo_voxel_data_ssbo,     5);
+        tgvk_descriptor_set_update_uniform_buffer(p_raytracer->svo_pass.descriptor_set.set, &p_raytracer->data.camera_ubo,              0);
+        tgvk_descriptor_set_update_storage_buffer(p_raytracer->svo_pass.descriptor_set.set, &p_raytracer->data.visibility_buffer_ssbo,  1);
+        tgvk_descriptor_set_update_storage_buffer(p_raytracer->svo_pass.descriptor_set.set, &p_raytracer->data.svo_ssbo,                2);
+        tgvk_descriptor_set_update_storage_buffer(p_raytracer->svo_pass.descriptor_set.set, &p_raytracer->data.svo_nodes_ssbo,          3);
+        tgvk_descriptor_set_update_storage_buffer(p_raytracer->svo_pass.descriptor_set.set, &p_raytracer->data.svo_leaf_node_data_ssbo, 4);
+        tgvk_descriptor_set_update_storage_buffer(p_raytracer->svo_pass.descriptor_set.set, &p_raytracer->data.svo_voxel_data_ssbo,     5);
 
         vkCmdBindDescriptorSets(p_raytracer->svo_pass.command_buffer.buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_raytracer->svo_pass.graphics_pipeline.layout.pipeline_layout, 0, 1, &p_raytracer->svo_pass.descriptor_set.set, 0, TG_NULL);
 
@@ -1127,17 +1119,17 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
         tgvk_cmd_begin_render_pass(&p_raytracer->visibility_pass.command_buffer, p_raytracer->visibility_pass.render_pass, &p_raytracer->visibility_pass.framebuffer, VK_SUBPASS_CONTENTS_INLINE);
     
         vkCmdBindPipeline(p_raytracer->visibility_pass.command_buffer.buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_raytracer->visibility_pass.graphics_pipeline.pipeline);
-        vkCmdBindIndexBuffer(p_raytracer->visibility_pass.command_buffer.buffer, p_raytracer->buffers.cube_ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
-        vkCmdBindVertexBuffers(p_raytracer->visibility_pass.command_buffer.buffer, 0, 1, &p_raytracer->buffers.idx_vbo.buffer, &vertex_buffer_offset);
-        vkCmdBindVertexBuffers(p_raytracer->visibility_pass.command_buffer.buffer, 1, 1, &p_raytracer->buffers.cube_vbo.buffer, &vertex_buffer_offset);
+        vkCmdBindIndexBuffer(p_raytracer->visibility_pass.command_buffer.buffer, p_raytracer->data.cube_ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
+        vkCmdBindVertexBuffers(p_raytracer->visibility_pass.command_buffer.buffer, 0, 1, &p_raytracer->data.idx_vbo.buffer, &vertex_buffer_offset);
+        vkCmdBindVertexBuffers(p_raytracer->visibility_pass.command_buffer.buffer, 1, 1, &p_raytracer->data.cube_vbo.buffer, &vertex_buffer_offset);
 
         // TODO: update required here? Otherwise mark as dirty. Also, draw indirect
-        tgvk_descriptor_set_update_storage_buffer(p_raytracer->visibility_pass.descriptor_set.set, &p_raytracer->buffers.cluster_idx_to_object_idx_ssbo, 0);
-        tgvk_descriptor_set_update_storage_buffer(p_raytracer->visibility_pass.descriptor_set.set, &p_raytracer->buffers.object_data_ssbo,               1);
-        tgvk_descriptor_set_update_storage_buffer(p_raytracer->visibility_pass.descriptor_set.set, &p_raytracer->buffers.voxel_cluster_ssbo,             2);
-        tgvk_descriptor_set_update_storage_buffer(p_raytracer->visibility_pass.descriptor_set.set, &p_raytracer->buffers.visibility_buffer_ssbo,         3);
-        tgvk_descriptor_set_update_uniform_buffer(p_raytracer->visibility_pass.descriptor_set.set, &p_raytracer->buffers.view_projection_ubo,            4);
-        tgvk_descriptor_set_update_uniform_buffer(p_raytracer->visibility_pass.descriptor_set.set, &p_raytracer->buffers.camera_ubo,                     5);
+        tgvk_descriptor_set_update_storage_buffer(p_raytracer->visibility_pass.descriptor_set.set, &p_raytracer->data.cluster_idx_to_object_idx_ssbo, 0);
+        tgvk_descriptor_set_update_storage_buffer(p_raytracer->visibility_pass.descriptor_set.set, &p_raytracer->data.object_data_ssbo,               1);
+        tgvk_descriptor_set_update_storage_buffer(p_raytracer->visibility_pass.descriptor_set.set, &p_raytracer->data.voxel_cluster_ssbo,             2);
+        tgvk_descriptor_set_update_storage_buffer(p_raytracer->visibility_pass.descriptor_set.set, &p_raytracer->data.visibility_buffer_ssbo,         3);
+        tgvk_descriptor_set_update_uniform_buffer(p_raytracer->visibility_pass.descriptor_set.set, &p_raytracer->data.view_projection_ubo,            4);
+        tgvk_descriptor_set_update_uniform_buffer(p_raytracer->visibility_pass.descriptor_set.set, &p_raytracer->data.camera_ubo,                     5);
 
         vkCmdBindDescriptorSets(p_raytracer->visibility_pass.command_buffer.buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_raytracer->visibility_pass.graphics_pipeline.layout.pipeline_layout, 0, 1, &p_raytracer->visibility_pass.descriptor_set.set, 0, TG_NULL);
         tgvk_cmd_draw_indexed_instanced(&p_raytracer->visibility_pass.command_buffer, 6 * 6, p_raytracer->scene.n_clusters); // TODO: triangle fans for fewer indices?
@@ -1172,7 +1164,7 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
     // SHADING
 
     // TODO: remove this line
-    tgvk_descriptor_set_update_storage_buffer(p_raytracer->shading_pass.descriptor_set.set, &p_raytracer->buffers.color_lut_idx_cluster_ssbo, 7);
+    tgvk_descriptor_set_update_storage_buffer(p_raytracer->shading_pass.descriptor_set.set, &p_raytracer->data.color_lut_idx_cluster_ssbo, 7);
     tgvk_command_buffer_begin(&p_raytracer->shading_pass.command_buffer, 0);
     {
         vkCmdBindPipeline(p_raytracer->shading_pass.command_buffer.buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_raytracer->shading_pass.graphics_pipeline.pipeline);
@@ -1181,10 +1173,10 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
         vkCmdBindVertexBuffers(p_raytracer->shading_pass.command_buffer.buffer, 0, 1, &screen_quad_positions_vbo.buffer, &vertex_buffer_offset);
         vkCmdBindVertexBuffers(p_raytracer->shading_pass.command_buffer.buffer, 1, 1, &screen_quad_uvs_vbo.buffer, &vertex_buffer_offset);
 
-        tgvk_descriptor_set_update_storage_buffer(p_raytracer->shading_pass.descriptor_set.set, &p_raytracer->buffers.svo_ssbo,                11);
-        tgvk_descriptor_set_update_storage_buffer(p_raytracer->shading_pass.descriptor_set.set, &p_raytracer->buffers.svo_nodes_ssbo,          12);
-        tgvk_descriptor_set_update_storage_buffer(p_raytracer->shading_pass.descriptor_set.set, &p_raytracer->buffers.svo_leaf_node_data_ssbo, 13);
-        tgvk_descriptor_set_update_storage_buffer(p_raytracer->shading_pass.descriptor_set.set, &p_raytracer->buffers.svo_voxel_data_ssbo,     14);
+        tgvk_descriptor_set_update_storage_buffer(p_raytracer->shading_pass.descriptor_set.set, &p_raytracer->data.svo_ssbo,                11);
+        tgvk_descriptor_set_update_storage_buffer(p_raytracer->shading_pass.descriptor_set.set, &p_raytracer->data.svo_nodes_ssbo,          12);
+        tgvk_descriptor_set_update_storage_buffer(p_raytracer->shading_pass.descriptor_set.set, &p_raytracer->data.svo_leaf_node_data_ssbo, 13);
+        tgvk_descriptor_set_update_storage_buffer(p_raytracer->shading_pass.descriptor_set.set, &p_raytracer->data.svo_voxel_data_ssbo,     14);
 
         vkCmdBindDescriptorSets(p_raytracer->shading_pass.command_buffer.buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_raytracer->shading_pass.graphics_pipeline.layout.pipeline_layout, 0, 1, &p_raytracer->shading_pass.descriptor_set.set, 0, TG_NULL);
 
@@ -1283,13 +1275,13 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
             tgvk_cmd_begin_render_pass(&p_raytracer->debug_pass.command_buffer, p_raytracer->debug_pass.render_pass, &p_raytracer->debug_pass.framebuffer, VK_SUBPASS_CONTENTS_INLINE);
 
             vkCmdBindPipeline(p_raytracer->debug_pass.command_buffer.buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_raytracer->debug_pass.graphics_pipeline.pipeline);
-            vkCmdBindIndexBuffer(p_raytracer->debug_pass.command_buffer.buffer, p_raytracer->buffers.cube_ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
-            vkCmdBindVertexBuffers(p_raytracer->debug_pass.command_buffer.buffer, 0, 1, &p_raytracer->buffers.idx_vbo.buffer, &vertex_buffer_offset);
-            vkCmdBindVertexBuffers(p_raytracer->debug_pass.command_buffer.buffer, 1, 1, &p_raytracer->buffers.cube_vbo.buffer, &vertex_buffer_offset);
+            vkCmdBindIndexBuffer(p_raytracer->debug_pass.command_buffer.buffer, p_raytracer->data.cube_ibo.buffer, 0, VK_INDEX_TYPE_UINT16);
+            vkCmdBindVertexBuffers(p_raytracer->debug_pass.command_buffer.buffer, 0, 1, &p_raytracer->data.idx_vbo.buffer, &vertex_buffer_offset);
+            vkCmdBindVertexBuffers(p_raytracer->debug_pass.command_buffer.buffer, 1, 1, &p_raytracer->data.cube_vbo.buffer, &vertex_buffer_offset);
 
-            tgvk_descriptor_set_update_storage_buffer(p_raytracer->debug_pass.descriptor_set.set, &p_raytracer->buffers.debug_matrices_ssbo, 0);
-            tgvk_descriptor_set_update_uniform_buffer(p_raytracer->debug_pass.descriptor_set.set, &p_raytracer->buffers.view_projection_ubo, 1);
-            tgvk_descriptor_set_update_storage_buffer(p_raytracer->debug_pass.descriptor_set.set, &p_raytracer->buffers.debug_colors_ssbo,   2);
+            tgvk_descriptor_set_update_storage_buffer(p_raytracer->debug_pass.descriptor_set.set, &p_raytracer->data.debug_matrices_ssbo, 0);
+            tgvk_descriptor_set_update_uniform_buffer(p_raytracer->debug_pass.descriptor_set.set, &p_raytracer->data.view_projection_ubo, 1);
+            tgvk_descriptor_set_update_storage_buffer(p_raytracer->debug_pass.descriptor_set.set, &p_raytracer->data.debug_colors_ssbo,   2);
 
             vkCmdBindDescriptorSets(p_raytracer->debug_pass.command_buffer.buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_raytracer->debug_pass.graphics_pipeline.layout.pipeline_layout, 0, 1, &p_raytracer->debug_pass.descriptor_set.set, 0, TG_NULL);
             tgvk_cmd_draw_indexed_instanced(&p_raytracer->debug_pass.command_buffer, 6 * 6, p_raytracer->debug_pass.count); // TODO: triangle fans for fewer indices? same above
@@ -1314,24 +1306,39 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
 
 
 
-    // UI
+    // GUI
 
-    if (p_raytracer->scene.n_chars > 0)
+    tggui_context* p_guic = &p_raytracer->gui_context;
+    u32 first_instance = 0;
+    for (u32 draw_call_idx = 0; draw_call_idx < p_guic->n_draw_calls; draw_call_idx++)
     {
-        tgvk_command_buffer_begin(&p_raytracer->ui_pass.command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-        tgvk_cmd_begin_render_pass(&p_raytracer->ui_pass.command_buffer, p_raytracer->ui_pass.render_pass, &p_raytracer->ui_pass.framebuffer, VK_SUBPASS_CONTENTS_INLINE);
+        TG_ASSERT(p_guic->p_textures[draw_call_idx] != TG_NULL);
+        TG_ASSERT(p_guic->p_n_instances_per_draw_call[draw_call_idx] > 0);
 
-        vkCmdBindPipeline(p_raytracer->ui_pass.command_buffer.buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_raytracer->ui_pass.graphics_pipeline.pipeline);
-        vkCmdBindVertexBuffers(p_raytracer->ui_pass.command_buffer.buffer, 0, 1, &p_raytracer->buffers.idx_vbo.buffer, &vertex_buffer_offset);
-        vkCmdBindVertexBuffers(p_raytracer->ui_pass.command_buffer.buffer, 1, 1, &p_raytracer->buffers.quad_vbo.buffer, &vertex_buffer_offset);
+        tgvk_command_buffer* p_cmd_buf = &p_raytracer->gui_pass.command_buffer;
 
-        tgvk_descriptor_set_update_storage_buffer(p_raytracer->ui_pass.descriptor_set.set, &p_raytracer->buffers.char_ssbo, 0);
+        tgvk_fence_wait(p_raytracer->gui_pass.fence);
+        tgvk_fence_reset(p_raytracer->gui_pass.fence);
 
-        vkCmdBindDescriptorSets(p_raytracer->ui_pass.command_buffer.buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_raytracer->ui_pass.graphics_pipeline.layout.pipeline_layout, 0, 1, &p_raytracer->ui_pass.descriptor_set.set, 0, TG_NULL);
-        tgvk_cmd_draw_instanced(&p_raytracer->ui_pass.command_buffer, 6, p_raytracer->scene.n_chars);
-        
-        vkCmdEndRenderPass(p_raytracer->ui_pass.command_buffer.buffer);
-        TGVK_CALL(vkEndCommandBuffer(p_raytracer->ui_pass.command_buffer.buffer));
+        tgvk_command_buffer_begin(p_cmd_buf, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+        tgvk_cmd_begin_render_pass(p_cmd_buf, p_raytracer->gui_pass.render_pass, &p_raytracer->gui_pass.framebuffer, VK_SUBPASS_CONTENTS_INLINE);
+
+        vkCmdBindPipeline(p_cmd_buf->buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_raytracer->gui_pass.graphics_pipeline.pipeline);
+        vkCmdBindVertexBuffers(p_cmd_buf->buffer, 0, 1, &p_raytracer->data.idx_vbo.buffer, &vertex_buffer_offset);
+        vkCmdBindVertexBuffers(p_cmd_buf->buffer, 1, 1, &p_raytracer->data.quad_vbo.buffer, &vertex_buffer_offset);
+
+        tgvk_descriptor_set_update_storage_buffer(p_raytracer->gui_pass.descriptor_set.set, &p_guic->transform_ssbo, 0);
+        tgvk_descriptor_set_update_image(p_raytracer->gui_pass.descriptor_set.set, p_guic->p_textures[draw_call_idx], 1);
+        tgvk_descriptor_set_update_storage_buffer(p_raytracer->gui_pass.descriptor_set.set, &p_guic->colors_ssbo, 2);
+
+        vkCmdBindDescriptorSets(p_cmd_buf->buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_raytracer->gui_pass.graphics_pipeline.layout.pipeline_layout, 0, 1, &p_raytracer->gui_pass.descriptor_set.set, 0, TG_NULL);
+
+        const u32 n_instances = p_guic->p_n_instances_per_draw_call[draw_call_idx];
+        tgvk_cmd_draw_instanced2(p_cmd_buf, 6, n_instances, first_instance);
+        first_instance += p_guic->p_n_instances_per_draw_call[draw_call_idx];
+
+        vkCmdEndRenderPass(p_cmd_buf->buffer);
+        TGVK_CALL(vkEndCommandBuffer(p_cmd_buf->buffer));
 
         VkSubmitInfo ui_submit_info = { 0 };
         ui_submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -1340,11 +1347,11 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
         ui_submit_info.pWaitSemaphores = &p_raytracer->semaphore;
         ui_submit_info.pWaitDstStageMask = &color_attachment_pipeline_stage_flags;
         ui_submit_info.commandBufferCount = 1;
-        ui_submit_info.pCommandBuffers = &p_raytracer->ui_pass.command_buffer.buffer;
+        ui_submit_info.pCommandBuffers = &p_cmd_buf->buffer;
         ui_submit_info.signalSemaphoreCount = 1;
         ui_submit_info.pSignalSemaphores = &p_raytracer->semaphore;
 
-        tgvk_queue_submit(TGVK_QUEUE_TYPE_GRAPHICS, 1, &ui_submit_info, VK_NULL_HANDLE);
+        tgvk_queue_submit(TGVK_QUEUE_TYPE_GRAPHICS, 1, &ui_submit_info, p_raytracer->gui_pass.fence);
     }
 
 
@@ -1403,7 +1410,17 @@ void tg_raytracer_clear(tg_raytracer* p_raytracer)
 
     tgvk_queue_submit(TGVK_QUEUE_TYPE_GRAPHICS, 1, &submit_info, p_raytracer->render_target.fence);
 
-    p_raytracer->scene.n_chars = 0;
+    tggui_context* p_guic = &p_raytracer->gui_context;
+    p_guic->n_quads = 0;
+    p_guic->n_draw_calls = 0;
+    for (u32 i = 0; i < TGGUI_MAX_N_DRAW_CALLS; i++)
+    {
+        p_guic->p_textures[i] = TG_NULL;
+        p_guic->p_n_instances_per_draw_call[i] = 0;
+    }
+    p_guic->offset_x = 0;
+    p_guic->offset_y = 0;
+
     p_raytracer->debug_pass.count = 0;
 
     // TODO: forward renderer
@@ -1413,5 +1430,176 @@ void tg_raytracer_clear(tg_raytracer* p_raytracer)
     //p_shading_ubo->directional_light_count = 0;
     //p_shading_ubo->point_light_count = 0;
 }
+
+
+
+void tggui_window_set_next_position(tg_raytracer* p_raytracer, f32 position_x, f32 position_y)
+{
+    TG_ASSERT(p_raytracer != TG_NULL);
+
+    p_raytracer->gui_context.window_next_position_x = position_x;
+    p_raytracer->gui_context.window_next_position_y = position_y;
+}
+
+void tggui_window_set_next_size(tg_raytracer* p_raytracer, f32 size_x, f32 size_y)
+{
+    TG_ASSERT(p_raytracer != TG_NULL);
+
+    p_raytracer->gui_context.window_next_size_x = size_x;
+    p_raytracer->gui_context.window_next_size_y = size_y;
+}
+
+void tggui_window_begin(tg_raytracer* p_raytracer, const char* p_window_name)
+{
+    TG_ASSERT(p_raytracer != TG_NULL);
+
+    const v2 target_size = {
+        (f32)p_raytracer->render_target.color_attachment.width,
+        (f32)p_raytracer->render_target.color_attachment.height
+    };
+
+    tggui_context* p_guic = &p_raytracer->gui_context;
+
+    const u32 draw_call_idx = p_guic->n_draw_calls++;
+    p_guic->p_textures[draw_call_idx] = &p_guic->white_texture;
+    p_guic->p_n_instances_per_draw_call[draw_call_idx]++;
+
+    const v2 min = { p_guic->window_next_position_x, p_guic->window_next_position_y };
+    const v2 max = { min.x + p_guic->window_next_size_x, min.y + p_guic->window_next_size_y };
+    const v2 rel_min = tg__screen_space_to_clip_space(min, target_size);
+    const v2 rel_max = tg__screen_space_to_clip_space(max, target_size);
+    const v2 translation = tgm_v2_divf(tgm_v2_add(rel_min, rel_max), 2.0f);
+    const v2 scale = tgm_v2_sub(rel_max, rel_min);
+
+    tggui_transform_ssbo* p_entry = &((tggui_transform_ssbo*)p_raytracer->gui_context.transform_ssbo.memory.p_mapped_device_memory)[p_raytracer->gui_context.n_quads++];
+
+    p_entry->translation_x   = translation.x;
+    p_entry->translation_y   = translation.y;
+    p_entry->half_scale_x    = scale.x / 2.0f;
+    p_entry->half_scale_y    = scale.y / 2.0f;
+    p_entry->uv_center_x     = 0.0f;
+    p_entry->uv_center_y     = 0.0f;
+    p_entry->uv_half_scale_x = 0.0f;
+    p_entry->uv_half_scale_y = 0.0f;
+    p_entry->type            = (u32)TGGUI_COLOR_WINDOW_BG;
+
+    p_raytracer->gui_context.offset_x = min.x + 0.0f; // TODO: which values for padding?
+    p_raytracer->gui_context.offset_y = min.y + 0.0f;
+}
+
+void tggui_window_end(tg_raytracer* p_raytracer)
+{
+    TG_ASSERT(p_raytracer != TG_NULL);
+
+    tggui_context* p_guic = &p_raytracer->gui_context;
+    p_guic->offset_x = 0;
+    p_guic->offset_y = 0;
+}
+
+void tggui_same_line(tg_raytracer* p_raytracer)
+{
+    TG_ASSERT(p_raytracer != TG_NULL);
+}
+
+b32 tggui_button(tg_raytracer* p_raytracer, const char* p_label)
+{
+    TG_ASSERT(p_raytracer != TG_NULL);
+
+    return TG_FALSE;
+}
+
+b32 tggui_checkbox(tg_raytracer* p_raytracer, const char* p_label, b32* p_value)
+{
+    TG_ASSERT(p_raytracer != TG_NULL);
+
+    return TG_FALSE;
+}
+
+void tggui_text(tg_raytracer* p_raytracer, const char* p_format, ...)
+{
+    TG_ASSERT(p_raytracer != TG_NULL);
+    TG_ASSERT(p_format != TG_NULL);
+    TG_ASSERT(p_raytracer->gui_context.n_draw_calls > 0); // We need a window
+
+    u32 draw_call_idx = p_raytracer->gui_context.n_draw_calls - 1;
+    if (p_raytracer->gui_context.p_textures[draw_call_idx] != &p_raytracer->gui_context.style.font.texture_atlas)
+    {
+        draw_call_idx = p_raytracer->gui_context.n_draw_calls++;
+        p_raytracer->gui_context.p_textures[draw_call_idx] = &p_raytracer->gui_context.style.font.texture_atlas;
+    }
+
+    char* p_variadic_arguments = TG_NULL;
+    tg_variadic_start(p_variadic_arguments, p_format);
+    char p_buffer[1024] = { 0 };
+    tg_stringf_va(sizeof(p_buffer), p_buffer, p_format, p_variadic_arguments);
+    tg_variadic_end(p_variadic_arguments);
+
+    const tgvk_font* p_font = &p_raytracer->gui_context.style.font;
+    const v2 target_size = {
+        (f32)p_raytracer->render_target.color_attachment.width,
+        (f32)p_raytracer->render_target.color_attachment.height
+    };
+
+    f32 x_offset = p_raytracer->gui_context.offset_x;
+    f32 y_offset = p_raytracer->gui_context.offset_y;
+    const char* p_it = p_buffer;
+
+    while (*p_it != '\0')
+    {
+        TG_ASSERT(p_raytracer->gui_context.n_quads < p_raytracer->gui_context.quad_capacity);
+
+        const char c = *p_it++;
+        const u8 glyph_idx = p_font->p_char_to_glyph[c];
+        const tgvk_glyph* p_glyph = &p_font->p_glyphs[glyph_idx];
+
+        const v2 min = {
+            x_offset + p_glyph->left_side_bearing,
+            y_offset + p_font->max_glyph_height - p_glyph->size.y - p_glyph->bottom_side_bearing
+        };
+        const v2 max = tgm_v2_add(min, p_glyph->size);
+
+        if (!tgm_v2_eq(min, max))
+        {
+            const v2 rel_min = tg__screen_space_to_clip_space(min, target_size);
+            const v2 rel_max = tg__screen_space_to_clip_space(max, target_size);
+            const v2 translation = tgm_v2_divf(tgm_v2_add(rel_min, rel_max), 2.0f);
+            const v2 scale = tgm_v2_sub(rel_max, rel_min);
+
+            tggui_transform_ssbo* p_char_ssbo = &((tggui_transform_ssbo*)p_raytracer->gui_context.transform_ssbo.memory.p_mapped_device_memory)[p_raytracer->gui_context.n_quads++];
+
+            p_char_ssbo->translation_x   = translation.x;
+            p_char_ssbo->translation_y   = translation.y;
+            p_char_ssbo->half_scale_x    = scale.x / 2.0f;
+            p_char_ssbo->half_scale_y    = scale.y / 2.0f;
+            p_char_ssbo->uv_center_x     = (p_glyph->uv_min.x + p_glyph->uv_max.x) / 2.0f;
+            p_char_ssbo->uv_center_y     = ((1.0f - p_glyph->uv_min.y) + (1.0f - p_glyph->uv_max.y)) / 2.0f;
+            p_char_ssbo->uv_half_scale_x = (p_glyph->uv_max.x - p_glyph->uv_min.x) / 2.0f;
+            p_char_ssbo->uv_half_scale_y = -((1.0f - p_glyph->uv_max.y) - (1.0f - p_glyph->uv_min.y)) / 2.0f;
+            p_char_ssbo->type            = (u32)TGGUI_COLOR_TEXT;
+
+            x_offset += p_glyph->advance_width;
+
+            const char next_c = *p_it;
+            if (next_c != '\0')
+            {
+                const u8 next_glyph_idx = p_font->p_char_to_glyph[next_c];
+                for (u32 kerning_idx = 0; kerning_idx < p_glyph->kerning_count; kerning_idx++)
+                {
+                    const tgvk_kerning* p_kerning = &p_glyph->p_kernings[kerning_idx];
+                    if (p_kerning->right_glyph_idx == next_glyph_idx)
+                    {
+                        x_offset += p_kerning->kerning;
+                        break;
+                    }
+                }
+            }
+
+            p_raytracer->gui_context.p_n_instances_per_draw_call[draw_call_idx]++;
+        }
+    }
+
+    p_raytracer->gui_context.offset_y += p_font->max_glyph_height;
+}
+
 
 #endif

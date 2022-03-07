@@ -896,6 +896,12 @@ v2 tgm_v2_divf(v2 v, f32 f)
 	return result;
 }
 
+b32 tgm_v2_eq(v2 v0, v2 v1)
+{
+	const b32 result = v0.x == v1.x && v0.y == v1.y;
+	return result;
+}
+
 f32 tgm_v2_mag(v2 v)
 {
 	const f32 result = tgm_f32_sqrt(v.x * v.x + v.y * v.y);

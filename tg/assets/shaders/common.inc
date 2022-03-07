@@ -30,5 +30,6 @@
 #define TG_OUT(     location_index, content) layout(location = location_index)      out content
 #define TG_OUT_FLAT(location_index, content) layout(location = location_index) flat out content
 
-#define TG_SSBO(binding_index, content) layout(std430, set = 0, binding = binding_index) buffer  tg_ssbo_ ## binding_index { content }
-#define TG_UBO( binding_index, content) layout(        set = 0, binding = binding_index) uniform tg_ubo_  ## binding_index { content }
+#define TG_SSBO(     binding_index, content) layout(std430, set = 0, binding = binding_index) buffer  tg_ssbo_ ## binding_index { content }
+#define TG_UBO(      binding_index, content) layout(        set = 0, binding = binding_index) uniform tg_ubo_  ## binding_index { content }
+#define TG_SAMPLER2D(binding_index, name   ) layout(        set = 0, binding = binding_index) uniform sampler2D name

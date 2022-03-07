@@ -251,7 +251,7 @@ static void tg__init_tone_mapping_pass(tg_renderer_h h_renderer)
     TGVK_CALL(vkEndCommandBuffer(h_renderer->tone_mapping_pass.command_buffer.command_buffer));
 }
 
-static void tg__init_ui_pass(tg_renderer_h h_renderer)
+static void tg__init_gui_pass(tg_renderer_h h_renderer)
 {
     h_renderer->ui_pass.command_buffer = tgvk_command_buffer_create(TGVK_COMMAND_POOL_TYPE_GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     
@@ -483,7 +483,7 @@ tg_renderer_h tg_renderer_create(tg_camera* p_camera)
     tg__init_forward_pass(h_renderer);
     tg__init_ray_tracing_pass(h_renderer);
     tg__init_tone_mapping_pass(h_renderer);
-    tg__init_ui_pass(h_renderer);
+    tg__init_gui_pass(h_renderer);
     tg__init_blit_pass(h_renderer);
     tg__init_present_pass(h_renderer);
     tg__init_clear_pass(h_renderer);

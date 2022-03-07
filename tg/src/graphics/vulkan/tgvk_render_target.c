@@ -76,10 +76,10 @@ tg_render_target tgvk_render_target_create(u32 color_width, u32 color_height, Vk
 {
 	tg_render_target render_target = { 0 };
 
-	render_target.color_attachment = tgvk_image_create(TGVK_IMAGE_TYPE_COLOR | TGVK_IMAGE_TYPE_STORAGE, color_width, color_height, color_format, p_color_sampler_create_info TG_DEBUG_PARAM(line) TG_DEBUG_PARAM(p_filename));
-	render_target.color_attachment_copy = tgvk_image_create(TGVK_IMAGE_TYPE_COLOR | TGVK_IMAGE_TYPE_STORAGE, color_width, color_height, color_format, p_color_sampler_create_info TG_DEBUG_PARAM(line) TG_DEBUG_PARAM(p_filename));
-	render_target.depth_attachment = tgvk_image_create(TGVK_IMAGE_TYPE_DEPTH, depth_width, depth_height, depth_format, p_depth_sampler_create_info TG_DEBUG_PARAM(line) TG_DEBUG_PARAM(p_filename));
-	render_target.depth_attachment_copy = tgvk_image_create(TGVK_IMAGE_TYPE_DEPTH, depth_width, depth_height, depth_format, p_depth_sampler_create_info TG_DEBUG_PARAM(line) TG_DEBUG_PARAM(p_filename));
+	render_target.color_attachment = tgvk_image_create_impl(TGVK_IMAGE_TYPE_COLOR | TGVK_IMAGE_TYPE_STORAGE, color_width, color_height, color_format, p_color_sampler_create_info TG_DEBUG_PARAM(line) TG_DEBUG_PARAM(p_filename));
+	render_target.color_attachment_copy = tgvk_image_create_impl(TGVK_IMAGE_TYPE_COLOR | TGVK_IMAGE_TYPE_STORAGE, color_width, color_height, color_format, p_color_sampler_create_info TG_DEBUG_PARAM(line) TG_DEBUG_PARAM(p_filename));
+	render_target.depth_attachment = tgvk_image_create_impl(TGVK_IMAGE_TYPE_DEPTH, depth_width, depth_height, depth_format, p_depth_sampler_create_info TG_DEBUG_PARAM(line) TG_DEBUG_PARAM(p_filename));
+	render_target.depth_attachment_copy = tgvk_image_create_impl(TGVK_IMAGE_TYPE_DEPTH, depth_width, depth_height, depth_format, p_depth_sampler_create_info TG_DEBUG_PARAM(line) TG_DEBUG_PARAM(p_filename));
 
 	tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_and_begin_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
 	tgvk_cmd_transition_image_layout(p_command_buffer, &render_target.color_attachment, TGVK_LAYOUT_UNDEFINED, TGVK_LAYOUT_COLOR_ATTACHMENT_WRITE);

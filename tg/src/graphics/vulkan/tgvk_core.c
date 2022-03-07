@@ -501,7 +501,7 @@ void tgvk_buffer_copy2(VkDeviceSize src_offset, VkDeviceSize dst_offset, VkDevic
     tgvk_command_buffer_end_and_submit(&p_global_graphics_command_buffers[thread_id]);
 }
 
-tgvk_buffer tgvk_buffer_create(VkDeviceSize size, VkBufferUsageFlags buffer_usage_flags, tgvk_memory_type memory_type TG_DEBUG_PARAM(u32 line) TG_DEBUG_PARAM(const char* p_filename))
+tgvk_buffer tgvk_buffer_create_impl(VkDeviceSize size, VkBufferUsageFlags buffer_usage_flags, tgvk_memory_type memory_type TG_DEBUG_PARAM(u32 line) TG_DEBUG_PARAM(const char* p_filename))
 {
     TG_ASSERT(size > 0);
 
@@ -1050,6 +1050,11 @@ void tgvk_cmd_draw_instanced(tgvk_command_buffer* p_command_buffer, u32 vertex_c
     vkCmdDraw(p_command_buffer->buffer, vertex_count, instance_count, 0, 0);
 }
 
+void tgvk_cmd_draw_instanced2(tgvk_command_buffer* p_command_buffer, u32 vertex_count, u32 instance_count, u32 first_instance)
+{
+    vkCmdDraw(p_command_buffer->buffer, vertex_count, instance_count, 0, first_instance);
+}
+
 void tgvk_cmd_transition_cube_map_layout(tgvk_command_buffer* p_command_buffer, tgvk_cube_map* p_cube_map, tgvk_image_layout_type src_type, tgvk_image_layout_type dst_type)
 {
     VkAccessFlags src_access_mask, dst_access_mask;
@@ -1343,7 +1348,7 @@ void tgvk_command_buffer_end_and_submit(tgvk_command_buffer* p_command_buffer)
 
 
 
-tgvk_cube_map tgvk_cube_map_create(u32 dimension, VkFormat format, const tgvk_sampler_create_info* p_sampler_create_info TG_DEBUG_PARAM(u32 line) TG_DEBUG_PARAM(const char* p_filename))
+tgvk_cube_map tgvk_cube_map_create_impl(u32 dimension, VkFormat format, const tgvk_sampler_create_info* p_sampler_create_info TG_DEBUG_PARAM(u32 line) TG_DEBUG_PARAM(const char* p_filename))
 {
     tgvk_cube_map cube_map = { 0 };
     cube_map.dimension = dimension;
@@ -1843,7 +1848,7 @@ tg_size tgvk_global_staging_buffer_size(void)
 
 
 
-tgvk_image tgvk_image_create(tgvk_image_type_flags type_flags, u32 width, u32 height, VkFormat format, const tgvk_sampler_create_info* p_sampler_create_info TG_DEBUG_PARAM(u32 line) TG_DEBUG_PARAM(const char* p_filename))
+tgvk_image tgvk_image_create_impl(tgvk_image_type_flags type_flags, u32 width, u32 height, VkFormat format, const tgvk_sampler_create_info* p_sampler_create_info TG_DEBUG_PARAM(u32 line) TG_DEBUG_PARAM(const char* p_filename))
 {
     tgvk_image image = { 0 };
 
@@ -2005,7 +2010,7 @@ tgvk_image tgvk_image_create(tgvk_image_type_flags type_flags, u32 width, u32 he
     return image;
 }
 
-tgvk_image tgvk_image_create2(tgvk_image_type type, const char* p_filename, const tgvk_sampler_create_info* p_sampler_create_info TG_DEBUG_PARAM(u32 line) TG_DEBUG_PARAM(const char* p_filename2))
+tgvk_image tgvk_image_create2_impl(tgvk_image_type type, const char* p_filename, const tgvk_sampler_create_info* p_sampler_create_info TG_DEBUG_PARAM(u32 line) TG_DEBUG_PARAM(const char* p_filename2))
 {
     u32 w, h;
     tg_color_image_format f;
@@ -2017,7 +2022,7 @@ tgvk_image tgvk_image_create2(tgvk_image_type type, const char* p_filename, cons
     tgvk_buffer* p_staging_buffer = tg__staging_buffer_take((VkDeviceSize)size);
     tg_memcpy(size, p_data, p_staging_buffer->memory.p_mapped_device_memory);
 
-    tgvk_image image = tgvk_image_create(type, w, h, (VkFormat)f, p_sampler_create_info TG_DEBUG_PARAM(line) TG_DEBUG_PARAM(p_filename2));
+    tgvk_image image = tgvk_image_create_impl(type, w, h, (VkFormat)f, p_sampler_create_info TG_DEBUG_PARAM(line) TG_DEBUG_PARAM(p_filename2));
 
     tgvk_command_buffer* p_command_buffer = tgvk_command_buffer_get_and_begin_global(TGVK_COMMAND_POOL_TYPE_GRAPHICS);
     tgvk_cmd_transition_image_layout(p_command_buffer, &image, TGVK_LAYOUT_UNDEFINED, TGVK_LAYOUT_TRANSFER_WRITE);
@@ -2074,7 +2079,7 @@ b32 tgvk_image_serialize(tgvk_image* p_image, const char* p_filename)
     return result;
 }
 
-b32 tgvk_image_deserialize(const char* p_filename, TG_OUT tgvk_image* p_image TG_DEBUG_PARAM(u32 line) TG_DEBUG_PARAM(const char* p_filename2))
+b32 tgvk_image_deserialize_impl(const char* p_filename, TG_OUT tgvk_image* p_image TG_DEBUG_PARAM(u32 line) TG_DEBUG_PARAM(const char* p_filename2))
 {
     b32 result = TG_FALSE;
 
@@ -2097,7 +2102,7 @@ b32 tgvk_image_deserialize(const char* p_filename, TG_OUT tgvk_image* p_image TG
             sampler_create_info.address_mode_v = p_simage->sampler_address_mode_v;
             sampler_create_info.address_mode_w = p_simage->sampler_address_mode_w;
 
-            *p_image = tgvk_image_create(p_simage->type, p_simage->width, p_simage->height, p_simage->format, &sampler_create_info TG_DEBUG_PARAM(line) TG_DEBUG_PARAM(p_filename2));
+            *p_image = tgvk_image_create_impl(p_simage->type, p_simage->width, p_simage->height, p_simage->format, &sampler_create_info TG_DEBUG_PARAM(line) TG_DEBUG_PARAM(p_filename2));
             const tg_size copy_size = file_properties.size - sizeof(tgvk_serialized_image);
             tgvk_util_copy_to_image(TGVK_LAYOUT_UNDEFINED, TGVK_LAYOUT_SHADER_READ_CFV, copy_size, p_simage->p_data, p_image);
         }
@@ -2133,7 +2138,7 @@ b32 tgvk_image_store_to_disc(tgvk_image* p_image, const char* p_filename, b32 fo
 
 
 
-tgvk_image_3d tgvk_image_3d_create(tgvk_image_type type, u32 width, u32 height, u32 depth, VkFormat format, const tgvk_sampler_create_info* p_sampler_create_info TG_DEBUG_PARAM(u32 line) TG_DEBUG_PARAM(const char* p_filename))
+tgvk_image_3d tgvk_image_3d_create_impl(tgvk_image_type type, u32 width, u32 height, u32 depth, VkFormat format, const tgvk_sampler_create_info* p_sampler_create_info TG_DEBUG_PARAM(u32 line) TG_DEBUG_PARAM(const char* p_filename))
 {
     tgvk_image_3d image_3d = { 0 };
 
