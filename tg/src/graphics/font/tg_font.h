@@ -3,7 +3,7 @@
 
 #include "tg_common.h"
 
-#define TG_FONT_GRID2PX(font, size_pt, grid_pt)    ((f32)(grid_pt) * ((f32)(size_pt) * (f32)tgp_get_window_dpi() / 72.0f) / (f32)(font).units_per_em)
+#define TG_FONT_GRID2PX(font, size_pt, grid_pt)    ( (f32)(grid_pt) * ((f32)(size_pt) * (f32)tgp_get_window_dpi() / 72.0f) / (f32)(font).units_per_em )
 
 typedef struct tg_open_type_kerning
 {

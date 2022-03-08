@@ -261,11 +261,19 @@ static void tg__scene_update_and_render(f32 dt_ms)
     tggui_window_begin(&scene.raytracer, "tg - Window");
 
     tggui_text(&scene.raytracer, "tg - %s", "Voxel Game Engine");
-    tggui_text(&scene.raytracer, "Another text!");
 
-    tggui_button(&scene.raytracer, "Button Text");
+    static b32 show_anonther_text = TG_FALSE;
+    if (tggui_button(&scene.raytracer, "Button Text"))
+    {
+        show_anonther_text = !show_anonther_text;
+    }
     tggui_same_line(&scene.raytracer);
-    tggui_text(&scene.raytracer, "This is placed next to the button");
+    tggui_text(&scene.raytracer, "Press to add another text");
+
+    if (show_anonther_text)
+    {
+        tggui_text(&scene.raytracer, "Another text!");
+    }
 
     static b32 check = TG_FALSE;
     tggui_checkbox(&scene.raytracer, "Checkbox", &check);
@@ -275,6 +283,7 @@ static void tg__scene_update_and_render(f32 dt_ms)
     tggui_window_set_next_position(&scene.raytracer, 8.0f + 550.0f + 8.0f, 8.0f);
     tggui_window_set_next_size(&scene.raytracer, 200.0f, 680.0f);
     tggui_window_begin(&scene.raytracer, "tg - Window 2");
+    tggui_text(&scene.raytracer, "Text in second window!");
     tggui_window_end(&scene.raytracer);
     
     //const m4 m = tgm_m4_scale((v3) { 1.0f, 1.0f, 1.0f });

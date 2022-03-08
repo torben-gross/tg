@@ -22,6 +22,7 @@ typedef enum tggui_color_type
     TGGUI_COLOR_FRAME,          // Checkbox, slider, text input
     TGGUI_COLOR_FRAME_HOVERED,
     TGGUI_COLOR_FRAME_ACTIVE,
+    TGGUI_COLOR_TITLE_BG,
     TGGUI_COLOR_CHECKMARK,
     TGGUI_COLOR_TYPE_COUNT
 } tggui_color_type;

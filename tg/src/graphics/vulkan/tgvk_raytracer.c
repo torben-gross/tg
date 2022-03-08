@@ -2,6 +2,7 @@
 
 #ifdef TG_VULKAN
 
+#include "graphics/font/tg_font.h"
 #include "graphics/tg_sparse_voxel_octree.h"
 #include "graphics/vulkan/tgvk_shader_library.h"
 #include "physics/tg_physics.h"
@@ -19,6 +20,9 @@
 #define TGVK_MAX_N_CLUSTERS                            (1 << 21)         // This results in a max of 1,073,741,824 voxels
 #define TGVK_MAX_VOXEL_CLUSTER_BUFFER_SIZE            (TGVK_MAX_N_CLUSTERS * TGVK_VOXEL_CLUSTER_SIZE)
 #define TGVK_MAX_COLOR_LUT_IDX_CLUSTER_BUFFER_SIZE    (TGVK_MAX_N_CLUSTERS * TGVK_COLOR_LUT_IDX_CLUSTER_SIZE)
+
+// TODO: temporary
+#define TG_FONT_SCALE_FACTOR 0.2f
 
 
 
@@ -108,6 +112,53 @@ static v2 tg__screen_space_to_clip_space(v2 v, v2 target_size)
     result.x = (v.x / target_size.x) * 2.0f - 1.0f;
     result.y = (v.y / target_size.y) * 2.0f - 1.0f;
     return result;
+}
+
+static void tg__push_gui_draw_call(tggui_context* p_guic, tgvk_image* p_texture)
+{
+    TG_ASSERT(p_guic != TG_NULL);
+    TG_ASSERT(p_texture != TG_NULL);
+    if (p_guic->n_draw_calls == 0)
+    {
+        TG_STATIC_ASSERT(TGGUI_MAX_N_DRAW_CALLS > 0);
+        p_guic->n_draw_calls = 1;
+        p_guic->p_textures[0] = p_texture;
+        p_guic->p_n_instances_per_draw_call[0] = 1;
+    }
+    else if (p_guic->p_textures[p_guic->n_draw_calls - 1] == p_texture)
+    {
+        p_guic->p_n_instances_per_draw_call[p_guic->n_draw_calls - 1]++;
+    }
+    else
+    {
+        TG_ASSERT(p_guic->n_draw_calls < TGGUI_MAX_N_DRAW_CALLS);
+        const u32 draw_call_idx = p_guic->n_draw_calls++;
+        p_guic->p_textures[draw_call_idx] = p_texture;
+        p_guic->p_n_instances_per_draw_call[draw_call_idx]++;
+    }
+}
+
+static void tg__push_gui_quad(tggui_context* p_guic, v2 min, v2 max, v2 target_size, tggui_color_type type)
+{
+    const v2 rel_min = tg__screen_space_to_clip_space(min, target_size);
+    const v2 rel_max = tg__screen_space_to_clip_space(max, target_size);
+    const v2 translation = tgm_v2_divf(tgm_v2_add(rel_min, rel_max), 2.0f);
+    const v2 scale = tgm_v2_sub(rel_max, rel_min);
+
+    TG_ASSERT(p_guic->n_quads < p_guic->quad_capacity);
+    tggui_transform_ssbo* p_quad = &((tggui_transform_ssbo*)p_guic->transform_ssbo.memory.p_mapped_device_memory)[p_guic->n_quads++];
+
+    p_quad->translation_x = translation.x;
+    p_quad->translation_y = translation.y;
+    p_quad->half_scale_x = scale.x / 2.0f;
+    p_quad->half_scale_y = scale.y / 2.0f;
+    p_quad->uv_center_x = 0.0f;
+    p_quad->uv_center_y = 0.0f;
+    p_quad->uv_half_scale_x = 0.0f;
+    p_quad->uv_half_scale_y = 0.0f;
+    p_quad->type = (u32)type;
+
+    tg__push_gui_draw_call(p_guic, &p_guic->white_texture);
 }
 
 static void tg__push_debug_svo_node(tg_raytracer* p_raytracer, const tg_svo_inner_node* p_inner, v3 min, v3 max, b32 blocks_only, b32 push_children)
@@ -691,12 +742,13 @@ void tg_raytracer_create(const tg_camera* p_camera, u32 max_n_instances, u32 max
     tgvk_font_create("fonts/arial.ttf", &p_style->font);
     p_style->p_colors[TGGUI_COLOR_TEXT]           = (v4){ 1.0f,  1.0f,  1.0f,  1.0f  };
     p_style->p_colors[TGGUI_COLOR_WINDOW_BG]      = (v4){ 0.06f, 0.06f, 0.06f, 0.94f };
-    p_style->p_colors[TGGUI_COLOR_BUTTON]         = (v4){ 0.26f, 0.59f, 0.98f, 0.04f };
+    p_style->p_colors[TGGUI_COLOR_BUTTON]         = (v4){ 0.26f, 0.59f, 0.98f, 0.9f  };
     p_style->p_colors[TGGUI_COLOR_BUTTON_HOVERED] = (v4){ 0.26f, 0.59f, 0.98f, 1.0f  };
     p_style->p_colors[TGGUI_COLOR_BUTTON_ACTIVE]  = (v4){ 0.06f, 0.53f, 0.98f, 1.0f  };
     p_style->p_colors[TGGUI_COLOR_FRAME]          = (v4){ 0.16f, 0.29f, 0.48f, 0.54f };
     p_style->p_colors[TGGUI_COLOR_FRAME_HOVERED]  = (v4){ 0.26f, 0.59f, 0.98f, 0.4f  };
     p_style->p_colors[TGGUI_COLOR_FRAME_ACTIVE]   = (v4){ 0.26f, 0.59f, 0.98f, 0.67f };
+    p_style->p_colors[TGGUI_COLOR_TITLE_BG]       = (v4){ 0.16f, 0.29f, 0.48f, 1.0f  };
     p_style->p_colors[TGGUI_COLOR_CHECKMARK]      = (v4){ 0.26f, 0.59f, 0.98f, 1.0f  };
 
     p_raytracer->gui_context.quad_capacity = 512;
@@ -1460,31 +1512,19 @@ void tggui_window_begin(tg_raytracer* p_raytracer, const char* p_window_name)
 
     tggui_context* p_guic = &p_raytracer->gui_context;
 
-    const u32 draw_call_idx = p_guic->n_draw_calls++;
-    p_guic->p_textures[draw_call_idx] = &p_guic->white_texture;
-    p_guic->p_n_instances_per_draw_call[draw_call_idx]++;
+    const v2 window_min = { p_guic->window_next_position_x, p_guic->window_next_position_y };
+    const v2 window_max = { window_min.x + p_guic->window_next_size_x, window_min.y + p_guic->window_next_size_y };
+    tg__push_gui_quad(p_guic, window_min, window_max, target_size, TGGUI_COLOR_WINDOW_BG);
 
-    const v2 min = { p_guic->window_next_position_x, p_guic->window_next_position_y };
-    const v2 max = { min.x + p_guic->window_next_size_x, min.y + p_guic->window_next_size_y };
-    const v2 rel_min = tg__screen_space_to_clip_space(min, target_size);
-    const v2 rel_max = tg__screen_space_to_clip_space(max, target_size);
-    const v2 translation = tgm_v2_divf(tgm_v2_add(rel_min, rel_max), 2.0f);
-    const v2 scale = tgm_v2_sub(rel_max, rel_min);
+    // TITLE BAR
+    const v2 title_bar_min = window_min;
+    const v2 title_bar_max = { window_max.x, title_bar_min.y + TG_FONT_SCALE_FACTOR * p_guic->style.font.max_glyph_height };
+    tg__push_gui_quad(p_guic, title_bar_min, title_bar_max, target_size, TGGUI_COLOR_TITLE_BG);
 
-    tggui_transform_ssbo* p_entry = &((tggui_transform_ssbo*)p_raytracer->gui_context.transform_ssbo.memory.p_mapped_device_memory)[p_raytracer->gui_context.n_quads++];
+    p_raytracer->gui_context.offset_x = window_min.x + 4.0f; // TODO: which values for padding?
+    p_raytracer->gui_context.offset_y = window_min.y;
 
-    p_entry->translation_x   = translation.x;
-    p_entry->translation_y   = translation.y;
-    p_entry->half_scale_x    = scale.x / 2.0f;
-    p_entry->half_scale_y    = scale.y / 2.0f;
-    p_entry->uv_center_x     = 0.0f;
-    p_entry->uv_center_y     = 0.0f;
-    p_entry->uv_half_scale_x = 0.0f;
-    p_entry->uv_half_scale_y = 0.0f;
-    p_entry->type            = (u32)TGGUI_COLOR_WINDOW_BG;
-
-    p_raytracer->gui_context.offset_x = min.x + 0.0f; // TODO: which values for padding?
-    p_raytracer->gui_context.offset_y = min.y + 0.0f;
+    tggui_text(p_raytracer, p_window_name);
 }
 
 void tggui_window_end(tg_raytracer* p_raytracer)
@@ -1505,7 +1545,35 @@ b32 tggui_button(tg_raytracer* p_raytracer, const char* p_label)
 {
     TG_ASSERT(p_raytracer != TG_NULL);
 
-    return TG_FALSE;
+    const v2 target_size = {
+        (f32)p_raytracer->render_target.color_attachment.width,
+        (f32)p_raytracer->render_target.color_attachment.height
+    };
+
+    tggui_context* p_guic = &p_raytracer->gui_context;
+
+    TG_ASSERT(p_guic->n_draw_calls > 0); // We need a window
+
+    const v2 min = { p_guic->offset_x, p_guic->offset_y };
+    const f32 size = TG_FONT_SCALE_FACTOR * p_guic->style.font.max_glyph_height;
+    const v2 max = { min.x + size, min.y + size };
+
+    b32 pressed = TG_FALSE;
+    tggui_color_type type = TGGUI_COLOR_BUTTON;
+
+    // TODO: As we draw back to front, the back consumes input before the front can. Therefore, we
+    // need to buffer all widgets, that can receive input, and process them front to back.
+    u32 mouse_x, mouse_y;
+    tg_input_get_mouse_position(&mouse_x, &mouse_y);
+    if (mouse_x >= tgm_f32_floor(min.x) && mouse_x <= tgm_f32_ceil(max.x) && mouse_y >= tgm_f32_floor(min.y) && mouse_y <= tgm_f32_ceil(max.y))
+    {
+        type = tg_input_is_mouse_button_down(TG_BUTTON_LEFT) ? TGGUI_COLOR_BUTTON_HOVERED : TGGUI_COLOR_BUTTON_ACTIVE;
+        pressed = tg_input_is_mouse_button_pressed(TG_BUTTON_LEFT, TG_TRUE);
+    }
+
+    tg__push_gui_quad(p_guic, min, max, target_size, type);
+
+    return pressed;
 }
 
 b32 tggui_checkbox(tg_raytracer* p_raytracer, const char* p_label, b32* p_value)
@@ -1553,10 +1621,10 @@ void tggui_text(tg_raytracer* p_raytracer, const char* p_format, ...)
         const tgvk_glyph* p_glyph = &p_font->p_glyphs[glyph_idx];
 
         const v2 min = {
-            x_offset + p_glyph->left_side_bearing,
-            y_offset + p_font->max_glyph_height - p_glyph->size.y - p_glyph->bottom_side_bearing
+            x_offset + TG_FONT_SCALE_FACTOR * (p_glyph->left_side_bearing),
+            y_offset + TG_FONT_SCALE_FACTOR * (p_font->max_glyph_height - p_glyph->size.y - p_glyph->bottom_side_bearing)
         };
-        const v2 max = tgm_v2_add(min, p_glyph->size);
+        const v2 max = { min.x + TG_FONT_SCALE_FACTOR * p_glyph->size.x, min.y + TG_FONT_SCALE_FACTOR * p_glyph->size.y };
 
         if (!tgm_v2_eq(min, max))
         {
@@ -1577,7 +1645,7 @@ void tggui_text(tg_raytracer* p_raytracer, const char* p_format, ...)
             p_char_ssbo->uv_half_scale_y = -((1.0f - p_glyph->uv_max.y) - (1.0f - p_glyph->uv_min.y)) / 2.0f;
             p_char_ssbo->type            = (u32)TGGUI_COLOR_TEXT;
 
-            x_offset += p_glyph->advance_width;
+            x_offset += TG_FONT_SCALE_FACTOR * p_glyph->advance_width;
 
             const char next_c = *p_it;
             if (next_c != '\0')
@@ -1588,7 +1656,7 @@ void tggui_text(tg_raytracer* p_raytracer, const char* p_format, ...)
                     const tgvk_kerning* p_kerning = &p_glyph->p_kernings[kerning_idx];
                     if (p_kerning->right_glyph_idx == next_glyph_idx)
                     {
-                        x_offset += p_kerning->kerning;
+                        x_offset += TG_FONT_SCALE_FACTOR * p_kerning->kerning;
                         break;
                     }
                 }
@@ -1596,9 +1664,13 @@ void tggui_text(tg_raytracer* p_raytracer, const char* p_format, ...)
 
             p_raytracer->gui_context.p_n_instances_per_draw_call[draw_call_idx]++;
         }
+        else if (c == ' ')
+        {
+            x_offset += TG_FONT_SCALE_FACTOR * p_font->max_glyph_height / 4.0f;
+        }
     }
 
-    p_raytracer->gui_context.offset_y += p_font->max_glyph_height;
+    p_raytracer->gui_context.offset_y += TG_FONT_SCALE_FACTOR * p_font->max_glyph_height;
 }
 
 
