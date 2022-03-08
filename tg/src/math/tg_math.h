@@ -408,6 +408,7 @@ v2     tgm_v2_mulf(v2 v, f32 f);
 v2     tgm_v2_min(v2 v0, v2 v1);
 v2     tgm_v2_neg(v2 v);
 v2     tgm_v2_sub(v2 v0, v2 v1);
+v2     tgm_v2_subf(v2 v, f32 f);
 
 v3     tgm_v3_abs(v3 v);
 v3     tgm_v3_add(v3 v0, v3 v1);

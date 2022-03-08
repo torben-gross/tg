@@ -964,6 +964,14 @@ v2 tgm_v2_sub(v2 v0, v2 v1)
 	return result;
 }
 
+v2 tgm_v2_subf(v2 v, f32 f)
+{
+	v2 result = { 0 };
+	result.x = v.x - f;
+	result.y = v.y - f;
+	return result;
+}
+
 
 
 v3 tgm_v3_abs(v3 v)

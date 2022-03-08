@@ -8,7 +8,7 @@
 
 
 
-#define TGGUI_MAX_N_DRAW_CALLS 8
+#define TGGUI_MAX_N_DRAW_CALLS 16
 
 
 

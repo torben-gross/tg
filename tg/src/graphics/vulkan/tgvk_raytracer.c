@@ -1503,19 +1503,65 @@ static void tggui__push_quad(tggui_context* p_guic, v2 min, v2 max, v2 target_si
     tggui__push_draw_call(p_guic, &p_guic->white_texture);
 }
 
-static void tggui__last_size(const tggui_context* p_guic, v2 target_size, TG_OUT v2* p_min, TG_OUT v2* p_max)
+static void tggui__button_behavior(v2 min, v2 max, TG_OUT b32* p_pressed, TG_OUT b32* p_held, TG_OUT b32* p_hovered)
 {
-    TG_ASSERT(p_guic != TG_NULL);
-    TG_ASSERT(p_guic->n_draw_calls > 0);
+    *p_pressed = TG_FALSE;
+    *p_held = TG_FALSE;
+    *p_hovered = TG_FALSE;
 
-    const tggui_transform_ssbo* p_quad = &((const tggui_transform_ssbo*)p_guic->transform_ssbo.memory.p_mapped_device_memory)[p_guic->n_quads - 1];
+    // TODO: As we draw back to front, the back consumes input before the front can. Therefore, we
+    // need to buffer all widgets, that can receive input, and process them front to back.
+    // Alternatively, we could do it like ImGui and don't process clicks/hovers the first frame and
+    // every frame, we update the hovered window at the end. If a button is inside a window, that
+    // is not hovered, it can't be hovered/clicked.
+    u32 mouse_x, mouse_y;
+    tg_input_get_mouse_position(&mouse_x, &mouse_y);
+    if (mouse_x >= tgm_f32_floor(min.x) && mouse_x <= tgm_f32_ceil(max.x) && mouse_y >= tgm_f32_floor(min.y) && mouse_y <= tgm_f32_ceil(max.y))
+    {
+        *p_hovered = TG_TRUE;
+        if (tg_input_is_mouse_button_down(TG_BUTTON_LEFT))
+        {
+            *p_held = TG_TRUE;
+            if (tg_input_is_mouse_button_pressed(TG_BUTTON_LEFT, TG_TRUE))
+            {
+                *p_pressed = TG_TRUE;
+            }
+        }
+    }
+}
 
-    const v2 half_scale = { p_quad->half_scale_x, p_quad->half_scale_y };
-    const v2 translation = { p_quad->translation_x, p_quad->translation_y };
-    const v2 rel_min = tgm_v2_sub(translation, half_scale);
-    const v2 rel_max = tgm_v2_add(translation, half_scale);
-    *p_min = tggui__clip_space_to_screen_space(rel_min, target_size);
-    *p_max = tggui__clip_space_to_screen_space(rel_max, target_size);
+static f32 tggui__text_width(const tggui_context* p_guic, const char* p_text)
+{
+    f32 result = 0.0f;
+
+    const tgvk_font* p_font = &p_guic->style.font;
+
+    const char* p_it = p_text;
+    while (*p_it != '\0')
+    {
+        const char c = *p_it++;
+        const u8 glyph_idx = p_font->p_char_to_glyph[c];
+        const tgvk_glyph* p_glyph = &p_font->p_glyphs[glyph_idx];
+
+        result += TG_FONT_SCALE_FACTOR * p_glyph->advance_width;
+
+        const char next_c = *p_it;
+        if (next_c != '\0')
+        {
+            const u8 next_glyph_idx = p_font->p_char_to_glyph[next_c];
+            for (u32 kerning_idx = 0; kerning_idx < p_glyph->kerning_count; kerning_idx++)
+            {
+                const tgvk_kerning* p_kerning = &p_glyph->p_kernings[kerning_idx];
+                if (p_kerning->right_glyph_idx == next_glyph_idx)
+                {
+                    result += TG_FONT_SCALE_FACTOR * p_kerning->kerning;
+                    break;
+                }
+            }
+        }
+    }
+
+    return result;
 }
 
 
@@ -1593,41 +1639,46 @@ void tggui_same_line(tg_raytracer* p_raytracer)
 b32 tggui_button(tg_raytracer* p_raytracer, const char* p_label)
 {
     TG_ASSERT(p_raytracer != TG_NULL);
-
-    const v2 target_size = {
-        (f32)p_raytracer->render_target.color_attachment.width,
-        (f32)p_raytracer->render_target.color_attachment.height
-    };
+    TG_ASSERT(p_label != TG_NULL);
 
     tggui_context* p_guic = &p_raytracer->gui_context;
     tggui_temp* p_tmp = &p_guic->temp;
 
     TG_ASSERT(p_guic->n_draw_calls > 0); // We need a window
 
-    const v2 min = p_tmp->offset;
-    const f32 size = TG_FONT_SCALE_FACTOR * p_guic->style.font.max_glyph_height;
-    const v2 max = { min.x + size, min.y + size };
+    const v2 target_size = {
+        (f32)p_raytracer->render_target.color_attachment.width,
+        (f32)p_raytracer->render_target.color_attachment.height
+    };
 
-    b32 pressed = TG_FALSE;
-    tggui_color_type type = TGGUI_COLOR_BUTTON;
+    const f32 min_total_size = TG_FONT_SCALE_FACTOR * p_guic->style.font.max_glyph_height;
+    const f32 min_size = min_total_size * 0.9f;
+    const f32 trim = (min_total_size - min_size) / 2.0f;
 
-    // TODO: As we draw back to front, the back consumes input before the front can. Therefore, we
-    // need to buffer all widgets, that can receive input, and process them front to back.
-    // Alternatively, we could do it like ImGui and don't process clicks/hovers the first frame and
-    // every frame, we update the hovered window at the end. If a button is inside a window, that
-    // is not hovered, it can't be hovered/clicked.
-    u32 mouse_x, mouse_y;
-    tg_input_get_mouse_position(&mouse_x, &mouse_y);
-    if (mouse_x >= tgm_f32_floor(min.x) && mouse_x <= tgm_f32_ceil(max.x) && mouse_y >= tgm_f32_floor(min.y) && mouse_y <= tgm_f32_ceil(max.y))
-    {
-        type = tg_input_is_mouse_button_down(TG_BUTTON_LEFT) ? TGGUI_COLOR_BUTTON_HOVERED : TGGUI_COLOR_BUTTON_ACTIVE;
-        pressed = tg_input_is_mouse_button_pressed(TG_BUTTON_LEFT, TG_TRUE);
-    }
+    const f32 margin = 4.0f; // TODO: margin for text (8.0f)
+    const f32 text_width = tggui__text_width(p_guic, p_label) + 2.0f * margin;
+    const f32 width = TG_MAX(text_width, min_size);
+
+    const v2 min = tgm_v2_addf(p_tmp->offset, trim);
+    const v2 max = { min.x + width, min.y + min_size };
+
+    b32 pressed, held, hovered;
+    tggui__button_behavior(min, max, &pressed, &held, &hovered);
+    const tggui_color_type type = hovered ? (held ? TGGUI_COLOR_BUTTON_ACTIVE : TGGUI_COLOR_BUTTON_HOVERED) : TGGUI_COLOR_BUTTON;
 
     tggui__push_quad(p_guic, min, max, target_size, type);
 
-    p_tmp->last_line_end_offset = (v2){ p_tmp->offset.x + size, p_tmp->offset.y };
-    p_tmp->offset = (v2){ p_tmp->base_offset_x, p_tmp->offset.y + size };
+    // TODO: This is way too hacky!
+    const tggui_temp preserve_temp = *p_tmp;
+    p_tmp->offset.x += trim + margin;
+    if (*p_label != '\0')
+    {
+        tggui_text(p_raytracer, p_label);
+    }
+    *p_tmp = preserve_temp;
+
+    p_tmp->last_line_end_offset = (v2){ p_tmp->offset.x + width + 2.0f * trim, p_tmp->offset.y};
+    p_tmp->offset = (v2){ p_tmp->base_offset_x, p_tmp->offset.y + TG_FONT_SCALE_FACTOR * p_guic->style.font.max_glyph_height };
 
     return pressed;
 }
@@ -1635,19 +1686,63 @@ b32 tggui_button(tg_raytracer* p_raytracer, const char* p_label)
 b32 tggui_checkbox(tg_raytracer* p_raytracer, const char* p_label, b32* p_value)
 {
     TG_ASSERT(p_raytracer != TG_NULL);
+    TG_ASSERT(p_label != TG_NULL);
 
-    return TG_FALSE;
+    tggui_context* p_guic = &p_raytracer->gui_context;
+    tggui_temp* p_tmp = &p_guic->temp;
+
+    TG_ASSERT(p_guic->n_draw_calls > 0); // We need a window
+
+    const v2 target_size = {
+        (f32)p_raytracer->render_target.color_attachment.width,
+        (f32)p_raytracer->render_target.color_attachment.height
+    };
+
+    const f32 total_size = TG_FONT_SCALE_FACTOR * p_guic->style.font.max_glyph_height;
+    const f32 size = total_size * 0.9f;
+    const f32 trim = (total_size - size) / 2.0f;
+
+    const v2 min = tgm_v2_addf(p_tmp->offset, trim);
+    const v2 max = { min.x + size, min.y + size };
+
+    b32 pressed, held, hovered;
+    tggui__button_behavior(min, max, &pressed, &held, &hovered);
+    if (pressed)
+    {
+        *p_value = !(*p_value);
+    }
+    const tggui_color_type type = hovered ? (held ? TGGUI_COLOR_FRAME_ACTIVE : TGGUI_COLOR_FRAME_HOVERED) : TGGUI_COLOR_FRAME;
+
+    tggui__push_quad(p_guic, min, max, target_size, type);
+
+    if (*p_value)
+    {
+        const v2 min_checkmark = tgm_v2_addf(min, 0.25f * size);
+        const v2 max_checkmark = tgm_v2_subf(max, 0.25f * size);
+        tggui__push_quad(p_guic, min_checkmark, max_checkmark, target_size, TGGUI_COLOR_CHECKMARK);
+    }
+
+    p_tmp->last_line_end_offset = (v2){ p_tmp->offset.x + total_size, p_tmp->offset.y };
+    p_tmp->offset = (v2){ p_tmp->base_offset_x, p_tmp->offset.y + TG_FONT_SCALE_FACTOR * p_guic->style.font.max_glyph_height };
+
+    return pressed;
 }
 
 void tggui_text(tg_raytracer* p_raytracer, const char* p_format, ...)
 {
     TG_ASSERT(p_raytracer != TG_NULL);
     TG_ASSERT(p_format != TG_NULL);
+    TG_ASSERT(*p_format != '\0');
 
     tggui_context* p_guic = &p_raytracer->gui_context;
     tggui_temp* p_tmp = &p_guic->temp;
 
     TG_ASSERT(p_guic->n_draw_calls > 0); // We need a window
+
+    const v2 target_size = {
+        (f32)p_raytracer->render_target.color_attachment.width,
+        (f32)p_raytracer->render_target.color_attachment.height
+    };
 
     u32 draw_call_idx = p_guic->n_draw_calls - 1;
     if (p_guic->p_textures[draw_call_idx] != &p_guic->style.font.texture_atlas)
@@ -1663,10 +1758,6 @@ void tggui_text(tg_raytracer* p_raytracer, const char* p_format, ...)
     tg_variadic_end(p_variadic_arguments);
 
     const tgvk_font* p_font = &p_guic->style.font;
-    const v2 target_size = {
-        (f32)p_raytracer->render_target.color_attachment.width,
-        (f32)p_raytracer->render_target.color_attachment.height
-    };
 
     v2 offset = p_tmp->offset;
     const char* p_it = p_buffer;
@@ -1679,7 +1770,7 @@ void tggui_text(tg_raytracer* p_raytracer, const char* p_format, ...)
         const tgvk_glyph* p_glyph = &p_font->p_glyphs[glyph_idx];
 
         const v2 min = {
-            offset.x + TG_FONT_SCALE_FACTOR * (p_glyph->left_side_bearing),
+            offset.x + TG_FONT_SCALE_FACTOR * p_glyph->left_side_bearing,
             offset.y + TG_FONT_SCALE_FACTOR * (p_font->max_glyph_height - p_glyph->size.y - p_glyph->bottom_side_bearing)
         };
         const v2 max = { min.x + TG_FONT_SCALE_FACTOR * p_glyph->size.x, min.y + TG_FONT_SCALE_FACTOR * p_glyph->size.y };
@@ -1703,8 +1794,6 @@ void tggui_text(tg_raytracer* p_raytracer, const char* p_format, ...)
             p_char_ssbo->uv_half_scale_y = -((1.0f - p_glyph->uv_max.y) - (1.0f - p_glyph->uv_min.y)) / 2.0f;
             p_char_ssbo->type            = (u32)TGGUI_COLOR_TEXT;
 
-            offset.x += TG_FONT_SCALE_FACTOR * p_glyph->advance_width;
-
             const char next_c = *p_it;
             if (next_c != '\0')
             {
@@ -1722,10 +1811,8 @@ void tggui_text(tg_raytracer* p_raytracer, const char* p_format, ...)
 
             p_guic->p_n_instances_per_draw_call[draw_call_idx]++;
         }
-        else if (c == ' ')
-        {
-            offset.x += TG_FONT_SCALE_FACTOR * p_font->max_glyph_height / 4.0f;
-        }
+
+        offset.x += TG_FONT_SCALE_FACTOR * p_glyph->advance_width;
     }
 
     p_tmp->last_line_end_offset = (v2){ offset.x, p_tmp->offset.y };

@@ -263,25 +263,27 @@ static void tg__scene_update_and_render(f32 dt_ms)
     tggui_text(&scene.raytracer, "tg - %s", "Voxel Game Engine");
 
     static b32 show_anonther_text = TG_FALSE;
-    if (tggui_button(&scene.raytracer, "Button Text"))
+    if (tggui_button(&scene.raytracer, "Button 0"))
     {
         show_anonther_text = !show_anonther_text;
     }
     tggui_same_line(&scene.raytracer);
-    tggui_text(&scene.raytracer, "Press to add another text");
+    tggui_text(&scene.raytracer, "Press to add more text");
 
     tggui_same_line(&scene.raytracer);
-    tggui_button(&scene.raytracer, "Same Line Button");
+    tggui_button(&scene.raytracer, "B2");
     tggui_same_line(&scene.raytracer);
-    tggui_text(&scene.raytracer, "This button is on the same line");
+    tggui_text(&scene.raytracer, "B2 is on same same line!");
+
+    static b32 check = TG_FALSE;
+    tggui_checkbox(&scene.raytracer, "Checkbox", &check);
+    tggui_same_line(&scene.raytracer);
+    tggui_text(&scene.raytracer, "This checkbox is %s%c", check ? "active" : "inactive", '.');
 
     if (show_anonther_text)
     {
         tggui_text(&scene.raytracer, "Another text!");
     }
-
-    static b32 check = TG_FALSE;
-    tggui_checkbox(&scene.raytracer, "Checkbox", &check);
 
     tggui_window_end(&scene.raytracer);
 
