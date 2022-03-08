@@ -27,6 +27,17 @@ typedef enum tggui_color_type
     TGGUI_COLOR_TYPE_COUNT
 } tggui_color_type;
 
+typedef struct tggui_temp
+{
+    f32    window_next_position_x;
+    f32    window_next_position_y;
+    f32    window_next_size_x;
+    f32    window_next_size_y;
+    f32    base_offset_x;
+    v2     last_line_end_offset;
+    v2     offset;
+} tggui_temp;
+
 typedef struct tggui_style
 {
     tgvk_font    font;
@@ -47,13 +58,7 @@ typedef struct tggui_context
     tgvk_image*    p_textures[TGGUI_MAX_N_DRAW_CALLS];
     u32            p_n_instances_per_draw_call[TGGUI_MAX_N_DRAW_CALLS];
 
-    f32            window_next_position_x;
-    f32            window_next_position_y;
-    f32            window_next_size_x;
-    f32            window_next_size_y;
-
-    f32            offset_x;
-    f32            offset_y;
+    tggui_temp     temp;
 } tggui_context;
 
 

@@ -398,6 +398,7 @@ tg_size (*tgm_size_ceil_to_pow2)(tg_size);
 +------------------------------------------------------------*/
 
 v2     tgm_v2_add(v2 v0, v2 v1);
+v2     tgm_v2_addf(v2 v, f32 f);
 v2     tgm_v2_divf(v2 v, f32 f);
 b32    tgm_v2_eq(v2 v0, v2 v1);
 f32    tgm_v2_mag(v2 v);
@@ -405,6 +406,7 @@ f32    tgm_v2_magsqr(v2 v);
 v2     tgm_v2_max(v2 v0, v2 v1);
 v2     tgm_v2_mulf(v2 v, f32 f);
 v2     tgm_v2_min(v2 v0, v2 v1);
+v2     tgm_v2_neg(v2 v);
 v2     tgm_v2_sub(v2 v0, v2 v1);
 
 v3     tgm_v3_abs(v3 v);

@@ -888,8 +888,18 @@ v2 tgm_v2_add(v2 v0, v2 v1)
 	return result;
 }
 
+v2 tgm_v2_addf(v2 v, f32 f)
+{
+	v2 result = { 0 };
+	result.x = v.x + f;
+	result.y = v.y + f;
+	return result;
+}
+
 v2 tgm_v2_divf(v2 v, f32 f)
 {
+	TG_ASSERT(f != 0.0f);
+
 	v2 result = { 0 };
 	result.x = v.x / f;
 	result.y = v.y / f;
@@ -935,6 +945,14 @@ v2 tgm_v2_min(v2 v0, v2 v1)
 	v2 result = { 0 };
 	result.x = v0.x < v1.x ? v0.x : v1.x;
 	result.y = v0.y < v1.y ? v0.y : v1.y;
+	return result;
+}
+
+v2 tgm_v2_neg(v2 v)
+{
+	v2 result = { 0 };
+	result.x = -v.x;
+	result.y = -v.y;
 	return result;
 }
 
@@ -1004,7 +1022,9 @@ v3 tgm_v3_cross(v3 v0, v3 v1)
 
 v3 tgm_v3_div(v3 v0, v3 v1)
 {
-	TG_ASSERT(v1.x && v1.y && v1.z);
+	TG_ASSERT(v1.x != 0.0f);
+	TG_ASSERT(v1.y != 0.0f);
+	TG_ASSERT(v1.z != 0.0f);
 
 	v3 result = { 0 };
 	result.x = v0.x / v1.x;
@@ -1024,7 +1044,7 @@ v3 tgm_v3_div_zero_check(v3 v0, v3 v1, v3 zero_alt)
 
 v3 tgm_v3_divf(v3 v, f32 f)
 {
-	TG_ASSERT(f);
+	TG_ASSERT(f != 0.0f);
 
 	v3 result = { 0 };
 	result.x = v.x / f;
@@ -1308,7 +1328,9 @@ v3i tgm_v3i_addi(v3i v0, i32 i)
 
 v3i tgm_v3i_div(v3i v0, v3i v1)
 {
-	TG_ASSERT(v1.x && v1.y && v1.z);
+	TG_ASSERT(v1.x != 0.0f);
+	TG_ASSERT(v1.y != 0.0f);
+	TG_ASSERT(v1.z != 0.0f);
 
 	v3i result = { 0 };
 	result.x = v0.x / v1.x;
@@ -1443,7 +1465,7 @@ v3u tgm_v3i_to_v3u(v3i v)
 
 v3u tgm_v3u_divu(v3u v, u32 u)
 {
-	TG_ASSERT(u > 0);
+	TG_ASSERT(u != 0);
 
 	v3u result = { 0 };
 	result.x = v.x / u;
@@ -1503,7 +1525,10 @@ v4 tgm_v4_addf(v4 v, f32 f)
 
 v4 tgm_v4_div(v4 v0, v4 v1)
 {
-	TG_ASSERT(v1.x && v1.y && v1.z && v1.w);
+	TG_ASSERT(v1.x != 0.0f);
+	TG_ASSERT(v1.y != 0.0f);
+	TG_ASSERT(v1.z != 0.0f);
+	TG_ASSERT(v1.w != 0.0f);
 
 	v4 result = { 0 };
 	result.x = v0.x / v1.x;
@@ -1515,7 +1540,7 @@ v4 tgm_v4_div(v4 v0, v4 v1)
 
 v4 tgm_v4_divf(v4 v, f32 f)
 {
-	TG_ASSERT(f);
+	TG_ASSERT(f != 0.0f);
 
 	v4 result = { 0 };
 	result.x = v.x / f;

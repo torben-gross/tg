@@ -270,6 +270,11 @@ static void tg__scene_update_and_render(f32 dt_ms)
     tggui_same_line(&scene.raytracer);
     tggui_text(&scene.raytracer, "Press to add another text");
 
+    tggui_same_line(&scene.raytracer);
+    tggui_button(&scene.raytracer, "Same Line Button");
+    tggui_same_line(&scene.raytracer);
+    tggui_text(&scene.raytracer, "This button is on the same line");
+
     if (show_anonther_text)
     {
         tggui_text(&scene.raytracer, "Another text!");
