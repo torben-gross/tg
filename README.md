@@ -1,6 +1,6 @@
 # TG - 3D Voxel Game Engine
 
-![alt text](https://github.com/torben-gross/tg/blob/master/tg/assets/textures/voxel_raytracer.png?raw=true)
+![alt text](https://github.com/torben-gross/tg/blob/master/tg/assets/textures/voxel_raytracer.png)
 
 **TG is a voxel-based 3D game engine exploiting various ray tracing methods.** The engine runs on the Windows platform and utilizes [Vulkan](https://www.lunarg.com/vulkan-sdk/) as its graphics API. TG supports rendering of tremendous numbers of voxels in real-time and will support dynamic destruction/modification of the world in the near future. Everything in the engine is custom built, without the usage of any external libraries besides the Win32 API and the Vulkan SDK.
 
@@ -59,7 +59,9 @@ The repository comes with a `tg.sln` file in the root folder. The only additiona
 
 Before switching the focus to voxel ray tracing after commit [358e48c5](https://github.com/torben-gross/tg/commit/358e48c5), this engine focussed on large-scale terrain rendering in a flat-shaded low-poly style. The terrain could be edited in real-time and was updated using multithreading.
 
-![alt text](https://github.com/torben-gross/tg/blob/master/tg/assets/textures/transvoxel.png?raw=true)
+| ![space-1.jpg](https://raw.githubusercontent.com/torben-gross/tg/master/tg/assets/textures/terrain_edit.png) | 
+|:--:| 
+| Terrain could be modified by adding/subtracting volume. Furthermore, the time of the day adjusted automatically. |
 
 A non-exhaustive list of features:
 
