@@ -106,6 +106,10 @@ typedef struct tggui_transform_ssbo
 
 
 
+static tggui_context* p_guic;
+
+
+
 static void tg__push_debug_svo_node(tg_raytracer* p_raytracer, const tg_svo_inner_node* p_inner, v3 min, v3 max, b32 blocks_only, b32 push_children)
 {
     const v3 extent = tgm_v3_sub(max, min);
@@ -681,11 +685,11 @@ void tg_raytracer_create(const tg_camera* p_camera, u32 max_n_instances, u32 max
     
 
 
-    tggui_context* p_guic = &p_raytracer->gui_context;
-    tggui_temp* p_tmp = &p_guic->temp;
-    *p_guic = (tggui_context){ 0 };
+    tggui_context* p_guic_internal = &p_raytracer->gui_context;
+    tggui_temp* p_tmp = &p_guic_internal->temp;
+    *p_guic_internal = (tggui_context){ 0 };
 
-    tggui_style* p_style = &p_guic->style;
+    tggui_style* p_style = &p_guic_internal->style;
     tgvk_font_create("fonts/arial.ttf", &p_style->font);
     p_style->p_colors[TGGUI_COLOR_TEXT]           = (v4){ 1.0f,  1.0f,  1.0f,  1.0f  };
     p_style->p_colors[TGGUI_COLOR_WINDOW_BG]      = (v4){ 0.06f, 0.06f, 0.06f, 0.94f };
@@ -698,11 +702,11 @@ void tg_raytracer_create(const tg_camera* p_camera, u32 max_n_instances, u32 max
     p_style->p_colors[TGGUI_COLOR_TITLE_BG]       = (v4){ 0.16f, 0.29f, 0.48f, 1.0f  };
     p_style->p_colors[TGGUI_COLOR_CHECKMARK]      = (v4){ 0.26f, 0.59f, 0.98f, 1.0f  };
 
-    p_guic->quad_capacity = 512;
-    p_guic->n_quads = 0;
+    p_guic_internal->quad_capacity = 512;
+    p_guic_internal->n_quads = 0;
 
-    p_guic->transform_ssbo = TGVK_BUFFER_CREATE(p_guic->quad_capacity * sizeof(tggui_transform_ssbo), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, TGVK_MEMORY_HOST);
-    p_guic->colors_ssbo = TGVK_BUFFER_CREATE(p_guic->quad_capacity * sizeof(tggui_transform_ssbo), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, TGVK_MEMORY_DEVICE);
+    p_guic_internal->transform_ssbo = TGVK_BUFFER_CREATE(p_guic_internal->quad_capacity * sizeof(tggui_transform_ssbo), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, TGVK_MEMORY_HOST);
+    p_guic_internal->colors_ssbo = TGVK_BUFFER_CREATE(p_guic_internal->quad_capacity * sizeof(tggui_transform_ssbo), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, TGVK_MEMORY_DEVICE);
 
     tgvk_sampler_create_info white_texture_sampler_create_info = { 0 };
     white_texture_sampler_create_info.min_filter = TG_IMAGE_FILTER_NEAREST;
@@ -711,15 +715,15 @@ void tg_raytracer_create(const tg_camera* p_camera, u32 max_n_instances, u32 max
     white_texture_sampler_create_info.address_mode_v = TG_IMAGE_ADDRESS_MODE_REPEAT;
     white_texture_sampler_create_info.address_mode_w = TG_IMAGE_ADDRESS_MODE_REPEAT;
 
-    p_guic->white_texture = TGVK_IMAGE_CREATE(TGVK_IMAGE_TYPE_COLOR, 1, 1, TG_COLOR_IMAGE_FORMAT_R8_UNORM, &white_texture_sampler_create_info);
+    p_guic_internal->white_texture = TGVK_IMAGE_CREATE(TGVK_IMAGE_TYPE_COLOR, 1, 1, TG_COLOR_IMAGE_FORMAT_R8_UNORM, &white_texture_sampler_create_info);
     const u8 white = 0xff;
-    tgvk_util_copy_to_image(VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, &white, &p_guic->white_texture);
+    tgvk_util_copy_to_image(VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, &white, &p_guic_internal->white_texture);
 
     tgvk_staging_buffer staging_buffer = { 0 };
-    tgvk_staging_buffer_take(TGGUI_COLOR_TYPE_COUNT * sizeof(u32), &p_guic->colors_ssbo, &staging_buffer);
+    tgvk_staging_buffer_take(TGGUI_COLOR_TYPE_COUNT * sizeof(u32), &p_guic_internal->colors_ssbo, &staging_buffer);
     for (u32 color_type_idx = 0; color_type_idx < TGGUI_COLOR_TYPE_COUNT; color_type_idx++)
     {
-        const u32 color = tg_color_pack(p_guic->style.p_colors[color_type_idx]);
+        const u32 color = tg_color_pack(p_guic_internal->style.p_colors[color_type_idx]);
         tgvk_staging_buffer_push_u32(&staging_buffer, color);
     }
     tgvk_staging_buffer_release(&staging_buffer);
@@ -1311,12 +1315,12 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
 
     // GUI
 
-    tggui_context* p_guic = &p_raytracer->gui_context;
+    tggui_context* p_guic_internal = &p_raytracer->gui_context;
     u32 first_instance = 0;
-    for (u32 draw_call_idx = 0; draw_call_idx < p_guic->n_draw_calls; draw_call_idx++)
+    for (u32 draw_call_idx = 0; draw_call_idx < p_guic_internal->n_draw_calls; draw_call_idx++)
     {
-        TG_ASSERT(p_guic->p_textures[draw_call_idx] != TG_NULL);
-        TG_ASSERT(p_guic->p_n_instances_per_draw_call[draw_call_idx] > 0);
+        TG_ASSERT(p_guic_internal->p_textures[draw_call_idx] != TG_NULL);
+        TG_ASSERT(p_guic_internal->p_n_instances_per_draw_call[draw_call_idx] > 0);
 
         tgvk_command_buffer* p_cmd_buf = &p_raytracer->gui_pass.command_buffer;
 
@@ -1330,15 +1334,15 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
         vkCmdBindVertexBuffers(p_cmd_buf->buffer, 0, 1, &p_raytracer->data.idx_vbo.buffer, &vertex_buffer_offset);
         vkCmdBindVertexBuffers(p_cmd_buf->buffer, 1, 1, &p_raytracer->data.quad_vbo.buffer, &vertex_buffer_offset);
 
-        tgvk_descriptor_set_update_storage_buffer(p_raytracer->gui_pass.descriptor_set.set, &p_guic->transform_ssbo, 0);
-        tgvk_descriptor_set_update_image(p_raytracer->gui_pass.descriptor_set.set, p_guic->p_textures[draw_call_idx], 1);
-        tgvk_descriptor_set_update_storage_buffer(p_raytracer->gui_pass.descriptor_set.set, &p_guic->colors_ssbo, 2);
+        tgvk_descriptor_set_update_storage_buffer(p_raytracer->gui_pass.descriptor_set.set, &p_guic_internal->transform_ssbo, 0);
+        tgvk_descriptor_set_update_image(p_raytracer->gui_pass.descriptor_set.set, p_guic_internal->p_textures[draw_call_idx], 1);
+        tgvk_descriptor_set_update_storage_buffer(p_raytracer->gui_pass.descriptor_set.set, &p_guic_internal->colors_ssbo, 2);
 
         vkCmdBindDescriptorSets(p_cmd_buf->buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_raytracer->gui_pass.graphics_pipeline.layout.pipeline_layout, 0, 1, &p_raytracer->gui_pass.descriptor_set.set, 0, TG_NULL);
 
-        const u32 n_instances = p_guic->p_n_instances_per_draw_call[draw_call_idx];
+        const u32 n_instances = p_guic_internal->p_n_instances_per_draw_call[draw_call_idx];
         tgvk_cmd_draw_instanced2(p_cmd_buf, 6, n_instances, first_instance);
-        first_instance += p_guic->p_n_instances_per_draw_call[draw_call_idx];
+        first_instance += p_guic_internal->p_n_instances_per_draw_call[draw_call_idx];
 
         vkCmdEndRenderPass(p_cmd_buf->buffer);
         TGVK_CALL(vkEndCommandBuffer(p_cmd_buf->buffer));
@@ -1413,15 +1417,15 @@ void tg_raytracer_clear(tg_raytracer* p_raytracer)
 
     tgvk_queue_submit(TGVK_QUEUE_TYPE_GRAPHICS, 1, &submit_info, p_raytracer->render_target.fence);
 
-    tggui_context* p_guic = &p_raytracer->gui_context;
-    tggui_temp* p_tmp = &p_guic->temp;
+    tggui_context* p_guic_internal = &p_raytracer->gui_context;
+    tggui_temp* p_tmp = &p_guic_internal->temp;
 
-    p_guic->n_quads = 0;
-    p_guic->n_draw_calls = 0;
+    p_guic_internal->n_quads = 0;
+    p_guic_internal->n_draw_calls = 0;
     for (u32 i = 0; i < TGGUI_MAX_N_DRAW_CALLS; i++)
     {
-        p_guic->p_textures[i] = TG_NULL;
-        p_guic->p_n_instances_per_draw_call[i] = 0;
+        p_guic_internal->p_textures[i] = TG_NULL;
+        p_guic_internal->p_n_instances_per_draw_call[i] = 0;
     }
 
     p_tmp->base_offset_x = -1.0f;
@@ -1440,23 +1444,23 @@ void tg_raytracer_clear(tg_raytracer* p_raytracer)
 
 
 
-static v2 tggui__screen_space_to_clip_space(v2 v, v2 target_size)
+static v2 tggui__screen_space_to_clip_space(v2 v)
 {
     v2 result = { 0 };
-    result.x = ((v.x / target_size.x) * 2.0f) - 1.0f;
-    result.y = ((v.y / target_size.y) * 2.0f) - 1.0f;
+    result.x = ((v.x / p_guic->viewport_size.x) * 2.0f) - 1.0f;
+    result.y = ((v.y / p_guic->viewport_size.y) * 2.0f) - 1.0f;
     return result;
 }
 
-static v2 tggui__clip_space_to_screen_space(v2 v, v2 target_size)
+static v2 tggui__clip_space_to_screen_space(v2 v)
 {
     v2 result = { 0 };
-    result.x = ((v.x + 1.0f) / 2.0f) * target_size.x;
-    result.y = ((v.y + 1.0f) / 2.0f) * target_size.y;
+    result.x = ((v.x + 1.0f) / 2.0f) * p_guic->viewport_size.x;
+    result.y = ((v.y + 1.0f) / 2.0f) * p_guic->viewport_size.y;
     return result;
 }
 
-static void tggui__push_draw_call(tggui_context* p_guic, tgvk_image* p_texture)
+static void tggui__push_draw_call(tgvk_image* p_texture)
 {
     TG_ASSERT(p_guic != TG_NULL);
     TG_ASSERT(p_texture != TG_NULL);
@@ -1480,10 +1484,10 @@ static void tggui__push_draw_call(tggui_context* p_guic, tgvk_image* p_texture)
     }
 }
 
-static void tggui__push_quad(tggui_context* p_guic, v2 min, v2 max, v2 target_size, tggui_color_type type)
+static void tggui__push_quad(v2 min, v2 max, tggui_color_type type)
 {
-    const v2 rel_min = tggui__screen_space_to_clip_space(min, target_size);
-    const v2 rel_max = tggui__screen_space_to_clip_space(max, target_size);
+    const v2 rel_min = tggui__screen_space_to_clip_space(min);
+    const v2 rel_max = tggui__screen_space_to_clip_space(max);
     const v2 translation = tgm_v2_divf(tgm_v2_add(rel_min, rel_max), 2.0f);
     const v2 scale = tgm_v2_sub(rel_max, rel_min);
 
@@ -1500,7 +1504,7 @@ static void tggui__push_quad(tggui_context* p_guic, v2 min, v2 max, v2 target_si
     p_quad->uv_half_scale_y = 0.0f;
     p_quad->type = (u32)type;
 
-    tggui__push_draw_call(p_guic, &p_guic->white_texture);
+    tggui__push_draw_call(&p_guic->white_texture);
 }
 
 static void tggui__button_behavior(v2 min, v2 max, TG_OUT b32* p_pressed, TG_OUT b32* p_held, TG_OUT b32* p_hovered)
@@ -1530,7 +1534,7 @@ static void tggui__button_behavior(v2 min, v2 max, TG_OUT b32* p_pressed, TG_OUT
     }
 }
 
-static f32 tggui__text_width(const tggui_context* p_guic, const char* p_text)
+static f32 tggui__text_width(const char* p_text)
 {
     f32 result = 0.0f;
 
@@ -1566,55 +1570,64 @@ static f32 tggui__text_width(const tggui_context* p_guic, const char* p_text)
 
 
 
-void tggui_window_set_next_position(tg_raytracer* p_raytracer, f32 position_x, f32 position_y)
+void tggui_set_context(tggui_context* p_context)
 {
-    TG_ASSERT(p_raytracer != TG_NULL);
+    TG_ASSERT(p_context != TG_NULL);
 
-    p_raytracer->gui_context.temp.window_next_position_x = position_x;
-    p_raytracer->gui_context.temp.window_next_position_y = position_y;
+    p_guic = p_context;
 }
 
-void tggui_window_set_next_size(tg_raytracer* p_raytracer, f32 size_x, f32 size_y)
+void tggui_set_viewport_size(f32 viewport_width, f32 viewport_height)
 {
-    TG_ASSERT(p_raytracer != TG_NULL);
+    TG_ASSERT(p_guic);
 
-    p_raytracer->gui_context.temp.window_next_size_x = size_x;
-    p_raytracer->gui_context.temp.window_next_size_y = size_y;
+    p_guic->viewport_size.x = viewport_width;
+    p_guic->viewport_size.y = viewport_height;
 }
 
-void tggui_window_begin(tg_raytracer* p_raytracer, const char* p_window_name)
+void tggui_window_set_next_position(f32 position_x, f32 position_y)
 {
-    TG_ASSERT(p_raytracer != TG_NULL);
+    TG_ASSERT(p_guic != TG_NULL);
 
-    const v2 target_size = {
-        (f32)p_raytracer->render_target.color_attachment.width,
-        (f32)p_raytracer->render_target.color_attachment.height
-    };
+    p_guic->temp.window_next_position_x = position_x;
+    p_guic->temp.window_next_position_y = position_y;
+}
 
-    tggui_context* p_guic = &p_raytracer->gui_context;
+void tggui_window_set_next_size(f32 size_x, f32 size_y)
+{
+    TG_ASSERT(p_guic != TG_NULL);
+
+    p_guic->temp.window_next_size_x = size_x;
+    p_guic->temp.window_next_size_y = size_y;
+}
+
+void tggui_window_begin(const char* p_window_name)
+{
+    TG_ASSERT(p_guic != TG_NULL);
+
     tggui_temp* p_tmp = &p_guic->temp;
     TG_ASSERT(p_tmp->base_offset_x == -1.0f); // TODO: Subwindows are not supported
 
     const v2 window_min = { p_tmp->window_next_position_x, p_tmp->window_next_position_y };
     const v2 window_max = { window_min.x + p_tmp->window_next_size_x, window_min.y + p_tmp->window_next_size_y };
-    tggui__push_quad(p_guic, window_min, window_max, target_size, TGGUI_COLOR_WINDOW_BG);
+    tggui__push_quad(window_min, window_max, TGGUI_COLOR_WINDOW_BG);
 
     const v2 title_bar_min = window_min;
     const v2 title_bar_max = { window_max.x, title_bar_min.y + TG_FONT_SCALE_FACTOR * p_guic->style.font.max_glyph_height };
-    tggui__push_quad(p_guic, title_bar_min, title_bar_max, target_size, TGGUI_COLOR_TITLE_BG);
+    tggui__push_quad(title_bar_min, title_bar_max, TGGUI_COLOR_TITLE_BG);
 
     p_tmp->base_offset_x = window_min.x + 4.0f;
     p_tmp->last_line_end_offset = (v2){ -1.0f, -1.0f };
     p_tmp->offset = (v2){ p_tmp->base_offset_x, window_min.y };
 
-    tggui_text(p_raytracer, p_window_name);
+    tggui_text(p_window_name);
 }
 
-void tggui_window_end(tg_raytracer* p_raytracer)
+void tggui_window_end(void)
 {
-    TG_ASSERT(p_raytracer != TG_NULL);
+    TG_ASSERT(p_guic != TG_NULL);
+    TG_ASSERT(p_guic->n_draw_calls > 0); // We need a window
 
-    tggui_context* p_guic = &p_raytracer->gui_context;
     tggui_temp* p_tmp = &p_guic->temp;
 
     p_tmp->base_offset_x = -1.0f;
@@ -1622,11 +1635,11 @@ void tggui_window_end(tg_raytracer* p_raytracer)
     p_tmp->offset = (v2){ -1.0f, -1.0f };
 }
 
-void tggui_same_line(tg_raytracer* p_raytracer)
+void tggui_same_line(void)
 {
-    TG_ASSERT(p_raytracer != TG_NULL);
+    TG_ASSERT(p_guic != TG_NULL);
+    TG_ASSERT(p_guic->n_draw_calls > 0); // We need a window
 
-    tggui_context* p_guic = &p_raytracer->gui_context;
     tggui_temp* p_tmp = &p_guic->temp;
 
     TG_ASSERT(p_tmp->last_line_end_offset.x != -1.0f && p_tmp->last_line_end_offset.y != -1.0f); // We call it where we should not call it!
@@ -1636,27 +1649,20 @@ void tggui_same_line(tg_raytracer* p_raytracer)
     p_tmp->last_line_end_offset = (v2){ -1.0f, -1.0f };
 }
 
-b32 tggui_button(tg_raytracer* p_raytracer, const char* p_label)
+b32 tggui_button(const char* p_label)
 {
-    TG_ASSERT(p_raytracer != TG_NULL);
+    TG_ASSERT(p_guic != TG_NULL);
+    TG_ASSERT(p_guic->n_draw_calls > 0); // We need a window
     TG_ASSERT(p_label != TG_NULL);
 
-    tggui_context* p_guic = &p_raytracer->gui_context;
     tggui_temp* p_tmp = &p_guic->temp;
-
-    TG_ASSERT(p_guic->n_draw_calls > 0); // We need a window
-
-    const v2 target_size = {
-        (f32)p_raytracer->render_target.color_attachment.width,
-        (f32)p_raytracer->render_target.color_attachment.height
-    };
 
     const f32 min_total_size = TG_FONT_SCALE_FACTOR * p_guic->style.font.max_glyph_height;
     const f32 min_size = min_total_size * 0.9f;
     const f32 trim = (min_total_size - min_size) / 2.0f;
 
     const f32 margin = 4.0f; // TODO: margin for text (8.0f)
-    const f32 text_width = tggui__text_width(p_guic, p_label) + 2.0f * margin;
+    const f32 text_width = tggui__text_width(p_label) + 2.0f * margin;
     const f32 width = TG_MAX(text_width, min_size);
 
     const v2 min = tgm_v2_addf(p_tmp->offset, trim);
@@ -1666,14 +1672,14 @@ b32 tggui_button(tg_raytracer* p_raytracer, const char* p_label)
     tggui__button_behavior(min, max, &pressed, &held, &hovered);
     const tggui_color_type type = hovered ? (held ? TGGUI_COLOR_BUTTON_ACTIVE : TGGUI_COLOR_BUTTON_HOVERED) : TGGUI_COLOR_BUTTON;
 
-    tggui__push_quad(p_guic, min, max, target_size, type);
+    tggui__push_quad(min, max, type);
 
     // TODO: This is way too hacky!
     const tggui_temp preserve_temp = *p_tmp;
     p_tmp->offset.x += trim + margin;
     if (*p_label != '\0')
     {
-        tggui_text(p_raytracer, p_label);
+        tggui_text(p_label);
     }
     *p_tmp = preserve_temp;
 
@@ -1683,20 +1689,13 @@ b32 tggui_button(tg_raytracer* p_raytracer, const char* p_label)
     return pressed;
 }
 
-b32 tggui_checkbox(tg_raytracer* p_raytracer, const char* p_label, b32* p_value)
+b32 tggui_checkbox(const char* p_label, b32* p_value)
 {
-    TG_ASSERT(p_raytracer != TG_NULL);
+    TG_ASSERT(p_guic != TG_NULL);
+    TG_ASSERT(p_guic->n_draw_calls > 0); // We need a window
     TG_ASSERT(p_label != TG_NULL);
 
-    tggui_context* p_guic = &p_raytracer->gui_context;
     tggui_temp* p_tmp = &p_guic->temp;
-
-    TG_ASSERT(p_guic->n_draw_calls > 0); // We need a window
-
-    const v2 target_size = {
-        (f32)p_raytracer->render_target.color_attachment.width,
-        (f32)p_raytracer->render_target.color_attachment.height
-    };
 
     const f32 total_size = TG_FONT_SCALE_FACTOR * p_guic->style.font.max_glyph_height;
     const f32 size = total_size * 0.9f;
@@ -1713,13 +1712,13 @@ b32 tggui_checkbox(tg_raytracer* p_raytracer, const char* p_label, b32* p_value)
     }
     const tggui_color_type type = hovered ? (held ? TGGUI_COLOR_FRAME_ACTIVE : TGGUI_COLOR_FRAME_HOVERED) : TGGUI_COLOR_FRAME;
 
-    tggui__push_quad(p_guic, min, max, target_size, type);
+    tggui__push_quad(min, max, type);
 
     if (*p_value)
     {
         const v2 min_checkmark = tgm_v2_addf(min, 0.25f * size);
         const v2 max_checkmark = tgm_v2_subf(max, 0.25f * size);
-        tggui__push_quad(p_guic, min_checkmark, max_checkmark, target_size, TGGUI_COLOR_CHECKMARK);
+        tggui__push_quad(min_checkmark, max_checkmark, TGGUI_COLOR_CHECKMARK);
     }
 
     p_tmp->last_line_end_offset = (v2){ p_tmp->offset.x + total_size, p_tmp->offset.y };
@@ -1728,21 +1727,19 @@ b32 tggui_checkbox(tg_raytracer* p_raytracer, const char* p_label, b32* p_value)
     return pressed;
 }
 
-void tggui_text(tg_raytracer* p_raytracer, const char* p_format, ...)
+b32 tggui_input_text(const char* p_label, u32 buffer_size, const char* p_buffer)
 {
-    TG_ASSERT(p_raytracer != TG_NULL);
+    return TG_FALSE;
+}
+
+void tggui_text(const char* p_format, ...)
+{
+    TG_ASSERT(p_guic != TG_NULL);
+    TG_ASSERT(p_guic->n_draw_calls > 0); // We need a window
     TG_ASSERT(p_format != TG_NULL);
     TG_ASSERT(*p_format != '\0');
 
-    tggui_context* p_guic = &p_raytracer->gui_context;
     tggui_temp* p_tmp = &p_guic->temp;
-
-    TG_ASSERT(p_guic->n_draw_calls > 0); // We need a window
-
-    const v2 target_size = {
-        (f32)p_raytracer->render_target.color_attachment.width,
-        (f32)p_raytracer->render_target.color_attachment.height
-    };
 
     u32 draw_call_idx = p_guic->n_draw_calls - 1;
     if (p_guic->p_textures[draw_call_idx] != &p_guic->style.font.texture_atlas)
@@ -1777,8 +1774,8 @@ void tggui_text(tg_raytracer* p_raytracer, const char* p_format, ...)
 
         if (!tgm_v2_eq(min, max))
         {
-            const v2 rel_min = tggui__screen_space_to_clip_space(min, target_size);
-            const v2 rel_max = tggui__screen_space_to_clip_space(max, target_size);
+            const v2 rel_min = tggui__screen_space_to_clip_space(min);
+            const v2 rel_max = tggui__screen_space_to_clip_space(max);
             const v2 translation = tgm_v2_divf(tgm_v2_add(rel_min, rel_max), 2.0f);
             const v2 scale = tgm_v2_sub(rel_max, rel_min);
 

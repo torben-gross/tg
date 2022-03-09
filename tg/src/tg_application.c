@@ -256,42 +256,48 @@ static void tg__scene_update_and_render(f32 dt_ms)
     TG_UNUSED(d0);
     TG_UNUSED(c0);
 
-    tggui_window_set_next_position(&scene.raytracer, 8.0f, 8.0f);
-    tggui_window_set_next_size(&scene.raytracer, 550.0f, 680.0f);
-    tggui_window_begin(&scene.raytracer, "tg - Window");
+    tggui_set_context(&scene.raytracer.gui_context);
+    tggui_set_viewport_size((f32)scene.raytracer.render_target.color_attachment.width, (f32)scene.raytracer.render_target.color_attachment.height);
 
-    tggui_text(&scene.raytracer, "tg - %s", "Voxel Game Engine");
+    tggui_window_set_next_position(8.0f, 8.0f);
+    tggui_window_set_next_size(550.0f, 680.0f);
+    tggui_window_begin("tg - Window");
+
+    tggui_text("tg - %s", "Voxel Game Engine");
 
     static b32 show_anonther_text = TG_FALSE;
-    if (tggui_button(&scene.raytracer, "Button 0"))
+    if (tggui_button("Button 0"))
     {
         show_anonther_text = !show_anonther_text;
     }
-    tggui_same_line(&scene.raytracer);
-    tggui_text(&scene.raytracer, "Press to add more text");
+    tggui_same_line();
+    tggui_text("Press to add more text");
 
-    tggui_same_line(&scene.raytracer);
-    tggui_button(&scene.raytracer, "B2");
-    tggui_same_line(&scene.raytracer);
-    tggui_text(&scene.raytracer, "B2 is on same same line!");
+    tggui_same_line();
+    tggui_button("B2");
+    tggui_same_line();
+    tggui_text("B2 is on same same line!");
 
     static b32 check = TG_FALSE;
-    tggui_checkbox(&scene.raytracer, "Checkbox", &check);
-    tggui_same_line(&scene.raytracer);
-    tggui_text(&scene.raytracer, "This checkbox is %s%c", check ? "active" : "inactive", '.');
+    tggui_checkbox("Checkbox", &check);
+    tggui_same_line();
+    tggui_text("This checkbox is %s%c", check ? "active" : "inactive", '.');
+
+    static char p_input_text_buffer[256] = "Hola!";
+    tggui_input_text("input text", sizeof(p_input_text_buffer), p_input_text_buffer);
 
     if (show_anonther_text)
     {
-        tggui_text(&scene.raytracer, "Another text!");
+        tggui_text("Another text!");
     }
 
-    tggui_window_end(&scene.raytracer);
+    tggui_window_end();
 
-    tggui_window_set_next_position(&scene.raytracer, 8.0f + 550.0f + 8.0f, 8.0f);
-    tggui_window_set_next_size(&scene.raytracer, 200.0f, 680.0f);
-    tggui_window_begin(&scene.raytracer, "tg - Window 2");
-    tggui_text(&scene.raytracer, "Text in second window!");
-    tggui_window_end(&scene.raytracer);
+    tggui_window_set_next_position(8.0f + 550.0f + 8.0f, 8.0f);
+    tggui_window_set_next_size(200.0f, 680.0f);
+    tggui_window_begin("tg - Window 2");
+    tggui_text("Text in second window!");
+    tggui_window_end();
     
     //const m4 m = tgm_m4_scale((v3) { 1.0f, 1.0f, 1.0f });
     //tg_raytracer_push_debug_cuboid(&scene.raytracer, m);

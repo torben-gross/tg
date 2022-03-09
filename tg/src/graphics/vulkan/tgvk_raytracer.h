@@ -58,6 +58,7 @@ typedef struct tggui_context
     tgvk_image*    p_textures[TGGUI_MAX_N_DRAW_CALLS];
     u32            p_n_instances_per_draw_call[TGGUI_MAX_N_DRAW_CALLS];
 
+    v2             viewport_size;
     tggui_temp     temp;
 } tggui_context;
 
@@ -205,14 +206,17 @@ void    tg_raytracer_color_lut_set(tg_raytracer* p_raytracer, u8 index, f32 r, f
 void    tg_raytracer_render(tg_raytracer* p_raytracer);
 void    tg_raytracer_clear(tg_raytracer* p_raytracer);
 
-void    tggui_window_set_next_position(tg_raytracer* p_raytracer, f32 position_x, f32 position_y); // Anchor is in top left corner
-void    tggui_window_set_next_size(tg_raytracer* p_raytracer, f32 size_x, f32 size_y);
-void    tggui_window_begin(tg_raytracer* p_raytracer, const char* p_window_name);
-void    tggui_window_end(tg_raytracer* p_raytracer);
-void    tggui_same_line(tg_raytracer* p_raytracer);
-b32     tggui_button(tg_raytracer* p_raytracer, const char* p_label);
-b32     tggui_checkbox(tg_raytracer* p_raytracer, const char* p_label, b32* p_value);
-void    tggui_text(tg_raytracer* p_raytracer, const char* p_format, ...);
+void    tggui_set_context(tggui_context* p_context);
+void    tggui_set_viewport_size(f32 viewport_width, f32 viewport_height);
+void    tggui_window_set_next_position(f32 position_x, f32 position_y); // Anchor is in top left corner
+void    tggui_window_set_next_size(f32 size_x, f32 size_y);
+void    tggui_window_begin(const char* p_window_name);
+void    tggui_window_end(void);
+void    tggui_same_line(void);
+b32     tggui_button(const char* p_label);
+b32     tggui_checkbox(const char* p_label, b32* p_value);
+b32     tggui_input_text(const char* p_label, u32 buffer_size, const char* p_buffer);
+void    tggui_text(const char* p_format, ...);
 
 
 #endif
