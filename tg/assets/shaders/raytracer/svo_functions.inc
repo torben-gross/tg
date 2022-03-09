@@ -1,4 +1,4 @@
-f32 tg_svo_traverse(tg_svo svo, v3 ray_origin_ws, v3 ray_direction_ws, out v3 out_hit_position, out v3 out_hit_normal)
+f32 tg_svo_traverse(tg_svo svo, v3 ray_origin_ws, v3 ray_direction_ws, out v3 out_hit_position, out v3 out_hit_normal, out u32 out_node_idx, out u32 out_voxel_idx)
 {
     v3 extent = svo.max.xyz - svo.min.xyz;
     v3 center = 0.5 * extent + svo.min.xyz;
@@ -15,8 +15,8 @@ f32 tg_svo_traverse(tg_svo svo, v3 ray_origin_ws, v3 ray_direction_ws, out v3 ou
 #endif
 
     f32 result = 1.0;
-    u32 node_idx = TG_U32_MAX;
-    u32 voxel_idx = TG_U32_MAX;
+    out_node_idx = TG_U32_MAX;
+    out_voxel_idx = TG_U32_MAX;
 
     f32 enter, exit;
     if (tg_intersect_ray_aabb(ray_origin_ms, ray_direction_ms, svo.min.xyz, svo.max.xyz, enter, exit))
@@ -219,6 +219,8 @@ f32 tg_svo_traverse(tg_svo svo, v3 ray_origin_ws, v3 ray_direction_ws, out v3 ou
                                 result = enter / camera_ubo.far;
                                 out_hit_position = hit_position;
                                 out_hit_normal = hit_normal;
+								out_node_idx = child_idx;
+								out_voxel_idx = relative_voxel_idx;
                                 break;
                             }
 
@@ -323,6 +325,5 @@ f32 tg_svo_traverse(tg_svo svo, v3 ray_origin_ws, v3 ray_direction_ws, out v3 ou
             }
         }
     }
-    u32 voxel_id = voxel_idx;
     return result;
 }

@@ -783,6 +783,7 @@ void tg_raytracer_create_object(tg_raytracer* p_raytracer, v3 center, v3u extent
 
     p_object->translation = center;
     p_object->angle_in_radians = TG_DEG2RAD((f32)(object_idx * 7));
+    if (object_idx == 0) p_object->angle_in_radians = TG_DEG2RAD(15.0f);
     p_object->axis = (v3){ 0.0f, 1.0f, 0.0f };
 
     tg_object_data_ssbo object_data = { 0 };
@@ -1227,7 +1228,7 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
                 tg_raytracer_push_debug_cuboid(p_raytracer, model_matrix, (v3) { 1.0f, 1.0f, 0.0f });
             }
         }
-        if (1)
+        if (0)
         {
             tg__push_debug_svo_node(p_raytracer, &p_svo->p_node_buffer[0].inner, p_svo->min, p_svo->max, TG_TRUE, TG_TRUE);
         }

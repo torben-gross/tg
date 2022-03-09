@@ -50,19 +50,20 @@ u32 stack_size;
     f32 parent_max_stack[15] = f32[15](0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
 #endif
 
-    // TODO: determine node_idx and voxel_idx?
-    u32 node_idx = TG_U32_MAX;
-    u32 voxel_idx = TG_U32_MAX;
     v3 out_hit_position, out_hit_normal;
-    f32 d = tg_svo_traverse(s, ray_origin, ray_direction, out_hit_position, out_hit_normal);
+	u32 out_node_idx, out_voxel_idx;
+    f32 d = tg_svo_traverse(s, ray_origin, ray_direction, out_hit_position, out_hit_normal, out_node_idx, out_voxel_idx);
     
+	out_node_idx  = out_node_idx  & ((1 << 31) - 1);
+	out_voxel_idx = out_voxel_idx % 512;
+	
     if (d <= 1.0)
     {
         // Layout : 24 bits depth | 10 bits object id | 30 bits relative voxel_id
 
         u64 depth_24b    = u64(d * 16777215.0) << u64(40);
-		u64 node_idx_31b = u64(node_idx)  << u64( 9);
-		u64 voxel_idx_9b = u64(voxel_idx)                ;
+		u64 node_idx_31b = u64(out_node_idx)  << u64( 9);
+		u64 voxel_idx_9b = u64(out_voxel_idx)                ;
 		u64 packed_data  = depth_24b | node_idx_31b | voxel_idx_9b;
 
         u32 x = u32(gl_FragCoord.x);
