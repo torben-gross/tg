@@ -17,6 +17,10 @@ Each object contains its own transform, so its rotation and translation. Further
 
 As mentioned earlier, each object may have their custom material LUT. To avoid duplication, each object simply contains an index into an array of LUTs, such that LUTs can be reused.
 
+| ![space-1.jpg](https://raw.githubusercontent.com/torben-gross/tg/master/tg/assets/textures/data-model.png) | 
+|:--:| 
+| The figure depicts the cluster indices (left), the relative voxel indices of the clusters (middle left), the axis-aligned blocks of the SVO (middle right), and the voxels of the SVO-blocks (right). |
+
 ## Rendering
 
 The rendering uses a combination of voxel-based ray tracing and [visibility buffering](https://jcgt.org/published/0002/02/04/) to achieve both incredible performance for first-hit computation and huge voxel counts. Furthermore, approximate SVOs are utilized to approximate real-time GI.
