@@ -140,6 +140,7 @@
     <ClCompile Include="src\platform\tg_platform_win32.c" />
     <ClCompile Include="src\util\tg_amanatides_woo.c" />
     <ClCompile Include="src\util\tg_color.c" />
+    <ClCompile Include="src\util\tg_hash.c" />
     <ClCompile Include="src\util\tg_hashmap.c" />
     <ClCompile Include="src\util\tg_list.c" />
     <ClCompile Include="src\util\tg_noise.c" />
@@ -184,6 +185,7 @@
     <ClInclude Include="src\tg_variadic.h" />
     <ClInclude Include="src\util\tg_bitmap.h" />
     <ClInclude Include="src\util\tg_color.h" />
+    <ClInclude Include="src\util\tg_hash.h" />
     <ClInclude Include="src\util\tg_hashmap.h" />
     <ClInclude Include="src\util\tg_list.h" />
     <ClInclude Include="src\util\tg_noise.h" />

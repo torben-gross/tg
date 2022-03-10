@@ -56,22 +56,16 @@ static void tg__scene_create(void)
     tg_poisson_disk_sampling_2d(pds_extent, pds_r, 32, &pds_buffer_count, p_pds_point_buffer);
 
     scene.camera.type = TG_CAMERA_TYPE_PERSPECTIVE;
-    //scene.camera.position = (v3){ 128.0f, 141.0f + 50.0f, 128.0f };
-    scene.camera.position = (v3){ 0.0f, 0.0f, 10.0f };
+    scene.camera.position = (v3){ 65.1368790f, -30.7384720f, 73.0285263f };
     scene.camera.position = tgm_v3_add(scene.camera.position, (v3) { TG_F32_EPSILON, TG_F32_EPSILON, TG_F32_EPSILON }); // TODO: This is just for debugging SVOs
-    scene.camera.pitch = 0.0f;
-    scene.camera.yaw = 0.0f;
+    scene.camera.pitch = -0.173136666f;
+    scene.camera.yaw = 0.710419059f;
     scene.camera.roll = 0.0f;
     scene.camera.persp.fov_y_in_radians = TG_DEG2RAD(70.0f);
     scene.camera.persp.aspect = tgp_get_window_aspect_ratio();
     scene.camera.persp.n = 0.1f;
     scene.camera.persp.f = 1000.0f;
     tg_input_get_mouse_position(&scene.last_mouse_x, &scene.last_mouse_y);
-
-    scene.camera.position = (v3){ 38.1339073f, -33.9577141f, -95.0398407f };
-    scene.camera.pitch = -0.752865911f;
-    scene.camera.yaw = 2.74896932;
-    scene.camera.roll = 0.0f;
 
     tg_raytracer_create(&scene.camera, (1 << 12), (1 << 21), &scene.raytracer);
     tg_raytracer_create_object(&scene.raytracer, (v3) { 0.0f, -64.0f, 0.0f }, (v3u) { 128, 32, 128 });
@@ -158,78 +152,82 @@ static void tg__scene_update_and_render(f32 dt_ms)
         //tg_raytracer_screenshot(&scene.raytracer, p_filename_buffer);
     }
 
-    u32 mouse_x;
-    u32 mouse_y;
-    tg_input_get_mouse_position(&mouse_x, &mouse_y);
-    if (tg_input_is_mouse_button_down(TG_BUTTON_MIDDLE))
+    tggui_set_context(&scene.raytracer.gui_context);
+    if (!tggui_is_in_focus())
     {
-        scene.camera.yaw += TG_DEG2RAD(0.064f * (f32)((i32)scene.last_mouse_x - (i32)mouse_x));
-        scene.camera.pitch += TG_DEG2RAD(0.064f * (f32)((i32)scene.last_mouse_y - (i32)mouse_y));
-    }
-    scene.last_mouse_x = mouse_x;
-    scene.last_mouse_y = mouse_y;
+        u32 mouse_x;
+        u32 mouse_y;
+        tg_input_get_mouse_position(&mouse_x, &mouse_y);
+        if (tg_input_is_mouse_button_down(TG_BUTTON_MIDDLE))
+        {
+            scene.camera.yaw += TG_DEG2RAD(0.064f * (f32)((i32)scene.last_mouse_x - (i32)mouse_x));
+            scene.camera.pitch += TG_DEG2RAD(0.064f * (f32)((i32)scene.last_mouse_y - (i32)mouse_y));
+        }
+        scene.last_mouse_x = mouse_x;
+        scene.last_mouse_y = mouse_y;
 
-    const f32 rotate_speed = 0.001f;
-    if (tg_input_is_key_down(TG_KEY_I))
-    {
-        scene.camera.pitch += rotate_speed * dt_ms;
-    }
-    if (tg_input_is_key_down(TG_KEY_J))
-    {
-        scene.camera.yaw += rotate_speed * dt_ms;
-    }
-    if (tg_input_is_key_down(TG_KEY_K))
-    {
-        scene.camera.pitch -= rotate_speed * dt_ms;
-    }
-    if (tg_input_is_key_down(TG_KEY_L))
-    {
-        scene.camera.yaw -= rotate_speed * dt_ms;
-    }
-    const m4 camera_rotation = tgm_m4_euler(scene.camera.pitch, scene.camera.yaw, scene.camera.roll);
+        const f32 rotate_speed = 0.001f;
+        if (tg_input_is_key_down(TG_KEY_I))
+        {
+            scene.camera.pitch += rotate_speed * dt_ms;
+        }
+        if (tg_input_is_key_down(TG_KEY_J))
+        {
+            scene.camera.yaw += rotate_speed * dt_ms;
+        }
+        if (tg_input_is_key_down(TG_KEY_K))
+        {
+            scene.camera.pitch -= rotate_speed * dt_ms;
+        }
+        if (tg_input_is_key_down(TG_KEY_L))
+        {
+            scene.camera.yaw -= rotate_speed * dt_ms;
+        }
+        const m4 camera_rotation = tgm_m4_euler(scene.camera.pitch, scene.camera.yaw, scene.camera.roll);
 
-    const v3 right = { camera_rotation.m00, camera_rotation.m10, camera_rotation.m20 }; // TODO: make these camera functions
-    const v3 up = { 0.0f, 1.0f, 0.0f };
-    const v3 forward = { -camera_rotation.m02, -camera_rotation.m12, -camera_rotation.m22 };
+        const v3 right = { camera_rotation.m00, camera_rotation.m10, camera_rotation.m20 }; // TODO: make these camera functions
+        const v3 up = { 0.0f, 1.0f, 0.0f };
+        const v3 forward = { -camera_rotation.m02, -camera_rotation.m12, -camera_rotation.m22 };
 
-    v3 velocity = { 0 };
-    if (tg_input_is_key_down(TG_KEY_W))
-    {
-        velocity = tgm_v3_add(velocity, forward);
-    }
-    if (tg_input_is_key_down(TG_KEY_A))
-    {
-        velocity = tgm_v3_sub(velocity, right);
-    }
-    if (tg_input_is_key_down(TG_KEY_S))
-    {
-        velocity = tgm_v3_sub(velocity, forward);
-    }
-    if (tg_input_is_key_down(TG_KEY_D))
-    {
-        velocity = tgm_v3_add(velocity, right);
-    }
-    if (tg_input_is_key_down(TG_KEY_SPACE))
-    {
-        velocity = tgm_v3_add(velocity, up);
-    }
-    if (tg_input_is_key_down(TG_KEY_CONTROL))
-    {
-        velocity = tgm_v3_sub(velocity, up);
-    }
+        v3 velocity = { 0 };
+        if (tg_input_is_key_down(TG_KEY_W))
+        {
+            velocity = tgm_v3_add(velocity, forward);
+        }
+        if (tg_input_is_key_down(TG_KEY_A))
+        {
+            velocity = tgm_v3_sub(velocity, right);
+        }
+        if (tg_input_is_key_down(TG_KEY_S))
+        {
+            velocity = tgm_v3_sub(velocity, forward);
+        }
+        if (tg_input_is_key_down(TG_KEY_D))
+        {
+            velocity = tgm_v3_add(velocity, right);
+        }
+        if (tg_input_is_key_down(TG_KEY_SPACE))
+        {
+            velocity = tgm_v3_add(velocity, up);
+        }
+        if (tg_input_is_key_down(TG_KEY_CONTROL))
+        {
+            velocity = tgm_v3_sub(velocity, up);
+        }
 
-    if (tgm_v3_magsqr(velocity) != 0.0f)
-    {
-        const f32 player_speed_mps = tg_input_is_key_down(TG_KEY_SHIFT) ? TG_RUNNING_MPS : TG_WALKING_MPS;
-        const f32 player_speed_mpms = player_speed_mps / 1000.0f;
-        const f32 player_speed = player_speed_mpms * dt_ms;
-        velocity = tgm_v3_mulf(tgm_v3_normalized(velocity), player_speed);
-        scene.camera.position = tgm_v3_add(scene.camera.position, velocity);
-    }
+        if (tgm_v3_magsqr(velocity) != 0.0f)
+        {
+            const f32 player_speed_mps = tg_input_is_key_down(TG_KEY_SHIFT) ? TG_RUNNING_MPS : TG_WALKING_MPS;
+            const f32 player_speed_mpms = player_speed_mps / 1000.0f;
+            const f32 player_speed = player_speed_mpms * dt_ms;
+            velocity = tgm_v3_mulf(tgm_v3_normalized(velocity), player_speed);
+            scene.camera.position = tgm_v3_add(scene.camera.position, velocity);
+        }
 
-    if (tg_input_get_mouse_wheel_detents(TG_FALSE))
-    {
-        scene.camera.persp.fov_y_in_radians -= 0.1f * tg_input_get_mouse_wheel_detents(TG_TRUE);
+        if (tg_input_get_mouse_wheel_detents(TG_FALSE))
+        {
+            scene.camera.persp.fov_y_in_radians -= 0.1f * tg_input_get_mouse_wheel_detents(TG_TRUE);
+        }
     }
 
     scene.light_timer += dt_ms;
@@ -261,48 +259,53 @@ static void tg__scene_update_and_render(f32 dt_ms)
     TG_UNUSED(d0);
     TG_UNUSED(c0);
 
-    //tggui_set_context(&scene.raytracer.gui_context);
-    //tggui_set_viewport_size((f32)scene.raytracer.render_target.color_attachment.width, (f32)scene.raytracer.render_target.color_attachment.height);
-    //
-    //tggui_window_set_next_position(8.0f, 8.0f);
-    //tggui_window_set_next_size(550.0f, 680.0f);
-    //tggui_window_begin("tg - Window");
-    //
-    //tggui_text("tg - %s", "Voxel Game Engine");
-    //
-    //static b32 show_anonther_text = TG_FALSE;
-    //if (tggui_button("Button 0"))
-    //{
-    //    show_anonther_text = !show_anonther_text;
-    //}
-    //tggui_same_line();
-    //tggui_text("Press to add more text");
-    //
-    //tggui_same_line();
-    //tggui_button("B2");
-    //tggui_same_line();
-    //tggui_text("B2 is on same same line!");
-    //
-    //static b32 check = TG_FALSE;
-    //tggui_checkbox("Checkbox", &check);
-    //tggui_same_line();
-    //tggui_text("This checkbox is %s%c", check ? "active" : "inactive", '.');
-    //
-    //static char p_input_text_buffer[256] = "Hola!";
-    //tggui_input_text("input text", sizeof(p_input_text_buffer), p_input_text_buffer);
-    //
-    //if (show_anonther_text)
-    //{
-    //    tggui_text("Another text!");
-    //}
-    //
-    //tggui_window_end();
-    //
-    //tggui_window_set_next_position(8.0f + 550.0f + 8.0f, 8.0f);
-    //tggui_window_set_next_size(200.0f, 680.0f);
-    //tggui_window_begin("tg - Window 2");
-    //tggui_text("Text in second window!");
-    //tggui_window_end();
+    tggui_set_viewport_size((f32)scene.raytracer.render_target.color_attachment.width, (f32)scene.raytracer.render_target.color_attachment.height);
+    
+    tggui_window_set_next_position(8.0f, 8.0f);
+    tggui_window_set_next_size(550.0f, 680.0f);
+    tggui_window_begin("tg - Window");
+    
+    tggui_text("tg - %s", "Voxel Game Engine");
+    
+    static b32 show_anonther_text = TG_FALSE;
+    if (tggui_button("Button 0"))
+    {
+        show_anonther_text = !show_anonther_text;
+    }
+    tggui_same_line();
+    tggui_text("Press to add more text");
+    
+    tggui_same_line();
+    tggui_button("B2");
+    tggui_same_line();
+    tggui_text("B2 is on same same line!");
+    
+    static b32 check = TG_FALSE;
+    tggui_checkbox("Checkbox", &check);
+    tggui_same_line();
+    tggui_text("This checkbox is %s%c", check ? "active" : "inactive", '.');
+    
+    static char p_input_text_buffer[32] = "Hola!";
+    tggui_input_text("input text", 100.0f, sizeof(p_input_text_buffer), p_input_text_buffer);
+
+    static f32 value = 0.333333333f;
+    tggui_input_f32("input float", 128.0f, &value);
+
+    static f32 value2 = 0.77777777f;
+    tggui_input_f32("input float2", 128.0f, &value2);
+    
+    if (show_anonther_text)
+    {
+        tggui_text("Another text!");
+    }
+    
+    tggui_window_end();
+    
+    tggui_window_set_next_position(8.0f + 550.0f + 8.0f, 8.0f);
+    tggui_window_set_next_size(200.0f, 680.0f);
+    tggui_window_begin("tg - Window 2");
+    tggui_text("Text in second window!");
+    tggui_window_end();
     
     //const m4 m = tgm_m4_scale((v3) { 1.0f, 1.0f, 1.0f });
     //tg_raytracer_push_debug_cuboid(&scene.raytracer, m);

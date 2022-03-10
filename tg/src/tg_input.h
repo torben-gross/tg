@@ -87,7 +87,11 @@ typedef enum tg_key
 	TG_KEY_LEFT_SHIFT       = 0xa0,
 	TG_KEY_RIGHT_SHIFT      = 0xa1,
 	TG_KEY_LEFT_CONTROL     = 0xa2,
-	TG_KEY_RIGHT_CONTROL    = 0xa3
+	TG_KEY_RIGHT_CONTROL    = 0xa3,
+	TG_KEY_PLUS             = 0xBB,
+	TG_KEY_COMMA            = 0xBC,
+	TG_KEY_MINUS            = 0xBD,
+	TG_KEY_PERIOD           = 0xBE
 } tg_key;
 
 typedef enum tg_button
@@ -105,12 +109,12 @@ typedef enum tg_button
 | Internals                                                   |
 +------------------------------------------------------------*/
 
-void    tg_input_clear(void);
-void    tg_input_on_key_pressed(tg_key key, b32 repeated, u32 additional_key_repeat_count);
-void    tg_input_on_key_released(tg_key key);
-void    tg_input_on_mouse_button_pressed(tg_button button);
-void    tg_input_on_mouse_button_released(tg_button button);
-void    tg_input_on_mouse_wheel_rotated(f32 detents);
+void      tg_input_clear(void);
+void      tg_input_on_key_pressed(tg_key key, b32 repeated, u32 additional_key_repeat_count);
+void      tg_input_on_key_released(tg_key key);
+void      tg_input_on_mouse_button_pressed(tg_button button);
+void      tg_input_on_mouse_button_released(tg_button button);
+void      tg_input_on_mouse_wheel_rotated(f32 detents);
 
 
 
@@ -118,12 +122,18 @@ void    tg_input_on_mouse_wheel_rotated(f32 detents);
 | Public functions                                            |
 +------------------------------------------------------------*/
 
-u32     tg_input_get_key_repeat_count(tg_key key);
-void    tg_input_get_mouse_position(u32* x, u32* y);
-f32     tg_input_get_mouse_wheel_detents(b32 consume);
-b32     tg_input_is_key_down(tg_key key);
-b32     tg_input_is_key_pressed(tg_key key, b32 consume);
-b32     tg_input_is_mouse_button_down(tg_button button);
-b32     tg_input_is_mouse_button_pressed(tg_button button, b32 consume);
+u32       tg_input_get_key_repeat_count(tg_key key);
+void      tg_input_get_mouse_position(u32* x, u32* y);
+f32       tg_input_get_mouse_wheel_detents(b32 consume);
+b32       tg_input_is_key_down(tg_key key);
+b32       tg_input_is_key_pressed(tg_key key, b32 consume);
+b32       tg_input_is_mouse_button_down(tg_button button);
+b32       tg_input_is_mouse_button_pressed(tg_button button, b32 consume);
+u32       tg_input_get_pressed_key_stack_size(void);
+tg_key    tg_input_get_pressed_key(u32 stack_idx);
+char      tg_input_to_char(tg_key key);
+char      tg_input_to_upper_case(char c);
+b32       tg_input_is_letter(tg_key key);
+
 
 #endif

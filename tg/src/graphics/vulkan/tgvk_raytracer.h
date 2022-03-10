@@ -3,12 +3,16 @@
 
 #include "graphics/tg_sparse_voxel_octree.h"
 #include "graphics/vulkan/tgvk_core.h"
-#include "graphics/vulkan/tgvk_font.h"
 #include "graphics/vulkan/tgvk_render_target.h"
 
+#include "graphics/vulkan/tgvk_font.h"
+#include "util/tg_hashmap.h"
 
 
-#define TGGUI_MAX_N_DRAW_CALLS 16
+
+#define TGGUI_MAX_N_DRAW_CALLS      16
+#define TGGUI_TEMP_BUFFER_SIZE      64
+#define TGGUI_DEFAULT_FORMAT_F32    "%.3f"
 
 
 
@@ -29,13 +33,15 @@ typedef enum tggui_color_type
 
 typedef struct tggui_temp
 {
-    f32    window_next_position_x;
-    f32    window_next_position_y;
-    f32    window_next_size_x;
-    f32    window_next_size_y;
-    f32    base_offset_x;
-    v2     last_line_end_offset;
-    v2     offset;
+    f32     window_next_position_x;
+    f32     window_next_position_y;
+    f32     window_next_size_x;
+    f32     window_next_size_y;
+    f32     base_offset_x;
+    v2      last_line_end_offset;
+    v2      offset;
+    u32     active_id;
+    char    p_temp_buffer[TGGUI_TEMP_BUFFER_SIZE];
 } tggui_temp;
 
 typedef struct tggui_style
@@ -208,14 +214,16 @@ void    tg_raytracer_clear(tg_raytracer* p_raytracer);
 
 void    tggui_set_context(tggui_context* p_context);
 void    tggui_set_viewport_size(f32 viewport_width, f32 viewport_height);
-void    tggui_window_set_next_position(f32 position_x, f32 position_y); // Anchor is in top left corner
+b32     tggui_is_in_focus(void);
+void    tggui_window_set_next_position(f32 position_x, f32 position_y);                    // Anchor is in top left corner
 void    tggui_window_set_next_size(f32 size_x, f32 size_y);
 void    tggui_window_begin(const char* p_window_name);
 void    tggui_window_end(void);
 void    tggui_same_line(void);
 b32     tggui_button(const char* p_label);
 b32     tggui_checkbox(const char* p_label, b32* p_value);
-b32     tggui_input_text(const char* p_label, u32 buffer_size, const char* p_buffer);
+b32     tggui_input_f32(const char* p_label, f32 width, f32* p_value);                     // Returns 'true' on value changed
+b32     tggui_input_text(const char* p_label, f32 width, u32 buffer_size, char* p_buffer); // Returns 'true' on value changed
 void    tggui_text(const char* p_format, ...);
 
 

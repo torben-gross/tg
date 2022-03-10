@@ -2,6 +2,7 @@
 
 #include "math/tg_math.h"
 #include "memory/tg_memory.h"
+#include "util/tg_hash.h"
 #include "util/tg_list.h"
 #include "util/tg_string.h"
 
@@ -114,7 +115,7 @@ b32 tg_hashmap_contains(tg_hashmap* p_hashmap, const void* p_key)
 {
 	TG_ASSERT(p_hashmap && p_key);
 
-	const u32 hash = tg__hash_key(p_hashmap, p_key);
+	const u32 hash = tg_hash(p_hashmap->key_size, p_key);
 	const u32 index = hash % p_hashmap->bucket_count;
 
 	tg_hashmap_bucket* p_bucket = &p_hashmap->p_buckets[index];
@@ -144,7 +145,7 @@ void tg_hashmap_insert(tg_hashmap* p_hashmap, const void* p_key, const void* p_v
 {
 	TG_ASSERT(p_hashmap && p_key && p_value);
 
-	const u32 hash = tg__hash_key(p_hashmap, p_key);
+	const u32 hash = tg_hash(p_hashmap->key_size, p_key);
 	const u32 index = hash % p_hashmap->bucket_count;
 
 	tg_hashmap_bucket* p_bucket = &p_hashmap->p_buckets[index];
@@ -170,7 +171,7 @@ void* tg_hashmap_pointer_to(tg_hashmap* p_hashmap, const void* p_key)
 {
 	TG_ASSERT(p_hashmap && p_key);
 
-	const u32 hash = tg__hash_key(p_hashmap, p_key);
+	const u32 hash = tg_hash(p_hashmap->key_size, p_key);
 	const u32 index = hash % p_hashmap->bucket_count;
 
 	tg_hashmap_bucket* p_bucket = &p_hashmap->p_buckets[index];
@@ -203,7 +204,7 @@ b32 tg_hashmap_try_remove(tg_hashmap* p_hashmap, const void* p_key)
 {
 	TG_ASSERT(p_hashmap && p_key);
 
-	const u32 hash = tg__hash_key(p_hashmap, p_key);
+	const u32 hash = tg_hash(p_hashmap->key_size, p_key);
 	const u32 index = hash % p_hashmap->bucket_count;
 
 	tg_hashmap_bucket* p_bucket = &p_hashmap->p_buckets[index];
@@ -223,22 +224,6 @@ b32 tg_hashmap_try_remove(tg_hashmap* p_hashmap, const void* p_key)
 	}
 
 	return TG_FALSE;
-}
-
-
-
-
-
-static u32 tg__hash_string(const char* p_key)
-{
-	u32 result = 0;
-
-	while (*p_key)
-	{
-		result += (u32)*p_key++ * 2654435761;
-	}
-
-	return result;
 }
 
 
@@ -282,7 +267,7 @@ void tg_string_hashmap_insert(tg_string_hashmap* p_string_hashmap, const char* p
 {
 	TG_ASSERT(p_string_hashmap && p_key && p_value);
 
-	const u32 hash = tg__hash_string(p_key);
+	const u32 hash = tg_hash_str(p_key);
 	const u32 index = hash % p_string_hashmap->bucket_count;
 
 	tg_string_hashmap_bucket* p_bucket = &p_string_hashmap->p_buckets[index];
@@ -311,7 +296,7 @@ void* tg_string_hashmap_pointer_to(tg_string_hashmap* p_string_hashmap, const ch
 {
 	TG_ASSERT(p_string_hashmap && p_key);
 
-	const u32 hash = tg__hash_string(p_key);
+	const u32 hash = tg_hash_str(p_key);
 	const u32 index = hash % p_string_hashmap->bucket_count;
 
 	tg_string_hashmap_bucket* p_bucket = &p_string_hashmap->p_buckets[index];

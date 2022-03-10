@@ -2,6 +2,7 @@
 
 #include "math/tg_math.h"
 #include "memory/tg_memory.h"
+#include "tg_variadic.h"
 
 void tg_string_create(char* p_data, TG_INOUT tg_string* p_string)
 {
@@ -339,44 +340,172 @@ tg_size tg_strsize(const char* p_string)
 	return result;
 }
 
-u32 tg_string_parse_f32(u32 size, char* p_buffer, f32 v)
+u32 tg__string_parse_f32_no_nul_va(u32 size, char* p_buffer, f32 v, const char* p_format, char* p_variadic_arguments)
 {
-	const u32 result = tg_string_parse_f32_no_nul(size, p_buffer, v) + 1;
+	const char* p_fmt_it = p_format;
+	TG_ASSERT(*p_fmt_it == '%');
+	p_fmt_it++;
+
+	if (size == 0 || p_buffer == TG_NULL)
+	{
+		TG_INVALID_CODEPATH(); // TODO: return required length
+		return 0;
+	}
+	else
+	{
+		char fmt_c = *p_fmt_it++;
+
+		if (fmt_c == '-')
+		{
+			// Left-justify within the given field width; Right justification is the default (see
+			// width sub-specifier).
+			TG_INVALID_CODEPATH();
+		}
+		else if (fmt_c == '+')
+		{
+			// Forces to preceed the result with a plus or minus sign (+ or -) even for positive
+			// numbers. By default, only negative numbers are preceded with a - sign.
+			TG_INVALID_CODEPATH();
+		}
+		else if (fmt_c == ' ')
+		{
+			// If no sign is going to be written, a blank space is inserted before the value.
+			TG_INVALID_CODEPATH();
+		}
+		else if (fmt_c == '#')
+		{
+			// Used with o, x or X specifiers the value is preceeded with 0, 0x or 0X respectively for
+			// values different than zero.
+			// 
+			// Used with a, A, e, E, f, F, g or G it forces the written output to contain a decimal
+			// point even if no more digits follow. By default, if no digits follow, no decimal
+			// point is written.
+			TG_INVALID_CODEPATH();
+		}
+		else if (fmt_c == '0')
+		{
+			// Left-pads the number with zeroes (0) instead of spaces when padding is specified
+			// (see width sub-specifier).
+			TG_INVALID_CODEPATH();
+		}
+
+		b32 width_specified_in_format_string = TG_FALSE;
+		u32 width = 0;
+		while (fmt_c >= '0' && fmt_c <= '9')
+		{
+			// Minimum number of characters to be printed. If the value to be printed is shorter
+			// than this number, the result is padded with blank spaces. The value is not truncated
+			// even if the result is larger.
+			width_specified_in_format_string = TG_TRUE;
+			width *= 10;
+			width += (u32)(fmt_c - '0');
+			fmt_c = *p_fmt_it++;
+		}
+		TG_ASSERT(width_specified_in_format_string == 0); // TODO: Not supported
+		if (fmt_c == '*')
+		{
+			// The width is not specified in the format string, but as an additional integer value
+			// argument preceding the argument that has to be formatted.
+			TG_ASSERT(!width_specified_in_format_string);
+			width = (u32)tg_variadic_arg(p_variadic_arguments, i32);
+			TG_INVALID_CODEPATH();
+		}
+
+		u32 precision = 6;
+		if (fmt_c == '.')
+		{
+			fmt_c = *p_fmt_it++;
+
+			if (fmt_c >= '0' && fmt_c <= '9')
+			{
+				// For integer specifiers (d, i, o, u, x, X): precision specifies the minimum number of
+				// digits to be written. If the value to be written is shorter than this number, the
+				// result is padded with leading zeros. The value is not truncated even if the result
+				// is longer. A precision of 0 means that no character is written for the value 0.
+				// 
+				// For a, A, e, E, f and F specifiers: this is the number of digits to be printed after
+				// the decimal point(by default, this is 6).
+				// 
+				// For g and G specifiers: This is the maximum number of significant digits to be
+				// printed.
+				// 
+				// For s: this is the maximum number of characters to be printed. By default all
+				// characters are printed until the ending null character is encountered.
+				// 
+				// If the period is specified without an explicit value for precision, 0 is assumed.
+				precision = (u32)(fmt_c - '0');
+				fmt_c = *p_fmt_it++;
+			}
+			else if (fmt_c == '*')
+			{
+				// The precision is not specified in the format string, but as an additional integer value
+				// argument preceding the argument that has to be formatted.
+				precision = (u32)tg_variadic_arg(p_variadic_arguments, i32);
+				fmt_c = *p_fmt_it++;
+			}
+			else
+			{
+				TG_INVALID_CODEPATH();
+			}
+		}
+
+		TG_ASSERT(fmt_c == 'f');
+
+		u32 count = 0;
+
+		if (v < 0)
+		{
+			TG_ASSERT(count + 1 < size);
+			p_buffer[count++] = '-';
+			v *= -1.0f;
+		}
+
+		const u32 integral_part = (u32)v;
+		count += tg_string_parse_u32_no_nul(size - count, &p_buffer[count], integral_part);
+
+		p_buffer[count++] = '.';
+
+		TG_ASSERT(count + precision < size);
+		f32 decimal_part = v - (f32)(u32)v;
+		for (u32 i = 0; i < precision; i++)
+		{
+			decimal_part *= 10.0f;
+			u32 digit = (u32)decimal_part;
+			decimal_part -= (f32)digit;
+
+			p_buffer[count++] = '0' + (char)digit;
+		}
+
+		// TODO: rounding because of precision reduction!
+
+		return count;
+	}
+}
+
+u32 tg_string_parse_f32(u32 size, char* p_buffer, f32 v, const char* p_format, ...)
+{
+	char* p_variadic_arguments = TG_NULL;
+	tg_variadic_start(p_variadic_arguments, p_format);
+
+	const u32 result = tg__string_parse_f32_no_nul_va(size, p_buffer, v, p_format, p_variadic_arguments) + 1;
+	tg_variadic_end(p_variadic_arguments);
+
 	TG_ASSERT(result <= size);
 	p_buffer[result - 1] = '\0';
+	
 	return result;
 }
 
-u32 tg_string_parse_f32_no_nul(u32 size, char* p_buffer, f32 v)
+u32 tg_string_parse_f32_no_nul(u32 size, char* p_buffer, f32 v, const char* p_format, ...)
 {
-	u32 count = 0;
-
-	if (v < 0)
-	{
-		TG_ASSERT(count + 1 < size);
-		p_buffer[count++] = '-';
-		v *= -1.0f;
-	}
-
-	const u32 integral_part = (u32)v;
-	count += tg_string_parse_u32_no_nul(size - count, &p_buffer[count], integral_part);
-
-	p_buffer[count++] = '.';
-
-	TG_ASSERT(count + 8 < size);
-	f32 decimal_part = v - (f32)(u32)v;
-	for (u32 i = 0; i < 8; i++)
-	{
-		decimal_part *= 10.0f;
-		const u32 digit = (u32)decimal_part;
-		p_buffer[count++] = '0' + (char)digit;
-		decimal_part -= (f32)digit;
-	}
-
-	TG_ASSERT(count < size);
-	p_buffer[count++] = 'f';
-
-	return count;
+	char* p_variadic_arguments = TG_NULL;
+	tg_variadic_start(p_variadic_arguments, p_format);
+	
+	const u32 result = tg__string_parse_f32_no_nul_va(size, p_buffer, v, p_format, p_variadic_arguments);
+	
+	tg_variadic_end(p_variadic_arguments);
+	
+	return result;
 }
 
 u32 tg_string_parse_f64(u32 size, char* p_buffer, f64 v)
@@ -580,4 +709,44 @@ u32 tg_string_to_u32(const char* p_string)
 	}
 
 	return result;
+}
+
+b32 tg_string_try_to_f32(const char* p_string, TG_OUT f32* p_result) // TODO: this does not work with exponents!
+{
+	TG_ASSERT(p_string != TG_NULL);
+
+	f32 sign = 1.0f;
+	f32 decimal = 0.0f;
+	f32 integral = 0.0f;
+
+	b32 converted = TG_FALSE;
+	if (*p_string == '-')
+	{
+		sign = -1.0f;
+		p_string++;
+	}
+	while (*p_string >= '0' && *p_string <= '9')
+	{
+		converted = TG_TRUE;
+		decimal *= 10.0f;
+		decimal += (f32)(*p_string - '0');
+		p_string++;
+	}
+	if (*p_string++ == '.')
+	{
+		f32 f = 10.0f;
+		while (*p_string >= '0' && *p_string <= '9')
+		{
+			converted = TG_TRUE;
+			integral += (f32)(*p_string - '0') / f;
+			f *= 10.0f;
+			p_string++;
+		}
+	}
+
+	if (converted)
+	{
+		*p_result = sign * (decimal + integral);
+	}
+	return converted;
 }

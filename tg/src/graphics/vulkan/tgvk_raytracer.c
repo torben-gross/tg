@@ -9,6 +9,7 @@
 #include "tg_input.h"
 #include "tg_variadic.h"
 #include "util/tg_color.h"
+#include "util/tg_hash.h"
 #include "util/tg_qsort.h"
 #include "util/tg_string.h"
 
@@ -728,9 +729,16 @@ void tg_raytracer_create(const tg_camera* p_camera, u32 max_n_instances, u32 max
     }
     tgvk_staging_buffer_release(&staging_buffer);
 
+    p_guic_internal->viewport_size = (v2){ -1.0f, -1.0f };
+
+    p_tmp->window_next_position_x = -1.0f;
+    p_tmp->window_next_position_y = -1.0f;
+    p_tmp->window_next_size_x = -1.0f;
+    p_tmp->window_next_size_y = -1.0f;
     p_tmp->base_offset_x = -1.0f;
     p_tmp->last_line_end_offset = (v2){ -1.0f, -1.0f };
     p_tmp->offset = (v2){ -1.0f, -1.0f };
+    p_tmp->active_id = TG_U32_MAX;
 
 
 
@@ -1569,6 +1577,21 @@ static f32 tggui__text_width(const char* p_text)
     return result;
 }
 
+static void tggui__set_active(u32 id)
+{
+    if (p_guic->temp.active_id != TG_U32_MAX)
+    {
+        // TODO: Do something?
+    }
+    p_guic->temp.active_id = id;
+}
+
+static void tggui__set_inactive(u32 id)
+{
+    TG_ASSERT(p_guic->temp.active_id == id);
+    p_guic->temp.active_id = TG_U32_MAX;
+}
+
 
 
 void tggui_set_context(tggui_context* p_context)
@@ -1580,10 +1603,17 @@ void tggui_set_context(tggui_context* p_context)
 
 void tggui_set_viewport_size(f32 viewport_width, f32 viewport_height)
 {
-    TG_ASSERT(p_guic);
+    TG_ASSERT(p_guic != TG_NULL);
 
     p_guic->viewport_size.x = viewport_width;
     p_guic->viewport_size.y = viewport_height;
+}
+
+b32 tggui_is_in_focus(void)
+{
+    TG_ASSERT(p_guic != TG_NULL);
+
+    return p_guic->temp.active_id != TG_U32_MAX;
 }
 
 void tggui_window_set_next_position(f32 position_x, f32 position_y)
@@ -1607,6 +1637,11 @@ void tggui_window_begin(const char* p_window_name)
     TG_ASSERT(p_guic != TG_NULL);
 
     tggui_temp* p_tmp = &p_guic->temp;
+
+    TG_ASSERT(p_tmp->window_next_position_x != -1.0f);
+    TG_ASSERT(p_tmp->window_next_position_y != -1.0f);
+    TG_ASSERT(p_tmp->window_next_size_x != -1.0f);
+    TG_ASSERT(p_tmp->window_next_size_y != -1.0f);
     TG_ASSERT(p_tmp->base_offset_x == -1.0f); // TODO: Subwindows are not supported
 
     const v2 window_min = { p_tmp->window_next_position_x, p_tmp->window_next_position_y };
@@ -1728,9 +1763,135 @@ b32 tggui_checkbox(const char* p_label, b32* p_value)
     return pressed;
 }
 
-b32 tggui_input_text(const char* p_label, u32 buffer_size, const char* p_buffer)
+b32 tggui_input_f32(const char* p_label, f32 width, f32* p_value)
 {
-    return TG_FALSE;
+    TG_ASSERT(p_guic != TG_NULL);
+
+    tggui_temp* p_tmp = &p_guic->temp;
+
+    const u32 id = tg_hash_str(p_label);
+    const b32 was_active_last_frame = p_tmp->active_id == id;
+
+    char p_buffer[TGGUI_TEMP_BUFFER_SIZE] = { 0 };
+    if (!was_active_last_frame)
+    {
+        tg_string_parse_f32(TGGUI_TEMP_BUFFER_SIZE, p_buffer, *p_value, "%.3f");
+    }
+    else
+    {
+        tg_memcpy(TGGUI_TEMP_BUFFER_SIZE, p_tmp->p_temp_buffer, p_buffer);
+    }
+
+    if (tggui_input_text(p_label, width, TGGUI_TEMP_BUFFER_SIZE, p_buffer))
+    {
+        tg_memcpy(TGGUI_TEMP_BUFFER_SIZE, p_buffer, p_tmp->p_temp_buffer);
+    }
+
+    b32 value_changed = TG_FALSE;
+    if (!was_active_last_frame && p_tmp->active_id == id) // Just activated
+    {
+        tg_string_parse_f32(TGGUI_TEMP_BUFFER_SIZE, p_tmp->p_temp_buffer, *p_value, "%.8f");
+    }
+    else if (was_active_last_frame && p_tmp->active_id != id) // Just deactivated
+    {
+        f32 result;
+        if (tg_string_try_to_f32(p_buffer, &result) && result != *p_value)
+        {
+            value_changed = TG_TRUE;
+            *p_value = result;
+        }
+    }
+
+    return value_changed;
+}
+
+b32 tggui_input_text(const char* p_label, f32 width, u32 buffer_size, char* p_buffer)
+{
+    TG_ASSERT(p_guic != TG_NULL);
+    TG_ASSERT(p_guic->n_draw_calls > 0); // We need a window
+    TG_ASSERT(p_label != TG_NULL);
+
+    tggui_temp* p_tmp = &p_guic->temp;
+
+    const f32 min_total_size = TG_FONT_SCALE_FACTOR * p_guic->style.font.max_glyph_height;
+    const f32 min_size = min_total_size * 0.9f;
+    const f32 trim = (min_total_size - min_size) / 2.0f;
+
+    const f32 margin = 4.0f; // TODO: margin for text (8.0f)
+    
+    const v2 min = tgm_v2_addf(p_tmp->offset, trim);
+    const v2 max = { min.x + width, min.y + min_size };
+
+    b32 pressed, held, hovered;
+    tggui__button_behavior(min, max, &pressed, &held, &hovered);
+
+    const u32 id = tg_hash_str(p_label);
+    b32 active = p_tmp->active_id == id;
+    if (pressed)
+    {
+        tggui__set_active(id);
+    }
+    else if (active)
+    {
+        const b32 clicked_outside = !hovered && tg_input_is_mouse_button_pressed(TG_BUTTON_LEFT, TG_FALSE);
+        const b32 returned = tg_input_is_key_pressed(TG_KEY_RETURN, TG_TRUE);
+        if (clicked_outside || returned)
+        {
+            tggui__set_inactive(id);
+        }
+    }
+
+    b32 value_changed = TG_FALSE;
+    if (active)
+    {
+        u32 l = tg_strlen_no_nul(p_buffer);
+        const u32 key_stack_size = tg_input_get_pressed_key_stack_size();
+        for (u32 i = 0; i < key_stack_size; i++)
+        {
+            const tg_key key = tg_input_get_pressed_key(i);
+            char c = tg_input_to_char(key);
+
+            if (c != '\0')
+            {
+                if (l + 1 < buffer_size)
+                {
+                    value_changed = TG_TRUE;
+                    if (tg_input_is_letter(key) && tg_input_is_key_down(TG_KEY_SHIFT))
+                    {
+                        c = tg_input_to_upper_case(c);
+                    }
+                    p_buffer[l++] = c;
+                    p_buffer[l] = '\0';
+                }
+            }
+            else if (key == TG_KEY_BACKSPACE)
+            {
+                if (l > 0)
+                {
+                    p_buffer[--l] = '\0';
+                    value_changed = TG_TRUE;
+                }
+            }
+        }
+    }
+
+    const tggui_color_type type = active ? TGGUI_COLOR_FRAME_ACTIVE : (hovered ? TGGUI_COLOR_FRAME_HOVERED : TGGUI_COLOR_FRAME);
+
+    tggui__push_quad(min, max, type);
+
+    // TODO: This is way too hacky!
+    const tggui_temp preserve_temp = *p_tmp;
+    p_tmp->offset.x += trim + margin;
+    if (*p_buffer != '\0')
+    {
+        tggui_text(p_buffer);
+    }
+    *p_tmp = preserve_temp;
+
+    p_tmp->last_line_end_offset = (v2){ p_tmp->offset.x + width + 2.0f * trim, p_tmp->offset.y };
+    p_tmp->offset = (v2){ p_tmp->base_offset_x, p_tmp->offset.y + TG_FONT_SCALE_FACTOR * p_guic->style.font.max_glyph_height };
+
+    return value_changed;
 }
 
 void tggui_text(const char* p_format, ...)

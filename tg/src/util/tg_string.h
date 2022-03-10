@@ -36,8 +36,8 @@ void           tg_stringf(u32 size, char* p_buffer, const char* p_format, ...);
 void           tg_stringf_va(u32 size, char* p_buffer, const char* p_format, char* p_variadic_arguments);
 u32            tg_strlen_no_nul(const char* p_string);
 tg_size        tg_strsize(const char* p_string);
-u32            tg_string_parse_f32(u32 size, char* p_buffer, f32 v);
-u32            tg_string_parse_f32_no_nul(u32 size, char* p_buffer, f32 v);
+u32            tg_string_parse_f32(u32 size, char* p_buffer, f32 v, const char* p_format, ...);
+u32            tg_string_parse_f32_no_nul(u32 size, char* p_buffer, f32 v, const char* p_format, ...);
 u32            tg_string_parse_f64(u32 size, char* p_buffer, f64 v);
 u32            tg_string_parse_f64_no_nul(u32 size, char* p_buffer, f64 v);
 u32            tg_string_parse_i32(u32 size, char* p_buffer, i32 v);
@@ -52,5 +52,6 @@ void           tg_string_replace_characters(char* p_string, char replace, char w
 f32            tg_string_to_f32(const char* p_string);
 i32            tg_string_to_i32(const char* p_string);
 u32            tg_string_to_u32(const char* p_string);
+b32            tg_string_try_to_f32(const char* p_string, TG_OUT f32* p_result);
 
 #endif
