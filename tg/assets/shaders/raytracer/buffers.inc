@@ -36,10 +36,10 @@ struct tg_view_projection_ubo
 struct tg_camera_ubo
 {
     v4     camera;
-    v4     ray00; // TODO: Rename this ridiculousness
-    v4     ray10;
-    v4     ray01;
-    v4     ray11;
+    v4     ray_bl;
+    v4     ray_br;
+    v4     ray_tr;
+    v4     ray_tl;
     f32    near;
     f32    far;
 };

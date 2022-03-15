@@ -446,6 +446,7 @@ v3i    tgm_v3_to_v3i(v3 v);
 v3i    tgm_v3_to_v3i_ceil(v3 v);
 v3i    tgm_v3_to_v3i_floor(v3 v);
 v3i    tgm_v3_to_v3i_round(v3 v);
+v3u    tgm_v3_to_v3u_round(v3 v);
 v4     tgm_v3_to_v4(v3 v, f32 w);
 
 v3i    tgm_v3i_abs(v3i v);

@@ -38,10 +38,7 @@ void main()
 
     // Instead of transforming the box, the ray is transformed with its inverse
     v3 ray_origin = camera_ubo.camera.xyz - center;
-    v3 ray_direction = normalize(mix(
-        mix(camera_ubo.ray00.xyz, camera_ubo.ray10.xyz, fy),
-        mix(camera_ubo.ray01.xyz, camera_ubo.ray11.xyz, fy),
-        fx));
+    v3 ray_direction = tg_lerp_corner_ray_directions(camera_ubo.ray_bl.xyz, camera_ubo.ray_br.xyz, camera_ubo.ray_tr.xyz, camera_ubo.ray_tl.xyz, fx, fy);
 
 #if TG_SVO_TRAVERSE_STACK_CAPACITY == 5 // Otherwise, we need to adjust the constructors
 u32 stack_size;

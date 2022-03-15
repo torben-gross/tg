@@ -33,3 +33,20 @@
 #define TG_SSBO(     binding_index, content) layout(std430, set = 0, binding = binding_index) buffer  tg_ssbo_ ## binding_index { content }
 #define TG_UBO(      binding_index, content) layout(        set = 0, binding = binding_index) uniform tg_ubo_  ## binding_index { content }
 #define TG_SAMPLER2D(binding_index, name   ) layout(        set = 0, binding = binding_index) uniform sampler2D name
+
+// Result is not normalized
+v3 tg_lerp_corner_ray_directions_nn(v3 ray_bl, v3 ray_br, v3 ray_tr, v3 ray_tl, f32 x, f32 y)
+{
+	return mix(
+        mix(ray_bl, ray_tl, y),
+        mix(ray_br, ray_tr, y),
+        x);
+}
+
+v3 tg_lerp_corner_ray_directions(v3 ray_bl, v3 ray_br, v3 ray_tr, v3 ray_tl, f32 x, f32 y)
+{
+	return normalize(mix(
+        mix(ray_bl, ray_tl, y),
+        mix(ray_br, ray_tr, y),
+        x));
+}

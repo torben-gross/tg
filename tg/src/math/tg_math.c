@@ -1295,6 +1295,15 @@ v3i tgm_v3_to_v3i_round(v3 v)
 	return result;
 }
 
+v3u tgm_v3_to_v3u_round(v3 v)
+{
+	v3u result = { 0 };
+	result.x = (u32)roundf(v.x);
+	result.y = (u32)roundf(v.y);
+	result.z = (u32)roundf(v.z);
+	return result;
+}
+
 v4 tgm_v3_to_v4(v3 v, f32 w)
 {
 	v4 result = { 0 };

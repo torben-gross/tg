@@ -10,7 +10,7 @@
 
 
 
-#define TGGUI_MAX_N_DRAW_CALLS      16
+#define TGGUI_MAX_N_DRAW_CALLS      32
 #define TGGUI_TEMP_BUFFER_SIZE      64
 #define TGGUI_DEFAULT_FORMAT_F32    "%.3f"
 
@@ -20,12 +20,13 @@ typedef enum tggui_color_type
 {
     TGGUI_COLOR_TEXT,
     TGGUI_COLOR_WINDOW_BG,
-    TGGUI_COLOR_BUTTON,
-    TGGUI_COLOR_BUTTON_HOVERED,
-    TGGUI_COLOR_BUTTON_ACTIVE,
     TGGUI_COLOR_FRAME,          // Checkbox, slider, text input
     TGGUI_COLOR_FRAME_HOVERED,
     TGGUI_COLOR_FRAME_ACTIVE,
+    TGGUI_COLOR_BUTTON,
+    TGGUI_COLOR_BUTTON_HOVERED,
+    TGGUI_COLOR_BUTTON_ACTIVE,
+    TGGUI_COLOR_SEPARATOR,
     TGGUI_COLOR_TITLE_BG,
     TGGUI_COLOR_CHECKMARK,
     TGGUI_COLOR_TYPE_COUNT
@@ -33,11 +34,12 @@ typedef enum tggui_color_type
 
 typedef struct tggui_temp
 {
-    f32     window_next_position_x;
-    f32     window_next_position_y;
-    f32     window_next_size_x;
-    f32     window_next_size_y;
-    f32     base_offset_x;
+    v2      window_next_position;
+    v2      window_next_size;
+
+    v2      window_position;
+    v2      window_size;
+    f32     window_content_base_position_x;
     v2      last_line_end_offset;
     v2      offset;
     u32     active_id;
@@ -78,6 +80,7 @@ typedef struct tg_scene
 
     u32                 cluster_capacity;
     u32                 n_clusters;
+    u32*                p_cluster_idx_idx_to_cluster_idx;
     u32*                p_voxel_cluster_data;
     u32*                p_cluster_idx_to_object_idx;
     
@@ -211,6 +214,7 @@ void    tg_raytracer_push_debug_line(tg_raytracer* p_raytracer, v3 src, v3 dst, 
 void    tg_raytracer_color_lut_set(tg_raytracer* p_raytracer, u8 index, f32 r, f32 g, f32 b);
 void    tg_raytracer_render(tg_raytracer* p_raytracer);
 void    tg_raytracer_clear(tg_raytracer* p_raytracer);
+b32     tg_raytracer_get_hovered_voxel(tg_raytracer* p_raytracer, u32 screen_x, u32 screen_y, TG_OUT f32* p_depth, TG_OUT u32* p_cluster_idx, TG_OUT u32* p_voxel_idx);
 
 void    tggui_set_context(tggui_context* p_context);
 void    tggui_set_viewport_size(f32 viewport_width, f32 viewport_height);
@@ -219,7 +223,9 @@ void    tggui_window_set_next_position(f32 position_x, f32 position_y);         
 void    tggui_window_set_next_size(f32 size_x, f32 size_y);
 void    tggui_window_begin(const char* p_window_name);
 void    tggui_window_end(void);
+void    tggui_new_line(void);
 void    tggui_same_line(void);
+void    tggui_separator(void);
 b32     tggui_button(const char* p_label);
 b32     tggui_checkbox(const char* p_label, b32* p_value);
 b32     tggui_input_f32(const char* p_label, f32 width, f32* p_value);                     // Returns 'true' on value changed

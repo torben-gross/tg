@@ -4,8 +4,6 @@
 #include "platform/tg_platform.h"
 #include "tg_input.h"
 #include "util/tg_string.h"
-// TODO: remove
-#include "util/tg_noise.h"
 
 
 
@@ -48,16 +46,8 @@ static v2* p_pds_point_buffer;
 
 static void tg__scene_create(void)
 {
-    // TODO: This is for testing only
-    u32 pds_buffer_capacity = 0;
-    tg_poisson_disk_sampling_2d(pds_extent, pds_r, 32, &pds_buffer_capacity, TG_NULL);
-    pds_buffer_count = pds_buffer_capacity;
-    p_pds_point_buffer = TG_MALLOC(pds_buffer_capacity * sizeof(v2));
-    tg_poisson_disk_sampling_2d(pds_extent, pds_r, 32, &pds_buffer_count, p_pds_point_buffer);
-
     scene.camera.type = TG_CAMERA_TYPE_PERSPECTIVE;
     scene.camera.position = (v3){ 65.1368790f, -30.7384720f, 73.0285263f };
-    scene.camera.position = tgm_v3_add(scene.camera.position, (v3) { TG_F32_EPSILON, TG_F32_EPSILON, TG_F32_EPSILON }); // TODO: This is just for debugging SVOs
     scene.camera.pitch = -0.173136666f;
     scene.camera.yaw = 0.710419059f;
     scene.camera.roll = 0.0f;
@@ -129,8 +119,6 @@ static void tg__scene_create(void)
 
 static void tg__scene_update_and_render(f32 dt_ms)
 {
-
-
     if (tg_input_is_key_pressed(TG_KEY_F11, TG_TRUE))
     {
         tg_system_time system_time = tgp_get_system_time();
@@ -228,6 +216,17 @@ static void tg__scene_update_and_render(f32 dt_ms)
         {
             scene.camera.persp.fov_y_in_radians -= 0.1f * tg_input_get_mouse_wheel_detents(TG_TRUE);
         }
+
+        if (tg_input_is_mouse_button_pressed(TG_BUTTON_LEFT, TG_TRUE))
+        {
+            f32 depth;
+            u32 cluster_idx, voxel_idx;
+            tg_raytracer_get_hovered_voxel(&scene.raytracer, mouse_x, mouse_y, &depth, &cluster_idx, &voxel_idx);
+
+            const u32 object_idx = scene.raytracer.scene.p_cluster_idx_to_object_idx[cluster_idx];
+            int bh = 0;
+            //tg_screen_space_to_world_space(&scene.camera, scene.raytracer.render_target.color_attachment.width, scene.raytracer.render_target.color_attachment.height, mouse_x, mouse_y, depth);
+        }
     }
 
     scene.light_timer += dt_ms;
@@ -259,11 +258,42 @@ static void tg__scene_update_and_render(f32 dt_ms)
     TG_UNUSED(d0);
     TG_UNUSED(c0);
 
+    tg_raytracer_clear(&scene.raytracer);
+
     tggui_set_viewport_size((f32)scene.raytracer.render_target.color_attachment.width, (f32)scene.raytracer.render_target.color_attachment.height);
     
     tggui_window_set_next_position(8.0f, 8.0f);
     tggui_window_set_next_size(550.0f, 680.0f);
     tggui_window_begin("tg - Window");
+
+    tggui_text("CREATE NEW OBJECT");
+
+    const f32 input_width = 128.0f;
+
+    static v3 center = { -496.0f, -496.0f, -496.0f };
+    tggui_input_f32("center.x", input_width, &center.x);
+    tggui_same_line();
+    tggui_input_f32("center.y", input_width, &center.y);
+    tggui_same_line();
+    tggui_input_f32("center.z", input_width, &center.z);
+    tggui_same_line();
+    tggui_text("Center");
+
+    static v3 extent = { 8.0f, 40.0f, 8.0f };
+    tggui_input_f32("extent.x", input_width, &extent.x);
+    tggui_same_line();
+    tggui_input_f32("extent.y", input_width, &extent.y);
+    tggui_same_line();
+    tggui_input_f32("extent.z", input_width, &extent.z);
+    tggui_same_line();
+    tggui_text("Extent (mult. of %u)", (u32)TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT);
+
+    if (tggui_button("Create"))
+    {
+        tg_raytracer_create_object(&scene.raytracer, center, tgm_v3_to_v3u_round(extent));
+    }
+
+    tggui_separator();
     
     tggui_text("tg - %s", "Voxel Game Engine");
     
@@ -320,7 +350,6 @@ static void tg__scene_update_and_render(f32 dt_ms)
     //    tg_raytracer_push_debug_cuboid(&scene.raytracer, pds_m1);
     //}
     tg_raytracer_render(&scene.raytracer);
-    tg_raytracer_clear(&scene.raytracer);
 
 #if 0
     tg_renderer_begin(scene.h_secondary_renderer);

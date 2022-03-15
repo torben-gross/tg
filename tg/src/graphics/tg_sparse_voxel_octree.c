@@ -20,7 +20,7 @@ TG_STATIC_ASSERT(TG_SVO_SIDE_LENGTH / TG_SVO_BLOCK_SIDE_LENGTH == 32); // Otherw
 
 
 
-static m4 tg__world_space_to_model_space(const tg_voxel_object* p_object, u32 relative_cluster_idx)
+static m4 tg_world_space_to_cluster_model_space(const tg_voxel_object* p_object, u32 relative_cluster_idx)
 {
     const m4 rotation = tgm_m4_angle_axis(p_object->angle_in_radians, p_object->axis);
 
@@ -59,7 +59,7 @@ static m4 tg__world_space_to_model_space(const tg_voxel_object* p_object, u32 re
     return ws2ms;
 }
 
-static m4 tg__model_space_to_world_space(const tg_voxel_object* p_object, u32 relative_cluster_idx)
+static m4 tg_cluster_model_space_to_world_space(const tg_voxel_object* p_object, u32 relative_cluster_idx)
 {
     const u32 relative_cluster_idx_x = relative_cluster_idx % p_object->n_clusters_per_dim.x;
     const u32 relative_cluster_idx_y = (relative_cluster_idx / p_object->n_clusters_per_dim.x) % p_object->n_clusters_per_dim.y;
@@ -162,7 +162,7 @@ static void tg__construct_leaf_node(
 
         // Transform 8 cluster corners (cluster space -> world space)
 
-        const m4 cs2ws = tg__model_space_to_world_space(p_object, relative_cluster_idx);
+        const m4 cs2ws = tg_cluster_model_space_to_world_space(p_object, relative_cluster_idx);
 
         v3 p_cluster_corners_ws[8] = { 0 };
         p_cluster_corners_ws[0] = tgm_m4_mulv4(cs2ws, p_cluster_corners_cs[0]).xyz;
@@ -197,7 +197,6 @@ static void tg__construct_leaf_node(
 
         // Transform 8 trimmed block corners (world space -> cluster space)
 
-        //const m4 ws2cs = tg__world_space_to_model_space(p_object, relative_cluster_idx);
         const m4 ws2cs = tgm_m4_inverse(cs2ws);
 
         v3 p_block_corners_cs[8] = { 0 };
@@ -350,7 +349,7 @@ static void tg__construct_inner_node(
         const tg_voxel_object* p_object = &p_scene->p_objects[object_idx];
         const u32 relative_cluster_idx = cluster_idx - p_object->first_cluster_idx;
 
-        const m4 ws2ms = tg__world_space_to_model_space(p_object, relative_cluster_idx);
+        const m4 ws2ms = tg_world_space_to_cluster_model_space(p_object, relative_cluster_idx);
 
         for (u32 child_idx = 0; child_idx < 8; child_idx++)
         {

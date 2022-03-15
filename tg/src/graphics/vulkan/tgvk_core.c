@@ -379,7 +379,97 @@ static tgvk_pipeline_layout tg__pipeline_layout_create(u32 shader_count, const t
 
 
 
-u32 tg_color_image_format_channels(tg_color_image_format format)
+m4 tg_camera_rotation(const tg_camera* p_camera)
+{
+    TG_ASSERT(p_camera != TG_NULL);
+
+    const m4 result = tgm_m4_inverse(tgm_m4_euler(p_camera->pitch, p_camera->yaw, p_camera->roll));
+    return result;
+}
+
+m4 tg_camera_translation(const tg_camera* p_camera)
+{
+    TG_ASSERT(p_camera != TG_NULL);
+
+    const m4 result = tgm_m4_translate(tgm_v3_neg(p_camera->position));
+    return result;
+}
+
+m4 tg_camera_view(const tg_camera* p_camera)
+{
+    TG_ASSERT(p_camera != TG_NULL);
+
+    const m4 r = tg_camera_rotation(p_camera);
+    const m4 t = tg_camera_translation(p_camera);
+    const m4 result = tgm_m4_mul(r, t);
+    return result;
+}
+
+m4 tg_camera_projection(const tg_camera* p_camera)
+{
+    TG_ASSERT(p_camera != TG_NULL);
+
+    m4 result = { 0 };
+    if (p_camera->type == TG_CAMERA_TYPE_PERSPECTIVE)
+    {
+        result = tgm_m4_perspective(p_camera->persp.fov_y_in_radians, p_camera->persp.aspect, p_camera->persp.n, p_camera->persp.f);
+    }
+    else
+    {
+        TG_ASSERT(p_camera->type == TG_CAMERA_TYPE_ORTHOGRAPHIC);
+        result = tgm_m4_orthographic(p_camera->ortho.l, p_camera->ortho.r, p_camera->ortho.b, p_camera->ortho.t, p_camera->ortho.f, p_camera->ortho.n);
+    }
+    return result;
+}
+
+m4 tg_camera_view_projection(const tg_camera* p_camera)
+{
+    TG_ASSERT(p_camera != TG_NULL);
+
+    const m4 p = tg_camera_projection(p_camera);
+    const m4 v = tg_camera_view(p_camera);
+    const m4 result = tgm_m4_mul(p, v);
+    return result;
+}
+
+void tg_camera_make_corner_ray_directions(const tg_camera* p_camera, TG_OUT v3* p_ray_bottom_left, TG_OUT v3* p_ray_bottom_right, TG_OUT v3* p_ray_top_right, TG_OUT v3* p_ray_top_left)
+{
+    const m4 r = tg_camera_rotation(p_camera);
+    const m4 p = tg_camera_projection(p_camera);
+    const m4 ivp_no_translation = tgm_m4_inverse(tgm_m4_mul(p, r));
+    *p_ray_bottom_left  = tgm_v3_normalized(tgm_m4_mulv4(ivp_no_translation, (v4) { -1.0f,  1.0f,  1.0f,  1.0f }).xyz);
+    *p_ray_bottom_right = tgm_v3_normalized(tgm_m4_mulv4(ivp_no_translation, (v4) {  1.0f,  1.0f,  1.0f,  1.0f }).xyz);
+    *p_ray_top_right    = tgm_v3_normalized(tgm_m4_mulv4(ivp_no_translation, (v4) {  1.0f, -1.0f,  1.0f,  1.0f }).xyz);
+    *p_ray_top_left     = tgm_v3_normalized(tgm_m4_mulv4(ivp_no_translation, (v4) { -1.0f, -1.0f,  1.0f,  1.0f }).xyz);
+}
+
+v3 tg_lerp_corner_ray_directions(v3 ray_bottom_left, v3 ray_bottom_right, v3 ray_top_right, v3 ray_top_left, f32 x, f32 y)
+{
+    TG_ASSERT(x >= 0.0f && x <= 1.0f);
+    TG_ASSERT(y >= 0.0f && y <= 1.0f);
+
+    const v3 ray_direction = tgm_v3_normalized(
+        tgm_v3_lerp(
+            tgm_v3_lerp(ray_bottom_left,  ray_top_left,  y),
+            tgm_v3_lerp(ray_bottom_right, ray_top_right, y),
+            x));
+    return ray_direction;
+}
+
+v3 tg_screen_space_to_world_space(const tg_camera* p_camera, u32 screen_width, u32 screen_height, u32 screen_x, u32 screen_y, f32 depth)
+{
+    const f32 x_normalized = ((f32)screen_x / (f32)screen_width );
+    const f32 y_normalized = ((f32)screen_y / (f32)screen_height);
+
+    v3 ray_bl, ray_br, ray_tr, ray_tl;
+    tg_camera_make_corner_ray_directions(p_camera, &ray_bl, &ray_br, &ray_tr, &ray_tl);
+    const v3 ray_direction = tg_lerp_corner_ray_directions(ray_bl, ray_br, ray_tr, ray_tl, x_normalized, y_normalized);
+    const v3 world_position = tgm_v3_add(p_camera->position, tgm_v3_mulf(ray_direction, depth * p_camera->persp.f));
+
+    return world_position;
+}
+
+u32 tg_color_image_format_channels(const tg_color_image_format format)
 {
     u32 result = 0;
 
@@ -402,7 +492,7 @@ u32 tg_color_image_format_channels(tg_color_image_format format)
     return result;
 }
 
-tg_size tg_color_image_format_size(tg_color_image_format format)
+tg_size tg_color_image_format_size(const tg_color_image_format format)
 {
     tg_size result = 0;
 
@@ -4241,16 +4331,16 @@ static void tg__screen_quad_create(void)
     const u16 p_indices[6] = { 0, 1, 2, 2, 3, 0 };
 
     v2 p_positions[4] = { 0 };
-    p_positions[0] = (v2){ -1.0f,  1.0f };
-    p_positions[1] = (v2){  1.0f,  1.0f };
-    p_positions[2] = (v2){  1.0f, -1.0f };
-    p_positions[3] = (v2){ -1.0f, -1.0f };
+    p_positions[0] = (v2){ -1.0f,  1.0f }; // Bottom left
+    p_positions[1] = (v2){  1.0f,  1.0f }; // Bottom right
+    p_positions[2] = (v2){  1.0f, -1.0f }; // Top right
+    p_positions[3] = (v2){ -1.0f, -1.0f }; // Top left
 
     v2 p_uvs[4] = { 0 };
-    p_uvs[0] = (v2){ 0.0f,  1.0f };
-    p_uvs[1] = (v2){ 1.0f,  1.0f };
-    p_uvs[2] = (v2){ 1.0f,  0.0f };
-    p_uvs[3] = (v2){ 0.0f,  0.0f };
+    p_uvs[0] = (v2){ 0.0f,  1.0f }; // Bottom left
+    p_uvs[1] = (v2){ 1.0f,  1.0f }; // Bottom right
+    p_uvs[2] = (v2){ 1.0f,  0.0f }; // Top right
+    p_uvs[3] = (v2){ 0.0f,  0.0f }; // Top left
 
     screen_quad_ibo = TGVK_BUFFER_CREATE_IBO(sizeof(p_indices));
     screen_quad_positions_vbo = TGVK_BUFFER_CREATE_VBO(sizeof(p_positions));
@@ -4324,9 +4414,9 @@ void tg_graphics_init(void)
 
     staging_buffer_size = TG_MAX(4096, tgvk_memory_page_size());
     global_staging_buffer_lock = TG_RWL_CREATE();
-    global_staging_buffer = TGVK_BUFFER_CREATE(staging_buffer_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, TGVK_MEMORY_HOST);
+    global_staging_buffer = TGVK_BUFFER_CREATE(staging_buffer_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, TGVK_MEMORY_HOST);
     internal_staging_buffer_lock = TG_RWL_CREATE();
-    internal_staging_buffer = TGVK_BUFFER_CREATE(staging_buffer_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, TGVK_MEMORY_HOST);
+    internal_staging_buffer = TGVK_BUFFER_CREATE(staging_buffer_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, TGVK_MEMORY_HOST);
 
     shaderc_compiler = shaderc_compiler_initialize();
     tgvk_shader_library_init();

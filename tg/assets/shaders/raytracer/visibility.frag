@@ -102,10 +102,7 @@ void main()
     v3 ray_origin_ws = camera_ubo.camera.xyz;
     v3 ray_origin_ms = (ws2ms * v4(ray_origin_ws, 1.0)).xyz;
 
-    v3 ray_direction_ws = mix(
-        mix(camera_ubo.ray00.xyz, camera_ubo.ray10.xyz, fy),
-        mix(camera_ubo.ray01.xyz, camera_ubo.ray11.xyz, fy),
-        fx);
+    v3 ray_direction_ws = tg_lerp_corner_ray_directions_nn(camera_ubo.ray_bl.xyz, camera_ubo.ray_br.xyz, camera_ubo.ray_tr.xyz, camera_ubo.ray_tl.xyz, fx, fy);
     v3 ray_direction_ms = normalize((ws2ms * v4(ray_direction_ws, 0.0)).xyz);
 
     v3 cluster_min = v3(0.0);
