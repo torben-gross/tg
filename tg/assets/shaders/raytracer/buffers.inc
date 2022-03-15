@@ -5,8 +5,8 @@ struct tg_cluster_idx_to_object_idx_ssbo_entry
 
 struct tg_object_data_ssbo_entry
 {
-    v3u    n_clusters_per_dim;
-    u32    first_cluster_idx;
+    v3u    n_cluster_pointers_per_dim;
+    u32    first_cluster_pointer;
     v3     translation;
     u32    pad; // TODO: Get rid of padding somehow?
     m4     rotation;

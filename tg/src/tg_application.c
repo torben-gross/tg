@@ -263,7 +263,7 @@ static void tg__scene_update_and_render(f32 dt_ms)
     tggui_set_viewport_size((f32)scene.raytracer.render_target.color_attachment.width, (f32)scene.raytracer.render_target.color_attachment.height);
     
     tggui_window_set_next_position(8.0f, 8.0f);
-    tggui_window_set_next_size(550.0f, 680.0f);
+    tggui_window_set_next_size(550.0f, 320.0f);
     tggui_window_begin("tg - Window");
 
     tggui_text("CREATE NEW OBJECT");
@@ -331,11 +331,11 @@ static void tg__scene_update_and_render(f32 dt_ms)
     
     tggui_window_end();
     
-    tggui_window_set_next_position(8.0f + 550.0f + 8.0f, 8.0f);
-    tggui_window_set_next_size(200.0f, 680.0f);
-    tggui_window_begin("tg - Window 2");
-    tggui_text("Text in second window!");
-    tggui_window_end();
+    //tggui_window_set_next_position(8.0f + 550.0f + 8.0f, 8.0f);
+    //tggui_window_set_next_size(200.0f, 680.0f);
+    //tggui_window_begin("tg - Window 2");
+    //tggui_text("Text in second window!");
+    //tggui_window_end();
     
     //const m4 m = tgm_m4_scale((v3) { 1.0f, 1.0f, 1.0f });
     //tg_raytracer_push_debug_cuboid(&scene.raytracer, m);

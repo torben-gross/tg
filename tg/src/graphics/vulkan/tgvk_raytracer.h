@@ -78,11 +78,16 @@ typedef struct tg_scene
     u32                 n_objects;
     tg_voxel_object*    p_objects;
 
-    u32                 cluster_capacity;
-    u32                 n_clusters;
-    u32*                p_cluster_idx_idx_to_cluster_idx;
-    u32*                p_voxel_cluster_data;
-    u32*                p_cluster_idx_to_object_idx;
+    u32                 cluster_pointer_capacity; // TODO: We may later have more cluster pointers than actual clusters and need a second member for that
+    u32                 n_cluster_pointers;
+    u32*                p_cluster_pointers;          // Points to a cluster
+
+    // A stack of available cluster pointers
+    u32                 n_available_cluster_indices;
+    u32*                p_available_cluster_indices;
+
+    u32*                p_voxel_cluster_data;        // Data of the clusters storing the voxels (1 bit per voxel)
+    u32*                p_cluster_idx_to_object_idx; // Maps every cluster index to its object index
     
     tg_svo              svo;
 } tg_scene;
@@ -94,11 +99,12 @@ typedef struct tg_raytracer_data
     tgvk_buffer            cube_vbo;
     tgvk_buffer            quad_vbo;
 
-    tgvk_buffer            cluster_idx_to_object_idx_ssbo;  // [cluster idx]             Maps cluster idx to its object idx
-    tgvk_buffer            object_data_ssbo;                // [object idx]              Metrics and first cluster idx
-    tgvk_buffer            object_color_lut_ssbo;           // [object idx]              Color LUT
-    tgvk_buffer            voxel_cluster_ssbo;              // [cluster idx + voxel idx] Cluster of voxels            (1 bit per voxel)
-    tgvk_buffer            color_lut_idx_cluster_ssbo;      // [cluster idx + voxel idx] Cluster of color LUT indices (8 bit per voxel)
+    tgvk_buffer            cluster_pointer_ssbo;            // [cluster pointer]            Maps cluster pointers to clusters
+    tgvk_buffer            cluster_idx_to_object_idx_ssbo;  // [cluster idx]                Maps cluster idx to its object idx
+    tgvk_buffer            object_data_ssbo;                // [object idx]                 Metrics and first cluster idx
+    tgvk_buffer            object_color_lut_ssbo;           // [object idx]                 Color LUT
+    tgvk_buffer            voxel_cluster_ssbo;              // [cluster idx + voxel idx]    Cluster of voxels            (1 bit per voxel)
+    tgvk_buffer            color_lut_idx_cluster_ssbo;      // [cluster idx + voxel idx]    Cluster of color LUT indices (8 bit per voxel)
 
     tgvk_buffer            svo_ssbo;
     tgvk_buffer            svo_nodes_ssbo;

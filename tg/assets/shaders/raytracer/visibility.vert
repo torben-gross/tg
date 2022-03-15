@@ -4,32 +4,33 @@
 #include "shaders/raytracer/buffers.inc"
 #include "shaders/raytracer/cluster.inc"
 
-TG_IN(0, u32    in_cluster_idx); #instance
+TG_IN(0, u32    in_cluster_pointer); #instance
 TG_IN(1, v3     in_position);
 
-TG_SSBO(0, tg_cluster_idx_to_object_idx_ssbo_entry    cluster_idx_to_object_idx_ssbo[];);
-TG_SSBO(1, tg_object_data_ssbo_entry                  object_data_ssbo[];              );
-TG_UBO( 4, tg_view_projection_ubo                     view_projection_ssbo;            );
+TG_SSBO(0, u32                                        cluster_pointer_ssbo[];          );
+TG_SSBO(1, tg_cluster_idx_to_object_idx_ssbo_entry    cluster_idx_to_object_idx_ssbo[];);
+TG_SSBO(2, tg_object_data_ssbo_entry                  object_data_ssbo[];              );
+TG_UBO( 5, tg_view_projection_ubo                     view_projection_ssbo;            );
 
-TG_OUT_FLAT(0, u32    v_cluster_idx);
+TG_OUT_FLAT(0, u32    v_cluster_pointer);
 
-m4 tg_cluster_model_matrix(u32 object_idx, u32 cluster_idx)
+m4 tg_cluster_model_matrix(u32 object_idx, u32 cluster_pointer)
 {
 	tg_object_data_ssbo_entry object_data = object_data_ssbo[object_idx];
 	
-	u32 relative_cluster_idx = cluster_idx - object_data.first_cluster_idx;
-	u32 relative_cluster_idx_x = relative_cluster_idx % object_data.n_clusters_per_dim.x;
-	u32 relative_cluster_idx_y = (relative_cluster_idx / object_data.n_clusters_per_dim.x) % object_data.n_clusters_per_dim.y;
-	u32 relative_cluster_idx_z = relative_cluster_idx / (object_data.n_clusters_per_dim.x * object_data.n_clusters_per_dim.y); // Note: We don't need modulo here, because z doesn't loop
+	u32 relative_cluster_pointer = in_cluster_pointer - object_data.first_cluster_pointer;
+	u32 relative_cluster_pointer_x = relative_cluster_pointer % object_data.n_cluster_pointers_per_dim.x;
+	u32 relative_cluster_pointer_y = (relative_cluster_pointer / object_data.n_cluster_pointers_per_dim.x) % object_data.n_cluster_pointers_per_dim.y;
+	u32 relative_cluster_pointer_z = relative_cluster_pointer / (object_data.n_cluster_pointers_per_dim.x * object_data.n_cluster_pointers_per_dim.y); // Note: We don't need modulo here, because z doesn't loop
 	
-	f32 relative_cluster_offset_x = f32(relative_cluster_idx_x * TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT);
-	f32 relative_cluster_offset_y = f32(relative_cluster_idx_y * TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT);
-	f32 relative_cluster_offset_z = f32(relative_cluster_idx_z * TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT);
+	f32 relative_cluster_offset_x = f32(relative_cluster_pointer_x * TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT);
+	f32 relative_cluster_offset_y = f32(relative_cluster_pointer_y * TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT);
+	f32 relative_cluster_offset_z = f32(relative_cluster_pointer_z * TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT);
 	v3 relative_cluster_offset = v3(relative_cluster_offset_x, relative_cluster_offset_y, relative_cluster_offset_z);
 	
 	v3 cluster_half_extent = v3(f32(TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT / 2));
-	v3 n_clusters_per_dim = v3(f32(object_data.n_clusters_per_dim.x), f32(object_data.n_clusters_per_dim.y), f32(object_data.n_clusters_per_dim.z));
-	v3 object_half_extent = n_clusters_per_dim * cluster_half_extent;
+	v3 n_cluster_pointers_per_dim = v3(f32(object_data.n_cluster_pointers_per_dim.x), f32(object_data.n_cluster_pointers_per_dim.y), f32(object_data.n_cluster_pointers_per_dim.z));
+	v3 object_half_extent = n_cluster_pointers_per_dim * cluster_half_extent;
 	
 	v3 relative_cluster_translation = -object_half_extent + cluster_half_extent + relative_cluster_offset;
 	
@@ -54,8 +55,9 @@ m4 tg_cluster_model_matrix(u32 object_idx, u32 cluster_idx)
 
 void main()
 {
-    v_cluster_idx = in_cluster_idx;
-	u32 object_idx = cluster_idx_to_object_idx_ssbo[in_cluster_idx].object_idx;
-	m4 m_mat = tg_cluster_model_matrix(object_idx, in_cluster_idx);
+	v_cluster_pointer = in_cluster_pointer;
+	u32 cluster_idx = cluster_pointer_ssbo[in_cluster_pointer];
+	u32 object_idx = cluster_idx_to_object_idx_ssbo[cluster_idx].object_idx;
+	m4 m_mat = tg_cluster_model_matrix(object_idx, in_cluster_pointer);
     gl_Position = view_projection_ssbo.p * view_projection_ssbo.v * m_mat * v4(in_position, 1.0);
 }

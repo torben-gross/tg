@@ -34,8 +34,8 @@ typedef struct tg_cluster_idx_to_object_idx_ssbo
 
 typedef struct tg_object_data_ssbo
 {
-    v3u    n_clusters_per_dim;
-    u32    first_cluster_idx;
+    v3u    n_cluster_pointers_per_dim;
+    u32    first_cluster_pointer;
     v3     translation;
     u32    pad; // TODO: Get rid of padding somehow?
     m4     rotation;
@@ -205,13 +205,14 @@ static void tg__init_buffers(tg_raytracer* p_raytracer)
 
     // ALLOCATE
     
-    const tg_size idx_vbo_size                        = (tg_size)p_raytracer->scene.cluster_capacity * sizeof(u32);
+    const tg_size idx_vbo_size                        = (tg_size)p_raytracer->scene.cluster_pointer_capacity * sizeof(u32);
 
-    const tg_size cluster_idx_to_object_idx_ssbo_size = (tg_size)p_raytracer->scene.cluster_capacity * sizeof(u32);
+    const tg_size cluster_pointer_ssbo_size           = (tg_size)p_raytracer->scene.cluster_pointer_capacity * sizeof(u32);
+    const tg_size cluster_idx_to_object_idx_ssbo_size = (tg_size)p_raytracer->scene.cluster_pointer_capacity * sizeof(u32);
     const tg_size object_data_ssbo_size               = (tg_size)p_raytracer->scene.object_capacity  * sizeof(tg_object_data_ssbo);
-    const tg_size object_color_lut_ssbo_size          = (tg_size)1  * sizeof(tg_object_color_lut_ssbo); // TODO: more color LUTs
-    const tg_size voxel_cluster_ssbo_size             = (tg_size)p_raytracer->scene.cluster_capacity * (tg_size)TGVK_VOXEL_CLUSTER_SIZE;
-    const tg_size color_lut_idx_cluster_ssbo_size     = (tg_size)p_raytracer->scene.cluster_capacity * (tg_size)TGVK_COLOR_LUT_IDX_CLUSTER_SIZE;
+    const tg_size object_color_lut_ssbo_size          = (tg_size)1 * sizeof(tg_object_color_lut_ssbo); // TODO: more color LUTs
+    const tg_size voxel_cluster_ssbo_size             = (tg_size)p_raytracer->scene.cluster_pointer_capacity * (tg_size)TGVK_VOXEL_CLUSTER_SIZE;
+    const tg_size color_lut_idx_cluster_ssbo_size     = (tg_size)p_raytracer->scene.cluster_pointer_capacity * (tg_size)TGVK_COLOR_LUT_IDX_CLUSTER_SIZE;
 
     const tg_size visibility_buffer_ssbo_size         = sizeof(tg_visibility_buffer_ssbo) + ((VkDeviceSize)w * (VkDeviceSize)h * TG_SIZEOF_MEMBER(tg_visibility_buffer_ssbo, p_data[0]));
 
@@ -222,6 +223,8 @@ static void tg__init_buffers(tg_raytracer* p_raytracer)
     p_raytracer->data.cube_vbo                       = TGVK_BUFFER_CREATE_VBO(sizeof(p_cube_positions));
     p_raytracer->data.quad_vbo                       = TGVK_BUFFER_CREATE_VBO(sizeof(p_quad_positions));
     
+    // They are filled as required
+    p_raytracer->data.cluster_pointer_ssbo           = TGVK_BUFFER_CREATE(cluster_pointer_ssbo_size,           ssbo_usage_flags, TGVK_MEMORY_DEVICE);
     p_raytracer->data.cluster_idx_to_object_idx_ssbo = TGVK_BUFFER_CREATE(cluster_idx_to_object_idx_ssbo_size, ssbo_usage_flags, TGVK_MEMORY_DEVICE);
     p_raytracer->data.object_data_ssbo               = TGVK_BUFFER_CREATE(object_data_ssbo_size,               ssbo_usage_flags, TGVK_MEMORY_DEVICE);
     p_raytracer->data.object_color_lut_ssbo          = TGVK_BUFFER_CREATE(object_color_lut_ssbo_size,          ssbo_usage_flags, TGVK_MEMORY_DEVICE);
@@ -246,7 +249,7 @@ static void tg__init_buffers(tg_raytracer* p_raytracer)
 
     tgvk_staging_buffer staging_buffer = { 0 };
     tgvk_staging_buffer_take(idx_vbo_size, &p_raytracer->data.idx_vbo, &staging_buffer);
-    for (u32 i = 0; i < p_raytracer->scene.cluster_capacity; i++)
+    for (u32 i = 0; i < p_raytracer->scene.cluster_pointer_capacity; i++)
     {
         tgvk_staging_buffer_push_u32(&staging_buffer, i);
     }
@@ -678,12 +681,20 @@ void tg_raytracer_create(const tg_camera* p_camera, u32 max_n_instances, u32 max
 
     p_raytracer->scene.object_capacity             = max_n_instances;
     p_raytracer->scene.n_objects                   = 0;
-    p_raytracer->scene.p_objects                   = TG_MALLOC((tg_size)max_n_instances * sizeof(*p_raytracer->scene.p_objects));
-    p_raytracer->scene.cluster_capacity            = max_n_clusters;
-    p_raytracer->scene.n_clusters                  = 0;
+    p_raytracer->scene.p_objects                   = TG_MALLOC((tg_size)max_n_instances * sizeof(tg_voxel_object));
+    p_raytracer->scene.cluster_pointer_capacity    = max_n_clusters;
+    p_raytracer->scene.n_cluster_pointers          = 0;
+    p_raytracer->scene.p_cluster_pointers          = TG_MALLOC((tg_size)max_n_clusters * sizeof(u32));
     p_raytracer->scene.p_voxel_cluster_data        = TG_MALLOC((tg_size)max_n_clusters * (tg_size)TGVK_VOXEL_CLUSTER_SIZE);
-    p_raytracer->scene.p_cluster_idx_to_object_idx = TG_MALLOC((tg_size)max_n_clusters * sizeof(*p_raytracer->scene.p_cluster_idx_to_object_idx));
-    
+    p_raytracer->scene.p_cluster_idx_to_object_idx = TG_MALLOC((tg_size)max_n_clusters * sizeof(u32));
+    p_raytracer->scene.n_available_cluster_indices = max_n_clusters;
+    p_raytracer->scene.p_available_cluster_indices = TG_MALLOC((tg_size)max_n_clusters * sizeof(u32));
+
+    for (u32 i = 0; i < max_n_clusters; i++)
+    {
+        p_raytracer->scene.p_available_cluster_indices[i] = max_n_clusters - i - 1;
+    }
+
 
 
     tggui_context* p_guic_internal = &p_raytracer->gui_context;
@@ -766,41 +777,39 @@ void tg_raytracer_destroy(tg_raytracer* p_raytracer)
 
 void tg_raytracer_create_object(tg_raytracer* p_raytracer, v3 center, v3u extent)
 {
-    TG_ASSERT(p_raytracer);
+    TG_ASSERT(p_raytracer != TG_NULL);
     TG_ASSERT(extent.x % TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT == 0);
     TG_ASSERT(extent.y % TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT == 0);
     TG_ASSERT(extent.z % TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT == 0);
     TG_ASSERT(p_raytracer->scene.n_objects < p_raytracer->scene.object_capacity);
 
-    const u32 object_idx = p_raytracer->scene.n_objects++;
-    tg_voxel_object* p_object = &p_raytracer->scene.p_objects[object_idx];
-    p_object->n_clusters_per_dim = (v3u){ extent.x / 8, extent.y / 8, extent.z / 8 };
-    const u32 n_clusters = p_object->n_clusters_per_dim.x * p_object->n_clusters_per_dim.y * p_object->n_clusters_per_dim.z;
-    TG_ASSERT(p_raytracer->scene.n_clusters + n_clusters <= p_raytracer->scene.cluster_capacity);
-    p_raytracer->scene.n_clusters += n_clusters;
+    tg_scene* p_scene = &p_raytracer->scene;
 
-    if (object_idx == 0)
-    {
-        p_object->first_cluster_idx = 0;
-    }
-    else
-    {
-        const tg_voxel_object* p_prev_object = p_object - 1;
-        const u32 prev_object_n_clusters = p_prev_object->n_clusters_per_dim.x * p_prev_object->n_clusters_per_dim.y * p_prev_object->n_clusters_per_dim.z;
-        p_object->first_cluster_idx = p_prev_object->first_cluster_idx + prev_object_n_clusters;
-    }
+    const u32 object_idx = p_scene->n_objects++;
+    tg_voxel_object* p_object = &p_scene->p_objects[object_idx];
+
+    p_object->n_cluster_pointers_per_dim = (v3u){ extent.x / 8, extent.y / 8, extent.z / 8 };
+    const u32 n_cluster_pointers = p_object->n_cluster_pointers_per_dim.x * p_object->n_cluster_pointers_per_dim.y * p_object->n_cluster_pointers_per_dim.z;
+
+    TG_ASSERT(p_scene->n_cluster_pointers + n_cluster_pointers <= p_scene->cluster_pointer_capacity);
+    TG_ASSERT(p_scene->n_available_cluster_indices >= n_cluster_pointers); // Move this down, once we have optional clusters and do it per alloc?
+
+    p_object->first_cluster_pointer = p_scene->n_cluster_pointers;
+    p_scene->n_cluster_pointers += n_cluster_pointers;
 
     p_object->translation = center;
     p_object->angle_in_radians = TG_DEG2RAD((f32)(object_idx * 7));
     if (object_idx == 0) p_object->angle_in_radians = TG_DEG2RAD(15.0f);
     p_object->axis = (v3){ 0.0f, 1.0f, 0.0f };
 
+    // UPDATE OBJECT SSBO DATA
+
     tg_object_data_ssbo object_data = { 0 };
-    object_data.n_clusters_per_dim = p_object->n_clusters_per_dim;
-    object_data.first_cluster_idx  = p_object->first_cluster_idx;
-    object_data.translation        = p_object->translation;
-    object_data.pad                = 0;
-    object_data.rotation           = tgm_m4_angle_axis(p_object->angle_in_radians, p_object->axis);
+    object_data.n_cluster_pointers_per_dim = p_object->n_cluster_pointers_per_dim;
+    object_data.first_cluster_pointer      = p_object->first_cluster_pointer;
+    object_data.translation                = p_object->translation;
+    object_data.pad                        = 0;
+    object_data.rotation                   = tgm_m4_angle_axis(p_object->angle_in_radians, p_object->axis);
 
     const tg_size object_data_ubo_staging_buffer_size = sizeof(tg_object_data_ssbo);
     const tg_size object_data_ubo_offset = (tg_size)object_idx * sizeof(tg_object_data_ssbo);
@@ -808,38 +817,47 @@ void tg_raytracer_create_object(tg_raytracer* p_raytracer, v3 center, v3u extent
     tgvk_staging_buffer_take2(object_data_ubo_staging_buffer_size, object_data_ubo_offset, &p_raytracer->data.object_data_ssbo, &staging_buffer);
     tgvk_staging_buffer_push(&staging_buffer, sizeof(object_data), &object_data);
 
-    // CLUSTER IDX TO OBJECT IDX
+    // ALLOCATE CLUSTERS AND INIT CLUSTER IDX TO OBJECT IDX
 
-    tgvk_staging_buffer_reinit2(&staging_buffer, (tg_size)n_clusters * sizeof(u32), p_object->first_cluster_idx * sizeof(u32), &p_raytracer->data.cluster_idx_to_object_idx_ssbo);
-    for (u32 relative_cluster_idx = 0; relative_cluster_idx < n_clusters; relative_cluster_idx++)
+    for (u32 relative_cluster_pointer = 0; relative_cluster_pointer < n_cluster_pointers; relative_cluster_pointer++)
     {
+        TG_ASSERT(p_scene->n_available_cluster_indices > 0);
+        const u32 cluster_pointer = p_object->first_cluster_pointer + relative_cluster_pointer;
+        const u32 cluster_idx = p_scene->p_available_cluster_indices[--(p_scene->n_available_cluster_indices)];
+        p_scene->p_cluster_pointers[cluster_pointer] = cluster_idx;
+        p_scene->p_cluster_idx_to_object_idx[cluster_idx] = object_idx;
+
+        tgvk_staging_buffer_reinit2(&staging_buffer, sizeof(u32), cluster_pointer * sizeof(u32), &p_raytracer->data.cluster_pointer_ssbo);
+        tgvk_staging_buffer_push_u32(&staging_buffer, cluster_idx);
+        tgvk_staging_buffer_reinit2(&staging_buffer, sizeof(u32), cluster_idx * sizeof(u32), &p_raytracer->data.cluster_idx_to_object_idx_ssbo);
         tgvk_staging_buffer_push_u32(&staging_buffer, object_idx);
     }
 
     // TODO: gen on GPU
     // SOLID VOXEL BITMAP
 
-    for (u32 relative_cluster_idx_z = 0; relative_cluster_idx_z < p_object->n_clusters_per_dim.z; relative_cluster_idx_z++)
+    for (u32 relative_cluster_pointer_z = 0; relative_cluster_pointer_z < p_object->n_cluster_pointers_per_dim.z; relative_cluster_pointer_z++)
     {
-        for (u32 relative_cluster_idx_y = 0; relative_cluster_idx_y < p_object->n_clusters_per_dim.y; relative_cluster_idx_y++)
+        for (u32 relative_cluster_pointer_y = 0; relative_cluster_pointer_y < p_object->n_cluster_pointers_per_dim.y; relative_cluster_pointer_y++)
         {
-            for (u32 relative_cluster_idx_x = 0; relative_cluster_idx_x < p_object->n_clusters_per_dim.x; relative_cluster_idx_x++)
+            for (u32 relative_cluster_pointer_x = 0; relative_cluster_pointer_x < p_object->n_cluster_pointers_per_dim.x; relative_cluster_pointer_x++)
             {
-                const u32 relative_cluster_idx
-                    = p_object->n_clusters_per_dim.x * p_object->n_clusters_per_dim.y * relative_cluster_idx_z
-                    + p_object->n_clusters_per_dim.x * relative_cluster_idx_y
-                    + relative_cluster_idx_x;
+                const u32 relative_cluster_pointer
+                    = p_object->n_cluster_pointers_per_dim.x * p_object->n_cluster_pointers_per_dim.y * relative_cluster_pointer_z
+                    + p_object->n_cluster_pointers_per_dim.x * relative_cluster_pointer_y
+                    + relative_cluster_pointer_x;
 
-                const u32 cluster_idx = p_object->first_cluster_idx + relative_cluster_idx;
-                TG_ASSERT(cluster_idx < p_raytracer->scene.cluster_capacity);
-                p_raytracer->scene.p_cluster_idx_to_object_idx[cluster_idx] = object_idx;
+                const u32 cluster_pointer = p_object->first_cluster_pointer + relative_cluster_pointer;
+                TG_ASSERT(cluster_pointer < p_scene->cluster_pointer_capacity);
+
+                const u32 cluster_idx = p_scene->p_cluster_pointers[cluster_pointer];
 
                 const tg_size cluster_offset = (tg_size)cluster_idx * TGVK_VOXEL_CLUSTER_SIZE;
                 tgvk_staging_buffer_reinit2(&staging_buffer, TGVK_VOXEL_CLUSTER_SIZE, cluster_offset, &p_raytracer->data.voxel_cluster_ssbo);
 
-                const u32 voxel_offset_x = TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT * relative_cluster_idx_x;
-                const u32 voxel_offset_y = TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT * relative_cluster_idx_y;
-                const u32 voxel_offset_z = TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT * relative_cluster_idx_z;
+                const u32 voxel_offset_x = TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT * relative_cluster_pointer_x;
+                const u32 voxel_offset_y = TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT * relative_cluster_pointer_y;
+                const u32 voxel_offset_z = TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT * relative_cluster_pointer_z;
 
                 u32 voxel_slot_bits = 0;
                 u32 voxel_slot = 0;
@@ -880,7 +898,7 @@ void tg_raytracer_create_object(tg_raytracer* p_raytracer, v3 center, v3u extent
                             if (voxel_slot_bits == 32)
                             {
                                 const tg_size idx = (cluster_offset + staging_buffer.copied_size + staging_buffer.filled_size) / sizeof(u32);
-                                p_raytracer->scene.p_voxel_cluster_data[idx] = voxel_slot;
+                                p_scene->p_voxel_cluster_data[idx] = voxel_slot;
                                 tgvk_staging_buffer_push_u32(&staging_buffer, voxel_slot);
                                 voxel_slot_bits = 0;
                                 voxel_slot = 0;
@@ -894,17 +912,20 @@ void tg_raytracer_create_object(tg_raytracer* p_raytracer, v3 center, v3u extent
 
     // COLOR LUT
 
-    for (u32 relative_cluster_idx_z = 0; relative_cluster_idx_z < p_object->n_clusters_per_dim.z; relative_cluster_idx_z++)
+    for (u32 relative_cluster_pointer_z = 0; relative_cluster_pointer_z < p_object->n_cluster_pointers_per_dim.z; relative_cluster_pointer_z++)
     {
-        for (u32 relative_cluster_idx_y = 0; relative_cluster_idx_y < p_object->n_clusters_per_dim.y; relative_cluster_idx_y++)
+        for (u32 relative_cluster_pointer_y = 0; relative_cluster_pointer_y < p_object->n_cluster_pointers_per_dim.y; relative_cluster_pointer_y++)
         {
-            for (u32 relative_cluster_idx_x = 0; relative_cluster_idx_x < p_object->n_clusters_per_dim.x; relative_cluster_idx_x++)
+            for (u32 relative_cluster_pointer_x = 0; relative_cluster_pointer_x < p_object->n_cluster_pointers_per_dim.x; relative_cluster_pointer_x++)
             {
-                const u32 relative_cluster_idx
-                    = TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT * TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT * relative_cluster_idx_z
-                    + TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT * relative_cluster_idx_y
-                    + relative_cluster_idx_x;
-                const u32 cluster_idx = p_object->first_cluster_idx + relative_cluster_idx;
+                const u32 relative_cluster_pointer
+                    = TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT * TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT * relative_cluster_pointer_z
+                    + TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT * relative_cluster_pointer_y
+                    + relative_cluster_pointer_x;
+                const u32 cluster_pointer = p_object->first_cluster_pointer + relative_cluster_pointer;
+                TG_ASSERT(cluster_pointer < p_scene->cluster_pointer_capacity);
+
+                const u32 cluster_idx = p_scene->p_cluster_pointers[cluster_pointer];
 
                 const tg_size cluster_offset = (tg_size)cluster_idx * TGVK_COLOR_LUT_IDX_CLUSTER_SIZE;
                 tgvk_staging_buffer_reinit2(&staging_buffer, TGVK_COLOR_LUT_IDX_CLUSTER_SIZE, cluster_offset, &p_raytracer->data.color_lut_idx_cluster_ssbo);
@@ -943,7 +964,7 @@ void tg_raytracer_push_debug_cuboid(tg_raytracer* p_raytracer, m4 transformation
     // TODO: color
     TG_ASSERT(p_raytracer);
     TG_ASSERT(p_raytracer->debug_pass.count < p_raytracer->debug_pass.capacity);
-    TG_ASSERT(p_raytracer->debug_pass.count < p_raytracer->scene.cluster_capacity); // Note: We reuse cluster indices for instancing
+    TG_ASSERT(p_raytracer->debug_pass.count < p_raytracer->scene.cluster_pointer_capacity); // Note: We reuse cluster indices for instancing
 
     m4* p_transformation_matrices = p_raytracer->data.debug_matrices_ssbo.memory.p_mapped_device_memory;
     p_transformation_matrices[p_raytracer->debug_pass.count] = transformation_matrix;
@@ -1147,15 +1168,16 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
         vkCmdBindVertexBuffers(p_raytracer->visibility_pass.command_buffer.buffer, 1, 1, &p_raytracer->data.cube_vbo.buffer, &vertex_buffer_offset);
 
         // TODO: update required here? Otherwise mark as dirty. Also, draw indirect
-        tgvk_descriptor_set_update_storage_buffer(p_raytracer->visibility_pass.descriptor_set.set, &p_raytracer->data.cluster_idx_to_object_idx_ssbo, 0);
-        tgvk_descriptor_set_update_storage_buffer(p_raytracer->visibility_pass.descriptor_set.set, &p_raytracer->data.object_data_ssbo,               1);
-        tgvk_descriptor_set_update_storage_buffer(p_raytracer->visibility_pass.descriptor_set.set, &p_raytracer->data.voxel_cluster_ssbo,             2);
-        tgvk_descriptor_set_update_storage_buffer(p_raytracer->visibility_pass.descriptor_set.set, &p_raytracer->data.visibility_buffer_ssbo,         3);
-        tgvk_descriptor_set_update_uniform_buffer(p_raytracer->visibility_pass.descriptor_set.set, &p_raytracer->data.view_projection_ubo,            4);
-        tgvk_descriptor_set_update_uniform_buffer(p_raytracer->visibility_pass.descriptor_set.set, &p_raytracer->data.camera_ubo,                     5);
+        tgvk_descriptor_set_update_storage_buffer(p_raytracer->visibility_pass.descriptor_set.set, &p_raytracer->data.cluster_pointer_ssbo,           0);
+        tgvk_descriptor_set_update_storage_buffer(p_raytracer->visibility_pass.descriptor_set.set, &p_raytracer->data.cluster_idx_to_object_idx_ssbo, 1);
+        tgvk_descriptor_set_update_storage_buffer(p_raytracer->visibility_pass.descriptor_set.set, &p_raytracer->data.object_data_ssbo,               2);
+        tgvk_descriptor_set_update_storage_buffer(p_raytracer->visibility_pass.descriptor_set.set, &p_raytracer->data.voxel_cluster_ssbo,             3);
+        tgvk_descriptor_set_update_storage_buffer(p_raytracer->visibility_pass.descriptor_set.set, &p_raytracer->data.visibility_buffer_ssbo,         4);
+        tgvk_descriptor_set_update_uniform_buffer(p_raytracer->visibility_pass.descriptor_set.set, &p_raytracer->data.view_projection_ubo,            5);
+        tgvk_descriptor_set_update_uniform_buffer(p_raytracer->visibility_pass.descriptor_set.set, &p_raytracer->data.camera_ubo,                     6);
 
         vkCmdBindDescriptorSets(p_raytracer->visibility_pass.command_buffer.buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_raytracer->visibility_pass.graphics_pipeline.layout.pipeline_layout, 0, 1, &p_raytracer->visibility_pass.descriptor_set.set, 0, TG_NULL);
-        tgvk_cmd_draw_indexed_instanced(&p_raytracer->visibility_pass.command_buffer, 6 * 6, p_raytracer->scene.n_clusters); // TODO: triangle fans for fewer indices?
+        tgvk_cmd_draw_indexed_instanced(&p_raytracer->visibility_pass.command_buffer, 6 * 6, p_raytracer->scene.n_cluster_pointers); // TODO: triangle fans for fewer indices?
 
         // TODO look at below
         //vkCmdExecuteCommands(p_raytracer->geometry_pass.command_buffer.buffer, p_raytracer->deferred_command_buffer_count, p_raytracer->p_deferred_command_buffers);
@@ -1235,7 +1257,7 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
             for (u32 object_idx = 0; object_idx < p_raytracer->scene.n_objects; object_idx++)
             {
                 const tg_voxel_object* p_object = &p_raytracer->scene.p_objects[object_idx];
-                const v3 scale = tgm_v3u_to_v3(tgm_v3u_mulu(p_object->n_clusters_per_dim, TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT));
+                const v3 scale = tgm_v3u_to_v3(tgm_v3u_mulu(p_object->n_cluster_pointers_per_dim, TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT));
                 const m4 s = tgm_m4_scale(scale);
                 const m4 r = tgm_m4_angle_axis(p_object->angle_in_radians, p_object->axis);
                 const m4 t = tgm_m4_translate(p_object->translation);

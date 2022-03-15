@@ -142,8 +142,8 @@ typedef struct tg_voxel_cluster
 
 typedef struct tg_voxel_object
 {
-	v3u    n_clusters_per_dim;
-	u32    first_cluster_idx; // Note: We have 5 unused bits in here to flag something
+	v3u    n_cluster_pointers_per_dim;
+	u32    first_cluster_pointer; // One unused bit in here (MSB)
 	v3     translation;
 	f32    angle_in_radians;
 	v3     axis;
