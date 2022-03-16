@@ -317,83 +317,40 @@ static void tg__scene_update_and_render(f32 dt_ms)
 
     tggui_text("Debug Visualization");
 
-    static tg_debug_visualization type;
-    static b32 none  = TG_FALSE;
-    static b32 depth = TG_FALSE;
-    static b32 clid  = TG_TRUE;
-    static b32 vxid  = TG_FALSE;
-    if (tggui_checkbox("None", &none))
+    static tg_debug_show type;
+    static char* p_names[TG_DEBUG_SHOW_COUNT] = { "None", "Object Idx", "Depth", "Cluster Idx", "Voxel Idx", "Blocks" };
+    static b32 p_debug_show_values[TG_DEBUG_SHOW_COUNT] = { 0, 0, 0, 1, 0, 0 };
+    for (u32 i = 0; i < TG_DEBUG_SHOW_COUNT; i++)
     {
-        depth = TG_FALSE;
-        clid  = TG_FALSE;
-        vxid  = TG_FALSE;
-        tg_raytracer_set_debug_visualization(&scene.raytracer, TG_DEBUG_VISUALIZATION_NONE);
+        if (tggui_checkbox(p_names[i], &p_debug_show_values[i]))
+        {
+            tg_memory_nullify(sizeof(p_debug_show_values), p_debug_show_values);
+            p_debug_show_values[i] = TG_TRUE;
+            tg_raytracer_set_debug_visualization(&scene.raytracer, i);
+        }
+        tggui_same_line();
+        tggui_text(p_names[i]);
     }
-    tggui_same_line();
-    tggui_text("None");
-    if (tggui_checkbox("Depth", &depth))
-    {
-        none  = TG_FALSE;
-        clid  = TG_FALSE;
-        vxid  = TG_FALSE;
-        tg_raytracer_set_debug_visualization(&scene.raytracer, TG_DEBUG_VISUALIZATION_DEPTH);
-    }
-    tggui_same_line();
-    tggui_text("Depth");
-    if (tggui_checkbox("Cluster Indices", &clid))
-    {
-        depth = TG_FALSE;
-        none  = TG_FALSE;
-        vxid  = TG_FALSE;
-        tg_raytracer_set_debug_visualization(&scene.raytracer, TG_DEBUG_VISUALIZATION_CLUSTER_INDICES);
-    }
-    tggui_same_line();
-    tggui_text("Cluster Indices");
-    if (tggui_checkbox("Voxel Indices", &vxid))
-    {
-        depth = TG_FALSE;
-        none  = TG_FALSE;
-        clid  = TG_FALSE;
-        tg_raytracer_set_debug_visualization(&scene.raytracer, TG_DEBUG_VISUALIZATION_VOXEL_INDICES);
-    }
-    tggui_same_line();
-    tggui_text("Voxel Indices");
+
+    tggui_text("Debug Cuboids");
+
+    tggui_checkbox("Object Bounds",   &scene.raytracer.debug.show_object_bounds);   tggui_same_line(); tggui_text("Show Object Bounds");
+    tggui_checkbox("SVO",             &scene.raytracer.debug.show_svo);             tggui_same_line(); tggui_text("Show SVO");
+    tggui_checkbox("SVO Leaves Only", &scene.raytracer.debug.show_svo_leaves_only); tggui_same_line(); tggui_text("Show SVO Leaves Only");
 
     tggui_separator();
-    
-    tggui_text("tg - %s", "Voxel Game Engine");
-    
-    static b32 show_anonther_text = TG_FALSE;
-    if (tggui_button("Button 0"))
-    {
-        show_anonther_text = !show_anonther_text;
-    }
-    tggui_same_line();
-    tggui_text("Press to add more text");
-    
-    tggui_same_line();
-    tggui_button("B2");
-    tggui_same_line();
-    tggui_text("B2 is on same same line!");
-    
-    static b32 check = TG_FALSE;
-    tggui_checkbox("Checkbox", &check);
-    tggui_same_line();
-    tggui_text("This checkbox is %s%c", check ? "active" : "inactive", '.');
-    
-    static char p_input_text_buffer[32] = "Hola!";
-    tggui_input_text("input text", 100.0f, sizeof(p_input_text_buffer), p_input_text_buffer);
 
-    static f32 value = 0.333333333f;
-    tggui_input_f32("input float", 128.0f, &value);
+    tggui_text("Statistics");
 
-    static f32 value2 = 0.77777777f;
-    tggui_input_f32("input float2", 128.0f, &value2);
-    
-    if (show_anonther_text)
+    static f32 display_ms = 0.0f;
+    static f32 sum = 0.0f;
+    sum += dt_ms;
+    if (sum > 50.0f)
     {
-        tggui_text("Another text!");
+        sum -= 50.0f;
+        display_ms = dt_ms;
     }
+    tggui_text("Time: %dms", display_ms);
     
     tggui_window_end();
     

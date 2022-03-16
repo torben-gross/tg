@@ -72,16 +72,16 @@ typedef struct tggui_context
 
 
 
-#ifdef TG_DEBUG
-typedef enum tg_debug_visualization
+typedef enum tg_debug_show
 {
-    TG_DEBUG_VISUALIZATION_NONE             = 0,
-    TG_DEBUG_VISUALIZATION_DEPTH            = 1,
-    TG_DEBUG_VISUALIZATION_CLUSTER_INDICES  = 2,
-    TG_DEBUG_VISUALIZATION_VOXEL_INDICES    = 3,
-    TG_DEBUG_VISUALIZATION_BLOCKS           = 4
-} tg_debug_visualization;
-#endif
+    TG_DEBUG_SHOW_NONE             = 0,
+    TG_DEBUG_SHOW_OBJECT_INDEX     = 1,
+    TG_DEBUG_SHOW_DEPTH            = 2,
+    TG_DEBUG_SHOW_CLUSTER_INDEX    = 3,
+    TG_DEBUG_SHOW_VOXEL_INDEX      = 4,
+    TG_DEBUG_SHOW_BLOCKS           = 5,
+    TG_DEBUG_SHOW_COUNT
+} tg_debug_show;
 
 typedef struct tg_scene
 {
@@ -202,6 +202,13 @@ typedef struct tg_raytracer_clear_pass
     tgvk_descriptor_set    descriptor_set;
 } tg_raytracer_clear_pass;
 
+typedef struct tg_raytracer_debug
+{
+    b32 show_object_bounds;
+    b32 show_svo;
+    b32 show_svo_leaves_only;
+} tg_raytracer_debug;
+
 typedef struct tg_raytracer
 {
     const tg_camera*                p_camera;
@@ -220,15 +227,15 @@ typedef struct tg_raytracer
     tg_raytracer_blit_pass          blit_pass;
     tg_raytracer_present_pass       present_pass;
     tg_raytracer_clear_pass         clear_pass;
+
+    tg_raytracer_debug              debug;
 } tg_raytracer;
 
 
 
 void    tg_raytracer_create(const tg_camera* p_camera, u32 max_n_objects, u32 max_n_clusters, TG_OUT tg_raytracer* p_raytracer);
 void    tg_raytracer_destroy(tg_raytracer* p_raytracer);
-#ifdef TG_DEBUG
-void    tg_raytracer_set_debug_visualization(tg_raytracer* p_raytracer, tg_debug_visualization type);
-#endif
+void    tg_raytracer_set_debug_visualization(tg_raytracer* p_raytracer, tg_debug_show type);
 void    tg_raytracer_create_object(tg_raytracer* p_raytracer, v3 center, v3u extent);
 void    tg_raytracer_destroy_object(tg_raytracer* p_raytracer, u32 object_idx);
 b32     tg_object_is_initialized(const tg_scene* p_scene, u32 object_idx);

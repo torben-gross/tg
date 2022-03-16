@@ -270,9 +270,7 @@ static void tg__init_buffers(tg_raytracer* p_raytracer)
 
     tgvk_staging_buffer_release(&staging_buffer);
 
-#ifdef TG_DEBUG
-    tg_raytracer_set_debug_visualization(p_raytracer, TG_DEBUG_VISUALIZATION_CLUSTER_INDICES);
-#endif
+    tg_raytracer_set_debug_visualization(p_raytracer, TG_DEBUG_SHOW_CLUSTER_INDEX);
 }
 
 static void tg__init_visibility_pass(tg_raytracer* p_raytracer)
@@ -784,6 +782,10 @@ void tg_raytracer_create(const tg_camera* p_camera, u32 max_n_objects, u32 max_n
     tg__init_blit_pass(p_raytracer);
     tg__init_present_pass(p_raytracer);
     tg__init_clear_pass(p_raytracer);
+
+    p_raytracer->debug.show_object_bounds = TG_TRUE;
+    p_raytracer->debug.show_svo = TG_FALSE;
+    p_raytracer->debug.show_svo_leaves_only = TG_TRUE;
 }
 
 void tg_raytracer_destroy(tg_raytracer* p_raytracer)
@@ -793,14 +795,12 @@ void tg_raytracer_destroy(tg_raytracer* p_raytracer)
 	TG_NOT_IMPLEMENTED();
 }
 
-#ifdef TG_DEBUG
-void tg_raytracer_set_debug_visualization(tg_raytracer* p_raytracer, tg_debug_visualization type)
+void tg_raytracer_set_debug_visualization(tg_raytracer* p_raytracer, tg_debug_show type)
 {
     TG_ASSERT(p_raytracer != TG_NULL);
 
     *(u32*)(p_raytracer->data.debug_visualization_type_ubo.memory.p_mapped_device_memory) = (u32)type;
 }
-#endif
 
 void tg_raytracer_create_object(tg_raytracer* p_raytracer, v3 center, v3u extent)
 {
@@ -1223,11 +1223,7 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
     //tgvk_atmosphere_model_update(&p_raytracer->model, iv, ip);
     const VkDeviceSize vertex_buffer_offset = 0;
 
-    static b32 show_svo = TG_FALSE;
-    if (tg_input_is_key_pressed(TG_KEY_F, TG_TRUE))
-    {
-        show_svo = !show_svo;
-    }
+    const b32 show_svo = *(tg_debug_show*)(p_raytracer->data.debug_visualization_type_ubo.memory.p_mapped_device_memory) == TG_DEBUG_SHOW_BLOCKS;
     if (show_svo)
     {
         tgvk_command_buffer_begin(&p_raytracer->svo_pass.command_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT);
@@ -1370,7 +1366,7 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
 
     if (1)
     {
-        if (1)
+        if (p_raytracer->debug.show_object_bounds)
         {
             for (u32 object_idx = 0; object_idx < p_raytracer->scene.object_capacity; object_idx++)
             {
@@ -1386,9 +1382,9 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
                 }
             }
         }
-        if (0)
+        if (p_raytracer->debug.show_svo)
         {
-            tg__push_debug_svo_node(p_raytracer, &p_svo->p_node_buffer[0].inner, p_svo->min, p_svo->max, TG_TRUE, TG_TRUE);
+            tg__push_debug_svo_node(p_raytracer, &p_svo->p_node_buffer[0].inner, p_svo->min, p_svo->max, p_raytracer->debug.show_svo_leaves_only, TG_TRUE);
         }
         if (0)
         {

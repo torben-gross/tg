@@ -10,11 +10,13 @@
 
 
 
-#define TG_DEBUG_VISUALIZATION_NONE             0
-#define TG_DEBUG_VISUALIZATION_DEPTH            1
-#define TG_DEBUG_VISUALIZATION_CLUSTER_INDICES  2
-#define TG_DEBUG_VISUALIZATION_VOXEL_INDICES    3
-#define TG_DEBUG_VISUALIZATION_BLOCK_INDICES    4
+
+#define TG_DEBUG_SHOW_NONE             0
+#define TG_DEBUG_SHOW_OBJECT_INDEX     1
+#define TG_DEBUG_SHOW_DEPTH            2
+#define TG_DEBUG_SHOW_CLUSTER_INDEX    3
+#define TG_DEBUG_SHOW_VOXEL_INDEX      4
+#define TG_DEBUG_SHOW_BLOCKS           5
 
 
 
@@ -205,14 +207,21 @@ void main()
         ////out_color = v4(v3(radiance), 1.0);
         //out_color = v4(v3(r_f32, g_f32, b_f32) * radiance, 1.0);
 
-
-
-
-		if (debug_visualization == TG_DEBUG_VISUALIZATION_DEPTH)
+		if (debug_visualization == TG_DEBUG_SHOW_OBJECT_INDEX)
+		{
+			u32 object_idx_hash0 = tg_hash_u32(object_idx);
+			u32 object_idx_hash1 = tg_hash_u32(object_idx_hash0);
+			u32 object_idx_hash2 = tg_hash_u32(object_idx_hash1);
+			f32 object_idx_r = f32(object_idx_hash0) / 4294967295.0;
+			f32 object_idx_g = f32(object_idx_hash1) / 4294967295.0;
+			f32 object_idx_b = f32(object_idx_hash2) / 4294967295.0;
+			out_color = v4(v3(object_idx_r, object_idx_g, object_idx_b), 1.0);
+		}
+		else if (debug_visualization == TG_DEBUG_SHOW_DEPTH)
 		{
 			out_color = v4(v3(min(1.0, 8.0 * depth_24b)), 1.0);
 		}
-		else if (debug_visualization == TG_DEBUG_VISUALIZATION_CLUSTER_INDICES)
+		else if (debug_visualization == TG_DEBUG_SHOW_CLUSTER_INDEX || debug_visualization == TG_DEBUG_SHOW_BLOCKS)
 		{
 			u32 cluster_idx_hash0 = tg_hash_u32(cluster_idx_31b);
 			u32 cluster_idx_hash1 = tg_hash_u32(cluster_idx_hash0);
@@ -222,7 +231,7 @@ void main()
 			f32 cluster_idx_b = f32(cluster_idx_hash2) / 4294967295.0;
 			out_color = v4(cluster_idx_r, cluster_idx_g, cluster_idx_b, 1.0);
 		}
-		else if (debug_visualization == TG_DEBUG_VISUALIZATION_VOXEL_INDICES)
+		else if (debug_visualization == TG_DEBUG_SHOW_VOXEL_INDEX)
 		{
 			u32 voxel_idx_hash0 = tg_hash_u32(voxel_idx_9b);
 			u32 voxel_idx_hash1 = tg_hash_u32(voxel_idx_hash0);
