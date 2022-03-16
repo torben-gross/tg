@@ -74,12 +74,14 @@ typedef struct tggui_context
 
 typedef enum tg_debug_show
 {
-    TG_DEBUG_SHOW_NONE             = 0,
-    TG_DEBUG_SHOW_OBJECT_INDEX     = 1,
-    TG_DEBUG_SHOW_DEPTH            = 2,
-    TG_DEBUG_SHOW_CLUSTER_INDEX    = 3,
-    TG_DEBUG_SHOW_VOXEL_INDEX      = 4,
-    TG_DEBUG_SHOW_BLOCKS           = 5,
+    TG_DEBUG_SHOW_NONE               = 0,
+    TG_DEBUG_SHOW_OBJECT_INDEX       = 1,
+    TG_DEBUG_SHOW_DEPTH              = 2,
+    TG_DEBUG_SHOW_CLUSTER_INDEX      = 3,
+    TG_DEBUG_SHOW_VOXEL_INDEX        = 4,
+    TG_DEBUG_SHOW_BLOCKS             = 5,
+    TG_DEBUG_SHOW_COLOR_LUT_INDEX    = 6,
+    TG_DEBUG_SHOW_COLOR              = 7,
     TG_DEBUG_SHOW_COUNT
 } tg_debug_show;
 

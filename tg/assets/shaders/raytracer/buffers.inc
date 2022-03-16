@@ -21,12 +21,6 @@ struct tg_voxel_cluster_ssbo_entry
 {
     u32    voxel_cluster_data_entry;
 };
-
-struct tg_color_lut_idx_cluster_ssbo_entry
-{
-    u32    color_lut_idx_cluster_data_entry; // Note: One entry is 8 bit
-};
-
 struct tg_view_projection_ubo
 {
     m4    v;

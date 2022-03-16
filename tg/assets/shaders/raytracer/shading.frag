@@ -4,6 +4,7 @@
 #include "shaders/commoni16.inc"
 #include "shaders/commoni64.inc"
 #include "shaders/raytracer/buffers.inc"
+#include "shaders/raytracer/cluster.inc"
 #include "shaders/raytracer/collide.inc"
 #include "shaders/raytracer/svo.inc"
 #include "shaders/util.inc"
@@ -11,12 +12,14 @@
 
 
 
-#define TG_DEBUG_SHOW_NONE             0
-#define TG_DEBUG_SHOW_OBJECT_INDEX     1
-#define TG_DEBUG_SHOW_DEPTH            2
-#define TG_DEBUG_SHOW_CLUSTER_INDEX    3
-#define TG_DEBUG_SHOW_VOXEL_INDEX      4
-#define TG_DEBUG_SHOW_BLOCKS           5
+#define TG_DEBUG_SHOW_NONE               0
+#define TG_DEBUG_SHOW_OBJECT_INDEX       1
+#define TG_DEBUG_SHOW_DEPTH              2
+#define TG_DEBUG_SHOW_CLUSTER_INDEX      3
+#define TG_DEBUG_SHOW_VOXEL_INDEX        4
+#define TG_DEBUG_SHOW_BLOCKS             5
+#define TG_DEBUG_SHOW_COLOR_LUT_INDEX    6
+#define TG_DEBUG_SHOW_COLOR              7
 
 
 
@@ -25,7 +28,7 @@ TG_IN(0, v2 v_uv);
 TG_SSBO( 4, tg_cluster_idx_to_object_idx_ssbo_entry    cluster_idx_to_object_idx_ssbo[];);
 TG_SSBO( 5, tg_object_data_ssbo_entry                  object_data_ssbo[];              );
 TG_SSBO( 6, tg_object_color_lut_ssbo_entry             object_color_lut_ssbo[];         );
-TG_SSBO( 7, tg_color_lut_idx_cluster_ssbo_entry        color_lut_idx_cluster_ssbo[];    );
+TG_SSBO( 7, u32                                        color_lut_idx_cluster_ssbo[];    );
 TG_SSBO( 8,
 	u32    visibility_buffer_w;
 	u32    visibility_buffer_h;
@@ -54,6 +57,15 @@ void main()
     if (depth_24b < 1.0)
     {
 		tg_object_data_ssbo_entry object_data = object_data_ssbo[object_idx];
+		
+		u64 absolute_voxel_idx = u64(cluster_idx_31b) * u64(TG_N_PRIMITIVES_PER_CLUSTER) + u64(voxel_idx_9b);
+		u32 color_lut_idx_slot_idx = u32(absolute_voxel_idx / u64(4));
+		u32 color_lut_idx_slot = color_lut_idx_cluster_ssbo[color_lut_idx_slot_idx];
+		u32 color_lut_idx = (color_lut_idx_slot >> ((absolute_voxel_idx % 4) * 8)) & 255;
+		u32 packed_color = object_color_lut_ssbo[color_lut_idx].packed_color_entry;
+        f32 color_r = f32( packed_color >> 24        ) / 255.0;
+        f32 color_g = f32((packed_color >> 16) & 0xff) / 255.0;
+        f32 color_b = f32((packed_color >>  8) & 0xff) / 255.0;
         
 		//tg_instance_data instance_ddd = instance_data[instance_id_10b];
         //
@@ -215,7 +227,7 @@ void main()
 			f32 object_idx_r = f32(object_idx_hash0) / 4294967295.0;
 			f32 object_idx_g = f32(object_idx_hash1) / 4294967295.0;
 			f32 object_idx_b = f32(object_idx_hash2) / 4294967295.0;
-			out_color = v4(v3(object_idx_r, object_idx_g, object_idx_b), 1.0);
+			out_color = v4(object_idx_r, object_idx_g, object_idx_b, 1.0);
 		}
 		else if (debug_visualization == TG_DEBUG_SHOW_DEPTH)
 		{
@@ -240,6 +252,20 @@ void main()
 			f32 voxel_idx_g = f32(voxel_idx_hash1) / 4294967295.0;
 			f32 voxel_idx_b = f32(voxel_idx_hash2) / 4294967295.0;
 			out_color = v4(voxel_idx_r, voxel_idx_g, voxel_idx_b, 1.0);
+		}
+		else if (debug_visualization == TG_DEBUG_SHOW_COLOR_LUT_INDEX)
+		{
+			u32 color_lut_idx_hash0 = tg_hash_u32(color_lut_idx);
+			u32 color_lut_idx_hash1 = tg_hash_u32(color_lut_idx_hash0);
+			u32 color_lut_idx_hash2 = tg_hash_u32(color_lut_idx_hash1);
+			f32 color_lut_idx_r = f32(color_lut_idx_hash0) / 4294967295.0;
+			f32 color_lut_idx_g = f32(color_lut_idx_hash1) / 4294967295.0;
+			f32 color_lut_idx_b = f32(color_lut_idx_hash2) / 4294967295.0;
+			out_color = v4(color_lut_idx_r, color_lut_idx_g, color_lut_idx_b, 1.0);
+		}
+		else if (debug_visualization == TG_DEBUG_SHOW_COLOR)
+		{
+			out_color = v4(color_r, color_g, color_b, 1.0);
 		}
 		else
 		{

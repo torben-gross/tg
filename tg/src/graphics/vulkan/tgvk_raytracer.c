@@ -828,7 +828,7 @@ void tg_raytracer_create_object(tg_raytracer* p_raytracer, v3 center, v3u extent
 
     p_object->translation = center;
     p_object->angle_in_radians = TG_DEG2RAD((f32)(object_idx * 7));
-    if (object_idx == 0) p_object->angle_in_radians = TG_DEG2RAD(15.0f);
+    //if (object_idx == 0) p_object->angle_in_radians = TG_DEG2RAD(15.0f);
     p_object->axis = (v3){ 0.0f, 1.0f, 0.0f };
 
     // UPDATE OBJECT SSBO DATA
@@ -951,8 +951,8 @@ void tg_raytracer_create_object(tg_raytracer* p_raytracer, v3 center, v3u extent
             for (u32 relative_cluster_pointer_x = 0; relative_cluster_pointer_x < p_object->n_cluster_pointers_per_dim.x; relative_cluster_pointer_x++)
             {
                 const u32 relative_cluster_pointer
-                    = TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT * TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT * relative_cluster_pointer_z
-                    + TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT * relative_cluster_pointer_y
+                    = p_object->n_cluster_pointers_per_dim.x * p_object->n_cluster_pointers_per_dim.y * relative_cluster_pointer_z
+                    + p_object->n_cluster_pointers_per_dim.x * relative_cluster_pointer_y
                     + relative_cluster_pointer_x;
                 const u32 cluster_pointer = p_object->first_cluster_pointer + relative_cluster_pointer;
                 TG_ASSERT(cluster_pointer < p_scene->cluster_pointer_capacity);
@@ -968,7 +968,7 @@ void tg_raytracer_create_object(tg_raytracer* p_raytracer, v3 center, v3u extent
                     {
                         for (u32 relative_voxel_x = 0; relative_voxel_x < TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT; relative_voxel_x++)
                         {
-                            const u8 v = (u8)((cluster_idx + relative_voxel_x) % 256);
+                            const u8 v = (u8)((TG_N_PRIMITIVES_PER_CLUSTER_CUBE_ROOT * relative_cluster_pointer_x + relative_voxel_x) % 256);
                             tgvk_staging_buffer_push_u8(&staging_buffer, v);
                         }
                     }
@@ -2214,6 +2214,5 @@ void tggui_text(const char* p_format, ...)
     p_tmp->last_line_end_offset = (v2){ offset.x, p_tmp->offset.y };
     tggui_new_line();
 }
-
 
 #endif

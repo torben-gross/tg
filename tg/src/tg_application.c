@@ -58,7 +58,7 @@ static void tg__scene_create(void)
     tg_input_get_mouse_position(&scene.last_mouse_x, &scene.last_mouse_y);
 
     tg_raytracer_create(&scene.camera, (1 << 12), (1 << 21), &scene.raytracer);
-    //tg_raytracer_create_object(&scene.raytracer, (v3) { 0.0f, -64.0f, 0.0f }, (v3u) { 128, 32, 128 });
+    tg_raytracer_create_object(&scene.raytracer, (v3) { 0.0f, -64.0f, 0.0f }, (v3u) { 128, 32, 128 });
     //tg_raytracer_create_object(&scene.raytracer, (v3) { 128.0f, 0.0f, 0.0f }, (v3u) { 128, 64, 32 });
     const u32 width = 1;
     const u32 depth = 3;
@@ -87,12 +87,9 @@ static void tg__scene_create(void)
     tg_raytracer_color_lut_set(&scene.raytracer, 2, 0.0f, 0.0f, 1.0f);
     for (u32 i = 3; i < 256; i++)
     {
-        const u32 r_u32 = tgm_u32_murmur_hash_3(i);
-        const u32 g_u32 = tgm_u32_murmur_hash_3(r_u32);
-        const u32 b_u32 = tgm_u32_murmur_hash_3(g_u32);
-        const f32 r = r_u32 / (f32)TG_U32_MAX;
-        const f32 g = g_u32 / (f32)TG_U32_MAX;
-        const f32 b = b_u32 / (f32)TG_U32_MAX;
+        const f32 b = (f32)(i - 3) / 252.0f;
+        const f32 r = 0.5f - 0.5f * b;
+        const f32 g = 0.0f;
         tg_raytracer_color_lut_set(&scene.raytracer, (u8)i, r, g, b);
     }
 
@@ -283,14 +280,14 @@ static void tg__scene_update_and_render(f32 dt_ms)
     tggui_set_viewport_size((f32)scene.raytracer.render_target.color_attachment.width, (f32)scene.raytracer.render_target.color_attachment.height);
     
     tggui_window_set_next_position(8.0f, 8.0f);
-    tggui_window_set_next_size(550.0f, 500.0f);
+    tggui_window_set_next_size(550.0f, 550.0f);
     tggui_window_begin("tg - Window");
 
     tggui_text("CREATE NEW OBJECT");
 
     const f32 input_width = 128.0f;
 
-    static v3 center = { -496.0f, -496.0f, -496.0f };
+    static v3 center = { -64.0f, 0.0f, -64.0f };
     tggui_input_f32("center.x", input_width, &center.x);
     tggui_same_line();
     tggui_input_f32("center.y", input_width, &center.y);
@@ -299,7 +296,7 @@ static void tg__scene_update_and_render(f32 dt_ms)
     tggui_same_line();
     tggui_text("Center");
 
-    static v3 extent = { 8.0f, 40.0f, 8.0f };
+    static v3 extent = { 80.0f, 40.0f, 80.0f };
     tggui_input_f32("extent.x", input_width, &extent.x);
     tggui_same_line();
     tggui_input_f32("extent.y", input_width, &extent.y);
@@ -318,7 +315,7 @@ static void tg__scene_update_and_render(f32 dt_ms)
     tggui_text("Debug Visualization");
 
     static tg_debug_show type;
-    static char* p_names[TG_DEBUG_SHOW_COUNT] = { "None", "Object Idx", "Depth", "Cluster Idx", "Voxel Idx", "Blocks" };
+    static char* p_names[TG_DEBUG_SHOW_COUNT] = { "None", "Object Idx", "Depth", "Cluster Idx", "Voxel Idx", "Blocks", "Color LUT Idx", "Color" };
     static b32 p_debug_show_values[TG_DEBUG_SHOW_COUNT] = { 0, 0, 0, 1, 0, 0 };
     for (u32 i = 0; i < TG_DEBUG_SHOW_COUNT; i++)
     {
