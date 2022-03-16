@@ -10,7 +10,7 @@
 
 
 
-#define TGGUI_MAX_N_DRAW_CALLS      32
+#define TGGUI_MAX_N_DRAW_CALLS      64
 #define TGGUI_TEMP_BUFFER_SIZE      64
 #define TGGUI_DEFAULT_FORMAT_F32    "%.3f"
 
@@ -72,6 +72,17 @@ typedef struct tggui_context
 
 
 
+#ifdef TG_DEBUG
+typedef enum tg_debug_visualization
+{
+    TG_DEBUG_VISUALIZATION_NONE             = 0,
+    TG_DEBUG_VISUALIZATION_DEPTH            = 1,
+    TG_DEBUG_VISUALIZATION_CLUSTER_INDICES  = 2,
+    TG_DEBUG_VISUALIZATION_VOXEL_INDICES    = 3,
+    TG_DEBUG_VISUALIZATION_BLOCKS           = 4
+} tg_debug_visualization;
+#endif
+
 typedef struct tg_scene
 {
     u32                 object_capacity;             // The number of allocated objects
@@ -118,6 +129,7 @@ typedef struct tg_raytracer_data
 
     tgvk_buffer            debug_matrices_ssbo;
     tgvk_buffer            debug_colors_ssbo;
+    tgvk_buffer            debug_visualization_type_ubo;
 } tg_raytracer_data;
 
 typedef struct tg_raytracer_visibility_pass
@@ -214,6 +226,9 @@ typedef struct tg_raytracer
 
 void    tg_raytracer_create(const tg_camera* p_camera, u32 max_n_objects, u32 max_n_clusters, TG_OUT tg_raytracer* p_raytracer);
 void    tg_raytracer_destroy(tg_raytracer* p_raytracer);
+#ifdef TG_DEBUG
+void    tg_raytracer_set_debug_visualization(tg_raytracer* p_raytracer, tg_debug_visualization type);
+#endif
 void    tg_raytracer_create_object(tg_raytracer* p_raytracer, v3 center, v3u extent);
 void    tg_raytracer_destroy_object(tg_raytracer* p_raytracer, u32 object_idx);
 b32     tg_object_is_initialized(const tg_scene* p_scene, u32 object_idx);

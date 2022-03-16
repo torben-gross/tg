@@ -217,7 +217,7 @@ static void tg__scene_update_and_render(f32 dt_ms)
             scene.camera.persp.fov_y_in_radians -= 0.1f * tg_input_get_mouse_wheel_detents(TG_TRUE);
         }
 
-        if (tg_input_is_mouse_button_pressed(TG_BUTTON_LEFT, TG_TRUE))
+        if (tg_input_is_mouse_button_pressed(TG_BUTTON_LEFT, TG_FALSE))
         {
             f32 depth;
             u32 cluster_idx, voxel_idx;
@@ -268,9 +268,14 @@ static void tg__scene_update_and_render(f32 dt_ms)
     }
     if (tg_input_is_key_pressed(TG_KEY_E, TG_TRUE))
     {
-        static f32 x_offset = 0.0f;
-        tg_raytracer_create_object(&scene.raytracer, (v3) { x_offset, 0.0f, 0.0f }, (v3u) { 32, 32, 32 });
-        x_offset += 40.0f;
+        static u32 x_offset = 0;
+        static u32 z_offset = 0;
+        static u32 size_x_delta = 8;
+        tg_raytracer_create_object(&scene.raytracer, (v3) { (f32)x_offset, 0.0f, (f32)z_offset }, (v3u) { 32 + size_x_delta, 32, 32 });
+        x_offset = (x_offset + 64) % 512;
+        z_offset += 8;
+        size_x_delta *= 7;
+        size_x_delta %= 128;
     }
 
     tg_raytracer_clear(&scene.raytracer);
@@ -278,7 +283,7 @@ static void tg__scene_update_and_render(f32 dt_ms)
     tggui_set_viewport_size((f32)scene.raytracer.render_target.color_attachment.width, (f32)scene.raytracer.render_target.color_attachment.height);
     
     tggui_window_set_next_position(8.0f, 8.0f);
-    tggui_window_set_next_size(550.0f, 320.0f);
+    tggui_window_set_next_size(550.0f, 500.0f);
     tggui_window_begin("tg - Window");
 
     tggui_text("CREATE NEW OBJECT");
@@ -307,6 +312,52 @@ static void tg__scene_update_and_render(f32 dt_ms)
     {
         tg_raytracer_create_object(&scene.raytracer, center, tgm_v3_to_v3u_round(extent));
     }
+
+    tggui_separator();
+
+    tggui_text("Debug Visualization");
+
+    static tg_debug_visualization type;
+    static b32 none  = TG_FALSE;
+    static b32 depth = TG_FALSE;
+    static b32 clid  = TG_TRUE;
+    static b32 vxid  = TG_FALSE;
+    if (tggui_checkbox("None", &none))
+    {
+        depth = TG_FALSE;
+        clid  = TG_FALSE;
+        vxid  = TG_FALSE;
+        tg_raytracer_set_debug_visualization(&scene.raytracer, TG_DEBUG_VISUALIZATION_NONE);
+    }
+    tggui_same_line();
+    tggui_text("None");
+    if (tggui_checkbox("Depth", &depth))
+    {
+        none  = TG_FALSE;
+        clid  = TG_FALSE;
+        vxid  = TG_FALSE;
+        tg_raytracer_set_debug_visualization(&scene.raytracer, TG_DEBUG_VISUALIZATION_DEPTH);
+    }
+    tggui_same_line();
+    tggui_text("Depth");
+    if (tggui_checkbox("Cluster Indices", &clid))
+    {
+        depth = TG_FALSE;
+        none  = TG_FALSE;
+        vxid  = TG_FALSE;
+        tg_raytracer_set_debug_visualization(&scene.raytracer, TG_DEBUG_VISUALIZATION_CLUSTER_INDICES);
+    }
+    tggui_same_line();
+    tggui_text("Cluster Indices");
+    if (tggui_checkbox("Voxel Indices", &vxid))
+    {
+        depth = TG_FALSE;
+        none  = TG_FALSE;
+        clid  = TG_FALSE;
+        tg_raytracer_set_debug_visualization(&scene.raytracer, TG_DEBUG_VISUALIZATION_VOXEL_INDICES);
+    }
+    tggui_same_line();
+    tggui_text("Voxel Indices");
 
     tggui_separator();
     
