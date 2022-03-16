@@ -61,7 +61,7 @@ static void tg__scene_create(void)
     tg_raytracer_create_object(&scene.raytracer, (v3) { 0.0f, -64.0f, 0.0f }, (v3u) { 128, 32, 128 });
     tg_raytracer_create_object(&scene.raytracer, (v3) { 128.0f, 0.0f, 0.0f }, (v3u) { 128, 64, 32 });
     const u32 width = 1;
-    const u32 depth = 15;
+    const u32 depth = 5;
     for (u32 depth_idx = 0; depth_idx < depth; depth_idx++)
     {
         const f32 offset_z = -(f32)depth_idx * 128.0f;
@@ -257,6 +257,11 @@ static void tg__scene_update_and_render(f32 dt_ms)
     TG_UNUSED(lz1);
     TG_UNUSED(d0);
     TG_UNUSED(c0);
+
+    if (tg_input_is_key_pressed(TG_KEY_Q, TG_TRUE))
+    {
+        tg_raytracer_destroy_object(&scene.raytracer, 5);
+    }
 
     tg_raytracer_clear(&scene.raytracer);
 

@@ -3375,11 +3375,15 @@ void tgvk_staging_buffer_take2(tg_size size, tg_size dst_offset, tgvk_buffer* p_
 void tgvk_staging_buffer_reinit(tgvk_staging_buffer* p_staging_buffer, tg_size size, tgvk_buffer* p_dst)
 {
     TG_ASSERT(p_staging_buffer != TG_NULL);
-    TG_ASSERT(p_staging_buffer->p_staging_buffer != TG_NULL);
     TG_ASSERT(p_staging_buffer->filled_size == 0);
-    TG_ASSERT(p_staging_buffer->copied_size == p_staging_buffer->size_to_copy);
+    TG_ASSERT(p_staging_buffer->copied_size == p_staging_buffer->size_to_copy || p_staging_buffer->p_staging_buffer == TG_NULL);
 
+    if (p_staging_buffer->p_staging_buffer == TG_NULL)
+    {
+        p_staging_buffer->p_staging_buffer = tgvk_global_staging_buffer_take(staging_buffer_size);
+    }
     p_staging_buffer->size_to_copy = size;
+    p_staging_buffer->dst_offset = 0;
     p_staging_buffer->p_dst = p_dst;
     p_staging_buffer->copied_size = 0;
     p_staging_buffer->filled_size = 0;
@@ -3388,10 +3392,13 @@ void tgvk_staging_buffer_reinit(tgvk_staging_buffer* p_staging_buffer, tg_size s
 void tgvk_staging_buffer_reinit2(tgvk_staging_buffer* p_staging_buffer, tg_size size, tg_size dst_offset, tgvk_buffer* p_dst)
 {
     TG_ASSERT(p_staging_buffer != TG_NULL);
-    TG_ASSERT(p_staging_buffer->p_staging_buffer != TG_NULL);
     TG_ASSERT(p_staging_buffer->filled_size == 0);
-    TG_ASSERT(p_staging_buffer->copied_size == p_staging_buffer->size_to_copy);
+    TG_ASSERT(p_staging_buffer->copied_size == p_staging_buffer->size_to_copy || p_staging_buffer->p_staging_buffer == TG_NULL);
 
+    if (p_staging_buffer->p_staging_buffer == TG_NULL)
+    {
+        p_staging_buffer->p_staging_buffer = tgvk_global_staging_buffer_take(staging_buffer_size);
+    }
     p_staging_buffer->size_to_copy = size;
     p_staging_buffer->dst_offset = dst_offset;
     p_staging_buffer->p_dst = p_dst;

@@ -215,6 +215,7 @@ typedef struct tg_raytracer
 void    tg_raytracer_create(const tg_camera* p_camera, u32 max_n_instances, u32 max_n_clusters, TG_OUT tg_raytracer* p_raytracer);
 void    tg_raytracer_destroy(tg_raytracer* p_raytracer);
 void    tg_raytracer_create_object(tg_raytracer* p_raytracer, v3 center, v3u extent);
+void    tg_raytracer_destroy_object(tg_raytracer* p_raytracer, u32 object_idx);
 void    tg_raytracer_push_debug_cuboid(tg_raytracer* p_raytracer, m4 transformation_matrix, v3 color); // Original cube's extent is 1^3 and position is centered at origin
 void    tg_raytracer_push_debug_line(tg_raytracer* p_raytracer, v3 src, v3 dst, v3 color);
 void    tg_raytracer_color_lut_set(tg_raytracer* p_raytracer, u8 index, f32 r, f32 g, f32 b);
