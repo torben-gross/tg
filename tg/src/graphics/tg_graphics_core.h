@@ -167,8 +167,9 @@ void       tg_camera_make_corner_ray_directions(const tg_camera* p_camera, TG_OU
 v3         tg_lerp_corner_ray_directions(v3 ray_bottom_left, v3 ray_bottom_right, v3 ray_top_right, v3 ray_top_left, f32 x, f32 y);
 v3         tg_screen_space_to_world_space(const tg_camera* p_camera, u32 screen_width, u32 screen_height, u32 screen_x, u32 screen_y, f32 depth);
 
-m4         tg_cluster_model_space_to_world_space(u32 cluster_idx);
-m4         tg_world_space_to_cluster_model_space(u32 cluster_idx);
+// TODO
+//m4         tg_cluster_model_space_to_world_space(u32 cluster_idx);
+//m4         tg_world_space_to_cluster_model_space(u32 cluster_idx);
 
 u32        tg_color_image_format_channels(tg_color_image_format format);
 tg_size    tg_color_image_format_size(tg_color_image_format format);

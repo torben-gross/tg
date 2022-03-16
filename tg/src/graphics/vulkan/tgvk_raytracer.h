@@ -74,17 +74,17 @@ typedef struct tggui_context
 
 typedef struct tg_scene
 {
-    u32                 object_capacity;
-    u32                 n_objects;
-    tg_voxel_object*    p_objects;
+    u32                 object_capacity;             // The number of allocated objects
+    u32                 n_objects;                   // The number of utilized objects
+    tg_voxel_object*    p_objects;                   // All objects as a contiguous array
+    u32                 n_available_object_indices;  // The number of available object indices on the stacl
+    u32*                p_available_object_indices;  // The available object indices as a stack
 
-    u32                 cluster_pointer_capacity; // TODO: We may later have more cluster pointers than actual clusters and need a second member for that
-    u32                 n_cluster_pointers;
-    u32*                p_cluster_pointers;          // Points to a cluster
-
-    // A stack of available cluster pointers
-    u32                 n_available_cluster_indices;
-    u32*                p_available_cluster_indices;
+    u32                 cluster_pointer_capacity;    // The number of allocated cluster pointers TODO: We may later have more cluster pointers than actual clusters and need a second member for that
+    u32                 n_cluster_pointers;          // The number of utilized cluster pointers
+    u32*                p_cluster_pointers;          // All cluster pointers as a contiguous array. Each element is an index, that points to a cluster
+    u32                 n_available_cluster_indices; // The number of available cluster indices on the stack
+    u32*                p_available_cluster_indices; // The available cluster indices as a stack
 
     u32*                p_voxel_cluster_data;        // Data of the clusters storing the voxels (1 bit per voxel)
     u32*                p_cluster_idx_to_object_idx; // Maps every cluster index to its object index
@@ -212,10 +212,11 @@ typedef struct tg_raytracer
 
 
 
-void    tg_raytracer_create(const tg_camera* p_camera, u32 max_n_instances, u32 max_n_clusters, TG_OUT tg_raytracer* p_raytracer);
+void    tg_raytracer_create(const tg_camera* p_camera, u32 max_n_objects, u32 max_n_clusters, TG_OUT tg_raytracer* p_raytracer);
 void    tg_raytracer_destroy(tg_raytracer* p_raytracer);
 void    tg_raytracer_create_object(tg_raytracer* p_raytracer, v3 center, v3u extent);
 void    tg_raytracer_destroy_object(tg_raytracer* p_raytracer, u32 object_idx);
+b32     tg_object_is_initialized(const tg_scene* p_scene, u32 object_idx);
 void    tg_raytracer_push_debug_cuboid(tg_raytracer* p_raytracer, m4 transformation_matrix, v3 color); // Original cube's extent is 1^3 and position is centered at origin
 void    tg_raytracer_push_debug_line(tg_raytracer* p_raytracer, v3 src, v3 dst, v3 color);
 void    tg_raytracer_color_lut_set(tg_raytracer* p_raytracer, u8 index, f32 r, f32 g, f32 b);

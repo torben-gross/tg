@@ -58,10 +58,10 @@ static void tg__scene_create(void)
     tg_input_get_mouse_position(&scene.last_mouse_x, &scene.last_mouse_y);
 
     tg_raytracer_create(&scene.camera, (1 << 12), (1 << 21), &scene.raytracer);
-    tg_raytracer_create_object(&scene.raytracer, (v3) { 0.0f, -64.0f, 0.0f }, (v3u) { 128, 32, 128 });
-    tg_raytracer_create_object(&scene.raytracer, (v3) { 128.0f, 0.0f, 0.0f }, (v3u) { 128, 64, 32 });
+    //tg_raytracer_create_object(&scene.raytracer, (v3) { 0.0f, -64.0f, 0.0f }, (v3u) { 128, 32, 128 });
+    //tg_raytracer_create_object(&scene.raytracer, (v3) { 128.0f, 0.0f, 0.0f }, (v3u) { 128, 64, 32 });
     const u32 width = 1;
-    const u32 depth = 5;
+    const u32 depth = 3;
     for (u32 depth_idx = 0; depth_idx < depth; depth_idx++)
     {
         const f32 offset_z = -(f32)depth_idx * 128.0f;
@@ -81,7 +81,7 @@ static void tg__scene_create(void)
             tg_raytracer_create_object(&scene.raytracer, (v3) { x - 6.0f, 100.0f, -70.0f + offset_z }, (v3u) { 32, 32, 32 });
         }
     }
-    tg_raytracer_create_object(&scene.raytracer, (v3) { -32.0f, 64.0f, 16.0f }, (v3u) { 32, 32, 32 });
+    //tg_raytracer_create_object(&scene.raytracer, (v3) { -32.0f, 64.0f, 16.0f }, (v3u) { 32, 32, 32 });
     tg_raytracer_color_lut_set(&scene.raytracer, 0, 1.0f, 0.0f, 0.0f);
     tg_raytracer_color_lut_set(&scene.raytracer, 1, 0.0f, 1.0f, 0.0f);
     tg_raytracer_color_lut_set(&scene.raytracer, 2, 0.0f, 0.0f, 1.0f);
@@ -221,11 +221,15 @@ static void tg__scene_update_and_render(f32 dt_ms)
         {
             f32 depth;
             u32 cluster_idx, voxel_idx;
-            tg_raytracer_get_hovered_voxel(&scene.raytracer, mouse_x, mouse_y, &depth, &cluster_idx, &voxel_idx);
-
-            const u32 object_idx = scene.raytracer.scene.p_cluster_idx_to_object_idx[cluster_idx];
-            int bh = 0;
-            //tg_screen_space_to_world_space(&scene.camera, scene.raytracer.render_target.color_attachment.width, scene.raytracer.render_target.color_attachment.height, mouse_x, mouse_y, depth);
+            const b32 result = tg_raytracer_get_hovered_voxel(&scene.raytracer, mouse_x, mouse_y, &depth, &cluster_idx, &voxel_idx);
+            if (result)
+            {
+                const u32 object_idx = scene.raytracer.scene.p_cluster_idx_to_object_idx[cluster_idx];
+                int bh = 0;
+                TG_UNUSED(object_idx);
+                TG_UNUSED(bh);
+                //tg_screen_space_to_world_space(&scene.camera, scene.raytracer.render_target.color_attachment.width, scene.raytracer.render_target.color_attachment.height, mouse_x, mouse_y, depth);
+            }
         }
     }
 
@@ -261,6 +265,12 @@ static void tg__scene_update_and_render(f32 dt_ms)
     if (tg_input_is_key_pressed(TG_KEY_Q, TG_TRUE))
     {
         tg_raytracer_destroy_object(&scene.raytracer, 5);
+    }
+    if (tg_input_is_key_pressed(TG_KEY_E, TG_TRUE))
+    {
+        static f32 x_offset = 0.0f;
+        tg_raytracer_create_object(&scene.raytracer, (v3) { x_offset, 0.0f, 0.0f }, (v3u) { 32, 32, 32 });
+        x_offset += 40.0f;
     }
 
     tg_raytracer_clear(&scene.raytracer);

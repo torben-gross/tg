@@ -210,7 +210,7 @@ static void tg__construct_leaf_node(
         p_block_corners_cs[6] = tgm_m4_mulv4(ws2cs, p_block_corners_ws[6]).xyz;
         p_block_corners_cs[7] = tgm_m4_mulv4(ws2cs, p_block_corners_ws[7]).xyz;
 
-        TG_ASSERT(tg_intersect_aabb_obb_ignore_contact(TG_CLUSTER_MIN, TG_CLUSTER_MAX, p_block_corners_cs));
+        //TG_ASSERT(tg_intersect_aabb_obb_ignore_contact(TG_CLUSTER_MIN, TG_CLUSTER_MAX, p_block_corners_cs));
 
         // Compute trimmed min corner and max corner of world space block corners. They define the
         // extent of the traversal.
@@ -495,13 +495,17 @@ void tg_svo_create(v3 extent_min, v3 extent_max, const tg_scene* p_scene, TG_OUT
     // TODO: We can already filter the clusters here (?)! Some are not inside of the initial SVO!
     u32 n_cluster_pointers = 0;
     u32* p_cluster_pointers = TG_MALLOC_STACK(p_scene->n_cluster_pointers * sizeof(*p_cluster_pointers));
-    for (u32 object_idx = 0; object_idx < p_scene->n_objects; object_idx++)
+    u32 curr_cluster_pointer = 0;
+    while (curr_cluster_pointer < p_scene->n_cluster_pointers)
     {
+        const u32 object_idx = p_scene->p_cluster_idx_to_object_idx[p_scene->p_cluster_pointers[curr_cluster_pointer]];
+        TG_ASSERT(tg_object_is_initialized(p_scene, object_idx));
         const tg_voxel_object* p_object = &p_scene->p_objects[object_idx];
         const u32 n_cluster_pointers_of_object
             = p_object->n_cluster_pointers_per_dim.x
             * p_object->n_cluster_pointers_per_dim.y
             * p_object->n_cluster_pointers_per_dim.z;
+        curr_cluster_pointer += n_cluster_pointers_of_object;
         for (u32 relative_cluster_pointer = 0; relative_cluster_pointer < n_cluster_pointers_of_object; relative_cluster_pointer++)
         {
             const u32 cluster_pointer = p_object->first_cluster_pointer + relative_cluster_pointer;
