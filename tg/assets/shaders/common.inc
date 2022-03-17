@@ -25,6 +25,8 @@
 #define TG_I32_MAX             2147483647
 #define TG_U32_MAX             0xffffffffu
 
+#define TG_PI                  3.14159265358979323846
+
 #define TG_IN(      location_index, content) layout(location = location_index)      in  content
 #define TG_IN_FLAT( location_index, content) layout(location = location_index) flat in  content
 #define TG_OUT(     location_index, content) layout(location = location_index)      out content

@@ -195,10 +195,10 @@ void main()
     {
         // Layout : 24 bits depth | 10 bits object id | 30 bits relative voxel_id
 
-        u64 depth_24b       = u64(d * 16777215.0) << u64(40);
-		u64 cluster_idx_31b = u64(cluster_idx)  << u64( 9);
-		u64 voxel_idx_9b    = u64(voxel_idx);
-		u64 packed_data     = depth_24b | cluster_idx_31b | voxel_idx_9b;
+        u64 depth_24b           = u64(d * 16777215.0) << u64(40);
+		u64 cluster_pointer_31b = u64(v_cluster_pointer)  << u64( 9);
+		u64 voxel_idx_9b        = u64(voxel_idx);
+		u64 packed_data         = depth_24b | cluster_pointer_31b | voxel_idx_9b;
 
         u32 x = u32(gl_FragCoord.x);
         u32 y = u32(gl_FragCoord.y);

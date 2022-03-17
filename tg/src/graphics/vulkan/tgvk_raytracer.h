@@ -82,6 +82,8 @@ typedef enum tg_debug_show
     TG_DEBUG_SHOW_BLOCKS             = 5,
     TG_DEBUG_SHOW_COLOR_LUT_INDEX    = 6,
     TG_DEBUG_SHOW_COLOR              = 7,
+    TG_DEBUG_SHOW_NORMAL             = 8,
+    TG_DEBUG_SHOW_SHADING            = 9,
     TG_DEBUG_SHOW_COUNT
 } tg_debug_show;
 

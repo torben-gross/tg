@@ -828,7 +828,7 @@ void tg_raytracer_create_object(tg_raytracer* p_raytracer, v3 center, v3u extent
 
     p_object->translation = center;
     p_object->angle_in_radians = TG_DEG2RAD((f32)(object_idx * 7));
-    //if (object_idx == 0) p_object->angle_in_radians = TG_DEG2RAD(15.0f);
+    if (object_idx == 0) p_object->angle_in_radians = TG_DEG2RAD(15.0f);
     p_object->axis = (v3){ 0.0f, 1.0f, 0.0f };
 
     // UPDATE OBJECT SSBO DATA
@@ -1336,6 +1336,7 @@ void tg_raytracer_render(tg_raytracer* p_raytracer)
         tgvk_descriptor_set_update_storage_buffer(p_raytracer->shading_pass.descriptor_set.set, &p_raytracer->data.svo_leaf_node_data_ssbo,      13);
         tgvk_descriptor_set_update_storage_buffer(p_raytracer->shading_pass.descriptor_set.set, &p_raytracer->data.svo_voxel_data_ssbo,          14);
         tgvk_descriptor_set_update_uniform_buffer(p_raytracer->shading_pass.descriptor_set.set, &p_raytracer->data.debug_visualization_type_ubo, 15);
+        tgvk_descriptor_set_update_storage_buffer(p_raytracer->shading_pass.descriptor_set.set, &p_raytracer->data.cluster_pointer_ssbo,         16);
 
         vkCmdBindDescriptorSets(p_raytracer->shading_pass.command_buffer.buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_raytracer->shading_pass.graphics_pipeline.layout.pipeline_layout, 0, 1, &p_raytracer->shading_pass.descriptor_set.set, 0, TG_NULL);
 

@@ -259,7 +259,7 @@ static void tg__scene_update_and_render(f32 dt_ms)
     TG_UNUSED(d0);
     TG_UNUSED(c0);
 
-    if (tg_input_is_key_pressed(TG_KEY_Q, TG_TRUE))
+    if (tg_input_is_key_pressed(TG_KEY_Q, TG_TRUE) && tg_object_is_initialized(&scene.raytracer.scene, 5))
     {
         tg_raytracer_destroy_object(&scene.raytracer, 5);
     }
@@ -280,7 +280,7 @@ static void tg__scene_update_and_render(f32 dt_ms)
     tggui_set_viewport_size((f32)scene.raytracer.render_target.color_attachment.width, (f32)scene.raytracer.render_target.color_attachment.height);
     
     tggui_window_set_next_position(8.0f, 8.0f);
-    tggui_window_set_next_size(550.0f, 550.0f);
+    tggui_window_set_next_size(550.0f, 600.0f);
     tggui_window_begin("tg - Window");
 
     tggui_text("CREATE NEW OBJECT");
@@ -315,7 +315,7 @@ static void tg__scene_update_and_render(f32 dt_ms)
     tggui_text("Debug Visualization");
 
     static tg_debug_show type;
-    static char* p_names[TG_DEBUG_SHOW_COUNT] = { "None", "Object Idx", "Depth", "Cluster Idx", "Voxel Idx", "Blocks", "Color LUT Idx", "Color" };
+    static char* p_names[TG_DEBUG_SHOW_COUNT] = { "None", "Object Idx", "Depth", "Cluster Idx", "Voxel Idx", "Blocks", "Color LUT Idx", "Color", "Normal", "Shading" };
     static b32 p_debug_show_values[TG_DEBUG_SHOW_COUNT] = { 0, 0, 0, 1, 0, 0 };
     for (u32 i = 0; i < TG_DEBUG_SHOW_COUNT; i++)
     {
