@@ -1932,6 +1932,134 @@ m4 tgm_m4_euler(f32 pitch_in_radians, f32 yaw_in_radians, f32 roll_in_radians)
 	return zyx;
 }
 
+m4 tgm_m4_gauss_jordan_elimination(m4 M)
+{
+	// Eric Lengyel. "Foundations of Game Engine Development". Volume 1, p. 45
+
+	TG_ASSERT(tgm_m4_det(M) != 0.0f);
+
+	// Let M be an n x n matrix, and let M' represent the current transformation of M after all of
+	// the previous operations in the process have been applied. The Gauss-Jordan elimination
+	// procedure for finding the matrix M^{-1} comprises the following steps for every column k of
+	// the matrix, with 0 <= k < n.
+
+	m4 M_prime = M;
+	m4 M_inv = tgm_m4_identity();
+
+	for (u32 k = 0; k < 4; k++)
+	{
+		// A. Find the row r with r >= k such that M'_{rk} has the largest absolute value, and let
+		//    p = M'_{rk}. If p == 0, then the inverse of M does not exist.
+
+		u32 r = k;
+		f32 p = M_prime.p_data[4 * k + k];
+
+		for (u32 row = k + 1; row < 4; row++)
+		{
+			const f32 v = M_prime.p_data[4 * k + row];
+			if (TG_ABS(v) > TG_ABS(p))
+			{
+				r = row;
+				p = v;
+			}
+		}
+
+		TG_ASSERT(p != 0.0f);
+
+		// B. If r != k, then exchange rows r and k using elementary row operation (b).
+
+		if (r != k)
+		{
+			// M'
+
+			f32 mr0 = M_prime.p_data[4 * 0 + r];
+			f32 mr1 = M_prime.p_data[4 * 1 + r];
+			f32 mr2 = M_prime.p_data[4 * 2 + r];
+			f32 mr3 = M_prime.p_data[4 * 3 + r];
+
+			M_prime.p_data[4 * 0 + r] = M_prime.p_data[4 * 0 + k];
+			M_prime.p_data[4 * 1 + r] = M_prime.p_data[4 * 1 + k];
+			M_prime.p_data[4 * 2 + r] = M_prime.p_data[4 * 2 + k];
+			M_prime.p_data[4 * 3 + r] = M_prime.p_data[4 * 3 + k];
+
+			M_prime.p_data[4 * 0 + k] = mr0;
+			M_prime.p_data[4 * 1 + k] = mr1;
+			M_prime.p_data[4 * 2 + k] = mr2;
+			M_prime.p_data[4 * 3 + k] = mr3;
+
+			// M^{-1}
+
+			mr0 = M_inv.p_data[4 * 0 + r];
+			mr1 = M_inv.p_data[4 * 1 + r];
+			mr2 = M_inv.p_data[4 * 2 + r];
+			mr3 = M_inv.p_data[4 * 3 + r];
+
+			M_inv.p_data[4 * 0 + r] = M_inv.p_data[4 * 0 + k];
+			M_inv.p_data[4 * 1 + r] = M_inv.p_data[4 * 1 + k];
+			M_inv.p_data[4 * 2 + r] = M_inv.p_data[4 * 2 + k];
+			M_inv.p_data[4 * 3 + r] = M_inv.p_data[4 * 3 + k];
+
+			M_inv.p_data[4 * 0 + k] = mr0;
+			M_inv.p_data[4 * 1 + k] = mr1;
+			M_inv.p_data[4 * 2 + k] = mr2;
+			M_inv.p_data[4 * 3 + k] = mr3;
+
+		}
+
+		// C. Multiply row k of M' (after the exchange in Step B) by 1/p using elementary row
+		// operation (a). This sets M'_{kk} = 1.
+
+		const f32 inv_p = 1.0f / p;
+
+		M_prime.p_data[4 * 0 + k] *= inv_p;
+		M_prime.p_data[4 * 1 + k] *= inv_p;
+		M_prime.p_data[4 * 2 + k] *= inv_p;
+		M_prime.p_data[4 * 3 + k] *= inv_p;
+
+		M_inv.p_data[4 * 0 + k] *= inv_p;
+		M_inv.p_data[4 * 1 + k] *= inv_p;
+		M_inv.p_data[4 * 2 + k] *= inv_p;
+		M_inv.p_data[4 * 3 + k] *= inv_p;
+
+		// D. For each row i with 0 <= i < n and i != k, add row k multiplied by -M'_{ik} to row i
+		//    using elementary row operation (c). This sets every entry in column k above and below
+		//    k to zero.
+
+		for (u32 i = 0; i < 4; i++)
+		{
+			if (i != k)
+			{
+				const f32 factor = -M_prime.p_data[4 * k + i];
+
+				M_prime.p_data[4 * 0 + i] += M_prime.p_data[4 * 0 + k] * factor;
+				M_prime.p_data[4 * 1 + i] += M_prime.p_data[4 * 1 + k] * factor;
+				M_prime.p_data[4 * 2 + i] += M_prime.p_data[4 * 2 + k] * factor;
+				M_prime.p_data[4 * 3 + i] += M_prime.p_data[4 * 3 + k] * factor;
+
+				M_inv.p_data[4 * 0 + i] += M_inv.p_data[4 * 0 + k] * factor;
+				M_inv.p_data[4 * 1 + i] += M_inv.p_data[4 * 1 + k] * factor;
+				M_inv.p_data[4 * 2 + i] += M_inv.p_data[4 * 2 + k] * factor;
+				M_inv.p_data[4 * 3 + i] += M_inv.p_data[4 * 3 + k] * factor;
+			}
+		}
+	}
+
+	// Validate results
+
+#ifdef TG_DEBUG
+	const m4 identity = tgm_m4_identity();
+	const m4 test_for_identity = tgm_m4_mul(M_inv, M);
+	for (u32 i = 0; i < 16; i++)
+	{
+		TG_ASSERT(identity.p_data[i] - 0.001f <= test_for_identity.p_data[i]);
+		TG_ASSERT(identity.p_data[i] + 0.001f >= test_for_identity.p_data[i]);
+	}
+#endif
+
+	return M_inv;
+
+}
+
 m4 tgm_m4_identity(void)
 {
 	m4 result = { 0 };

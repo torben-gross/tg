@@ -516,6 +516,7 @@ m3     tgm_m3_transposed(m3 m);
 m4     tgm_m4_angle_axis(f32 angle_in_radians, v3 axis);
 f32    tgm_m4_det(m4 m);
 m4     tgm_m4_euler(f32 pitch_in_radians, f32 yaw_in_radians, f32 roll_in_radians);
+m4     tgm_m4_gauss_jordan_elimination(m4 m);
 m4     tgm_m4_identity(void);
 m4     tgm_m4_inverse(m4 m);
 m4     tgm_m4_look_at(v3 from, v3 to, v3 up);
