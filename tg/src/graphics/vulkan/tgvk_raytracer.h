@@ -114,11 +114,11 @@ typedef struct tg_raytracer_data
     tgvk_buffer            cube_vbo;
     tgvk_buffer            quad_vbo;
 
-    tgvk_buffer            cluster_pointer_ssbo;            // [cluster pointer]            Maps cluster pointers to clusters
-    tgvk_buffer            cluster_idx_to_object_idx_ssbo;  // [cluster idx]                Maps cluster idx to its object idx
-    tgvk_buffer            object_data_ssbo;                // [object idx]                 Metrics and first cluster idx
+    tgvk_buffer             cluster_pointer_ssbo;            // [cluster pointer]            Maps cluster pointers to clusters
+    tgvk_buffer             cluster_idx_to_object_idx_ssbo;  // [cluster idx]                Maps cluster idx to its object idx
+    tgvk_buffer             object_data_ssbo;                // [object idx]                 Metrics and first cluster idx
     tgvk_buffer            object_color_lut_ssbo;           // [object idx]                 Color LUT
-    tgvk_buffer            voxel_cluster_ssbo;              // [cluster idx + voxel idx]    Cluster of voxels            (1 bit per voxel)
+    tgvk_buffer             voxel_cluster_ssbo;              // [cluster idx + voxel idx]    Cluster of voxels            (1 bit per voxel)
     tgvk_buffer            color_lut_idx_cluster_ssbo;      // [cluster idx + voxel idx]    Cluster of color LUT indices (8 bit per voxel)
 
     tgvk_buffer            svo_ssbo;

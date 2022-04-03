@@ -39,10 +39,12 @@ static tg_sample_scene scene = { 0 };
 
 
 
-static const v2 pds_extent = { 640.0f, 640.0f };
-static const f32 pds_r = 16.0f;
-static u32 pds_buffer_count;
-static v2* p_pds_point_buffer;
+// TODO
+//static const v2 pds_extent = { 640.0f, 640.0f };
+//static const f32 pds_r = 16.0f;
+//static u32 pds_buffer_count;
+//static v2* p_pds_point_buffer;
+#include "util/tg_fbx.h"
 
 static void tg__scene_create(void)
 {
@@ -56,6 +58,8 @@ static void tg__scene_create(void)
     scene.camera.persp.n = 0.1f;
     scene.camera.persp.f = 1000.0f;
     tg_input_get_mouse_position(&scene.last_mouse_x, &scene.last_mouse_y);
+
+    tg_fbx_load("Nature_Embankment_vcwjeh2fa_8K_3d_ms/vcwjeh2fa_LOD0.fbx");
 
     tg_raytracer_create(&scene.camera, (1 << 12), (1 << 21), &scene.raytracer);
     tg_raytracer_create_object(&scene.raytracer, (v3) { 0.0f, -64.0f, 0.0f }, (v3u) { 128, 32, 128 });

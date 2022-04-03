@@ -143,15 +143,15 @@ void tg__enclosing_sphere(u32 contained_point_count, const v3* p_contained_point
 			m4 d = m;
 
 			d.m00 = tgm_v3_magsqr(p_boundary_points[0]); d.m01 = tgm_v3_magsqr(p_boundary_points[1]); d.m02 = tgm_v3_magsqr(p_boundary_points[2]); d.m03 = tgm_v3_magsqr(p_boundary_points[3]);
-			p_center->x = tgm_m4_determinant(d);
+			p_center->x = tgm_m4_det(d);
 
 			d.m10 = m.m00; d.m11 = m.m01; d.m12 = m.m02; d.m13 = m.m03;
-			p_center->y = -tgm_m4_determinant(d);
+			p_center->y = -tgm_m4_det(d);
 
 			d.m20 = m.m10; d.m21 = m.m11; d.m22 = m.m12; d.m23 = m.m13;
-			p_center->z = tgm_m4_determinant(d);
+			p_center->z = tgm_m4_det(d);
 
-			*p_center = tgm_v3_divf(*p_center, 2.0f * tgm_m4_determinant(m));
+			*p_center = tgm_v3_divf(*p_center, 2.0f * tgm_m4_det(m));
 			*p_radius = tgm_v3_mag(tgm_v3_sub(*p_center, p_boundary_points[0]));
 		} break;
 		default: TG_INVALID_CODEPATH(); break;
@@ -1195,6 +1195,16 @@ v3 tgm_v3_normalized_not_null(v3 v, v3 alt)
 	return result;
 }
 
+v3 tgm_v3_project(v3 v0, v3 v1)
+{
+	TG_ASSERT(tgm_v3_dot(v1, v1) != 0.0f);
+
+	// Eric Lengyel. "Foundations of Game Engine Development". Volume 1, p. 33
+
+	const v3 result = tgm_v3_mulf(v1, tgm_v3_dot(v0, v1) / tgm_v3_dot(v1, v1));
+	return result;
+}
+
 v3 tgm_v3_reflect(v3 d, v3 n)
 {
 #ifdef TG_DEBUG
@@ -1221,6 +1231,14 @@ v3 tgm_v3_refract(v3 d, v3 n, f32 eta)
 	{
 		result = tgm_v3_sub(tgm_v3_mulf(d, eta), tgm_v3_mulf(n, eta * tgm_v3_dot(n, d) + tgm_f32_sqrt(k)));
 	}
+	return result;
+}
+
+v3 tgm_v3_reject(v3 v0, v3 v1)
+{
+	// Eric Lengyel. "Foundations of Game Engine Development". Volume 1, p. 34
+
+	const v3 result = tgm_v3_sub(v0, tgm_v3_project(v0, v1));
 	return result;
 }
 
@@ -1885,21 +1903,21 @@ m4 tgm_m4_angle_axis(f32 angle_in_radians, v3 axis)
 	return result;
 }
 
-f32 tgm_m4_determinant(m4 m)
+f32 tgm_m4_det(m4 m)
 {
 	const f32 result =
-		m.m03 * m.m12 * m.m21 * m.m30 - m.m02 * m.m03 * m.m21 * m.m30 -
-		m.m03 * m.m11 * m.m22 * m.m30 + m.m01 * m.m03 * m.m22 * m.m30 +
-		m.m02 * m.m11 * m.m23 * m.m30 - m.m01 * m.m02 * m.m23 * m.m30 -
-		m.m03 * m.m12 * m.m20 * m.m31 + m.m02 * m.m03 * m.m20 * m.m31 +
-		m.m03 * m.m10 * m.m22 * m.m31 - m.m00 * m.m03 * m.m22 * m.m31 -
-		m.m02 * m.m10 * m.m23 * m.m31 + m.m00 * m.m02 * m.m23 * m.m31 +
-		m.m03 * m.m11 * m.m20 * m.m32 - m.m01 * m.m03 * m.m20 * m.m32 -
-		m.m03 * m.m10 * m.m21 * m.m32 + m.m00 * m.m03 * m.m21 * m.m32 +
-		m.m01 * m.m10 * m.m23 * m.m32 - m.m00 * m.m01 * m.m23 * m.m32 -
-		m.m02 * m.m11 * m.m20 * m.m33 + m.m01 * m.m02 * m.m20 * m.m33 +
-		m.m02 * m.m10 * m.m21 * m.m33 - m.m00 * m.m02 * m.m21 * m.m33 -
-		m.m01 * m.m10 * m.m22 * m.m33 + m.m00 * m.m01 * m.m22 * m.m33;
+		m.m03 * m.m12 * m.m21 * m.m30 - m.m02 * m.m13 * m.m21 * m.m30 -
+		m.m03 * m.m11 * m.m22 * m.m30 + m.m01 * m.m13 * m.m22 * m.m30 +
+		m.m02 * m.m11 * m.m23 * m.m30 - m.m01 * m.m12 * m.m23 * m.m30 -
+		m.m03 * m.m12 * m.m20 * m.m31 + m.m02 * m.m13 * m.m20 * m.m31 +
+		m.m03 * m.m10 * m.m22 * m.m31 - m.m00 * m.m13 * m.m22 * m.m31 -
+		m.m02 * m.m10 * m.m23 * m.m31 + m.m00 * m.m12 * m.m23 * m.m31 +
+		m.m03 * m.m11 * m.m20 * m.m32 - m.m01 * m.m13 * m.m20 * m.m32 -
+		m.m03 * m.m10 * m.m21 * m.m32 + m.m00 * m.m13 * m.m21 * m.m32 +
+		m.m01 * m.m10 * m.m23 * m.m32 - m.m00 * m.m11 * m.m23 * m.m32 -
+		m.m02 * m.m11 * m.m20 * m.m33 + m.m01 * m.m12 * m.m20 * m.m33 +
+		m.m02 * m.m10 * m.m21 * m.m33 - m.m00 * m.m12 * m.m21 * m.m33 -
+		m.m01 * m.m10 * m.m22 * m.m33 + m.m00 * m.m11 * m.m22 * m.m33;
 
 	return result;
 }
@@ -1943,6 +1961,8 @@ m4 tgm_m4_identity(void)
 
 m4 tgm_m4_inverse(m4 m)
 {
+	TG_ASSERT(tgm_m4_det(m) != 0.0f);
+
 	m4 result = { 0 };
 
 	const f32 m2323 = m.m22 * m.m33 - m.m23 * m.m32;
