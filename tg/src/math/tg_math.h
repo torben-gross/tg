@@ -514,13 +514,18 @@ m3     tgm_m3_orthographic(f32 left, f32 right, f32 bottom, f32 top);
 m3     tgm_m3_transposed(m3 m);
 
 m4     tgm_m4_angle_axis(f32 angle_in_radians, v3 axis);
+m4     tgm_m4_cofactor(m4 m);
 f32    tgm_m4_det(m4 m);
+m4     tgm_m4_divf(m4 m, f32 f);
 m4     tgm_m4_euler(f32 pitch_in_radians, f32 yaw_in_radians, f32 roll_in_radians);
 m4     tgm_m4_gauss_jordan_elimination(m4 m);
 m4     tgm_m4_identity(void);
 m4     tgm_m4_inverse(m4 m);
+m4     tgm_m4_inverse_lengyel(m4 m);
+m4     tgm_m4_inverse_transform(m4 m);
 m4     tgm_m4_look_at(v3 from, v3 to, v3 up);
 m4     tgm_m4_mul(m4 m0, m4 m1);
+m4     tgm_m4_mulf(m4 m, f32 f);
 v4     tgm_m4_mulv4(m4 m, v4 v);
 m4     tgm_m4_orthographic(f32 left, f32 right, f32 bottom, f32 top, f32 far, f32 near);
 m4     tgm_m4_perspective(f32 fov_y_in_radians, f32 aspect, f32 near, f32 far);

@@ -1869,36 +1869,104 @@ m3 tgm_m3_transposed(m3 m)
 
 m4 tgm_m4_angle_axis(f32 angle_in_radians, v3 axis)
 {
+	// Eric Lengyel. "Foundations of Game Engine Development". Volume 1, pp. 64 f.
+
 	m4 result = { 0 };
+
+	TG_ASSERT(tgm_v3_mag(axis) == 1.0f);
 
 	const f32 c = tgm_f32_cos(angle_in_radians);
 	const f32 s = tgm_f32_sin(angle_in_radians);
-	const f32 omc = 1.0f - c;
-	const f32 l = tgm_v3_mag(axis);
-	TG_ASSERT(l);
-	const f32 x = axis.x / l;
-	const f32 y = axis.y / l;
-	const f32 z = axis.z / l;
+	const f32 d = 1.0f - c;
 
-	result.m00 = x * x * omc + c;
-	result.m10 = y * x * omc + z * s;
-	result.m20 = z * x * omc - y * s;
+	const f32 x = axis.x * d;
+	const f32 y = axis.y * d;
+	const f32 z = axis.z * d;
+	const f32 axay = x * axis.y;
+	const f32 axaz = x * axis.z;
+	const f32 ayaz = y * axis.z;
+
+	result.m00 = c + x * axis.x;
+	result.m10 = axay + s * axis.z;
+	result.m20 = axaz - s * axis.y;
 	result.m30 = 0.0f;
 
-	result.m01 = x * y * omc - z * s;
-	result.m11 = y * y * omc + c;
-	result.m21 = z * y * omc + x * s;
+	result.m01 = axay - s * axis.z;
+	result.m11 = c + y * axis.y;
+	result.m21 = ayaz + s * axis.x;
 	result.m31 = 0.0f;
 
-	result.m02 = x * z * omc + y * s;
-	result.m12 = y * z * omc - x * s;
-	result.m22 = z * z * omc + c;
+	result.m02 = axaz + s * axis.y;
+	result.m12 = ayaz - s * axis.x;
+	result.m22 = c + z * axis.z;
 	result.m32 = 0.0f;
 
 	result.m03 = 0.0f;
 	result.m13 = 0.0f;
 	result.m23 = 0.0f;
 	result.m33 = 1.0f;
+
+	return result;
+}
+
+m4 tgm_m4_cofactor(m4 m)
+{
+	m4 result = { 0 };
+
+	// Eric Lengyel. "Foundations of Game Engine Development". Volume 1, pp. 38, 46 f.
+	// https://semath.info/src/cofactor-matrix.html#ex4
+
+	result.m00 =
+		  m.m11 * m.m22 * m.m33 + m.m12 * m.m23 * m.m31 + m.m13 * m.m21 * m.m32
+		- m.m13 * m.m22 * m.m31 - m.m12 * m.m21 * m.m33 - m.m11 * m.m23 * m.m32;
+	result.m10 =
+		- m.m01 * m.m22 * m.m33 - m.m02 * m.m23 * m.m31 - m.m03 * m.m21 * m.m32
+		+ m.m03 * m.m22 * m.m31 + m.m02 * m.m21 * m.m33 + m.m01 * m.m23 * m.m32;
+	result.m20 =
+		  m.m01 * m.m12 * m.m33 + m.m02 * m.m13 * m.m31 + m.m03 * m.m11 * m.m32
+		- m.m03 * m.m12 * m.m31 - m.m02 * m.m11 * m.m33 - m.m01 * m.m13 * m.m32;
+	result.m30 =
+		- m.m01 * m.m12 * m.m23 - m.m02 * m.m13 * m.m21 - m.m03 * m.m11 * m.m22
+		+ m.m03 * m.m12 * m.m21 + m.m02 * m.m11 * m.m23 + m.m01 * m.m13 * m.m22;
+
+	result.m01 =
+		- m.m10 * m.m22 * m.m33 - m.m12 * m.m23 * m.m30 - m.m13 * m.m20 * m.m32
+		+ m.m13 * m.m22 * m.m30 + m.m12 * m.m20 * m.m33 + m.m10 * m.m23 * m.m32;
+	result.m11 =
+		  m.m00 * m.m22 * m.m33 + m.m02 * m.m23 * m.m30 + m.m03 * m.m20 * m.m32
+		- m.m03 * m.m22 * m.m30 - m.m02 * m.m20 * m.m33 - m.m00 * m.m23 * m.m32;
+	result.m21 =
+		- m.m00 * m.m12 * m.m33 - m.m02 * m.m13 * m.m30 - m.m03 * m.m10 * m.m32
+		+ m.m03 * m.m12 * m.m30 + m.m02 * m.m10 * m.m33 + m.m00 * m.m13 * m.m32;
+	result.m31 =
+		  m.m00 * m.m12 * m.m23 + m.m02 * m.m13 * m.m20 + m.m03 * m.m10 * m.m22
+		- m.m03 * m.m12 * m.m20 - m.m02 * m.m10 * m.m23 - m.m00 * m.m13 * m.m22;
+
+	result.m02 =
+		  m.m10 * m.m21 * m.m33 + m.m11 * m.m23 * m.m30 + m.m13 * m.m20 * m.m31
+		- m.m13 * m.m21 * m.m30 - m.m11 * m.m20 * m.m33 - m.m10 * m.m23 * m.m31;
+	result.m12 =
+		- m.m00 * m.m21 * m.m33 - m.m01 * m.m23 * m.m30 - m.m03 * m.m20 * m.m31
+		+ m.m03 * m.m21 * m.m30 + m.m01 * m.m20 * m.m33 + m.m00 * m.m23 * m.m31;
+	result.m22 =
+		  m.m00 * m.m11 * m.m33 + m.m01 * m.m13 * m.m30 + m.m03 * m.m10 * m.m31
+		- m.m03 * m.m11 * m.m30 - m.m01 * m.m10 * m.m33 - m.m00 * m.m13 * m.m31;
+	result.m32 =
+		- m.m00 * m.m11 * m.m23 - m.m01 * m.m13 * m.m20 - m.m03 * m.m10 * m.m21
+		+ m.m03 * m.m11 * m.m20 + m.m01 * m.m10 * m.m23 + m.m00 * m.m13 * m.m21;
+
+	result.m03 =
+		- m.m10 * m.m21 * m.m32 - m.m11 * m.m22 * m.m30 - m.m12 * m.m20 * m.m31
+		+ m.m12 * m.m21 * m.m30 + m.m11 * m.m20 * m.m32 + m.m10 * m.m22 * m.m32;
+	result.m13 =
+		  m.m00 * m.m21 * m.m32 + m.m01 * m.m22 * m.m30 + m.m02 * m.m20 * m.m31
+		- m.m02 * m.m21 * m.m30 - m.m01 * m.m20 * m.m32 - m.m00 * m.m22 * m.m31;
+	result.m23 =
+		- m.m00 * m.m11 * m.m32 - m.m01 * m.m12 * m.m30 - m.m02 * m.m10 * m.m31
+		+ m.m02 * m.m11 * m.m30 + m.m01 * m.m10 * m.m32 + m.m00 * m.m12 * m.m31;
+	result.m33 =
+		  m.m00 * m.m11 * m.m22 + m.m01 * m.m12 * m.m20 + m.m02 * m.m10 * m.m21
+		- m.m02 * m.m11 * m.m20 - m.m01 * m.m10 * m.m22 - m.m00 * m.m12 * m.m21;
 
 	return result;
 }
@@ -1918,6 +1986,33 @@ f32 tgm_m4_det(m4 m)
 		m.m02 * m.m11 * m.m20 * m.m33 + m.m01 * m.m12 * m.m20 * m.m33 +
 		m.m02 * m.m10 * m.m21 * m.m33 - m.m00 * m.m12 * m.m21 * m.m33 -
 		m.m01 * m.m10 * m.m22 * m.m33 + m.m00 * m.m11 * m.m22 * m.m33;
+
+	return result;
+}
+
+m4 tgm_m4_divf(m4 m, f32 f)
+{
+	m4 result = { 0 };
+
+	result.m00 = m.m00 / f;
+	result.m10 = m.m10 / f;
+	result.m20 = m.m20 / f;
+	result.m30 = m.m30 / f;
+
+	result.m01 = m.m01 / f;
+	result.m11 = m.m11 / f;
+	result.m21 = m.m21 / f;
+	result.m31 = m.m31 / f;
+
+	result.m02 = m.m02 / f;
+	result.m12 = m.m12 / f;
+	result.m22 = m.m22 / f;
+	result.m32 = m.m32 / f;
+
+	result.m03 = m.m03 / f;
+	result.m13 = m.m13 / f;
+	result.m23 = m.m23 / f;
+	result.m33 = m.m33 / f;
 
 	return result;
 }
@@ -2138,6 +2233,109 @@ m4 tgm_m4_inverse(m4 m)
 	return result;
 }
 
+m4 tgm_m4_inverse_lengyel(m4 m)
+{
+	// Eric Lengyel. "Foundations of Game Engine Development". Volume 1, p. 49
+
+	m4 result = { 0 };
+
+	const v3 a = m.col0.xyz;
+	const v3 b = m.col1.xyz;
+	const v3 c = m.col2.xyz;
+	const v3 d = m.col3.xyz;
+
+	const f32 x = m.m30;
+	const f32 y = m.m31;
+	const f32 z = m.m32;
+	const f32 w = m.m33;
+
+	v3 s = tgm_v3_cross(a, b);
+	v3 t = tgm_v3_cross(c, d);
+	v3 u = tgm_v3_sub(tgm_v3_mulf(a, y), tgm_v3_mulf(b, x));
+	v3 v = tgm_v3_sub(tgm_v3_mulf(c, w), tgm_v3_mulf(d, z));
+
+	const f32 det = tgm_v3_dot(s, v) + tgm_v3_dot(t, u);
+	const f32 inv_det = 1.0f / det;
+
+	s = tgm_v3_mulf(s, inv_det);
+	t = tgm_v3_mulf(t, inv_det);
+	u = tgm_v3_mulf(u, inv_det);
+	v = tgm_v3_mulf(v, inv_det);
+
+	const v3 r0 = tgm_v3_add(tgm_v3_cross(b, v), tgm_v3_mulf(t, y));
+	const v3 r1 = tgm_v3_sub(tgm_v3_cross(v, a), tgm_v3_mulf(t, x));
+	const v3 r2 = tgm_v3_add(tgm_v3_cross(d, u), tgm_v3_mulf(s, w));
+	const v3 r3 = tgm_v3_sub(tgm_v3_cross(u, c), tgm_v3_mulf(s, z));
+
+	result.m00 = r0.x;
+	result.m10 = r1.x;
+	result.m20 = r2.x;
+	result.m30 = r3.x;
+
+	result.m01 = r0.y;
+	result.m11 = r1.y;
+	result.m21 = r2.y;
+	result.m31 = r3.y;
+
+	result.m02 = r0.z;
+	result.m12 = r1.z;
+	result.m22 = r2.z;
+	result.m32 = r3.z;
+
+	result.m03 = -tgm_v3_dot(b, t);
+	result.m13 =  tgm_v3_dot(a, t);
+	result.m23 = -tgm_v3_dot(d, s);
+	result.m33 =  tgm_v3_dot(c, s);
+
+	return result;
+}
+
+m4 tgm_m4_inverse_transform(m4 m)
+{
+	// Eric Lengyel. "Foundations of Game Engine Development". Volume 1, p. 80
+
+	m4 result = { 0 };
+
+	const v3 a = m.col0.xyz;
+	const v3 b = m.col1.xyz;
+	const v3 c = m.col2.xyz;
+	const v3 d = m.col3.xyz;
+
+	v3 s = tgm_v3_cross(a, b);
+	v3 t = tgm_v3_cross(c, d);
+
+	const f32 inv_det = 1.0f / tgm_v3_dot(s, c);
+
+	s = tgm_v3_mulf(s, inv_det);
+	t = tgm_v3_mulf(t, inv_det);
+	const v3 v = tgm_v3_mulf(c, inv_det);
+
+	const v3 r0 = tgm_v3_cross(b, v);
+	const v3 r1 = tgm_v3_cross(v, a);
+
+	result.m00 = r0.x;
+	result.m10 = r1.x;
+	result.m20 = s.x;
+	result.m30 = 0.0f;
+
+	result.m01 = r0.y;
+	result.m11 = r1.y;
+	result.m21 = s.y;
+	result.m31 = 0.0f;
+
+	result.m02 = r0.z;
+	result.m12 = r1.z;
+	result.m22 = s.z;
+	result.m32 = 0.0f;
+
+	result.m03 = -tgm_v3_dot(b, t);
+	result.m13 =  tgm_v3_dot(a, t);
+	result.m23 = -tgm_v3_dot(d, s);
+	result.m33 = 1.0f;
+
+	return result;
+}
+
 m4 tgm_m4_look_at(v3 from, v3 to, v3 up)
 {
 	TG_ASSERT(!tgm_v3_eq(from, to) && !tgm_v3_eq(from, up) && !tgm_v3_eq(to, up));
@@ -2196,6 +2394,33 @@ m4 tgm_m4_mul(m4 m0, m4 m1)
 	result.m13 = m0.m10 * m1.m03 + m0.m11 * m1.m13 + m0.m12 * m1.m23 + m0.m13 * m1.m33;
 	result.m23 = m0.m20 * m1.m03 + m0.m21 * m1.m13 + m0.m22 * m1.m23 + m0.m23 * m1.m33;
 	result.m33 = m0.m30 * m1.m03 + m0.m31 * m1.m13 + m0.m32 * m1.m23 + m0.m33 * m1.m33;
+
+	return result;
+}
+
+m4 tgm_m4_mulf(m4 m, f32 f)
+{
+	m4 result = { 0 };
+
+	result.m00 = m.m00 * f;
+	result.m10 = m.m10 * f;
+	result.m20 = m.m20 * f;
+	result.m30 = m.m30 * f;
+
+	result.m01 = m.m01 * f;
+	result.m11 = m.m11 * f;
+	result.m21 = m.m21 * f;
+	result.m31 = m.m31 * f;
+
+	result.m02 = m.m02 * f;
+	result.m12 = m.m12 * f;
+	result.m22 = m.m22 * f;
+	result.m32 = m.m32 * f;
+
+	result.m03 = m.m03 * f;
+	result.m13 = m.m13 * f;
+	result.m23 = m.m23 * f;
+	result.m33 = m.m33 * f;
 
 	return result;
 }
@@ -2277,19 +2502,22 @@ m4 tgm_m4_rotate_x(f32 angle_in_radians)
 {
 	m4 result = { 0 };
 
+	const f32 c = tgm_f32_cos(angle_in_radians);
+	const f32 s = tgm_f32_sin(angle_in_radians);
+
 	result.m00 = 1.0f;
 	result.m10 = 0.0f;
 	result.m20 = 0.0f;
 	result.m30 = 0.0f;
 
 	result.m01 = 0.0f;
-	result.m11 = tgm_f32_cos(angle_in_radians);
-	result.m21 = tgm_f32_sin(angle_in_radians);
+	result.m11 = c;
+	result.m21 = s;
 	result.m31 = 0.0f;
 
 	result.m02 = 0.0f;
-	result.m12 = -tgm_f32_sin(angle_in_radians);
-	result.m22 = tgm_f32_cos(angle_in_radians);
+	result.m12 = -s;
+	result.m22 = c;
 	result.m32 = 0.0f;
 
 	result.m03 = 0.0f;
@@ -2304,9 +2532,12 @@ m4 tgm_m4_rotate_y(f32 angle_in_radians)
 {
 	m4 result = { 0 };
 
-	result.m00 = tgm_f32_cos(angle_in_radians);
+	const f32 c = tgm_f32_cos(angle_in_radians);
+	const f32 s = tgm_f32_sin(angle_in_radians);
+
+	result.m00 = c;
 	result.m10 = 0.0f;
-	result.m20 = -tgm_f32_sin(angle_in_radians);
+	result.m20 = -s;
 	result.m30 = 0.0f;
 
 	result.m01 = 0.0f;
@@ -2314,9 +2545,9 @@ m4 tgm_m4_rotate_y(f32 angle_in_radians)
 	result.m21 = 0.0f;
 	result.m31 = 0.0f;
 
-	result.m02 = tgm_f32_sin(angle_in_radians);
+	result.m02 = s;
 	result.m12 = 0.0f;
-	result.m22 = tgm_f32_cos(angle_in_radians);
+	result.m22 = c;
 	result.m32 = 0.0f;
 
 	result.m03 = 0.0f;
@@ -2331,13 +2562,16 @@ m4 tgm_m4_rotate_z(f32 angle_in_radians)
 {
 	m4 result = { 0 };
 
-	result.m00 = tgm_f32_cos(angle_in_radians);
-	result.m10 = tgm_f32_sin(angle_in_radians);
+	const f32 c = tgm_f32_cos(angle_in_radians);
+	const f32 s = tgm_f32_sin(angle_in_radians);
+
+	result.m00 = c;
+	result.m10 = s;
 	result.m20 = 0.0f;
 	result.m30 = 0.0f;
 
-	result.m01 = -tgm_f32_sin(angle_in_radians);
-	result.m11 = tgm_f32_cos(angle_in_radians);
+	result.m01 = -s;
+	result.m11 = c;
 	result.m21 = 0.0f;
 	result.m31 = 0.0f;
 
